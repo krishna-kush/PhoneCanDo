@@ -1,0 +1,196 @@
+---
+import { site } from "../../data/site";
+---
+
+<section class="section linux" id="linux">
+    <div class="linux-grid">
+        <div>
+            <p class="fig-label">FIG. 04 — Subsystem</p>
+            <h2>And underneath it, a full Linux.</h2>
+            <p>
+                The agent doesn't just run on your phone. It runs
+                inside a full Linux of its own — its own root, its own
+                packages, its own files. apt, git, ssh, tmux, python:
+                if it runs on Linux, it runs in there.
+            </p>
+            <p>
+                Start another sandbox and the next agent gets a root
+                of its own. Separate files, separate packages,{" "}
+                <em>nothing shared unless you share it.</em>
+            </p>
+            <p class="fine">
+                On-device · arm64 · one sandbox per agent
+            </p>
+            <p class="linux-cta">
+                <a
+                    class="btn btn-ghost"
+                    href={site.repo}
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    Follow the build
+                    <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <path
+                            d="M2 10 10 2M4 2h6v6"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        ></path>
+                    </svg>
+                </a>
+            </p>
+        </div>
+
+        <figure class="passport-plate">
+            <!-- CSS-only experiment: checking the box runs the install on SBX-01. -->
+            <input class="visa-input" type="checkbox" id="visa-ffmpeg" />
+
+            <div class="passport-bar">
+                <span>Root passports · A-01</span>
+                <span class="passport-bar-state">
+                    <i aria-hidden="true"></i>2 roots · 0 shared
+                </span>
+            </div>
+
+            <div class="passport-books">
+                <div class="passport passport-a">
+                    <div class="passport-page">
+                        <div class="passport-head">
+                            <div class="passport-title">
+                                Passport <span>/ root</span>
+                            </div>
+                            <div class="passport-serial">SBX-01</div>
+                        </div>
+                        <div class="passport-id">
+                            <div class="passport-photo" aria-hidden="true">
+                                <span>/</span>
+                                <small>this is the root</small>
+                            </div>
+                            <dl class="passport-fields">
+                                <div>
+                                    <dt>Holder</dt>
+                                    <dd>agent-01</dd>
+                                </div>
+                                <div>
+                                    <dt>Image</dt>
+                                    <dd>a-01</dd>
+                                </div>
+                                <div>
+                                    <dt>Root</dt>
+                                    <dd>/sbx/01</dd>
+                                </div>
+                            </dl>
+                        </div>
+                        <div class="passport-entries-label">
+                            Entries <span>own packages</span>
+                        </div>
+                        <div class="passport-stamps">
+                            <span>apt</span><span>git</span><span>ssh</span>
+                            <span>tmux</span><span>python3</span>
+                        </div>
+                        <div class="passport-slot">
+                            <span class="slot-hint" aria-hidden="true">
+                                next entry
+                            </span>
+                            <span class="visa">
+                                ffmpeg<em>41 mb · admitted</em>
+                            </span>
+                        </div>
+                        <div class="passport-dpkg">
+                            dpkg <b class="pkgs-before">412</b>
+                            <b class="pkgs-after">413</b> pkgs
+                            <span class="pkgs-delta">+1</span>
+                        </div>
+                        <div class="passport-mrz" aria-hidden="true">
+                            <span>P&lt;SBX01&lt;&lt;ROOT&lt;&lt;OF&lt;&lt;ITS&lt;&lt;OWN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span>
+                            <span>SBX01&lt;&lt;&lt;&lt;&lt;&lt;&lt;ARM64&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="passport-border" aria-hidden="true">
+                    <span class="passport-seal">
+                        <b>0</b>
+                        <span>shared</span>
+                        <em>pages</em>
+                    </span>
+                </div>
+
+                <div class="passport passport-b">
+                    <div class="passport-page">
+                        <div class="passport-head">
+                            <div class="passport-title">
+                                Passport <span>/ root</span>
+                            </div>
+                            <div class="passport-serial">SBX-02</div>
+                        </div>
+                        <div class="passport-id">
+                            <div class="passport-photo" aria-hidden="true">
+                                <span>/</span>
+                                <small>this is the root</small>
+                            </div>
+                            <dl class="passport-fields">
+                                <div>
+                                    <dt>Holder</dt>
+                                    <dd>agent-02</dd>
+                                </div>
+                                <div>
+                                    <dt>Image</dt>
+                                    <dd>a-01</dd>
+                                </div>
+                                <div>
+                                    <dt>Root</dt>
+                                    <dd>/sbx/02</dd>
+                                </div>
+                            </dl>
+                        </div>
+                        <div class="passport-entries-label">
+                            Entries <span>own packages</span>
+                        </div>
+                        <div class="passport-stamps">
+                            <span>apt</span><span>git</span><span>ssh</span>
+                            <span>tmux</span><span>python3</span>
+                        </div>
+                        <div class="passport-slot">
+                            <span class="slot-hint" aria-hidden="true">
+                                next entry
+                            </span>
+                            <span class="slot-still" aria-hidden="true">
+                                unchanged · 0 kb
+                            </span>
+                        </div>
+                        <div class="passport-dpkg">
+                            dpkg <b>388</b> pkgs
+                        </div>
+                        <div class="passport-mrz" aria-hidden="true">
+                            <span>P&lt;SBX02&lt;&lt;ROOT&lt;&lt;OF&lt;&lt;ITS&lt;&lt;OWN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span>
+                            <span>SBX02&lt;&lt;&lt;&lt;&lt;&lt;&lt;ARM64&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <label class="passport-install" for="visa-ffmpeg">
+                <span class="pi-event">Install event</span>
+                <span class="pi-cmd">apt install ffmpeg</span>
+                <span class="pi-act">
+                    <span class="pi-off">press to stamp SBX-01</span>
+                    <span class="pi-on">stamped · press to reset</span>
+                </span>
+            </label>
+
+            <figcaption class="passport-foot">
+                <span>own root · own packages</span>
+                <span class="right">same image · {site.arch}</span>
+            </figcaption>
+        </figure>
+    </div>
+    <span class="ticks-bottom" aria-hidden="true"></span>
+</section>

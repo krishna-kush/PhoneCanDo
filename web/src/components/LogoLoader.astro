@@ -1,0 +1,16 @@
+---
+// Animated loader built from the logo. The sequence and timing live in
+// theme/logo.json; Base.astro emits the generated CSS from that same spec.
+import logo from '../../../theme/logo.json';
+
+interface Props {
+  size?: number;
+}
+const { size = 20 } = Astro.props;
+const offset = Math.max(logo.shadow.minUiPx, Math.round(size * logo.shadow.ratio));
+---
+
+<span
+  class="pc-loader"
+  style={`--pc-s:${size}px;--pc-o:${offset}px`}
+  aria-hidden="true"></span>

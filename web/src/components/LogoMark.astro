@@ -1,0 +1,20 @@
+---
+// Static brand mark: red square, hard amber shadow. Geometry comes from
+// theme/logo.json; colours come from the theme vars emitted by Base.astro.
+import logo from '../../../theme/logo.json';
+
+interface Props {
+  size?: number;
+  unit?: 'px' | 'em';
+}
+const { size = 13, unit = 'px' } = Astro.props;
+const offset =
+  unit === 'em'
+    ? Number((size * logo.shadow.ratio).toFixed(3))
+    : Math.max(logo.shadow.minUiPx, Math.round(size * logo.shadow.ratio));
+---
+
+<span
+  class="pc-mark"
+  style={`--pc-s:${size}${unit};--pc-o:${offset}${unit}`}
+  aria-hidden="true"></span>

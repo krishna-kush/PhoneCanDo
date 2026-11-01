@@ -1,0 +1,22 @@
+{
+  "name": "phonecando",
+  "version": "0.0.1",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "packageManager": "pnpm@11.11.0",
+  "scripts": {
+    "install:app": "pnpm -C app install",
+    "start": "pnpm -C app start",
+    "android": "pnpm -C app android",
+    "android:full": "pnpm -C app android:full",
+    "android:play": "pnpm -C app android:play",
+    "ios": "pnpm -C app ios",
+    "typecheck": "pnpm -C app exec tsc --noEmit",
+    "check:vectors": "pnpm -C app check:vectors",
+    "web:install": "pnpm -C web install",
+    "web:dev": "pnpm -C web dev",
+    "web:build": "pnpm -C web build",
+    "logos": "node scripts/make-logos.mjs",
+    "release:android": "node scripts/release-android.mjs"
+  }
+}
