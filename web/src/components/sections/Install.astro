@@ -1,0 +1,98 @@
+---
+import { site } from "../../data/site";
+---
+
+<section class="section" id="install">
+    <div class="sec-head">
+        <div class="sec-rail">
+            <p class="kicker">Sec. 04 / Install</p>
+            <p class="fig-label">FIG. 06 — Procedure</p>
+        </div>
+        <div class="sec-body">
+            <h2>Get it on the phone.</h2>
+            <p class="lead">
+                Alpha, sideloaded, signed. No store review, no
+                account. You will need <em>2 GB free</em> and a few
+                minutes for the first-launch setup.
+            </p>
+        </div>
+    </div>
+
+    <div class="install">
+        <div class="install-spec">
+            <div class="install-head">
+                <p class="install-kicker">Data plate / A-01</p>
+                <span class="stamp">Sideload</span>
+            </div>
+            <dl class="rows">
+                <div>
+                    <dt>Version</dt>
+                    <dd>v{site.version} · alpha</dd>
+                </div>
+                <div>
+                    <dt>Released</dt>
+                    <dd>{site.released}</dd>
+                </div>
+                <div>
+                    <dt>Architecture</dt>
+                    <dd>{site.arch} only</dd>
+                </div>
+                <div>
+                    <dt>Requires</dt>
+                    <dd>Android {site.minAndroid} · 2 GB free</dd>
+                </div>
+                <div>
+                    <dt>Download</dt>
+                    <dd>{site.size}</dd>
+                </div>
+                <div>
+                    <dt>SHA-256</dt>
+                    <dd class="dim">{site.sha256}</dd>
+                </div>
+                <div>
+                    <dt>License</dt>
+                    <dd>{site.license}</dd>
+                </div>
+            </dl>
+            <div class="barcode" aria-hidden="true"></div>
+            <p class="serial">
+                FM-01 · A-01 · v{site.version} · {site.arch}
+            </p>
+        </div>
+        <div>
+            <a class="btn btn-primary" href={site.apk}>
+                Download APK · v{site.version}
+            </a>
+            <ol class="steps">
+                <li>
+                    <span>
+                        Download the APK and allow installs from
+                        your browser when Android asks.
+                    </span>
+                </li>
+                <li>
+                    <span>
+                        Open it. Android will warn about an unknown
+                        app — that is the alpha build, not a store
+                        listing.
+                    </span>
+                </li>
+                <li>
+                    <span>
+                        First launch sets up the on-device runtime.
+                        Keep the app open, plug in, and grab a
+                        coffee.
+                    </span>
+                </li>
+            </ol>
+            <p class="cmd">
+                adb install -r phonecando-{site.version}-arm64.apk
+            </p>
+            <p class="note">
+                Arm64 only · Android {site.minAndroid}+ ·
+                sideloading required
+            </p>
+        </div>
+    </div>
+    <span class="ticks-bottom" aria-hidden="true"></span>
+</section>

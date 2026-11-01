@@ -1,0 +1,24 @@
+{
+  "shadow": {
+    "ratio": 0.12,
+    "minUiPx": 1,
+    "minAssetPx": 2,
+    "stretchPx": 1
+  },
+  "loader": {
+    "holdMs": 160,
+    "endHoldMs": 800,
+    "morphMs": 320,
+    "ease": [0.2, 0.9, 0.2, 1.04],
+    "swapEase": [0.65, 0, 0.35, 1],
+    "poses": [
+      { "w": 1, "h": 1, "swap": false },
+      { "w": 1.8, "h": 1, "swap": false },
+      { "w": 1.8, "h": 1, "swap": true },
+      { "w": 1.8, "h": 1, "swap": false },
+      { "w": 1, "h": 1.8, "swap": false },
+      { "w": 1.8, "h": 1, "swap": true },
+      { "w": 1, "h": 1, "swap": false }
+    ]
+  }
+}

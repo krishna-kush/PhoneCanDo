@@ -1,0 +1,7 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true
+  },
+  "exclude": ["android", "modules/*/android", "modules/phonecando-runner/opencode-config"]
+}

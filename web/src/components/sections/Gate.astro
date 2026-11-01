@@ -1,0 +1,114 @@
+---
+import Slate from "../Slate.astro";
+import LogoLoader from "../LogoLoader.astro";
+import { site } from "../../data/site";
+---
+
+<section class="section" id="gate">
+    <div class="sec-head">
+        <div class="sec-rail">
+            <p class="kicker">Sec. 03 / The gate</p>
+            <p class="fig-label">FIG. 05 — Consent, three ways</p>
+        </div>
+        <div class="sec-body">
+            <h2>It ships locked.</h2>
+            <p class="lead">
+                Phone control starts <em>locked</em>. It stays locked until you
+                arm it with your fingegurprint, face or PIN, it locks again when
+                PhoneCanDo closes, and the agent can never arm itself.
+            </p>
+        </div>
+    </div>
+
+    <figure class="gate-plate">
+        <div class="gate-bar">
+            <span>Phone control / A-01</span>
+            <span class="gate-bar-state">
+                <i aria-hidden="true"></i>Default · locked
+            </span>
+        </div>
+
+        <div class="gate-states">
+            <div class="gate-panel">
+                <p class="gate-no">01 / Locked</p>
+                <h3>Nothing moves.</h3>
+                <p>
+                    Every phone action is refused at the bridge with{" "}
+                    <code>403 automation_off</code>. The agent can still think,
+                    and use its own terminal.
+                </p>
+                <ul class="gate-list">
+                    <li>Read the screen</li>
+                    <li>Tap · type · scroll</li>
+                    <li>Notifications · share</li>
+                    <li>Clipboard · links · apps</li>
+                </ul>
+            </div>
+
+            <div class="gate-media">
+                <!-- Real recording only, never a mock. Source: UnlockDialog.tsx. -->
+                <div class="gate-frame" data-media>
+                    {site.gate.video ? (
+                        <video
+                            src={site.gate.video}
+                            poster={site.gate.poster}
+                            autoplay
+                            muted
+                            loop
+                            playsinline
+                            aria-label="PhoneCanDo asking for biometric unlock"
+                        />
+                    ) : (
+                        <Slate slot="03" label="Biometric prompt · recording" />
+                    )}
+                    {site.gate.video ? (
+                        <div class="media-loader">
+                            <LogoLoader size={26} />
+                        </div>
+                    ) : null}
+                </div>
+                <p class="gate-media-cap">The agent asks · you press</p>
+            </div>
+
+            <div class="gate-panel gate-panel-armed">
+                <p class="gate-no">02 / Armed</p>
+                <h3>You unlocked it.</h3>
+                <p>
+                    Face or device PIN, nothing else. The agent never sees the
+                    credential, and it cannot press this button for you.
+                </p>
+                <p class="gate-note">
+                    Stays armed until you lock it again from Settings → Phone
+                    control, or until the app restarts.
+                </p>
+            </div>
+        </div>
+
+        <div class="gate-modes">
+            <p class="gate-modes-label">How often it asks</p>
+            <div class="gate-mode">
+                <p class="gate-mode-head">01 / Per action</p>
+                <p>Every read, tap and send waits for you.</p>
+            </div>
+            <div class="gate-mode">
+                <p class="gate-mode-head">02 / Per task</p>
+                <p>One prompt when the agent starts a job, then it runs.</p>
+            </div>
+            <div class="gate-mode">
+                <p class="gate-mode-head">03 / Per session</p>
+                <p>
+                    One prompt, then it acts until you lock it or the app
+                    restarts.
+                </p>
+            </div>
+        </div>
+
+        <figcaption class="gate-foot">
+            <p>
+                <span>Works while locked:</span> reopening PhoneCanDo · this
+                prompt · Android's accessibility screen
+            </p>
+            <p>Play build: no driver, nothing to gate.</p>
+        </figcaption>
+    </figure>
+</section>

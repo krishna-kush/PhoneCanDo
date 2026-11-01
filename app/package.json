@@ -1,0 +1,50 @@
+{
+  "name": "phonecando-app",
+  "version": "0.1.1",
+  "main": "index.ts",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@tamagui/config": "^2.7.7",
+    "@tamagui/core": "2.7.7",
+    "@xterm/xterm": "^6.0.0",
+    "expo": "~57.0.24",
+    "expo-application": "~57.0.3",
+    "expo-asset": "~57.0.18",
+    "expo-file-system": "~57.0.7",
+    "expo-font": "~57.0.4",
+    "expo-intent-launcher": "~57.0.1",
+    "expo-local-authentication": "^57.0.3",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "phonecando-runner": "link:./modules/phonecando-runner",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-keyboard-controller": "^1.22.6",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.2",
+    "react-native-svg": "15.15.4",
+    "react-native-url-polyfill": "^4.0.0",
+    "react-native-webview": "13.16.1",
+    "tamagui": "^2.7.7",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@expo/config-plugins": "^57.0.9",
+    "@tamagui/babel-plugin": "^2.7.7",
+    "@types/react": "~19.2.2",
+    "babel-preset-expo": "57.0.12",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "android:full": "PHONECANDO_AUTOMATION=full expo run:android",
+    "android:play": "PHONECANDO_AUTOMATION=play expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "check:vectors": "node scripts/vectors/test_shadow.js && node scripts/vectors/test_modifiers.js"
+  },
+  "private": true
+}

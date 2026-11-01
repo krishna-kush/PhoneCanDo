@@ -1,0 +1,92 @@
+diff --git a/packages/native/build.zig b/packages/native/build.zig
+index b226da7..118acf3 100644
+--- a/packages/native/build.zig
++++ b/packages/native/build.zig
+@@ -367,11 +367,21 @@ fn addNativeAudioDependencies(
+         .macos => addMacOSSystemLibraries(b, module, macos_sdk_path.?),
+         .linux => {
+             module.linkSystemLibrary("dl", .{});
+-            module.linkSystemLibrary("pthread", .{});
+             module.linkSystemLibrary("m", .{});
++            // Bionic has no libpthread (its symbols live in libc).
++            if (target.result.abi != .android) module.linkSystemLibrary("pthread", .{});
+         },
+         else => {},
+     }
++
++    // Bionic lacks glibc's pthread_tryjoin_np (referenced by
++    // src/clipboard/host.zig): ship our own (kill+join, never blocks).
++    if (target.result.abi == .android) {
++        module.addCSourceFile(.{
++            .file = b.path("src/android-pthread-shim.c"),
++            .flags = &.{"-std=c99"},
++        });
++    }
+ }
+ 
+ fn addYogaDependencies(b: *std.Build, module: *std.Build.Module) void {
+@@ -411,6 +421,12 @@ fn addTranslatedCImports(
+         .optimize = optimize,
+     });
+     miniaudio_translate.addIncludePath(b.path("src"));
++    // Android/bionic: the NDK sysroot copy (nullability-stripped, see build
++    // driver) must be visible to translate-c for <pthread.h> etc. Wired via
++    // BIONIC_SYSROOT_INC so the opentui tree stays pristine for other targets.
++    if (b.graph.environ_map.get("BIONIC_SYSROOT_INC")) |bionic_inc| {
++        miniaudio_translate.addSystemIncludePath(.{ .cwd_relative = bionic_inc });
++    }
+     module.addImport("miniaudio", miniaudio_translate.createModule());
+ 
+     const yoga_dep = b.dependency("yoga", .{});
+@@ -420,6 +436,9 @@ fn addTranslatedCImports(
+         .optimize = optimize,
+     });
+     yoga_translate.addIncludePath(yoga_dep.path(""));
++    if (b.graph.environ_map.get("BIONIC_SYSROOT_INC")) |bionic_inc| {
++        yoga_translate.addSystemIncludePath(.{ .cwd_relative = bionic_inc });
++    }
+     module.addImport("yoga", yoga_translate.createModule());
+ }
+ 
+@@ -745,6 +764,21 @@ fn buildTarget(
+         .linkage = .dynamic,
+     });
+ 
++    // Android/bionic: zig 0.16 does not search the NDK sysroot for -ldl/-lm
++    // on its own (libc file covers includes/CRT only). Point the link at the
++    // API-level stub libs. ANDROID_NDK_HOME + ANDROID_API come from the env.
++    if (target.result.abi == .android) {
++        if (b.graph.environ_map.get("ANDROID_NDK_HOME")) |ndk| {
++            const api = b.graph.environ_map.get("ANDROID_API") orelse "29";
++            const libdir = std.fmt.allocPrint(
++                b.allocator,
++                "{s}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/{s}",
++                .{ ndk, api },
++            ) catch null;
++            if (libdir) |dir| module.addLibraryPath(.{ .cwd_relative = dir });
++        }
++    }
++
+     if (target.result.os.tag == .linux and optimize != .Debug) lib.build_id = .sha1;
+ 
+     addNativeAudioDependencies(b, module, target, macos_sdk_path);
+diff --git a/packages/native/src/android-pthread-shim.c b/packages/native/src/android-pthread-shim.c
+new file mode 100644
+index 0000000..bac3ef1
+--- /dev/null
++++ b/packages/native/src/android-pthread-shim.c
+@@ -0,0 +1,14 @@
++// Bionic compatibility shim (Android only).
++//
++// glibc's pthread_tryjoin_np does not exist on Android, but
++// src/clipboard/host.zig references it, which fails dlopen of the whole
++// library. Semantics preserved: join iff already terminated (never blocks),
++// EBUSY while the thread is still alive.
++#include <errno.h>
++#include <pthread.h>
++#include <signal.h>
++
++int pthread_tryjoin_np(pthread_t thread, void **retval) {
++  if (pthread_kill(thread, 0) == 0) return EBUSY;
++  return pthread_join(thread, retval);
++}

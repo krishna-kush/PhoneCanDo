@@ -1,0 +1,13 @@
+{
+  "name": "phonecando-terminal",
+  "version": "0.1.0",
+  "description": "PhoneCanDo PTY terminal: JNI forkpty + byte transport for xterm.js rendering.",
+  "main": "src/PhoneCanDoTerminalModule.ts",
+  "types": "src/PhoneCanDoTerminalModule.ts",
+  "license": "SEE LICENSE IN ../../../LICENSE",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}
