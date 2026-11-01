@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Android 11+ package visibility: the engine must be able to resolve
+       launcher activities for installed apps (getLaunchIntentForPackage). -->
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.MAIN" />
+      <category android:name="android.intent.category.LAUNCHER" />
+    </intent>
+  </queries>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <!-- Runtime-requested on launch (Android 13+ drops plain posts without the
+       grant; the app never asked, so appops sat at `ignore`). -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <application>
+    <service
+      android:name="com.phonecando.runner.PhoneCanDoServeService"
+      android:exported="false"
+      android:foregroundServiceType="dataSync" />
+  </application>
+</manifest>

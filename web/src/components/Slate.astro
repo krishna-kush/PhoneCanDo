@@ -1,0 +1,33 @@
+---
+/** Video slate shown until a recording is dropped in. Never fake UI. */
+interface Props {
+  slot?: string;
+  label?: string;
+  glyph?: boolean;
+  big?: string;
+}
+const { slot, label = 'Screen recording', glyph = false, big } = Astro.props;
+---
+
+<div class="slate">
+  {
+    big ? (
+      <span class="rec"><i></i>Rec</span>
+    ) : (
+      slot && <span class="rec"><i></i>Slot {slot}</span>
+    )
+  }
+  {big && <span class="ghost" aria-hidden="true">{big}</span>}
+  {
+    glyph ? (
+      <span class="glyph" aria-hidden="true">
+        <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
+          <path d="M0 0l10 6-10 6z" />
+        </svg>
+      </span>
+    ) : (
+      !big && <span class="mark" aria-hidden="true" />
+    )
+  }
+  <span class="label">{label}</span>
+</div>

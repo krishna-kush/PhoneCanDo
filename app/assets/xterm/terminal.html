@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<!--XTERM_CSS-->
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; overflow: hidden; }
+  /* Center the xterm viewport so the fit remainder (< 1 cell each axis)
+     splits evenly: otherwise left/top show bare padding while right/bottom
+     show padding + remainder, reading as asymmetric borders. */
+  #term { height: 100%; width: 100%; padding: 8px; box-sizing: border-box; background: #0a0a0a; display: flex; align-items: center; justify-content: center; }
+  #term .xterm { flex: none; }
+</style>
+</head>
+<body>
+<div id="term"></div>
+<script>
+(function () {
+  // The payload token below is substituted at bundle time (base64 alphabet can never
+  // contain "</script", so inlining is always HTML-safe).
+  var src = decodeURIComponent(escape(atob('%%XTERM_B64_PAYLOAD%%')));
+  var s = document.createElement('script');
+  s.text = src;
+  document.head.appendChild(s);
+})();
+</script>
+<script>
+//TERMINAL_JS
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.phonecando.runner'
+version = '0.1.0'
+
+// Prebuild writes this (withAutomationFlag.js). Default full for plain
+// `expo run:android` / direct Gradle invocations.
+def automationMode = project.findProperty("phonecando.automation") ?: "full"
+
+// Shared agent config lives at the module root so an iOS implementation can
+// consume the same source. Android packages a generated copy.
+def agentConfigDir = file("../opencode-config")
+def agentConfigAssets = layout.buildDirectory.dir("generated/agentConfig").get().asFile
+
+android {
+  namespace "com.phonecando.runner"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  sourceSets {
+    main {
+      assets.srcDirs += agentConfigAssets
+      // Ship the v2 bionic engine as native libs (CNG-safe: module-owned
+      // dir). Executed from nativeLibraryDir where SELinux permits exec.
+      jniLibs.srcDirs += ['src/main/libs']
+      // The a11y driver exists only in full builds. withAutomationFlag.js
+      // writes `phonecando.automation` into gradle.properties at prebuild.
+      if (automationMode != "play") {
+        java.srcDirs += 'src/uiauto/java'
+        kotlin.srcDirs += 'src/uiauto/java'
+        res.srcDirs += 'src/uiauto/res'
+      }
+    }
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+tasks.register("syncAgentConfig", Sync) {
+  from(agentConfigDir) {
+    exclude "**/node_modules/**"
+  }
+  into(new File(agentConfigAssets, "opencode-config"))
+  doFirst {
+    if (!agentConfigDir.isDirectory()) {
+      throw new GradleException("Missing opencode-config at ${agentConfigDir}")
+    }
+  }
+}
+
+tasks.named("preBuild").configure { dependsOn("syncAgentConfig") }
+
+dependencies {
+  // Loopback agent bridge HTTP framing (MIT). Hand-rolling it was 100 lines of
+  // parser nobody asked for.
+  implementation 'org.nanohttpd:nanohttpd:2.3.1'
+}
+
+if (automationMode != "play") {
+  dependencies {
+    // The app's settings plugin substitutes these coordinates with the
+    // included `pce/` build; play builds never resolve them.
+    implementation 'com.phonecando.pce:pce-api:0.1.0-dev'
+    implementation 'com.phonecando.pce:pce-core:0.1.0-dev'
+    implementation 'com.phonecando.pce:pce-json:0.1.0-dev'
+    implementation 'com.phonecando.pce:pce-android:0.1.0-dev'
+    implementation 'com.phonecando.pce:pce-pack:0.1.0-dev'
+  }
+}

@@ -1,0 +1,44 @@
+---
+import type { Demo } from '../data/demos';
+import LogoLoader from './LogoLoader.astro';
+import Slate from './Slate.astro';
+
+interface Props {
+  demo: Demo;
+  index: number;
+}
+const { demo, index } = Astro.props;
+const num = String(index + 1).padStart(2, '0');
+---
+
+<article class="demo">
+  <div class="demo-media" data-media>
+    {
+      demo.video ? (
+        <video
+          src={demo.video}
+          poster={demo.poster}
+          muted
+          loop
+          playsinline
+          preload="none"
+          controls
+          aria-label={demo.title}
+        />
+      ) : (
+        <Slate big={num} label="Screen recording" />
+      )
+    }
+    {demo.video ? (
+      <div class="media-loader">
+        <LogoLoader size={26} />
+      </div>
+    ) : null}
+    <span class="plate-no" aria-hidden="true">PL. {num}</span>
+  </div>
+  <div class="demo-body">
+    <p class="demo-index"><span>Plate {num}</span><span>{demo.video ? 'Clip' : 'Slot'}</span></p>
+    <h3>{demo.title}</h3>
+    <p class="tags">{demo.tags.join(' · ')}</p>
+  </div>
+</article>

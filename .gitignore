@@ -1,0 +1,32 @@
+node_modules/
+.expo/
+dist/
+*.log
+.DS_Store
+
+.playwright-mcp/
+
+# Local reference clones
+reference/
+
+# Generated Tamagui compiler output
+.tamagui/
+
+# Secrets and signing keys (never commit)
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+release.env
+.env
+.env.*
+!.env.example
+
+# Expo CNG generated projects (regenerate via `expo prebuild`)
+app/android/
+app/ios/
+# Staged engine payload (built by scripts/bootstrap; not committed)
+app/modules/phonecando-runner/android/src/main/libs/

@@ -1,0 +1,32 @@
+---
+import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+import Hero from "../components/sections/Hero.astro";
+import Demos from "../components/sections/Demos.astro";
+import Models from "../components/sections/Models.astro";
+import Linux from "../components/sections/Linux.astro";
+import Gate from "../components/sections/Gate.astro";
+import Install from "../components/sections/Install.astro";
+import Faq from "../components/sections/Faq.astro";
+---
+
+<Base>
+    <div class="page">
+        <!-- One-shot linear fill; wire it to video/asset load progress later. -->
+        <div class="load-bar" aria-hidden="true"></div>
+        <Nav />
+
+        <main id="top">
+            <Hero />
+            <Demos />
+            <Models />
+            <Linux />
+            <Gate />
+            <Install />
+            <Faq />
+        </main>
+
+        <Footer />
+    </div>
+</Base>

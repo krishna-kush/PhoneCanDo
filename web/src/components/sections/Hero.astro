@@ -1,0 +1,131 @@
+---
+import Slate from "../Slate.astro";
+import LogoLoader from "../LogoLoader.astro";
+import { site } from "../../data/site";
+---
+
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow">
+            <span class="dot" aria-hidden="true"></span>
+            PhoneCanDo Field Manual · Alpha v{site.version}
+        </p>
+        <h1>
+            AI that can <em>use</em> your phone.
+        </h1>
+        <p class="hero-sub">
+            PhoneCanDo puts a real agent on your Android. It reads the screen,
+            uses the apps, and works in a full terminal.{" "}
+            <strong>No PC. No cloud relay.</strong> Your keys, your data, on the
+            device.
+        </p>
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="#install">
+                Download APK
+                <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M6 1v8M2.5 5.5 6 9l3.5-3.5M1 11h10"
+                        stroke="currentColor"
+                        stroke-width="1.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    ></path>
+                </svg>
+            </a>
+            <a class="btn btn-ghost" href="#demos">
+                See it work
+            </a>
+        </div>
+        <p class="hero-note">
+            <span>No account</span>
+            <span>No PC</span>
+            <span>Sideload alpha</span>
+        </p>
+    </div>
+
+    <figure class="phone-wrap">
+        <figcaption class="fig-head">
+            <div>
+                <p class="fig-label">FIG. 01 — The body</p>
+                <p class="fig-sub">Model A-01 / 1080 × 2340 / {site.arch}</p>
+            </div>
+            <span class="stamp">On-device</span>
+        </figcaption>
+        <div class="phone-figure">
+            <span class="dim-v" aria-hidden="true">
+                <span>9:19.5</span>
+            </span>
+            <div class="phone">
+                <div class="phone-screen" data-media>
+                    {site.hero.video ? (
+                        <video
+                            src={site.hero.video}
+                            poster={site.hero.poster}
+                            autoplay
+                            muted
+                            loop
+                            playsinline
+                            aria-label="PhoneCanDo running on a phone"
+                        />
+                    ) : (
+                        <Slate slot="01" glyph label="Hero loop · 0:08" />
+                    )}
+                    {site.hero.video ? (
+                        <div class="media-loader">
+                            <LogoLoader size={26} />
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+            <div class="hero-trace" aria-hidden="true">
+                <div class="hero-trace-bar">
+                    <span>Session 001</span>
+                    <span>9s</span>
+                </div>
+                <div class="hero-trace-body">
+                    <p>
+                        <span class="tc">screen.read()</span>
+                        <span class="tr">whatsapp</span>
+                    </p>
+                    <p class="ind">
+                        <span class="tc">tap("Sam")</span>
+                        <span class="tr">open</span>
+                    </p>
+                    <p class="ind">
+                        <span class="tc">send()</span>
+                        <span class="tr">approved</span>
+                    </p>
+                    <p class="last">
+                        <span class="tok">✓ sent · 9s</span>
+                        <span class="tcursor"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </figure>
+</section>
+
+<dl class="specs">
+    <div>
+        <dt>Runs on</dt>
+        <dd>On-device · {site.arch}</dd>
+    </div>
+    <div>
+        <dt>Android</dt>
+        <dd>{site.minAndroid} and up</dd>
+    </div>
+    <div>
+        <dt>Build</dt>
+        <dd>Alpha v{site.version}</dd>
+    </div>
+    <div>
+        <dt>License</dt>
+        <dd>{site.license}</dd>
+    </div>
+</dl>

@@ -1,0 +1,75 @@
+---
+import { site } from "../../data/site";
+---
+
+<section class="section faq" id="faq">
+    <div class="sec-head">
+        <div class="sec-rail">
+            <p class="kicker">Sec. 05 / Troubleshooting</p>
+            <p class="fig-label">FIG. 07 — Q &amp; A</p>
+        </div>
+        <div class="sec-body">
+            <h2>The fine print.</h2>
+            <p class="lead">
+                The store, the hardware, the permissions, the network —
+                the answers we give most often, in full,{" "}
+                <em>license terms included.</em>
+            </p>
+        </div>
+    </div>
+
+    <details>
+        <summary>Is it on the Play Store?</summary>
+        <p>
+            Not yet. The alpha ships as a signed APK you install
+            yourself. The full build can drive other apps through
+            Android accessibility, which Play restricts — a reduced
+            build is planned for stores, while the full one stays
+            sideloaded.
+        </p>
+    </details>
+    <details>
+        <summary>Do I need a computer?</summary>
+        <p>
+            No. Setup, the agent, the terminal and the model keys
+            all live on the phone.
+        </p>
+    </details>
+    <details>
+        <summary>Which phones does it run on?</summary>
+        <p>
+            Arm64 devices on Android {site.minAndroid} or newer,
+            with 2 GB free. It will not run on x86 emulators or
+            32-bit phones.
+        </p>
+    </details>
+    <details>
+        <summary>What can it actually control?</summary>
+        <p>
+            Any app with a visible UI: tapping, typing, scrolling,
+            reading the screen, plus notifications, clipboard,
+            sharing and intents. Actions that change the phone need
+            a biometric unlock first.
+        </p>
+    </details>
+    <details>
+        <summary>Does it need a constant connection?</summary>
+        <p>
+            The agent and your files run locally. Model calls go to
+            the provider you configure, so it needs network for
+            those — unless you point it at a local endpoint.
+        </p>
+    </details>
+    <details>
+        <summary>Can I use the source?</summary>
+        <p>
+            The source is on{" "}
+            <a href={site.repo} target="_blank" rel="noreferrer">
+                GitHub
+            </a>{" "}
+            under a source-available license. You can read it and
+            contribute; you cannot copy, use, or redistribute it.
+            The official app is the only distributed build.
+        </p>
+    </details>
+</section>

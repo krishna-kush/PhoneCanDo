@@ -1,0 +1,85 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { site } from '../data/site';
+---
+
+<Base
+  title={`404 — Page not found · ${site.name}`}
+  description="That sheet was never printed."
+  noindex
+>
+  <div class="page">
+    <Nav />
+
+    <main class="missing">
+      <div class="miss-copy">
+        <p class="eyebrow">
+          <span class="dot" aria-hidden="true"></span>
+          Error 404 · Lookup failed
+        </p>
+        <h1>This sheet was <em>never printed.</em></h1>
+        <p class="hero-sub">
+          The address you followed doesn’t match a page in the manual. Nothing is broken and
+          nothing left the device — <strong>the sheet just isn’t here.</strong>
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="/">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M11 6H1M4.5 2.5 1 6l3.5 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            Back to the field manual
+          </a>
+          <a class="btn btn-ghost" href={site.repo} target="_blank" rel="noreferrer">
+            GitHub
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </a>
+        </div>
+        <p class="miss-note">
+          Or jump to <a href="/#demos">demos</a>, <a href="/#install">install</a> or
+          <a href="/#faq">the FAQ</a>.
+        </p>
+      </div>
+
+      <figure class="miss-plate">
+        <div class="miss-head">
+          <p class="fig-label">FIG. 404 — Requested sheet</p>
+          <span class="stamp">Not on file</span>
+        </div>
+        <div class="miss-sheet">
+          <p class="miss-code" aria-hidden="true">4<span>0</span>4</p>
+          <dl class="miss-rows">
+            <div>
+              <dt>Request</dt>
+              <dd id="miss-path">this page</dd>
+            </div>
+            <div>
+              <dt>Response</dt>
+              <dd class="miss-red">404 · not found</dd>
+            </div>
+            <div>
+              <dt>Manual</dt>
+              <dd>0 matching sheets</dd>
+            </div>
+          </dl>
+        </div>
+        <figcaption class="miss-foot">
+          <span>FM-01 / A-01</span>
+          <span>Plate 000 / missing</span>
+        </figcaption>
+      </figure>
+    </main>
+
+    <Footer />
+  </div>
+
+  <script is:inline>
+    // A static 404 does not know the request; show the path the visitor hit.
+    const path = location.pathname + location.search;
+    const el = document.getElementById('miss-path');
+    if (el) el.textContent = path;
+  </script>
+</Base>

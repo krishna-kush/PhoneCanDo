@@ -1,0 +1,4 @@
+<resources>
+  <!-- Debug-only test key. Never use this key for published packs. -->
+  <string name="phonecando_pack_public_key" translatable="false">MCowBQYDK2VwAyEAUtPQ6WnQ4AVyCtGAyoecsONhkcGdDSPLwTANbyN0Vmw=</string>
+</resources>

@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "PhoneCanDo",
+    "slug": "phonecando",
+    "version": "0.1.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.phonecando.app"
+    },
+    "android": {
+      "package": "com.phonecando.app",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["REQUEST_INSTALL_PACKAGES"]
+    },
+    "plugins": [
+      "expo-secure-store",
+      "./plugins/withExtractNativeLibs.js",
+      "./plugins/withAutomationFlag.js",
+      "./plugins/withPceCompositeBuild.js",
+      "./plugins/withLoopbackCleartext.js",
+      "./plugins/withReleaseSigning.js",
+      "expo-asset"
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

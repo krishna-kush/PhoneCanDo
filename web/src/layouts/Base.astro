@@ -1,0 +1,124 @@
+---
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
+import "@fontsource/instrument-serif/400.css";
+import "@fontsource/instrument-serif/400-italic.css";
+import "../styles/global.css";
+import tokens from "../../../theme/tokens.json";
+import { logoLoaderCss } from "../lib/logoLoaderCss";
+import { site } from "../data/site";
+
+interface Props {
+    title?: string;
+    description?: string;
+    noindex?: boolean;
+}
+const {
+    title = `${site.name} · ${site.tagline}`,
+    description = "PhoneCanDo runs an AI agent on your Android. It reads the screen, uses the apps, and works in a full terminal. No PC, no cloud relay.",
+    noindex = false,
+} = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+
+// theme/tokens.json is the single source for the site and the app. Roles map
+// onto the var names global.css already uses, so the stylesheet needs no
+// renames when a token changes.
+const VAR_NAMES: [keyof typeof tokens.dark, string][] = [
+    ["bg", "bg"],
+    ["panel", "panel"],
+    ["panel2", "panel-2"],
+    ["line", "line"],
+    ["lineStrong", "line-2"],
+    ["fg", "fg"],
+    ["muted", "muted"],
+    ["dim", "dim"],
+    ["faint", "faint"],
+    ["primary", "red"],
+    ["primaryHi", "red-hi"],
+    ["primarySoft", "red-soft"],
+    ["onPrimary", "on-primary"],
+    ["secondary", "accent"],
+    ["secondaryInk", "accent-ink"],
+    ["secondarySoft", "accent-soft"],
+    ["secondaryLine", "accent-line"],
+];
+const vars = (t: typeof tokens.dark) =>
+    VAR_NAMES.map(([role, name]) => `--${name}:${t[role]}`).join(";");
+const themeCss = `:root{${vars(tokens.dark)}}[data-theme='light']{${vars(tokens.light)}}`;
+const themeInit = `(() => {
+  const root = document.documentElement;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const apply = (t) => {
+    root.dataset.theme = t;
+    if (meta) meta.content = t === 'light' ? '${tokens.light.bg}' : '${tokens.dark.bg}';
+  };
+  apply(matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.addEventListener('click', (e) => {
+    if (!(e.target instanceof Element) || !e.target.closest('.theme-toggle')) return;
+    apply(root.dataset.theme === 'light' ? 'dark' : 'light');
+  });
+})();`;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={canonical} />
+        <meta name="theme-color" content={tokens.dark.bg} />
+        {noindex ? <meta name="robots" content="noindex" /> : null}
+        <style is:inline set:html={themeCss} />
+        <style is:inline set:html={logoLoaderCss} />
+        <script is:inline set:html={themeInit} />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link
+            rel="icon"
+            href="/favicon-32x32.png"
+            sizes="32x32"
+            type="image/png"
+        />
+        <link
+            rel="icon"
+            href="/favicon-16x16.png"
+            sizes="16x16"
+            type="image/png"
+        />
+        <link
+            rel="apple-touch-icon"
+            href="/apple-touch-icon.png"
+            sizes="180x180"
+        />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={new URL("/og.png", Astro.site)} />
+        <meta name="twitter:card" content="summary_large_image" />
+    </head>
+    <body>
+        <slot />
+        <script is:inline>
+            // Drive the logo loader on media that is actually loading. Posters and
+            // slates stay still; playback starts the loader, canplay hides it.
+            (() => {
+                for (const video of document.querySelectorAll("video")) {
+                    const frame = video.closest("[data-media]");
+                    if (!frame) continue;
+                    const set = (on) => {
+                        frame.dataset.loading = on ? "true" : "false";
+                    };
+                    video.addEventListener("loadstart", () => set(true));
+                    video.addEventListener("waiting", () => set(true));
+                    video.addEventListener("canplay", () => set(false));
+                    video.addEventListener("playing", () => set(false));
+                    video.addEventListener("error", () => set(false));
+                    if (!video.paused) set(true);
+                }
+            })();
+        </script>
+    </body>
+</html>

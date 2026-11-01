@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="service_description">PhoneCanDo phone control: lets the on-device agent read this screen and tap, type, scroll, or navigate while you have phone control unlocked in PhoneCanDo.</string>
+</resources>
