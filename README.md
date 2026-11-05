@@ -5,7 +5,7 @@
 <h1 align="center">PhoneCanDo</h1>
 
 <p align="center">
-  <strong>Your phone is the computer.</strong><br/>
+  <strong>Your phone is the computer. Just Ask, phonecando.</strong><br/>
   On-device agent chat, a real terminal, and phone control — all on Android.
 </p>
 
@@ -35,7 +35,7 @@ Model calls go to the provider you configure. Everything else stays local.
 | **Chat** | The opencode web UI, paired with the local engine. |
 | **Terminal** | A real PTY and TUI, rendered by xterm.js. |
 | **Phone control** | Accessibility-driven observe/act, gated by an in-app switch. |
-| **Two flavors** | `full` with phone control; `play` without the accessibility service. |
+| **Three channels** | `full` with phone control; `lite` without it, the download that installs `full` in place; `play` with neither. |
 | **Local by default** | No telemetry. Sessions and keys stay on the device. |
 
 ## How it fits
@@ -74,14 +74,33 @@ pnpm -C app android:full
 See [`docs/bootstrap/oc-build.md`](docs/bootstrap/oc-build.md) for the exact
 toolchain, patches and verification.
 
-## Flavors
+## Channels
 
-| Flavor | Command | Phone control |
-|---|---|---|
-| Full | `pnpm -C app android:full` | Yes — accessibility service + PCE |
-| Play | `pnpm -C app android:play` | No — no accessibility service, no PCE |
+| Channel | Command | Phone control | Updates |
+|---|---|---|---|
+| Full | `pnpm -C app android:full` | Yes — accessibility service + PCE | GitHub Releases |
+| Lite | `pnpm -C app android:lite` | No — no accessibility service, no PCE | GitHub Releases |
+| Play | `pnpm -C app android:play` | No — no accessibility service, no PCE | Play (later; not released) |
+
+Channels are Gradle product flavors in one project, so native libraries
+compile once for all of them. Debug builds install as separate apps per
+channel, `com.phonecando.app.<channel>.dev` ("PhoneCanDo Lite Dev", "PhoneCanDo
+Full Dev"), next to the release one. Lite and full share the package and signing
+key; lite uses a lower version code so the full APK can replace it.
+
+Why lite exists: Play Protect blocks any browser or file-manager download that
+declares an accessibility service ("App blocked to protect your device", no
+install-anyway). Lite declares none, so it installs; on first launch it offers
+the full build and installs it in place, which Play Protect allows. Android
+13+ then locks the accessibility switch for the sideloaded app, and Settings →
+Phone control walks the user through unlocking it in three steps. Device-proven;
+see `docs/release/upgrade-test.md` and `research/restricted-settings.md`.
 
 ## Commands
+
+`./manage` at the repo root wraps every script: `./manage help` lists them.
+`./manage release <next-version> --notes "..."` builds full and lite, audits
+both and drafts the GitHub release; add `--publish` to publish.
 
 | Task | Command |
 |---|---|

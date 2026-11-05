@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-// One-command Android release: bump, build, verify, stage, draft, update site.
+// One-command Android release: bump, build full + lite, verify, stage, draft,
+// update site. Full is the update target (latest.json); lite is the download
+// users start from, since Play Protect blocks full from a browser but lets
+// lite install it in place (docs/release/upgrade-test.md).
 // Signing secrets stay in the private env file; this script never prints them.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -15,6 +18,10 @@ import {
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { auditApk } from './apk-audit.mjs';
+
+process.env.CI = '1'; // expo prebuild: never prompt
+process.env.EXPO_NO_GIT_STATUS = '1'; // expo prebuild: never run git
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const APP = join(ROOT, 'app');
@@ -22,7 +29,8 @@ const APP_JSON = join(APP, 'app.json');
 const APP_PKG = join(APP, 'package.json');
 const SITE_TS = join(ROOT, 'web/src/data/site.ts');
 const UPDATES_TS = join(APP, 'src/engine/updates.ts');
-const APK = join(APP, 'android/app/build/outputs/apk/release/app-release.apk');
+const apkFor = (flavor) =>
+  join(APP, `android/app/build/outputs/apk/${flavor}/release/app-${flavor}-release.apk`);
 const STAGE_ROOT = join(ROOT, 'dist/release');
 
 let args;
@@ -54,14 +62,16 @@ function main() {
   }
   const retry = version === currentVersion;
   const versionCode = retry ? currentCode : currentCode + 1;
+  // --upload-only: the APKs are already staged for this version (a build
+  // succeeded, an upload timed out). Never rebuild for a network failure.
+  if (args.uploadOnly && !retry) {
+    fail(`--upload-only needs app.json already at ${version} (it is ${currentVersion})`);
+  }
 
   const repo = process.env.GITHUB_REPO;
   if (!repo || !/^[^/\s]+\/[^/\s]+$/.test(repo)) {
     fail('Set GITHUB_REPO=owner/repo');
   }
-  // Publishing a draft creates the tag; GitHub cannot do that in a repo with
-  // no commits. Fail before the 20-minute build, not after.
-  if (args.publish) assertRepoHasCommits(repo);
   const releaseEnv = process.env.PHONECANDO_RELEASE_ENV;
   if (!releaseEnv || !existsSync(releaseEnv)) {
     fail('Set PHONECANDO_RELEASE_ENV to the private env file');
@@ -74,7 +84,9 @@ function main() {
 
   const notes = args.notes || `Release v${version}`;
   const released = new Date().toISOString().slice(0, 10);
-  const apkUrl = `https://github.com/${repo}/releases/download/v${version}/phonecando-${version}-arm64.apk`;
+  const apkUrl = `https://github.com/${repo}/releases/download/v${version}/phonecando-${version}-full-arm64.apk`;
+
+  // Site: starter (lite) is the download, full is offered for adb.
 
   const appPkgRaw = readFileSync(APP_PKG, 'utf8');
   const siteRaw = readFileSync(SITE_TS, 'utf8');
@@ -83,16 +95,20 @@ function main() {
   const appPkgNext = nextPackageVersion(appPkgRaw, version);
   const updatesNext = nextRepoText(updatesRaw, repo);
   // Validate the site edit before the build; real size/SHA are filled later.
-  nextSiteText(siteRaw, { version, released, size: 0, sha256: '<after build>', apkUrl, repo });
+  nextSiteText(siteRaw, { version, released, size: 0, sha256: '<after build>', repo });
 
   console.log(`PhoneCanDo release v${version} (code ${versionCode})`);
   console.log(`Repo:    ${repo}`);
   console.log(`Signing: ${signing.storeFile} (alias ${signing.alias})`);
-  console.log(`APK:     ${APK}`);
+  console.log(`APKs:    ${apkFor('full')}`);
+  console.log(`         ${apkFor('lite')}`);
   console.log(`Stage:   ${join(STAGE_ROOT, `v${version}`)}`);
 
   if (args.dryRun) {
-    console.log('Dry run: no files written, no build, no release.');
+    // Offline by design: gh auth, the release state and the repo's commits
+    // are checked only by a real run.
+    console.log('Dry run: no files written, no build, no release, no network.');
+    console.log(`Assets: phonecando-${version}-full-arm64.apk (latest.json target), phonecando-${version}-lite-arm64.apk (site download)`);
     console.log('File edits OK: app/app.json, app/package.json, web/src/data/site.ts, app/src/engine/updates.ts');
     console.log(
       `Manifest: ${JSON.stringify(
@@ -111,47 +127,73 @@ function main() {
     return;
   }
 
+  // GitHub checks come before any file is written and before the 20-minute
+  // build. A published release is final: re-running its version would
+  // rebuild, overwrite the stage and site.ts, and only then fail to upload.
+  // A draft is fine; createDraft replaces its assets.
+  const tag = `v${version}`;
+  assertGhAuth();
+  // Publishing a draft creates the tag; GitHub cannot do that in a repo with
+  // no commits.
+  if (args.publish) assertRepoHasCommits(repo);
+  if (releaseState(repo, tag) === 'published') {
+    fail(`Release ${tag} is already published in ${repo}; release a new version instead`);
+  }
+
   writeFileSync(APP_JSON, appJsonNext);
   writeFileSync(APP_PKG, appPkgNext);
   writeFileSync(UPDATES_TS, updatesNext);
 
-  run('npx', ['expo', 'prebuild', '-p', 'android', '--clean'], { cwd: APP });
-  run(
-    'bash',
-    [
-      '-c',
-      'set -a; source "$PHONECANDO_RELEASE_ENV"; set +a; ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a',
-    ],
-    { cwd: join(APP, 'android') },
-  );
-
-  if (!existsSync(APK)) fail(`Missing APK: ${APK}`);
-  verifyApk(APK, tools, appPackage, version, versionCode);
-
-  const size = statSync(APK).size;
-  const sha256 = createHash('sha256').update(readFileSync(APK)).digest('hex');
-  const stage = join(STAGE_ROOT, `v${version}`);
+  const stage = join(STAGE_ROOT, tag);
   mkdirSync(stage, { recursive: true });
-  const asset = join(stage, `phonecando-${version}-arm64.apk`);
-  copyFileSync(APK, asset);
+  const asset = join(stage, `phonecando-${version}-full-arm64.apk`);
+  const liteAsset = join(stage, `phonecando-${version}-lite-arm64.apk`);
   const manifestPath = join(stage, 'latest.json');
-  writeFileSync(
-    manifestPath,
-    `${JSON.stringify({ versionCode, version, apk: apkUrl, size, sha256, notes }, null, 2)}\n`,
-  );
+  const site = { version, released, repo };
 
-  writeFileSync(
-    SITE_TS,
-    nextSiteText(siteRaw, { version, released, size, sha256, apkUrl, repo }),
-  );
+  if (args.uploadOnly) {
+    for (const f of [asset, liteAsset, manifestPath]) if (!existsSync(f)) fail(`--upload-only: missing ${f}`);
+    verifyApk(asset, tools, appPackage, version, versionCode, 'full');
+    verifyApk(liteAsset, tools, appPackage, version, 1, 'lite');
+    // The staged full APK may have been rebuilt or replaced since latest.json
+    // was written, and lite rejects a download whose size differs: size and
+    // SHA-256 always come from the file being uploaded.
+    const staged = readManifest(manifestPath);
+    if (staged.version !== version || staged.versionCode !== versionCode || staged.apk !== apkUrl) {
+      fail(
+        `${manifestPath} describes ${staged.version} (${staged.versionCode}) at ${staged.apk}, ` +
+          `not ${version} (${versionCode}) at ${apkUrl}`,
+      );
+    }
+    if (args.notes && args.notes !== staged.notes) {
+      fail(`--upload-only publishes the staged notes; edit ${manifestPath} to change them`);
+    }
+    const full = fileDigest(asset);
+    writeManifest(manifestPath, { ...staged, ...full });
+    createDraft({ version, repo, notes: staged.notes, assets: [asset, liteAsset, manifestPath] });
+    const lite = writeSite(siteRaw, liteAsset, site);
+    report(asset, full, liteAsset, lite, manifestPath);
+    console.log(`Uploaded staged ${tag} assets.`);
+    return;
+  }
 
-  createDraft({ version, repo, notes, asset, manifestPath });
+  // Both flavors in one Gradle run: shared libraries compile once.
+  buildFlavors(['full', 'lite']);
+  // Both must pass before either is staged: full is the update every lite
+  // user is offered. Lite: same version string, versionCode 1
+  // (withBuildChannel.js), no accessibility service, so a browser install
+  // passes Play Protect.
+  verifyApk(apkFor('full'), tools, appPackage, version, versionCode, 'full');
+  verifyApk(apkFor('lite'), tools, appPackage, version, 1, 'lite');
+  copyFileSync(apkFor('full'), asset);
+  copyFileSync(apkFor('lite'), liteAsset);
+  const full = fileDigest(asset);
+  writeManifest(manifestPath, { versionCode, version, apk: apkUrl, ...full, notes });
 
-  console.log('');
-  console.log(`APK:      ${asset}`);
-  console.log(`Manifest: ${manifestPath}`);
-  console.log(`Size:     ${size} bytes (${Math.round(size / 1024 / 1024)} MB)`);
-  console.log(`SHA-256:  ${sha256}`);
+  createDraft({ version, repo, notes, assets: [asset, liteAsset, manifestPath] });
+  // The site links the release assets: write it only after every upload.
+  const lite = writeSite(siteRaw, liteAsset, site);
+  report(asset, full, liteAsset, lite, manifestPath);
   if (!args.publish) {
     console.log('');
     console.log('Draft release ready. Review it, then publish with:');
@@ -159,12 +201,73 @@ function main() {
   }
 }
 
+// Prebuild re-applies the config plugins over the existing android/ so Gradle
+// stays incremental (--clean regenerates from scratch); the flavors then build
+// in a single Gradle invocation.
+function buildFlavors(flavors) {
+  // Expo CLI 57 regenerates app/android unless --no-clean is passed; the
+  // config plugins replace their blocks on every run, so reuse is safe.
+  run('npx', ['expo', 'prebuild', '-p', 'android', '--no-install', args.clean ? '--clean' : '--no-clean'], { cwd: APP });
+  const tasks = flavors.map((f) => `assemble${f.charAt(0).toUpperCase()}${f.slice(1)}Release`).join(' ');
+  run(
+    'bash',
+    [
+      '-c',
+      `set -a; source "$PHONECANDO_RELEASE_ENV"; set +a; ./gradlew ${tasks} --build-cache -PreactNativeArchitectures=arm64-v8a`,
+    ],
+    { cwd: join(APP, 'android') },
+  );
+  for (const f of flavors) if (!existsSync(apkFor(f))) fail(`Missing APK after build: ${apkFor(f)}`);
+}
+
+function fileDigest(file) {
+  return {
+    size: statSync(file).size,
+    sha256: createHash('sha256').update(readFileSync(file)).digest('hex'),
+  };
+}
+
+function readManifest(path) {
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    fail(`${path}: ${error.message}`);
+  }
+  if (typeof manifest?.notes !== 'string') fail(`${path}: no notes`);
+  return manifest;
+}
+
+// latest.json: the update manifest lite and full read from the release.
+function writeManifest(path, { versionCode, version, apk, size, sha256, notes }) {
+  writeFileSync(path, `${JSON.stringify({ versionCode, version, apk, size, sha256, notes }, null, 2)}\n`);
+}
+
+// Site download = lite: its size and SHA-256 come from the staged file.
+function writeSite(siteRaw, liteApk, fields) {
+  const lite = fileDigest(liteApk);
+  writeFileSync(SITE_TS, nextSiteText(siteRaw, { ...fields, size: lite.size, sha256: lite.sha256 }));
+  return lite;
+}
+
+function report(asset, full, liteAsset, lite, manifestPath) {
+  const mb = (bytes) => Math.round(bytes / 1024 / 1024);
+  console.log('');
+  console.log(`Full APK: ${asset}`);
+  console.log(`  ${full.size} bytes (${mb(full.size)} MB) sha256 ${full.sha256}`);
+  console.log(`Lite APK: ${liteAsset}`);
+  console.log(`  ${lite.size} bytes (${mb(lite.size)} MB) sha256 ${lite.sha256}`);
+  console.log(`Manifest: ${manifestPath}`);
+}
+
 function parseArgs(argv) {
-  const out = { dryRun: false, publish: false, version: undefined, notes: '' };
+  const out = { dryRun: false, publish: false, uploadOnly: false, clean: false, version: undefined, notes: '' };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--dry-run') out.dryRun = true;
     else if (arg === '--publish') out.publish = true;
+    else if (arg === '--upload-only') out.uploadOnly = true;
+    else if (arg === '--clean') out.clean = true;
     else if (arg === '--version') {
       i += 1;
       out.version = requireValue(argv, i, '--version');
@@ -191,8 +294,12 @@ function usage() {
 Options:
   --version X.Y.Z   Release version (default: bump patch)
   --notes TEXT      Update dialog and GitHub release notes
-  --dry-run         Check env, SDK and file edits without building
-  --publish         Publish the draft after both assets are attached
+  --dry-run         Check env, SDK and file edits without building (offline)
+  --publish         Publish the draft after all assets are attached
+  --upload-only     Skip the builds; re-audit the staged APKs, refresh
+                    latest.json's size/SHA-256 from the staged full APK and
+                    upload (retry after a failed upload)
+  --clean           Regenerate android/ from scratch before building
 
 Env:
   PHONECANDO_RELEASE_ENV  path to the private signing env file
@@ -264,15 +371,10 @@ function findBuildTools(sdk) {
   return { apksigner, aapt };
 }
 
-function verifyApk(apk, tools, pkg, version, versionCode) {
-  const certs = execFileSync(tools.apksigner, ['verify', '--print-certs', apk], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'inherit'],
-  });
-  console.log(certs.trim());
-  if (/CN=Android Debug/i.test(certs)) {
-    fail('APK is signed with the Android debug key; release signing was not applied');
-  }
+// Release signer, channel contents and engine (apk-audit.mjs), then the
+// package, version and versionCode.
+function verifyApk(apk, tools, pkg, version, versionCode, channel) {
+  console.log(auditApk(apk, channel, tools));
 
   const badging = execFileSync(tools.aapt, ['dump', 'badging', apk], {
     encoding: 'utf8',
@@ -307,55 +409,60 @@ function nextRepoText(raw, repo) {
   return replaceOnce(raw, /(const REPO = ')[^']*(')/, `$1${repo}$2`, 'updates.REPO');
 }
 
-function nextSiteText(raw, { version, released, size, sha256, apkUrl, repo }) {
+// web/src/data/site.ts derives the version and every download URL from
+// app/app.json; only the facts a published release knows live there: the
+// repo and the `published` block (version, date, lite size, lite SHA-256).
+function nextSiteText(raw, { version, released, size, sha256, repo }) {
   const sizeLabel = `${Math.round(size / 1024 / 1024)} MB`;
-  let text = replaceOnce(raw, /(\brepo:\s*)'[^']*'/, `$1'https://github.com/${repo}'`, 'site.repo');
-  text = replaceOnce(
-    text,
-    /(\breleases:\s*)'[^']*'/,
-    `$1'https://github.com/${repo}/releases'`,
-    'site.releases',
-  );
-  text = replaceOnce(text, /(\bapk:\s*)'[^']*'/, `$1'${apkUrl}'`, 'site.apk');
-  text = replaceOnce(text, /(\bversion:\s*)'[^']*'/, `$1'${version}'`, 'site.version');
-  text = replaceOnce(text, /(\breleased:\s*)'[^']*'/, `$1'${released}'`, 'site.released');
-  text = replaceOnce(text, /(\bsize:\s*)'[^']*'/, `$1'${sizeLabel}'`, 'site.size');
-  text = replaceOnce(text, /(\bsha256:\s*)'[^']*'/, `$1'${sha256}'`, 'site.sha256');
+  let text = replaceOnce(raw, /(\bconst repo = )'[^']*'/, `$1'https://github.com/${repo}'`, 'site repo');
+  text = replaceOnce(text, /(\bversion:\s*)'[^']*'/, `$1'${version}'`, 'site published.version');
+  text = replaceOnce(text, /(\breleased:\s*)'[^']*'/, `$1'${released}'`, 'site published.released');
+  text = replaceOnce(text, /(\bsize:\s*)'[^']*'/, `$1'${sizeLabel}'`, 'site published.size');
+  text = replaceOnce(text, /(\bsha256:\s*)'[^']*'/, `$1'${sha256}'`, 'site published.sha256');
   return text;
 }
 
-function createDraft({ version, repo, notes, asset, manifestPath }) {
+function assertGhAuth() {
   const auth = spawnSync('gh', ['auth', 'status'], { stdio: 'ignore' });
   if (auth.error) fail(`gh: ${auth.error.message}`);
   if (auth.status !== 0) fail('gh is not authenticated; run `gh auth login`');
+}
 
-  const tag = `v${version}`;
+// 'missing', 'draft' or 'published'. Any other answer stops the release: a
+// state that cannot be read is not a go-ahead.
+function releaseState(repo, tag) {
   const view = spawnSync('gh', ['release', 'view', tag, '-R', repo, '--json', 'isDraft'], {
     encoding: 'utf8',
   });
   if (view.error) fail(`gh: ${view.error.message}`);
+  if (view.status !== 0) {
+    if (/not found|404/i.test(view.stderr || '')) return 'missing';
+    fail(`gh release view ${tag} failed: ${(view.stderr || '').trim()}`);
+  }
+  let isDraft;
+  try {
+    ({ isDraft } = JSON.parse(view.stdout));
+  } catch {
+    // Rejected below.
+  }
+  if (typeof isDraft !== 'boolean') fail(`gh release view ${tag}: unexpected output ${view.stdout.trim()}`);
+  return isDraft ? 'draft' : 'published';
+}
 
-  if (view.status === 0) {
-    let isDraft = false;
-    try {
-      isDraft = JSON.parse(view.stdout).isDraft;
-    } catch {
-      // Fall through to the published-release error.
-    }
-    if (!isDraft) fail(`Release ${tag} already exists and is published`);
+function createDraft({ version, repo, notes, assets }) {
+  const tag = `v${version}`;
+  const state = releaseState(repo, tag);
+  if (state === 'published') fail(`Release ${tag} already exists and is published`);
+  if (state === 'draft') {
     console.log(`Draft ${tag} already exists; replacing its assets.`);
     run('gh', ['release', 'edit', tag, '-R', repo, '--title', `${tag} (alpha)`, '--notes', notes]);
-    run('gh', ['release', 'upload', tag, asset, manifestPath, '--clobber', '-R', repo]);
+    run('gh', ['release', 'upload', tag, ...assets, '--clobber', '-R', repo]);
   } else {
-    if (!/not found|404/i.test(view.stderr || '')) {
-      fail(`gh release view ${tag} failed: ${(view.stderr || '').trim()}`);
-    }
     run('gh', [
       'release',
       'create',
       tag,
-      asset,
-      manifestPath,
+      ...assets,
       '-R',
       repo,
       '--draft',

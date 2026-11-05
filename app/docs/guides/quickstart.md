@@ -14,11 +14,25 @@
 ```sh
 pnpm install
 adb reverse tcp:8081 tcp:8081
-pnpm android:full      # default: full automation flavor
-# pnpm android:play    # no accessibility host / PCE
+pnpm android:full      # default: full phone control + self-update
+# pnpm android:lite    # no phone control; GitHub self-update
+# pnpm android:play    # no phone control; Play-managed updates
 ```
 
-`expo run:android` builds and installs the APK. JS/asset-only changes reload
+Channels are Gradle product flavors; `pnpm android:<channel>` re-applies the
+config plugins with `--no-clean` (seconds; Expo CLI 57 would otherwise
+regenerate `app/android`) and builds the `<channel>Debug` variant, so
+switching channels is one command and compiled outputs are reused. Add
+`--clean` to start from scratch.
+
+`pnpm android:<channel>` installs a debug-signed **PhoneCanDo Lite Dev** or
+**PhoneCanDo Full Dev** (`com.phonecando.app.<channel>.dev`), separate from
+each other and from the release `com.phonecando.app`, so all three can live
+on the phone. Debug builds show the update pitch but refuse the install: the
+release APK is another package (`com.phonecando.app`), so it would install
+beside the dev app, never update it. An adb install also never gets the
+restricted-settings lock (it follows the installer's package source, not
+debuggability), so those two flows are release-build tests. JS/asset-only changes reload
 from Metro; native module, manifest or dependency changes need another
 `pnpm android:full`.
 
@@ -32,8 +46,10 @@ from Metro; native module, manifest or dependency changes need another
 
 ## Checks
 
+From `app/` (`./manage check` runs both from the repo root):
+
 ```sh
-pnpm typecheck
+npx tsc --noEmit
 pnpm check:vectors
 ```
 

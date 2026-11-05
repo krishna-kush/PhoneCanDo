@@ -57,6 +57,12 @@ class PhoneCanDoRunnerModule : Module() {
 
     OnCreate {
       instance = this@PhoneCanDoRunnerModule
+      // App start clears the "PhoneCanDo updated" notice. Every way back
+      // after a self-update (the installer's Open, the launcher, the notice)
+      // cold-starts the new build, and this hook runs once per start, before
+      // any screen and without depending on UI code; a per-resume hook would
+      // repeat it for nothing.
+      appContext.reactContext?.let { PackageReplacedReceiver.clearNotice(it) }
     }
     OnDestroy {
       if (instance === this@PhoneCanDoRunnerModule) instance = null
@@ -66,8 +72,11 @@ class PhoneCanDoRunnerModule : Module() {
       appFilesDir().absolutePath
     }
 
+    // This module's own direct-start child (startServe) or the engine the
+    // foreground service runs. The updater stops the engine before a
+    // self-update and polls this until serve has exited.
     Function("isServeRunning") {
-      checkServeProcess()
+      checkServeProcess() || PhoneCanDoServeService.isServeAlive()
     }
 
     Function("startServe") { params: Map<String, Any> ->
@@ -212,18 +221,21 @@ class PhoneCanDoRunnerModule : Module() {
       "requested"
     }
 
-    // Build flavor flag (PHONECANDO_AUTOMATION=play|full at prebuild time, baked in
-    // as manifest meta-data by withAutomationFlag.js): "play" builds compile
-    // the automation driver out. Absent meta-data (Expo Go / pre-flag
-    // installs) means full — dev default.
-    Function("isAutomationBuild") {
+    // Build channel: the Gradle flavor (full|lite|play) writes it into the
+    // manifest meta-data com.phonecando.channel (withBuildChannel.js), and the
+    // serve service passes it to the engine as PHONECANDO_CHANNEL. Only full
+    // compiles the accessibility driver and PCE. Absent meta-data (Expo Go /
+    // pre-channel installs) means full — dev default.
+    Function("getBuildChannel") {
       try {
         val context = appContext.reactContext ?: return@Function "full"
         val ai = context.packageManager.getApplicationInfo(
           context.packageName,
           android.content.pm.PackageManager.GET_META_DATA,
         )
-        ai.metaData?.getString("com.phonecando.automation") ?: "full"
+        ai.metaData?.getString("com.phonecando.channel")
+          ?: ai.metaData?.getString("com.phonecando.automation")
+          ?: "full"
       } catch (_: Exception) {
         "full"
       }
@@ -233,12 +245,14 @@ class PhoneCanDoRunnerModule : Module() {
     // the app process). The Settings screen flips it after biometric auth;
     // the agent process has no way to flip it.
     Function("setAutomationEnabled") { enabled: Boolean ->
-      AutomationGate.enabled = enabled
-      enabled
+      AutomationHosts.install()
+      AutomationHosts.current?.setEnabled(enabled)
+      AutomationHosts.current?.enabled == true
     }
 
     Function("isAutomationEnabled") {
-      AutomationGate.enabled
+      AutomationHosts.install()
+      AutomationHosts.current?.enabled == true
     }
 
     // One-shot tab requested by the bridge's /app route. Read-and-clear so a
@@ -289,22 +303,100 @@ class PhoneCanDoRunnerModule : Module() {
     }
 
     // Resolve the bridge's waiting /accessibility request after the user
-    // confirms (or cancels) the in-chat prompt. The app is the only caller.
-    Function("resolveAccessibility") { ok: Boolean ->
-      BridgeServer.resolveAccessibility(ok)
+    // confirms (or cancels) the in-chat prompt. `guided`: the app is running
+    // its restricted-settings guide, so the bridge answers at once instead of
+    // waiting for a service that cannot connect yet. The app is the only caller.
+    Function("resolveAccessibility") { ok: Boolean, guided: Boolean ->
+      BridgeServer.resolveAccessibility(ok, guided)
       ok
     }
 
     // True while the user has PhoneCanDo enabled in Android accessibility settings
     // (full builds only; play builds have no PCE host and stay false).
     Function("isUiAutomationConnected") {
-      PceAuto.service != null
+      AutomationHosts.install()
+      AutomationHosts.current?.connected == true
     }
 
+    // True when PhoneCanDo is listed in Android's enabled accessibility
+    // services (set by the switch, before the service binds). Lite/play
+    // builds have no service and stay false.
+    Function("isAccessibilityServiceEnabled") {
+      val context = appContext.reactContext ?: return@Function false
+      RestrictedSettings.isServiceEnabled(context)
+    }
+
+    // The service ran on this install, which proves the lock was cleared.
+    Function("hasAccessibilityConnectedBefore") {
+      val context = appContext.reactContext ?: return@Function false
+      RestrictedSettings.everConnected(context)
+    }
+
+    // Whether Android lets PhoneCanDo install APKs ("Install unknown apps"
+    // for this app). The updater checks it before the installer screen, so
+    // the app explains the switch itself instead of Android's prompt landing
+    // on top of the app's own.
+    Function("canRequestPackageInstalls") {
+      val context = appContext.reactContext ?: return@Function true
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@Function true
+      try {
+        context.packageManager.canRequestPackageInstalls()
+      } catch (_: Throwable) {
+        true
+      }
+    }
+
+    // updates.ts calls this right before it hands the APK to Android's
+    // installer, so PackageReplacedReceiver in the new build knows the update
+    // is PhoneCanDo's own; Play, adb and dev reinstalls leave no mark.
+    Function("markSelfUpdatePending") {
+      val context = appContext.reactContext ?: return@Function false
+      PackageReplacedReceiver.markPending(context)
+    }
+
+    // Android 14+: PhoneCanDo can show Android's "Restricted setting" note
+    // itself (RestrictedSettings.kt). False on Android 13 or when the OEM
+    // guards that activity; the guide then sends the user to the switch.
+    Function("canShowRestrictedSettingNote") {
+      val context = appContext.reactContext ?: return@Function false
+      RestrictedSettings.canShowNote(context)
+    }
+
+    // Shows Android's "Restricted setting" note over the app. "opened" | "failed".
+    Function("showRestrictedSettingNote") {
+      val context = appContext.reactContext ?: return@Function "failed"
+      RestrictedSettings.showNote(context)
+    }
+
+    // Opens this app's App info page (the ⋮ menu there holds "Allow
+    // restricted settings" once Android has shown its note).
+    Function("openAppInfoSettings") {
+      val context = appContext.reactContext ?: return@Function "failed"
+      try {
+        context.startActivity(
+          Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            .setData(android.net.Uri.parse("package:${context.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        "opened"
+      } catch (_: Throwable) {
+        "failed"
+      }
+    }
+
+    // Opens the Accessibility list scrolled to and highlighting our service
+    // (the Settings app honours these fragment-args extras on AOSP-based
+    // builds; others ignore them and show the plain list).
     Function("openAccessibilitySettings") {
       val context = appContext.reactContext ?: throw Exception("no react context")
+      val component = android.content.ComponentName(
+        context.packageName, RestrictedSettings.SERVICE_CLASS,
+      ).flattenToString()
+      val args = android.os.Bundle().apply { putString(":settings:fragment_args_key", component) }
       context.startActivity(
         Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+          .putExtra(":settings:fragment_args_key", component)
+          .putExtra(":settings:show_fragment_args", args)
           .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
       )
       "opened"
@@ -315,6 +407,7 @@ class PhoneCanDoRunnerModule : Module() {
       context.getSharedPreferences(PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE)
         .getString(PhoneCanDoServeService.KEY_PORT, "") ?: ""
     }
+
 
     // v2 serve is auth-first: every REST/SSE call needs HTTP Basic with the
     // install-stable server password (generated once by the service, handed

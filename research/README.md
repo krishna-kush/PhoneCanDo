@@ -10,3 +10,7 @@ the various docs (`docs/`, `app/docs/`) or the code, and only unresolved
 background stays here. A thin folder is expected, not a gap.
 
 - `open-questions.md` — scope questions that are not scheduled.
+- `restricted-settings.md` — what the app can and cannot know about
+  Android's accessibility lock (AOSP 13–16 evidence), how the two-step guide
+  uses it, the on-device checks still owed, and the session install that was
+  tried and removed.

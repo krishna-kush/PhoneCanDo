@@ -29,6 +29,38 @@ import { site } from "../../data/site";
         </p>
     </details>
     <details>
+        <summary>Why a starter build and then a full build?</summary>
+        <p>
+            Play Protect blocks any app downloaded through a browser,
+            messaging app or file manager that declares an accessibility
+            service (“App blocked to protect your device”, no install
+            anyway). The full build declares one; the starter build does
+            not, so it installs. The starter build then downloads the
+            full build and hands it to Android's installer, which Play
+            Protect allows. Both are signed with the same key, so your
+            data is kept.
+        </p>
+        <p>
+            “App blocked to protect your device” on the starter build, or
+            “App not installed”? Uninstall any older or debug PhoneCanDo
+            build first (different signing key), and check the APK is
+            {site.size}, {site.arch} and matches the SHA-256 above. With a
+            computer, <code>adb install</code> of the full APK skips the
+            block entirely.
+        </p>
+    </details>
+    <details>
+        <summary>The accessibility toggle says “denied access”.</summary>
+        <p>
+            Android 13+ locks that toggle for apps installed outside a
+            store. PhoneCanDo walks you through it in Settings → Phone
+            control: Android shows its “Restricted setting” note (tap OK),
+            then App info → ⋮ (top right) → <strong>Allow restricted
+            settings</strong>, then the toggle. The ⋮ item only appears
+            after that note, so do the steps in order.
+        </p>
+    </details>
+    <details>
         <summary>Do I need a computer?</summary>
         <p>
             No. Setup, the agent, the terminal and the model keys

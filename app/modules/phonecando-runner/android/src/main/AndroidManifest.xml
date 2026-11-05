@@ -6,6 +6,12 @@
       <action android:name="android.intent.action.MAIN" />
       <category android:name="android.intent.category.LAUNCHER" />
     </intent>
+    <!-- Android 14+: the Settings activity behind the "Restricted setting"
+         note, resolved before the guide offers to show it
+         (RestrictedSettings.kt). -->
+    <intent>
+      <action android:name="android.settings.SHOW_RESTRICTED_SETTING_DIALOG" />
+    </intent>
   </queries>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
@@ -18,5 +24,14 @@
       android:name="com.phonecando.runner.PhoneCanDoServeService"
       android:exported="false"
       android:foregroundServiceType="dataSync" />
+    <!-- Bring the app back after a self-update (system broadcast; the new
+         build receives it). -->
+    <receiver
+      android:name="com.phonecando.runner.PackageReplacedReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>

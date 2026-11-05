@@ -36,7 +36,7 @@ through `@fontsource`, so there is still no external JS or CDN request. The eigh
 
 | What | File |
 |---|---|
-| Version, APK URL, size, SHA-256, repo links | `src/data/site.ts` |
+| Release facts (date, size, SHA-256), repo links; version and APK URLs derive from `app/app.json` | `src/data/site.ts` |
 | Demo gallery cards + video paths | `src/data/demos.ts` |
 | Colours, type, spacing | `src/styles/global.css` |
 | Section copy | `src/components/sections/*.astro` |
@@ -82,7 +82,8 @@ canonical URL and OG tags are absolute.
 
 ## Left to fill
 
-- `src/data/site.ts`: repo URL, direct APK asset URL, build date, SHA-256.
+- `src/data/site.ts`: repo URL; `./manage release` fills the `published`
+  block (version, date, size, SHA-256). APK URLs derive from the app version.
 - `astro.config.mjs`: real domain (currently `https://phonecando.app`).
 - `public/og.png` is generated from the design — regenerate if the headline
   changes.

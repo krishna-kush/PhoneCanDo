@@ -1,4 +1,6 @@
 ---
+import Slate from "../Slate.astro";
+import LogoLoader from "../LogoLoader.astro";
 import { site } from "../../data/site";
 ---
 
@@ -11,9 +13,9 @@ import { site } from "../../data/site";
         <div class="sec-body">
             <h2>Get it on the phone.</h2>
             <p class="lead">
-                Alpha, sideloaded, signed. No store review, no
-                account. You will need <em>2 GB free</em> and a few
-                minutes for the first-launch setup.
+                Two installs and a switch, all on the phone. No store,
+                no account. Bring <em>2 GB free</em> and one coffee for
+                the first launch.
             </p>
         </div>
     </div>
@@ -43,7 +45,7 @@ import { site } from "../../data/site";
                 </div>
                 <div>
                     <dt>Download</dt>
-                    <dd>{site.size}</dd>
+                    <dd>{site.size} · starter build</dd>
                 </div>
                 <div>
                     <dt>SHA-256</dt>
@@ -59,40 +61,115 @@ import { site } from "../../data/site";
                 FM-01 · A-01 · v{site.version} · {site.arch}
             </p>
         </div>
-        <div>
-            <a class="btn btn-primary" href={site.apk}>
-                Download APK · v{site.version}
+
+        <div class="install-steps">
+            <!-- Computer: full APK first (adb skips Play Protect). Phone:
+                 the full button hides and the starter becomes primary. -->
+            <a class="btn btn-primary install-full" href={site.fullApk}>
+                Full APK for adb · v{site.version}
+            </a>
+            <a class="btn btn-ghost install-starter" href={site.apk}>
+                Starter APK for the phone · v{site.version}
             </a>
             <ol class="steps">
                 <li>
                     <span>
-                        Download the APK and allow installs from
-                        your browser when Android asks.
+                        <b>Grab the starter.</b> Open it, tap Install.
+                        No superpowers yet, so Play Protect lets it in.
+                        First launch unpacks the brain: one coffee.
                     </span>
                 </li>
                 <li>
                     <span>
-                        Open it. Android will warn about an unknown
-                        app — that is the alpha build, not a store
-                        listing.
+                        <b>Give it hands.</b> Tap{" "}
+                        <em>Install full build</em> in the app and let
+                        PhoneCanDo install it. It moves in over the
+                        starter and keeps your stuff.
                     </span>
                 </li>
                 <li>
                     <span>
-                        First launch sets up the on-device runtime.
-                        Keep the app open, plug in, and grab a
-                        coffee.
+                        <b>Flip the switch.</b> Settings → Phone control
+                        walks you through Android's safety lock in
+                        three taps. Your fingerprint stays the final
+                        key.
                     </span>
                 </li>
             </ol>
-            <p class="cmd">
-                adb install -r phonecando-{site.version}-arm64.apk
-            </p>
             <p class="note">
-                Arm64 only · Android {site.minAndroid}+ ·
-                sideloading required
+                Why two installs? Play Protect blocks any browser
+                download that can drive the screen. The starter
+                can't, so it gets in, then fetches the full build
+                itself, which Android allows. Silly. Tested. Works.
+            </p>
+            <p class="note install-pc-only">
+                On a computer? Skip the dance:
+            </p>
+            <div class="cmd-wrap install-pc-only">
+                <p class="cmd cmd-lines" data-cmd>
+                    <span>curl -LO {site.fullApk}</span>
+                    <span>adb install -r {site.fullApkFile}</span>
+                </p>
+                <button class="cmd-copy" type="button" data-copy aria-label="Copy both commands">
+                    Copy
+                </button>
+            </div>
+        </div>
+
+        <div class="install-media">
+            <!-- Real screen recording of the three steps, never a mock. -->
+            <div class="install-frame" data-media>
+                {site.install.video ? (
+                    <video
+                        src={site.install.video}
+                        poster={site.install.poster}
+                        autoplay
+                        muted
+                        loop
+                        playsinline
+                        aria-label="Installing PhoneCanDo: starter, full build, accessibility switch"
+                    />
+                ) : (
+                    <Slate slot="04" label="Install walkthrough · recording" />
+                )}
+                {site.install.video ? (
+                    <div class="media-loader">
+                        <LogoLoader size={26} />
+                    </div>
+                ) : null}
+            </div>
+            <p class="install-media-cap">
+                Starter → full → switch · 0:40
             </p>
         </div>
     </div>
     <span class="ticks-bottom" aria-hidden="true"></span>
 </section>
+
+<script>
+    // Copies the commands, one per line and without the "$ " prompts, then
+    // says so on the button for a moment.
+    for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+        button.addEventListener("click", async () => {
+            const box = button.parentElement?.querySelector("[data-cmd]");
+            if (!box) return;
+            const text = Array.from(box.querySelectorAll("span"))
+                .map((line) => line.textContent?.trim() ?? "")
+                .join("\n");
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch {
+                // No clipboard API (insecure context, old browser): select
+                // the lines so a manual copy picks them up.
+                const range = document.createRange();
+                range.selectNodeContents(box);
+                const selection = window.getSelection();
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+                return;
+            }
+            button.textContent = "Copied";
+            window.setTimeout(() => (button.textContent = "Copy"), 1500);
+        });
+    }
+</script>

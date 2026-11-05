@@ -75,7 +75,7 @@ rename only with a native rebuild.
 | Area | Path | Docs |
 |---|---|---|
 | Root shell | `app/App.tsx`, `app/index.ts` | this page |
-| Feature screens | `app/src/ui/{chat,terminal,env,settings,common}/` | `../../app/docs/modules/chat.md`, `../../app/docs/modules/terminal.md` |
+| Feature screens | `app/src/ui/{chat,terminal,env,settings,accessibility,common}/` | `../../app/docs/modules/chat.md`, `../../app/docs/modules/terminal.md` |
 | State | `app/src/state/` | this page |
 | Engine seam | `app/src/engine/` | `../../app/docs/modules/runner.md` |
 | Native modules | `app/modules/{phonecando-terminal,phonecando-runner}/` | `../../app/docs/modules/terminal.md`, `../../app/docs/modules/runner.md` |

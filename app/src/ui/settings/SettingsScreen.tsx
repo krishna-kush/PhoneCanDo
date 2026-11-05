@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
+import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
-import * as LocalAuthentication from 'expo-local-authentication';
 import { useAppStore, type ThemeMode } from '../../state/app';
 import * as runner from '../../engine/runner';
 import { installedVersion } from '../../engine/updates';
@@ -13,6 +11,7 @@ import SectionTitle from '../common/SectionTitle';
 import LogoMark from '../common/LogoMark';
 import ThumbIcon from '../common/ThumbIcon';
 import { TUI, useScheme } from '../common/globals';
+import PhoneControlSection from './PhoneControlSection';
 
 const runnerAvailable = runner.isRunnerAvailable();
 const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark'];
@@ -25,54 +24,30 @@ export default function SettingsScreen() {
   const scheme = useScheme();
   const [engineStatus, setEngineStatus] = useState('unknown');
   const [engineLog, setEngineLog] = useState('');
-  const [unlocked, setUnlocked] = useState(false);
-  const [uiConnected, setUiConnected] = useState(false);
-  const [trustMsg, setTrustMsg] = useState('');
   const enginePort = useAppStore((s) => s.enginePort);
-  const footerTab = useAppStore((s) => s.footerTab);
+
   const themeMode = useAppStore((s) => s.themeMode);
   const setThemeMode = useAppStore((s) => s.setThemeMode);
   const resetWorkspace = useAppStore((s) => s.resetWorkspace);
+  const requestUpdatePrompt = useAppStore((s) => s.requestUpdatePrompt);
+  const updatePromptMuted = useAppStore((s) => s.updatePromptMuted);
+  const setUpdatePromptMuted = useAppStore((s) => s.setUpdatePromptMuted);
   const [confirmReset, setConfirmReset] = useState(false);
   const version = installedVersion();
-  // Build flavor (full ships the automation driver, play compiles it out).
-  // Sync native call; pre-flag installs and Expo Go read as full.
-  let automation = 'full';
+  // Build channel (only full ships the automation driver).
+  // Sync native call; pre-channel installs and Expo Go read as full.
+  let channel = 'full';
   try {
-    if (runnerAvailable) automation = runner.isAutomationBuild();
+    if (runnerAvailable) channel = runner.getBuildChannel();
   } catch {
     // native bridge absent
   }
-
-  useEffect(() => {
-    if (!runnerAvailable) return;
-    const sync = () => {
-      setUnlocked(runner.isAutomationEnabled());
-      setUiConnected(runner.isUiAutomationConnected());
-    };
-    sync();
-    // Users toggle the service in Android Settings, so re-read on return.
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') sync();
-    });
-    return () => sub.remove();
-  }, []);
-
-  // The in-chat unlock modal can flip the gate while Settings stays mounted;
-  // refresh when the tab becomes visible.
-  useEffect(() => {
-    if (!runnerAvailable || footerTab !== 'settings') return;
-    setUnlocked(runner.isAutomationEnabled());
-    setUiConnected(runner.isUiAutomationConnected());
-  }, [footerTab]);
 
   async function refresh() {
     if (!runnerAvailable) {
       setEngineStatus('native module unavailable');
       return;
     }
-    setUnlocked(runner.isAutomationEnabled());
-    setUiConnected(runner.isUiAutomationConnected());
     try {
       const health = runner.serveHealth(enginePort);
       setEngineStatus(health === 'ok' ? 'running (ok)' : `stopped (${health})`);
@@ -102,42 +77,67 @@ export default function SettingsScreen() {
     }
   }
 
-  async function togglePhoneControl() {
-    if (!runnerAvailable) return;
-    if (unlocked) {
-      runner.setAutomationEnabled(false);
-      setUnlocked(false);
-      setTrustMsg('Phone control locked.');
-      return;
-    }
-    try {
-      const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock phone control',
-        cancelLabel: 'Cancel',
-      });
-      if (!res.success) {
-        setTrustMsg('Not unlocked.');
-        return;
-      }
-      const ok = runner.setAutomationEnabled(true);
-      setUnlocked(ok);
-      setUiConnected(runner.isUiAutomationConnected());
-      setTrustMsg(ok ? 'Unlocked until you lock it or PhoneCanDo restarts.' : 'This install has no phone-control driver; rebuild the app.');
-    } catch (e) {
-      setTrustMsg(`Biometric error: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
   return (
     <Screen>
       <SectionTitle>About</SectionTitle>
       <AppCard
         title="PhoneCanDo on-device agent"
-        subtitle={`v${version.version} (${version.versionCode}) · theme ${scheme} · automation ${automation}`}
+        subtitle={`v${version.version} (${version.versionCode}) · theme ${scheme} · channel ${channel}`}
         chevron={false}
         icon={<LogoMark size={36} />}
         plate={false}
       />
+
+      {/* Lite has no phone control; saying so belongs next to what the build is. */}
+      {channel === 'lite' ? <PhoneControlSection channel={channel} /> : null}
+
+      <SectionTitle>Update</SectionTitle>
+      {channel === 'lite' ? (
+        <>
+          <AppCard
+            title="Starter build: a brain in a jar"
+            subtitle="Chat and terminal only. No eyes, no hands."
+            chevron={false}
+            icon={<Thumb up={false} />}
+          />
+          <Text fontSize={14} color="$color10">
+            Right now the agent can think but not act. It cannot see your screen, tap a button or
+            type a word, so every "open WhatsApp and reply" ends in a polite shrug. The full build
+            fixes that in one tap: it installs over this one, keeps your data, and gives the agent
+            eyes and hands behind your fingerprint.
+          </Text>
+          <AppButton onPress={requestUpdatePrompt}>Install the full build</AppButton>
+          <AppButton
+            variant="secondary"
+            onPress={() => void setUpdatePromptMuted(!updatePromptMuted)}
+          >
+            {updatePromptMuted ? 'Ask again on launch' : "Don't ask on launch"}
+          </AppButton>
+          <Text fontSize={13} color="$color10">
+            {updatePromptMuted
+              ? 'The full-build offer stays quiet at launch. This button brings it back.'
+              : 'The full-build offer opens every launch until you install it or silence it here.'}
+          </Text>
+        </>
+      ) : (
+        <>
+          <AppCard
+            title={channel === 'play' ? 'Updates come through Play' : 'Full build'}
+            subtitle={
+              channel === 'play'
+                ? `v${version.version} · Play keeps it current`
+                : `v${version.version} · checks GitHub on launch`
+            }
+            chevron={false}
+            icon={<Thumb up />}
+          />
+          {channel !== 'play' ? (
+            <AppButton variant="secondary" onPress={requestUpdatePrompt}>
+              Check for updates
+            </AppButton>
+          ) : null}
+        </>
+      )}
 
       <SectionTitle>Appearance</SectionTitle>
       <XStack gap="$2">
@@ -154,46 +154,7 @@ export default function SettingsScreen() {
         ))}
       </XStack>
 
-      <SectionTitle>Phone control</SectionTitle>
-      {automation === 'play' ? (
-        <Text fontSize={14} color="$color10">
-          This Play build has no screen automation. Notifications, clipboard, and opening links still work.
-        </Text>
-      ) : (
-        <>
-          <AppCard
-            title={unlocked ? 'Unlocked' : 'Locked'}
-            subtitle={
-              unlocked
-                ? 'The agent can act on the phone until you lock it or PhoneCanDo restarts.'
-                : 'Biometric unlock is required before the agent can act on the phone.'
-            }
-            chevron={false}
-            icon={<Thumb up={unlocked} />}
-          />
-          <AppCard
-            title={uiConnected ? 'Accessibility service: on' : 'Accessibility service: off'}
-            subtitle="Android Settings → Accessibility → PhoneCanDo"
-            chevron={false}
-            icon={<Thumb up={uiConnected} />}
-          />
-          <AppButton onPress={togglePhoneControl}>
-            {unlocked ? 'Lock phone control' : 'Unlock with biometrics'}
-          </AppButton>
-          <AppButton variant="secondary" onPress={() => runner.openAccessibilitySettings()}>
-            Open accessibility settings
-          </AppButton>
-          {trustMsg ? (
-            <Text fontSize={13} color="$color10">
-              {trustMsg}
-            </Text>
-          ) : null}
-          <Text fontSize={14} color="$color10">
-            Uses Android's Accessibility API to read the screen and tap, type, scroll, notify,
-            and use the clipboard. Off by default; the agent cannot unlock it.
-          </Text>
-        </>
-      )}
+      {channel !== 'lite' ? <PhoneControlSection channel={channel} /> : null}
 
       <SectionTitle>Engine (on-device serve)</SectionTitle>
       <AppCard

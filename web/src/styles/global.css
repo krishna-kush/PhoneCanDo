@@ -1742,7 +1742,7 @@ h1 em { font-style: italic; color: var(--red); }
 /* ---------- install ---------- */
 .install {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 0.8fr);
   gap: 1px;
   background: var(--line);
   border: 1px solid var(--line);
@@ -1782,6 +1782,46 @@ h1 em { font-style: italic; color: var(--red); }
 .rows dd { margin: 0; font: 400 12px/1.5 var(--mono); color: var(--fg); overflow-wrap: anywhere; }
 .rows dd.dim { color: var(--dim); }
 .install .btn { width: 100%; margin-bottom: 22px; }
+.install .btn.install-starter { margin-top: -12px; }
+/* Phones only get the starter, as the primary button; the full APK is for
+   adb from a computer. */
+@media (hover: none) and (pointer: coarse) {
+  .install .install-full,
+  .install .install-pc-only { display: none; }
+  .install .btn.install-starter {
+    margin-top: 0;
+    background: var(--red);
+    border-color: var(--red);
+    color: var(--on-primary);
+  }
+  .install .btn.install-starter:hover { background: var(--red-hi); border-color: var(--red-hi); }
+}
+.steps li em { font-style: normal; color: var(--fg); font-weight: 500; }
+.install-media {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--art-bg);
+}
+.install-frame {
+  position: relative;
+  height: 420px;
+  aspect-ratio: 9 / 19.5;
+  max-width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  background: var(--art-bg);
+}
+.install-frame video { width: 100%; height: 100%; object-fit: cover; }
+.install-media-cap {
+  font: 500 8px/1.4 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--art-dim);
+}
 .steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
 .steps li {
   counter-increment: s;
@@ -1819,6 +1859,32 @@ h1 em { font-style: italic; color: var(--red); }
   white-space: nowrap;
 }
 .cmd::before { content: '$ '; color: var(--red); }
+/* Several commands in one box: one per line, each with its own prompt, and
+   no visible scrollbar (a long line still scrolls by swipe or trackpad). */
+.cmd.cmd-lines { scrollbar-width: none; }
+.cmd.cmd-lines::-webkit-scrollbar { display: none; }
+.cmd.cmd-lines::before { content: none; }
+.cmd.cmd-lines span { display: block; }
+.cmd.cmd-lines span::before { content: '$ '; color: var(--red); }
+/* The copy button sits outside the scrolling box, so it stays put in the top
+   right while a long line scrolls under it. */
+.cmd-wrap { position: relative; margin-top: 14px; }
+.cmd-wrap .cmd { margin-top: 0; padding-right: 64px; }
+.cmd-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--panel);
+  font: 500 9px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.cmd-copy:hover { color: var(--fg); border-color: var(--fg); }
 .note {
   margin-top: 14px;
   font: 400 10px/1.7 var(--mono);
@@ -1850,8 +1916,13 @@ h1 em { font-style: italic; color: var(--red); }
   color: var(--faint);
 }
 
+@media (max-width: 1180px) {
+  .install { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .install-media { grid-column: 1 / -1; }
+}
 @media (max-width: 980px) {
-  .install { grid-template-columns: 1fr; }
+  .install { grid-template-columns: minmax(0, 1fr); }
+  .install-media { grid-column: auto; }
 }
 @media (max-width: 760px) {
   .rows div { grid-template-columns: 104px minmax(0, 1fr); }

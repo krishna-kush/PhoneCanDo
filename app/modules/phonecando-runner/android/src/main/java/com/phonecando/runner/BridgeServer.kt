@@ -20,6 +20,7 @@ import org.json.JSONObject
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicReference
 
 // Loopback bridge for the agent's mobile_* tools: opencode serve is a separate
 // process, so a local socket is the only shared channel. NanoHTTPD is bound to
@@ -63,6 +64,11 @@ class BridgeServer private constructor(
     }
     val (status, payload) = try {
       route(method, session.uri, body)
+    } catch (_: AutomationUnavailableException) {
+      // The service disconnected between the connected check and the call:
+      // the same 503 as a service that was never on, so the agent recovers
+      // through mobile_open_accessibility instead of seeing a 500.
+      automationUnavailable()
     } catch (e: Exception) {
       Log.w(TAG, "$method ${session.uri} failed", e)
       Response.Status.INTERNAL_ERROR to errorJson("internal", e.message ?: "bridge failure")
@@ -74,30 +80,32 @@ class BridgeServer private constructor(
     if (method == "GET" && path == "/ping") return Response.Status.OK to okJson(ping())
     if (method == "GET" && path == "/battery") return Response.Status.OK to okJson(battery())
 
+    val host = automation()
+
+    // Lite/play have no accessibility host, so /pce/* does not exist there:
+    // 404 like /unlock and /accessibility, not a 503 asking the user to
+    // enable a service these builds do not have.
+    if (path.startsWith("/pce/") && !hasAutomation()) return notFound(path)
+
     // Master switch (full builds): every side-effecting call needs the user's
     // unlock. The switch is in-memory in the app process (biometric-gated), so
-    // a stale "on" cannot survive a restart. Play builds have no driver and no
-    // switch; their six basic tools stay available (Slice-1 behavior).
+    // a stale "on" cannot survive a restart. Lite/play have no driver and no
+    // switch; their basic tools stay available.
     if (path == "/notify" || path == "/share" || path == "/open" ||
       path == "/clipboard" || path.startsWith("/pce/")
     ) {
-      if (flavor() != "play" && !AutomationGate.enabled) {
+      if (hasAutomation() && host?.enabled != true) {
         return Response.Status.FORBIDDEN to errorJson(
           "automation_off", "phone control is locked; unlock it in PhoneCanDo settings",
         )
       }
-      if (path.startsWith("/pce/") && PceAuto.service == null) {
-        return Response.Status.SERVICE_UNAVAILABLE to errorJson(
-          "automation_unavailable", "enable PhoneCanDo in Android accessibility settings",
-        )
+      if (path.startsWith("/pce/") && host?.connected != true) {
+        return automationUnavailable()
       }
     }
 
     if (path.startsWith("/pce/")) {
-      val pce = PceAuto.service
-        ?: return Response.Status.SERVICE_UNAVAILABLE to errorJson(
-          "automation_unavailable", "enable PhoneCanDo in Android accessibility settings",
-        )
+      val pce = host ?: return automationUnavailable()
       if (method == "GET" && path == "/pce/describe") {
         return uiResult(pce.describe())
       }
@@ -133,8 +141,8 @@ class BridgeServer private constructor(
         "/share" -> share(o)
         "/open" -> open(o)
         "/app" -> app(o)
-        "/unlock" -> unlock(o)
-        "/accessibility" -> accessibility(o)
+        "/unlock" -> if (hasAutomation()) unlock(o) else notFound(path)
+        "/accessibility" -> if (hasAutomation()) accessibility(o) else notFound(path)
         else -> clipboard(o)
       }
     }
@@ -158,14 +166,15 @@ class BridgeServer private constructor(
   }
 
   private fun ping(): JSONObject = JSONObject()
-    .put("flavor", flavor())
+    .put("channel", buildChannel())
+    .put("flavor", buildChannel())
     .put("sdk", Build.VERSION.SDK_INT)
     .put("model", Build.MODEL)
-    .put("automation", flavor() != "play")
-    .put("unlocked", AutomationGate.enabled)
+    .put("automation", hasAutomation())
+    .put("unlocked", automation()?.enabled == true)
     // `ui` is kept as the compatibility alias used by the existing prompt.
-    .put("ui", PceAuto.service != null)
-    .put("pce", PceAuto.service != null)
+    .put("ui", automation()?.connected == true)
+    .put("pce", automation()?.connected == true)
 
   private fun battery(): JSONObject {
     val bm = context.getSystemService(BatteryManager::class.java)
@@ -282,7 +291,7 @@ class BridgeServer private constructor(
   // lets the agent continue in the same turn. The app is the only place the
   // gate can flip; the agent never sees or supplies a credential.
   private fun unlock(o: JSONObject): Pair<Response.Status, String> {
-    if (AutomationGate.enabled) {
+    if (automation()?.enabled == true) {
       return Response.Status.OK to okJson(
         JSONObject().put("requested", false).put("unlocked", true).put("notified", false),
       )
@@ -307,7 +316,7 @@ class BridgeServer private constructor(
     val waitMs = o.optLong("waitMs", 45_000).coerceIn(5_000, 90_000)
     val deadline = System.currentTimeMillis() + waitMs
     try {
-      while (!future.isDone && !AutomationGate.enabled && System.currentTimeMillis() < deadline) {
+      while (!future.isDone && automation()?.enabled != true && System.currentTimeMillis() < deadline) {
         Thread.sleep(100)
       }
     } catch (_: InterruptedException) {
@@ -316,25 +325,35 @@ class BridgeServer private constructor(
       if (pendingUnlock === future) pendingUnlock = null
       prefs.edit().remove(PhoneCanDoServeService.KEY_PENDING_UNLOCK).apply()
     }
-    val unlocked = AutomationGate.enabled || future.getNow(false)
+    val unlocked = automation()?.enabled == true || future.getNow(false)
     return Response.Status.OK to okJson(
       JSONObject().put("requested", true).put("unlocked", unlocked).put("notified", notified),
     )
   }
 
-  // Ask the app to show an in-chat confirmation before opening Android's
-  // Accessibility settings. The app opens the system screen only after the
-  // user confirms, then the bridge waits for the PhoneCanDo service to connect.
-  // The user must flip the system toggle; the agent cannot. Safe to call while
-  // phone control is locked.
+  // Ask the app to show its accessibility dialog over the chat, then wait for
+  // PhoneCanDo's service to connect, so the agent carries on by itself once
+  // the user has switched it on; the guide's three steps fit in the default
+  // wait. Ends early when the user taps "Not now". The user must flip the
+  // system toggle; the agent cannot. Safe to call while phone control is
+  // locked. `restricted` is "sideload" when the user went through the app's
+  // restricted-settings guide, otherwise the native best guess
+  // (RestrictedSettings.state). The wait stays under five minutes, where
+  // common HTTP clients give up on a response. A newer request takes over
+  // the dialog and ends this wait at once with `superseded`.
   private fun accessibility(o: JSONObject): Pair<Response.Status, String> {
-    if (PceAuto.service != null) {
+    if (automation()?.connected == true) {
       return Response.Status.OK to okJson(
-        JSONObject().put("opened", false).put("enabled", true).put("notified", false),
+        JSONObject().put("opened", false).put("enabled", true).put("cancelled", false)
+          .put("superseded", false).put("notified", false)
+          .put("restricted", RestrictedSettings.NONE),
       )
     }
-    val future = CompletableFuture<Boolean>()
-    pendingAccessibility = future
+    val wait = AccessibilityWait()
+    // The dialog now reports to this request, so the older one could never
+    // see "Not now": end its wait, as superseded rather than as the user's
+    // cancel.
+    pendingAccessibility.getAndSet(wait)?.superseded = true
     val prefs = context.getSharedPreferences(PhoneCanDoServeService.PREFS, Context.MODE_PRIVATE)
     prefs.edit()
       .putString(PhoneCanDoServeService.KEY_PENDING_TAB, "home")
@@ -351,38 +370,37 @@ class BridgeServer private constructor(
       } else false
     } else false
     try {
-      val decisionMs = o.optLong("waitMs", 20_000).coerceIn(5_000, 60_000)
-      val decisionDeadline = System.currentTimeMillis() + decisionMs
+      val waitMs = o.optLong("waitMs", 240_000).coerceIn(30_000, 280_000)
+      val deadline = System.currentTimeMillis() + waitMs
       try {
-        while (!future.isDone && System.currentTimeMillis() < decisionDeadline) {
-          Thread.sleep(100)
+        while (automation()?.connected != true && !wait.cancelled && !wait.superseded &&
+          System.currentTimeMillis() < deadline
+        ) {
+          Thread.sleep(250)
         }
       } catch (_: InterruptedException) {
         Thread.currentThread().interrupt()
       }
-      if (!future.getNow(false)) {
-        return Response.Status.OK to okJson(
-          JSONObject().put("opened", false).put("enabled", false).put("notified", notified),
-        )
-      }
-      val enableMs = o.optLong("enableMs", 40_000).coerceIn(10_000, 90_000)
-      val enableDeadline = System.currentTimeMillis() + enableMs
-      try {
-        while (PceAuto.service == null && System.currentTimeMillis() < enableDeadline) {
-          Thread.sleep(200)
-        }
-      } catch (_: InterruptedException) {
-        Thread.currentThread().interrupt()
+      val enabled = automation()?.connected == true
+      val restricted = when {
+        wait.guided -> RestrictedSettings.SIDELOAD
+        enabled -> RestrictedSettings.NONE
+        else -> RestrictedSettings.state(context)
       }
       return Response.Status.OK to okJson(
         JSONObject()
-          .put("opened", true)
-          .put("enabled", PceAuto.service != null)
-          .put("notified", notified),
+          .put("opened", wait.opened)
+          .put("enabled", enabled)
+          .put("cancelled", !enabled && wait.cancelled)
+          .put("superseded", !enabled && wait.superseded)
+          .put("notified", notified)
+          .put("restricted", restricted),
       )
     } finally {
-      if (pendingAccessibility === future) pendingAccessibility = null
-      prefs.edit().remove(PhoneCanDoServeService.KEY_PENDING_ACCESSIBILITY).apply()
+      // A newer request may have taken over; leave its pending state alone.
+      if (pendingAccessibility.compareAndSet(wait, null)) {
+        prefs.edit().remove(PhoneCanDoServeService.KEY_PENDING_ACCESSIBILITY).apply()
+      }
     }
   }
 
@@ -449,15 +467,32 @@ class BridgeServer private constructor(
     }
   }
 
-  private fun flavor(): String = try {
+  private fun buildChannel(): String = try {
     val ai = context.packageManager.getApplicationInfo(
       context.packageName,
       android.content.pm.PackageManager.GET_META_DATA,
     )
-    ai.metaData?.getString("com.phonecando.automation") ?: "full"
+    ai.metaData?.getString("com.phonecando.channel")
+      ?: ai.metaData?.getString("com.phonecando.automation")
+      ?: "full"
   } catch (_: Exception) {
     "full"
   }
+
+  private fun hasAutomation(): Boolean = buildChannel() == "full"
+
+  private fun automation(): AutomationHost? {
+    AutomationHosts.install()
+    return AutomationHosts.current
+  }
+
+  private fun notFound(path: String) =
+    Response.Status.NOT_FOUND to errorJson("not_found", "no route for $path in this build")
+
+  private fun automationUnavailable() =
+    Response.Status.SERVICE_UNAVAILABLE to errorJson(
+      "automation_unavailable", "enable PhoneCanDo in Android accessibility settings",
+    )
 
   private fun json(status: Response.Status, body: String): Response =
     newFixedLengthResponse(status, "application/json; charset=utf-8", body)
@@ -483,15 +518,25 @@ class BridgeServer private constructor(
     // continue in the same turn after a successful unlock.
     @Volatile
     private var pendingUnlock: CompletableFuture<Boolean>? = null
-    @Volatile
-    private var pendingAccessibility: CompletableFuture<Boolean>? = null
+    // Atomic so a newer /accessibility request swaps itself in and supersedes
+    // exactly the one it replaced.
+    private val pendingAccessibility = AtomicReference<AccessibilityWait?>(null)
 
     fun resolveUnlock(ok: Boolean) {
       pendingUnlock?.complete(ok)
     }
 
-    fun resolveAccessibility(ok: Boolean) {
-      pendingAccessibility?.complete(ok)
+    // The app's dialog reports progress: ok when the user opened a step's
+    // screen (guided: one of the restricted-settings guide's steps), not ok
+    // when the user tapped "Not now", which ends the bridge's wait.
+    fun resolveAccessibility(ok: Boolean, guided: Boolean) {
+      val wait = pendingAccessibility.get() ?: return
+      if (ok) {
+        wait.opened = true
+        if (guided) wait.guided = true
+      } else {
+        wait.cancelled = true
+      }
     }
 
     // NanoHTTPD binds in start(), not in the constructor: try the fixed door,
@@ -514,4 +559,13 @@ class BridgeServer private constructor(
       return null
     }
   }
+}
+
+// One /accessibility request's progress, written by the app's dialog while
+// the bridge waits for the service; `superseded` is set by a newer request.
+class AccessibilityWait {
+  @Volatile var opened = false
+  @Volatile var guided = false
+  @Volatile var cancelled = false
+  @Volatile var superseded = false
 }

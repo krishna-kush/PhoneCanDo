@@ -1,6 +1,6 @@
 # Status
 
-As of 2026-10-31. Device evidence is Android 16 / API 36.
+As of 2026-11-05. Device evidence is Android 16 / API 36.
 
 ## App and engine
 
@@ -11,7 +11,19 @@ As of 2026-10-31. Device evidence is Android 16 / API 36.
 - `serve` runs in a foreground service on a service-owned dynamic port, is
   auth-first, and is quiet when idle.
 - The loopback bridge, `mobile_*` tools, biometric/master-switch gate,
-  five-minute bridge grace and full/play flavor split are live.
+  five-minute bridge grace and full/lite/play channel split are live.
+- The `play` channel builds but is a later feature: nothing is released from
+  it and it is untested on a device.
+- The sideload path is device-proven (2026-11-03, Android 16, India): lite
+  installs from a file manager, installs full in place through the normal
+  installer, Play Protect allows it, and the accessibility service enables
+  after "Allow restricted settings" (`docs/release/upgrade-test.md`).
+- The three-step accessibility guide (Android's "Restricted setting" note
+  shown in place, App info → Allow restricted settings, the switch) is
+  device-verified on the Moto G96 (2026-11-04,
+  `research/restricted-settings.md`). Not yet on a device: the agent waiting
+  for the switch and carrying on by itself, the update dialog's own
+  "Install unknown apps" step, and the compact step links.
 - `activityName` and `eventSeq` are device-verified. The staged
   `mobile_wait` eventSeq comparison lands with the next APK because the
   generated asset was stale.

@@ -9,10 +9,17 @@ All native code is autolinked; `app/android/` is generated.
 
 - `PhoneCanDoRunnerModule.kt`: `getPrefix`, `isServeRunning`, `startServe`,
   `stopServe`, `startServeService`, `stopServeService`, `setActiveSession`,
-  `getServePort`, `health`.
+  `getServePort`, `health`, `markSelfUpdatePending`.
+- `isServeRunning` is true while either serve process is alive: the module's
+  own direct-start child (`startServe`, which the app does not call) or the
+  engine the service runs (`PhoneCanDoServeService.isServeAlive`, safe to read
+  from the JS thread). The updater relies on it to stop the engine before a
+  self-update.
 - `PhoneCanDoServeService.kt`: the foreground service (`dataSync` type).
-- `AndroidManifest.xml`: service declaration plus `FOREGROUND_SERVICE*`
-  permissions (merged at build).
+- `PackageReplacedReceiver.kt`: brings the app back after a self-update
+  (see Self-update install).
+- `AndroidManifest.xml`: service and receiver declarations plus
+  `FOREGROUND_SERVICE*` permissions (merged at build).
 
 ## opencode payload (v2)
 
@@ -55,6 +62,16 @@ The service also owns the native invoke from `nativeLibraryDir`
 (`libopencode2.so` executed directly), `START_STICKY`, and the live
 notification described below.
 
+Android 15+ lets a `dataSync` foreground service run 6 hours in any 24 while
+the app is in the background; bringing the app to the foreground resets the
+clock. At the limit Android calls `onTimeout(startId, fgsType)` and crashes
+the whole process unless the service stops within seconds. The service
+therefore stops the supervisor and SSE, removes its notification, calls
+`stopSelf()`, then stops serve and the bridge (`stopSelf` comes before the
+wait for serve to exit). Nothing restarts it in the background; the app starts
+the engine again when it next comes to the foreground (`App.tsx` calls
+`ensureServeRunning` on launch and on every return to the foreground).
+
 ## Live notification
 
 The service owns the live notification: UI reports opens (`ACTION_SESSION`
@@ -87,13 +104,102 @@ v2 loads **`plugins/<id>/index.ts`** (`@opencode/plugin`, `Plugin.define` +
 `<project>/.opencode/plugins/`; V1 `tools/*.ts` and `@opencode-ai/plugin` do
 not load (intentional v2 breaking change, verified on device).
 
-## Build flavors
+## Build channels
 
-One codebase, two APKs: `PHONECANDO_AUTOMATION=full` (default,
-`pnpm android:full`) ships the automation driver; `=play`
-(`pnpm android:play`) strips it. The flavor is baked at prebuild time. Full
-mechanics and tool gating are in `bridge.md`; the PCE host is in
-`automation.md`.
+One codebase, three APKs as Gradle product flavors: `full`
+(`pnpm android:full`) ships the automation driver and self-update; `lite`
+(`pnpm android:lite`) keeps self-update without the driver; `play`
+(`pnpm android:play`) has neither. One prebuild serves every flavor.
+Full mechanics, permissions and tool gating are in `bridge.md`; the PCE host
+is in `automation.md`.
+
+Build a signed channel APK with `./manage build lite|full` (repo root); the
+script audits lite for no accessibility service and no PCE classes, and full
+for the opposite. `./manage release <version>` builds both and drafts the
+GitHub release.
+
+## Self-update install
+
+`installDownloaded` in `src/engine/updates.ts` hands the downloaded APK to
+Android's installer screen with `ACTION_VIEW`. The update dialog first checks
+Android's "Install unknown apps" switch for PhoneCanDo
+(`canRequestPackageInstalls()`); when it is off, the dialog explains it and
+opens that settings page itself, then installs by itself once the user comes
+back with it on, instead of Android's own prompt landing on top of the
+dialog. Play Protect allows this when
+lite installs full because the originating app is PhoneCanDo, not a browser
+(device-proven, `docs/release/upgrade-test.md`). After that install, Android
+13+ keeps the accessibility toggle locked until App info → ⋮ → Allow
+restricted settings, and that menu item only appears after Android has shown
+its "Restricted setting" notice for the app. The AOSP 13–16 sources settle
+what the app can know (`research/restricted-settings.md`):
+
+- The lock state is unreadable by design. The app op holding it
+  (`access_restricted_settings`) is `restrictRead`: every read and every
+  watcher callback needs `MANAGE_APPOPS` (signature), and the Android 15+
+  `EnhancedConfirmationManager` is SystemApi behind a signature permission.
+  Confirmed on device.
+- Whether the lock was applied is knowable, because the rule is the install
+  source and `getInstallSourceInfo()` exposes it: the lock is set at install
+  iff the installer declared `PACKAGE_SOURCE_LOCAL_FILE` or
+  `PACKAGE_SOURCE_DOWNLOADED_FILE` (Files, browser downloads, the system
+  installer screen). Store installs, `adb install` (`PACKAGE_SOURCE_OTHER`)
+  and other session sources are never locked by the install; debuggability
+  plays no part. Android 14+ applies the lock only on a first install for
+  the user; Android 13 on every install from a file, updates included. The
+  lock is a per-package app op, so it also survives updates from any source.
+  `getInstallSourceInfo()` shows only the latest install, so the guide never
+  depends on it; it only feeds the bridge's best guess. In PhoneCanDo's flow
+  the lock comes from lite's own install from Files and carries over to full.
+- Android 14+ exports the Settings activity behind that message
+  (`android.settings.SHOW_RESTRICTED_SETTING_DIALOG`) without a permission;
+  13 keeps it private. Started for our own package it shows the message in
+  place and moves the state to acknowledged, which adds the App info item.
+  It does that unconditionally, so on an app that was not locked it locks
+  it; the guide always follows with "Allow restricted settings", so the
+  worst case is one extra confirmation. Verified on the Moto G96, Android 16
+  (`default` → `ignore`).
+
+Since the lock cannot be read, `RESTRICTED_FLOW` (a constant in
+`app/src/ui/accessibility/guide.ts`, `true`) decides the flow: release
+installs always reach users as files, so the accessibility prompt and
+Settings run a three-step guide, all steps visible (`StepList.tsx`) with the
+current one spelled out. The whole guide lives in `app/src/ui/accessibility/`:
+`guide.ts` holds the flow switch, the steps and every user-facing line, the
+hook (`useAccessibilitySteps.ts`) holds state and actions, and
+`AccessibilitySetup.tsx` and `AccessibilityDialog.tsx` render it in Settings
+(inside `settings/PhoneControlSection.tsx`) and over the chat. Step 1 shows Android's "Restricted setting" message: in place
+through `showRestrictedSettingNote()` on Android 14+, otherwise (Android 13,
+an OEM that guards that screen, or a note that did not appear) by opening
+Accessibility so the user taps PhoneCanDo. Step 2 opens App info
+(`openAppInfoSettings()`) for "Allow restricted settings". Step 3 opens
+Accessibility for the switch. Coming back to the app moves to the next step,
+and each step has one-tap corrections. The guide ends when PhoneCanDo appears
+in `enabled_accessibility_services` or the service binds, it is skipped once
+the service has run on this install (`hasAccessibilityConnectedBefore()`; on
+Android 13 a later update from a file voids that, since 13 locks again), and
+it runs only on Android 13 and newer, where the lock exists. With
+`RESTRICTED_FLOW` false the plain flow shows, with "Android said Restricted
+setting? Show the steps" to start the guide at step 2.
+`openAccessibilitySettings()` passes the Settings fragment-args extras so the
+list opens scrolled to PhoneCanDo on AOSP-based builds; the per-service page
+itself needs a signature permission.
+
+### Engine stop and the way back
+
+Before the installer screen, `installDownloaded` stops the engine
+(`stopServeService`, then polls `isServeRunning` for up to 4 s) and calls
+`markSelfUpdatePending()`, which stores a timestamp and the running build's
+channel in the engine prefs (`commit`, since the install kills the process).
+`PackageReplacedReceiver` (`MY_PACKAGE_REPLACED`, runs in the new build) acts
+only when that mark exists and is under 30 minutes old, and always clears it,
+so dev reinstalls, `adb install` and Play updates stay quiet. It never acts on
+the play channel, and it stays quiet when the user is already back in the app
+through the installer's Open button. Acting means a "PhoneCanDo updated"
+notification ("switch on phone control" only for lite → full) and a launch
+attempt that Android 10+ usually blocks from the background. The module's
+`OnCreate` cancels that notification on every app start; each way back after
+an update cold-starts the new build.
 
 ## Not implemented yet
 

@@ -10,16 +10,23 @@ export type ServeParams = {
 declare class PhoneCanDoRunnerModule extends NativeModule {
   getPrefix(): string;
   isServeRunning(): boolean;
-  isAutomationBuild(): string;
+  getBuildChannel(): string;
   setAutomationEnabled(enabled: boolean): boolean;
   isAutomationEnabled(): boolean;
   consumeLaunchTab(): string;
   consumeUnlockRequest(): string;
   resolveUnlock(ok: boolean): boolean;
   consumeAccessibilityRequest(): string;
-  resolveAccessibility(ok: boolean): boolean;
+  resolveAccessibility(ok: boolean, guided: boolean): boolean;
   isUiAutomationConnected(): boolean;
   openAccessibilitySettings(): string;
+  isAccessibilityServiceEnabled(): boolean;
+  hasAccessibilityConnectedBefore(): boolean;
+  canRequestPackageInstalls(): boolean;
+  markSelfUpdatePending(): boolean;
+  canShowRestrictedSettingNote(): boolean;
+  showRestrictedSettingNote(): string;
+  openAppInfoSettings(): string;
   startServe(params: ServeParams): string;
   stopServe(): string;
   startServeService(params: ServeParams): string;
@@ -43,10 +50,10 @@ export function isServeRunning(): boolean {
   return mod.isServeRunning();
 }
 
-export function isAutomationBuild(): string {
-  const m = mod as unknown as { isAutomationBuild?: () => string };
-  if (typeof m.isAutomationBuild !== 'function') return 'full';
-  return m.isAutomationBuild();
+export function getBuildChannel(): string {
+  const m = mod as unknown as { getBuildChannel?: () => string };
+  if (typeof m.getBuildChannel !== 'function') return 'full';
+  return m.getBuildChannel();
 }
 
 export function setAutomationEnabled(enabled: boolean): boolean {
@@ -85,10 +92,10 @@ export function consumeAccessibilityRequest(): string {
   return m.consumeAccessibilityRequest();
 }
 
-export function resolveAccessibility(ok: boolean): boolean {
-  const m = mod as unknown as { resolveAccessibility?: (v: boolean) => boolean };
+export function resolveAccessibility(ok: boolean, guided: boolean): boolean {
+  const m = mod as unknown as { resolveAccessibility?: (v: boolean, g: boolean) => boolean };
   if (typeof m.resolveAccessibility !== 'function') return false;
-  return m.resolveAccessibility(ok);
+  return m.resolveAccessibility(ok, guided);
 }
 
 export function isUiAutomationConnected(): boolean {
@@ -101,6 +108,12 @@ export function openAccessibilitySettings(): string {
   const m = mod as unknown as { openAccessibilitySettings?: () => string };
   if (typeof m.openAccessibilitySettings !== 'function') return 'unsupported';
   return m.openAccessibilitySettings();
+}
+
+export function markSelfUpdatePending(): boolean {
+  const m = mod as unknown as { markSelfUpdatePending?: () => boolean };
+  if (typeof m.markSelfUpdatePending !== 'function') return false;
+  return m.markSelfUpdatePending();
 }
 
 export function startServe(params: ServeParams): string {

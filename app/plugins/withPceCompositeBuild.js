@@ -1,15 +1,16 @@
 const { withSettingsGradle } = require('@expo/config-plugins');
+const { append, block, strip, stripLegacy } = require('./gradleBlock');
 
-// Build the PCE from source instead of resolving stale ~/.m2 artifacts.
-// The app keeps published coordinates; Gradle substitutes the included build.
-const MARKER = '// phonecando: build the PCE from source';
+// Build the PCE from source instead of resolving stale ~/.m2 artifacts. The
+// runner module depends on it only in its full flavor (fullImplementation),
+// so lite/play never resolve these coordinates; the composite build is still
+// configured because all flavors live in one Gradle project.
+const LEGACY_MARKER = '// phonecando: build the PCE from source';
 
-module.exports = function withPceCompositeBuild(config) {
-  return withSettingsGradle(config, (cfg) => {
-    if (cfg.modResults.contents.includes(MARKER)) return cfg;
-    cfg.modResults.contents += `
-${MARKER}
-includeBuild('../../pce') {
+const GRADLE_BLOCK = block(
+  'build the PCE from source',
+  '',
+  `includeBuild('../../pce') {
   dependencySubstitution {
     substitute module('com.phonecando.pce:pce-api') using project(':api')
     substitute module('com.phonecando.pce:pce-core') using project(':core')
@@ -18,7 +19,13 @@ includeBuild('../../pce') {
     substitute module('com.phonecando.pce:pce-pack') using project(':pack')
   }
 }
-`;
+`,
+);
+
+module.exports = function withPceCompositeBuild(config) {
+  return withSettingsGradle(config, (cfg) => {
+    const contents = stripLegacy(cfg.modResults.contents, LEGACY_MARKER, /includeBuild\([^)]*\)\s*\{/);
+    cfg.modResults.contents = append(strip(contents, 'build the PCE from source'), GRADLE_BLOCK);
     return cfg;
   });
 };
