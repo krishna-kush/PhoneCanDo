@@ -78,8 +78,8 @@ importers:
         specifier: 13.16.1
         version: 13.16.1(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       tamagui:
-        specifier: ^2.7.7
-        version: 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+        specifier: ^3.1.7
+        version: 3.1.7(6135ff07c79319bb76e810be59841ed0)
       zustand:
         specifier: ^5.0.0
         version: 5.0.15(@types/react@19.2.18)(react@19.2.3)(use-sync-external-store@1.7.0(react@19.2.3))
@@ -974,36 +974,46 @@ packages:
   '@sinclair/typebox@0.27.12':
     resolution: {integrity: sha512-hhyNJ+nbR6ZR7pToHvllEFun9TL0sbL+tk/ON75lo+Xas054uez98qRbsuNt7MBCyZKK4+8Yli/OAGZhmfBZ/g==}
 
-  '@tamagui/accordion@2.7.7':
-    resolution: {integrity: sha512-ADPikvTf9b/+e6IdsmCWbzNGhKNedh0hpW7/qyVh0rslWwX3tktIU1nW7q+ABG2rJLdromGNADYev/k16KeRYg==}
+  '@tamagui/accordion@3.1.7':
+    resolution: {integrity: sha512-iO+JghBi/32vzUR97NRYs/pjRnTEjUB2doFA7iUy/DLQIyAOiqVPnElLnO3PBcxQ2OaX7IKzCG8wF2j2004S/w==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/adapt@2.7.7':
-    resolution: {integrity: sha512-y5XB67wh7AlctHrm4niqN9EW8HOHK2AsTVQqRiyAPBSiLZScQA69mhyFNI+7BFm05FBcsxRaaDCUDfgdCtGCeA==}
+  '@tamagui/adapt@3.1.7':
+    resolution: {integrity: sha512-x77EzTzbHi+MvB5HhLbdLt6CUmy6vvo/l5d1BxnGGBeod9F7Wf7lH1kxJl/wcg0ZgkmlCr1P9hlodGv8P0kdpg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/alert-dialog@2.7.7':
-    resolution: {integrity: sha512-8XPuOhBut6RS4nyJtcx5VDuv7hOsMq0FeEhXQZoHRaVmzIMawSTqEywr8t/jdX6spOgJDEcGQzq5+qO2KzIPpQ==}
+  '@tamagui/alert-dialog@3.1.7':
+    resolution: {integrity: sha512-8tEv1/HWRE4Jd0iEbhxWnBh6f70UK48qK76UzkL2fGY8uN/gt393EePTYFcqHlvO34oWhrLgmsffXrauVaoS7Q==}
+    peerDependencies:
+      react: '>=19'
+      react-native-web: '*'
+
+  '@tamagui/animate-presence@3.1.7':
+    resolution: {integrity: sha512-CU+fZKUG6bNzdJuw6RPFsRU1O68sPTprLyT+snsis16Fbv5C0gJit2x/GyNp8d9L6YYKPHKIo+TLg2lHXe5a7g==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/animate-presence@2.7.7':
-    resolution: {integrity: sha512-UGHtwXmnrCOus5fV0Cn8bMKAuwx6DdPeMzjfNFpmhkZCRIcXvvPVV/ec7cFTB73sCuIV6vbPsFtqACy/qmqjow==}
-    peerDependencies:
-      react: '>=19'
-
-  '@tamagui/animate@2.7.7':
-    resolution: {integrity: sha512-vbqKXlcnte6Nnxb1i8ohqth4dGQCkU9FFGIOgR2CB/gRkJs0TMMzbvJ5GaNnejAqkUiwy2SJUzaTlnyWBMR9ZA==}
+  '@tamagui/animate@3.1.7':
+    resolution: {integrity: sha512-nXGSYsNU+C1bCVScmFoH1YglEWhWQFEue3+eIHe7C88veqXd+nAYS8u+Kc/8b+k1P+hftELGhISRT61m/0qyEQ==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/animation-helpers@2.7.7':
     resolution: {integrity: sha512-kDo4n7e0Dq21RP1RUyodg0IfnXEWmvNtRVrMp+s11VmInNLPJlJQmQKhBwWdWEacrdswVbA4Kz2GKN0fXZQtqw==}
 
+  '@tamagui/animation-helpers@3.1.7':
+    resolution: {integrity: sha512-PtHcFO0nh+ofke0beeXv4pBzKnj4KnlC+UId/DZ/+QyTOXO22yVcyhTc49E1satZbRjZJJ3jcUsZjJ/ZyXez3w==}
+
   '@tamagui/animations-css@2.7.7':
     resolution: {integrity: sha512-kNbdujzOHpZTw8oA5uF5zBcjVmV8GW+/LWuHICCj4cz19C59JfHSYDiNNYzclJSeL0x08dNyOnRJv2i7wUD5IQ==}
+    peerDependencies:
+      react: '>=19'
+      react-dom: '*'
+
+  '@tamagui/animations-css@3.1.7':
+    resolution: {integrity: sha512-y2LRtdWcQVqASsD/aesXIZnOLV3Rnh+szOfJ5Krj8JS1sNM/8GAXGpUpwOhgBLDjhtkOpVOcvriiXuNIbKS+TA==}
     peerDependencies:
       react: '>=19'
       react-dom: '*'
@@ -1018,50 +1028,56 @@ packages:
     peerDependencies:
       react: '>=19'
 
+  '@tamagui/animations-react-native@3.1.7':
+    resolution: {integrity: sha512-vv5xutcyA/f1ze0AalM7GFgzjfGDu3A9+B+JiF9gxZwQxPrZMooIyQwYTf9onaei449gd7llWmVgI0rtvYTJxA==}
+    peerDependencies:
+      react: '>=19'
+      react-native-web: '*'
+
   '@tamagui/animations-reanimated@2.7.7':
     resolution: {integrity: sha512-wmR/39Vj+NXu6Ewh9J45xCywlSrtbkH5e8oPaaBoYvmQ/bml2tfEIu3EOKtrVXCmu8r81GXO1Od4NZbYzilzFQ==}
     peerDependencies:
       react: '>=19'
       react-native-reanimated: '>=3.0.0'
 
-  '@tamagui/avatar@2.7.7':
-    resolution: {integrity: sha512-r22ZkC93ZgQA76NlIMtirFWtWws5VfGQIVgZ7fj0vDzQWP4/EG6PSC2sPIAWUPcOeUvkijTf0UrqV0hBUF3jnw==}
+  '@tamagui/avatar@3.1.7':
+    resolution: {integrity: sha512-GOQZn6fMuPVJY4rQ8mDG1v32sNGe+/FI76CcS5fhCjGbbhk4TYgqUn/kYvOQeO3OXLBjUApwAHNKudevRRHgMg==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/babel-plugin@2.7.7':
     resolution: {integrity: sha512-Ob3x9InYUoxLEkrYZWhO3pRe2UzwPHT7AaSXX1/GUspSZKKgnRauiYDYW5mVqOnLPuwuPO9mrsi7gif+zS1fZw==}
 
-  '@tamagui/button@2.7.7':
-    resolution: {integrity: sha512-1AfIKkAKsprvtdO7nPvgAMECr8xTS+cZ/+PRCP/1sLiPLNQX4SB8qgH5mg7xiy3mLmYU0YB8qMxFPCU4MXW9SA==}
+  '@tamagui/button@3.1.7':
+    resolution: {integrity: sha512-/VuBFzBs137h48U7MBQK+0STZGrgG1GkvxDNFFGs26ivg91ZpoQClB3N68TyQ+X9N7GFxw70rn/iSNSaqU71Fg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/card@2.7.7':
-    resolution: {integrity: sha512-8YptN4Pz0i0tPidl7ymAI3uL1ONwczcEvVtnZQpHC5SR9kixk+v1KBrWXp6gWDVfIL8d6BnTMI+CtYttcBEgMg==}
+  '@tamagui/card@3.1.7':
+    resolution: {integrity: sha512-XDtx29C71VXHeLLv0mzEaUvjJDQdbBog9tg8zGtlCaDXZ5pjeYf15eEBy9ynhfvI5sr975N/yzExodWvDUl6ew==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/checkbox-headless@2.7.7':
-    resolution: {integrity: sha512-ddwVcKUTkY6jdk3te5iYGi/nMKcHMD5LjYf6oQrXt21iv1v9DIQZfQfHDyZ3XAPZK2/K2noWEeZYOnRZUyzWsw==}
+  '@tamagui/checkbox-headless@3.1.7':
+    resolution: {integrity: sha512-ZJcLfuZKyhISelpy3b8f5KLd8CPEMWjjSlMoaNtJeWIqTM7tS2MWo7n3h31MD36XSrRc3xbhIxpn0dDpRQ0+fw==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/checkbox@2.7.7':
-    resolution: {integrity: sha512-RzRmOHGyiNdmR02rC/x9xbsV2/GRSqvS/P1OxCn1r3fuU2MsUHOffqNNOZWUsCxwWlic6uviv2E1Ls67LhPGJg==}
+  '@tamagui/checkbox@3.1.7':
+    resolution: {integrity: sha512-a2CrfXwF9yK2KQp5R5qmpGQVb8PuAFzNP4TuGf9lFCDk4WcIX7X7UEeqmHhq2SLmv7wi5l6qCRxhiNuRn8425w==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/cli-color@2.7.7':
     resolution: {integrity: sha512-512UKxU+QQvKCtxkfdtH+4b5cbcfTAMzuLln9iBQSJ4Ibc3MycuUPnN7xhD/KXVozPqf78W9JiASZXXuf0Vpgw==}
 
-  '@tamagui/collapsible@2.7.7':
-    resolution: {integrity: sha512-zEdQYgLX8cP06s/t0qj16fB0yEnGp4bnJZ0fhqmnq6WuEH1DQnCQa5a0QR5O140KeUz38XKYZbNOX8w6DjUURw==}
+  '@tamagui/collapsible@3.1.7':
+    resolution: {integrity: sha512-1VPx+lJ900dDcrc/EW4vj5mRHXTyefhbC5No1tCT0ezeFnLqG3Px02RqXx8VAlLRyeC0KShqfDVDAoJV4NN1UQ==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/collection@2.7.7':
-    resolution: {integrity: sha512-UTKQKnF+kiHiI0e8JaOsnkTs8kRHpIPRQ3Jc4/nDbjTuYKicirrbMBAnnvieMhC5v6n+tE4IxRBTMR1Jo+cVyg==}
+  '@tamagui/collection@3.1.7':
+    resolution: {integrity: sha512-GH7AaYzJ0JUa4SU7itKaUjABUcIF9laT2yV5pGBiLHdCoi3RZ3Nme6GOVwXExFWUca5fKuwdtd93FlrPRU9S7Q==}
     peerDependencies:
       react: '>=19'
 
@@ -1073,8 +1089,16 @@ packages:
     peerDependencies:
       react: '>=19'
 
+  '@tamagui/compose-refs@3.1.7':
+    resolution: {integrity: sha512-8f+7ssObtc+6CiuYKBgsE1LqD/bDFhmSIfHVaLOwvKT8+McbnG8osTVR+0aU0p0vRWNdNwezvIMiYruXbu1d/w==}
+    peerDependencies:
+      react: '>=19'
+
   '@tamagui/config-default@2.7.7':
     resolution: {integrity: sha512-ZutYg4zfaKVk9Io+aA3NtBEfD0RiO2M9VBsvxYUOzUFlDFlr6NpqjEsMVHZ+vgZx6UI8y8oIBHHvwaULnZ4pbg==}
+
+  '@tamagui/config-default@3.1.7':
+    resolution: {integrity: sha512-o/AxJXGZvNukzm4bd9wq2PQgIqyKN3fy/4q7Ay6w4kTBYDI+gSHWEK4V/aAkPGWO9xXS7GO8SXrNJ6jVtOw4vg==}
 
   '@tamagui/config@2.7.7':
     resolution: {integrity: sha512-Y8/noP72gdKairNEM6amyTGY/Fh5sO6a3cWCJNBHShiSfakLxnaLHzbaZJgUyn+U1Mja7IrDJ5iFqwX8wI6WHQ==}
@@ -1089,8 +1113,13 @@ packages:
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/context-menu@2.7.7':
-    resolution: {integrity: sha512-aslnRwPmK1fKV1SEr9hW9qGeGAlPgU2lSN44LKSrNyDfq7qgk7VYHyDzy76k6YIHarhg6jGhjH7APfZiZ2msZw==}
+  '@tamagui/constants@3.1.7':
+    resolution: {integrity: sha512-aIO1cybex0ydgXBpiohDVgOliHUs+y2CRDKHypAL0GI29iEgcktcLHa0GLNu4mpCILWilrQeld5UgtKss/GSGw==}
+    peerDependencies:
+      react: '>=19'
+
+  '@tamagui/context-menu@3.1.7':
+    resolution: {integrity: sha512-JWqLj8HdkZ5hKzdrAao0dEZKAG+/3cpbF7949xOvsbWRDuVVT9EM60AAfMM5CyCDBb8Aiwvf/Ast2Lo/qvajkg==}
     peerDependencies:
       react: '>=19'
 
@@ -1099,13 +1128,18 @@ packages:
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/create-context@2.7.7':
-    resolution: {integrity: sha512-qTdZtCa1p7DRgH7Vxd3DL8TxCYiq30DIod5tLat6P1xx76QwQ1nn4GecxnaYmWIlMUlnukOr9QxYTMMQVaUysA==}
+  '@tamagui/core@3.1.7':
+    resolution: {integrity: sha512-nScCYBiSeWG+P6MVlwUI4jf2eLgn4FNIPuRzB/N1Tij9tiCfUHJrQcDQ0D07FwREXkuffEDeXQM0m44cOSGatw==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/create-menu@2.7.7':
-    resolution: {integrity: sha512-Iked7U/omYlUJ90OYqQDXMQQkNPCVdezI0tWL80IfiJPZRdofrSMo9gEN4PwmSeUmjMl+9z56a4jrYONkq8uOQ==}
+  '@tamagui/create-context@3.1.7':
+    resolution: {integrity: sha512-/2Xz7V1mDTqQY+Uj2dBocaaC7EeBWUmywyP2Ke7fP11jTQrlkXSdSdVUa1gl6cNfgXgtx0KGjQTAFT1YiuuGsw==}
+    peerDependencies:
+      react: '>=19'
+
+  '@tamagui/create-menu@3.1.7':
+    resolution: {integrity: sha512-LjbSzIK25iYw89hot7K5VBxPobpBAF+0qNGXHWLoxHQBufF7MV2XI1cybJZAF6ZR67llczKkmTFrLhM0d88xXg==}
     peerDependencies:
       react: '>=19'
 
@@ -1115,47 +1149,70 @@ packages:
   '@tamagui/cubic-bezier-animator@2.7.7':
     resolution: {integrity: sha512-jTjglcrkhUM7OuD1gV5BhJQTuCChv+EQsVmsPUhSs6kRbQEiS/pvqgfNomz1g857+AjuLTbKvHPA+OndcETLdA==}
 
-  '@tamagui/dialog@2.7.7':
-    resolution: {integrity: sha512-0wNL7KL7B5cn4/EB/2nbvIOyMaL1QCml1xdQbqpmFlyIdGq5eNrUU3O5SccLCvWirAYhRlissAm4p5A0U9WUlw==}
+  '@tamagui/cubic-bezier-animator@3.1.7':
+    resolution: {integrity: sha512-fTszl9ApoPBXXFelJZwe64KQln1+YqxzXY1idSpFTH1rJc5lWqy7EWhhObmRBFXARA9r3OH4Z2QbShby7+XMRA==}
+
+  '@tamagui/dialog@3.1.7':
+    resolution: {integrity: sha512-qFw+B1EjR3gudTMNAThT6NgNDbtMuYsy9OZdqK6J1F+k24o26V5HSexfo6+21phIT9MoyvyoHjNFSoF3icu4lg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/dismissable@2.7.7':
-    resolution: {integrity: sha512-HDwslXPIAL43Km+eVs/NxxXzwe0kbWzsnA7EJGEegnaPzeRn2dlZYJL/1suoGIFw9i40CAtpQsqlblwHg+SWxA==}
+  '@tamagui/dismissable@3.1.7':
+    resolution: {integrity: sha512-csyS9tfTc4STtVj3+gEcUaiJ5L/wP9kjt4+nA38WGh9bfy70N9Mlinizm0lmZGs/Piuw0FKqG3JoHskglJGPRw==}
     peerDependencies:
       react: '>=19'
       react-dom: '*'
 
-  '@tamagui/element@2.7.7':
-    resolution: {integrity: sha512-i6Y5poBWRdk1kj63QuHgm71agdITqF2ZXPtB732kWt53bo6W0eTQre64XjvqW9eNF20tyQaiC1L3BYmd5iJCag==}
-    peerDependencies:
-      react: '*'
-
-  '@tamagui/elements@2.7.7':
-    resolution: {integrity: sha512-d97LrzgfQ2oT6Pebx5Mr89j7wuS6fQpD77h8tDmg+Z0JS8UDVSixSIVnQDDzpk+5XYsJuiB5nGVzXCxDxGC46A==}
+  '@tamagui/dom@3.1.7':
+    resolution: {integrity: sha512-p0EtcojbWM2GkWkrJ1Zc/Fxp9o67cTVeflWTxLQgShPFfjDPBXE72FKvLcezajIVUTAXp0B2TnJd00Xq3geHLw==}
     peerDependencies:
       react: '>=19'
+
+  '@tamagui/element@3.1.7':
+    resolution: {integrity: sha512-vvkSZJhXUh3n41Eu9yH8vCdLbMmlD6e0niB/pgvrO7+ye3txClgC7bgpPgcd7JwS/zyX5+If1XFdyN1IQENL9Q==}
+    peerDependencies:
+      react: '*'
 
   '@tamagui/fake-react-native@2.7.7':
     resolution: {integrity: sha512-wpPOC1mAOOkBud/rxcb9LIN23HRrKcPsHdDQ815ewpEo00pyM2GfYSXynac2dzLLJ/v24PvRgdOHKGxOL9g5kw==}
 
-  '@tamagui/floating@2.7.7':
-    resolution: {integrity: sha512-WgMreiq9bTJ8fSoJSYMyFGwGnzKDn0qdG8tkS8MoHAr1mNYW5HPXDL+lBGIlmXUAgzegS4/ZTbjXrYPDCkUKtQ==}
+  '@tamagui/fake-react-native@3.1.7':
+    resolution: {integrity: sha512-HBnSolsO8C3EZEJmeBQ8QkSlnvuitwpe1QQhGieg8G9Rvq2dykGhFIST444fdTOOk8/+/RibsU9KvtZnUIDbyA==}
+    peerDependencies:
+      '@babel/core': '*'
+      '@react-native/babel-preset': '*'
+      react-native: '*'
+    peerDependenciesMeta:
+      '@babel/core':
+        optional: true
+      '@react-native/babel-preset':
+        optional: true
+      react-native:
+        optional: true
+
+  '@tamagui/field@3.1.7':
+    resolution: {integrity: sha512-ThZWLc0eLMFc+XGnxfbzt1GqFqSqr5VWoLywaxxKaIbA+YlY6Y0/RVDU5C3ntA3m0bgt2aNYbghBSoZ0yE5thw==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/focus-guard@2.7.7':
-    resolution: {integrity: sha512-4fMovXGv1qWFHug/zFrtHqVMLWrG1Tfu1RiXT5LT29A2QdpABPijD01OOlFxnj1S9GqRVSp9kN6ZTSfop1y/KQ==}
+  '@tamagui/floating@3.1.7':
+    resolution: {integrity: sha512-AMH82PmCxN60pfFgxzEz0NiD7iOZSCyfoG3ngqL/0KFsuo8QPUkAkk3fsOGcT3dy9oB4jzOLNrqj6GXs7jqeaw==}
+    peerDependencies:
+      react: '>=19'
+      react-dom: '*'
+
+  '@tamagui/focus-guard@3.1.7':
+    resolution: {integrity: sha512-GvCdNXZ7ZJvcVDuoxhex5LWdJeB0k1zEtmLjCddIF9WEghF4FoSGcWUGThGxfB6WoJjDdSVBFtsSeOcZvFGwdA==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/focus-scope@2.7.7':
-    resolution: {integrity: sha512-hwZPLe5CqDrF7yEjLUouIS0lZ4foptCFe3zBdOuVlyIReFZp2iAYMyjzCEoK6f2rXXlnNj/YAf0+Yc2u/CXkaA==}
+  '@tamagui/focus-scope@3.1.7':
+    resolution: {integrity: sha512-VJXU4vlXm0R8r5A2fvT7YPci+SmZCisALJyTz49M/m03cWNF/WEWEkCv2j18wgx4UnIYOrPCTGMNKt1vOfh4iQ==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/focusable@2.7.7':
-    resolution: {integrity: sha512-4bRnXx/yvLJwY403ND73zsO6xWkV2id3MLh80JcBye+XqQqhUMFaZg/o9F8xTQFDZkdg6nGkG5A1ghgnfu2tSg==}
+  '@tamagui/focusable@3.1.7':
+    resolution: {integrity: sha512-0wzmsqsKv1nqVDMKuNPRm3waRAOp+O36Lx4AMdv0y5ex5ZvEIAUdZk5CM6tWWRIuWLjqPEQu7IOoVlq2LoSnEA==}
     peerDependencies:
       react: '>=19'
 
@@ -1165,44 +1222,39 @@ packages:
   '@tamagui/font-silkscreen@2.7.7':
     resolution: {integrity: sha512-LRBgIElBDJcsqZ7ZUFKcupBGdXSqtJeXMPigFkRwKd5a9DVXCmNdgtwA9YdSktUzm+T2O3hlF5p9ybpDu8/Y/g==}
 
-  '@tamagui/font-size@2.7.7':
-    resolution: {integrity: sha512-P6pWDFll12v4Ir9HsruNd9W9tWnab9fmWVZ5gfcfJYp3XrwscrmDFBSOCgj1/OQQ/l5+8pJzSmnHIw6AbjDujQ==}
+  '@tamagui/font-size@3.1.7':
+    resolution: {integrity: sha512-W7ihbfnwnKEV3MbLmiG+5KtJhtN0UR91BAZ5D8y4kMTMQTESIe83MiHMpWAL1RSDEcUe/Kcqq5xi6tm7Fckl5Q==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/form@2.7.7':
-    resolution: {integrity: sha512-D983m20OSoJXJyb8T3X91t0DZhyBbjbrk36MBquCq70zXvgKK4zHXFNJQieo+GntL53x+XbMEKlzydS2ZGYIpA==}
+  '@tamagui/form@3.1.7':
+    resolution: {integrity: sha512-IY8zoBjbh7FxR909kOdSuh1vAS4IYOzhpq4D4By8BouN/+kN0YPK+i9EuUEygTX4wsVjDA2dHibh1akwRYOByQ==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/generate-themes@2.7.7':
     resolution: {integrity: sha512-woXK7Bf/nYsu/7975G9oyfDdS4nF0PjPtJ4qg7B+Zg6RC+vUKREl4YmnmEGvKG0VLcWR6fxBubD0IDbQhWhqXQ==}
 
-  '@tamagui/get-button-sized@2.7.7':
-    resolution: {integrity: sha512-I/xeTlZBZcCeM/yp9YceE8be23RJoHPSTfe4D7MOeVSPTy8JheQkKXNO9WWL4irWNQhxV5tMVz98RkmELkVc2A==}
+  '@tamagui/get-font-sized@3.1.7':
+    resolution: {integrity: sha512-waZ6sLPVy+v6xZbxmHMjA2YE060uOwISLqaQSDE66g8ls1oXvliPlZe9QTz3fdmP9ZZ2IRAFe0sj1AKEzieKxQ==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/get-font-sized@2.7.7':
-    resolution: {integrity: sha512-YSQGTAbM9xcPPVsGh2DqsENGvrJSngWcRfgqTkFHRsy3sGxuloSd9sxbS7d/dIaMTcfLeyEbrGP1zVSyM0wXZg==}
+  '@tamagui/get-token@3.1.7':
+    resolution: {integrity: sha512-uVDblnqqtY6EkMKhcvOvXqB1kNUuWBWfa2ppirM07Z+ePAAoTS2pq/rQZ0EJhex8p5COsIciglg0Z2uf45SUjg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/get-token@2.7.7':
-    resolution: {integrity: sha512-8iCzqqJXHxGoKRqJBqMJBpYcFGWVVC5YioHKmx8kgr5jY+9OZTJPtW448e5slXhAvfedPthl70P0fHpF1F9z3A==}
-    peerDependencies:
-      react: '>=19'
-
-  '@tamagui/group@2.7.7':
-    resolution: {integrity: sha512-KJxWx30CPxDSUFFB22WqvQfj/Z/TGDGCEYA6jlYtl2YsVnNRnNvl9Q8KeT+fq8wscdZ2cPAR+Zil9SztDVREgQ==}
+  '@tamagui/group@3.1.7':
+    resolution: {integrity: sha512-k4XUWm/ilAp/43jySOFhsMjRpbaePTbI2DHC9NW0JXkuEtB8D1wHXOYQ9tH0i4MVT49CcGFHlc9atBwmZcMrmA==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/helpers-node@2.7.7':
     resolution: {integrity: sha512-brL4V9GvisC6ZRQzF2mUkbwC9DgCsbgJp8XT1oSAkJ6k2N3p+Zjekvxqo43X9SJIcRnX2C5n5G9FW5pM1Itdgg==}
 
-  '@tamagui/helpers-tamagui@2.7.7':
-    resolution: {integrity: sha512-i5IITp/nRpsEnHQbZTjimm4Ix+yX3er9zT3ovgFBSnyTu7ZK1v6dlfj48nOhNjETOZF9tSL3Nb9wZhuGmGe1Nw==}
+  '@tamagui/helpers-tamagui@3.1.7':
+    resolution: {integrity: sha512-/jDfmaX3TkVoz98yU6/+bwzVCEIl6/Ix63FZ6psPhPzB0DZtZAvYaEFwkff/ZH4tNhm82Qj/3UWQ2mOVE1r4Rw==}
     peerDependencies:
       react: '>=19'
 
@@ -1211,13 +1263,19 @@ packages:
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/image@2.7.7':
-    resolution: {integrity: sha512-VjK0+fJbV2gYg5wlY/mei8kKtOw/YFnjTCuYnMSrbxvioRz3B3oN+fKwjZNJ/gKBIIEO3WpOXbgZsSbvL2Jffg==}
+  '@tamagui/helpers@3.1.7':
+    resolution: {integrity: sha512-IaSNLL2garVguIIMBEF05/29jT2ymVWd9wD7qW+lXCAyy5O+zIqrHUPlWIpu0HOmQjMnItPOP+cErgb+GgxAjQ==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/input@2.7.7':
-    resolution: {integrity: sha512-UN+9DQdJ6vD2Iao5WNKZ6qMMseULOCj+k3/X42EzDRl+EJ1Exdxzl5UP7ZqAnCiNkX+CVRU6AW4tjhCyufSvvA==}
+  '@tamagui/image@3.1.7':
+    resolution: {integrity: sha512-HMCz54JA4ey9yE5wsHbaqioi55UE2IASRDfWtOu4tSxnGNac0DaxRDHI4f02F9gb2xzf+J2yey2NYpGPaD85pQ==}
+    peerDependencies:
+      react: '>=19'
+      react-native-web: '*'
+
+  '@tamagui/input@3.1.7':
+    resolution: {integrity: sha512-KLCeOLWhNjHZYFgbqQg88S4bdaLSeFzZgE7kCmpPAoj7hBQVbjEF0vfMWQ9+5sH5dy7eJ1wXhO9+LjPq/XmLFA==}
     peerDependencies:
       react: '>=19'
 
@@ -1226,23 +1284,29 @@ packages:
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/label@2.7.7':
-    resolution: {integrity: sha512-TDXpzY8T3zq9Fy+k+x+GMRpvgiOtPOEbpBeggrVGBNGKc7wfR69eYwX4PlKjuzzoFhEuim02tvyDNShWuXaeHg==}
+  '@tamagui/is-equal-shallow@3.1.7':
+    resolution: {integrity: sha512-SRoBadloshbCvnFH5iwziQbRnIkbgV6JaelmnVwWBIPO5x17qPZTly+Lv/+chzfMkJndosQYl8JtqLFfi/WKMA==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/linear-gradient@2.7.7':
-    resolution: {integrity: sha512-CohvA2XhiQZu/dxx5mxKvFkmRObxmh93eGVx/Go8lXiPGs/1kRMwjK0ofXFFCifms+R8VMg/UJZCbTC/cWHyxw==}
+  '@tamagui/label@3.1.7':
+    resolution: {integrity: sha512-sMD4nThmuqeABOelCqHT+ZfGGY1pxJcTlwrsAkOQyXswKjSIuuNGsE0h5wfSuqEtjXF72/jFKmk87UiRykQBgQ==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/list-item@2.7.7':
-    resolution: {integrity: sha512-DfCAMXuAiIVnOidbOQA6tAjHl7mJkf6N0E5CwmCAUrqddStUUzah7QKMry0Dm7T//v4Yn9gV/MW0oEVO7QykiA==}
+  '@tamagui/linear-gradient@3.1.7':
+    resolution: {integrity: sha512-hz/ydyFO0ebFGAF9Eua9sGbO3uUOXdh9z5m0OrExF6evvS1B8XOk0D32Z5CYdEqDy0PYW8ReM9UAzjMNihqBBg==}
+    peerDependencies:
+      react: '>=19'
+      react-native-web: '*'
+
+  '@tamagui/list-item@3.1.7':
+    resolution: {integrity: sha512-NruvVKtwsTtxcvyZB0x+lT39PO9WKrALM7NtNNNZJ8oeWmVtctsqiF5SNbf7mAWQl/2yUeMszqJ9jTj02so+xw==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/menu@2.7.7':
-    resolution: {integrity: sha512-eFFHeZLnIKscdO9a6X+KA9u/xzM0fFhaFqYgqSlQxDaEuTbuPrbG7P+Ngd1ain41aqeOlgSoptLp98L/N5qiDQ==}
+  '@tamagui/menu@3.1.7':
+    resolution: {integrity: sha512-GejPsFMjlAYonGy3EdPe0oNwr/P333SRVlfLs496EMAbps7xAZJRx+2113lvplfp0wUzroSEVSf1EqlCR/Uxlg==}
     peerDependencies:
       react: '>=19'
 
@@ -1251,56 +1315,125 @@ packages:
     peerDependencies:
       react: '*'
 
+  '@tamagui/native@3.1.7':
+    resolution: {integrity: sha512-MWIBk0nfcrkjoaGeJdhZw6lVM8e45+Mspl2u715Fto7Zs4ImveYopFYo+xHb/54DqpY/E31cffpJUD+miI/YzQ==}
+    peerDependencies:
+      '@expo/ui': '*'
+      burnt: '*'
+      one: '*'
+      react: '*'
+      react-native: '*'
+      react-native-gesture-handler: '*'
+      react-native-keyboard-controller: '*'
+      react-native-safe-area-context: '*'
+      react-native-teleport: '*'
+      react-native-web: '*'
+      react-native-worklets-core: '*'
+      zeego: '*'
+    peerDependenciesMeta:
+      '@expo/ui':
+        optional: true
+      burnt:
+        optional: true
+      one:
+        optional: true
+      react-native:
+        optional: true
+      react-native-gesture-handler:
+        optional: true
+      react-native-keyboard-controller:
+        optional: true
+      react-native-safe-area-context:
+        optional: true
+      react-native-teleport:
+        optional: true
+      react-native-web:
+        optional: true
+      react-native-worklets-core:
+        optional: true
+      zeego:
+        optional: true
+
   '@tamagui/normalize-css-color@2.7.7':
     resolution: {integrity: sha512-cKOxHlJANLFwqKt88p9yggSghtwqulYYl1QDR8foo+Vkmi1crCJ/wP54vfXrD3Kum4svq0HvE7fadETk1lsjCA==}
 
-  '@tamagui/polyfill-dev@2.7.7':
-    resolution: {integrity: sha512-bheKyzk75S6vblfYpODkKcTGh3FWDmQKdZ0EzN9M3NDAaSKzfuTxi/6bFydf72THt06elphq+PCZBR2BZw8OAQ==}
+  '@tamagui/normalize-css-color@3.1.7':
+    resolution: {integrity: sha512-wIKjpz70p2aZJhx7+RYUEloXPbNsWo2PDVQHQb9nGPaIDNOXgGvyIUDidtXwr+q1z6TTldDQjwoVn5ROaMF0WQ==}
 
-  '@tamagui/popover@2.7.7':
-    resolution: {integrity: sha512-UpHCr7oBUyMPkUQ808ugR3UvySeNAQvjfLg+LEGsKmC4D59zWy8xWfFrubbM7+2eLt6rCsqrGNMw/nhLlDNplw==}
+  '@tamagui/polyfill-dev@3.1.7':
+    resolution: {integrity: sha512-tv8hLFNrTkhW3jTeu7QhnK1dajhEexaS1VW/rFMt4EPDxmzJRuHEQZysVUQuwQNFEPwDP2QVPgzu6TQ59y+XcA==}
+
+  '@tamagui/popover@3.1.7':
+    resolution: {integrity: sha512-ZY6inT4BVDdhzTvuDOOXQDpLZQwuQzZfHIdcQys3HdhSC8u0ptF9N/Uce8sfjOeq2eS3t8rJpIQ6Qv1faFyq/A==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/popper@2.7.7':
-    resolution: {integrity: sha512-FMuC8k00vnWR+AcNw/Jo7qEIF53Z086aqVH1104cJzyxLf52wAG7FMnLo98ogGYLM/LLb5g2VFNbJr2oVb2jnA==}
+  '@tamagui/popper@3.1.7':
+    resolution: {integrity: sha512-re/2G3i7Ebug7NZwFfz5xNVX0VsM6Amx6654504oooBrQIrlii6Xo7cs0r7RJB1lnMhlX0R9eLyWx0XfQLZtwQ==}
     peerDependencies:
       react: '>=19'
+      react-dom: '*'
+      react-native-web: '*'
 
-  '@tamagui/portal@2.7.7':
-    resolution: {integrity: sha512-pqxOHTzPjUcoJft6o9oBML+3YSLpF8dhAEAlCXpTSkbZgSckRvU07qKVzuGzNiMceJyBkYr627mYBouWgoFdmw==}
+  '@tamagui/portal@3.1.7':
+    resolution: {integrity: sha512-vu2WgGlK520AwSThDV9dntV/DC4r56mbNMbEdt2phYqJIrRny/kOOCBziTcVOgwnSIT/knhcs9Q8An7NARfOzA==}
     peerDependencies:
       react: '>=19'
       react-dom: '*'
 
-  '@tamagui/progress@2.7.7':
-    resolution: {integrity: sha512-lugHF3WLGt8WjRZn+VnP6aPErFnLUN5744RynwoN0Coqk9H+9Uh8n/l6yVq1RuYnCMXHk7kMPLAvZ1/VvBwtvw==}
+  '@tamagui/progress@3.1.7':
+    resolution: {integrity: sha512-zacVoVnd08MSEWSVi3pqK65hfCNrb8VGsLFjAQAHp1DHdYnbnLJGSxN4kevUoyNj9FDYGEfA2vS4Ab2XbdSwUQ==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/proxy-worm@2.7.7':
     resolution: {integrity: sha512-bjxS1dSY6lJz3+IEspDVm4/jHyagDMJHjwOaTpqZUteayPRpzYITVYdTeMUIvk3vJMgE4w8j5maoNB1iMW7Tcg==}
 
-  '@tamagui/radio-group@2.7.7':
-    resolution: {integrity: sha512-bXropDqFCoUQZoUwxPI1nXxwyMV0kqlSixcY5VOZCcgdTvhnWLkApHqk3VhhOwAnVPsc5zQ7AghaxNjGkd+8lA==}
+  '@tamagui/radio-group@3.1.7':
+    resolution: {integrity: sha512-5tsPR0MI26uW6bimdy5Oat7W95NeR6qv33+6l7tD0L2NRyE1l2darbFBdC9PeCPWGR94Kxzy9wk5X1BdnCpvsQ==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/radio-headless@2.7.7':
-    resolution: {integrity: sha512-+K3LDwWt5CWECw4lT3hRhyqrlbLpH5JwpnjfDrVeEiqFxQwE40tLvAevv0AmPIjyCtQuZDrJ7Ju+OBH6l7D38w==}
+  '@tamagui/radio-headless@3.1.7':
+    resolution: {integrity: sha512-TFcWPFZ0qOSf5Preay4Alohg5M7A6ukSsOSjK5PA1gpUW8lAwJ+snYwk6aV5hZa2WqNTuJq7oABwqZPi/+rbNw==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/react-native-media-driver@2.7.7':
     resolution: {integrity: sha512-rGRzCDENDqizpwRNk92d5HpuJM8N+Vm1PyUL+tfiur5LIolKHGKwNUf/I10+11e2MIN5t4r97VsL68tfDgoHfg==}
 
+  '@tamagui/react-native-media-driver@3.1.7':
+    resolution: {integrity: sha512-xlF6r0Ayc/xFP1qSfgh8rFF59Dqzv0Ar1JLBNcKnSf1bwwnb9H2ARh9jX8Z80GS1IvIQohgWH7Mdl40jrfn6sQ==}
+    peerDependencies:
+      react-native-web: '*'
+
+  '@tamagui/react-native-pan-responder@3.1.7':
+    resolution: {integrity: sha512-eJW+zhXEuBzJ33E/dp3AZPGAwsSNi5CWYIw7wOA7AZ3Au2Caqq2oA7uCLsBiikorkrn97ENI/qs9ZT0ogTKdkA==}
+    peerDependencies:
+      react: '>=19'
+
+  '@tamagui/react-native-types@3.1.7':
+    resolution: {integrity: sha512-J31kD8eSQwMGFgbzk2705ac0jh3H2qx0jX2vRbKY8Up10ctC9JfnUA/yIBUWYZhkevDd1cRX2HFFC83HU/ge9g==}
+    peerDependencies:
+      react: '>=19'
+
   '@tamagui/react-native-use-pressable@2.7.7':
     resolution: {integrity: sha512-55dBrzzwfqEpl8ajTBUUzQSHNvXByT51ssZNAkULZzQfYzdpiwjHeOc3dri0QM4Ww4PsxiJaOzdyk4sAxRYxUg==}
     peerDependencies:
       react: '>=19'
 
+  '@tamagui/react-native-use-pressable@3.1.7':
+    resolution: {integrity: sha512-VoFgAMPoSuOlCZHOVlVcIVt+RdTMI2HjTLeTtgp82cZBv40oH1ttmfVCRKkScaNbF/rTSKKZQvRyIak6SWTE7A==}
+    peerDependencies:
+      react: '>=19'
+
   '@tamagui/react-native-use-responder-events@2.7.7':
     resolution: {integrity: sha512-pH3ElUBjaKnzYZPw2Z5UAaWI5NN0vYSDAXx8gXy4Ea3s5KKnIjoFGQeUnhp3BdyOUJl0X8KbH1XyFxIZw9Xw/Q==}
+    peerDependencies:
+      react: '>=19'
+
+  '@tamagui/react-native-use-responder-events@3.1.7':
+    resolution: {integrity: sha512-txL7JNDW4YkW9cjMaKWwhrfSOFJ8RrqeTDTTg1adsVjyqcoQAb8oQjnXL9+mNR+1wrYmSr6kbeY4w0LtKGOREQ==}
     peerDependencies:
       react: '>=19'
 
@@ -1316,75 +1449,83 @@ packages:
       react: '>=19'
       react-dom: '*'
 
-  '@tamagui/remove-scroll@2.7.7':
-    resolution: {integrity: sha512-S345Tj4qwYQusx/FKFuTdCRCb1lNckJsUnXkiDphYOYgvpejZzxxwPyIGGOhH0Taf3gMbm6Drs4c2SaDyNtosQ==}
+  '@tamagui/remove-scroll@3.1.7':
+    resolution: {integrity: sha512-aj7NzM8Pdf2txKV6HpHCL4RgRdrn/geaV+y+vfNwtIh2bDZlfL/YRfHupzCXYz0Bf/XMktUOyBE3NHzkAeFxyA==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/roving-focus@2.7.7':
-    resolution: {integrity: sha512-+5Vby9hHnNv577gqDdz3OOUN4TfpAWdbev6jmgDMItW8T3lvdKPqwE6+5Ja5RZKS46lG1gAvNrfZyDXjdpI0Sg==}
+  '@tamagui/roving-focus@3.1.7':
+    resolution: {integrity: sha512-yol/KXWonmIjmg1EtIFh20rIy0RdGvi/VL4XXagmlRDz0jDARIVj3Wvrd45gelI5oTE4rXOB7oXW4YtEg4pwpw==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/scroll-view@2.7.7':
-    resolution: {integrity: sha512-r8OggZh1lSwDAwnfjieaxNdiEIyLCElhDfjyufT88C0x2J5MuTDjm8/OG4bdRPCV64mILGZJp7Zqjwb5mEjbfw==}
+  '@tamagui/scroll-view@3.1.7':
+    resolution: {integrity: sha512-j4HBrzLNGGFXdel3KvjzYZ487HCXJIv1e/MoC5qUTH3+gtsOoFBrp8UP4Ervt3mwVa+XzGssMsoGJj2KF2FIzw==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/select@2.7.7':
-    resolution: {integrity: sha512-IJ1ei9XctvkUj496eVL9+8/oMvaeL9fagVfbHiE+O5p1kY4xHL8OcZ/HMuE8ssuJqEMytwAAFmkyflL/r0d9sQ==}
+  '@tamagui/select@3.1.7':
+    resolution: {integrity: sha512-QMztwN310PK1G3XhXjpPZxdKNZx6pLtTTnIzWRIMOgbyuVJdUOVtYUeLzd/wRDvvGBLq2GrRnyZrdAE2T272fw==}
     peerDependencies:
       react: '>=19'
       react-dom: '*'
 
-  '@tamagui/separator@2.7.7':
-    resolution: {integrity: sha512-jnJkHoOG2TymjzwmZYJbJ30II3Gt3M02GLE0IDGoKUzH54iX/bI+ja6CiGaizBMuwbEKDkxF6/fUqVN8jcae3g==}
+  '@tamagui/separator@3.1.7':
+    resolution: {integrity: sha512-rRSTdtwpBoc98Oqb/D5U4QOB/5pU0VCr8Gcw+twMd5LQx67sxCKP6cOvWYN68Y/KmtseEZJwWm2L8DLcbDYMMA==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/shapes@2.7.7':
-    resolution: {integrity: sha512-C23YRRiDaa9p6h8T6RNJS9Ti2jMvspJbYq4ijz0Qbnmlg/Y+U/mdVwlxfVsnfS7aAN0RkkCYrH0b2WX+6QlRTA==}
+  '@tamagui/shapes@3.1.7':
+    resolution: {integrity: sha512-Z0cm76TdAdHiGalqSwbt/dZ5W+CdjIpBYZu7r9ipTSUF19fwK0LPsD9lY7+vFSvYhF1NAJd3M5vuBVJIj+Rfig==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/sheet@2.7.7':
-    resolution: {integrity: sha512-iH+vn0/chk/fuV0dCorRt8M5j1AfWNVmLxtjJvLtV1cSzmlXS1twhtfLwgHZwrByMHOk03aAao8dXrD3aEUSeg==}
+  '@tamagui/sheet@3.1.7':
+    resolution: {integrity: sha512-hxe0dyiPh3FJizEtFm2/pgLSe0f9u5eO+/3Er6aCwaGbuDvaUWq4BvTBNzJXSar1f2TGdF1JCpG4Vm4yLwg2Mw==}
     peerDependencies:
       react: '>=19'
+      react-native-safe-area-context: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native-safe-area-context:
+        optional: true
 
   '@tamagui/shorthands@2.7.7':
     resolution: {integrity: sha512-O3fHY0c1+HJr94t2vTqCEt6NutjgbwAd65Q0OGR1pHIUPlfxqPJ3oUAmMi/klIyL19RS49nKubSUClM9nxweGg==}
 
+  '@tamagui/shorthands@3.1.7':
+    resolution: {integrity: sha512-Y3cIRSGwZIn2rOaXWlbCfz/hG++/3gOZiUGAHKqESTRIksvowGbCba84RY9thYZjgt1twgrSML7FyYhTedm7mQ==}
+
   '@tamagui/simple-hash@2.7.7':
     resolution: {integrity: sha512-zowTxvDPfyIkezyNMLYgg065PPeUtN6XwAKwOiGeji0UYGD/Ly833YfJIDkzFE1cHDIhSIGsuj+DUJ0RhOSC6A==}
 
-  '@tamagui/sizable-context@2.7.7':
-    resolution: {integrity: sha512-3bJGylCPowR+x2her8+8edZt9Inqvl4BPQmKo7hdfrz0yBu2TIRcM9ew8rxUBNGB7qW70sK1uu3Zg5Q2gf+EAw==}
+  '@tamagui/simple-hash@3.1.7':
+    resolution: {integrity: sha512-uogwB7tVkC+k8atxWEbbwmaJaKFYWGNL6ahpgGvStReyxKzGZN4jREuqMLMa5GAbRdyYnsKwIGTTeBLEKxjkwA==}
+
+  '@tamagui/slider@3.1.7':
+    resolution: {integrity: sha512-a/WG3w0uMDWBrnm3NMrT5JPYehwNWxeoid4+e9W35QAr3mbxnHKZjOjCePmMeG1lwUTt9g4vSrXUOhD8byrsng==}
+    peerDependencies:
+      react: '>=19'
+      react-native-web: '*'
+
+  '@tamagui/spacer@3.1.7':
+    resolution: {integrity: sha512-RFd/miRT/RGLiIrub0nPT6fTUOBgQX2jJkoq8hmURPAm/zaBWd/QPfWLbRdaVs/JTQeUZQtjmnxZFojicHN72w==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/slider@2.7.7':
-    resolution: {integrity: sha512-53UPwmAYS6xA5zuvQoZQkY1kE7vXxHk5CUNYWZJir1TTvKAyiYG5zInLwaovpsZuV3eY2/Jry6CEnU0LzCPlnQ==}
+  '@tamagui/spinner@3.1.7':
+    resolution: {integrity: sha512-AimMzeRjxSiGDjyJqEoDjz3k5/rEF1cK1ycJK6PfoVGCzJbj8SyM8iPvZKMyq+M2miFXBDwOBEVe2YVEkM0a4w==}
+    peerDependencies:
+      react: '>=19'
+      react-native-web: '*'
+
+  '@tamagui/stacks@3.1.7':
+    resolution: {integrity: sha512-f9aWmalSxAJ/9PNAU8/xl6qUleC7WoJgdFOLB47KBMOt8sSc4D//6feCY8y02fBA+KadXsmO+IHjBGUPQvTrPg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/spacer@2.7.7':
-    resolution: {integrity: sha512-iLvIUw8FM6Ja0vGG0uwOrjBXfe9YPm+oi9Fu8m3fJIzLxJOWF9VFQTxU6EhX/kzKpNJjrb3Q2yF3yOYYhyV6kQ==}
-    peerDependencies:
-      react: '>=19'
-
-  '@tamagui/spinner@2.7.7':
-    resolution: {integrity: sha512-MOw0Td9Dfkr9Wx9oS4alWAE6UaRE2qIe2FGyyXv+DHbOp+OQlPlVaCxUm6nikXWeJQ7fwkZncGpitDleRDoFTg==}
-    peerDependencies:
-      react: '>=19'
-
-  '@tamagui/stacks@2.7.7':
-    resolution: {integrity: sha512-YpmBPIjk010PBUCnyh1+3MNUlyk1TDivxK+dhBQVI7lVY3LvwyFkV8+AR8XO9pQonsnMtsQ+sXOQSo5UnVVFoA==}
-    peerDependencies:
-      react: '>=19'
-
-  '@tamagui/start-transition@2.7.7':
-    resolution: {integrity: sha512-QhnuauczAW8Th85vcH8hn+jwCiGn6HuVwkp29qFPXU1b+YpWHN27v/Ettqaj1mVGLpmkaq1UsPIKZAlYuGw6yg==}
+  '@tamagui/start-transition@3.1.7':
+    resolution: {integrity: sha512-2r0mnxos9QMS1o0i3qV9LpS+tnYwladJ2Rh3orBPEUleTnF/LV7lDlaNpmuFBEu5yinzwiK1hr95sRw3MImSTw==}
     peerDependencies:
       react: '>=19'
 
@@ -1396,31 +1537,39 @@ packages:
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/switch-headless@2.7.7':
-    resolution: {integrity: sha512-GQJ3l9pXGsvGC0FbGTWMF/em3Y1ElcXjzKN+IXyH4LjniwNYIf/iruPx2X+It3Xtq2Jarv3XoS2czifDYig2sA==}
+  '@tamagui/style-grammar@3.1.7':
+    resolution: {integrity: sha512-s5czrARzOSIInLqMqeQSBflObNwn3DPIqr3o9tWzfJgPSL9nxcGGIUht8Am9rx03PQNjUDk9EuBEgIc3lhAXWQ==}
+
+  '@tamagui/switch-headless@3.1.7':
+    resolution: {integrity: sha512-AottKBSCKLJNZxHGUTdDHZMT7qLql0imvP645A34HrM/IncxKoKle/SxHcZo4qGdpiCOllc39KK4BFR2hqx0+A==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/switch@2.7.7':
-    resolution: {integrity: sha512-9MLGK9mFA3jIDIYA4Awo3begZsFN31WeIRNziCORyGhWsDdSfiMqpLdQPcAvzpsbnIaW2aniNZIacBaI9B1sHg==}
+  '@tamagui/switch@3.1.7':
+    resolution: {integrity: sha512-CgtbZuPMw0nMs/7zfRUyXxGsyp47W6//OhOXmRdDOJwC0N17ckOaX7K5QJPaLf6mdQKRkY2MOqDsuHpndILsRg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/tabs@2.7.7':
-    resolution: {integrity: sha512-eQNvfEldC1EYhgxIbSF9khUQf3TFphgddyRr0iT+UIRJKm//ALOpo5FBblWf6KITSd2q1SFaCUzFNwo5xFRH3w==}
+  '@tamagui/tabs-headless@3.1.7':
+    resolution: {integrity: sha512-B33vE0lthCwVYRd5eWiAf6hrbxzAr1HXUIwQRXLKuZ/Yw5LRJ8fiITnlIJ2FcCmdsEKWdlR9gk6aixpaybPqVw==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/text@2.7.7':
-    resolution: {integrity: sha512-KTYYcBuqBLjDKge4JGyK1OxQ+PijuXMUqhOrzi4JIOH0tb/atb2r9jgJ180UEwABevNYYF9evudo6Y7K62afdw==}
+  '@tamagui/tabs@3.1.7':
+    resolution: {integrity: sha512-XbJi+x+XFifvmk66b9yixhN24et8VEyBCeYzp2L1LYZu7EV8W4OEWbwTn1eZa9JKwgj4Zn8Urcv5EPUxgQdjbg==}
+    peerDependencies:
+      react: '>=19'
+
+  '@tamagui/text@3.1.7':
+    resolution: {integrity: sha512-BGj6SSyX+jxntH8TiNLfFI8WgdBnDUsb3lpHMo02P91Q+qt68aHtng6bZJ9rqjLIjVN0kRvYjF75uV/vChQ5ng==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/theme-builder@2.7.7':
     resolution: {integrity: sha512-M9heTIvrOkT3v368g5daAwknWRAI4LZ6AAMmFSFlqeMDN4cWZpOH2Edyxfs2OfA8uk6vtZMqzvvCIOMLQiWOQQ==}
 
-  '@tamagui/theme@2.7.7':
-    resolution: {integrity: sha512-pCEVfHtILe1IRoBtdOqTNo0TphfH3En2SFDSzWg09rUYYS9dDZI3nkP+AGYAPBkyYweGN4iEpGwz7FeNFnZDYA==}
+  '@tamagui/theme@3.1.7':
+    resolution: {integrity: sha512-kEgJ4zNr5uOKIcgc1HxqazI+c9bF47k/aPjQTNixjGWrEkLDdY+vPYG4zcFMy7kOg5SzSyK8e0Qhy90HKvVa1g==}
     peerDependencies:
       react: '>=19'
 
@@ -1430,46 +1579,58 @@ packages:
   '@tamagui/timer@2.7.7':
     resolution: {integrity: sha512-lPNn48cKvSi0VL60kmMqNrZmfDyFRWvg/hePBbJPivcviuwIQOVNaZ7cl4Azi0PQkMCRVZadGCVywrTYhzt3GQ==}
 
-  '@tamagui/toast@2.7.7':
-    resolution: {integrity: sha512-Da3T+pOpGoTtajlSnFsPmpAVekWTtLaszNItuuV2bGsQqhOTBzAaLWOm8L0WI8b9Xw3oAbZUVMWG5nRmd1NmKQ==}
+  '@tamagui/toast@3.1.7':
+    resolution: {integrity: sha512-H2a/M/ObQ9QTrwrgHLdbp3GSjONfO1hTBMqb9Jh4NgWwgmQZSuL2rWSBOMrC94aqSmQaXvmdN/IUfAlnMNqDcg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/toggle-group@2.7.7':
-    resolution: {integrity: sha512-DECbzYRZtWDlJTzQq+/huJKumT8A+QGNtUHMROxhze2lpg6xf4ApBpB07c0psC12mWRGMBiiPNB9WwNVOM230w==}
+  '@tamagui/toggle-group@3.1.7':
+    resolution: {integrity: sha512-ZXJvRATaEEqn4vl8imNPtVuKZH5CZFXxaYKLYRvc2d/4+qC2mqk/frO/Bdbg1k43zjEATlwG373zpRB2qFj6yA==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/tooltip@2.7.7':
-    resolution: {integrity: sha512-8AgveeTU2zc1sDbp9y9HIzdnurNHq1zALxLVJ/OVFqzMHciLeW188RV91mp/J8Nl9Qd4sr0D1J58xWFd957a3w==}
+  '@tamagui/tooltip@3.1.7':
+    resolution: {integrity: sha512-Cw1E12RwyeKOAWtTpq/FUC6uzIKHhrgYf0eTqOJ8wG8IYrdqnLW2U4lHk/vThPur4rLyW9rg3U0ARngREX+nKg==}
     peerDependencies:
       react: '>=19'
 
   '@tamagui/types@2.7.7':
     resolution: {integrity: sha512-CiOfuWrChi/RHhvE3kZ5Z+cxsOY33/gd3yvNsEGiMAHhYlVrANb9ZPoM6R/M7hQ9mkN7Z19GAFcn2FQnhEMzoA==}
 
-  '@tamagui/use-async@2.7.7':
-    resolution: {integrity: sha512-Cq27cDJ2BcAU1x4F9EIA1fbNebBmE5ctD4lTg7J1khuFb2LNDXfMY9rHbnXbp9mFym2TcHvzPL+kIgbxJUDZsQ==}
+  '@tamagui/types@3.1.7':
+    resolution: {integrity: sha512-mwqV1x3Jv2K9wsMahDuL9K8HB14R4gJQM4aBRX5N1v6tCrF5BxFDGOqjdPyWvkliLixYbijP0kIuKLMpsB+PcQ==}
+
+  '@tamagui/ui@3.1.7':
+    resolution: {integrity: sha512-pVfl3PNJIxV3ttoZKcoK6I2qUjWN+7rFVD2arrb04nROA535OKaHlauL6+6lm0ASsXZNcsAqHLPPg/7hn0RKug==}
+    peerDependencies:
+      react: '>=19'
+      react-native-safe-area-context: '*'
+    peerDependenciesMeta:
+      react-native-safe-area-context:
+        optional: true
+
+  '@tamagui/use-async@3.1.7':
+    resolution: {integrity: sha512-xjaDpuTpwLzIUYfWle+4egpGn+5RSpWM+bj9Vb0TfEEp0ezxULVHgSu71mHqkDoxhhsVEx5mjObZaLnG0V6c6A==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-callback-ref@2.7.7':
-    resolution: {integrity: sha512-WWkNH6vK3v3V5Aq2SHu8u3EsWoYRO7T0pJ7AzLsBfCBrgvnReVGhLfiD40SIRtvq7uIBPs4BSeFmLrD7Oi3HJQ==}
+  '@tamagui/use-callback-ref@3.1.7':
+    resolution: {integrity: sha512-lPXpD0hG43LkoXKMEg3H/XBrZSGGdjTtBr3xmCLqMw5Ye0xSv8siZeR+AKeWNJxXXVF21unC3Roij5hgW3Mj9Q==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-constant@2.7.7':
-    resolution: {integrity: sha512-05U/jVdT1zbsy7eFh6trNeJhKR6obj+xDmaF1f8J5e3dbsFPNZ3X/qWIEpA2wY4A8iX2zBaHnM2maSt4MtgV5Q==}
+  '@tamagui/use-constant@3.1.7':
+    resolution: {integrity: sha512-Gn/50mDWhXviqQ3eVYB3lugF6qyj3nEgdO8qgUrurCCrCw6/+Kcg53R8xzs3yX3tXCs4A8ynB943d/oq0YmYdg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-controllable-state@2.7.7':
-    resolution: {integrity: sha512-UKIhW5aAxuS2DwqthrRMGwYVkGrRSvUd2jTcAxkUfENGc16ozYfI6rl/xmSzK75ub0lb8zfQYbSstVvnmsqqeA==}
+  '@tamagui/use-controllable-state@3.1.7':
+    resolution: {integrity: sha512-Db43AMpOTu1nAH02xS9RyIyWlLx5qplaCqy58+xyr6JzVdP4hLjBLHIiyzkSJHozuSBvAy6uInIoP4ukZiBYQg==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-debounce@2.7.7':
-    resolution: {integrity: sha512-xoEha0pNhTt6aaPVP04ygmtkH8SENJDCMYsOJTvgB71sY38Zq+3cL/9TKEJcTKt9oPRCluRELdfJJsY9VwvnaA==}
+  '@tamagui/use-debounce@3.1.7':
+    resolution: {integrity: sha512-1FViBtOlTfvA7Kbl0bZo6qgn6hejmvvsQVmNnP3L0BgxxzCyKC8YcMD9c30NISXDG9VeCeLOm9E9IfIiPUvbwQ==}
     peerDependencies:
       react: '>=19'
 
@@ -1478,8 +1639,13 @@ packages:
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-direction@2.7.7':
-    resolution: {integrity: sha512-2Mly+yuIR+cCkHmdMeza/4XjF9ubs+e7auwdzzLxq6k+yaNYJL/Ti+JC3lEcBtvWT6cRViWA3A0aaxi3EfCL/Q==}
+  '@tamagui/use-did-finish-ssr@3.1.7':
+    resolution: {integrity: sha512-tfjcDLIIqh4rPzyujSXR0M4QmRLCBCjxSqXGNVAZRa+M6MmOVzIFMF/FoK9nm2NR2Hi3ZZ5oaHR8x0jVJxxPHg==}
+    peerDependencies:
+      react: '>=19'
+
+  '@tamagui/use-direction@3.1.7':
+    resolution: {integrity: sha512-bwYUhw+0PQZFAsLAXgLp5WOLjO5S1G1xN1qOdSH2D8JXgrow5XxAw/EHvH2wGq/1hPEy1ZbZHqSOmkPIjLb/lg==}
     peerDependencies:
       react: '>=19'
 
@@ -1488,8 +1654,13 @@ packages:
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-escape-keydown@2.7.7':
-    resolution: {integrity: sha512-PlNYmTIrL6dnZnSVWuUCkIxfbKYK0UxJVOBwDClEMBxw7CHzoVKQAGnwqq8LgN4OESJws/x5PhM7WCWKoqfq2g==}
+  '@tamagui/use-element-layout@3.1.7':
+    resolution: {integrity: sha512-NHFh2IsupAOxIy9s3hCrj1vKB3CRlQz61aO1e8NqB3YH2mKJN1Zay06y4D3aKCo2sDx7tsbAnf5w/A8A964lxw==}
+    peerDependencies:
+      react: '>=19'
+
+  '@tamagui/use-escape-keydown@3.1.7':
+    resolution: {integrity: sha512-uqjrCuSp0kCOQ598ErDaJwUtRWN+cp6dwtgx9eRAGVEnDhH6u8GPXeOODA1IyCkKvo4WKgA0JYRMzAn2PbI1DQ==}
     peerDependencies:
       react: '>=19'
 
@@ -1498,13 +1669,18 @@ packages:
     peerDependencies:
       react: '>=19'
 
+  '@tamagui/use-event@3.1.7':
+    resolution: {integrity: sha512-Q4Kqr8coVg5rj0xDz/awCBj/EgW6kvsfLLhQQGWu3PsLkse10kVrqMZD8HPAq7rPyXMNIECvxmKNQ9VW/p0G1g==}
+    peerDependencies:
+      react: '>=19'
+
   '@tamagui/use-force-update@2.7.7':
     resolution: {integrity: sha512-iQAbi6fGtU4ynZ7NsmyG0m5OxPiQEYb1oAg9C2e4fHi9xtIn7FSj57jCZXYDQXFP0jsBEZ21hukqefrWFDkwew==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-keyboard-visible@2.7.7':
-    resolution: {integrity: sha512-NBFP77Pd5Dq9ayVb4155Gstexz/ECvx+7R1aKVzykEqEThIfRSVyrJx118Tl98wAwdjBX1tkGMjz2r4weYxMpA==}
+  '@tamagui/use-force-update@3.1.7':
+    resolution: {integrity: sha512-KsvqIcTSR5igaVEr8VbdAK/8rZNBjCu4K/+s8o4smwG2eJP4bGj5+iXeH7eLI4rYs7sx3zVbwuBuEZuwx25r6Q==}
     peerDependencies:
       react: '>=19'
 
@@ -1513,18 +1689,23 @@ packages:
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-previous@2.7.7':
-    resolution: {integrity: sha512-QDoP3s+peUhkHRBEf0xJ8KYQglpHezgmQlOyBLsXat2n9FY7+7Fi3A1gJFoPOrQC+2vL6ms/uzHmcQLc1esm7A==}
+  '@tamagui/use-presence@3.1.7':
+    resolution: {integrity: sha512-miEh6CpmqVbOPeCDw5ZPyrBzjxePcfzMbzQhS5MHrySQZOyccDSIuFRZM8DDkmnQzlxqqefyjE4xOlkKJq9EFQ==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/use-window-dimensions@2.7.7':
-    resolution: {integrity: sha512-tssyzmQqHRckO5AC9XS90M28ybz/Vkg9HYU6GG1jUIAIEqZTIQAU+VZclDBmfMa4Mkpb8XBUtlTOUazpbBCKkw==}
+  '@tamagui/use-previous@3.1.7':
+    resolution: {integrity: sha512-Y0POsfxXDpI66Sc3800fN7iBrcRCrSAxzVmPi3EXaX1ifmzOODgo17egnsrtesN00BJUOJiDP2v60qVAQwG16A==}
     peerDependencies:
       react: '>=19'
 
-  '@tamagui/visually-hidden@2.7.7':
-    resolution: {integrity: sha512-JvqYcC2DYZlXInwMBh5/yRxGq9jtlZ5bmxJGSw71urW47De1ozVMnB7+X3jN3GU8mxfL3wVgzNxXHmMK2ds5VA==}
+  '@tamagui/use-window-dimensions@3.1.7':
+    resolution: {integrity: sha512-WFDAwO5ktPYTTlYbYZPpp0ud/dRpiI+vpbIcWfTYM5/6z1P2ici1+qHbl5U8g/uHokHIfv1bsCtDXkOg538jbA==}
+    peerDependencies:
+      react: '>=19'
+
+  '@tamagui/visually-hidden@3.1.7':
+    resolution: {integrity: sha512-2+aSLDj69TwEhw2iKkCLi58Rtgs+FwZ3WOIrtb4gqIA6sRoJ6V0vJox9XI5tDte/7JcGHSW8K5vr3RGv1esPdw==}
     peerDependencies:
       react: '>=19'
 
@@ -1534,8 +1715,14 @@ packages:
       react: '>=19'
       react-dom: '*'
 
-  '@tamagui/z-index-stack@2.7.7':
-    resolution: {integrity: sha512-HKzvfbvo/NsktWBCoIySQEE6Y35GzkCkgxLWp+sKW83c7iIgU0hnWsu1BvoyBDjIDf0wf2VyzoJVjrUPTxFkbQ==}
+  '@tamagui/web@3.1.7':
+    resolution: {integrity: sha512-nq1ZPSqoFeXqGpdB2E/XjrRTzTJ6TCi+WF2KIcYSi/pE1LyR/RTX6i2o+hTYUYf8nNKy9SFuJz1ZTpV1QLBPyw==}
+    peerDependencies:
+      react: '>=19'
+      react-dom: '*'
+
+  '@tamagui/z-index-stack@3.1.7':
+    resolution: {integrity: sha512-lf29aSmyjI0a0jHq+Yb+ptVhLhR+hRdtPJqRH1Rj5nYb0rFYx+c7F8YhTGabI5JOW5BIPMVjlcSwWSf5u3b24Q==}
     peerDependencies:
       react: '>=19'
 
@@ -3190,6 +3377,10 @@ packages:
   setprototypeof@1.2.0:
     resolution: {integrity: sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==}
 
+  sf-symbols-typescript@2.2.0:
+    resolution: {integrity: sha512-TPbeg0b7ylrswdGCji8FRGFAKuqbpQlLbL8SOle3j1iHSs5Ob5mhvMAxWN2UItOjgALAB5Zp3fmMfj8mbWvXKw==}
+    engines: {node: '>=10'}
+
   shebang-command@2.0.0:
     resolution: {integrity: sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==}
     engines: {node: '>=8'}
@@ -3303,10 +3494,14 @@ packages:
     resolution: {integrity: sha512-9kY+CygyYM6j02t5YFHbNz2FN5QmYGv9zAjVp4lCDjlCw7amdckXlEt/bjMhUIfj4ThGRE4gCUH5+yGnNuPo5A==}
     engines: {node: '>=10.0.0'}
 
-  tamagui@2.7.7:
-    resolution: {integrity: sha512-C30TuSttP9wOdDYWu6nr0+vwlW40KIzBjAruN3w3uGhDngscA3sj4zsL+QppryG4ffEvnDP/jpPV3+D7aXhB1Q==}
+  tamagui@3.1.7:
+    resolution: {integrity: sha512-HSI8oLi2QPClbFsd+oUOIear6mY66FCFGs4IcOTZntRkVDxWyRaeDoPFYuLljadb6zGjWjgMb3+9HmAgTqU6XQ==}
     peerDependencies:
       react: '>=19'
+      react-native-safe-area-context: '*'
+    peerDependenciesMeta:
+      react-native-safe-area-context:
+        optional: true
 
   terminal-link@2.1.1:
     resolution: {integrity: sha512-un0FmiRUQNr5PJqy9kP7c40F5BOfpGlYTrxonDChEZB7pzZxRNp/bt+ymiy9/npwXya9KH99nJ/GXFIiUkYGFQ==}
@@ -4701,76 +4896,135 @@ snapshots:
 
   '@sinclair/typebox@0.27.12': {}
 
-  '@tamagui/accordion@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/accordion@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/collapsible': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/collection': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-direction': 2.7.7(react@19.2.3)
+      '@tamagui/collapsible': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/collection': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-direction': 3.1.7(react@19.2.3)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/adapt@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/adapt@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/z-index-stack': 2.7.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/z-index-stack': 3.1.7(react@19.2.3)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/alert-dialog@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/alert-dialog@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/dialog': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/dismissable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/focus-scope': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/remove-scroll': 2.7.7(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/dialog': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/dismissable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focus-scope': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/remove-scroll': 3.1.7(react@19.2.3)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/animate-presence@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/animate-presence@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/use-constant': 2.7.7(react@19.2.3)
-      '@tamagui/use-force-update': 2.7.7(react@19.2.3)
-      '@tamagui/use-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/use-constant': 3.1.7(react@19.2.3)
+      '@tamagui/use-force-update': 3.1.7(react@19.2.3)
+      '@tamagui/use-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/animate@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/animate@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/animation-helpers@2.7.7': {}
+
+  '@tamagui/animation-helpers@3.1.7':
+    dependencies:
+      '@tamagui/style-grammar': 3.1.7
 
   '@tamagui/animations-css@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -4781,6 +5035,28 @@ snapshots:
       '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
       react: 19.2.3
       react-dom: 19.3.0(react@19.2.3)
+
+  '@tamagui/animations-css@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/animation-helpers': 3.1.7
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/cubic-bezier-animator': 3.1.7
+      '@tamagui/use-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+      react-dom: 19.3.0(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/animations-motion@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -4802,6 +5078,27 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
+  '@tamagui/animations-react-native@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/animation-helpers': 3.1.7
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/use-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
+
   '@tamagui/animations-reanimated@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native-reanimated@4.5.1(react-native-worklets@0.10.4(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@react-native/normalize-colors': 0.83.2
@@ -4813,18 +5110,29 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@tamagui/avatar@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/avatar@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/image': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/shapes': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/image': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/shapes': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/babel-plugin@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -4840,100 +5148,159 @@ snapshots:
       - react-dom
       - supports-color
 
-  '@tamagui/button@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/button@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/config-default': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/font-size': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-button-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/helpers-tamagui': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/spacer': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/config-default': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/font-size': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/helpers-tamagui': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/card@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/card@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/checkbox-headless@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/checkbox-headless@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/label': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-previous': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/label': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-previous': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/checkbox@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/checkbox@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/checkbox-headless': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/font-size': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/helpers-tamagui': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/label': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-previous': 2.7.7(react@19.2.3)
+      '@tamagui/checkbox-headless': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/cli-color@2.7.7': {}
 
-  '@tamagui/collapsible@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/collapsible@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/collection@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/collection@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/colors@2.7.7': {}
 
   '@tamagui/compose-refs@2.7.7(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+
+  '@tamagui/compose-refs@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -4947,6 +5314,29 @@ snapshots:
     transitivePeerDependencies:
       - react
       - react-dom
+
+  '@tamagui/config-default@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/animation-helpers': 3.1.7
+      '@tamagui/animations-css': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animations-react-native': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/shorthands': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/config@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native-reanimated@4.5.1(react-native-worklets@0.10.4(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -4972,17 +5362,34 @@ snapshots:
     dependencies:
       react: 19.2.3
 
-  '@tamagui/context-menu@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
+  '@tamagui/constants@3.1.7(react@19.2.3)':
     dependencies:
-      '@tamagui/create-menu': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/popover': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-callback-ref': 2.7.7(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      react: 19.2.3
+
+  '@tamagui/context-menu@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/create-menu': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/popover': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-callback-ref': 3.1.7(react@19.2.3)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
       - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/core@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -4996,35 +5403,72 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@tamagui/create-context@2.7.7(react@19.2.3)':
+  '@tamagui/core@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-media-driver': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-use-pressable': 3.1.7(react@19.2.3)
+      '@tamagui/use-element-layout': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/create-context@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
-  '@tamagui/create-menu@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
+  '@tamagui/create-menu@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/animate': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/collection': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/dismissable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/focus-guard': 2.7.7(react@19.2.3)
-      '@tamagui/focus-scope': 2.7.7(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/image': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/native': 2.7.7(react@19.2.3)
-      '@tamagui/popover': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/popper': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/remove-scroll': 2.7.7(react@19.2.3)
-      '@tamagui/roving-focus': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-callback-ref': 2.7.7(react@19.2.3)
-      '@tamagui/use-direction': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/animate': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/collection': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/dismissable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focus-guard': 3.1.7(react@19.2.3)
+      '@tamagui/focus-scope': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-token': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/image': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/native': 3.1.7(5c73f69a1ded5eb0383949a9e9a1945f)
+      '@tamagui/popover': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/popper': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/remove-scroll': 3.1.7(react@19.2.3)
+      '@tamagui/roving-focus': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-callback-ref': 3.1.7(react@19.2.3)
+      '@tamagui/use-direction': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
+      sf-symbols-typescript: 2.2.0
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
       - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/create-theme@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -5035,87 +5479,161 @@ snapshots:
 
   '@tamagui/cubic-bezier-animator@2.7.7': {}
 
-  '@tamagui/dialog@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/cubic-bezier-animator@3.1.7': {}
+
+  '@tamagui/dialog@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/adapt': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/dismissable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/focus-scope': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/remove-scroll': 2.7.7(react@19.2.3)
-      '@tamagui/sheet': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/z-index-stack': 2.7.7(react@19.2.3)
+      '@tamagui/adapt': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/dismissable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focus-scope': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/remove-scroll': 3.1.7(react@19.2.3)
+      '@tamagui/sheet': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/z-index-stack': 3.1.7(react@19.2.3)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/dismissable@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/dismissable@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/use-escape-keydown': 2.7.7(react@19.2.3)
-      '@tamagui/use-event': 2.7.7(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/use-escape-keydown': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
       react: 19.2.3
       react-dom: 19.3.0(react@19.2.3)
-
-  '@tamagui/element@2.7.7(react@19.2.3)':
-    dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      react: 19.2.3
-
-  '@tamagui/elements@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      react: 19.2.3
     transitivePeerDependencies:
-      - react-dom
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/dom@3.1.7(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+
+  '@tamagui/element@3.1.7(react@19.2.3)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      react: 19.2.3
 
   '@tamagui/fake-react-native@2.7.7': {}
 
-  '@tamagui/floating@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
+  '@tamagui/fake-react-native@3.1.7(@babel/core@7.29.7)(@react-native/babel-preset@0.87.1(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))':
+    optionalDependencies:
+      '@babel/core': 7.29.7
+      '@react-native/babel-preset': 0.87.1(@babel/core@7.29.7)
+      react-native: 0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+
+  '@tamagui/field@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/form': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/floating@3.1.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@floating-ui/react-dom': 2.1.9(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
       '@floating-ui/react-native': 0.10.10(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-event': 2.7.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
       react: 19.2.3
+      react-dom: 19.3.0(react@19.2.3)
     transitivePeerDependencies:
-      - react-dom
       - react-native
 
-  '@tamagui/focus-guard@2.7.7(react@19.2.3)':
+  '@tamagui/focus-guard@3.1.7(react@19.2.3)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/use-event': 2.7.7(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
       react: 19.2.3
 
-  '@tamagui/focus-scope@2.7.7(react@19.2.3)':
+  '@tamagui/focus-scope@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/start-transition': 2.7.7(react@19.2.3)
-      '@tamagui/use-async': 2.7.7(react@19.2.3)
-      '@tamagui/use-event': 2.7.7(react@19.2.3)
-      react: 19.2.3
-
-  '@tamagui/focusable@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/start-transition': 3.1.7(react@19.2.3)
+      '@tamagui/use-async': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/focusable@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/font-inter@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -5131,20 +5649,43 @@ snapshots:
       - react
       - react-dom
 
-  '@tamagui/font-size@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/font-size@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/form@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/form@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/generate-themes@2.7.7(esbuild@0.27.7)(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -5159,52 +5700,88 @@ snapshots:
       - react-dom
       - supports-color
 
-  '@tamagui/get-button-sized@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/get-font-sized@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/get-font-sized@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/get-token@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/get-token@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/group@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
-
-  '@tamagui/group@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/spacer': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/helpers-node@2.7.7':
     dependencies:
       '@tamagui/types': 2.7.7
 
-  '@tamagui/helpers-tamagui@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/helpers-tamagui@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/font-size': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/helpers@2.7.7(react@19.2.3)':
     dependencies:
@@ -5212,200 +5789,346 @@ snapshots:
       '@tamagui/simple-hash': 2.7.7
       react: 19.2.3
 
-  '@tamagui/image@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/helpers@3.1.7(react@19.2.3)':
     dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/simple-hash': 3.1.7
+      '@tamagui/style-grammar': 3.1.7
       react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
 
-  '@tamagui/input@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/image@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/element': 2.7.7(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/font-size': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-button-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-font-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/helpers-tamagui': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/input@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/element': 3.1.7(react@19.2.3)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/font-size': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-font-sized': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/helpers-tamagui': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/is-equal-shallow@2.7.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
-  '@tamagui/label@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/is-equal-shallow@3.1.7(react@19.2.3)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-button-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-font-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
       react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
 
-  '@tamagui/linear-gradient@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/label@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/native': 2.7.7(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-font-sized': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
-      - react-dom
-
-  '@tamagui/list-item@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/font-size': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-font-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/helpers-tamagui': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
-
-  '@tamagui/menu@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-menu': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/popover': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/popper': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/scroll-view': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
       - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/linear-gradient@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/list-item@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/font-size': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-font-sized': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-token': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/helpers-tamagui': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/menu@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-menu': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/popover': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/popper': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/scroll-view': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/native@2.7.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
+  '@tamagui/native@3.1.7(5c73f69a1ded5eb0383949a9e9a1945f)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      react: 19.2.3
+    optionalDependencies:
+      react-native: 0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      react-native-keyboard-controller: 1.22.6(react-native-reanimated@4.5.1(react-native-worklets@0.10.4(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-safe-area-context: 5.7.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+
   '@tamagui/normalize-css-color@2.7.7':
     dependencies:
       '@react-native/normalize-color': 2.1.0
 
-  '@tamagui/polyfill-dev@2.7.7': {}
-
-  '@tamagui/popover@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
+  '@tamagui/normalize-css-color@3.1.7':
     dependencies:
-      '@tamagui/adapt': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/dismissable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/floating': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/focus-scope': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/popper': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/remove-scroll': 2.7.7(react@19.2.3)
-      '@tamagui/scroll-view': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/sheet': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/z-index-stack': 2.7.7(react@19.2.3)
+      '@react-native/normalize-color': 2.1.0
+
+  '@tamagui/polyfill-dev@3.1.7': {}
+
+  '@tamagui/popover@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/adapt': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/dismissable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/floating': 3.1.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      '@tamagui/focus-scope': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/popper': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/remove-scroll': 3.1.7(react@19.2.3)
+      '@tamagui/scroll-view': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/sheet': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/z-index-stack': 3.1.7(react@19.2.3)
       react: 19.2.3
       react-freeze: 1.0.4(react@19.2.3)
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
       - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/popper@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
+  '@tamagui/popper@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/floating': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/start-transition': 2.7.7(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
-      - react-native
-
-  '@tamagui/portal@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/native': 2.7.7(react@19.2.3)
-      '@tamagui/start-transition': 2.7.7(react@19.2.3)
-      '@tamagui/use-event': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/z-index-stack': 2.7.7(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/floating': 3.1.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      '@tamagui/start-transition': 3.1.7(react@19.2.3)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
       react-dom: 19.3.0(react@19.2.3)
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/progress@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/portal@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/native': 3.1.7(5c73f69a1ded5eb0383949a9e9a1945f)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/start-transition': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/z-index-stack': 3.1.7(react@19.2.3)
+      react: 19.2.3
+      react-dom: 19.3.0(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/progress@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/get-token': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/proxy-worm@2.7.7': {}
 
-  '@tamagui/radio-group@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/radio-group@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/label': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/radio-headless': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/roving-focus': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-previous': 2.7.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/radio-headless': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/roving-focus': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/radio-headless@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/radio-headless@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/label': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-previous': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/label': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-previous': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/react-native-media-driver@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -5414,11 +6137,47 @@ snapshots:
       - react
       - react-dom
 
+  '@tamagui/react-native-media-driver@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/react-native-pan-responder@3.1.7(react@19.2.3)':
+    dependencies:
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-use-responder-events': 3.1.7(react@19.2.3)
+      react: 19.2.3
+
+  '@tamagui/react-native-types@3.1.7(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+
   '@tamagui/react-native-use-pressable@2.7.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
+  '@tamagui/react-native-use-pressable@3.1.7(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+
   '@tamagui/react-native-use-responder-events@2.7.7(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+
+  '@tamagui/react-native-use-responder-events@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -5445,104 +6204,172 @@ snapshots:
       react: 19.2.3
       react-dom: 19.3.0(react@19.2.3)
 
-  '@tamagui/remove-scroll@2.7.7(react@19.2.3)':
+  '@tamagui/remove-scroll@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
-  '@tamagui/roving-focus@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/roving-focus@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/collection': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-direction': 2.7.7(react@19.2.3)
-      '@tamagui/use-event': 2.7.7(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
-
-  '@tamagui/scroll-view@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/collection': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-direction': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/select@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
+  '@tamagui/scroll-view@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/adapt': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/dismissable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/floating': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/focus-scope': 2.7.7(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/list-item': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/native': 2.7.7(react@19.2.3)
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/remove-scroll': 2.7.7(react@19.2.3)
-      '@tamagui/separator': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/sheet': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-debounce': 2.7.7(react@19.2.3)
-      '@tamagui/use-event': 2.7.7(react@19.2.3)
-      '@tamagui/use-previous': 2.7.7(react@19.2.3)
-      '@tamagui/z-index-stack': 2.7.7(react@19.2.3)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/select@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/adapt': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/dismissable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/floating': 3.1.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      '@tamagui/focus-scope': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-token': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/list-item': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/native': 3.1.7(5c73f69a1ded5eb0383949a9e9a1945f)
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/remove-scroll': 3.1.7(react@19.2.3)
+      '@tamagui/separator': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/sheet': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-debounce': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
+      '@tamagui/z-index-stack': 3.1.7(react@19.2.3)
       react: 19.2.3
       react-dom: 19.3.0(react@19.2.3)
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/separator@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/separator@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/shapes@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/shapes@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/sheet@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/sheet@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/adapt': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animations-react-native': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/native': 2.7.7(react@19.2.3)
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/remove-scroll': 2.7.7(react@19.2.3)
-      '@tamagui/scroll-view': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-constant': 2.7.7(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-did-finish-ssr': 2.7.7(react@19.2.3)
-      '@tamagui/use-keyboard-visible': 2.7.7(react@19.2.3)
-      '@tamagui/z-index-stack': 2.7.7(react@19.2.3)
+      '@tamagui/adapt': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animation-helpers': 3.1.7
+      '@tamagui/animations-react-native': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focus-scope': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/native': 3.1.7(5c73f69a1ded5eb0383949a9e9a1945f)
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-pan-responder': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-use-responder-events': 3.1.7(react@19.2.3)
+      '@tamagui/remove-scroll': 3.1.7(react@19.2.3)
+      '@tamagui/scroll-view': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-constant': 3.1.7(react@19.2.3)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-did-finish-ssr': 3.1.7(react@19.2.3)
+      '@tamagui/z-index-stack': 3.1.7(react@19.2.3)
       react: 19.2.3
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+    optionalDependencies:
+      react-native-safe-area-context: 5.7.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/shorthands@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -5551,56 +6378,114 @@ snapshots:
       - react
       - react-dom
 
+  '@tamagui/shorthands@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
   '@tamagui/simple-hash@2.7.7': {}
 
-  '@tamagui/sizable-context@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/simple-hash@3.1.7': {}
+
+  '@tamagui/slider@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/get-token': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-use-responder-events': 3.1.7(react@19.2.3)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-debounce': 3.1.7(react@19.2.3)
+      '@tamagui/use-direction': 3.1.7(react@19.2.3)
+      react: 19.2.3
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/spacer@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/slider@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/spinner@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-debounce': 2.7.7(react@19.2.3)
-      '@tamagui/use-direction': 2.7.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+      react-native-web: 0.21.2(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/stacks@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/spacer@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
-
-  '@tamagui/spinner@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
-
-  '@tamagui/stacks@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-button-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
-
-  '@tamagui/start-transition@2.7.7(react@19.2.3)':
+  '@tamagui/start-transition@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -5659,62 +6544,118 @@ snapshots:
       - react-dom
       - supports-color
 
-  '@tamagui/switch-headless@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/label': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-previous': 2.7.7(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
+  '@tamagui/style-grammar@3.1.7': {}
 
-  '@tamagui/switch@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/switch-headless@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/label': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/switch-headless': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-previous': 2.7.7(react@19.2.3)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/label': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/use-previous': 3.1.7(react@19.2.3)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/tabs@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/switch@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/element': 2.7.7(react@19.2.3)
-      '@tamagui/get-button-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/group': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/roving-focus': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/sizable-context': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-direction': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/switch-headless': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/text@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/tabs-headless@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/get-font-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers-tamagui': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-direction': 3.1.7(react@19.2.3)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/tabs@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/group': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/roving-focus': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/tabs-headless': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/text@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/get-font-sized': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers-tamagui': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/theme-builder@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -5725,14 +6666,25 @@ snapshots:
       - react
       - react-dom
 
-  '@tamagui/theme@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/theme@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/start-transition': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/start-transition': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/themes@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -5747,87 +6699,211 @@ snapshots:
 
   '@tamagui/timer@2.7.7': {}
 
-  '@tamagui/toast@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
+  '@tamagui/toast@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/collection': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/dismissable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/native': 2.7.7(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/start-transition': 2.7.7(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/visually-hidden': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/collection': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/dismissable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/native': 3.1.7(5c73f69a1ded5eb0383949a9e9a1945f)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/start-transition': 3.1.7(react@19.2.3)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/visually-hidden': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
-      - react-dom
-
-  '@tamagui/toggle-group@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/font-size': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/helpers-tamagui': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/roving-focus': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/sizable-context': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-direction': 2.7.7(react@19.2.3)
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
-      - react-dom
-
-  '@tamagui/tooltip@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/floating': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers': 2.7.7(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/popover': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/popper': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      react: 19.2.3
-    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
       - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/toggle-group@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/font-size': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-token': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/helpers-tamagui': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/roving-focus': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-direction': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/tooltip@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/floating': 3.1.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/popover': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/popper': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/types@2.7.7': {}
 
-  '@tamagui/use-async@2.7.7(react@19.2.3)':
+  '@tamagui/types@3.1.7': {}
+
+  '@tamagui/ui@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/accordion': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/adapt': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/alert-dialog': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/avatar': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/button': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/card': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/checkbox': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/collapsible': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/context-menu': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/create-menu': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/dialog': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/element': 3.1.7(react@19.2.3)
+      '@tamagui/field': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/font-size': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/form': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-font-sized': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-token': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/group': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers-tamagui': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/image': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/input': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/label': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/list-item': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/menu': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/popover': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/popper': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/progress': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/radio-group': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-media-driver': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/scroll-view': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/select': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/separator': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/shapes': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/sheet': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/slider': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/spacer': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/spinner': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/switch': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/tabs': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/theme': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/toast': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/toggle-group': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/tooltip': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-debounce': 3.1.7(react@19.2.3)
+      '@tamagui/use-force-update': 3.1.7(react@19.2.3)
+      '@tamagui/use-window-dimensions': 3.1.7(react@19.2.3)
+      '@tamagui/visually-hidden': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/z-index-stack': 3.1.7(react@19.2.3)
+      react: 19.2.3
+    optionalDependencies:
+      react-native-safe-area-context: 5.7.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/use-async@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
-  '@tamagui/use-callback-ref@2.7.7(react@19.2.3)':
+  '@tamagui/use-callback-ref@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
-  '@tamagui/use-constant@2.7.7(react@19.2.3)':
+  '@tamagui/use-constant@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
-  '@tamagui/use-controllable-state@2.7.7(react@19.2.3)':
+  '@tamagui/use-controllable-state@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      '@tamagui/start-transition': 2.7.7(react@19.2.3)
-      '@tamagui/use-event': 2.7.7(react@19.2.3)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/start-transition': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
       react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
-  '@tamagui/use-debounce@2.7.7(react@19.2.3)':
+  '@tamagui/use-debounce@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -5835,7 +6911,11 @@ snapshots:
     dependencies:
       react: 19.2.3
 
-  '@tamagui/use-direction@2.7.7(react@19.2.3)':
+  '@tamagui/use-did-finish-ssr@3.1.7(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+
+  '@tamagui/use-direction@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -5845,12 +6925,22 @@ snapshots:
       '@tamagui/is-equal-shallow': 2.7.7(react@19.2.3)
       react: 19.2.3
 
-  '@tamagui/use-escape-keydown@2.7.7(react@19.2.3)':
+  '@tamagui/use-element-layout@3.1.7(react@19.2.3)':
     dependencies:
-      '@tamagui/use-callback-ref': 2.7.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/is-equal-shallow': 3.1.7(react@19.2.3)
+      react: 19.2.3
+
+  '@tamagui/use-escape-keydown@3.1.7(react@19.2.3)':
+    dependencies:
+      '@tamagui/use-callback-ref': 3.1.7(react@19.2.3)
       react: 19.2.3
 
   '@tamagui/use-event@2.7.7(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+
+  '@tamagui/use-event@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -5858,7 +6948,7 @@ snapshots:
     dependencies:
       react: 19.2.3
 
-  '@tamagui/use-keyboard-visible@2.7.7(react@19.2.3)':
+  '@tamagui/use-force-update@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -5869,21 +6959,52 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@tamagui/use-previous@2.7.7(react@19.2.3)':
+  '@tamagui/use-presence@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
     dependencies:
-      react: 19.2.3
-
-  '@tamagui/use-window-dimensions@2.7.7(react@19.2.3)':
-    dependencies:
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      react: 19.2.3
-
-  '@tamagui/visually-hidden@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
-    dependencies:
-      '@tamagui/web': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
       react: 19.2.3
     transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
       - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/use-previous@3.1.7(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+
+  '@tamagui/use-window-dimensions@3.1.7(react@19.2.3)':
+    dependencies:
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      react: 19.2.3
+
+  '@tamagui/visually-hidden@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/web': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      react: 19.2.3
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-dom
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   '@tamagui/web@2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -5901,7 +7022,38 @@ snapshots:
       react: 19.2.3
       react-dom: 19.3.0(react@19.2.3)
 
-  '@tamagui/z-index-stack@2.7.7(react@19.2.3)':
+  '@tamagui/web@3.1.7(7633e66b242d9eb115d78c0e2efe0799)':
+    dependencies:
+      '@tamagui/animation-helpers': 3.1.7
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/dom': 3.1.7(react@19.2.3)
+      '@tamagui/helpers': 3.1.7(react@19.2.3)
+      '@tamagui/is-equal-shallow': 3.1.7(react@19.2.3)
+      '@tamagui/native': 3.1.7(5c73f69a1ded5eb0383949a9e9a1945f)
+      '@tamagui/normalize-css-color': 3.1.7
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/style-grammar': 3.1.7
+      '@tamagui/types': 3.1.7
+      '@tamagui/use-did-finish-ssr': 3.1.7(react@19.2.3)
+      '@tamagui/use-event': 3.1.7(react@19.2.3)
+      '@tamagui/use-force-update': 3.1.7(react@19.2.3)
+      react: 19.2.3
+      react-dom: 19.3.0(react@19.2.3)
+    transitivePeerDependencies:
+      - '@expo/ui'
+      - burnt
+      - one
+      - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-safe-area-context
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
+
+  '@tamagui/z-index-stack@3.1.7(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -7921,6 +9073,8 @@ snapshots:
 
   setprototypeof@1.2.0: {}
 
+  sf-symbols-typescript@2.2.0: {}
+
   shebang-command@2.0.0:
     dependencies:
       shebang-regex: 3.0.0
@@ -8022,75 +9176,89 @@ snapshots:
       string-width: 4.2.3
       strip-ansi: 6.0.1
 
-  tamagui@2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
+  tamagui@3.1.7(6135ff07c79319bb76e810be59841ed0):
     dependencies:
-      '@tamagui/accordion': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/adapt': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/alert-dialog': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/animate-presence': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/avatar': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/button': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/card': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/checkbox': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/collapsible': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/compose-refs': 2.7.7(react@19.2.3)
-      '@tamagui/constants': 2.7.7(react@19.2.3)
-      '@tamagui/context-menu': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/core': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/create-context': 2.7.7(react@19.2.3)
-      '@tamagui/create-menu': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/dialog': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/element': 2.7.7(react@19.2.3)
-      '@tamagui/elements': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/fake-react-native': 2.7.7
-      '@tamagui/focusable': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/font-size': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/form': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-button-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-font-sized': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/get-token': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/group': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/helpers-tamagui': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/image': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/input': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/label': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/linear-gradient': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/list-item': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/menu': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/polyfill-dev': 2.7.7
-      '@tamagui/popover': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/popper': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/portal': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/progress': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/radio-group': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/react-native-media-driver': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/scroll-view': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/select': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/separator': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/shapes': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/sheet': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/slider': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/spacer': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/spinner': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/stacks': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/switch': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/tabs': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/text': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/theme': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/toast': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/toggle-group': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/tooltip': 2.7.7(react-dom@19.3.0(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
-      '@tamagui/use-controllable-state': 2.7.7(react@19.2.3)
-      '@tamagui/use-debounce': 2.7.7(react@19.2.3)
-      '@tamagui/use-force-update': 2.7.7(react@19.2.3)
-      '@tamagui/use-window-dimensions': 2.7.7(react@19.2.3)
-      '@tamagui/visually-hidden': 2.7.7(react-dom@19.3.0(react@19.2.3))(react@19.2.3)
-      '@tamagui/z-index-stack': 2.7.7(react@19.2.3)
+      '@tamagui/accordion': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/adapt': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/alert-dialog': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/animate-presence': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/avatar': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/button': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/card': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/checkbox': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/collapsible': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/compose-refs': 3.1.7(react@19.2.3)
+      '@tamagui/constants': 3.1.7(react@19.2.3)
+      '@tamagui/context-menu': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/core': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/create-context': 3.1.7(react@19.2.3)
+      '@tamagui/create-menu': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/dialog': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/element': 3.1.7(react@19.2.3)
+      '@tamagui/fake-react-native': 3.1.7(@babel/core@7.29.7)(@react-native/babel-preset@0.87.1(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      '@tamagui/field': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/focusable': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/font-size': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/form': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-font-sized': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/get-token': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/group': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/helpers-tamagui': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/image': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/input': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/label': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/linear-gradient': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/list-item': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/menu': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/polyfill-dev': 3.1.7
+      '@tamagui/popover': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/popper': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/portal': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/progress': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/radio-group': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-media-driver': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/react-native-types': 3.1.7(react@19.2.3)
+      '@tamagui/scroll-view': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/select': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/separator': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/shapes': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/sheet': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/slider': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/spacer': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/spinner': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/stacks': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/switch': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/tabs': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/text': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/theme': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/toast': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/toggle-group': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/tooltip': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/ui': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-controllable-state': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/use-debounce': 3.1.7(react@19.2.3)
+      '@tamagui/use-force-update': 3.1.7(react@19.2.3)
+      '@tamagui/use-window-dimensions': 3.1.7(react@19.2.3)
+      '@tamagui/visually-hidden': 3.1.7(7633e66b242d9eb115d78c0e2efe0799)
+      '@tamagui/z-index-stack': 3.1.7(react@19.2.3)
       react: 19.2.3
+    optionalDependencies:
+      react-native-safe-area-context: 5.7.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
     transitivePeerDependencies:
+      - '@babel/core'
+      - '@expo/ui'
+      - '@react-native/babel-preset'
+      - burnt
+      - one
       - react-dom
       - react-native
+      - react-native-gesture-handler
+      - react-native-keyboard-controller
+      - react-native-teleport
+      - react-native-web
+      - react-native-worklets-core
+      - zeego
 
   terminal-link@2.1.1:
     dependencies:
