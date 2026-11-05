@@ -1,6 +1,8 @@
 package com.phonecando.runner.uiauto
 
 import android.accessibilityservice.AccessibilityService
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.phonecando.runner.AutomationHosts
@@ -53,10 +55,33 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
     val pkg = event.packageName?.toString() ?: return
     val cls = event.className?.toString() ?: return
     // Generic root views and system dialogs are not activities.
-    if (!cls.startsWith(pkg)) return
+    if (!isActivity(pkg, cls)) return
     activityPackage = pkg
     activityClass = cls
   }
+
+  // An activity's class need not live under its package name: a dev build
+  // (com.phonecando.app.full.dev) runs com.phonecando.app.MainActivity, and
+  // many apps ship activities from another namespace. Ask the package manager;
+  // only for a package Android 11+ hides from us (outside the manifest's
+  // launcher <queries>) fall back to the class-name prefix.
+  @Suppress("DEPRECATION")
+  private fun isActivity(pkg: String, cls: String): Boolean =
+    try {
+      packageManager.getActivityInfo(ComponentName(pkg, cls), 0)
+      true
+    } catch (e: PackageManager.NameNotFoundException) {
+      !isVisible(pkg) && cls.startsWith(pkg)
+    }
+
+  @Suppress("DEPRECATION")
+  private fun isVisible(pkg: String): Boolean =
+    try {
+      packageManager.getPackageInfo(pkg, 0)
+      true
+    } catch (e: PackageManager.NameNotFoundException) {
+      false
+    }
 
   override fun onInterrupt() {
     Log.w(TAG, "accessibility service interrupted")
