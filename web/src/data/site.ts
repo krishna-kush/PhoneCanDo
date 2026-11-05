@@ -1,32 +1,27 @@
 import app from '../../../app/app.json';
+// What only a published release knows: repo, date, and the size and SHA-256
+// of both APKs. ./manage release writes the whole file once its uploads
+// succeed (scripts/release-android.mjs); never edit it by hand.
+import release from './release.json';
 
-// Everything the download UI shows. Update here, nowhere else.
+// Everything the download UI shows. Edit here; release.json is the script's.
 //
 // The version comes from the app itself (app/app.json, bumped by
 // ./manage release), and every download URL and file name derives from it,
-// so the buttons and the curl/adb commands can never name different versions.
-const repo = 'https://github.com/krishna-kush/PhoneCanDo';
+// so the buttons and the computer commands can never name different versions.
+const repo = `https://github.com/${release.repo}`;
 const releases = `${repo}/releases`;
 const version: string = app.expo.version;
 const apkFile = (channel: 'lite' | 'full') => `phonecando-${version}-${channel}-arm64.apk`;
 const apkUrl = (channel: 'lite' | 'full') => `${releases}/download/v${version}/${apkFile(channel)}`;
 
-// What only a published release knows, written by ./manage release once its
-// uploads succeed (scripts/release-android.mjs). It must describe the app
-// version above: a page showing one version's links with another's checksum
-// would hand people a file that fails its own check.
-const published = {
-  version: '0.1.2',
-  released: '2026-11-03',
-  // The starter (lite) APK, the phone download.
-  size: '106 MB',
-  sha256: 'bd297f20a84aaa8da492268402db6eab05b3d5c5637778be12ea0c9e05abf927',
-};
-
-if (published.version !== version) {
+// release.json must describe the app version above: a page showing one
+// version's links with another's checksum would hand people a file that
+// fails its own check.
+if (release.version !== version) {
   const message =
-    `web/src/data/site.ts: the release facts are for v${published.version}, but app/app.json says ` +
-    `v${version}. ./manage release ${version} writes them once its uploads succeed.`;
+    `web/src/data/release.json is for v${release.version}, but app/app.json says ` +
+    `v${version}. ./manage release ${version} writes it once its uploads succeed.`;
   // A production build must not ship mismatched links and checksum; the dev
   // server only warns, so the site stays editable while a release is pending.
   if (import.meta.env.PROD) throw new Error(message);
@@ -43,11 +38,14 @@ export const site = {
   apk: apkUrl('lite'),
   fullApk: apkUrl('full'),
   fullApkFile: apkFile('full'),
-  released: published.released,
+  // Pinned in the computer commands: they check the download against it.
+  fullSha256: release.full.sha256,
+  released: release.released,
   arch: 'arm64',
   minAndroid: '8.0',
-  size: published.size,
-  sha256: published.sha256,
+  // The starter (lite) APK, the phone download.
+  size: `${Math.round(release.lite.size / 1024 / 1024)} MB`,
+  sha256: release.lite.sha256,
   license: 'Source-available',
   // Hero screen recording. Drop the files in public/ and fill both paths.
   hero: { video: '', poster: '' },

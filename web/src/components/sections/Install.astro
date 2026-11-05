@@ -2,6 +2,44 @@
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
 import { site } from "../../data/site";
+
+// The computer install, per OS, as three separate commands: download, check
+// the file against the SHA-256 pinned here, install. Two spaces before the
+// file name is the checksum-line format.
+const apk = site.fullApkFile;
+const pcScripts = [
+    {
+        os: "linux",
+        label: "Linux",
+        lines: [
+            `curl -LO ${site.fullApk}`,
+            `echo "${site.fullSha256}  ${apk}" | sha256sum -c`,
+            `adb install -r ${apk}`,
+        ],
+    },
+    {
+        // shasum ships with every macOS; sha256sum only since 15.
+        os: "macos",
+        label: "macOS",
+        lines: [
+            `curl -LO ${site.fullApk}`,
+            `echo "${site.fullSha256}  ${apk}" | shasum -a 256 -c`,
+            `adb install -r ${apk}`,
+        ],
+    },
+    {
+        // PowerShell: curl.exe, because plain `curl` there is
+        // Invoke-WebRequest; -eq ignores the case of Get-FileHash's hex.
+        os: "windows",
+        label: "Windows",
+        powershell: true,
+        lines: [
+            `curl.exe -LO ${site.fullApk}`,
+            `(Get-FileHash ${apk} -Algorithm SHA256).Hash -eq "${site.fullSha256}"`,
+            `adb install -r ${apk}`,
+        ],
+    },
+];
 ---
 
 <section class="section" id="install">
@@ -102,17 +140,28 @@ import { site } from "../../data/site";
                 can't, so it gets in, then fetches the full build
                 itself, which Android allows. Silly. Tested. Works.
             </p>
-            <p class="note install-pc-only">
-                On a computer? Skip the dance:
-            </p>
-            <div class="cmd-wrap install-pc-only">
-                <p class="cmd cmd-lines" data-cmd>
-                    <span>curl -LO {site.fullApk}</span>
-                    <span>adb install -r {site.fullApkFile}</span>
-                </p>
-                <button class="cmd-copy" type="button" data-copy aria-label="Copy both commands">
-                    Copy
-                </button>
+            <!-- Linux shows until the script picks the visitor's OS. -->
+            <div class="install-pc install-pc-only" data-os-picker>
+                <div class="install-pc-head">
+                    <p class="note">On a computer? Skip the dance:</p>
+                    <div class="os-tabs" role="group" aria-label="Your computer">
+                        {pcScripts.map(({ os, label }) => (
+                            <button class="os-tab" type="button" data-os={os} aria-pressed={String(os === "linux")}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                {pcScripts.map(({ os, label, lines, powershell }) => (
+                    <div class="cmd-wrap" data-os-panel={os} hidden={os !== "linux"}>
+                        <p class:list={["cmd", "cmd-lines", { "cmd-ps": powershell }]} data-cmd>
+                            {lines.map((line) => <span>{line}</span>)}
+                        </p>
+                        <button class="cmd-copy" type="button" data-copy aria-label={`Copy the ${label} commands`}>
+                            Copy
+                        </button>
+                    </div>
+                ))}
             </div>
         </div>
 
@@ -147,8 +196,30 @@ import { site } from "../../data/site";
 </section>
 
 <script>
-    // Copies the commands, one per line and without the "$ " prompts, then
-    // says so on the button for a moment.
+    // The computer commands open on the visitor's OS, guessed from the
+    // browser; the tabs switch it.
+    const picker = document.querySelector<HTMLElement>("[data-os-picker]");
+    if (picker) {
+        const show = (os: string) => {
+            for (const tab of picker.querySelectorAll<HTMLElement>("[data-os]")) {
+                tab.setAttribute("aria-pressed", String(tab.dataset.os === os));
+            }
+            for (const panel of picker.querySelectorAll<HTMLElement>("[data-os-panel]")) {
+                panel.hidden = panel.dataset.osPanel !== os;
+            }
+        };
+        const { userAgentData } = navigator as Navigator & { userAgentData?: { platform: string } };
+        const platform = userAgentData?.platform || navigator.userAgent;
+        // Case-sensitive /Win/, so "Darwin" doesn't read as Windows.
+        show(/mac/i.test(platform) ? "macos" : /Win/.test(platform) ? "windows" : "linux");
+        picker.addEventListener("click", (event) => {
+            const tab = (event.target as Element).closest<HTMLElement>("[data-os]");
+            if (tab?.dataset.os) show(tab.dataset.os);
+        });
+    }
+
+    // Copies the commands, one per line and without the prompts, then says
+    // so on the button for a moment.
     for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
         button.addEventListener("click", async () => {
             const box = button.parentElement?.querySelector("[data-cmd]");

@@ -1,89 +1,64 @@
-# phonecando web
+<p align="center">
+  <img src="public/logo.svg" width="64" alt="PhoneCanDo logo" />
+</p>
 
-Marketing site for PhoneCanDo. Static Astro, no backend. One tiny inline script
-powers the theme toggle; everything else is HTML + CSS. Deploys as plain
-files.
+<h1 align="center">PhoneCanDo web</h1>
+
+<p align="center">
+  The site at <a href="https://phonecando.app">phonecando.app</a><br/>
+  Static Astro · no backend · no CDN · no external JS
+</p>
 
 ```sh
 pnpm install
-pnpm dev        # http://localhost:4321
-pnpm build      # -> dist/
+pnpm dev      # http://localhost:4321
+pnpm build    # → dist/
 ```
 
-Astro is pinned to 7.3.0 because the host Node is 22.23.0 (Astro 7.4 needs
-22.23.4). Bump both together.
+Astro is pinned to 7.3.0 (7.4 needs Node ≥ 22.23.4); bump the two together.
 
-## Themes
+## Where things live
 
-The page starts in the OS theme (`prefers-color-scheme`); the nav toggle
-switches for the current visit only, so every load starts in the device
-theme. Light is warm paper (`#f2ecdf`) with a faint noise grain and the hero
-grid; dark is warm night ink (`#0c0b09`). Tokens live at the top of
-`src/styles/global.css`. Phone screens, demo media and the gate recording stay
-dark in both themes on purpose (`--art-*` tokens); terminals and the
-small hero session card follow the theme.
-
-## Design
-
-The site is built as a field manual, not a SaaS landing page: Instrument Serif
-display type, Geist sans body, Geist Mono labels, signal red + safety amber
-inks, sharp plates, registration ticks, figure labels, a consent gate and a
-printed colophon. The amber is `#fdc50d` on paper for rules, fills and shadows,
-a deeper `#7a4f00` for small text, and `#f59e0b` in dark. Fonts are bundled
-through `@fontsource`, so there is still no external JS or CDN request. The eight demo cards are plates; the model section is a freight manifest — a red-taped model crate with two routes into it — with an in-development stamp; the gate section is one consent plate — locked, the biometric prompt, armed — carrying the real `403 automation_off` that refuses every phone action. The top edge is a contained, one-shot linear loader. Media cards swap in the logo-derived loader on real video `loadstart`/`waiting` signals, and fall back to a static mark under reduced motion.
-
-## Edit here, nowhere else
-
-| What | File |
+| Change | Edit |
 |---|---|
-| Release facts (date, size, SHA-256), repo links; version and APK URLs derive from `app/app.json` | `src/data/site.ts` |
-| Demo gallery cards + video paths | `src/data/demos.ts` |
-| Colours, type, spacing | `src/styles/global.css` |
-| Section copy | `src/components/sections/*.astro` |
-| Section order | `src/pages/index.astro` |
-| Favicon / PWA / logo mark | generated; run `pnpm logos` at the repo root |
-| Social card | `public/og.png` |
+| Release facts: date, sizes, both SHA-256s, repo | nothing: `./manage release` writes `src/data/release.json` |
+| Site name, tagline, specs, media paths | `src/data/site.ts` |
+| Version, APK links, the adb command | nothing: derived from `app/app.json` |
+| Section copy · order | `src/components/sections/*.astro` · `src/pages/index.astro` |
+| Demo cards | `src/data/demos.ts` |
+| Colours (shared with the app) | `theme/tokens.json` |
+| Type, spacing, layout | `src/styles/global.css` |
+| Logo, favicons, loader | `theme/logo.json`; `pnpm logos` (repo root) redraws the icon files |
+| Social card | `public/og.png`, hand-built; redo it when the headline changes |
 
-`global.css` is one file in named blocks (`nav`, `hero`, `gate`, …). Find one
-with `grep -n '^/\* ---------- ' src/styles/global.css`. A block keeps its own
-`@media` rules; only reduced motion is global.
+A production build fails if `release.json` belongs to another version than
+`app/app.json`. `global.css` is one file of named blocks, each owning its
+`@media` rules: `grep -n '^/\* ---------- ' src/styles/global.css`.
 
-## Brand assets
+## Look
 
-`pnpm logos` (repo root) regenerates `public/favicon.svg`, the PNG favicons,
-PWA/Apple icons and `logo.svg` from `theme/tokens.json` plus the mark geometry
-in `theme/logo.json`. Don't hand-edit those. The same file holds the loader
-timing/poses; `src/lib/logoLoaderCss.ts` generates its CSS and the app imports
-the file directly, so one edit updates both. `og.png` is still the hand-built
-social card.
+A field manual, not a SaaS page: Instrument Serif display, Geist body, Geist
+Mono labels, signal red and safety amber on warm paper or night ink. Fonts ship
+through `@fontsource`. The page opens in the OS theme and the nav toggle lasts
+one visit; phone screens and media stay dark in both (`--art-*`).
 
-## Phone recordings
+## Recordings
 
-Every slot renders a labelled slate until a file exists — no fake UI anywhere.
+Every media slot shows a labelled slate until its file exists, never a mock.
 
-- **Hero** — put the clip in `public/`, then set `hero.video` and
-  `hero.poster` in `src/data/site.ts`. Plays muted on loop.
-  The small hero session card is decorative; it needs no media.
-- **Demos** — drop files in `public/demos/`, then fill `video` and `poster`
-  in `src/data/demos.ts`. The card switches from slate to `<video>` on its
-  own (tap to play, native controls, nothing preloads).
-- **Gate** — the in-app biometric prompt. Drop the clip in `public/`, then set
-  `gate.video` and `gate.poster` in `src/data/site.ts`.
+| Slot | Drop files in | Then set |
+|---|---|---|
+| Hero | `public/` | `hero` in `site.ts` |
+| Demos | `public/demos/` | `video`, `poster` in `demos.ts` |
+| Gate | `public/` | `gate` in `site.ts` |
+| Install | `public/` | `install` in `site.ts` |
 
-Media spec: 720×1560 (9:19.5), H.264 MP4, muted, 6–10 s, ≤3 MB per clip,
-poster JPG from the first frame. The card crops to 9:16, so keep UI inside
-the middle.
+720×1560 H.264 MP4, muted, ≤ 3 MB, 6–10 s (the install walkthrough runs
+~40 s), JPG poster from the first frame. Cards crop to 9:16, so keep the UI
+centred.
 
 ## Deploy
 
-Cloudflare Pages (or any static host): root `web`, build `pnpm build`,
-output `dist`. Set the real domain in `astro.config.mjs` (`site`) so the
-canonical URL and OG tags are absolute.
-
-## Left to fill
-
-- `src/data/site.ts`: repo URL; `./manage release` fills the `published`
-  block (version, date, size, SHA-256). APK URLs derive from the app version.
-- `astro.config.mjs`: real domain (currently `https://phonecando.app`).
-- `public/og.png` is generated from the design — regenerate if the headline
-  changes.
+Any static host serving `dist/`. Cloudflare: root `web`, build `pnpm build`,
+output `dist`; `wrangler.jsonc` adds the 404 page. `site` in
+`astro.config.mjs` sets the domain for canonical and OG URLs.
