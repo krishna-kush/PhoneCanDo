@@ -1,0 +1,218 @@
+name: Security
+
+# Supply-chain and secret hygiene: dependency review + OSV diff scan gate PRs
+# on newly introduced vulnerable deps; prod pushes and the weekly run report
+# all known OSV vulns to code scanning; gitleaks scans the full git history;
+# zizmor audits the workflows; pnpm audit reports (never blocks) per project.
+
+on:
+  push:
+    branches: [prod]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Diffs the dependency graph between base and head through the API, so
+      # no checkout. No PR comment (comment-summary-in-pr needs
+      # pull-requests: write, which fork PRs never get): read the job summary.
+      # Licenses: the project is source-available (see LICENSE) and the PCE
+      # rules forbid embedding AGPL, so network-copyleft licenses are denied.
+      # deny-licenses is deprecated upstream but still supported in v5; the
+      # alternative allow-list would fail on every odd npm license string.
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0
+          show-patched-versions: true
+          comment-summary-in-pr: never
+
+  # OSV-Scanner through Google's reusable workflows (they pin their own
+  # checkout/scanner/upload steps; callers of reusable workflows cannot set
+  # timeout-minutes). A recursive scan finds app/ and web/ pnpm-lock.yaml (and
+  # any lockfile added later; .gitignored paths are skipped). Gradle is not
+  # covered: osv-scanner needs a gradle.lockfile or verification-metadata.xml,
+  # and pce/ has neither.
+  osv-scan:
+    name: OSV-Scanner (full report)
+    if: github.event_name != 'pull_request'
+    permissions:
+      actions: read # codeql upload-sarif reads the run (codeql-action#2117)
+      contents: read
+      security-events: write # upload SARIF to code scanning
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+    with:
+      scan-args: |-
+        --recursive
+        ./
+      # Report every known vuln to code scanning, but do not go red on prod or
+      # the weekly run over advisories nobody introduced; PRs gate below.
+      fail-on-vuln: false
+
+  osv-scan-pr:
+    name: OSV-Scanner (new vulns in PR)
+    if: github.event_name == 'pull_request'
+    permissions:
+      actions: read # codeql upload-sarif reads the run (codeql-action#2117)
+      contents: read
+      security-events: write # upload SARIF to code scanning
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+    with:
+      scan-args: |-
+        --recursive
+        ./
+      # Scans base and head, fails only on vulns the PR adds.
+      fail-on-vuln: true
+
+  gitleaks:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout (all history)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The gitleaks CLI (MIT) instead of gitleaks-action: the action only
+      # scans the pushed commit range on push/PR, which breaks when history is
+      # rewritten (this repo amends and force-pushes its base commit), and it
+      # downloads an unverified, older gitleaks. This pins version + SHA-256.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          tgz="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl -fsSL --retry 3 -o "$tgz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  ${tgz}" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gitleaks-bin"
+          tar -xzf "$tgz" -C "$RUNNER_TEMP/gitleaks-bin" gitleaks
+          "$RUNNER_TEMP/gitleaks-bin/gitleaks" version
+
+      # `gitleaks git` defaults to `git log -p --full-history --all`: every
+      # commit on every fetched ref. Findings are redacted in logs and report.
+      - name: Scan full history
+        run: >-
+          "$RUNNER_TEMP/gitleaks-bin/gitleaks" git .
+          --config .github/gitleaks.toml
+          --redact --no-banner --exit-code 1
+          --report-format sarif --report-path "$RUNNER_TEMP/gitleaks.sarif"
+
+      - name: Summarise findings
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          sarif="$RUNNER_TEMP/gitleaks.sarif"
+          if [ ! -s "$sarif" ]; then
+            echo "### gitleaks: no report (the scan did not complete; see its log)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          n=$(jq '[.runs[].results[]] | length' "$sarif")
+          commits=$(git rev-list --all --count)
+          {
+            echo "### gitleaks: ${n} finding(s) in ${commits} commits"
+            if [ "$n" -gt 0 ]; then
+              echo
+              echo '| Rule | File | Line | Commit |'
+              echo '| --- | --- | ---: | --- |'
+              jq -r '.runs[].results[] |
+                "| \(.ruleId) | <code>\(.locations[0].physicalLocation.artifactLocation.uri)</code> | \(.locations[0].physicalLocation.region.startLine) | <code>\((.partialFingerprints.commitSha // "?")[0:7])</code> |"' "$sarif"
+              echo
+              echo 'Values are redacted. A real secret must be rotated first (removing it from git does not un-leak it);'
+              echo 'a false positive gets the narrowest possible allowlist in <code>.github/gitleaks.toml</code>.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Only on findings: the report is redacted, but it still maps rules to
+      # file/commit, and code scanning is deliberately not used (an alert there
+      # "resolves" when the file changes although the secret stays in history).
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gitleaks-sarif
+          path: ${{ runner.temp }}/gitleaks.sarif
+          retention-days: 7
+          if-no-files-found: warn
+
+  zizmor:
+    name: Workflow audit (zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read # online audits read workflow/action metadata
+      security-events: write # upload SARIF to code scanning
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Advanced Security mode: findings go to code scanning (category
+      # "zizmor") and do not fail the job; block on them with a code scanning
+      # merge-protection ruleset if wanted. Audits .github/workflows/* and
+      # .github/dependabot.yml, with online audits (impostor commits, known
+      # vulnerable actions) using the job token.
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+
+  pnpm-audit:
+    name: pnpm audit (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [app, web]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pnpm 11 needs Node 22+, so Node goes first. No install and no cache:
+      # pnpm audit only reads the lockfile.
+      - name: Set up Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Set up pnpm (version from package.json packageManager)
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      # Report only, never a gate: transitive React Native / Expo advisories
+      # are common and usually only fixable by an Expo SDK bump. The helper
+      # always exits 0 and raises a warning annotation for high/critical;
+      # continue-on-error also covers registry outages.
+      - name: Audit lockfile (report only)
+        continue-on-error: true
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/pnpm-audit.json"
+          pnpm -C "$PROJECT" audit --json > "$report"
+          status=$?
+          echo "pnpm audit exit code: ${status} (1 = advisories at or above 'low')"
+          node .github/ci/security/pnpm-audit-summary.mjs "$PROJECT" "$report" high

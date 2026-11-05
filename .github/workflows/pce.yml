@@ -1,0 +1,512 @@
+name: PCE
+
+# The phone-control engine (pce/, its own Gradle build): the full build, a
+# pure-JVM OS x JDK matrix, every module built alone, the pce/AGENTS.md
+# dependency law (static, Gradle-resolved and published POMs), the sample and
+# consumer-sample proofs against their documented output, and the Android
+# device harnesses on an emulator. Runs on PCE changes and nightly.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - 'pce/**'
+      - '.github/workflows/pce.yml'
+      - '.github/ci/pce/**'
+  pull_request:
+    paths:
+      - 'pce/**'
+      - '.github/workflows/pce.yml'
+      - '.github/ci/pce/**'
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  modules:
+    name: Module list
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: pce/settings.gradle.kts
+          sparse-checkout-cone-mode: false
+      - name: Read include(...) from settings.gradle.kts
+        id: list
+        run: |
+          set -euo pipefail
+          list=$(grep -oE '"(:[A-Za-z0-9_-]+)"' pce/settings.gradle.kts | tr -d '":' | jq -Rnc '[inputs]')
+          [[ "$list" != '[]' ]] || { echo "::error::no modules found in pce/settings.gradle.kts"; exit 1; }
+          echo "modules: $list"
+          echo "list=$list" >>"$GITHUB_OUTPUT"
+
+  dependency-law:
+    name: Dependency law
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: pce
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Static law (build files and sources)
+        run: |
+          set -euo pipefail
+          mkdir -p build/ci
+          node ../.github/ci/pce/check-deps.mjs . | tee build/ci/law-static.txt
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Point Gradle toolchains at the installed JDKs
+        run: bash ../.github/ci/pce/gradle-jdks.sh
+      - name: Resolve every module's main and test classpaths
+        run: bash ../.github/ci/pce/resolve-deps.sh build/ci/resolved
+      - name: Resolved law (Gradle's own view)
+        run: |
+          set -euo pipefail
+          node ../.github/ci/pce/check-deps.mjs --resolved build/ci/resolved . | tee build/ci/law-resolved.txt
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### PCE dependency law (pce/AGENTS.md §2, §3, §5)'
+            echo
+            echo 'Static: build files, plugins, publishing ids, imports, Clock/IdGenerator injection, global state.'
+            echo
+            echo '```text'
+            cat build/ci/law-static.txt 2>/dev/null || echo '(static check did not run)'
+            echo
+            echo 'Resolved project dependencies (module, configuration, projects):'
+            cat build/ci/law-resolved.txt 2>/dev/null || echo '(resolved check did not run)'
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pce-dependency-reports
+          path: pce/build/ci/
+          retention-days: 7
+          if-no-files-found: warn
+
+  build:
+    name: Build (./gradlew build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: pce
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      # Validates every gradle-wrapper.jar checksum, then caches Gradle state.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Point Gradle toolchains at the installed JDKs
+        run: bash ../.github/ci/pce/gradle-jdks.sh
+      # Everything: JVM tests, Android unit tests, lint, AARs, the sample app.
+      - name: ./gradlew build
+        run: |
+          set -euo pipefail
+          mkdir -p build/ci
+          ./gradlew build --continue --warning-mode all 2>&1 | tee build/ci/build.log
+      - name: Test summary
+        if: always()
+        run: node ../.github/ci/pce/junit-summary.mjs . --title 'PCE ./gradlew build' --require-tests
+      - name: Gradle deprecations (Gradle 10 readiness, informational)
+        if: always()
+        run: |
+          count=$(grep -ciE 'has been deprecated|is deprecated|will fail with an error in Gradle' build/ci/build.log || true)
+          echo "Gradle deprecation warnings in ./gradlew build: ${count:-0}" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pce-build-reports
+          path: |
+            pce/**/build/reports/
+            pce/**/build/test-results/**/*.xml
+            pce/build/ci/build.log
+          retention-days: 7
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pce-libraries
+          path: |
+            pce/*/build/libs/*.jar
+            pce/*/build/outputs/aar/*.aar
+          retention-days: 7
+          if-no-files-found: error
+
+  jvm-matrix:
+    # Compilation always uses the build's jvmToolchain(17) on a JDK 21 Gradle
+    # daemon; test-jdk.init.gradle then runs the tests and the sample on the
+    # matrix JDK, so this proves the target-17 bytecode on 17/21/25 runtimes on
+    # every hosted OS and CPU. ANDROID_HOME is unset (the arm runner has no
+    # Android SDK at all): the pure modules must not need one.
+    name: JVM ${{ matrix.os }} / JDK ${{ matrix.jdk }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-latest]
+        jdk: [17, 21, 25]
+    defaults:
+      run:
+        shell: bash
+        working-directory: pce
+    env:
+      TEST_JDK: ${{ matrix.jdk }}
+    steps:
+      # Without this, Windows checks gradlew out with CRLF and bash cannot run it.
+      - name: Keep LF line endings
+        if: runner.os == 'Windows'
+        working-directory: .
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          # The last one becomes JAVA_HOME (the Gradle daemon).
+          java-version: |
+            17
+            25
+            21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Point Gradle toolchains at the installed JDKs
+        run: bash ../.github/ci/pce/gradle-jdks.sh
+      - name: Pure-JVM tests on JDK ${{ matrix.jdk }}
+        run: |
+          set -euo pipefail
+          unset ANDROID_HOME ANDROID_SDK_ROOT
+          ./gradlew --init-script ../.github/ci/pce/test-jdk.init.gradle -PpceTestJdk="$TEST_JDK" \
+            :api:test :core:test :json:test :pack:test :testkit:test
+      - name: Sample on JDK ${{ matrix.jdk }} matches docs/guides/quickstart.md
+        run: |
+          set -euo pipefail
+          unset ANDROID_HOME ANDROID_SDK_ROOT
+          mkdir -p build/ci
+          ./gradlew -q --init-script ../.github/ci/pce/test-jdk.init.gradle -PpceTestJdk="$TEST_JDK" \
+            :sample:run >build/ci/sample.txt
+          cat build/ci/sample.txt
+          node ../.github/ci/pce/expect-output.mjs --doc docs/guides/quickstart.md \
+            --after 'Expected sample output' build/ci/sample.txt
+      - name: Test summary
+        if: always()
+        env:
+          TITLE: JVM ${{ matrix.os }} / JDK ${{ matrix.jdk }}
+        run: node ../.github/ci/pce/junit-summary.mjs . --title "$TITLE" --require-tests
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: pce-jvm-${{ matrix.os }}-jdk${{ matrix.jdk }}
+          path: |
+            pce/**/build/reports/tests/
+            pce/**/build/test-results/**/*.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+  module-isolation:
+    # pce/AGENTS.md §2: "Each module must build, test and publish alone."
+    # A fresh runner per module catches a module that only builds because a
+    # sibling's task ran first, or that leans on an undeclared dependency.
+    name: Alone :${{ matrix.module }}
+    needs: modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJSON(needs.modules.outputs.list) }}
+    defaults:
+      run:
+        working-directory: pce
+    env:
+      MODULE: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Point Gradle toolchains at the installed JDKs
+        run: bash ../.github/ci/pce/gradle-jdks.sh
+      - name: Build, test and publish :${{ matrix.module }} alone
+        run: |
+          set -euo pipefail
+          tasks=(":$MODULE:build")
+          if grep -q 'maven-publish' "$MODULE/build.gradle.kts"; then tasks+=(":$MODULE:publishToMavenLocal"); fi
+          ./gradlew "${tasks[@]}" --no-build-cache
+      - name: Published pce-${{ matrix.module }} without its siblings
+        run: |
+          set -euo pipefail
+          grep -q 'maven-publish' "$MODULE/build.gradle.kts" || { echo "$MODULE does not publish"; exit 0; }
+          repo="$HOME/.m2/repository/com/phonecando/pce"
+          ls "$repo/pce-$MODULE"/*/pce-"$MODULE"-*.pom
+          others=$(find "$repo" -mindepth 1 -maxdepth 1 ! -name "pce-$MODULE" -printf '%f ')
+          [[ -z "$others" ]] || { echo "::error:::$MODULE:publishToMavenLocal also published: $others"; exit 1; }
+      - name: Test summary
+        if: always()
+        env:
+          TITLE: ':${{ matrix.module }} alone'
+        run: node ../.github/ci/pce/junit-summary.mjs . --title "$TITLE"
+
+  sample-run:
+    name: Sample (:sample:run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: pce
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Point Gradle toolchains at the installed JDKs
+        run: bash ../.github/ci/pce/gradle-jdks.sh
+      - name: ./gradlew :sample:run
+        run: |
+          set -euo pipefail
+          mkdir -p build/ci
+          ./gradlew -q :sample:run >build/ci/sample.txt
+          cat build/ci/sample.txt
+      # Observe, resolve, AMBIGUOUS for duplicate text (§4), tap, assert; the
+      # docs promise this exact output, so a change to either fails here.
+      - name: Output matches docs/guides/quickstart.md
+        run: >-
+          node ../.github/ci/pce/expect-output.mjs --doc docs/guides/quickstart.md
+          --after 'Expected sample output' build/ci/sample.txt
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### PCE sample (\`./gradlew :sample:run\`)"
+            echo
+            echo '```text'
+            cat build/ci/sample.txt 2>/dev/null || echo '(no output)'
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  publish-consumer:
+    # The published-coordinate path: publishToMavenLocal, the law on the
+    # published POMs, then consumer-sample as its own build that sees only
+    # Maven coordinates (docs/modules/consumer-sample.md, AGENTS.md §5).
+    name: Publish + consumer-sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: pce
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Point Gradle toolchains at the installed JDKs
+        run: bash ../.github/ci/pce/gradle-jdks.sh
+      - name: ./gradlew publishToMavenLocal
+        run: ./gradlew publishToMavenLocal
+      - name: Published POMs obey the dependency law
+        run: |
+          set -euo pipefail
+          mkdir -p build/ci
+          node ../.github/ci/pce/check-deps.mjs --published "$HOME/.m2/repository/com/phonecando/pce" . |
+            tee build/ci/law-published.txt
+      - name: consumer-sample (Maven coordinates only)
+        run: |
+          set -euo pipefail
+          ./gradlew -q -p consumer-sample :api-consumer:run >build/ci/api-consumer.txt
+          ./gradlew -q -p consumer-sample :core-consumer:run >build/ci/core-consumer.txt
+          cat build/ci/api-consumer.txt build/ci/core-consumer.txt
+      - name: Output matches docs/modules/consumer-sample.md
+        run: >-
+          node ../.github/ci/pce/expect-output.mjs --doc docs/modules/consumer-sample.md
+          --after 'Expected output' build/ci/api-consumer.txt build/ci/core-consumer.txt
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### PCE published coordinates'
+            echo
+            echo '```text'
+            cat build/ci/law-published.txt 2>/dev/null || echo '(publish did not complete)'
+            echo
+            cat build/ci/api-consumer.txt build/ci/core-consumer.txt 2>/dev/null || echo '(consumer-sample did not run)'
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pce-maven-local
+          path: ~/.m2/repository/com/phonecando/pce/
+          retention-days: 7
+          if-no-files-found: error
+
+  device-harness:
+    # The android/ime/shizuku androidTest sources are activity-driven device
+    # harnesses, not instrumentation (am instrument force-stops the package and
+    # kills the service under test), so this runs them the way their module
+    # docs do and reads the PASS/FAIL line from logcat. Non-blocking: so far
+    # they are proven on one physical Android 16 phone only; emulator timing,
+    # software-GPU screenshots and IME binding are unproven. Promote into
+    # pce-ok once a run of green nights shows they are stable.
+    name: Device harness API ${{ matrix.api }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        # 30 is the floor: the a11y harness requires screenshots (API 30+).
+        api: [30, 34, 36]
+    defaults:
+      run:
+        working-directory: pce
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Point Gradle toolchains at the installed JDKs
+        run: bash ../.github/ci/pce/gradle-jdks.sh
+      - name: Build the harness APKs
+        run: ./gradlew :android:assembleDebugAndroidTest :ime:assembleDebugAndroidTest :shizuku:assembleDebugAndroidTest
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run the harnesses on an API ${{ matrix.api }} emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          disable-spellchecker: true
+          emulator-boot-timeout: 900
+          script: bash .github/ci/pce/device-harness.sh pce/build/device-harness
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pce-device-harness-api${{ matrix.api }}
+          path: pce/build/device-harness/
+          retention-days: 7
+          if-no-files-found: warn
+
+  dependency-graph:
+    # Submits pce/'s resolved Gradle dependencies to GitHub's dependency graph,
+    # which gives them Dependabot alerts and dependency review (the security
+    # workflows cannot see Gradle deps otherwise). Not part of pce-ok.
+    name: Dependency graph
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      # No gradle-jdks.sh here: it would create the Gradle user home before
+      # this action restores its cache (which a pre-existing home blocks), and
+      # resolving dependencies never needs the JDK 17 toolchain.
+      - uses: gradle/actions/dependency-submission@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          build-root-directory: pce
+
+  pce-ok:
+    name: pce-ok
+    if: always()
+    needs: [modules, dependency-law, build, jvm-matrix, module-isolation, sample-run, publish-consumer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every blocking PCE job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=pce-ok::not green: $failed"
+            exit 1
+          fi

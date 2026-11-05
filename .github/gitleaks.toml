@@ -1,0 +1,17 @@
+# Gitleaks config for the `gitleaks` job in .github/workflows/security.yml.
+# Starts from gitleaks' built-in rules and only adds path allowlists for
+# third-party or generated files whose minified code trips the generic-api-key
+# rule (e.g. `t.TwoKeyMap=void` in xterm.js). Keep this list short: every
+# entry here is a file nobody will ever see a secret finding for.
+
+title = "PhoneCanDo gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Vendored upstream xterm.js build, and the generated terminal page that inlines it as base64 (its own sources, terminal.js/terminal.html, stay scanned)"
+paths = [
+  '''(?:^|/)app/assets/xterm/xterm\.js$''',
+  '''(?:^|/)app/assets/xterm/terminal\.bundle\.html$''',
+]

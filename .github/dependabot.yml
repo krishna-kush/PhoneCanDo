@@ -1,0 +1,139 @@
+# Dependabot version updates (security updates skip the groups, the
+# update-types ignores and the cooldown below: those apply to version updates).
+# One ecosystem per weekday so update PRs do not land at once. Every updater
+# waits 7 days after a release (cooldown) before proposing it: fresh releases
+# are where regressions and hijacked packages show up. PRs target prod.
+#
+# Expo-managed packages: Expo SDK upgrades are manual (`expo install --fix`
+# after an SDK bump), so Dependabot never proposes an Expo SDK major, and never
+# a minor of the React / React Native packages the SDK pins (RN 0.86 -> 0.87 is
+# a "minor" in semver but a new RN release that needs a new SDK).
+
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '05:00'
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci(deps)
+    groups:
+      # Pinned SHAs + version comments, all in one PR.
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm # pnpm lockfiles are handled by the npm ecosystem
+    directory: /app
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: '05:00'
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    ignore:
+      # Expo SDK major = manual SDK upgrade.
+      - dependency-name: expo
+        update-types: ['version-update:semver-major']
+      - dependency-name: expo-*
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@expo/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: babel-preset-expo
+        update-types: ['version-update:semver-major']
+      # Versions the SDK pins: patch updates only.
+      - dependency-name: react
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@types/react'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: react-native
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: react-native-*
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@react-native/*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@react-native-async-storage/*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+    groups:
+      # Whatever the ignores leave of the SDK set moves together.
+      expo-sdk:
+        patterns:
+          - expo
+          - expo-*
+          - '@expo/*'
+          - babel-preset-expo
+          - react
+          - '@types/react'
+          - react-native
+          - react-native-*
+          - '@react-native/*'
+          - '@react-native-async-storage/*'
+      # core is pinned exactly and the rest by caret: they must match.
+      tamagui:
+        patterns:
+          - tamagui
+          - '@tamagui/*'
+      app-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: '05:00'
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    groups:
+      astro:
+        patterns:
+          - astro
+          - '@astrojs/*'
+      fontsource:
+        patterns:
+          - '@fontsource/*'
+          - '@fontsource-variable/*'
+      web-minor-patch:
+        update-types: [minor, patch]
+
+  # pce/ only: pce/consumer-sample is a separate build that resolves the
+  # unpublished com.phonecando.pce artifacts, so Dependabot cannot update it.
+  - package-ecosystem: gradle
+    directory: /pce
+    schedule:
+      interval: weekly
+      day: thursday
+      time: '05:00'
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      # Kotlin Gradle plugins (jvm/android/serialization) share one version.
+      kotlin:
+        patterns:
+          - org.jetbrains.kotlin.*
+          - org.jetbrains.kotlin:*
+      android-gradle-plugin:
+        patterns:
+          - com.android.*
+      # api and aidl are one release.
+      shizuku:
+        patterns:
+          - dev.rikka.shizuku:*
+      pce-minor-patch:
+        update-types: [minor, patch]

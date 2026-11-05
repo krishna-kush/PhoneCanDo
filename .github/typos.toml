@@ -1,0 +1,56 @@
+# typos (crate-ci/typos) config for .github/workflows/lint.yml, passed with
+# `config:`. typos only flags known misspellings, so project jargon (opencode,
+# opentui, forkpty, bionic, zustand, tamagui, ...) needs no allowlist; add an
+# entry below only when typos actually flags a legitimate word.
+
+[files]
+# Spell-check .github/ (workflows, CI helpers) too; skip the git dir itself.
+ignore-hidden = false
+extend-exclude = [
+  ".git/",
+  # Generated or vendored: fix upstream / rerun the generator instead.
+  "pnpm-lock.yaml",
+  "app/assets/xterm/terminal.bundle.html",
+  "app/assets/xterm/xterm.js",
+  "app/assets/xterm/xterm.css",
+  "pce/gradlew",
+  "pce/gradlew.bat",
+  "pce/gradle/wrapper/",
+  # Upstream diffs (opencode/opentui) keep upstream spelling.
+  "scripts/bootstrap/patches/",
+  # Binary assets and font licence text.
+  "*.png",
+  "*.jpg",
+  "*.webp",
+  "*.ttf",
+  "*.jar",
+  "app/assets/fonts/",
+  # Local-only trees (gitignored; listed for local runs).
+  "node_modules/",
+  "reference/",
+  "dist/",
+  "build/",
+]
+
+[default]
+extend-ignore-identifiers-re = [
+  # Acronym plurals (OTPs, APKs, PNGs): typos splits the trailing
+  # capital off ("OTPs" -> two short words) and flags the first half.
+  "^[A-Z]{2,}s$",
+]
+extend-ignore-re = [
+  # SHA-256 / SHA-1 digests (release.json, pinned action SHAs, checksums).
+  "\\b[0-9a-f]{40,64}\\b",
+  # The deliberate misspelling exercised by the IME autocorrect vectors
+  # (app/scripts/vectors/test_shadow.js: diffToEdit('teh', 'the')).
+  "'teh'",
+  # Short shell variable named after opentui in engine.yml (ot="$WORK/...").
+  "\\bot=",
+  "\\$ot\\b",
+  # Inline opt-out for a single line: `typos: ignore-line`.
+  "(?Rm)^.*typos: ignore-line.*$",
+]
+
+[default.extend-words]
+# Legitimate words typos mistakes for misspellings go here, as
+# word = "word" (none needed yet).
