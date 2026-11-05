@@ -3,8 +3,11 @@ package com.phonecando.runner.uiauto
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import com.phonecando.runner.AutomationHosts
+import com.phonecando.runner.FullAutomation
 import com.phonecando.runner.PceAuto
 import com.phonecando.runner.PceAutomation
+import com.phonecando.runner.RestrictedSettings
 
 // Full-build accessibility host. All observation and action logic lives in the
 // PCE adapter; this service only owns the Android lifecycle.
@@ -29,7 +32,11 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
 
   override fun onServiceConnected() {
     super.onServiceConnected()
+    // Android bound us: the restricted-settings lock is cleared on this
+    // install, and that outlives updates (RestrictedSettings.kt).
+    RestrictedSettings.markConnected(this)
     try {
+      AutomationHosts.current = FullAutomation
       val next = PceAutomationImpl(this)
       PceAuto.setService(next)
       pce = next

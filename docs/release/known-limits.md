@@ -35,8 +35,23 @@ These are not scheduled work unless they are also listed in
 
 ## Host and builds
 
-- Play builds have no accessibility host, PCE, packs or automation UI. They
-  register only the six basic tools.
+- Lite/play builds have no accessibility host, PCE, packs or automation UI.
+  They register only the six basic tools. Lite still self-updates from GitHub;
+  Play updates through Play and has no install-packages permission.
+- Play Protect hard-blocks the full APK when it comes from a browser,
+  messaging app or file manager (accessibility service declared; nearly all
+  markets). Lite is the download; it installs full in place and that install
+  is allowed. Full stays directly installable only via `adb install`.
+- Android 13+ restricted settings: after an install from a file the
+  accessibility toggle is refused until App info → ⋮ → Allow restricted
+  settings, and that menu item only appears after Android has shown its
+  "Restricted setting" notice. The app cannot read the lock (the app op is
+  read-protected by the framework), open the ⋮ menu or clear the lock, so a
+  constant (`RESTRICTED_FLOW`) runs a three-step guide with self-tracked
+  progress: Android's "Restricted setting" message (shown in place on
+  Android 14+, through the Accessibility list on 13), App info, the switch.
+  Only the switch turning on is observable.
+  Details and the on-device checks: `research/restricted-settings.md`.
 - opencode 2.0.26 has no `ctx.permission.assert`, and Code Mode's `execute`
   bypasses top-level permission rules for plugin tools. The app-side biometric
   master switch is the gate until opencode is bumped.
@@ -55,6 +70,12 @@ These are not scheduled work unless they are also listed in
   (`--v2-*` variables and `opencode-color-scheme`); a rename fails silently.
 - Boot receiver is not implemented. Android 15+ forbids a dataSync foreground
   service from `BOOT_COMPLETED`.
+- Android 15+ lets the engine's foreground service (type `dataSync`) run 6
+  hours in any 24 while PhoneCanDo is in the background; opening the app
+  resets the clock. At the limit the engine and the phone bridge stop: the
+  engine notification goes away and an agent turn still running ends there
+  (the chat is kept). Opening PhoneCanDo starts the engine again. This bounds
+  unattended background runs, including phone control left unlocked.
 - Battery-exemption prompting and health-check restart recovery are not
   implemented.
 - One shared engine per device. The terminal and web UI share sessions; they

@@ -8,12 +8,20 @@ If a phone-control call returns `automation_off`, call `mobile_request_unlock`.
 It shows the biometric/PIN prompt over the chat and waits. If it returns
 `unlocked:true`, continue the task. If `unlocked:false`, stop and ask the user
 to unlock; never retry or bypass the gate.
-If a UI call returns `automation_unavailable`, call `mobile_open_accessibility`.
-It shows a confirmation, opens Android Accessibility settings, and waits up to
-~60s. If it returns `enabled:true`, continue. If `enabled:false`, stop and ask
-the user to enable PhoneCanDo and tell you when done; then call `mobile_ping` and
-continue only if it reports `ui:true`. Never try to toggle the accessibility
-service yourself.
+If a UI call returns `automation_unavailable`, call `mobile_open_accessibility`
+once. It shows PhoneCanDo's setup dialog over the chat and waits up to four
+minutes while the user follows it, returning as soon as the service connects,
+so you can carry on without the user writing again. It returns
+`{opened, enabled, cancelled, restricted}`. If `enabled:true`, continue the
+task right away. If `cancelled:true`, the user tapped "Not now": stop and ask
+whether to continue. Otherwise, tell the user to finish the steps shown in
+PhoneCanDo and say when done; do not call it again in a loop. When they say
+done, call `mobile_ping` and continue only if it reports `ui:true`.
+`restricted: sideload` means the user went through PhoneCanDo's
+restricted-settings guide (Android locks the switch for apps installed from a
+file: Android's "Restricted setting" note, App info → Allow restricted
+settings, then the switch). Never try to toggle the accessibility service
+yourself.
 If a permission tool reports `notified:true`, tell the user to tap the PhoneCanDo
 notification if the app did not come forward.
 After finishing a phone-control task, call `mobile_return` to bring PhoneCanDo back

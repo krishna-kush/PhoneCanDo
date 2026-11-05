@@ -5,6 +5,22 @@ PhoneCanDo ships signed APKs from public GitHub releases. Set
 `releases/latest/download/latest.json` on launch and offers the update; Android
 still shows its installer (one tap). Play is not involved.
 
+Each release carries two APKs with the same version string.
+`phonecando-<ver>-lite-arm64.apk` is the site download: no accessibility
+service, so Play Protect lets a browser install it.
+`phonecando-<ver>-full-arm64.apk` is the full build and the `latest.json`
+target: lite offers it on first launch and installs it in place (measured in
+`upgrade-test.md`).
+
+Version codes: full gets the bumped `android.versionCode` (2, 3, ...); lite is
+always 1. Any full therefore replaces any lite, and no lite can ever replace
+an installed full (Android refuses the downgrade). Settings → About shows the
+channel, so "0.1.2 · lite" and "0.1.2 · full" are told apart by name, not by
+code. The `play` channel is a later feature; nothing is released from it.
+
+Everything below runs through `./manage release <version> ...` from the repo
+root, which fills in the env defaults.
+
 ## One-time: the release key
 
 The release key (path in `PHONECANDO_STORE_FILE`) is the app's identity. Every
@@ -42,23 +58,47 @@ node scripts/release-android.mjs --version 0.1.2 --notes "What changed."
 
 The script:
 
-1. Bumps `app/app.json` (`expo.version`, `android.versionCode`) and
-   `app/package.json`.
-2. Runs `expo prebuild -p android --clean`, then `assembleRelease` (arm64 only)
-   with the signing env sourced.
-3. Verifies the APK with `apksigner` and `aapt`, rejects the Android debug
-   signer, then computes size and SHA-256.
-4. Stages `dist/release/v<version>/phonecando-<version>-arm64.apk` and
-   `latest.json` (gitignored).
-5. Updates `web/src/data/site.ts` (version, date, size, SHA-256, APK URL) and
-   `app/src/engine/updates.ts` (repo).
-6. Creates a **draft** GitHub release with both assets. If a draft for the tag
-   already exists, it replaces the assets with `--clobber`.
+1. Checks GitHub before building or writing anything: `gh auth status` and
+   `gh release view v<version>`. A version whose release is already
+   published is refused; an existing draft is fine. `--dry-run` skips these
+   checks and stays offline.
+2. Bumps `app/app.json` (`expo.version`, `android.versionCode`) and
+   `app/package.json`, and sets the repo in `app/src/engine/updates.ts`.
+3. Runs `expo prebuild -p android --no-install --no-clean` once (the
+   channels are flavors of one project; without `--no-clean` Expo CLI 57
+   regenerates `app/android`, which `--clean` asks for explicitly), then
+   builds both flavors in one
+   Gradle run, `assembleFullRelease assembleLiteRelease` (arm64 only), with
+   the signing env sourced.
+4. Audits both APKs before staging either (`scripts/apk-audit.mjs`, which
+   `./manage build` uses too): signed by the release certificate (SHA-256
+   `f334c389…fd75a0`; set `PHONECANDO_RELEASE_CERT_SHA256` after a key
+   rotation), never the Android debug key; package, version and versionCode;
+   channel meta-data; full declares the accessibility service and carries its
+   class and the PCE classes, lite has neither; both carry non-empty
+   `lib/arm64-v8a/libopencode2.so` and `libopentui.so`. A check that cannot
+   run (missing tool, unreadable APK) fails.
+5. Stages `dist/release/v<version>/phonecando-<version>-full-arm64.apk`,
+   `phonecando-<version>-lite-arm64.apk` and `latest.json` (size and SHA-256
+   of the staged full APK; gitignored).
+6. Creates a **draft** GitHub release with all three assets. If a draft for
+   the tag already exists, it replaces the assets with `--clobber`.
+7. Only after every upload succeeded, updates the `published` block in
+   `web/src/data/site.ts` (version, date, lite size, lite SHA-256). The site
+   takes its version from `app/app.json` and derives every download URL and
+   file name from it; a production web build fails if the `published` block
+   belongs to another version.
+
+If an upload fails after the builds (GitHub times out on 110 MB assets now
+and then), do not rebuild: `./manage release <version> --upload-only`
+re-audits both staged APKs, rewrites the size and SHA-256 in `latest.json`
+from the staged full APK (its version, versionCode, URL and notes stay; a
+different `--notes` is refused), re-uploads with `--clobber` using those
+notes, then updates `site.ts`; add `--publish` to publish.
 
 If a build fails after the version bump, fix it and rerun the same command. The
-script keeps the same version/versionCode when the version is unchanged; a
-published release with that tag is refused. It does not run git, so commit the
-version/site changes yourself.
+script keeps the same version/versionCode when the version is unchanged. It
+does not run git, so commit the version/site changes yourself.
 
 Publish the draft after checking it:
 
@@ -78,7 +118,7 @@ attached.
 {
   "versionCode": 3,
   "version": "0.1.2",
-  "apk": "https://github.com/<owner>/PhoneCanDo/releases/download/v0.1.2/phonecando-0.1.2-arm64.apk",
+  "apk": "https://github.com/<owner>/PhoneCanDo/releases/download/v0.1.2/phonecando-0.1.2-full-arm64.apk",
   "size": 111871491,
   "sha256": "<sha256>",
   "notes": "What changed."
@@ -91,8 +131,10 @@ publishing so the stable URL never serves a partial release.
 
 ## Test the update path
 
-The updater is skipped in `__DEV__` (debug builds are debug-signed). Test with
-two signed releases:
+Debug builds run the same update check and show the dialog, but refuse the
+install: a dev build is its own package (`com.phonecando.app.<channel>.dev`,
+debug key), so the release APK could never update it. Test with two signed
+releases:
 
 1. Uninstall the old debug-signed app once (`adb uninstall com.phonecando.app`;
    app data is wiped), then install `v0.1.0` (`adb install -r ...`).
@@ -100,11 +142,14 @@ two signed releases:
 3. Open 0.1.0: dialog → Update → download → Android installer → Install.
    Reopen: Settings → About shows `v0.1.1 (2)`.
 4. Cancel the installer once and confirm "Install" retries without downloading
-   again. Deny "install unknown apps" and confirm "Open install settings"
-   recovers.
+   again. With "Install unknown apps" off for PhoneCanDo, confirm the app's
+   own "One quick OK from Android" step opens the right settings screen and
+   that the install starts by itself on return.
 
-Known friction: Play Protect may scan/warn on sideloaded APKs; the user taps
-through. There are no delta updates — each update is the full ~107 MB APK.
+Known friction: Play Protect hard-blocks the full APK from a browser or file
+manager in most markets ("App blocked to protect your device", no "Install
+anyway") because it declares an accessibility service. Lite is not blocked.
+Whether lite can install full in place is measured in `upgrade-test.md`. There are no delta updates — each update is the full ~107 MB APK.
 Release builds allow cleartext only to `127.0.0.1`/`localhost` (the pair UI and
 opencode); everything else keeps Android's TLS-only default.
 

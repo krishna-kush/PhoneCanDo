@@ -15,6 +15,10 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 
 const ENGINE_PORT_KEY = 'phonecando.enginePort.v1';
 const THEME_MODE_KEY = 'phonecando.themeMode.v1';
+const UPDATE_PROMPT_MUTED_KEY = 'phonecando.updatePromptMuted.v1';
+// Earlier guides (v1, v2) numbered their steps for other screens.
+const A11Y_STEP_KEY = 'phonecando.a11yStep.v3';
+const A11Y_STEP_KEYS_OLD = ['phonecando.a11yStep.v1', 'phonecando.a11yStep.v2'];
 
 // Quiet-when-idle stop: runs ONLY when the app UI goes away (backgrounded;
 // swipe-kill is covered by the service self-stop backstop). The stop veto is
@@ -58,6 +62,20 @@ interface AppState {
   folderPickerOpen: boolean;
   /** Web view can go back to the opencode home/project list. */
   webCanGoBack: boolean;
+  /** Bumped by Settings → Update; UpdateDialog re-checks GitHub on change. */
+  updatePromptNonce: number;
+  /** Lite: stop opening the full-build pitch on launch (Settings → Update). */
+  updatePromptMuted: boolean;
+  /**
+   * Restricted-settings guide progress: 1 Android's note, 2 App info (Allow
+   * restricted settings), 3 the Accessibility switch.
+   */
+  a11yStep: 1 | 2 | 3;
+  /**
+   * The user hit Android's "Restricted setting" refusal while the plain flow
+   * was showing: run the guide anyway. In-memory only.
+   */
+  a11yGuideForced: boolean;
 
   hydrate: () => Promise<void>;
   setEnginePort: (port: string) => Promise<void>;
@@ -72,6 +90,10 @@ interface AppState {
   openTerminalDir: (dir: string) => void;
   closeTerminal: () => void;
   setFolderPickerOpen: (open: boolean) => void;
+  requestUpdatePrompt: () => void;
+  setUpdatePromptMuted: (muted: boolean) => Promise<void>;
+  setA11yStep: (step: 1 | 2 | 3) => Promise<void>;
+  setA11yGuideForced: (forced: boolean) => void;
   quietEngineIfIdle: () => Promise<void>;
   resetWorkspace: () => Promise<string>;
 }
@@ -88,6 +110,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   terminalDir: null,
   folderPickerOpen: false,
   webCanGoBack: false,
+  updatePromptNonce: 0,
+  updatePromptMuted: false,
+  a11yStep: 1,
+  a11yGuideForced: false,
 
   hydrate: async () => {
     const { envs, activeEnvId } = await loadEnvs();
@@ -95,7 +121,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     const storedTheme = await AsyncStorage.getItem(THEME_MODE_KEY);
     const themeMode: ThemeMode =
       storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'system';
-    set({ envs, activeEnvId, enginePort, themeMode, hydrated: true });
+    const updatePromptMuted = (await AsyncStorage.getItem(UPDATE_PROMPT_MUTED_KEY)) === '1';
+    const storedStep = await AsyncStorage.getItem(A11Y_STEP_KEY);
+    const a11yStep = storedStep === '2' ? 2 : storedStep === '3' ? 3 : 1;
+    void AsyncStorage.multiRemove(A11Y_STEP_KEYS_OLD).catch(() => {});
+    set({ envs, activeEnvId, enginePort, themeMode, updatePromptMuted, a11yStep, hydrated: true });
   },
 
   setEnginePort: async (enginePort) => {
@@ -152,6 +182,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   closeTerminal: () => set({ terminalDir: null }),
 
   setFolderPickerOpen: (folderPickerOpen) => set({ folderPickerOpen }),
+
+  requestUpdatePrompt: () => set((s) => ({ updatePromptNonce: s.updatePromptNonce + 1 })),
+
+  setA11yStep: async (a11yStep) => {
+    set({ a11yStep });
+    try {
+      await AsyncStorage.setItem(A11Y_STEP_KEY, String(a11yStep));
+    } catch {
+      // Best-effort; the in-memory step applies for this run.
+    }
+  },
+
+  setA11yGuideForced: (a11yGuideForced) => set({ a11yGuideForced }),
+
+  setUpdatePromptMuted: async (updatePromptMuted) => {
+    set({ updatePromptMuted });
+    try {
+      await AsyncStorage.setItem(UPDATE_PROMPT_MUTED_KEY, updatePromptMuted ? '1' : '0');
+    } catch {
+      // Best-effort; the in-memory choice applies for this run.
+    }
+  },
 
   quietEngineIfIdle: async () => {
     await stopEngineIfIdle(get().enginePort);

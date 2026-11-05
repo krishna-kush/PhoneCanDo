@@ -49,7 +49,7 @@ Kotlin library API. The library API is in `pce/docs/api/`.
   renderer and input/sizing contract.
 - `app/docs/modules/chat.md` — pair-loaded opencode web UI in the app shell.
 - `app/docs/modules/bridge.md` — loopback bridge, `mobile_*` tools, trust gate
-  and full/play flavors.
+  and full/lite/play channels.
 - `app/docs/modules/automation.md` — PCE host integration, routes, pack
   lifecycle and current implementation status.
 - `app/docs/context.md` — project context and hard-won platform notes.
@@ -66,6 +66,9 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 
 ## Release
 
+- `../manage` — root entry point for every script (`./manage help`).
+- `release/upgrade-test.md` — on-device test: can lite install full past
+  Play Protect, and which install method gets through.
 - `release/known-limits.md` — cross-module limits and not-yet features.
 - `release/android.md` — signed APK releases, keys, versionCode and the
   in-app updater.

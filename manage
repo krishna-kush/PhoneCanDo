@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""PhoneCanDo: one entry point for the repo's scripts.
+
+  ./manage release 0.1.2 --notes "What changed."   build full + lite, draft GitHub release
+  ./manage release 0.1.2 --notes "..." --publish   same, then publish
+  ./manage release 0.1.2 --dry-run                 check env and edits, no build
+  ./manage release 0.1.2 --upload-only [--publish] re-upload staged assets, no build
+  ./manage build lite|full [--clean]               signed local APK -> dist/<channel>/
+  ./manage prebuild [--clean]                      re-apply config plugins to app/android
+  ./manage android lite|full|play                  dev build + install on the adb device
+  ./manage check                                   tsc + key/reconcile vectors
+  ./manage logos                                   regenerate brand assets from theme/
+  ./manage xterm                                   re-inline the terminal page bundle
+  ./manage web dev|build                           the website
+  ./manage engine build|stage [args]               opencode payload (scripts/bootstrap)
+  ./manage apk info <file.apk>                     package, version, channel, signer, a11y
+  ./manage device push <file.apk>                  copy to /sdcard/Download/phonecando/
+  ./manage device log                              logcat for update / install / Play Protect
+
+Defaults: GITHUB_REPO from app/src/engine/updates.ts, PHONECANDO_RELEASE_ENV
+from ~/.config/phonecando/release.env, ANDROID_HOME from /opt/android-sdk.
+Never runs git.
+"""
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+APP = ROOT / "app"
+WEB = ROOT / "web"
+SCRIPTS = ROOT / "scripts"
+CHANNELS = ("lite", "full", "play")
+
+
+def sh(cmd, cwd=ROOT, env=None):
+    print("$ " + " ".join(cmd), flush=True)
+    r = subprocess.run(cmd, cwd=str(cwd), env=env or os.environ.copy())
+    if r.returncode != 0:
+        sys.exit(r.returncode)
+
+
+def capture(cmd):
+    return subprocess.run(cmd, capture_output=True, text=True, check=False).stdout
+
+
+def die(msg):
+    print(f"manage: {msg}", file=sys.stderr)
+    sys.exit(2)
+
+
+def release_env():
+    env = os.environ.copy()
+    env.setdefault("ANDROID_HOME", "/opt/android-sdk")
+    env.setdefault("PHONECANDO_RELEASE_ENV", str(Path.home() / ".config/phonecando/release.env"))
+    if "GITHUB_REPO" not in env:
+        m = re.search(r"const REPO = '([^']+)'", (APP / "src/engine/updates.ts").read_text())
+        if m:
+            env["GITHUB_REPO"] = m.group(1)
+    return env
+
+
+def build_tools():
+    sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT") or "/opt/android-sdk"
+    bt = Path(sdk) / "build-tools"
+    versions = sorted(
+        (p for p in bt.iterdir() if re.fullmatch(r"\d+(\.\d+)+", p.name)),
+        key=lambda p: [int(x) for x in p.name.split(".")],
+    )
+    if not versions:
+        die(f"no build-tools under {bt}")
+    return versions[-1]
+
+
+def channel_arg(args):
+    if not args or args[0] not in CHANNELS:
+        die(f"channel must be one of {', '.join(CHANNELS)}")
+    return args[0]
+
+
+def cmd_release(args):
+    if not args or args[0].startswith("--"):
+        die("usage: manage release <version> [--notes TEXT] [--publish] [--dry-run]")
+    sh(["node", str(SCRIPTS / "release-android.mjs"), "--version", args[0], *args[1:]], env=release_env())
+
+
+def cmd_build(args):
+    ch = channel_arg(args)
+    if ch == "play":
+        die("play is a later feature; build lite or full")
+    sh(["node", str(SCRIPTS / "build-android.mjs"), ch, *args[1:]], env=release_env())
+
+
+def cmd_prebuild(args):
+    sh(["pnpm", "prebuild:clean" if "--clean" in args else "prebuild"], cwd=APP)
+
+
+def cmd_android(args):
+    sh(["pnpm", f"android:{channel_arg(args)}"], cwd=APP)
+
+
+def cmd_check(args):
+    sh(["npx", "tsc", "--noEmit", "-p", "."], cwd=APP)
+    sh(["pnpm", "check:vectors"], cwd=APP)
+
+
+def cmd_logos(args):
+    sh(["node", str(SCRIPTS / "make-logos.mjs")])
+
+
+def cmd_xterm(args):
+    sh(["node", "scripts/inline-xterm.js"], cwd=APP)
+
+
+def cmd_web(args):
+    if not args or args[0] not in ("dev", "build", "preview"):
+        die("usage: manage web dev|build|preview")
+    sh(["pnpm", args[0]], cwd=WEB)
+
+
+def cmd_engine(args):
+    if not args or args[0] not in ("build", "stage"):
+        die("usage: manage engine build|stage [args]")
+    script = {"build": "build-engine-android.sh", "stage": "stage-v2.sh"}[args[0]]
+    sh([str(SCRIPTS / "bootstrap" / script), *args[1:]])
+
+
+def cmd_apk(args):
+    if len(args) < 2 or args[0] != "info":
+        die("usage: manage apk info <file.apk>")
+    apk = Path(args[1])
+    if not apk.is_file():
+        die(f"no such file: {apk}")
+    bt = build_tools()
+    badging = capture([str(bt / "aapt"), "dump", "badging", str(apk)])
+    pkg = next((l for l in badging.splitlines() if l.startswith("package:")), "package: ?")
+    manifest = capture([str(bt / "aapt"), "dump", "xmltree", str(apk), "AndroidManifest.xml"])
+    chan = re.search(r'com\.phonecando\.channel.*?\n.*?android:value.*?"([a-z]+)"', manifest, re.S)
+    certs = capture([str(bt / "apksigner"), "verify", "--print-certs", str(apk)])
+    signer = next((l.strip() for l in certs.splitlines() if "SHA-256" in l), "signer: ?")
+    print(pkg)
+    print(f"channel: {chan.group(1) if chan else '?'}")
+    print(f"accessibility service: {'yes' if 'BIND_ACCESSIBILITY_SERVICE' in manifest else 'no'}")
+    print(f"size: {apk.stat().st_size} bytes")
+    print(signer)
+
+
+def cmd_device(args):
+    if not args:
+        die("usage: manage device push <file.apk> | log")
+    if args[0] == "push":
+        if len(args) < 2 or not Path(args[1]).is_file():
+            die("usage: manage device push <file.apk>")
+        sh(["adb", "shell", "mkdir", "-p", "/sdcard/Download/phonecando"])
+        sh(["adb", "push", args[1], "/sdcard/Download/phonecando/"])
+        print("Open it from Files → Downloads → phonecando on the phone (not adb install).")
+    elif args[0] == "log":
+        sh(["adb", "logcat", "-c"])
+        sh(["adb", "logcat", "-v", "time", "-s", "phonecando-update", "ReactNativeJS:I",
+            "PackageInstaller:V", "PackageManager:I", "Finsky:I"])
+    else:
+        die("usage: manage device push <file.apk> | log")
+
+
+COMMANDS = {
+    "release": cmd_release,
+    "build": cmd_build,
+    "prebuild": cmd_prebuild,
+    "android": cmd_android,
+    "check": cmd_check,
+    "logos": cmd_logos,
+    "xterm": cmd_xterm,
+    "web": cmd_web,
+    "engine": cmd_engine,
+    "apk": cmd_apk,
+    "device": cmd_device,
+}
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return
+    fn = COMMANDS.get(argv[0])
+    if fn is None:
+        die(f"unknown command {argv[0]!r}; run ./manage help")
+    fn(argv[1:])
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

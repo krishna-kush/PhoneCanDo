@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Modal } from 'react-native';
+import { AppState, Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
+import { useAppStore } from '../../state/app';
 import {
+  canInstallUpdates,
   checkForUpdate,
   downloadUpdate,
   installedVersion,
   installDownloaded,
+  isLiteUpgrade,
   openInstallSettings,
   type UpdateProgress,
   type UpdateManifest,
@@ -13,7 +16,16 @@ import {
 import AppButton from './AppButton';
 import { useTheme } from './globals';
 
-type Phase = 'idle' | 'available' | 'downloading' | 'installing' | 'ready' | 'error';
+type Phase =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'none'
+  | 'downloading'
+  | 'permission'
+  | 'installing'
+  | 'ready'
+  | 'error';
 
 function mb(bytes?: number): string {
   return bytes && bytes > 0 ? `${Math.round(bytes / 1048576)} MB` : '';
@@ -23,42 +35,84 @@ function errText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-// Checks GitHub releases on launch. Android always shows the installer, so
-// the best this can do is download silently and hand the APK over.
+// Full: checks GitHub two seconds after launch and only speaks up when a
+// newer build exists. Lite: the full build always exists, so the pitch opens
+// at once and the manifest fills in behind it. Settings → Update re-runs the
+// check on demand through the store nonce. Android always shows its own
+// installer; the best this can do is download and hand the APK over.
 export default function UpdateDialog() {
   const t = useTheme();
   const current = installedVersion();
+  const lite = isLiteUpgrade();
+  const nonce = useAppStore((s) => s.updatePromptNonce);
+  const hydrated = useAppStore((s) => s.hydrated);
+  const muted = useAppStore((s) => s.updatePromptMuted);
   const [phase, setPhase] = useState<Phase>('idle');
   const [manifest, setManifest] = useState<UpdateManifest | null>(null);
   const [progress, setProgress] = useState<UpdateProgress>({ written: 0, total: 0 });
   const [error, setError] = useState('');
   const fileRef = useRef<Awaited<ReturnType<typeof downloadUpdate>> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const checkRef = useRef<AbortController | null>(null);
+
+  // quiet: say nothing unless a newer build exists (launch check on full).
+  async function check(quiet: boolean) {
+    checkRef.current?.abort();
+    const ctrl = new AbortController();
+    checkRef.current = ctrl;
+    if (!quiet) setPhase('checking');
+    try {
+      const m = await checkForUpdate(ctrl.signal);
+      if (ctrl.signal.aborted) return;
+      if (m) {
+        setManifest(m);
+        setPhase('available');
+      } else if (!quiet) {
+        setPhase('none');
+      }
+    } catch (e) {
+      if (ctrl.signal.aborted) return;
+      if (quiet) return; // offline at launch: the site is the fallback
+      setError(`Could not reach GitHub: ${errText(e)}`);
+      setPhase('error');
+    }
+  }
 
   useEffect(() => {
-    // A debug build carries the debug signature; it would offer a release APK
-    // Android then refuses to install. Only release builds check.
-    if (__DEV__) return;
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => {
-      void checkForUpdate(ctrl.signal)
-        .then((m) => {
-          if (!m) return;
-          setManifest(m);
-          setPhase('available');
-        })
-        .catch(() => {
-          // Offline or GitHub unreachable: stay quiet; the site is the fallback.
-        });
-    }, 2000);
+    // Debug builds run the same launch check so the pitch can be seen in the
+    // dev loop; only the install is refused (see downloadAndInstall).
+    if (!hydrated) return;
+    if (lite) {
+      // Settings → Update can silence the launch pitch; the button there
+      // still opens it on demand.
+      if (muted) return;
+      void check(false);
+      return () => checkRef.current?.abort();
+    }
+    const timer = setTimeout(() => void check(true), 2000);
     return () => {
       clearTimeout(timer);
-      ctrl.abort();
+      checkRef.current?.abort();
     };
-  }, []);
+    // Launch-only: a later mute must not close an open dialog.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lite, hydrated]);
+
+  // Settings → Update.
+  useEffect(() => {
+    if (nonce > 0) void check(false);
+  }, [nonce]);
 
   async function downloadAndInstall() {
     if (!manifest) return;
+    if (__DEV__) {
+      // Debug signature: Android refuses the release APK over this app.
+      setError(
+        'Dev build: Android will not install the release APK over a debug-signed app. Test the install with the release lite build.',
+      );
+      setPhase('error');
+      return;
+    }
     setError('');
     setProgress({ written: 0, total: 0 });
     setPhase('downloading');
@@ -90,6 +144,12 @@ export default function UpdateDialog() {
       return;
     }
     setError('');
+    // Without Android's "Install unknown apps" switch the installer would
+    // open Android's own prompt over this dialog; ask here first instead.
+    if (!canInstallUpdates()) {
+      setPhase('permission');
+      return;
+    }
     setPhase('installing');
     try {
       await installDownloaded(file);
@@ -101,13 +161,25 @@ export default function UpdateDialog() {
     }
   }
 
+  // Back from Android's settings with the switch on: install by itself.
+  useEffect(() => {
+    if (phase !== 'permission') return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && canInstallUpdates()) void install();
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   function close() {
     abortRef.current?.abort();
+    checkRef.current?.abort();
     setPhase('idle');
   }
 
   const open = phase !== 'idle';
   const pct = progress.total > 0 ? Math.min(100, Math.round((progress.written / progress.total) * 100)) : 0;
+  const pitch = phase === 'checking' || phase === 'available';
 
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
@@ -128,29 +200,77 @@ export default function UpdateDialog() {
           width="100%"
           maxWidth={360}
         >
-          {phase === 'available' && manifest ? (
+          {pitch && lite ? (
             <>
               <Text fontSize={19} fontWeight="700">
-                Update available
+                Give it hands
               </Text>
               <Text fontSize={15} color="$color10">
-                PhoneCanDo {current.version} → {manifest.version}
-                {manifest.size ? ` · ${mb(manifest.size)}` : ''}
+                This starter build is a brain in a jar: it chats and runs a terminal, but it
+                cannot touch your phone. Ask it to open WhatsApp and it shrugs.
               </Text>
-              {manifest.notes ? (
-                <Text fontSize={14} color="$color10">
-                  {manifest.notes}
-                </Text>
-              ) : null}
+              <Text fontSize={14} color="$color10">
+                The full build adds eyes and hands: it reads the screen, taps, types and scrolls,
+                behind your fingerprint. It installs over this one. Nothing is lost.
+              </Text>
               <Text fontSize={13} color="$color10">
-                Android will ask you to confirm the install. Your data is kept.
+                {manifest
+                  ? `Full build ${manifest.version}${manifest.size ? ` · ${mb(manifest.size)}` : ''}. Android asks once to allow installs from PhoneCanDo, then confirms.`
+                  : 'Fetching the latest release…'}
               </Text>
               <XStack gap="$2" marginTop="$2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Later
                 </AppButton>
-                <AppButton flex={1} onPress={() => void downloadAndInstall()}>
-                  Update
+                <AppButton flex={1} loading={!manifest} onPress={() => void downloadAndInstall()}>
+                  {manifest ? 'Install full build' : 'Fetching'}
+                </AppButton>
+              </XStack>
+            </>
+          ) : null}
+
+          {pitch && !lite ? (
+            <>
+              <Text fontSize={19} fontWeight="700">
+                {manifest ? 'Update available' : 'Checking for updates'}
+              </Text>
+              <Text fontSize={15} color="$color10">
+                {manifest
+                  ? `PhoneCanDo ${current.version} → ${manifest.version}${manifest.size ? ` · ${mb(manifest.size)}` : ''}`
+                  : `Asking GitHub for anything newer than ${current.version}…`}
+              </Text>
+              {manifest?.notes ? (
+                <Text fontSize={14} color="$color10">
+                  {manifest.notes}
+                </Text>
+              ) : null}
+              {manifest ? (
+                <Text fontSize={13} color="$color10">
+                  Android will ask you to confirm the install. Your data is kept.
+                </Text>
+              ) : null}
+              <XStack gap="$2" marginTop="$2">
+                <AppButton variant="secondary" flex={1} onPress={close}>
+                  Later
+                </AppButton>
+                <AppButton flex={1} loading={!manifest} onPress={() => void downloadAndInstall()}>
+                  {manifest ? 'Update' : 'Checking'}
+                </AppButton>
+              </XStack>
+            </>
+          ) : null}
+
+          {phase === 'none' ? (
+            <>
+              <Text fontSize={19} fontWeight="700">
+                Up to date
+              </Text>
+              <Text fontSize={15} color="$color10">
+                PhoneCanDo {current.version} is the latest release.
+              </Text>
+              <XStack gap="$2" marginTop="$2">
+                <AppButton flex={1} onPress={close}>
+                  Close
                 </AppButton>
               </XStack>
             </>
@@ -159,7 +279,7 @@ export default function UpdateDialog() {
           {phase === 'downloading' ? (
             <>
               <Text fontSize={19} fontWeight="700">
-                Downloading update
+                Downloading {lite ? 'the full build' : 'update'}
               </Text>
               <Text fontSize={15} color="$color10">
                 {pct}%{progress.total > 0 ? ` · ${mb(progress.written)} of ${mb(progress.total)}` : ''}
@@ -168,11 +288,32 @@ export default function UpdateDialog() {
                 <YStack height={6} backgroundColor={t.primary} width={`${pct}%`} />
               </YStack>
               <Text fontSize={13} color="$color10">
-                Keep the app open. The update installs when the download finishes.
+                Keep the app open. The install starts when the download finishes.
               </Text>
               <XStack gap="$2" marginTop="$2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Cancel
+                </AppButton>
+              </XStack>
+            </>
+          ) : null}
+
+          {phase === 'permission' ? (
+            <>
+              <Text fontSize={19} fontWeight="700">
+                One quick OK from Android
+              </Text>
+              <Text fontSize={15} color="$color10">
+                Android asks before any app installs something, even its own update. Tap Open
+                settings, switch on "Allow from this source" for PhoneCanDo, then come back. The
+                install starts by itself.
+              </Text>
+              <XStack gap="$2" marginTop="$2">
+                <AppButton variant="secondary" flex={1} onPress={close}>
+                  Later
+                </AppButton>
+                <AppButton flex={1} onPress={() => void openInstallSettings()}>
+                  Open settings
                 </AppButton>
               </XStack>
             </>
@@ -184,8 +325,8 @@ export default function UpdateDialog() {
                 Opening installer
               </Text>
               <Text fontSize={15} color="$color10">
-                Confirm the install in Android's dialog. PhoneCanDo will close and reopen on the new
-                version.
+                Confirm the install in Android's dialog. When it says "App installed", tap Open.
+                If you miss it, a notification brings you back.
               </Text>
             </>
           ) : null}
@@ -196,8 +337,7 @@ export default function UpdateDialog() {
                 Ready to install
               </Text>
               <Text fontSize={15} color="$color10">
-                The update is downloaded. If you dismissed Android's installer, install it again
-                below.
+                The download is done. If you dismissed Android's installer, try again below.
               </Text>
               <XStack gap="$2" marginTop="$2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
@@ -213,19 +353,24 @@ export default function UpdateDialog() {
           {phase === 'error' ? (
             <>
               <Text fontSize={19} fontWeight="700">
-                Update failed
+                {manifest ? 'Install failed' : 'Check failed'}
               </Text>
               <Text fontSize={15} color="$color10">
                 {error}
               </Text>
-              <AppButton variant="secondary" onPress={() => void openInstallSettings()}>
-                Open install settings
-              </AppButton>
+              {manifest ? (
+                <AppButton variant="secondary" onPress={() => void openInstallSettings()}>
+                  Open install settings
+                </AppButton>
+              ) : null}
               <XStack gap="$2" marginTop="$2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Close
                 </AppButton>
-                <AppButton flex={1} onPress={() => void downloadAndInstall()}>
+                <AppButton
+                  flex={1}
+                  onPress={() => (manifest ? void downloadAndInstall() : void check(false))}
+                >
                   Retry
                 </AppButton>
               </XStack>

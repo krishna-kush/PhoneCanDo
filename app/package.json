@@ -1,6 +1,6 @@
 {
   "name": "phonecando-app",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "main": "index.ts",
   "license": "SEE LICENSE IN ../LICENSE",
   "dependencies": {
@@ -39,9 +39,12 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo run:android",
-    "android:full": "PHONECANDO_AUTOMATION=full expo run:android",
-    "android:play": "PHONECANDO_AUTOMATION=play expo run:android",
+    "android": "node scripts/android-dev.mjs full",
+    "android:full": "node scripts/android-dev.mjs full",
+    "android:lite": "node scripts/android-dev.mjs lite",
+    "android:play": "node scripts/android-dev.mjs play",
+    "prebuild": "EXPO_NO_GIT_STATUS=1 expo prebuild -p android --no-install --no-clean",
+    "prebuild:clean": "EXPO_NO_GIT_STATUS=1 expo prebuild -p android --clean",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "check:vectors": "node scripts/vectors/test_shadow.js && node scripts/vectors/test_modifiers.js"

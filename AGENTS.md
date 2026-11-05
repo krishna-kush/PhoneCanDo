@@ -13,7 +13,10 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{chat,terminal,env,settings,common}/` — feature screens.
+- `app/src/ui/{chat,terminal,env,settings,accessibility,common}/` — feature
+  screens. `accessibility/` is the whole Accessibility setup guide:
+  `guide.ts` (pure: the `RESTRICTED_FLOW` switch, steps and every line of
+  copy), the hook, the step list, the Settings block and the agent's dialog.
   Terminal split: `TerminalScreen.tsx` (layout only) + `keys.ts`,
   `reconcile.ts`, `sizing.ts` (pure, zero RN imports) + `usePtySession.ts`,
   `useMirrorInput.ts` (hooks) + `ExtraKeysBar.tsx`.
@@ -47,8 +50,23 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
 
 ## Dev loop (physical Android 16 device on adb, Metro :8081)
 
+- Channels (`full|lite|play`) are Gradle product flavors (`withBuildChannel.js`);
+  one prebuild serves all, `pnpm android:<channel>` builds `<channel>Debug`.
+- Debug builds install per channel as `com.phonecando.app.<channel>.dev`
+  ("PhoneCanDo Lite Dev" / "PhoneCanDo Full Dev", `plugins/withDevAppId.js`),
+  separate from the release-signed `com.phonecando.app`, so both dev
+  channels and production testing share one phone. Debug apps cannot
+  self-update (debug signature), and an adb install never gets Android's
+  restricted-settings lock (it follows the installer's package source, not
+  debuggability), so the lite→full install and the staged accessibility
+  flow are release-build tests only.
+
 - JS/asset-only: reload from Metro. No rebuild.
 - `modules/*/android`, `android/`, manifest, native deps: `expo run:android`.
+  Prebuild runs with `--no-clean` (Expo CLI 57 otherwise deletes and
+  regenerates `app/android`), so `app/android` and its compiled outputs
+  survive; pass `--clean` to `pnpm android:<channel>` / `./manage build` only
+  when a build looks stale.
 - New JS native-module imports: restart Metro with `--clear` (stale haste
   map fails "Unable to resolve"). `adb reverse tcp:8081 tcp:8081`.
 - Verify with `tsc --noEmit`, `pnpm check:vectors`, logcat
@@ -76,6 +94,11 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
 8. Never run git commands, at all (no status/diff/log/add/commit) — the
    user owns all git operations; use file tools and report, don't verify
    via git.
-9. PCE work: read `pce/AGENTS.md`. The PCE is a separate Gradle build
+9. Android builds take a long time. Never rebuild unless the change
+   requires it (native code, manifest, channel, version bump). Reuse what is
+   in `dist/` (`./manage apk info` tells you what a file is); a failed upload
+   or a copy to the phone is never a reason to rebuild
+   (`./manage release <ver> --upload-only` retries from staged assets).
+10. PCE work: read `pce/AGENTS.md`. The PCE is a separate Gradle build
    owned by PhoneCanDo; modularity, dependency direction and typed errors are
    quality gates.

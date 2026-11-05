@@ -25,20 +25,37 @@ runs in the foreground service beside `serve`.
   timeout) so the agent can continue in the same turn. The modal is the only
   place the gate flips; the agent never sees a credential.
 - `/accessibility` is ungated and first asks the app to show an in-chat
-  confirmation (`AccessibilityDialog`). Only after the user taps **Open
-  settings** does the app open Android's Accessibility screen; the bridge then
-  waits for `PceAuto.service` to connect. The user must flip the system toggle;
-  the agent cannot. If the wait times out, the agent asks the user to say when
-  done and checks `/ping` (`pce`; `ui` is a compatibility alias). `/ping`
-  reports the flavor, lock, and PCE state.
+  dialog (`ui/accessibility/AccessibilityDialog.tsx`; with the
+  restricted-settings guide, `RESTRICTED_FLOW` in `guide.ts`, it walks
+  Android's "Restricted setting" message, App info → Allow restricted
+  settings and the switch; see `runner.md`). The bridge then waits up to
+  `waitMs` (default 240 s, capped under five minutes where HTTP clients give
+  up) for `PceAuto.service` to connect, so the agent carries on by itself
+  once the switch is on. "Not now" in the dialog ends the wait at once
+  (`cancelled:true`). A second `/accessibility` request takes over the
+  dialog, so "Not now" reaches only the newer one; the earlier request
+  returns at once with `superseded:true` (not `cancelled`). The response is
+  `{opened, enabled, cancelled, superseded, notified, restricted}`;
+  `restricted` is `sideload` when the user went through the
+  guide, else the native guess (`RestrictedSettings.state`). The user must
+  flip the system toggle; the agent cannot. On `enabled:false` the agent tells the user
+  to follow the steps in the app and checks `/ping` (`pce`; `ui` is a
+  compatibility alias) when they say done. `/ping` reports the flavor, lock,
+  and PCE state.
 
 ## Agent-side tools
 
-`plugins/mobile/index.ts` registers the tools via `ctx.tool.transform` (15s
-timeout by default, 50s for unlock, 65s for accessibility; degrades to a
-message when the bridge is absent). `mobile_return` wraps `/app`;
-`mobile_request_unlock` wraps `/unlock`; `mobile_open_accessibility` wraps
-`/accessibility`.
+`plugins/mobile/index.ts` registers the six basic tools every channel gets
+(`mobile_ping/battery/notify/share/open/clipboard`); `plugins/automation/index.ts`,
+shipped only in full, registers phone control, `mobile_return` (`/app`),
+`mobile_request_unlock` (`/unlock`) and `mobile_open_accessibility`
+(`/accessibility`). Both register via `ctx.tool.transform` through
+`mobile/shared.ts` (15s client timeout by default, 50s for unlock, 255s for
+accessibility, whose bridge wait is 240s; degrades to a message when the
+bridge is absent). `mobile_act` derives its timeout from the call, so a long
+wait ends in the bridge's own result rather than a client timeout: `timeoutMs`
+(clamped to 1–120 s, default 30 s) plus, with `expect`, `expectTimeoutMs`
+(0.5–30 s, default 5 s) plus 10 s, capped at 280 s.
 
 The full tool surface is in `../../../docs/api/tools.md`; wrapper parity and device proof
 are in `../modules/automation.md`.
@@ -50,22 +67,24 @@ process. Settings → Phone control or the in-chat unlock modal flips it only
 after `expo-local-authentication` succeeds (device credential fallback
 allowed). Locked calls to `notify/share/open/clipboard/pce/*` return 403
 `automation_off` in full builds; with the switch on but the service not
-enabled in Android settings, `/pce/*` returns 503 `automation_unavailable`.
-`/app`, `/unlock`, and `/accessibility` stay ungated: own-app launch, the
-user's biometric/accessibility modals, and the system accessibility screen are
-safe even while locked.
+enabled in Android settings, `/pce/*` returns 503 `automation_unavailable`,
+also when the service disconnects between the bridge's check and the call
+(the agent's cue to call `mobile_open_accessibility`).
+`/app` stays ungated: own-app launch is safe even while locked. `/unlock`,
+`/accessibility` and `/pce/*` exist only in full builds; lite/play return 404
+`not_found` for them.
 
-Play builds have no accessibility host and no switch, so the six basic tools
-stay available (and the UI/PCE tools are not registered). `/ping` reports
-`unlocked`, `pce`, and the `ui` compatibility alias so the agent can explain
-what is missing. The service injects `PHONECANDO_AUTOMATION=full|play` into the
-opencode env; play builds register only the six basic tools (the accessibility
-host and PCE are absent, so automation tools would only fail). Full builds
-register three extra non-driver tools, `mobile_return`,
-`mobile_request_unlock`, and `mobile_open_accessibility`, plus the four PCE
-tools `mobile_describe`/`observe`/`act`/`pack`, the `mobile_launch` package
-launcher, and the legacy screen/info/click/tap/text/scroll/swipe/back/home/wait
-wrappers (24 tools total).
+Lite/play builds have no accessibility host and no switch, so the six basic
+tools stay available (and the UI/PCE tools are not registered). `/ping` reports
+`channel`, `unlocked`, `pce`, and the `ui` compatibility alias so the agent can
+explain what is missing. The service injects `PHONECANDO_CHANNEL=full|lite|play`
+into the opencode env; the agent asset also omits the full-only automation
+plugin outside full. Full builds register the base six tools plus three extra
+non-driver tools, `mobile_return`, `mobile_request_unlock`, and
+`mobile_open_accessibility`, the four PCE tools
+`mobile_describe`/`observe`/`act`/`pack`, the `mobile_launch` package launcher,
+and the legacy screen/info/click/tap/text/scroll/swipe/back/home/wait wrappers
+(24 tools total). Lite/play get the base six only.
 
 ### Trust gate caveat
 
@@ -75,27 +94,53 @@ top-level `permissions` rules, so a `mobile_*` ask rule is inert in this build.
 Per-call prompts return when opencode is bumped; until then the app-side
 master switch (biometric, default off) is the gate.
 
-## Build flavors
+## Build channels
 
-One codebase, two APKs. `PHONECANDO_AUTOMATION=full` (default,
-`pnpm android:full`) ships the automation driver; `=play`
-(`pnpm android:play`) strips it via `plugins/withAutomationFlag.js` (removes
-the driver service + `BIND_ACCESSIBILITY_SERVICE`, bakes a
-`com.phonecando.automation` meta-data flag). JS reads it via
-`isAutomationBuild()` (`full` when the native fn is absent — Expo Go /
-pre-flag installs); Settings → About shows it. Every Slice-2 component
-(service, bridge automation endpoints, automation UI) must gate on this flag.
-Rationale: Play bans autonomous a11y agents, so the Play build carries no
-automation trace while sideload/F-Droid keeps full power.
+One codebase, three channels, one Gradle project: channels are product
+flavors on the `channel` dimension (`pnpm android:<channel>` builds the
+`<channel>Debug` variant; the release scripts build `assembleFullRelease
+assembleLiteRelease` in one Gradle run). Library modules without the
+dimension (React Native, Expo, Reanimated, the terminal) compile once and are
+shared; only the app module and `phonecando-runner` differ per flavor.
 
-`withAutomationFlag.js` writes `phonecando.automation=full|play` into
-`gradle.properties` at prebuild (env vars go stale in a reused Gradle daemon),
-declares the service in the app manifest only for `full`, and the module's
-`sourceSets` include `src/uiauto/java` + `src/uiauto/res` only when the property
-is not `play`. APK audited 2026-10-30: no `com.phonecando.pce`,
-`com.phonecando.runner.uiauto` or `com.phonecando.runner.packs` classes in any dex, no
-driver service, no `accessibility_config` resource, and no
-`BIND_ACCESSIBILITY_SERVICE`.
+| Channel | Phone control | Self-update | `REQUEST_INSTALL_PACKAGES` |
+| --- | --- | --- | --- |
+| `full` | accessibility + PCE | GitHub Releases | yes |
+| `lite` | none | GitHub Releases (offers `full`) | yes |
+| `play` | none | Play-managed | no |
+
+Lite and full share the package name and signing key. Lite is pinned to
+`versionCode` 1 so any full release replaces it and no lite can ever replace
+an installed full. Lite is the site download because Play Protect blocks
+full from a browser; see `docs/release/upgrade-test.md`. `SYSTEM_ALERT_WINDOW` is not used by any channel and is stripped.
+
+`plugins/withBuildChannel.js` declares the flavors in `app/build.gradle`
+(lite pins `versionCode 1`), fills the `com.phonecando.channel` meta-data
+from a per-flavor manifest placeholder, writes the accessibility service into
+the `src/full/AndroidManifest.xml` overlay and a `tools:node="remove"` for
+`REQUEST_INSTALL_PACKAGES` into `src/play/`, and strips
+`BIND_ACCESSIBILITY_SERVICE` plus `SYSTEM_ALERT_WINDOW` from the main
+manifest. The runner module declares the same dimension: its `full` source
+set adds `src/uiauto/java` + `src/uiauto/res`, the PCE dependencies are
+`fullImplementation`, `consumer-rules-full.pro` keeps `FullAutomation` (which
+`AutomationHost.kt` finds by reflection and caches, a miss included) should
+the app ever minify, and `syncAgentConfig<Variant>` tasks stage a per-variant
+agent config (lite/play omit the automation plugin and use the lite
+`AGENTS.md`), registered with `addGeneratedSourceDirectory` so the Android
+plugin orders every asset reader after them. `withPceCompositeBuild.js` always includes the PCE build; only
+the full flavor resolves it.
+
+JS reads the channel with `getBuildChannel()` (`full` when the native fn is
+absent — Expo Go / pre-channel installs); Settings → About shows it. The
+self-updater returns null only for `play`. Every full-only component must gate
+on `full`. Rationale: Play bans autonomous a11y agents, so Play carries no
+automation trace while sideload/GitHub keeps full power.
+
+APK audit checklist (run after each channel build): no
+`com.phonecando.pce`, `com.phonecando.runner.uiauto` or
+`com.phonecando.runner.packs` classes in any dex for lite/play; no driver
+service or `accessibility_config` resource; no `BIND_ACCESSIBILITY_SERVICE`;
+no `SYSTEM_ALERT_WINDOW`; and no `REQUEST_INSTALL_PACKAGES` in `play`.
 
 ## Related
 

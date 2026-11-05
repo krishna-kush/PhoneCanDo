@@ -16,6 +16,12 @@ android {
         cppFlags ""
       }
     }
+    // Same architecture list as the app (reactNativeArchitectures); without
+    // this the JNI PTY was compiled for all four ABIs on every build.
+    ndk {
+      abiFilters((project.findProperty("reactNativeArchitectures") ?: "arm64-v8a")
+        .split(",").collect { it.trim() }.toArray(new String[0]))
+    }
   }
   externalNativeBuild {
     cmake {

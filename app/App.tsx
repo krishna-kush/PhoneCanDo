@@ -13,7 +13,7 @@ import TerminalScreen from './src/ui/terminal/TerminalScreen';
 import FolderPicker from './src/ui/terminal/FolderPicker';
 import EnvScreen from './src/ui/env/EnvScreen';
 import SettingsScreen from './src/ui/settings/SettingsScreen';
-import AccessibilityDialog from './src/ui/common/AccessibilityDialog';
+import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';

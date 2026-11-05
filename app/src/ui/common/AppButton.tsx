@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button } from 'tamagui';
 import { HIT, useTheme } from './globals';
+import LogoLoader from './LogoLoader';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -9,6 +10,9 @@ type Props = {
   onPress: () => void;
   variant?: Variant;
   disabled?: boolean;
+  /** Busy state: disabled, outlined, with the small logo loader before the
+      label (the loader's red needs a non-red surface to read). */
+  loading?: boolean;
   flex?: number;
   accessibilityState?: { selected?: boolean };
 };
@@ -20,12 +24,13 @@ export default function AppButton({
   onPress,
   variant = 'primary',
   disabled,
+  loading,
   flex,
   accessibilityState,
 }: Props) {
   const t = useTheme();
   const style =
-    variant === 'secondary'
+    variant === 'secondary' || loading
       ? { backgroundColor: 'transparent', borderColor: t.lineStrong, color: t.fg }
       : variant === 'ghost'
         ? { backgroundColor: 'transparent', borderWidth: 0, color: t.fg }
@@ -34,7 +39,8 @@ export default function AppButton({
   return (
     <Button
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || loading}
+      icon={loading ? <LogoLoader size={9} /> : undefined}
       flex={flex}
       accessibilityState={accessibilityState}
       minHeight={HIT.buttonH}
@@ -48,7 +54,7 @@ export default function AppButton({
       textProps={{ textTransform: 'uppercase' }}
       elevation={0}
       boxShadow={variant === 'ghost' ? undefined : `2px 2px 0 ${t.secondary}`}
-      opacity={disabled ? 0.5 : 1}
+      opacity={disabled && !loading ? 0.5 : 1}
       pressStyle={{ opacity: 0.85, scale: 0.98 }}
       {...style}
     >

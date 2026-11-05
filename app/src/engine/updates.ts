@@ -1,5 +1,6 @@
 // In-app updater: GitHub Releases is the store. Each release carries
-// latest.json (this manifest) plus phonecando-<version>-arm64.apk.
+// latest.json (this manifest), phonecando-<version>-full-arm64.apk (the
+// target here) and phonecando-<version>-lite-arm64.apk (the site download).
 // No GitHub API: /releases/latest skips pre-releases and the API is
 // rate-limited (60/h/IP); a release asset URL is neither. The asset name is
 // stable, so the check URL never changes.
@@ -7,7 +8,13 @@ import { applicationId, nativeApplicationVersion, nativeBuildVersion } from 'exp
 import { Directory, DownloadTask, File, Paths } from 'expo-file-system';
 import { getContentUriAsync } from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
-import { isAutomationBuild, isServeRunning, stopServeService } from './runner';
+import {
+  canRequestPackageInstalls,
+  getBuildChannel,
+  isServeRunning,
+  markSelfUpdatePending,
+  stopServeService,
+} from './runner';
 
 const REPO = 'krishna-kush/PhoneCanDo';
 const MANIFEST_URL = `https://github.com/${REPO}/releases/latest/download/latest.json`;
@@ -24,6 +31,12 @@ export type UpdateManifest = {
 };
 
 export type UpdateProgress = { written: number; total: number };
+
+// Lite is the download users get past Play Protect with; its only "update" is
+// the full build with phone control. Same version string, higher versionCode.
+export function isLiteUpgrade(): boolean {
+  return getBuildChannel() === 'lite';
+}
 
 export function installedVersion(): { version: string; versionCode: number } {
   return {
@@ -67,9 +80,8 @@ export async function fetchLatest(signal?: AbortSignal): Promise<UpdateManifest 
 }
 
 export async function checkForUpdate(signal?: AbortSignal): Promise<UpdateManifest | null> {
-  // A Play install must update through Play; replacing it with the full APK
-  // would silently add the accessibility driver Play strips.
-  if (isAutomationBuild() === 'play') return null;
+  // Play updates through Play. Full and lite both use the full GitHub APK.
+  if (getBuildChannel() === 'play') return null;
   const remote = await fetchLatest(signal);
   if (!remote) return null;
   const newer = remote.versionCode > installedVersion().versionCode;
@@ -78,7 +90,7 @@ export async function checkForUpdate(signal?: AbortSignal): Promise<UpdateManife
 }
 
 function apkName(m: UpdateManifest): string {
-  return m.apk.split('/').pop() ?? `phonecando-${m.version}-arm64.apk`;
+  return m.apk.split('/').pop() ?? `phonecando-${m.version}-full-arm64.apk`;
 }
 
 function updatesDir(): Directory {
@@ -127,7 +139,7 @@ export async function downloadUpdate(
 
 // The engine is a child of this UID and outlives an APK replace; stop it
 // before the installer kills the app so the new build never pairs with the
-// old binary.
+// old binary. isServeRunning covers the foreground service's engine too.
 async function stopEngine(): Promise<void> {
   try {
     if (!isServeRunning()) return;
@@ -141,14 +153,38 @@ async function stopEngine(): Promise<void> {
   }
 }
 
+// Hands the APK to Android's installer screen (ACTION_VIEW). Resolves when
+// that screen closes; on success the process is replaced, so the caller only
+// ever sees a cancel. Measured 2026-11-03 (docs/release/upgrade-test.md):
+// Play Protect allows this when lite installs full, because the originating
+// app is PhoneCanDo, not a browser or file manager. A session install that
+// declares a non-file source was tried and dropped: it cannot clear the
+// restricted-settings lock lite's own install already set
+// (research/restricted-settings.md).
 export async function installDownloaded(apk: File): Promise<void> {
   await stopEngine();
+  console.log(`[phonecando-update] install apk=${apk.name}`);
   const uri = await getContentUriAsync(apk.uri);
-  await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+  // The update receiver in the new build acts only on this mark
+  // (PackageReplacedReceiver.kt).
+  markSelfUpdatePending();
+  const res = await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
     data: uri,
     type: 'application/vnd.android.package-archive',
     flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+    // Ask the installer for a result so a refusal is visible in logcat.
+    extra: { 'android.intent.extra.RETURN_RESULT': true },
   });
+  console.log(
+    `[phonecando-update] intent result=${res.resultCode} extra=${JSON.stringify(res.extra ?? null)}`,
+  );
+}
+
+// Android's "Install unknown apps" switch for PhoneCanDo. Checked before the
+// installer screen: when it is off, the update dialog explains it and
+// carries on by itself once the user comes back with it on.
+export function canInstallUpdates(): boolean {
+  return canRequestPackageInstalls();
 }
 
 export async function openInstallSettings(): Promise<void> {

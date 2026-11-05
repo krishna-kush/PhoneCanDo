@@ -6,14 +6,19 @@ plugins {
 group = 'com.phonecando.runner'
 version = '0.1.0'
 
-// Prebuild writes this (withAutomationFlag.js). Default full for plain
-// `expo run:android` / direct Gradle invocations.
-def automationMode = project.findProperty("phonecando.automation") ?: "full"
+expoModule {
+  // The Expo plugin publishes a single "release" component; with product
+  // flavors the components are <flavor>Release, so publishing is off (the
+  // module is consumed from source only).
+  canBePublished false
+}
 
 // Shared agent config lives at the module root so an iOS implementation can
-// consume the same source. Android packages a generated copy.
+// consume the same source. Android packages a generated copy per variant;
+// non-full flavors drop the full-only automation plugin and use lite
+// instructions.
 def agentConfigDir = file("../opencode-config")
-def agentConfigAssets = layout.buildDirectory.dir("generated/agentConfig").get().asFile
+def liteAgentConfigDir = file("../opencode-config-lite")
 
 android {
   namespace "com.phonecando.runner"
@@ -21,19 +26,31 @@ android {
     versionCode 1
     versionName "0.1.0"
   }
+  // Channels are product flavors (app/plugins/withBuildChannel.js declares the
+  // same dimension on the app). Only this module and the app differ per
+  // channel; every other library compiles once and is shared.
+  flavorDimensions += ["channel"]
+  productFlavors {
+    full {
+      dimension "channel"
+      // Keeps the class AutomationHost.kt finds by reflection if the app
+      // ever minifies; only full has it.
+      consumerProguardFiles 'consumer-rules-full.pro'
+    }
+    lite { dimension "channel" }
+    play { dimension "channel" }
+  }
   sourceSets {
     main {
-      assets.srcDirs += agentConfigAssets
       // Ship the v2 bionic engine as native libs (CNG-safe: module-owned
       // dir). Executed from nativeLibraryDir where SELinux permits exec.
       jniLibs.srcDirs += ['src/main/libs']
-      // The a11y driver exists only in full builds. withAutomationFlag.js
-      // writes `phonecando.automation` into gradle.properties at prebuild.
-      if (automationMode != "play") {
-        java.srcDirs += 'src/uiauto/java'
-        kotlin.srcDirs += 'src/uiauto/java'
-        res.srcDirs += 'src/uiauto/res'
-      }
+    }
+    // The a11y driver, PCE host and pack keys exist only in full.
+    full {
+      java.srcDirs += 'src/uiauto/java'
+      kotlin.srcDirs += 'src/uiauto/java'
+      res.srcDirs += 'src/uiauto/res'
     }
   }
   lintOptions {
@@ -41,34 +58,56 @@ android {
   }
 }
 
-tasks.register("syncAgentConfig", Sync) {
-  from(agentConfigDir) {
-    exclude "**/node_modules/**"
-  }
-  into(new File(agentConfigAssets, "opencode-config"))
-  doFirst {
-    if (!agentConfigDir.isDirectory()) {
-      throw new GradleException("Missing opencode-config at ${agentConfigDir}")
-    }
-  }
+// Copies the agent config one variant ships. The Android plugin owns the
+// output folder (addGeneratedSourceDirectory below), so it knows this task
+// produces those assets and runs it before every task that reads them: asset
+// merging, lint, and any reader a later plugin version adds. Registering the
+// folder as a plain asset srcDir instead hides the producer, and Gradle 9
+// fails the build on each reader it was not linked to.
+abstract class AgentConfigSync extends Sync {
+  @OutputDirectory
+  abstract DirectoryProperty getOutputDir()
 }
 
-tasks.named("preBuild").configure { dependsOn("syncAgentConfig") }
+androidComponents {
+  onVariants(selector().all()) { variant ->
+    def channel = variant.flavorName
+    def sync = tasks.register("syncAgentConfig${variant.name.capitalize()}", AgentConfigSync) {
+      into(outputDir)
+      from(agentConfigDir) {
+        into "opencode-config"
+        exclude "**/node_modules/**"
+        if (channel != "full") {
+          exclude "AGENTS.md"
+          exclude "plugins/automation/**"
+        }
+      }
+      if (channel != "full") {
+        from(liteAgentConfigDir) {
+          into "opencode-config"
+          include "AGENTS.md"
+        }
+      }
+      doFirst {
+        if (!agentConfigDir.isDirectory() || (channel != "full" && !liteAgentConfigDir.isDirectory())) {
+          throw new GradleException("Missing agent config for channel ${channel}")
+        }
+      }
+    }
+    variant.sources.assets?.addGeneratedSourceDirectory(sync) { it.outputDir }
+  }
+}
 
 dependencies {
   // Loopback agent bridge HTTP framing (MIT). Hand-rolling it was 100 lines of
   // parser nobody asked for.
   implementation 'org.nanohttpd:nanohttpd:2.3.1'
-}
 
-if (automationMode != "play") {
-  dependencies {
-    // The app's settings plugin substitutes these coordinates with the
-    // included `pce/` build; play builds never resolve them.
-    implementation 'com.phonecando.pce:pce-api:0.1.0-dev'
-    implementation 'com.phonecando.pce:pce-core:0.1.0-dev'
-    implementation 'com.phonecando.pce:pce-json:0.1.0-dev'
-    implementation 'com.phonecando.pce:pce-android:0.1.0-dev'
-    implementation 'com.phonecando.pce:pce-pack:0.1.0-dev'
-  }
+  // The app's settings plugin substitutes these coordinates with the included
+  // `pce/` build; lite/play never resolve them.
+  fullImplementation 'com.phonecando.pce:pce-api:0.1.0-dev'
+  fullImplementation 'com.phonecando.pce:pce-core:0.1.0-dev'
+  fullImplementation 'com.phonecando.pce:pce-json:0.1.0-dev'
+  fullImplementation 'com.phonecando.pce:pce-android:0.1.0-dev'
+  fullImplementation 'com.phonecando.pce:pce-pack:0.1.0-dev'
 }

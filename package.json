@@ -9,6 +9,7 @@
     "start": "pnpm -C app start",
     "android": "pnpm -C app android",
     "android:full": "pnpm -C app android:full",
+    "android:lite": "pnpm -C app android:lite",
     "android:play": "pnpm -C app android:play",
     "ios": "pnpm -C app ios",
     "typecheck": "pnpm -C app exec tsc --noEmit",
@@ -17,6 +18,7 @@
     "web:dev": "pnpm -C web dev",
     "web:build": "pnpm -C web build",
     "logos": "node scripts/make-logos.mjs",
-    "release:android": "node scripts/release-android.mjs"
+    "release:android": "node scripts/release-android.mjs",
+    "build:android": "node scripts/build-android.mjs"
   }
 }

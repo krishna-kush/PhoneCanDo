@@ -15,7 +15,13 @@ import android.util.Log
 import java.io.File
 
 class PhoneCanDoServeService : Service() {
+  // Mirrored into the companion (liveServe) so the module's isServeRunning
+  // can see this engine from the JS thread.
   private var serveProcess: Process? = null
+    set(value) {
+      field = value
+      liveServe = value
+    }
   private var bridge: BridgeServer? = null
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -198,14 +204,58 @@ class PhoneCanDoServeService : Service() {
     // status and shuts down idle ones on its own (quiet-when-idle).
   }
 
+  // Android 15+ lets dataSync foreground services run 6 hours in any 24
+  // while the app is in the background (bringing the app to the foreground
+  // resets the clock). At the limit Android calls this and allows a few
+  // seconds to stop; a service still running then crashes the whole process
+  // (RemoteServiceException), taking the bridge and the accessibility host
+  // with it. So stop everything now. The app starts the engine again on its
+  // next foreground: App.tsx calls ensureServeRunning (ensureServe.ts) on
+  // launch and on every return to 'active', its failed health check fires a
+  // fresh service start, and that foreground has reset the clock.
+  override fun onTimeout(startId: Int, fgsType: Int) {
+    Log.w(TAG, "foreground service time limit reached (type $fgsType), stopping")
+    stopSupervisor()
+    stopSse()
+    stopForeground(STOP_FOREGROUND_REMOVE)
+    // stopSelf before the serve wait: it reaches the system at once, while
+    // serve may take a moment to exit. onDestroy repeats this harmlessly.
+    stopSelf()
+    stopServeProcess()
+    bridge?.stop()
+    bridge = null
+  }
+
+  // destroy() sends SIGTERM and serve normally exits at once. The wait is
+  // bounded because onTimeout and onDestroy run on the main thread: an engine
+  // that ignored SIGTERM would otherwise freeze the app, and at the Android
+  // 15+ time limit Android would crash it anyway.
   private fun stopServeProcess() {
-    try {
-      serveProcess?.destroy()
-      serveProcess?.waitFor()
-    } catch (_: Exception) {
+    val proc = serveProcess
+    if (proc != null) {
+      try {
+        proc.destroy()
+        val deadline = System.currentTimeMillis() + 3_000
+        while (System.currentTimeMillis() < deadline && !hasExited(proc)) {
+          Thread.sleep(50)
+        }
+        if (!hasExited(proc) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          proc.destroyForcibly()
+        }
+      } catch (_: Exception) {
+      }
     }
     serveProcess = null
   }
+
+  // Process.isAlive needs API 26; exitValue works everywhere.
+  private fun hasExited(proc: Process): Boolean =
+    try {
+      proc.exitValue()
+      true
+    } catch (_: IllegalThreadStateException) {
+      false
+    }
 
   // Agent bridge: loopback HTTP for the mobile_* tools. Token is install-stable
   // (like the serve password) so a service restart doesn't strand an orphaned
@@ -312,16 +362,16 @@ class PhoneCanDoServeService : Service() {
         put("PHONECANDO_BRIDGE_URL", it.url)
         put("PHONECANDO_BRIDGE_TOKEN", it.token)
       }
-      // The mobile plugin hides UI tools in play builds (they would only 503).
-      put(
-        "PHONECANDO_AUTOMATION",
-        try {
-          packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.GET_META_DATA)
-            .metaData?.getString("com.phonecando.automation") ?: "full"
-        } catch (_: Exception) {
-          "full"
-        },
-      )
+      // The mobile plugin registers UI tools only in full builds.
+      val channel = try {
+        packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.GET_META_DATA)
+          .metaData?.getString("com.phonecando.channel") ?: "full"
+      } catch (_: Exception) {
+        "full"
+      }
+      put("PHONECANDO_CHANNEL", channel)
+      // Keep the old variable for existing agent configs.
+      put("PHONECANDO_AUTOMATION", if (channel == "full") "full" else "play")
       put("TMPDIR", home.absolutePath)
       intent?.getStringExtra(EXTRA_SSL_CERT)?.let { put("SSL_CERT_FILE", it) }
     }
@@ -363,6 +413,22 @@ class PhoneCanDoServeService : Service() {
     const val WORKING_TEXT = "● Working…"
     const val SUPERVISOR_INTERVAL_MS = 30_000L
     const val BRIDGE_GRACE_MS = 5 * 60_000L
+
+    // The service's current serve process: written on the main thread, read
+    // from the JS thread through isServeAlive.
+    @Volatile private var liveServe: Process? = null
+
+    // True while the service's serve process is alive. The updater stops the
+    // engine before a self-update and polls this until serve has exited.
+    fun isServeAlive(): Boolean {
+      val proc = liveServe ?: return false
+      return try {
+        proc.exitValue()
+        false
+      } catch (_: IllegalThreadStateException) {
+        true
+      }
+    }
   }
 
   // Live notification: the service owns the text because it outlives the UI

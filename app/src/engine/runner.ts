@@ -65,14 +65,14 @@ export function stopServeService(): string {
   return load().stopServeService();
 }
 
-// Build flavor: "full" ships the automation driver, "play" compiles it out
-// (PHONECANDO_AUTOMATION at prebuild time). Absent native fn (Expo Go / pre-flag
+// Build channel: full ships phone control; lite has no phone control but
+// self-updates; play has neither. Absent native fn (Expo Go / pre-channel
 // installs) means full — dev default.
-export function isAutomationBuild(): string {
+export function getBuildChannel(): string {
   try {
-    const m = load() as unknown as { isAutomationBuild?: () => string };
-    if (typeof m.isAutomationBuild !== 'function') return 'full';
-    return m.isAutomationBuild();
+    const m = load() as unknown as { getBuildChannel?: () => string };
+    if (typeof m.getBuildChannel !== 'function') return 'full';
+    return m.getBuildChannel();
   } catch {
     return 'full';
   }
@@ -182,12 +182,13 @@ export function onAccessibilityRequest(listener: (reason: string) => void): { re
 }
 
 // Resolve the bridge's waiting /accessibility request after the user confirms
-// (or cancels) the in-chat prompt.
-export function resolveAccessibility(ok: boolean): boolean {
+// (or cancels) the in-chat prompt. `guided`: the restricted-settings guide is
+// running, so the bridge answers at once instead of waiting for the service.
+export function resolveAccessibility(ok: boolean, guided: boolean): boolean {
   try {
-    const m = load() as unknown as { resolveAccessibility?: (v: boolean) => boolean };
+    const m = load() as unknown as { resolveAccessibility?: (v: boolean, g: boolean) => boolean };
     if (typeof m.resolveAccessibility !== 'function') return false;
-    return m.resolveAccessibility(ok);
+    return m.resolveAccessibility(ok, guided);
   } catch {
     return false;
   }
@@ -200,6 +201,88 @@ export function isUiAutomationConnected(): boolean {
     return m.isUiAutomationConnected();
   } catch {
     return false;
+  }
+}
+
+// PhoneCanDo is in Android's enabled accessibility services (set by the
+// switch, before the service binds).
+export function isAccessibilityServiceEnabled(): boolean {
+  try {
+    const m = load() as unknown as { isAccessibilityServiceEnabled?: () => boolean };
+    return typeof m.isAccessibilityServiceEnabled === 'function' && m.isAccessibilityServiceEnabled();
+  } catch {
+    return false;
+  }
+}
+
+// The service ran on this install, which proves the restricted-settings lock
+// was cleared (RestrictedSettings.kt).
+export function hasAccessibilityConnectedBefore(): boolean {
+  try {
+    const m = load() as unknown as { hasAccessibilityConnectedBefore?: () => boolean };
+    return typeof m.hasAccessibilityConnectedBefore === 'function' && m.hasAccessibilityConnectedBefore();
+  } catch {
+    return false;
+  }
+}
+
+// Android lets PhoneCanDo install APKs ("Install unknown apps" for this
+// app). True when the native call is missing, so the old flow still runs.
+export function canRequestPackageInstalls(): boolean {
+  try {
+    const m = load() as unknown as { canRequestPackageInstalls?: () => boolean };
+    return typeof m.canRequestPackageInstalls !== 'function' || m.canRequestPackageInstalls();
+  } catch {
+    return true;
+  }
+}
+
+// Marks the coming APK replace as PhoneCanDo's own self-update, so the update
+// receiver in the new build announces it; updates PhoneCanDo did not start
+// (Play, adb, dev reinstalls) stay quiet. False when the native fn is missing
+// or the write failed; the installer's own Open button still leads back.
+export function markSelfUpdatePending(): boolean {
+  try {
+    const m = load() as unknown as { markSelfUpdatePending?: () => boolean };
+    if (typeof m.markSelfUpdatePending !== 'function') return false;
+    return m.markSelfUpdatePending();
+  } catch {
+    return false;
+  }
+}
+
+// Android 14+: PhoneCanDo can show Android's "Restricted setting" note
+// itself, so the user never has to find PhoneCanDo in the Accessibility list.
+// False on Android 13 or when the OEM guards that activity.
+export function canShowRestrictedSettingNote(): boolean {
+  try {
+    const m = load() as unknown as { canShowRestrictedSettingNote?: () => boolean };
+    return typeof m.canShowRestrictedSettingNote === 'function' && m.canShowRestrictedSettingNote();
+  } catch {
+    return false;
+  }
+}
+
+// Shows Android's "Restricted setting" note over the app. 'opened' | 'failed'.
+export function showRestrictedSettingNote(): string {
+  try {
+    const m = load() as unknown as { showRestrictedSettingNote?: () => string };
+    if (typeof m.showRestrictedSettingNote !== 'function') return 'failed';
+    return m.showRestrictedSettingNote();
+  } catch {
+    return 'failed';
+  }
+}
+
+// Opens this app's App info page, where the ⋮ menu holds "Allow restricted
+// settings" once Android has shown its note. 'opened' | 'failed'.
+export function openAppInfoSettings(): string {
+  try {
+    const m = load() as unknown as { openAppInfoSettings?: () => string };
+    if (typeof m.openAppInfoSettings !== 'function') return 'failed';
+    return m.openAppInfoSettings();
+  } catch {
+    return 'failed';
   }
 }
 

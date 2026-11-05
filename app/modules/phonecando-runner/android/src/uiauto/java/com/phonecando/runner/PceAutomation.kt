@@ -2,9 +2,8 @@ package com.phonecando.runner
 
 import org.json.JSONObject
 
-// Seam between the bridge (main source) and the PCE adapter (full-only
-// source). Keeping PCE types out of main is what lets `play` builds compile
-// the automation driver out without shipping PCE classes.
+// Full-only adapter seam. The bridge sees only AutomationHost in main; lite and
+// play compile this source set out, so no PCE class reaches their APK.
 interface PceAutomation {
   fun describe(): JSONObject
   fun observe(options: JSONObject): JSONObject
