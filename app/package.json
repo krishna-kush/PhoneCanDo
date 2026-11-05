@@ -8,7 +8,7 @@
     "@tamagui/config": "^2.7.7",
     "@tamagui/core": "2.7.7",
     "@xterm/xterm": "^6.0.0",
-    "expo": "~57.0.24",
+    "expo": "~57.0.31",
     "expo-application": "~57.0.3",
     "expo-asset": "~57.0.18",
     "expo-file-system": "~57.0.7",
@@ -18,7 +18,7 @@
     "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "phonecando-runner": "link:./modules/phonecando-runner",
-    "react": "19.2.3",
+    "react": "19.2.9",
     "react-native": "0.86.3",
     "react-native-keyboard-controller": "^1.22.6",
     "react-native-reanimated": "4.5.1",
@@ -34,7 +34,7 @@
     "@expo/config-plugins": "^57.0.9",
     "@tamagui/babel-plugin": "^2.7.7",
     "@types/react": "~19.2.2",
-    "babel-preset-expo": "57.0.12",
+    "babel-preset-expo": "57.0.16",
     "typescript": "~6.0.3"
   },
   "scripts": {
