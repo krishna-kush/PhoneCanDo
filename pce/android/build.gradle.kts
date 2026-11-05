@@ -32,7 +32,7 @@ kotlin {
 
 dependencies {
     api(project(":api"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     androidTestImplementation(project(":core"))
     androidTestImplementation(project(":testkit"))
