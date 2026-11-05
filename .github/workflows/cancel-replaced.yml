@@ -1,0 +1,40 @@
+name: Cancel Replaced
+
+# A force-push to prod (amend + push) replaces the old head commit, so its
+# still-running push runs test code that no longer exists: cancel them. A
+# normal push never cancels anything (every commit's runs finish), and
+# scheduled, manual and PR runs are never touched.
+
+on:
+  push:
+    branches: [prod]
+
+permissions:
+  contents: read
+
+jobs:
+  cancel:
+    name: cancel runs of the replaced commit
+    if: github.event.forced
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel push runs of the replaced head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          ids=$(gh api "repos/$REPO/actions/runs?head_sha=$BEFORE&event=push&per_page=100" \
+            --jq '.workflow_runs[] | select(.status != "completed") | .id')
+          n=0
+          while read -r id; do
+            [ -n "$id" ] || continue
+            echo "cancelling run $id (replaced ${BEFORE:0:7})"
+            gh api -X POST "repos/$REPO/actions/runs/$id/cancel" >/dev/null || true
+            n=$((n + 1))
+          done <<< "$ids"
+          echo "Force-push replaced \`${BEFORE:0:7}\`: cancelled $n run(s)." >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,389 @@
+name: Web
+
+# The static site in web/ (Astro, deployed elsewhere from web/dist; nothing
+# here deploys). Builds once, then checks the built pages: links, release
+# downloads, page weight, browsers × viewports × colour schemes, axe,
+# Lighthouse. Runs when the site, the shared theme or the app version (which
+# the site's download links derive from) changes, and nightly for drift.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - web/**
+      - theme/**
+      - app/app.json
+      - .github/workflows/web.yml
+      - .github/ci/web/**
+  pull_request:
+    paths:
+      - web/**
+      - theme/**
+      - app/app.json
+      - .github/workflows/web.yml
+      - .github/ci/web/**
+  workflow_dispatch:
+  schedule:
+    - cron: '37 3 * * *'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Tools that are not web deps, installed per job into $RUNNER_TEMP/tools
+  # (npm --no-save, nothing lands in the repo or its lockfile).
+  PLAYWRIGHT_VERSION: 1.64.1
+  AXE_PLAYWRIGHT_VERSION: 4.14.0
+  HTML_VALIDATE_VERSION: 11.18.0
+  LHCI_VERSION: 0.16.0
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # pnpm version comes from the root package.json packageManager field.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install
+        run: pnpm -C web install --frozen-lockfile
+      # A production build also fails when web/src/data/release.json is for
+      # another version than app/app.json (web/src/data/site.ts).
+      - name: Build
+        run: pnpm -C web build
+      - name: Summary
+        run: |
+          set -euo pipefail
+          {
+            echo "### Web build"
+            echo
+            echo "$(find web/dist -type f | wc -l) files, $(du -sh web/dist | cut -f1) in web/dist. Pages:"
+            echo
+            find web/dist -name '*.html' -printf "- \`/%P\` (%s bytes)\n" | sort
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-site
+          path: web/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  # Type-checks .astro files and src/ TypeScript against web/tsconfig.json
+  # (astro/tsconfigs/strict), with the site's own @astrojs/check devDep.
+  astro-check:
+    name: astro check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install
+        run: pnpm -C web install --frozen-lockfile
+      - name: astro check
+        run: pnpm -C web check
+
+  # Non-blocking first: rules relaxed for intentional markup in
+  # .github/ci/web/htmlvalidate.json (inline custom-property styles on the
+  # logo marks, muted autoplay recordings, SRI only for cross-origin). Promote
+  # once a run is clean.
+  html-validate:
+    name: html-validate
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-site
+          path: web/dist
+      - name: Install html-validate
+        working-directory: ${{ runner.temp }}
+        run: npm i --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/tools" "html-validate@$HTML_VALIDATE_VERSION"
+      - name: Validate
+        run: >-
+          "$RUNNER_TEMP/tools/node_modules/.bin/html-validate"
+          --config .github/ci/web/htmlvalidate.json
+          --formatter "stylish,json=$RUNNER_TEMP/html-validate.json"
+          web/dist
+      - name: Summary
+        if: always()
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/html-validate.json"
+          {
+            echo "### html-validate"
+            echo
+            if [ -s "$report" ]; then
+              echo "$(jq '[.[].errorCount] | add // 0' "$report") errors, $(jq '[.[].warningCount] | add // 0' "$report") warnings."
+              echo
+              echo "| Rule | Count |"
+              echo "|---|---:|"
+              jq -r '[.[].messages[].ruleId] | group_by(.) | map("| \(.[0]) | \(length) |") | .[]' "$report"
+            else
+              echo "No problems reported."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  links:
+    name: Internal links
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-site
+          path: web/dist
+      - name: Check links, anchors and third-party subresources
+        run: node .github/ci/web/check-links.mjs web/dist
+
+  weight:
+    name: Page weight
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-site
+          path: web/dist
+      # Today's pages are ~200 KB on first load; 3 MB fails, 1 MB warns.
+      - name: Measure against the budget
+        run: node .github/ci/web/page-weight.mjs web/dist --budget 3145728 --warn 1048576
+
+  release-links:
+    name: Release downloads
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-site
+          path: web/dist
+      # Every APK link on the site must name an uploaded asset of the
+      # published release whose size and sha256 match release.json.
+      - name: Check download links against the GitHub release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/ci/web/check-release.mjs web/dist
+
+  smoke:
+    name: Smoke (${{ matrix.browser }})
+    needs: build
+    # Pinned image: playwright install --with-deps is distro-specific.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-site
+          path: web/dist
+      - name: Install Playwright and ${{ matrix.browser }}
+        working-directory: ${{ runner.temp }}
+        env:
+          BROWSER: ${{ matrix.browser }}
+        run: |
+          set -euo pipefail
+          npm i --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/tools" \
+            "playwright@$PLAYWRIGHT_VERSION" "@axe-core/playwright@$AXE_PLAYWRIGHT_VERSION"
+          "$RUNNER_TEMP/tools/node_modules/.bin/playwright" install --with-deps "$BROWSER"
+      # axe fails the job on critical violations only. Serious ones (today:
+      # colour contrast of the red `primary` ink as small text) are listed in
+      # the summary; switch to --axe serious once they are fixed.
+      - name: Smoke test
+        env:
+          BROWSER: ${{ matrix.browser }}
+        run: >-
+          node .github/ci/web/smoke.mjs --browser "$BROWSER" --dist web/dist
+          --out smoke-out --tools "$RUNNER_TEMP/tools" --axe critical
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: web-smoke-${{ matrix.browser }}
+          path: smoke-out
+          if-no-files-found: warn
+          retention-days: 7
+
+  lighthouse:
+    name: Lighthouse (${{ matrix.preset }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [mobile, desktop]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-site
+          path: web/dist
+      - name: Install Lighthouse CI
+        working-directory: ${{ runner.temp }}
+        run: npm i --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/tools" "@lhci/cli@$LHCI_VERSION"
+      # One config: Lighthouse defaults to mobile; desktop adds the preset.
+      - name: Config for ${{ matrix.preset }}
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: |
+          set -euo pipefail
+          if [ "$PRESET" = desktop ]; then
+            jq '.ci.collect.settings.preset = "desktop"' .github/ci/web/lighthouserc.json > "$RUNNER_TEMP/lighthouserc.json"
+          else
+            cp .github/ci/web/lighthouserc.json "$RUNNER_TEMP/lighthouserc.json"
+          fi
+      # Runs the system Chrome against lhci's own static server on web/dist.
+      - name: Collect (3 runs per page)
+        run: '"$RUNNER_TEMP/tools/node_modules/.bin/lhci" collect --config="$RUNNER_TEMP/lighthouserc.json"'
+      # Scores are warn-level; error-level assertions are binary audits that
+      # pass today (title, lang, description, viewport, names, no console
+      # errors, home crawlable). The job fails on those at the end, after the
+      # reports are saved.
+      - name: Assert
+        id: assert
+        continue-on-error: true
+        run: '"$RUNNER_TEMP/tools/node_modules/.bin/lhci" assert --config="$RUNNER_TEMP/lighthouserc.json"'
+      - name: Write reports
+        if: always()
+        run: '"$RUNNER_TEMP/tools/node_modules/.bin/lhci" upload --target=filesystem --outputDir=lhci-report'
+      # Public repo, public site: the report goes to Google's temporary public
+      # storage (kept a few days) so the summary can link it. Best effort.
+      - name: Upload to temporary public storage
+        if: always()
+        continue-on-error: true
+        run: '"$RUNNER_TEMP/tools/node_modules/.bin/lhci" upload --target=temporary-public-storage'
+      - name: Summary
+        if: always()
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: node .github/ci/web/lhci-summary.mjs lhci-report "$PRESET"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: lighthouse-${{ matrix.preset }}
+          path: |
+            lhci-report
+            .lighthouseci
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Fail on error-level assertions
+        if: steps.assert.outcome == 'failure'
+        run: |
+          echo "::error::Lighthouse error-level assertions failed; see the summary table"
+          exit 1
+
+  # Nightly / manual only, non-blocking: other people's servers fail for
+  # reasons unrelated to a change. The canonical/og domain (phonecando.app)
+  # is excluded until it is registered; APK downloads are checked through the
+  # API by release-links instead of fetching 100+ MB files.
+  external-links:
+    name: External links
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-site
+          path: web/dist
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --no-progress
+            --max-concurrency 4
+            --max-retries 3
+            --timeout 30
+            --accept 200..=299,429
+            --root-dir ${{ github.workspace }}/web/dist
+            --scheme https --scheme http
+            --exclude '^https?://(www\.)?phonecando\.app'
+            --exclude '/releases/download/'
+            -- 'web/dist/**/*.html'
+          fail: true
+          jobSummary: true
+
+  web-ok:
+    name: web-ok
+    if: always()
+    needs: [build, astro-check, links, weight, release-links, smoke, lighthouse]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All blocking web jobs passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          bad=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [ -n "$bad" ]; then
+            echo "::error::not successful: $bad"
+            exit 1
+          fi

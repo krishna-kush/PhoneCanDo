@@ -1,49 +1,280 @@
 name: CI
 
+# Fast main gate for the app, the site and the repo's own tooling: typecheck
+# and key/reconcile vectors, the Android JS bundle and config plugins without
+# a prebuild or device, generated-file drift, the theme spec, the website
+# build and script wiring. Runs on every push to prod, every PR, nightly (to
+# catch upstream drift) and on demand. Branch protection: require `ci-ok`.
+# Native builds, the PCE, the engine and deep site checks have their own
+# workflows (android.yml, pce.yml, engine.yml, web.yml).
+
 on:
   push:
     branches: [prod]
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   app:
+    name: app (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 is the floor (pnpm 11, Astro 7); 24 is the current LTS devs run.
+        node: [22, 24]
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 11.11.0
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - name: Install app deps (frozen lockfile)
+        run: pnpm -C app install --frozen-lockfile
+      - name: Typecheck (tsc --noEmit)
+        run: pnpm -C app exec tsc --noEmit
+      - name: Key/reconcile vectors
+        env:
+          NODE_MAJOR: ${{ matrix.node }}
+        run: |
+          set -euo pipefail
+          pnpm -C app check:vectors | tee "$RUNNER_TEMP/vectors.log"
+          {
+            echo "### Vectors (Node $NODE_MAJOR)"
+            echo
+            grep '^RESULT' "$RUNNER_TEMP/vectors.log" | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  vectors:
+    # The vectors are the one part of the dev loop with no Android tooling, so
+    # they must run for contributors on any OS (Linux is covered by `app`).
+    name: vectors (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Run every vector file (zero deps, plain node)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(app/scripts/vectors/*.js)
+          [ "${#files[@]}" -gt 0 ] || { echo "::error::no vector files in app/scripts/vectors"; exit 1; }
+          for f in "${files[@]}"; do
+            echo "::group::$f"
+            node "$f"
+            echo "::endgroup::"
+          done
+
+  app-bundle:
+    name: app bundle (Android JS, no device)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_NO_GIT_STATUS: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: app/pnpm-lock.yaml
-      - run: pnpm -C app install --frozen-lockfile
-      - run: pnpm -C app exec tsc --noEmit
-      - run: pnpm -C app check:vectors
+      - name: Install app deps (frozen lockfile)
+        run: pnpm -C app install --frozen-lockfile
+      # Introspection runs every app.json plugin's manifest and
+      # gradle.properties mods in memory against Expo's template (there is no
+      # app/android here) and writes nothing; the helper checks the results
+      # the channels, engine and pair UI depend on.
+      - name: Config plugins (expo config --type introspect)
+        working-directory: app
+        run: |
+          set -euo pipefail
+          # The binary directly: `pnpm exec` may print its deps check
+          # ("Already up to date") to stdout, ahead of the JSON.
+          ./node_modules/.bin/expo config --type introspect --json > "$RUNNER_TEMP/expo-introspect.json"
+          node ../.github/ci/js/check-expo-config.mjs "$RUNNER_TEMP/expo-introspect.json"
+      # The same Metro + Hermes path a release build embeds, minus Gradle:
+      # proves every import resolves and the Tamagui/Reanimated Babel plugins
+      # compile the whole app for Android.
+      - name: Bundle JS for Android (expo export, Hermes bytecode)
+        working-directory: app
+        run: pnpm exec expo export --platform android --output-dir "$RUNNER_TEMP/expo-export" --source-maps
+      - name: Bundle report
+        run: node .github/ci/js/bundle-report.mjs "$RUNNER_TEMP/expo-export" --require-ext html,ttf
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-bundle-android
+          path: ${{ runner.temp }}/expo-export
+          retention-days: 7
+          if-no-files-found: error
+
+  generated:
+    name: generated files in sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      # Only for the vendored-xterm comparison (@xterm/xterm at its locked version).
+      - name: Install app deps (frozen lockfile)
+        run: pnpm -C app install --frozen-lockfile
+      # Re-runs inline-xterm.js and make-logos.mjs on a scratch copy of their
+      # inputs and compares with the committed outputs (PNGs by pixels).
+      - name: Regenerate and compare
+        run: node .github/ci/js/check-generated.mjs --require-vendor
+
+  theme:
+    name: theme spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Check theme/tokens.json and theme/logo.json
+        run: node .github/ci/js/check-theme.mjs
 
   web:
+    name: website build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ASTRO_TELEMETRY_DISABLED: '1'
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 11.11.0
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
-      - run: pnpm -C web install --frozen-lockfile
-      - run: pnpm -C web build
-
-  pce:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Install web deps (frozen lockfile)
+        run: pnpm -C web install --frozen-lockfile
+      # Fails by design when web/src/data/release.json is for another version
+      # than app/app.json (site.ts); ./manage release writes both.
+      - name: Build (astro build)
+        run: pnpm -C web build
+      - name: Build report
+        run: node .github/ci/js/dist-report.mjs web/dist --title "Website build (web/dist)"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          distribution: temurin
-          java-version: 21
-      - run: ./gradlew :api:test :core:test :json:test :pack:test :testkit:test --no-daemon
-        working-directory: pce
+          name: web-dist
+          path: web/dist
+          retention-days: 7
+          if-no-files-found: error
+
+  scripts:
+    name: scripts and wiring
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Syntax-check every Node script (node --check)
+        run: |
+          set -euo pipefail
+          # Repo scripts, config plugins, Metro/Babel/Astro configs, the
+          # terminal page source and the CI helpers themselves.
+          mapfile -d '' files < <(git ls-files -z -- \
+            'scripts/*.js' 'scripts/*.mjs' 'scripts/*.cjs' \
+            'app/scripts/*.js' 'app/scripts/*.mjs' \
+            'app/plugins/*.js' 'app/metro.config.js' 'app/babel.config.js' \
+            'app/assets/xterm/terminal.js' 'web/astro.config.mjs' \
+            '.github/ci/*.mjs' '.github/ci/*.js')
+          [ "${#files[@]}" -gt 0 ] || { echo "::error::no scripts matched"; exit 1; }
+          for f in "${files[@]}"; do node --check "$f"; done
+          echo "node --check: ${#files[@]} files OK"
+          echo "node --check: ${#files[@]} files OK" >> "$GITHUB_STEP_SUMMARY"
+      # Through python3 explicitly: the committed exec bit is lint.yml's check.
+      - name: manage compiles and prints its help
+        run: |
+          set -euo pipefail
+          python3 -m py_compile manage
+          python3 manage --help
+      # Loads the release script's whole import graph (apk-audit.mjs) and
+      # exits at --help, before any env, SDK or network access.
+      - name: Release script loads (--help)
+        run: node scripts/release-android.mjs --help
+      - name: Entry points resolve (manage, package.json, vectors, versions)
+        run: node .github/ci/js/check-wiring.mjs
+
+  ci-ok:
+    # The one check to require in branch protection: green only when every
+    # gate above succeeded (a skipped or cancelled gate counts as a failure).
+    name: ci-ok
+    if: always()
+    needs: [app, vectors, app-bundle, generated, theme, web, scripts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All gates passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### CI gates"
+            echo
+            echo "| Job | Result |"
+            echo "|---|---|"
+            jq -r 'to_entries[] | "| \(.key) | \(.value.result) |"' <<< "$NEEDS"
+          } >> "$GITHUB_STEP_SUMMARY"
+          bad=$(jq -r '[to_entries[] | select(.value.result != "success") | "\(.key)=\(.value.result)"] | join(", ")' <<< "$NEEDS")
+          if [ -n "$bad" ]; then
+            echo "::error::gates not successful: $bad"
+            exit 1
+          fi
+          echo "all gates succeeded"

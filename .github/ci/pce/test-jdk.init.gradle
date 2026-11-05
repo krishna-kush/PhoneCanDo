@@ -1,0 +1,31 @@
+// Gradle init script for the PCE JVM matrix: run every Test and JavaExec task
+// of the Kotlin/JVM modules on the JDK given by -PpceTestJdk=<major>, while
+// compilation keeps the build's own jvmToolchain(17). That proves the
+// published bytecode (target 17) works on newer consumer runtimes without
+// touching pce/ build files. Without the property this script does nothing.
+//
+//   ./gradlew --init-script ../.github/ci/pce/test-jdk.init.gradle -PpceTestJdk=25 :core:test
+
+def requested = gradle.startParameter.projectProperties['pceTestJdk']
+if (requested) {
+    int major = requested as int
+    allprojects {
+        // Kotlin/JVM modules only; the Android modules keep AGP's own setup.
+        plugins.withId('org.jetbrains.kotlin.jvm') {
+            def launcher = extensions.getByType(JavaToolchainService).launcherFor {
+                languageVersion = JavaLanguageVersion.of(major)
+            }
+            tasks.withType(Test).configureEach { javaLauncher = launcher }
+            tasks.withType(JavaExec).configureEach { javaLauncher = launcher }
+            tasks.matching { it instanceof Test || it instanceof JavaExec }.configureEach { task ->
+                task.doFirst {
+                    def meta = task.javaLauncher.get().metadata
+                    if (meta.languageVersion.asInt() != major) {
+                        throw new GradleException("${task.path} resolved JDK ${meta.languageVersion}, expected ${major}")
+                    }
+                    logger.lifecycle("[pce-ci] ${task.path} runs on JDK ${meta.javaRuntimeVersion} (${meta.vendor})")
+                }
+            }
+        }
+    }
+}

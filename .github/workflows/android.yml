@@ -1,0 +1,433 @@
+name: Android
+
+# Builds the app from a clean checkout the way the release scripts do: Expo
+# prebuild (app/android is CNG output), debug APKs per channel, a release-shape
+# lite + full build signed with a throwaway key, lint, and an emulator smoke
+# test. Runs on prod pushes, pull requests, nightly (drift) and on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - '**'
+      - '!**/*.md'
+      - '!docs/**'
+      - '!research/**'
+      - '!web/**'
+      - '!scripts/bootstrap/**'
+      - '!.github/**'
+      - '.github/workflows/android.yml'
+      - '.github/ci/android/**'
+      # Packaged into the APK and audited byte for byte.
+      - 'app/modules/phonecando-runner/opencode-config*/**'
+  pull_request:
+    paths:
+      - '**'
+      - '!**/*.md'
+      - '!docs/**'
+      - '!research/**'
+      - '!web/**'
+      - '!scripts/bootstrap/**'
+      - '!.github/**'
+      - '.github/workflows/android.yml'
+      - '.github/ci/android/**'
+      - 'app/modules/phonecando-runner/opencode-config*/**'
+  schedule:
+    - cron: '37 2 * * *'
+  workflow_dispatch:
+    inputs:
+      engine_run_id:
+        description: >-
+          Optional run id of an engine.yml run: its engine-payload-arm64
+          artifact is packaged into the release-shape build and the audit's
+          engine gate is enforced.
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  EXPO_NO_GIT_STATUS: '1'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prebuild:
+    name: Prebuild (config plugins)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - name: Generate app/android and check every plugin's output
+        run: bash .github/ci/android/prebuild.sh
+      - name: Second prebuild is byte-identical
+        # app/plugins/gradleBlock.js promises repeated prebuilds are
+        # byte-identical; Expo's own template mods are outside this repo, so
+        # this reports until it has been seen green, then can gate.
+        continue-on-error: true
+        run: bash .github/ci/android/prebuild.sh --again
+      - name: Upload generated app/android
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-prebuild-output
+          path: app/android
+          retention-days: 7
+          if-no-files-found: warn
+
+  assemble:
+    name: Debug APK (${{ matrix.channel }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [lite, full, play]
+    env:
+      CHANNEL: ${{ matrix.channel }}
+      # The phone's ABI; the emulator runs the release-shape build instead.
+      ABIS: arm64-v8a
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Free disk space
+        run: bash .github/ci/android/free-disk.sh
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          # 21 runs Gradle; the PCE (full's included build) asks for a 17 toolchain.
+          java-version: |
+            17
+            21
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Generate app/android (expo prebuild)
+        run: bash .github/ci/android/prebuild.sh
+      - name: NDK, CMake and Gradle sizing
+        run: bash .github/ci/android/toolchain.sh
+      - name: Assemble ${{ matrix.channel }}Debug
+        id: build
+        working-directory: app/android
+        run: ./gradlew ":app:assemble${CHANNEL^}Debug" -PreactNativeArchitectures="$ABIS" --stacktrace --console=plain
+      - name: Audit APK
+        run: >-
+          node .github/ci/android/audit-apk.mjs
+          --apk "app/android/app/build/outputs/apk/$CHANNEL/debug/app-$CHANNEL-debug.apk"
+          --channel "$CHANNEL" --build debug --abis "$ABIS"
+          --json "$RUNNER_TEMP/out/audit.json"
+      - name: Stage APK
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          ver=$(node -p "require('./app/app.json').expo.version")
+          mkdir -p "$RUNNER_TEMP/out"
+          cp "app/android/app/build/outputs/apk/$CHANNEL/debug/app-$CHANNEL-debug.apk" \
+            "$RUNNER_TEMP/out/phonecando-$ver-$CHANNEL-debug-arm64.apk"
+          (cd "$RUNNER_TEMP/out" && sha256sum ./*.apk >SHA256SUMS)
+      - name: Upload APK
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apk-${{ matrix.channel }}-debug
+          path: ${{ runner.temp }}/out/
+          retention-days: 7
+          if-no-files-found: error
+
+  release:
+    name: Release shape (lite + full, throwaway key)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: read
+      # Only for the optional engine payload from another run (workflow_dispatch).
+      actions: read
+    env:
+      # Releases are arm64 only; x86_64 is added so the emulator job can run
+      # these exact APKs. The audit checks the ABI list either way.
+      ABIS: arm64-v8a,x86_64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Free disk space
+        run: bash .github/ci/android/free-disk.sh
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Generate app/android (expo prebuild)
+        run: bash .github/ci/android/prebuild.sh
+      - name: NDK, CMake and Gradle sizing
+        run: bash .github/ci/android/toolchain.sh
+      - name: Fetch engine payload (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.engine_run_id != '' }}
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: engine-payload-arm64
+          run-id: ${{ inputs.engine_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/engine-payload
+      - name: Stage engine payload
+        id: engine
+        env:
+          PAYLOAD: ${{ runner.temp }}/engine-payload
+        run: |
+          set -euo pipefail
+          # Not in the repository (docs/bootstrap/); without it the build is
+          # complete except for the engine, and the audit skips that gate.
+          mode=optional
+          if [ -d "$PAYLOAD" ]; then
+            a=$(find "$PAYLOAD" -name libopencode2.so -size +0 | head -n 1)
+            b=$(find "$PAYLOAD" -name libopentui.so -size +0 | head -n 1)
+            if [ -n "$a" ] && [ -n "$b" ]; then
+              libs=app/modules/phonecando-runner/android/src/main/libs/arm64-v8a
+              mkdir -p "$libs"
+              cp "$a" "$b" "$libs/"
+              mode=required
+            else
+              echo "::warning title=Engine payload::artifact has no non-empty libopencode2.so + libopentui.so; building without the engine"
+            fi
+          fi
+          echo "mode=$mode" >>"$GITHUB_OUTPUT"
+          echo "Engine payload: **$([ "$mode" = required ] && echo staged || echo 'not staged (not in the repository)')**" >>"$GITHUB_STEP_SUMMARY"
+      - name: Generate a throwaway release key
+        id: key
+        run: |
+          set -euo pipefail
+          # withReleaseSigning.js refuses a release build without
+          # PHONECANDO_STORE_FILE. This key lives only in this job: the APKs
+          # it signs can never update the published app.
+          umask 077
+          ks="$RUNNER_TEMP/phonecando-ci-throwaway.p12"
+          pw=$(openssl rand -hex 24)
+          echo "::add-mask::$pw"
+          keytool -genkeypair -noprompt -keystore "$ks" -storetype PKCS12 \
+            -storepass "$pw" -keypass "$pw" -alias phonecando \
+            -keyalg RSA -keysize 3072 -validity 30 \
+            -dname "CN=PhoneCanDo CI throwaway (not the release key), O=PhoneCanDo CI"
+          keytool -exportcert -alias phonecando -keystore "$ks" -storetype PKCS12 \
+            -storepass "$pw" -file "$RUNNER_TEMP/ci-cert.der"
+          # Same shape as the private release.env the release scripts source.
+          printf '%s\n' "PHONECANDO_STORE_FILE=$ks" "PHONECANDO_STORE_PASSWORD=$pw" \
+            "PHONECANDO_KEY_ALIAS=phonecando" "PHONECANDO_KEY_PASSWORD=$pw" >"$RUNNER_TEMP/release-signing.env"
+          echo "cert_sha256=$(sha256sum "$RUNNER_TEMP/ci-cert.der" | cut -d' ' -f1)" >>"$GITHUB_OUTPUT"
+      - name: Assemble fullRelease + liteRelease (one Gradle run, like release-android.mjs)
+        id: build
+        working-directory: app/android
+        env:
+          PHONECANDO_RELEASE_ENV: ${{ runner.temp }}/release-signing.env
+        run: |
+          set -euo pipefail
+          set -a
+          # shellcheck source=/dev/null
+          source "$PHONECANDO_RELEASE_ENV"
+          set +a
+          ./gradlew :app:assembleFullRelease :app:assembleLiteRelease \
+            -PreactNativeArchitectures="$ABIS" --stacktrace --console=plain
+      - name: Audit both APKs (release gate + CI checks)
+        env:
+          CERT_SHA256: ${{ steps.key.outputs.cert_sha256 }}
+          ENGINE: ${{ steps.engine.outputs.mode }}
+        run: |
+          set -uo pipefail
+          status=0
+          for ch in lite full; do
+            node .github/ci/android/audit-apk.mjs \
+              --apk "app/android/app/build/outputs/apk/$ch/release/app-$ch-release.apk" \
+              --channel "$ch" --build release --abis "$ABIS" \
+              --cert-sha256 "$CERT_SHA256" --engine "$ENGINE" \
+              --json "$RUNNER_TEMP/out/$ch/audit.json" || status=1
+          done
+          exit "$status"
+      - name: Stage APKs
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ver=$(node -p "require('./app/app.json').expo.version")
+          for ch in lite full; do
+            dir="$RUNNER_TEMP/out/$ch"
+            mkdir -p "$dir"
+            cp "app/android/app/build/outputs/apk/$ch/release/app-$ch-release.apk" \
+              "$dir/phonecando-$ver-$ch-ci-throwaway-signed.apk"
+            printf '%s\n' \
+              "NOT A RELEASE. UNSIGNED FOR RELEASE PURPOSES." \
+              "Release build type of the $ch channel from $COMMIT ($RUN_URL)," \
+              "signed with a throwaway key generated inside that CI job and discarded." \
+              "Android refuses it as an update to the published app (different signer)." \
+              "ABIs: $ABIS (published releases are arm64-v8a only)." \
+              "The opencode engine is included only if audit.json says it was staged." \
+              >"$dir/NOT-A-RELEASE.txt"
+            (cd "$dir" && sha256sum ./*.apk >SHA256SUMS)
+          done
+      - name: Upload lite APK
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apk-lite-release-shape-throwaway-signed
+          path: ${{ runner.temp }}/out/lite/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload full APK
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apk-full-release-shape-throwaway-signed
+          path: ${{ runner.temp }}/out/full/
+          retention-days: 7
+          if-no-files-found: error
+
+  lint:
+    name: Android lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # Reporting job: findings go to the summary, PR annotations and the
+    # artifact. Non-blocking until it has run green once (first run may hit
+    # lint-only configuration issues no build exercises).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Free disk space
+        run: bash .github/ci/android/free-disk.sh
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Generate app/android (expo prebuild)
+        run: bash .github/ci/android/prebuild.sh
+      - name: NDK, CMake and Gradle sizing
+        run: bash .github/ci/android/toolchain.sh
+      # Not :app: its lint analyses every node_modules Android library and
+      # crashes inside react-native-worklets (a lint bug, not ours). :app is
+      # Expo's generated template; our native code is in these two modules.
+      - name: Lint runner (full + lite) and terminal
+        working-directory: app/android
+        env:
+          INIT_SCRIPT: ${{ github.workspace }}/.github/ci/android/lint.init.gradle
+        run: >-
+          ./gradlew --init-script "$INIT_SCRIPT"
+          :phonecando-runner:lintFullDebug :phonecando-runner:lintLiteDebug
+          :phonecando-terminal:lintDebug
+          --continue --stacktrace --console=plain
+      - name: Summarise lint findings
+        if: ${{ !cancelled() }}
+        run: |
+          shopt -s nullglob
+          node .github/ci/android/lint-summary.mjs \
+            app/android/app/build/reports/lint-results-*.xml \
+            app/modules/*/android/build/reports/lint-results-*.xml
+      - name: Upload lint reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-lint-reports
+          path: |
+            app/android/app/build/reports/lint-results-*
+            app/modules/*/android/build/reports/lint-results-*
+          retention-days: 7
+          if-no-files-found: warn
+
+  emulator:
+    name: Emulator smoke (${{ matrix.channel }}, API ${{ matrix.api }})
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    # lite on the target API gates. full and the minSdk leg report until they
+    # have been seen green on hosted emulators.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { channel: lite, api: 36, experimental: false }
+          - { channel: full, api: 36, experimental: true }
+          - { channel: lite, api: 29, experimental: true }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download release-shape APK
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apk-${{ matrix.channel }}-release-shape-throwaway-signed
+          path: ${{ runner.temp }}/apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Boot emulator and run the smoke test
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          APK_DIR: ${{ runner.temp }}/apk
+          SMOKE_OUT: ${{ runner.temp }}/smoke
+          CHANNEL: ${{ matrix.channel }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 3
+          ram-size: 4096M
+          disk-size: 6G
+          emulator-boot-timeout: 900
+          disable-animations: true
+          # The action runs each script line through sh; keep it one line.
+          script: bash .github/ci/android/smoke.sh "$APK_DIR" "$SMOKE_OUT" "$CHANNEL"
+      - name: Upload screenshots and logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: emulator-smoke-${{ matrix.channel }}-api${{ matrix.api }}
+          path: ${{ runner.temp }}/smoke/
+          retention-days: 7
+          if-no-files-found: warn

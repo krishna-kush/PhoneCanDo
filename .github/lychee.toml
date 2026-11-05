@@ -1,0 +1,41 @@
+# lychee link checker config for .github/workflows/lint.yml.
+#
+# Inputs are the tracked *.md files (git ls-files, passed via --files-from).
+# Push/PR run with --offline: relative links, images and #anchors between
+# repo files must resolve (blocking). The nightly/dispatch run also requests
+# external URLs (non-blocking, report in the job summary).
+
+no_progress = true
+max_concurrency = 8
+max_retries = 3
+retry_wait_time = 2
+timeout = 30
+# 429 = rate limited: the URL exists, the host just throttles CI runners.
+accept = ["100..=103", "200..=299", "429"]
+
+# Links inside code spans/blocks are examples and placeholders
+# (https://github.com/<owner>/..., http://localhost:4321): never checked.
+include_verbatim = false
+
+# localhost, 127.0.0.1, 10.x, 192.168.x, link-local: device/dev-only URLs.
+exclude_all_private = true
+
+exclude = [
+  '^https?://(www\.)?example\.(com|org|net)',
+  '^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?',
+  '^https?://10\.\d+\.\d+\.\d+',
+  # Release assets only exist once a release is published.
+  '^https?://github\.com/krishna-kush/PhoneCanDo/releases',
+  # Domain not registered yet (site lives at phonecando.tarf.app);
+  # web/README.md links it. Drop this line once the domain is live.
+  '^https?://(www\.)?phonecando\.app',
+  # XML namespace URIs, not documents.
+  '^https?://schemas\.android\.com/',
+]
+
+# Never scan dependency or local reference trees even if passed by a glob.
+exclude_path = [
+  '(^|/)node_modules/',
+  '^\.?/?reference/',
+  '(^|/)dist/',
+]
