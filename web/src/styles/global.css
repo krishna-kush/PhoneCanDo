@@ -65,6 +65,22 @@ img, video { display: block; max-width: 100%; }
 h1, h2, h3, p { margin: 0; }
 .mono { font-family: var(--mono); }
 
+/* One scrollbar to rule them all (page, demo strip, command box): a square
+   signal-red bar over whatever ground it scrolls, behind a hairline rule.
+   Chrome and Safari draw these -webkit- ones; Firefox has none, so it alone
+   gets the standard properties, which Chrome would otherwise prefer, losing
+   the square ends. */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-track:vertical { border-left: 1px solid var(--line); }
+::-webkit-scrollbar-track:horizontal { border-top: 1px solid var(--line); }
+::-webkit-scrollbar-thumb { background: var(--red); }
+::-webkit-scrollbar-thumb:hover { background: var(--red-hi); }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: var(--red) transparent; }
+}
+
 /* One sheet, with a contained loader and a pair of registration ticks on each section. */
 .page {
   position: relative;
@@ -868,7 +884,6 @@ h1 em { font-style: italic; color: var(--red); }
     border-radius: 0;
     margin-inline: calc(-1 * var(--pad));
     padding: 0 var(--pad) 6px;
-    scrollbar-width: thin;
   }
   .demo {
     flex: 0 0 74%;
@@ -1860,19 +1875,7 @@ h1 em { font-style: italic; color: var(--red); }
 }
 .cmd::before { content: '$ '; color: var(--red); }
 /* Several commands in one box: one per line, each with its own prompt. A long
-   line scrolls under a square bar in the primary red on a hairline track. */
-.cmd.cmd-lines::-webkit-scrollbar { height: 6px; }
-.cmd.cmd-lines::-webkit-scrollbar-track { background: var(--line); }
-.cmd.cmd-lines::-webkit-scrollbar-thumb { background: var(--red); }
-/* Firefox has no -webkit- scrollbar, so it gets the standard properties;
-   only Firefox, because Chrome drops its -webkit- styling (square ends)
-   once they are set. */
-@supports not selector(::-webkit-scrollbar) {
-  .cmd.cmd-lines {
-    scrollbar-width: thin;
-    scrollbar-color: var(--red) var(--line);
-  }
-}
+   line scrolls under the site scrollbar. */
 .cmd.cmd-lines::before { content: none; }
 /* pre: a checksum line's two spaces survive on screen and in a manual copy. */
 .cmd.cmd-lines span { display: block; white-space: pre; }
