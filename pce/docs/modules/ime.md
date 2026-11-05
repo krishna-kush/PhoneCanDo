@@ -118,7 +118,9 @@ are test-only; they are not in the published AAR.
 ## What works
 
 - `BackendAction.SetText` commits into the active input connection. With
-  `clear = true`, it selects all and sends Delete first.
+  `clear = true`, it selects all and the committed text replaces the
+  selection (no Delete key: key events travel on another queue and could land
+  after the new text).
 - `BackendAction.Key(KeyCode.ENTER)` sends Enter.
 - `BackendAction.Key(KeyCode.DELETE)` sends Backspace.
 - Unbound service or missing input connection returns `BACKEND_UNAVAILABLE`;

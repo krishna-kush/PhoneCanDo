@@ -33,6 +33,11 @@ class TestActivity : Activity() {
     @Volatile
     private var resultText = "idle"
 
+    // Marks this activity's field in the EditorInfo the IME receives, so the
+    // scenario can wait for the IME to bind to *this* field: after a relaunch
+    // the IME may still hold the connection of the destroyed previous field.
+    private val editorToken = "pce-ime-test@${System.identityHashCode(this)}"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (intent.getBooleanExtra(EXTRA_RUN, false)) {
@@ -46,6 +51,7 @@ class TestActivity : Activity() {
             contentDescription = "pce-ime-input"
             hint = "type here"
             imeOptions = EditorInfo.IME_ACTION_DONE
+            privateImeOptions = editorToken
             setSingleLine(true)
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(
@@ -106,16 +112,11 @@ class TestActivity : Activity() {
 
     private fun runScenario() {
         val deadline = System.currentTimeMillis() + 15_000
-        while (
-            (TestImeService.instance == null ||
-                TestImeService.instance?.currentInputConnection == null) &&
-            System.currentTimeMillis() < deadline
-        ) {
+        while (!imeBoundToInput() && System.currentTimeMillis() < deadline) {
             Thread.sleep(50)
         }
-        val service = TestImeService.instance
-        if (service?.currentInputConnection == null) {
-            fail(AssertionError("test IME did not provide an input connection"))
+        if (!imeBoundToInput()) {
+            fail(AssertionError("test IME did not start input on this activity's field"))
             return
         }
 
@@ -163,6 +164,12 @@ class TestActivity : Activity() {
         } catch (failure: Throwable) {
             fail(failure)
         }
+    }
+
+    private fun imeBoundToInput(): Boolean {
+        val service = TestImeService.instance ?: return false
+        return service.currentInputConnection != null &&
+            service.currentInputEditorInfo?.privateImeOptions == editorToken
     }
 
     private fun awaitText(expected: String) {
