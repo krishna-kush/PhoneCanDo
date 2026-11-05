@@ -27,7 +27,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const APP = join(ROOT, 'app');
 const APP_JSON = join(APP, 'app.json');
 const APP_PKG = join(APP, 'package.json');
-const SITE_TS = join(ROOT, 'web/src/data/site.ts');
+const RELEASE_JSON = join(ROOT, 'web/src/data/release.json');
 const UPDATES_TS = join(APP, 'src/engine/updates.ts');
 const apkFor = (flavor) =>
   join(APP, `android/app/build/outputs/apk/${flavor}/release/app-${flavor}-release.apk`);
@@ -89,13 +89,10 @@ function main() {
   // Site: starter (lite) is the download, full is offered for adb.
 
   const appPkgRaw = readFileSync(APP_PKG, 'utf8');
-  const siteRaw = readFileSync(SITE_TS, 'utf8');
   const updatesRaw = readFileSync(UPDATES_TS, 'utf8');
   const appJsonNext = nextAppJson(appJsonRaw, version, versionCode);
   const appPkgNext = nextPackageVersion(appPkgRaw, version);
   const updatesNext = nextRepoText(updatesRaw, repo);
-  // Validate the site edit before the build; real size/SHA are filled later.
-  nextSiteText(siteRaw, { version, released, size: 0, sha256: '<after build>', repo });
 
   console.log(`PhoneCanDo release v${version} (code ${versionCode})`);
   console.log(`Repo:    ${repo}`);
@@ -109,7 +106,8 @@ function main() {
     // are checked only by a real run.
     console.log('Dry run: no files written, no build, no release, no network.');
     console.log(`Assets: phonecando-${version}-full-arm64.apk (latest.json target), phonecando-${version}-lite-arm64.apk (site download)`);
-    console.log('File edits OK: app/app.json, app/package.json, web/src/data/site.ts, app/src/engine/updates.ts');
+    console.log('File edits OK: app/app.json, app/package.json, app/src/engine/updates.ts');
+    console.log('After the uploads: web/src/data/release.json');
     console.log(
       `Manifest: ${JSON.stringify(
         {
@@ -129,7 +127,7 @@ function main() {
 
   // GitHub checks come before any file is written and before the 20-minute
   // build. A published release is final: re-running its version would
-  // rebuild, overwrite the stage and site.ts, and only then fail to upload.
+  // rebuild, overwrite the stage and release.json, and only then fail to upload.
   // A draft is fine; createDraft replaces its assets.
   const tag = `v${version}`;
   assertGhAuth();
@@ -149,7 +147,7 @@ function main() {
   const asset = join(stage, `phonecando-${version}-full-arm64.apk`);
   const liteAsset = join(stage, `phonecando-${version}-lite-arm64.apk`);
   const manifestPath = join(stage, 'latest.json');
-  const site = { version, released, repo };
+  const release = { repo, version, released };
 
   if (args.uploadOnly) {
     for (const f of [asset, liteAsset, manifestPath]) if (!existsSync(f)) fail(`--upload-only: missing ${f}`);
@@ -171,7 +169,7 @@ function main() {
     const full = fileDigest(asset);
     writeManifest(manifestPath, { ...staged, ...full });
     createDraft({ version, repo, notes: staged.notes, assets: [asset, liteAsset, manifestPath] });
-    const lite = writeSite(siteRaw, liteAsset, site);
+    const lite = writeRelease(release, liteAsset, full);
     report(asset, full, liteAsset, lite, manifestPath);
     console.log(`Uploaded staged ${tag} assets.`);
     return;
@@ -191,8 +189,8 @@ function main() {
   writeManifest(manifestPath, { versionCode, version, apk: apkUrl, ...full, notes });
 
   createDraft({ version, repo, notes, assets: [asset, liteAsset, manifestPath] });
-  // The site links the release assets: write it only after every upload.
-  const lite = writeSite(siteRaw, liteAsset, site);
+  // The site links the release assets: write its facts only after every upload.
+  const lite = writeRelease(release, liteAsset, full);
   report(asset, full, liteAsset, lite, manifestPath);
   if (!args.publish) {
     console.log('');
@@ -243,10 +241,16 @@ function writeManifest(path, { versionCode, version, apk, size, sha256, notes })
   writeFileSync(path, `${JSON.stringify({ versionCode, version, apk, size, sha256, notes }, null, 2)}\n`);
 }
 
-// Site download = lite: its size and SHA-256 come from the staged file.
-function writeSite(siteRaw, liteApk, fields) {
+// web/src/data/release.json: what only a published release knows, for the
+// site (web/src/data/site.ts derives the version and every download URL from
+// app/app.json). Written whole, never edited in place, so nothing else in
+// the site can collide with it. Lite is the phone download; full's SHA-256
+// is pinned in the computer commands. Both digests come from the files just
+// uploaded.
+function writeRelease({ repo, version, released }, liteApk, full) {
   const lite = fileDigest(liteApk);
-  writeFileSync(SITE_TS, nextSiteText(siteRaw, { ...fields, size: lite.size, sha256: lite.sha256 }));
+  const facts = { repo, version, released, lite, full };
+  writeFileSync(RELEASE_JSON, `${JSON.stringify(facts, null, 2)}\n`);
   return lite;
 }
 
@@ -407,19 +411,6 @@ function nextPackageVersion(raw, version) {
 
 function nextRepoText(raw, repo) {
   return replaceOnce(raw, /(const REPO = ')[^']*(')/, `$1${repo}$2`, 'updates.REPO');
-}
-
-// web/src/data/site.ts derives the version and every download URL from
-// app/app.json; only the facts a published release knows live there: the
-// repo and the `published` block (version, date, lite size, lite SHA-256).
-function nextSiteText(raw, { version, released, size, sha256, repo }) {
-  const sizeLabel = `${Math.round(size / 1024 / 1024)} MB`;
-  let text = replaceOnce(raw, /(\bconst repo = )'[^']*'/, `$1'https://github.com/${repo}'`, 'site repo');
-  text = replaceOnce(text, /(\bversion:\s*)'[^']*'/, `$1'${version}'`, 'site published.version');
-  text = replaceOnce(text, /(\breleased:\s*)'[^']*'/, `$1'${released}'`, 'site published.released');
-  text = replaceOnce(text, /(\bsize:\s*)'[^']*'/, `$1'${sizeLabel}'`, 'site published.size');
-  text = replaceOnce(text, /(\bsha256:\s*)'[^']*'/, `$1'${sha256}'`, 'site published.sha256');
-  return text;
 }
 
 function assertGhAuth() {

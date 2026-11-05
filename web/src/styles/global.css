@@ -1859,13 +1859,25 @@ h1 em { font-style: italic; color: var(--red); }
   white-space: nowrap;
 }
 .cmd::before { content: '$ '; color: var(--red); }
-/* Several commands in one box: one per line, each with its own prompt, and
-   no visible scrollbar (a long line still scrolls by swipe or trackpad). */
-.cmd.cmd-lines { scrollbar-width: none; }
-.cmd.cmd-lines::-webkit-scrollbar { display: none; }
+/* Several commands in one box: one per line, each with its own prompt. A long
+   line scrolls under a square bar in the primary red on a hairline track. */
+.cmd.cmd-lines::-webkit-scrollbar { height: 6px; }
+.cmd.cmd-lines::-webkit-scrollbar-track { background: var(--line); }
+.cmd.cmd-lines::-webkit-scrollbar-thumb { background: var(--red); }
+/* Firefox has no -webkit- scrollbar, so it gets the standard properties;
+   only Firefox, because Chrome drops its -webkit- styling (square ends)
+   once they are set. */
+@supports not selector(::-webkit-scrollbar) {
+  .cmd.cmd-lines {
+    scrollbar-width: thin;
+    scrollbar-color: var(--red) var(--line);
+  }
+}
 .cmd.cmd-lines::before { content: none; }
-.cmd.cmd-lines span { display: block; }
+/* pre: a checksum line's two spaces survive on screen and in a manual copy. */
+.cmd.cmd-lines span { display: block; white-space: pre; }
 .cmd.cmd-lines span::before { content: '$ '; color: var(--red); }
+.cmd.cmd-ps span::before { content: 'PS> '; }
 /* The copy button sits outside the scrolling box, so it stays put in the top
    right while a long line scrolls under it. */
 .cmd-wrap { position: relative; margin-top: 14px; }
@@ -1885,6 +1897,38 @@ h1 em { font-style: italic; color: var(--red); }
   cursor: pointer;
 }
 .cmd-copy:hover { color: var(--fg); border-color: var(--fg); }
+/* Computer install: the note and the OS tabs on one row, then the box for
+   the picked OS. */
+.install-pc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 14px;
+}
+.install-pc-head .note { margin-top: 0; }
+.install-pc .cmd-wrap { margin-top: 10px; }
+.os-tabs { display: flex; }
+.os-tab {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  font: 500 9px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  cursor: pointer;
+}
+.os-tab + .os-tab { margin-left: -1px; }
+.os-tab:hover { color: var(--fg); }
+.os-tab[aria-pressed='true'] {
+  position: relative;
+  border-color: var(--line-2);
+  background: var(--panel-2);
+  color: var(--fg);
+}
 .note {
   margin-top: 14px;
   font: 400 10px/1.7 var(--mono);

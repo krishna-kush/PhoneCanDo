@@ -83,18 +83,20 @@ The script:
    of the staged full APK; gitignored).
 6. Creates a **draft** GitHub release with all three assets. If a draft for
    the tag already exists, it replaces the assets with `--clobber`.
-7. Only after every upload succeeded, updates the `published` block in
-   `web/src/data/site.ts` (version, date, lite size, lite SHA-256). The site
-   takes its version from `app/app.json` and derives every download URL and
-   file name from it; a production web build fails if the `published` block
-   belongs to another version.
+7. Only after every upload succeeded, writes `web/src/data/release.json`
+   whole (repo, version, date, and the size and SHA-256 of both uploaded
+   APKs; the site's computer commands check the full one). Nothing else
+   writes that file, so hand edits to `site.ts` never collide with a release.
+   The site takes its version from `app/app.json` and derives every download
+   URL and file name from it; a production web build fails if
+   `release.json` belongs to another version.
 
 If an upload fails after the builds (GitHub times out on 110 MB assets now
 and then), do not rebuild: `./manage release <version> --upload-only`
 re-audits both staged APKs, rewrites the size and SHA-256 in `latest.json`
 from the staged full APK (its version, versionCode, URL and notes stay; a
 different `--notes` is refused), re-uploads with `--clobber` using those
-notes, then updates `site.ts`; add `--publish` to publish.
+notes, then writes `release.json`; add `--publish` to publish.
 
 If a build fails after the version bump, fix it and rerun the same command. The
 script keeps the same version/versionCode when the version is unchanged. It
