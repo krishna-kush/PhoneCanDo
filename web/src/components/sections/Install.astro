@@ -182,7 +182,7 @@ const pcScripts = [
                     <p class="note">On a computer? Skip the dance:</p>
                     <div class="os-tabs" role="group" aria-label="Your computer">
                         {pcScripts.map(({ os, label }) => (
-                            <button class="os-tab" type="button" data-os={os} aria-pressed={String(os === "linux")}>
+                            <button class="os-tab" type="button" data-os={os} aria-pressed={os === "linux" ? "true" : "false"}>
                                 {label}
                             </button>
                         ))}
