@@ -1,7 +1,27 @@
 ---
+import { encode } from "uqr";
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
 import { site } from "../../data/site";
+
+// The plate's code is real: the starter APK's URL, so a visitor on a
+// computer can scan the download onto the phone. Encoded at build time, so
+// the page ships one SVG path and no script. Each run of dark modules in a
+// row is one rectangle; the 4-module border is the spec's quiet zone.
+const qr = encode(site.apk, { ecc: "M", border: 4 });
+const qrPath = qr.data
+    .map((row, y) => {
+        let d = "";
+        for (let x = 0; x < row.length; x++) {
+            if (!row[x]) continue;
+            const start = x;
+            while (row[x + 1]) x++;
+            const run = x - start + 1;
+            d += `M${start} ${y}h${run}v1h-${run}z`;
+        }
+        return d;
+    })
+    .join("");
 
 // The computer install, per OS, as three separate commands: download, check
 // the file against the SHA-256 pinned here, install. Two spaces before the
@@ -94,7 +114,23 @@ const pcScripts = [
                     <dd>{site.license}</dd>
                 </div>
             </dl>
-            <div class="barcode" aria-hidden="true"></div>
+            <!-- A phone can't scan its own screen: it keeps the printed
+                 barcode, a computer gets the code. -->
+            <div class="barcode install-phone-only" aria-hidden="true"></div>
+            <div class="install-qr install-pc-only">
+                <svg
+                    viewBox={`0 0 ${qr.size} ${qr.size}`}
+                    shape-rendering="crispEdges"
+                    role="img"
+                    aria-label={`QR code for the starter APK, v${site.version}`}
+                >
+                    <path d={qrPath} />
+                </svg>
+                <p class="install-qr-cap">
+                    <b>Scan with the phone</b>
+                    Gets the starter: step 01
+                </p>
+            </div>
             <p class="serial">
                 FM-01 · A-01 · v{site.version} · {site.arch}
             </p>
