@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import Mascot from '../components/Mascot.astro';
 import { site } from '../data/site';
 ---
 
@@ -75,6 +76,7 @@ import { site } from '../data/site';
 
     <Footer />
   </div>
+  <Mascot />
 
   <script is:inline>
     // A static 404 does not know the request; show the path the visitor hit.

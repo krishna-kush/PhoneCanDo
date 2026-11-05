@@ -1,0 +1,1015 @@
+---
+// A-01, the brand mark as a creature. It climbs down the sheet's left edge as
+// the page scrolls, reacts to the section beside it, hops when clicked, can
+// be grabbed and flung, and narrates what the visitor does in the agent's own
+// command style. At the Linux section A-02, the second sandbox, turns up in
+// the right margin. Poses and timing come from theme/logo.json, the spec the
+// loader runs on; colours come from the theme vars. Wide screens only: below
+// 1440px there is no margin to live in.
+import logo from '../../../theme/logo.json';
+
+const SIZE = 24;
+const { loader, shadow } = logo;
+const offset = Math.max(shadow.minUiPx, Math.round(SIZE * shadow.ratio));
+const vars = [
+  `--m-s:${SIZE}px`,
+  `--m-o:${offset}px`,
+  `--m-wide:${Math.max(...loader.poses.map((p) => p.w))}`,
+  `--m-tall:${Math.max(...loader.poses.map((p) => p.h))}`,
+  `--m-morph:${loader.morphMs}ms`,
+  `--m-ease:cubic-bezier(${loader.ease.join(',')})`,
+].join(';');
+---
+
+<div class="mascot" style={vars} data-size={SIZE} data-box={SIZE + offset} aria-hidden="true">
+  <div class="mascot-rig">
+    <div class="mascot-unit mascot-bod" data-pose="square">
+      <span class="mascot-ink mascot-red"></span>
+      <span class="mascot-ink mascot-amber"></span>
+      <span class="mascot-ink mascot-face">
+        <i class="mascot-eye"><b></b></i>
+        <i class="mascot-eye"><b></b></i>
+      </span>
+    </div>
+    <span class="mascot-prop mascot-dots"><i></i><i></i><i></i></span>
+    <span class="mascot-prop mascot-keys"><i></i><i></i><i></i></span>
+    <svg class="mascot-prop mascot-lock" width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.3">
+      <rect x="1" y="5" width="8" height="6"></rect>
+      <path d="M3 5V3.5a2 2 0 0 1 4 0V5"></path>
+    </svg>
+    <span class="mascot-prop mascot-arrow">
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+        <path d="M6 1v8M2.5 5.5 6 9l3.5-3.5M1 11h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </span>
+    <span class="mascot-prop mascot-ask">?</span>
+    <span class="mascot-prop mascot-zz"><i>z</i><i>z</i></span>
+    <p class="mascot-cap"><span>A-01 ·</span> <b></b></p>
+
+    <div class="mascot-twin">
+      <div class="mascot-unit" data-pose="square">
+        <span class="mascot-ink mascot-red"></span>
+        <span class="mascot-ink mascot-amber"></span>
+        <span class="mascot-ink mascot-face">
+          <i class="mascot-eye"><b></b></i>
+          <i class="mascot-eye"><b></b></i>
+        </span>
+      </div>
+      <p class="mascot-cap"><span>A-02 ·</span> <b>own root</b></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Bundled, not inline: minified, cached, shared by every page that has it.
+  // Every frame is pure maths plus style writes; layout is read only when the
+  // page reflows (measure) or on a press or a hover, never in the loop.
+  import logo from '../../../theme/logo.json';
+
+  type Pose = 'square' | 'wide' | 'tall';
+  type Fly = { mode: 'drag' | 'air' | 'rest' | 'home'; x: number; y: number; vx: number; vy: number; t0: number; sx: number; sy: number };
+  type Press = { x0: number; y0: number; gx: number; gy: number; trail: [number, number, number][]; dragged: boolean };
+
+  // What A-01 says beside each part of the page. Keys are section ids, or the
+  // first class where there is none: the hero, the footer, the 404's main.
+  const lines: Record<string, string> = {
+    hero: 'on duty',
+    demos: 'watching plates',
+    models: 'thinking…',
+    linux: 'apt install fun',
+    gate: '403 · needs you',
+    install: 'sideload me',
+    faq: 'any questions?',
+    footer: 'end of manual',
+    missing: '404 · lost too',
+  };
+  const { poses, holdMs, morphMs: morph, endHoldMs } = logo.loader;
+  const step = holdMs + morph;
+
+  const root = document.querySelector<HTMLElement>('.mascot');
+  const rig = root?.querySelector<HTMLElement>('.mascot-rig');
+  const body = root?.querySelector<HTMLElement>('.mascot-bod');
+  const word = root?.querySelector<HTMLElement>('.mascot-cap b');
+  const twin = root?.querySelector<HTMLElement>('.mascot-twin');
+  const twinUnit = twin?.querySelector<HTMLElement>('.mascot-unit');
+  const twinWord = twin?.querySelector<HTMLElement>('.mascot-cap b');
+  if (root && rig && body && word && twin && twinUnit && twinWord) {
+    const size = Number(root.dataset.size);
+    const box = Number(root.dataset.box);
+    const still = matchMedia('(prefers-reduced-motion: reduce)');
+    const shown = matchMedia('(min-width: 1440px)');
+    // Viewport kept clear above and below its path: the nav, the caption.
+    const TOP = 88;
+    const BOTTOM = 150;
+    // Fling physics in px and ms. Walls keep it inside the margin.
+    const GRAVITY = 0.0022;
+    const BOUNCE = 0.6;
+    const page = document.querySelector<HTMLElement>('.page');
+    const sections = [...document.querySelectorAll<HTMLElement>('main > section, main.missing, .page > footer')].map(
+      (el): [HTMLElement, string] => [el, el.id || el.classList[0] || '']
+    );
+
+    let y = TOP;
+    let last = 0;
+    let raf = 0;
+    let moving = false;
+    let stepAt = 0;
+    let scene = '';
+    let say = '';
+    let sayCode = false;
+    let sayUntil = 0;
+    let boops = 0;
+    let taps = 0;
+    let tapAt = 0;
+    let asleep = false;
+    let idleTimer = 0;
+    let pokedAt = 0;
+    let dancing = false;
+    let press: Press | null = null;
+    let fly: Fly | null = null;
+    let twinTimer = 0;
+    let twinOut = 0;
+    let lastScroll = scrollY;
+    let lastScrollAt = 0;
+    let dizziness = 0;
+    let jumpUntil = 0;
+    let hovered: Element | null = null;
+    let pressedAt = 0;
+    let readTimer = 0;
+    let hiddenAt = 0;
+    let gazeQueued = false;
+    let pointerX = 0;
+    let pointerY = 0;
+
+    // Layout the loop needs, measured on load and whenever the page reflows.
+    let range = 0;
+    let sheetLeft = 0;
+    let sheetRight = 0;
+    let bands: [number, number, string][] = [];
+    const measure = () => {
+      range = document.documentElement.scrollHeight - innerHeight;
+      const sheet = page?.getBoundingClientRect();
+      sheetLeft = sheet?.left ?? 0;
+      sheetRight = sheet?.right ?? 0;
+      bands = sections.map(([el, key]) => {
+        const r = el.getBoundingClientRect();
+        return [r.top + scrollY, r.bottom + scrollY, key];
+      });
+    };
+
+    const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+    const flag = (name: string, on: boolean, el: HTMLElement = root) => el.toggleAttribute(`data-${name}`, on);
+    const timers = new Map<HTMLElement, number>();
+    const pose = (p: Pose, el: HTMLElement = body) => {
+      window.clearTimeout(timers.get(el));
+      el.dataset.pose = p;
+    };
+    const poseThen = (p: Pose, next: Pose, ms: number, el: HTMLElement = body) => {
+      pose(p, el);
+      timers.set(el, window.setTimeout(() => pose(next, el), ms));
+    };
+
+    // Scroll progress maps onto its path, so it doubles as a page position.
+    // Callers pass scrollY in: Chrome treats reading it as a layout read, so
+    // a frame reads it once, before it writes anything.
+    const targetY = (sy: number) => {
+      if (still.matches) return TOP;
+      const p = range > 0 ? clamp(sy / range, 0, 1) : 0;
+      return TOP + p * (innerHeight - TOP - BOTTOM);
+    };
+    const sceneAt = (at: number, sy: number) => {
+      const docY = at + sy;
+      for (const [top, bottom, key] of bands) if (top <= docY && bottom > docY) return key;
+      return scene;
+    };
+
+    const caption = () => {
+      const saying = performance.now() < sayUntil;
+      const text = saying ? say : asleep && scene !== 'footer' ? 'zz · idle' : lines[scene] ?? '';
+      word.toggleAttribute('data-code', saying && sayCode);
+      if (word.textContent !== text) word.textContent = text;
+    };
+    const speak = (text: string, ms: number, code = false) => {
+      say = text;
+      sayCode = code;
+      sayUntil = performance.now() + ms;
+      caption();
+      window.setTimeout(caption, ms + 20);
+    };
+    const twinSpeak = (text: string, ms: number) => {
+      twinWord.textContent = text;
+      window.clearTimeout(twinTimer);
+      twinTimer = window.setTimeout(() => (twinWord.textContent = 'own root'), ms);
+    };
+
+    const hop = (el: HTMLElement = body) => {
+      if (still.matches || dancing || el.hasAttribute('data-hop') || (el === body && fly)) return;
+      flag('hop', true, el);
+      pose('wide', el);
+      window.setTimeout(() => {
+        pose('tall', el);
+        flag('swap', true, el);
+      }, 110);
+      window.setTimeout(() => flag('swap', false, el), 330);
+      window.setTimeout(() => poseThen('wide', 'square', morph, el), 470);
+      window.setTimeout(() => flag('hop', false, el), 600);
+    };
+    const shake = (el: HTMLElement = body) => {
+      if (still.matches) return;
+      flag('shake', true, el);
+      window.setTimeout(() => flag('shake', false, el), 420);
+    };
+
+    // Triple-click: the loader's own pose sequence, twice through, as a dance.
+    // A-02 joins in when it is out.
+    const poseName = (p: { w: number; h: number }): Pose => (p.w > 1 ? 'wide' : p.h > 1 ? 'tall' : 'square');
+    const dance = () => {
+      const length = poses.length * step * 2 + endHoldMs;
+      speak('♪ loader dance', still.matches ? 1400 : length);
+      if (still.matches || dancing || fly) return;
+      dancing = true;
+      const units = root.dataset.twin === 'in' ? [body, twinUnit] : [body];
+      poses.concat(poses).forEach((p, i) =>
+        window.setTimeout(() => {
+          for (const el of units) {
+            pose(poseName(p), el);
+            flag('swap', p.swap, el);
+          }
+        }, i * step)
+      );
+      window.setTimeout(() => {
+        dancing = false;
+        hop();
+      }, length);
+    };
+
+    // A-02 lives in the Linux section only: it pops in, says hi, A-01 hops
+    // back, and it pops out again when the section scrolls past.
+    const showTwin = (on: boolean) => {
+      window.clearTimeout(twinOut);
+      if (on) {
+        root.dataset.twin = 'in';
+        const greet = () => root.dataset.twin === 'in';
+        window.setTimeout(() => {
+          if (!greet()) return;
+          twinSpeak('hi A-01', 1400);
+          hop(twinUnit);
+        }, 450);
+        window.setTimeout(() => greet() && hop(), 800);
+      } else if (root.dataset.twin) {
+        root.dataset.twin = 'out';
+        twinOut = window.setTimeout(() => delete root.dataset.twin, still.matches ? 0 : 300);
+      }
+    };
+
+    const setScene = (next: string) => {
+      if (next === scene) return;
+      const was = scene;
+      scene = next;
+      root.dataset.scene = next;
+      if (next === 'gate' && !fly) {
+        pose('square');
+        flag('swap', false, body);
+      }
+      if (was === 'gate' && !root.hasAttribute('data-dizzy')) {
+        speak('free!', 1200);
+        hop();
+      }
+      if ((next === 'linux') !== (was === 'linux')) showTwin(next === 'linux');
+      caption();
+    };
+
+    // Off its post, A-01 is in viewport px: dragged, in the air, resting
+    // where it landed, then walking home to the rail.
+    const home = () => ({ x: sheetLeft - 16 - box, y });
+    const walls = (h: { x: number }) => ({ left: 8, right: h.x + 12, top: 8, bottom: innerHeight - box - 8 });
+    const place = (f: Fly, h: { x: number; y: number }) => {
+      body.style.transform = `translate(${(f.x - h.x).toFixed(1)}px, ${(f.y - h.y).toFixed(1)}px)`;
+    };
+
+    const land = (f: Fly) => {
+      f.mode = 'rest';
+      delete root.dataset.fly;
+      flag('swap', false, body);
+      speak('oof', 900);
+      shake();
+      window.setTimeout(() => {
+        if (fly?.mode !== 'rest') return;
+        Object.assign(fly, { mode: 'home', t0: performance.now(), sx: fly.x, sy: fly.y });
+        speak('walking back…', 60000);
+        schedule();
+      }, 700);
+    };
+    const arrive = () => {
+      fly = null;
+      body.style.transform = '';
+      flag('away', false);
+      flag('swap', false, body);
+      poseThen('wide', 'square', morph);
+      speak('again!', 1400);
+    };
+
+    const flyStep = (f: Fly, dt: number, now: number) => {
+      const h = home();
+      const w = walls(h);
+      if (f.mode === 'air') {
+        f.vy += GRAVITY * dt;
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        let hit: Pose | '' = '';
+        let speed = 0;
+        if (f.x < w.left || f.x > w.right) {
+          f.x = clamp(f.x, w.left, w.right);
+          speed = Math.abs(f.vx);
+          f.vx = -f.vx * BOUNCE;
+          hit = 'tall';
+        }
+        if (f.y < w.top) {
+          f.y = w.top;
+          speed = Math.abs(f.vy);
+          f.vy = -f.vy * BOUNCE;
+          hit = 'wide';
+        }
+        if (f.y >= w.bottom) {
+          f.y = w.bottom;
+          if (f.vy > 0.12) {
+            speed = f.vy;
+            f.vy = -f.vy * BOUNCE;
+            hit = 'wide';
+          } else f.vy = 0;
+          f.vx *= Math.exp(-dt / 160);
+        }
+        // Each hard bounce squashes it against the wall and flips the inks.
+        if (hit && speed > 0.15) {
+          poseThen(hit, 'square', morph);
+          flag('swap', !body.hasAttribute('data-swap'), body);
+        }
+        if (f.y >= w.bottom && f.vy === 0 && Math.abs(f.vx) < 0.03) land(f);
+      } else if (f.mode === 'home') {
+        const dur = Math.min(1600, 500 + Math.hypot(h.x - f.sx, h.y - f.sy) * 2.5);
+        const k = Math.min(1, (now - f.t0) / dur);
+        const e = k < 0.5 ? 2 * k * k : 1 - (2 - 2 * k) ** 2 / 2;
+        f.x = f.sx + (h.x - f.sx) * e;
+        f.y = f.sy + (h.y - f.sy) * e;
+        flag('swap', h.y < f.sy, body);
+        if (now - stepAt > step) {
+          stepAt = now;
+          pose(body.dataset.pose === 'tall' ? 'square' : 'tall');
+        }
+        if (k >= 1) return arrive();
+      }
+      place(f, h);
+    };
+
+    const tick = (now: number) => {
+      raf = 0;
+      const dt = last ? Math.min(32, now - last) : 16;
+      last = now;
+      const sy = scrollY;
+      const target = targetY(sy);
+      const d = target - y;
+      y = Math.abs(d) < 0.5 ? target : y + d * (1 - Math.exp(-dt / 120));
+      rig.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+      setScene(sceneAt(y + size / 2, sy));
+
+      // Moving: it inches, tall then square. Climbing back up the inks swap,
+      // amber in front. Stopping squashes it wide for one morph. At the
+      // gate nothing moves: it slides, locked.
+      const locked = scene === 'gate';
+      if (fly) {
+        moving = false;
+        if (fly.mode !== 'drag') flyStep(fly, dt, now);
+      } else if (dancing) {
+        moving = false;
+      } else if (Math.abs(d) > 3 && !still.matches) {
+        moving = true;
+        flag('swap', d < 0 && !locked, body);
+        if (!locked && !body.hasAttribute('data-hop') && now - stepAt > step) {
+          stepAt = now;
+          pose(body.dataset.pose === 'tall' ? 'square' : 'tall');
+        }
+      } else if (moving) {
+        moving = false;
+        flag('swap', false, body);
+        if (!locked) poseThen('wide', 'square', morph);
+      }
+
+      const busy = fly && fly.mode !== 'rest' && fly.mode !== 'drag';
+      if (busy || Math.abs(target - y) > 0.5) raf = requestAnimationFrame(tick);
+      else last = 0;
+    };
+    const schedule = () => {
+      if (!raf && shown.matches) raf = requestAnimationFrame(tick);
+    };
+
+    // Twenty quiet seconds and it dozes off; any scroll, pointer or key wakes it.
+    const poke = () => {
+      const now = performance.now();
+      if (!asleep && now - pokedAt < 500) return;
+      pokedAt = now;
+      window.clearTimeout(idleTimer);
+      if (asleep) {
+        asleep = false;
+        flag('asleep', false);
+        speak('oh! hi', 1400);
+      }
+      idleTimer = window.setTimeout(() => {
+        asleep = true;
+        flag('asleep', true);
+        caption();
+      }, 20000);
+    };
+
+    const blink = () => {
+      if (!still.matches && !document.hidden && shown.matches) {
+        flag('blink', true);
+        window.setTimeout(() => flag('blink', false), 130);
+      }
+      window.setTimeout(blink, 2400 + Math.random() * 3600);
+    };
+
+    const dizzy = () => {
+      if (root.hasAttribute('data-dizzy')) return;
+      flag('dizzy', true);
+      speak('whoa · slow down', 1800);
+      window.setTimeout(() => flag('dizzy', false), 1800);
+    };
+
+    // Eyes follow the pointer, once a frame at most, from cached geometry.
+    // A pupil only moves in half-px steps, so most pointer moves write
+    // nothing at all.
+    const gaze = (el: HTMLElement, cx: number, cy: number) => {
+      const dx = pointerX - cx;
+      const dy = pointerY - cy;
+      const n = Math.hypot(dx, dy) || 1;
+      const lx = `${Math.round((dx / n) * 3) / 2}px`;
+      const ly = `${Math.round((dy / n) * 4) / 2}px`;
+      if (el.style.getPropertyValue('--lx') !== lx) el.style.setProperty('--lx', lx);
+      if (el.style.getPropertyValue('--ly') !== ly) el.style.setProperty('--ly', ly);
+    };
+    const aim = () => {
+      gazeQueued = false;
+      const half = box / 2;
+      const h = home();
+      gaze(body, (fly ? fly.x : h.x) + half, (fly ? fly.y : y) + half);
+      if (root.dataset.twin) gaze(twinUnit, sheetRight + 16 + half, y + half);
+    };
+
+    const tap = () => {
+      if (scene === 'gate') {
+        speak('nope · locked', 1400);
+        shake();
+        return;
+      }
+      const now = performance.now();
+      taps = now - tapAt < 450 ? taps + 1 : 1;
+      tapAt = now;
+      if (taps === 3) return dance();
+      boops += 1;
+      speak(boops > 1 ? `boop ×${boops}` : 'boop', 1200);
+      hop();
+      if (root.dataset.twin === 'in')
+        window.setTimeout(() => {
+          twinSpeak('boop back', 1200);
+          hop(twinUnit);
+        }, 250);
+    };
+
+    // One press is a tap, a drag or a throw. Catching it mid-air works too.
+    body.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      poke();
+      const r = body.getBoundingClientRect();
+      press = { x0: e.clientX, y0: e.clientY, gx: e.clientX - r.left, gy: e.clientY - r.top, trail: [], dragged: false };
+      body.setPointerCapture(e.pointerId);
+    });
+    body.addEventListener('pointermove', (e) => {
+      if (!press) return;
+      if (!press.dragged) {
+        if (Math.hypot(e.clientX - press.x0, e.clientY - press.y0) < 5 || still.matches || dancing) return;
+        if (scene === 'gate') {
+          press = null;
+          speak('nope · locked', 1400);
+          shake();
+          return;
+        }
+        press.dragged = true;
+        fly = { mode: 'drag', x: 0, y: 0, vx: 0, vy: 0, t0: 0, sx: 0, sy: 0 };
+        root.dataset.fly = 'drag';
+        flag('away', true);
+        flag('swap', false, body);
+        pose('tall');
+        speak('hey! put me down', 60000);
+      }
+      if (!fly) return;
+      const h = home();
+      const w = walls(h);
+      fly.x = clamp(e.clientX - press.gx, w.left, w.right);
+      fly.y = clamp(e.clientY - press.gy, w.top, w.bottom);
+      press.trail.push([e.clientX, e.clientY, e.timeStamp]);
+      if (press.trail.length > 32) press.trail.shift();
+      place(fly, h);
+    });
+    const release = (e: PointerEvent) => {
+      if (!press) return;
+      const p = press;
+      press = null;
+      if (!p.dragged || !fly) {
+        if (e.type === 'pointerup') tap();
+        return;
+      }
+      // Throw velocity from the last 90ms of the drag, or from the sample
+      // before the last when the pointer sent nothing newer, so a held pause
+      // drops it gently instead of zeroing a real throw.
+      let i = p.trail.findIndex(([, , t]) => e.timeStamp - t < 90);
+      if (i < 0 || i === p.trail.length - 1) i = Math.max(0, p.trail.length - 2);
+      const from = p.trail[i] ?? [e.clientX, e.clientY, e.timeStamp];
+      const dt = Math.max(16, e.timeStamp - from[2]);
+      fly.vx = clamp((e.clientX - from[0]) / dt, -3, 3);
+      fly.vy = clamp((e.clientY - from[1]) / dt, -3, 3);
+      fly.mode = 'air';
+      root.dataset.fly = 'air';
+      pose('square');
+      speak(Math.hypot(fly.vx, fly.vy) > 0.6 ? 'wheee!' : 'eep', 60000);
+      schedule();
+    };
+    body.addEventListener('pointerup', release);
+    body.addEventListener('pointercancel', release);
+
+    addEventListener(
+      'pointermove',
+      (e) => {
+        if (!shown.matches) return;
+        pointerX = e.clientX;
+        pointerY = e.clientY;
+        if (!gazeQueued) {
+          gazeQueued = true;
+          requestAnimationFrame(aim);
+        }
+        poke();
+      },
+      { passive: true }
+    );
+    addEventListener('keydown', () => shown.matches && poke());
+    addEventListener(
+      'scroll',
+      () => {
+        // Dizziness builds with every px scrolled and drains at 0.35px/ms, so
+        // a reading scroll never fills it and a hard spin of the wheel tips
+        // it over in about two seconds. Tuned for Linux's 53px wheel notch;
+        // 100px-notch systems get there sooner. One event counts for at
+        // most 200px and an in-page link's scroll not at all: a jump is not
+        // a spin.
+        const now = performance.now();
+        const moved = now < jumpUntil ? 0 : Math.min(200, Math.abs(scrollY - lastScroll));
+        lastScroll = scrollY;
+        if (!shown.matches) return;
+        dizziness = Math.max(0, dizziness - (now - lastScrollAt) * 0.35) + moved;
+        lastScrollAt = now;
+        if (dizziness > 600) {
+          dizziness = 0;
+          dizzy();
+        }
+        poke();
+        schedule();
+      },
+      { passive: true }
+    );
+    // The page reflows (fonts, images, an opened FAQ) or the window resizes:
+    // measure again, then let the loop catch up.
+    const remeasure = () => {
+      if (!shown.matches) return;
+      measure();
+      schedule();
+    };
+    new ResizeObserver(remeasure).observe(document.body);
+    addEventListener('resize', remeasure);
+    shown.addEventListener('change', () => {
+      remeasure();
+      if (shown.matches) poke();
+    });
+    still.addEventListener('change', schedule);
+
+    // The theme toggle: it squints at the lights coming on, yawns at them
+    // going off.
+    new MutationObserver(() => {
+      if (!shown.matches) return;
+      poke();
+      flag('squint', true);
+      window.setTimeout(() => flag('squint', false), 1600);
+      if (document.documentElement.dataset.theme === 'light') speak('too bright!', 1600);
+      else {
+        speak('lights out · yawn', 1600);
+        if (!fly && !dancing && scene !== 'gate' && !still.matches) poseThen('tall', 'square', 700);
+      }
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    // The Linux plate's install stamps SBX-01 only, so A-01 cheers and A-02,
+    // its own root, stays without.
+    document.getElementById('visa-ffmpeg')?.addEventListener('change', (e) => {
+      if (!shown.matches) return;
+      if (e.target instanceof HTMLInputElement && e.target.checked) {
+        speak('ffmpeg! yay', 1600);
+        hop();
+        window.setTimeout(() => {
+          twinSpeak('not in my root', 1800);
+          shake(twinUnit);
+        }, 300);
+      } else {
+        speak('apt remove · ok', 1400);
+        twinSpeak('still clean', 1400);
+      }
+    });
+
+    // Narration: the visitor's own actions, written the way the hero's
+    // session card writes the agent's. Bigger reactions win, and a quoted
+    // label shrinks with an ellipsis until the line fits the margin.
+    const TAPPABLE = 'a[href], button, summary, label[for], [role="button"]';
+    const labelOf = (el: Element) =>
+      (el.getAttribute('aria-label') || el.textContent || el.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
+    const narrate = (call: string, label: string | undefined, tail: string, ms: number) => {
+      if (fly || dancing || root.hasAttribute('data-dizzy')) return;
+      const line = (l: string | undefined) => (l === undefined ? `${call}()${tail}` : `${call}("${l}")${tail}`);
+      speak(line(label), ms, true);
+      const cap = word.parentElement;
+      for (let l = label; cap && l && l.length > 4 && cap.getBoundingClientRect().left < 8; ) {
+        l = l.slice(0, -2).trimEnd();
+        say = line(`${l}…`);
+        caption();
+      }
+    };
+    const tappable = (target: EventTarget | null) => {
+      const el = target instanceof Element ? target.closest(TAPPABLE) : null;
+      return el && page?.contains(el) ? el : null;
+    };
+
+    document.addEventListener('pointerover', (e) => {
+      if (!shown.matches) return;
+      const el = tappable(e.target);
+      if (el === hovered) return;
+      hovered = el;
+      if (el) narrate('tap', labelOf(el), '?', 1800);
+    });
+    document.addEventListener(
+      'click',
+      (e) => {
+        const el = tappable(e.target);
+        if (!el || !shown.matches || el.closest('.theme-toggle')) return;
+        if (el.matches('a[href^="#"], a[href^="/#"]')) jumpUntil = performance.now() + 3000;
+        if (el.matches('[data-copy]')) narrate('clipboard.copy', undefined, ' ✓', 1600);
+        else narrate('tap', labelOf(el), ' ✓', 1600);
+        hop();
+      },
+      true
+    );
+    addEventListener('scrollend', () => (jumpUntil = 0));
+    document.addEventListener('copy', () => shown.matches && narrate('clipboard.copy', undefined, ' ✓', 1600));
+    document.addEventListener('selectionchange', () => {
+      if (!shown.matches) return;
+      window.clearTimeout(readTimer);
+      readTimer = window.setTimeout(() => {
+        const s = getSelection();
+        const text = s && !s.isCollapsed ? s.toString().replace(/\s+/g, ' ').trim() : '';
+        if (text && s?.anchorNode && page?.contains(s.anchorNode)) narrate('screen.read', text, '', 2400);
+      }, 400);
+    });
+    // Media events don't bubble, so these listen in the capture phase. Only
+    // a play or pause that follows a press counts; autoplay is not you.
+    document.addEventListener('pointerdown', () => (pressedAt = performance.now()), true);
+    for (const type of ['play', 'pause'])
+      document.addEventListener(
+        type,
+        (e) => {
+          if (shown.matches && e.target instanceof HTMLVideoElement && performance.now() - pressedAt < 1000)
+            narrate(`video.${type}`, undefined, '', 1600);
+        },
+        true
+      );
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) hiddenAt = performance.now();
+      else if (shown.matches && performance.now() - hiddenAt > 2000) narrate('app.resume', undefined, '', 1600);
+    });
+
+    if (shown.matches) measure();
+    y = targetY(scrollY);
+    rig.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+    setScene(sceneAt(y + size / 2, scrollY));
+    caption();
+    if (shown.matches) poke();
+    blink();
+    window.setTimeout(() => {
+      if (scene === 'gate' || !shown.matches) return;
+      speak('hello!', 1500);
+      hop();
+    }, 900);
+  }
+</script>
+
+<style is:global>
+  /* A unit is one creature: two inks like the mark (red face, amber
+     shadow), each scaled to the loader's wide and tall poses and swapped on
+     the same offset, plus a face layer at the front offset so the eyes stay
+     on whichever ink is in front. Pose and swap live on the unit, so A-01
+     and A-02 move on their own. */
+  .mascot { display: none; }
+
+  @media (min-width: 1440px) {
+    .mascot {
+      position: fixed;
+      top: 0;
+      right: calc(50% + var(--frame) / 2);
+      z-index: 15;
+      display: block;
+      width: 150px;
+      pointer-events: none;
+      user-select: none;
+    }
+  }
+
+  .mascot-rig {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    will-change: transform;
+  }
+  /* Leader to the sheet, ending in a dot on its edge: a callout, like the
+     hero's session card. A-02 mirrors it on the right edge. */
+  .mascot-rig::before,
+  .mascot-rig::after,
+  .mascot-twin::before,
+  .mascot-twin::after {
+    content: '';
+    position: absolute;
+    background: var(--accent);
+  }
+  .mascot-rig::before,
+  .mascot-twin::before {
+    top: calc(var(--m-s) / 2);
+    width: 16px;
+    height: 1px;
+    opacity: 0.6;
+  }
+  .mascot-rig::after,
+  .mascot-twin::after {
+    top: calc(var(--m-s) / 2 - 1px);
+    width: 3px;
+    height: 3px;
+  }
+  .mascot-rig::before { right: 0; }
+  .mascot-rig::after { right: -2px; }
+  .mascot-twin::before { left: 0; }
+  .mascot-twin::after { left: -2px; }
+
+  .mascot-unit {
+    --m-w: 1;
+    --m-h: 1;
+    --m-red-o: 0px;
+    --m-amber-o: var(--m-o);
+    position: absolute;
+    top: 0;
+    width: calc(var(--m-s) + var(--m-o));
+    height: calc(var(--m-s) + var(--m-o));
+  }
+  .mascot-unit[data-pose='tall'] { --m-h: var(--m-tall); }
+  .mascot-unit[data-pose='wide'] { --m-w: var(--m-wide); }
+  .mascot-unit[data-swap] { --m-red-o: var(--m-o); --m-amber-o: 0px; }
+
+  .mascot-bod {
+    right: 16px;
+    cursor: grab;
+    pointer-events: auto;
+    touch-action: none;
+  }
+  .mascot[data-fly='drag'] .mascot-bod { cursor: grabbing; }
+
+  .mascot-ink {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--m-s);
+    height: var(--m-s);
+    transform: translate(var(--io), var(--io)) scale(var(--m-w), var(--m-h));
+    transition:
+      transform var(--m-morph) var(--m-ease),
+      background-color 0.3s;
+  }
+  .mascot-red { --io: var(--m-red-o); z-index: 1; background-color: var(--red); }
+  .mascot-amber { --io: var(--m-amber-o); z-index: 0; background-color: var(--accent); }
+  .mascot-face { --io: 0px; z-index: 2; }
+  .mascot-unit[data-swap] > .mascot-red { z-index: 0; }
+  .mascot-unit[data-swap] > .mascot-amber { z-index: 1; }
+  /* Locked at the gate: the ink drains to the footer mark's resting grey. */
+  .mascot[data-scene='gate'] .mascot-bod > .mascot-red { background-color: var(--line-2); }
+  .mascot[data-scene='gate'] .mascot-bod > .mascot-amber { background-color: var(--line); }
+
+  .mascot-eye {
+    position: absolute;
+    top: 7px;
+    width: 6px;
+    height: 7px;
+    background: var(--on-primary);
+    transition: transform 0.12s;
+  }
+  .mascot-eye:first-child { left: 5px; }
+  .mascot-eye + .mascot-eye { left: 13px; }
+  .mascot-eye b {
+    position: absolute;
+    left: 1.5px;
+    top: 2px;
+    width: 3px;
+    height: 3px;
+    background: var(--art-bg);
+    transform: translate(var(--lx, 1.5px), var(--ly, 0px));
+    transition: transform 0.15s;
+  }
+  .mascot[data-fly] .mascot-bod .mascot-eye { transform: scale(1.1, 1.35); }
+  .mascot[data-squint] .mascot-eye { transform: scaleY(0.4); }
+  .mascot[data-blink] .mascot-eye,
+  .mascot:is([data-asleep], [data-scene='footer']) .mascot-eye { transform: scaleY(0.15); }
+  /* Dizzy: the pupils roll round the eyes, one each way. */
+  .mascot[data-dizzy] .mascot-eye b {
+    transform: none;
+    animation: mascot-orbit 0.5s linear infinite;
+  }
+  .mascot[data-dizzy] .mascot-eye + .mascot-eye b { animation-direction: reverse; }
+
+  .mascot-cap {
+    position: absolute;
+    top: calc(var(--m-s) + var(--m-o) + 16px);
+    right: 16px;
+    font: 500 8.5px/1.4 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  /* The serial only fits beside the longest line from 1500px up. */
+  .mascot-cap span { display: none; color: var(--accent-ink); }
+  .mascot-cap b { font-weight: 500; }
+  /* Narration reads as code, like the hero's session card: lowercase ink. */
+  .mascot-cap b[data-code] {
+    font-size: 9.5px;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: var(--fg);
+  }
+  @media (min-width: 1500px) {
+    .mascot-cap span { display: inline; }
+  }
+
+  /* A-02, the second sandbox: the same body in the right margin, looking
+     across at A-01 until the pointer gives it something else to watch. */
+  .mascot-twin {
+    --lx: -1.5px;
+    position: absolute;
+    top: 0;
+    left: calc(100% + var(--frame));
+    display: none;
+    width: 150px;
+    transform-origin: calc(16px + var(--m-s) / 2) calc(var(--m-s) / 2);
+  }
+  .mascot-twin .mascot-unit { left: 16px; }
+  .mascot-twin .mascot-cap { right: auto; left: 16px; }
+  .mascot[data-twin] .mascot-twin {
+    display: block;
+    animation: mascot-pop 0.42s var(--m-ease) both;
+  }
+  .mascot[data-twin='out'] .mascot-twin { animation: mascot-unpop 0.3s ease-in both; }
+
+  /* Props, one per section. Each sits left of the body or over its head,
+     and all of them stay at the post while A-01 is away from it. Their
+     loops animate opacity, rotate or translate on HTML boxes only, so the
+     compositor runs them and an idle page does no work. */
+  .mascot-prop { position: absolute; display: none; }
+  .mascot[data-scene='models'] .mascot-dots,
+  .mascot[data-scene='linux'] .mascot-keys { display: flex; }
+  .mascot[data-scene='gate'] .mascot-lock,
+  .mascot[data-scene='install'] .mascot-arrow,
+  .mascot:is([data-scene='faq'], [data-scene='missing']) .mascot-ask,
+  .mascot:is([data-asleep], [data-scene='footer']) .mascot-zz { display: block; }
+  .mascot[data-asleep] .mascot-prop:not(.mascot-zz) { display: none; }
+  .mascot[data-away] .mascot-prop,
+  .mascot-bod[data-hop] ~ :is(.mascot-dots, .mascot-ask, .mascot-zz) { visibility: hidden; }
+
+  /* An ellipsis typing itself out: one dot, two, three. */
+  .mascot-dots { top: -11px; right: 18px; gap: 3px; }
+  .mascot-dots i { width: 3px; height: 3px; background: var(--muted); }
+  .mascot-dots i:nth-child(2) { animation: mascot-dot-2 1.2s steps(1) infinite; }
+  .mascot-dots i:nth-child(3) { animation: mascot-dot-3 1.2s steps(1) infinite; }
+
+  .mascot-keys { top: 15px; right: 52px; gap: 2px; }
+  .mascot-keys i {
+    position: relative;
+    width: 7px;
+    height: 5px;
+    border: 1px solid var(--line-2);
+  }
+  .mascot-keys i::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: var(--red);
+    opacity: 0;
+    animation: mascot-key 0.6s steps(1) infinite;
+  }
+  .mascot-keys i:nth-child(2)::after { animation-delay: 0.2s; }
+  .mascot-keys i:nth-child(3)::after { animation-delay: 0.4s; }
+
+  .mascot-lock { top: 7px; right: 52px; color: var(--red); }
+  .mascot-arrow {
+    top: 8px;
+    right: 52px;
+    color: var(--red);
+    animation: mascot-bob 0.9s ease-in-out infinite alternate;
+  }
+  .mascot-arrow svg { display: block; }
+  .mascot-ask {
+    top: -24px;
+    right: 21px;
+    font: 400 20px/1 var(--serif);
+    color: var(--accent-ink);
+    animation: mascot-wobble 1.6s ease-in-out infinite;
+  }
+  .mascot-zz { top: -4px; right: 38px; width: 0; height: 0; }
+  .mascot-zz i {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    font: 500 10px/1 var(--mono);
+    font-style: normal;
+    color: var(--muted);
+    opacity: 0;
+    animation: mascot-float 2.4s ease-out infinite;
+  }
+  .mascot-zz i + i { animation-delay: 1.2s; }
+
+  .mascot[data-scene='linux'] .mascot-bod { animation: mascot-type 0.2s steps(1) infinite alternate; }
+  .mascot[data-asleep] .mascot-bod { animation: none; }
+  .mascot[data-dizzy] .mascot-bod { animation: mascot-wobble 0.5s ease-in-out infinite; }
+  .mascot .mascot-unit[data-hop] { animation: mascot-hop 0.6s ease-in-out; }
+  .mascot .mascot-unit[data-shake] { animation: mascot-shake 0.42s linear; }
+
+  @keyframes mascot-dot-2 {
+    0% { opacity: 0; }
+    33.33% { opacity: 1; }
+  }
+  @keyframes mascot-dot-3 {
+    0% { opacity: 0; }
+    66.67% { opacity: 1; }
+  }
+  @keyframes mascot-key {
+    0% { opacity: 1; }
+    33% { opacity: 0; }
+  }
+  @keyframes mascot-type { to { translate: 0 1px; } }
+  @keyframes mascot-bob { to { translate: 0 3px; } }
+  @keyframes mascot-wobble {
+    0%, 100% { rotate: -10deg; }
+    50% { rotate: 10deg; }
+  }
+  @keyframes mascot-float {
+    0% { translate: 0 0; opacity: 0; }
+    30% { opacity: 1; }
+    100% { translate: -10px -20px; opacity: 0; }
+  }
+  @keyframes mascot-hop {
+    0%, 18% { translate: 0 0; }
+    50% { translate: 0 -22px; }
+    78%, 100% { translate: 0 0; }
+  }
+  @keyframes mascot-shake {
+    0%, 100% { translate: 0 0; }
+    20%, 60% { translate: -3px 0; }
+    40%, 80% { translate: 3px 0; }
+  }
+  @keyframes mascot-orbit {
+    0%, 100% { translate: -1.5px -2px; }
+    25% { translate: 1.5px -2px; }
+    50% { translate: 1.5px 2px; }
+    75% { translate: -1.5px 2px; }
+  }
+  @keyframes mascot-pop {
+    from { scale: 0; translate: 0 12px; }
+  }
+  @keyframes mascot-unpop {
+    to { scale: 0; translate: 0 12px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mascot-ink,
+    .mascot-eye,
+    .mascot-eye b { transition: none; }
+    .mascot[data-scene] .mascot-unit,
+    .mascot[data-twin] .mascot-twin,
+    .mascot[data-dizzy] .mascot-eye b,
+    .mascot-dots i,
+    .mascot-keys i::after,
+    .mascot-arrow,
+    .mascot-ask,
+    .mascot-zz i { animation: none; }
+    .mascot[data-dizzy] .mascot-eye b { transform: translate(var(--lx, 1.5px), var(--ly, 0px)); }
+    .mascot-zz i { opacity: 1; }
+    .mascot-zz i + i { translate: -6px -8px; }
+  }
+</style>
