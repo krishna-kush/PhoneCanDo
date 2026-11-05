@@ -53,12 +53,21 @@ class PhoneCanDoServeService : Service() {
     startBridge()
   }
 
+  // Every stop below is stopSelf(startId): a newer startForegroundService()
+  // (App.tsx re-ensures serve on each foreground) may already be queued, and
+  // bringing the service down while that request is pending crashes the app
+  // (ForegroundServiceDidNotStartInTimeException). With the id, the system
+  // ignores the stop when a newer start exists; that start decides instead.
+  // shutdownQuietly() uses the latest id seen for the same reason.
+  private var lastStartId = 0
+
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    lastStartId = startId
     if (intent?.action == ACTION_STOP) {
       stopSupervisor()
       stopSse()
       stopServeProcess()
-      stopSelf()
+      stopSelf(startId)
       return START_NOT_STICKY
     }
     // Open/link/rename report: upsert the watched set (multi-chat: one entry
@@ -157,7 +166,7 @@ class PhoneCanDoServeService : Service() {
       val tracked = readMap(KEY_TRACKED_MAP)
       if (watched.isEmpty() && tracked.isEmpty()) {
         Log.i(TAG, "null intent restart with nothing watched, staying stopped")
-        stopSelf()
+        stopSelf(startId)
         return START_NOT_STICKY
       }
       Log.i(TAG, "null intent restart with live chats, relaunching serve")
@@ -170,7 +179,7 @@ class PhoneCanDoServeService : Service() {
         renderNotification()
       } catch (e: Exception) {
         Log.e(TAG, "serve relaunch failed", e)
-        stopSelf()
+        stopSelf(startId)
         return START_NOT_STICKY
       }
       return START_STICKY
@@ -183,7 +192,7 @@ class PhoneCanDoServeService : Service() {
         Log.i(TAG, "serve started on $port")
       } catch (e: Exception) {
         Log.e(TAG, "serve start failed", e)
-        stopSelf()
+        stopSelf(startId)
         return START_NOT_STICKY
       }
     }
@@ -702,7 +711,7 @@ class PhoneCanDoServeService : Service() {
     stopSupervisor()
     stopSse()
     stopServeProcess()
-    stopSelf()
+    stopSelf(lastStartId)
   }
 
   private fun prefs() = getSharedPreferences(PREFS, MODE_PRIVATE)

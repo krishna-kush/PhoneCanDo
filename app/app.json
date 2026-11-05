@@ -33,6 +33,7 @@
       "./plugins/withBuildChannel.js",
       "./plugins/withDevAppId.js",
       "./plugins/withBuildPerf.js",
+      "./plugins/withMinSdk.js",
       "./plugins/withPceCompositeBuild.js",
       "./plugins/withLoopbackCleartext.js",
       "./plugins/withReleaseSigning.js",

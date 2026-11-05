@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState as RNAppState } from 'react-native';
 import { create } from 'zustand';
 import { stopServeService } from '../engine/runner';
 import {
@@ -30,6 +31,12 @@ async function stopEngineIfIdle(port: string): Promise<void> {
   // turn before the next tool call. Quiet shutdown resumes after lock/reset.
   if (isAutomationEnabled()) return;
   const stop = () => {
+    // The session check above is async: if the user came back meanwhile, the
+    // foreground has already sent a fresh startForegroundService(). Stopping
+    // the service under that pending start crashes the app
+    // (ForegroundServiceDidNotStartInTimeException), so only stop if we are
+    // still in the background.
+    if (RNAppState.currentState === 'active') return;
     try {
       stopServeService();
     } catch {
