@@ -1,0 +1,36 @@
+// markdownlint-cli2 config for .github/workflows/lint.yml (passed with
+// --config). Relaxed: structural rules stay on (heading levels, duplicate
+// siblings, broken tables/links/fences, stray HTML); pure-style rules the docs
+// deliberately don't follow are off, each with the reason.
+{
+  "config": {
+    "default": true,
+    // Docs hard-wrap prose near 80 cols, but tables, URLs and paths can't.
+    "MD013": false,
+    // app/docs/context.md uses compact "### finding" + paragraph notes.
+    "MD022": false,
+    // Same heading text under different parents is fine (e.g. "Status").
+    "MD024": { "siblings_only": true },
+    // Ordered lists sometimes continue numbering across a paragraph.
+    "MD029": false,
+    // "Label:\n- item" lists without a blank line read fine on GitHub.
+    "MD032": false,
+    // README/web README use a centred HTML logo + badge header.
+    "MD033": {
+      "allowed_elements": ["p", "img", "h1", "a", "br", "strong", "em", "sub", "sup", "kbd", "details", "summary", "picture", "source"]
+    },
+    // research/ source lists cite bare URLs on purpose.
+    "MD034": false,
+    // Bare ``` fences hold trees, logs and device output with no language.
+    "MD040": false,
+    // README starts with the HTML logo block, not a "# " heading.
+    "MD041": false,
+    // Fenced vs indented code style.
+    "MD046": false,
+    // Table pipe alignment style (cosmetic).
+    "MD060": false
+  },
+  "gitignore": true,
+  "ignores": ["**/node_modules/**", "reference/**", "dist/**", "**/dist/**", "**/build/**"],
+  "noProgress": true
+}

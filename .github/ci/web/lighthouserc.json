@@ -1,0 +1,43 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./web/dist",
+      "url": ["http://localhost/", "http://localhost/404.html"],
+      "numberOfRuns": 3,
+      "settings": {
+        "chromeFlags": "--no-sandbox"
+      }
+    },
+    "assert": {
+      "assertMatrix": [
+        {
+          "matchingUrlPattern": ".*",
+          "assertions": {
+            "categories:performance": ["warn", { "minScore": 0.9 }],
+            "categories:accessibility": ["warn", { "minScore": 0.9 }],
+            "categories:best-practices": ["warn", { "minScore": 0.9 }],
+            "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
+            "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
+            "total-blocking-time": ["warn", { "maxNumericValue": 200 }],
+            "total-byte-weight": ["warn", { "maxNumericValue": 512000 }],
+            "color-contrast": "warn",
+            "errors-in-console": "error",
+            "document-title": "error",
+            "html-has-lang": "error",
+            "meta-description": "error",
+            "meta-viewport": "error",
+            "button-name": "error",
+            "link-name": "error"
+          }
+        },
+        {
+          "matchingUrlPattern": "^http://[^/]+/$",
+          "assertions": {
+            "categories:seo": ["warn", { "minScore": 0.9 }],
+            "is-crawlable": "error"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,427 @@
+name: Lint
+
+# Repo-wide lint gate: workflows (actionlint + shellcheck), shell scripts,
+# Python (./manage), JSON/YAML/TOML/XML data, repo hygiene, Markdown links.
+# Spelling (typos) and Markdown style (markdownlint) report without blocking
+# yet. Runs on prod pushes, every PR, daily (adds external links) and on demand.
+
+on:
+  push:
+    branches: [prod]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: '22'
+  LYCHEE_VERSION: v0.24.2
+
+jobs:
+  actionlint:
+    name: actionlint (workflows + shellcheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint (pinned + sha256-verified)
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/actionlint"
+          tgz="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          mkdir -p "$dir"
+          curl -fsSL --retry 3 -o "$dir/$tgz" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${tgz}"
+          echo "${ACTIONLINT_SHA256}  $dir/$tgz" | sha256sum --check --strict
+          tar -xzf "$dir/$tgz" -C "$dir"
+          "$dir/actionlint" -version
+          echo "$dir" >> "$GITHUB_PATH"
+
+      # Without shellcheck on PATH actionlint silently skips `run:` scripts,
+      # so pass it explicitly and fail if the runner image ever drops it.
+      # .github/actionlint.yaml is picked up automatically.
+      - name: Run actionlint
+        run: |
+          set -euo pipefail
+          if ! sc="$(command -v shellcheck)"; then
+            echo "::error::shellcheck is not on the runner; actionlint would skip run: scripts"
+            exit 1
+          fi
+          sc_version="$("$sc" --version | sed -n 's/^version: //p')"
+          shopt -s nullglob
+          workflows=(.github/workflows/*.yml .github/workflows/*.yaml)
+          echo "::add-matcher::.github/ci/lint/actionlint-matcher.json"
+          rc=0
+          actionlint -color -shellcheck="$sc" || rc=$?
+          echo "::remove-matcher owner=actionlint::"
+          if [ "$rc" -eq 0 ]; then verdict='no problems'; else verdict='problems found (see annotations)'; fi
+          echo "**actionlint ${ACTIONLINT_VERSION}** (shellcheck ${sc_version}): ${#workflows[@]} workflow file(s), ${verdict}." >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+  shellcheck:
+    name: shellcheck (shell scripts)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # *.sh/*.bash plus extensionless sh/bash shebang files; the generated
+      # Gradle wrapper (pce/gradlew) is skipped.
+      - name: Find shell scripts
+        run: |
+          set -euo pipefail
+          git ls-files -z | bash .github/ci/lint/list-scripts.sh shell > "$RUNNER_TEMP/shell-files.txt"
+          cat "$RUNNER_TEMP/shell-files.txt"
+          shellcheck --version
+
+      # ubuntu-latest ships shellcheck (apt); no download needed.
+      - name: shellcheck --severity=warning (blocking)
+        run: |
+          set -euo pipefail
+          mapfile -t files < "$RUNNER_TEMP/shell-files.txt"
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No shell scripts tracked."
+            exit 0
+          fi
+          rc=0
+          shellcheck --severity=warning --external-sources --source-path=SCRIPTDIR \
+            --format=gcc "${files[@]}" > "$RUNNER_TEMP/sc.txt" || rc=$?
+          sed -E 's/^([^:]+):([0-9]+):([0-9]+): (error|warning): (.*)$/::\4 file=\1,line=\2,col=\3::\5/' "$RUNNER_TEMP/sc.txt"
+          echo "**shellcheck (warning+):** ${#files[@]} script(s), $(wc -l < "$RUNNER_TEMP/sc.txt") finding(s)." >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+      # Style/info hints (quoting nits, useless cat, ...). Promote by folding
+      # into the step above (--severity=style) once this pass is clean.
+      - name: shellcheck --severity=style (report only)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mapfile -t files < "$RUNNER_TEMP/shell-files.txt"
+          if [ "${#files[@]}" -eq 0 ]; then exit 0; fi
+          rc=0
+          shellcheck --severity=style --external-sources --source-path=SCRIPTDIR \
+            --format=gcc "${files[@]}" > "$RUNNER_TEMP/sc-style.txt" || rc=$?
+          sed -E 's/^([^:]+):([0-9]+):([0-9]+): (error|warning|note): (.*)$/::notice file=\1,line=\2,col=\3::\4: \5/' "$RUNNER_TEMP/sc-style.txt"
+          echo "**shellcheck (style+, non-blocking):** $(wc -l < "$RUNNER_TEMP/sc-style.txt") finding(s)." >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+  python:
+    name: python ${{ matrix.python }} (compile + manage smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # Oldest distro Python we expect ./manage to meet, and the newest.
+        python: ['3.10', '3.x']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      # -W error turns SyntaxWarnings (e.g. invalid escapes in regexes) into
+      # failures before they become SyntaxErrors in a later Python.
+      - name: Byte-compile every Python file
+        run: |
+          set -euo pipefail
+          git ls-files -z | bash .github/ci/lint/list-scripts.sh python > "$RUNNER_TEMP/py-files.txt"
+          mapfile -t files < "$RUNNER_TEMP/py-files.txt"
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::no Python files found (./manage at least is expected)"
+            exit 1
+          fi
+          python3 --version
+          printf '%s\n' "${files[@]}"
+          python3 -W error -m py_compile "${files[@]}"
+          echo "**python $(python3 -c 'import platform; print(platform.python_version())')**: ${#files[@]} file(s) byte-compiled." >> "$GITHUB_STEP_SUMMARY"
+
+      # Only argument errors and help: every path here exits before running
+      # a build, adb or node, so it is safe on a bare runner.
+      - name: Smoke-test ./manage dispatch
+        run: |
+          set -euo pipefail
+          usage="$(./manage help)"
+          grep -q 'one entry point for the repo' <<< "$usage"
+          [ "$(./manage)" = "$usage" ]
+          expect_usage_error() {
+            local rc=0
+            ./manage "$@" > /dev/null 2>&1 || rc=$?
+            if [ "$rc" -ne 2 ]; then
+              echo "::error file=manage::'./manage $*' exited $rc, expected usage error 2"
+              return 1
+            fi
+            echo "ok: ./manage $* -> 2"
+          }
+          expect_usage_error no-such-command
+          expect_usage_error build
+          expect_usage_error build play
+          expect_usage_error android desktop
+          expect_usage_error web
+          expect_usage_error engine
+          expect_usage_error apk info /nonexistent.apk
+          expect_usage_error device push
+
+  ruff:
+    name: ruff (Python errors)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RUFF_VERSION: 0.17.3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+
+      # E9 syntax/IO errors, F pyflakes (undefined names, unused imports,
+      # shadowing), PLE pylint errors. Style is deliberately not enforced.
+      - name: ruff check --select E9,F,PLE
+        run: |
+          set -euo pipefail
+          git ls-files -z | bash .github/ci/lint/list-scripts.sh python > "$RUNNER_TEMP/py-files.txt"
+          mapfile -t files < "$RUNNER_TEMP/py-files.txt"
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::no Python files found (./manage at least is expected)"
+            exit 1
+          fi
+          uvx "ruff@${RUFF_VERSION}" --version
+          rc=0
+          uvx "ruff@${RUFF_VERSION}" check --isolated --select E9,F,PLE --target-version py310 \
+            --output-format github "${files[@]}" || rc=$?
+          echo "**ruff ${RUFF_VERSION}** (E9,F,PLE): ${#files[@]} file(s), exit ${rc}." >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+  data:
+    name: data files (JSON/YAML/TOML/XML)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYYAML_VERSION: 6.0.3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+
+      # Parse + duplicate keys; JSONC only where the consumer accepts it
+      # (*.jsonc, tsconfig); local file references in app.json/webmanifest.
+      - name: JSON / JSONC
+        run: git ls-files -s -z | node .github/ci/lint/check-data.mjs --git-stage
+
+      # YAML (+ duplicate keys), TOML (tomllib) and XML/SVG well-formedness:
+      # a broken AndroidManifest.xml otherwise only fails deep in Gradle.
+      - name: YAML / TOML / XML
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          git ls-files -z -- '*.yml' '*.yaml' '*.toml' '*.xml' '*.svg' \
+            | uv run --no-project --python '>=3.11' --with "pyyaml==${PYYAML_VERSION}" \
+                python .github/ci/lint/check-data.py -0
+
+  hygiene:
+    name: repo hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      # CRLF, UTF-8/BOM, final newline, trailing whitespace (config/scripts),
+      # conflict markers, >5 MiB files, committed keys/env/APKs, exec bits,
+      # Windows/macOS-unsafe names. See the header of check-hygiene.mjs.
+      - name: Check tracked files
+        run: git ls-files -s -z | node .github/ci/lint/check-hygiene.mjs --git-stage
+
+  links:
+    name: markdown links (offline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: List tracked Markdown
+        run: |
+          set -euo pipefail
+          git ls-files -- '*.md' > lychee-inputs.txt
+          echo "$(wc -l < lychee-inputs.txt) Markdown file(s)"
+
+      # Relative links, images and #anchors between repo files must resolve.
+      # --offline blocks every network request, so this cannot flake.
+      - name: lychee --offline
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          lycheeVersion: ${{ env.LYCHEE_VERSION }}
+          args: >-
+            --config .github/lychee.toml
+            --offline
+            --include-fragments=anchor-only
+            --files-from lychee-inputs.txt
+          fail: true
+          failIfEmpty: true
+
+  links-external:
+    name: markdown links (external, report only)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: List tracked Markdown
+        run: git ls-files -- '*.md' > lychee-inputs.txt
+
+      # Third-party sites rate-limit and go down: report in the job summary,
+      # never block. The default GITHUB_TOKEN only raises GitHub's rate limit.
+      - name: lychee (local + external)
+        continue-on-error: true
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          lycheeVersion: ${{ env.LYCHEE_VERSION }}
+          args: >-
+            --config .github/lychee.toml
+            --include-fragments=anchor-only
+            --files-from lychee-inputs.txt
+          fail: true
+
+  typos:
+    name: typos (spelling, report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Non-blocking until the first green run proves the allowlist in
+      # .github/typos.toml; then drop continue-on-error.
+      - name: typos
+        id: typos
+        continue-on-error: true
+        uses: crate-ci/typos@4c8b7f51ca60df14e3c5ca82770dfbbe6c3dae85 # v1.52.0
+        with:
+          config: .github/typos.toml
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        env:
+          OUTCOME: ${{ steps.typos.outcome }}
+        run: echo "**typos:** ${OUTCOME} (non-blocking; findings are annotations)." >> "$GITHUB_STEP_SUMMARY"
+
+  markdownlint:
+    name: markdownlint (style, report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MARKDOWNLINT_CLI2_VERSION: 0.24.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      # Relaxed rule set in docs.markdownlint-cli2.jsonc. Non-blocking until a
+      # first green run; then drop continue-on-error.
+      - name: markdownlint-cli2
+        id: mdl
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          npx --yes "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}" '**/*.md' \
+            --config .github/ci/lint/docs.markdownlint-cli2.jsonc
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        env:
+          OUTCOME: ${{ steps.mdl.outcome }}
+        run: echo "**markdownlint-cli2 ${MARKDOWNLINT_CLI2_VERSION}:** ${OUTCOME} (non-blocking)." >> "$GITHUB_STEP_SUMMARY"
+
+  lint-ok:
+    name: lint-ok
+    if: ${{ always() }}
+    needs: [actionlint, shellcheck, python, ruff, data, hygiene, links, typos, markdownlint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # The one check to mark required in branch protection. typos and
+      # markdownlint are listed but cannot fail it (continue-on-error steps).
+      - name: All lint jobs passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Lint gate"
+            echo "| job | result |"
+            echo "| --- | --- |"
+            jq -r 'to_entries[] | "| \(.key) | \(.value.result) |"' <<< "$NEEDS"
+          } >> "$GITHUB_STEP_SUMMARY"
+          failed="$(jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key] | join(", ")' <<< "$NEEDS")"
+          if [ -n "$failed" ]; then
+            echo "::error::lint jobs not green: ${failed}"
+            exit 1
+          fi
+          echo "All lint jobs green."
