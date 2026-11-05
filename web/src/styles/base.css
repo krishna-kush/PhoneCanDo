@@ -1,0 +1,123 @@
+/* Base: site-only vars, reset, the scrollbar, the page sheet and its load
+   bar, shared keyframes. Theme colours are NOT declared here:
+   theme/tokens.json is the single source for the site and the app, and
+   layouts/Base.astro emits those vars. Only decorative, site-only vars
+   live below. */
+
+:root {
+  color-scheme: dark;
+  --nav-bg: rgba(12, 11, 9, 0.92);
+  --grid: rgba(245, 158, 11, 0.09);
+  --ghost-hover: rgba(242, 236, 223, 0.05);
+  --glow: rgba(240, 32, 56, 0.16);
+  --phone-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --media-shadow: none;
+  --grain: none;
+  /* product artefacts (phone screen, demo media) stay dark in both themes */
+  --art-bg: #070707;
+  --art-fg: #f2f2f2;
+  --art-muted: #a1a1a1;
+  --art-dim: #8a8a8a;
+  --art-accent: #f59e0b;
+  /* the install QR's dots: light on the dark panel here (an inverted code,
+     which some scanners can't read), red in light */
+  --qr-ink: var(--fg);
+  --frame: 1160px;
+  --pad: clamp(18px, 4vw, 40px);
+  --mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: 'Geist Variable', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --r: 0px;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --nav-bg: rgba(242, 236, 223, 0.93);
+  --grid: rgba(253, 197, 13, 0.12);
+  --ghost-hover: rgba(23, 19, 13, 0.05);
+  --glow: rgba(225, 25, 47, 0.1);
+  --phone-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 30px 60px -30px rgba(30, 20, 10, 0.45);
+  --media-shadow: none;
+  --qr-ink: var(--red);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.1'/%3E%3C/svg%3E");
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: var(--grain);
+  color: var(--fg);
+  font: 16px/1.65 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+a { color: inherit; text-decoration: none; }
+h1, h2, h3 { text-wrap: balance; }
+.hero-sub, .lead, .faq details p { text-wrap: pretty; }
+::selection { background: var(--red); color: var(--on-primary); }
+:focus-visible { outline: 2px solid var(--red-hi); outline-offset: 3px; }
+img, video { display: block; max-width: 100%; }
+h1, h2, h3, p { margin: 0; }
+.mono { font-family: var(--mono); }
+
+/* One scrollbar to rule them all (page, demo strip, command box): a square
+   signal-red bar over whatever ground it scrolls, behind a hairline rule.
+   Chrome and Safari draw these -webkit- ones; Firefox has none, so it alone
+   gets the standard properties, which Chrome would otherwise prefer, losing
+   the square ends. */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-track:vertical { border-left: 1px solid var(--line); }
+::-webkit-scrollbar-track:horizontal { border-top: 1px solid var(--line); }
+::-webkit-scrollbar-thumb { background: var(--red); }
+::-webkit-scrollbar-thumb:hover { background: var(--red-hi); }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: var(--red) transparent; }
+}
+
+/* One sheet, with a contained loader and a pair of registration ticks on each section. */
+.page {
+  position: relative;
+  max-width: var(--frame);
+  margin: 0 auto;
+  border-inline: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  overflow-x: clip;
+}
+
+/* One-shot linear fill; drive it from video/image load events later. */
+.load-bar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 30;
+  width: min(var(--frame), 100%);
+  height: 2px;
+  transform: translateX(-50%);
+  background: var(--red-soft);
+  overflow: hidden;
+  pointer-events: none;
+}
+.load-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--red);
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: load-fill 1.2s linear forwards;
+}
+@keyframes load-fill {
+  to { transform: scaleX(1); }
+}
+
+/* Status blink: the slate's rec dot, the hero cursor, the passport bar. */
+@keyframes blink { 50% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .load-bar::before { animation: none; transform: none; opacity: 0.45; }
+}

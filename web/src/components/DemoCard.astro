@@ -42,3 +42,100 @@ const num = String(index + 1).padStart(2, '0');
     <p class="tags">{demo.tags.join(' · ')}</p>
   </div>
 </article>
+
+<style is:global>
+  .demo { min-width: 0; background: var(--bg); padding: 0; }
+  .demo-media {
+    position: relative;
+    aspect-ratio: 9 / 16;
+    border-radius: 0;
+    overflow: hidden;
+    background: var(--art-bg);
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    box-shadow: none;
+    transition: border-color 0.2s;
+  }
+  .demo-media video,
+  .demo-media img { width: 100%; height: 100%; object-fit: cover; }
+  .demo-media::before,
+  .demo-media::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    width: 10px;
+    height: 10px;
+    border-color: var(--art-accent);
+    pointer-events: none;
+  }
+  .demo-media::before {
+    top: 6px;
+    left: 6px;
+    border-top: 1px solid;
+    border-left: 1px solid;
+  }
+  .demo-media::after {
+    right: 6px;
+    bottom: 6px;
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+  }
+  .plate-no {
+    position: absolute;
+    z-index: 3;
+    top: 10px;
+    right: 10px;
+    padding: 3px 5px;
+    background: rgba(7, 7, 7, 0.55);
+    font: 500 8px/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--art-accent);
+  }
+  .demo-body { padding: 12px 12px 14px; }
+  .demo-index {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font: 500 8.5px/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .demo-index span:first-child { color: var(--accent-ink); }
+  .demo h3 {
+    margin-top: 9px;
+    font: 400 19px/1.2 var(--serif);
+    letter-spacing: -0.01em;
+  }
+  .demo .tags {
+    margin-top: 7px;
+    font: 400 9px/1.5 var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .demo-media .slate .label { font-size: 8px; letter-spacing: 0.1em; }
+  .demo:hover .demo-media { border-bottom-color: var(--accent-ink); }
+  .demo:hover .demo-index span:first-child { color: var(--red); }
+  .demo:hover .slate .glyph { transform: scale(1.08); }
+
+  @media (max-width: 760px) {
+    .demo {
+      flex: 0 0 74%;
+      scroll-snap-align: start;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .demo .demo-body { order: -1; padding-bottom: 10px; }
+  }
+  @media (max-width: 420px) {
+    .demo { flex-basis: 84%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .demo-media { transition: none; }
+  }
+</style>

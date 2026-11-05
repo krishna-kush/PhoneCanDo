@@ -1,0 +1,90 @@
+/* Labels the components share: kicker, figure labels, stamp, brand,
+   barcode, serial. */
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 9.5px/1.45 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.kicker::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: none;
+  background: var(--red);
+}
+.kicker b { color: var(--fg); font-weight: 500; }
+
+.fig-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 8.5px/1.45 var(--mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  white-space: nowrap;
+}
+.fig-label::before {
+  content: '';
+  width: 16px;
+  height: 1px;
+  flex: none;
+  background: var(--accent);
+}
+.fig-sub {
+  margin-top: 4px;
+  font: 500 8px/1.4 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.stamp {
+  display: inline-block;
+  padding: 4px 7px;
+  border: 1px solid var(--red);
+  color: var(--red);
+  font: 500 8px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 600 15px/1 var(--mono);
+  letter-spacing: -0.02em;
+}
+
+.barcode {
+  height: 34px;
+  margin-top: 26px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--fg) 0 2px,
+    transparent 2px 4px,
+    var(--fg) 4px 5px,
+    transparent 5px 9px,
+    var(--fg) 9px 12px,
+    transparent 12px 14px,
+    var(--fg) 14px 15px,
+    transparent 15px 19px
+  );
+  opacity: 0.75;
+}
+.serial {
+  margin-top: 8px;
+  font: 500 8px/1.4 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}

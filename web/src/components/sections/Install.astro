@@ -280,3 +280,234 @@ const pcScripts = [
         });
     }
 </script>
+
+<style is:global>
+    .install {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 0.8fr);
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 0;
+      overflow: hidden;
+    }
+    .install > div { background: var(--bg); padding: clamp(22px, 3vw, 34px); }
+    .install-spec { position: relative; }
+    .install-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .install-kicker {
+      font: 500 8.5px/1.4 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+    }
+    .rows { margin: 0; }
+    .rows div {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr);
+      gap: 16px;
+      padding: 11px 0;
+      border-top: 1px solid var(--line);
+    }
+    .rows div:first-child { border-top: 0; padding-top: 0; }
+    .rows dt {
+      font: 500 10px/1.4 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .rows dd { margin: 0; font: 400 12px/1.5 var(--mono); color: var(--fg); overflow-wrap: anywhere; }
+    .rows dd.dim { color: var(--dim); }
+    .install .btn { width: 100%; margin-bottom: 22px; }
+    .install .btn.install-starter { margin-top: -12px; }
+    .install .install-phone-only { display: none; }
+    /* Phones only get the starter, as the primary button; the full APK is for
+       adb from a computer. */
+    @media (hover: none) and (pointer: coarse) {
+      .install .install-full,
+      .install .install-pc-only { display: none; }
+      .install .install-phone-only { display: block; }
+      .install .btn.install-starter {
+        margin-top: 0;
+        background: var(--red);
+        border-color: var(--red);
+        color: var(--on-primary);
+      }
+      .install .btn.install-starter:hover { background: var(--red-hi); border-color: var(--red-hi); }
+    }
+    .steps li em { font-style: normal; color: var(--fg); font-weight: 500; }
+    .install-media {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: var(--art-bg);
+    }
+    .install-frame {
+      position: relative;
+      height: 420px;
+      aspect-ratio: 9 / 19.5;
+      max-width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      background: var(--art-bg);
+    }
+    .install-frame video { width: 100%; height: 100%; object-fit: cover; }
+    .install-media-cap {
+      font: 500 8px/1.4 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-align: center;
+      color: var(--art-dim);
+    }
+    .steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+    .steps li {
+      counter-increment: s;
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr);
+      gap: 12px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+    .steps li:first-child { border-top: 0; padding-top: 0; }
+    .steps li::before {
+      content: counter(s, decimal-leading-zero);
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-2);
+      font: 500 8px/1 var(--mono);
+      color: var(--accent-ink);
+    }
+    .steps b { color: var(--fg); font-weight: 500; }
+    .cmd {
+      margin-top: 14px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      background: var(--panel-2);
+      font: 400 11px/1.6 var(--mono);
+      color: var(--muted);
+      user-select: all;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .cmd::before { content: '$ '; color: var(--red); }
+    /* Several commands in one box: one per line, each with its own prompt. A long
+       line scrolls under the site scrollbar. */
+    .cmd.cmd-lines::before { content: none; }
+    /* pre: a checksum line's two spaces survive on screen and in a manual copy. */
+    .cmd.cmd-lines span { display: block; white-space: pre; }
+    .cmd.cmd-lines span::before { content: '$ '; color: var(--red); }
+    .cmd.cmd-ps span::before { content: 'PS> '; }
+    /* The copy button sits outside the scrolling box, so it stays put in the top
+       right while a long line scrolls under it. */
+    .cmd-wrap { position: relative; margin-top: 14px; }
+    .cmd-wrap .cmd { margin-top: 0; padding-right: 64px; }
+    .cmd-copy {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      background: var(--panel);
+      font: 500 9px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .cmd-copy:hover { color: var(--fg); border-color: var(--fg); }
+    /* Computer install: the note and the OS tabs on one row, then the box for
+       the picked OS. */
+    .install-pc-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      margin-top: 14px;
+    }
+    .install-pc-head .note { margin-top: 0; }
+    .install-pc .cmd-wrap { margin-top: 10px; }
+    .os-tabs { display: flex; }
+    .os-tab {
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      font: 500 9px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+      cursor: pointer;
+    }
+    .os-tab + .os-tab { margin-left: -1px; }
+    .os-tab:hover { color: var(--fg); }
+    .os-tab[aria-pressed='true'] {
+      position: relative;
+      border-color: var(--line-2);
+      background: var(--panel-2);
+      color: var(--fg);
+    }
+    .note {
+      margin-top: 14px;
+      font: 400 10px/1.7 var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    /* The plate's code on a computer: the QR, with what scanning it does. On
+       the command box's panel, edged like it; the dots' ink is per theme
+       (--qr-ink, styles/base.css). */
+    .install-qr {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      margin-top: 26px;
+    }
+    .install-qr svg {
+      flex: none;
+      width: 120px;
+      height: 120px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      fill: var(--qr-ink);
+    }
+    .install-qr-cap {
+      margin: 0;
+      font: 400 10px/1.7 var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-wrap: balance;
+      color: var(--faint);
+    }
+    .install-qr-cap b { display: block; font-weight: 500; color: var(--fg); }
+
+    @media (max-width: 1180px) {
+      .install { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .install-media { grid-column: 1 / -1; }
+    }
+    @media (max-width: 980px) {
+      .install { grid-template-columns: minmax(0, 1fr); }
+      .install-media { grid-column: auto; }
+      /* One column: the button and steps first and the data plate last, so the
+         nav's Download APK lands on a button, not a spec sheet. */
+      .install-steps { order: -1; }
+      .install-spec { order: 1; }
+    }
+    @media (max-width: 760px) {
+      .rows div { grid-template-columns: 104px minmax(0, 1fr); }
+    }
+</style>

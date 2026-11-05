@@ -45,3 +45,78 @@ import LogoMark from './LogoMark.astro';
     </a>
   </div>
 </header>
+
+<style is:global>
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    height: 58px;
+    padding: 0 var(--pad);
+    border-bottom: 1px solid var(--line);
+    background: var(--nav-bg);
+    backdrop-filter: blur(10px);
+  }
+
+  .nav-doc {
+    margin-left: 2px;
+    padding-left: 12px;
+    border-left: 1px solid var(--line-2);
+    font: 500 8px/1.4 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .nav-links { display: flex; gap: 24px; margin-left: auto; }
+  .nav-links a {
+    font: 500 11px/1 var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .nav-links a:hover { color: var(--red); }
+  .nav-cta { display: flex; align-items: center; gap: 10px; margin-left: 4px; }
+  .nav .btn { height: 34px; padding: 0 13px; font-size: 10px; }
+  .theme-toggle {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--line-2);
+    border-radius: 0;
+    background: var(--bg);
+    color: var(--fg);
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--accent);
+    transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  }
+  .theme-toggle:hover {
+    background: var(--ghost-hover);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--accent);
+  }
+  .theme-toggle svg { display: none; }
+  .theme-toggle .sun { display: block; }
+  [data-theme='light'] .theme-toggle .sun { display: none; }
+  [data-theme='light'] .theme-toggle .moon { display: block; }
+  .nav .btn-primary:hover svg { transform: translateY(1px); }
+
+  @media (max-width: 1100px) {
+    .nav-doc { display: none; }
+  }
+  @media (max-width: 760px) {
+    .nav-links { display: none; }
+    .nav { gap: 12px; }
+    .nav-cta { margin-left: auto; }
+    .nav-cta .ghost { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-toggle { transition: none; }
+    .theme-toggle:hover { transform: none; }
+  }
+</style>

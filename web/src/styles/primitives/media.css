@@ -1,0 +1,19 @@
+/* Loader base + keyframes are generated from theme/logo.json in Base.astro. */
+
+/* Media loading overlay: hidden until Base.astro sees loadstart/waiting. */
+.media-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  background: var(--art-bg);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s, visibility 0.15s;
+}
+[data-media][data-loading='true'] > .media-loader {
+  opacity: 1;
+  visibility: visible;
+}

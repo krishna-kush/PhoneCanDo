@@ -32,3 +32,61 @@ import { demos } from "../../data/demos";
     </p>
     <span class="ticks-bottom" aria-hidden="true"></span>
 </section>
+
+<style is:global>
+    /* Demos heading doubles as the slogan: heading scale, red italic, marker on the wordmark. */
+    .sec-head h2.slogan {
+      font-style: italic;
+      color: var(--red);
+    }
+    .sec-head .slogan span {
+      position: relative;
+      isolation: isolate;
+      padding: 0.02em 0.2em;
+      color: var(--on-primary);
+    }
+    /* The marker is a hand-swiped stroke: leaning, tapered, and a little over the word. */
+    .sec-head .slogan span::before {
+      content: '';
+      position: absolute;
+      inset: -0.04em -0.22em;
+      z-index: -1;
+      background: var(--red);
+      clip-path: polygon(3% 14%, 100% 0, 97% 84%, 0 100%);
+    }
+
+    /* demo gallery: plates */
+    .demos {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 0;
+      overflow: hidden;
+    }
+    .swipe-hint { display: none; }
+
+    @media (max-width: 760px) {
+      .demos {
+        display: flex;
+        gap: 10px;
+        grid-template-columns: none;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        background: none;
+        border: 0;
+        border-radius: 0;
+        margin-inline: calc(-1 * var(--pad));
+        padding: 0 var(--pad) 6px;
+      }
+      .swipe-hint {
+        display: block;
+        margin-top: 12px;
+        font: 500 8.5px/1 var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+    }
+</style>

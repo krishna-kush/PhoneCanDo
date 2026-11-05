@@ -27,13 +27,17 @@ Astro is pinned to 7.3.0 (7.4 needs Node ≥ 22.23.4); bump the two together.
 | Section copy · order | `src/components/sections/*.astro` · `src/pages/index.astro` |
 | Demo cards | `src/data/demos.ts` |
 | Colours (shared with the app) | `theme/tokens.json` |
-| Type, spacing, layout | `src/styles/global.css` |
+| A section's or component's look | the `<style is:global>` at the bottom of its `.astro` file |
+| Shared pieces: vars, reset, labels, buttons, section scaffolding | `src/styles/` (`global.css` lists them) |
 | Logo, favicons, loader | `theme/logo.json`; `pnpm logos` (repo root) redraws the icon files |
 | Social card | `public/og.png`, hand-built; redo it when the headline changes |
 
 A production build fails if `release.json` belongs to another version than
-`app/app.json`. `global.css` is one file of named blocks, each owning its
-`@media` rules: `grep -n '^/\* ---------- ' src/styles/global.css`.
+`app/app.json`. CSS lives with what it styles: a rule two or more components
+use goes in `src/styles/primitives/`, anything else in its component, each
+file owning its `@media` rules. The header of `src/styles/global.css` has the
+cascade order (layers, set inline in `Base.astro`) and why component styles
+are `is:global`.
 
 ## Look
 

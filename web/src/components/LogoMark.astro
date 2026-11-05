@@ -18,3 +18,25 @@ const offset =
   class="pc-mark"
   style={`--pc-s:${size}${unit};--pc-o:${offset}${unit}`}
   aria-hidden="true"></span>
+
+<style is:global>
+  /* Brand mark: red square + hard amber shadow, the button language at logo
+     scale. The wrapper reserves the shadow footprint so gaps stay honest. */
+  .pc-mark {
+    position: relative;
+    display: inline-block;
+    flex: none;
+    width: calc(var(--pc-s) + var(--pc-o));
+    height: calc(var(--pc-s) + var(--pc-o));
+  }
+  .pc-mark::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--pc-s);
+    height: var(--pc-s);
+    background: var(--red);
+    box-shadow: var(--pc-o) var(--pc-o) 0 var(--accent);
+  }
+</style>

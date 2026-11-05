@@ -194,3 +194,436 @@ import { site } from "../../data/site";
     </div>
     <span class="ticks-bottom" aria-hidden="true"></span>
 </section>
+
+<style is:global>
+    .linux { background-color: var(--panel); }
+    .linux-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+      gap: clamp(28px, 5vw, 64px);
+      align-items: center;
+    }
+    .linux .fig-label { margin-bottom: 0; }
+    .linux h2 {
+      margin-top: 14px;
+      font: 400 clamp(38px, 4.8vw, 58px)/0.98 var(--serif);
+      letter-spacing: -0.02em;
+    }
+    .linux p {
+      margin-top: 14px;
+      max-width: 48ch;
+      font-size: 15px;
+      color: var(--muted);
+    }
+    .linux p em { font-style: italic; color: var(--fg); }
+    .linux .fine {
+      margin-top: 18px;
+      font: 400 10px/1.7 var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .linux-cta { margin-top: 18px; }
+    .linux-cta .btn:hover svg { transform: translate(1px, -1px); }
+
+    @media (max-width: 980px) {
+      .linux-grid { grid-template-columns: 1fr; }
+    }
+
+    /* root passports: one book per agent, zero shared pages */
+    .passport-plate {
+      position: relative;
+      margin: 0;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+    }
+    /* The toggle is a real checkbox: keyboard and screen readers get the experiment. */
+    .visa-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      border: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .passport-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      font: 500 10px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .passport-bar-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      color: var(--dim);
+    }
+    .passport-bar-state i {
+      width: 6px;
+      height: 6px;
+      flex: none;
+      background: var(--red);
+      animation: blink 2.4s steps(1) infinite;
+    }
+    .passport-books {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+    }
+    .passport { padding: 10px; background: var(--panel-2); }
+    .passport-page {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      height: 100%;
+      padding: 12px 13px 10px;
+      border: 1px solid var(--line-2);
+      background: var(--panel);
+      box-shadow: inset 0 0 0 2px var(--panel), inset 0 0 0 3px var(--line);
+      overflow: hidden;
+    }
+    /* Security guilloche; the paper is a document, not a panel. */
+    .passport-page::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-radial-gradient(
+        circle at 50% 38%,
+        transparent 0 10px,
+        var(--accent-line) 10px 11px
+      );
+      opacity: 0.06;
+      pointer-events: none;
+    }
+    .passport-page > * { position: relative; }
+    .passport-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid var(--line);
+    }
+    .passport-title {
+      font: 400 16px/1 var(--serif);
+      letter-spacing: -0.01em;
+      color: var(--fg);
+    }
+    .passport-title span {
+      font: 500 6.5px/1.2 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+    }
+    .passport-serial {
+      font: 500 8.5px/1 var(--mono);
+      letter-spacing: 0.1em;
+      color: var(--red);
+      white-space: nowrap;
+    }
+    .passport-id {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr);
+      gap: 12px;
+    }
+    .passport-photo {
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 4px;
+      height: 64px;
+      padding: 0 3px;
+      border: 1px solid var(--line-2);
+      background: var(--panel-2);
+    }
+    .passport-photo span { font: 400 30px/0.75 var(--serif); color: var(--fg); }
+    .passport-photo small {
+      font: 500 6px/1.35 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      text-align: center;
+    }
+    .passport-fields { display: grid; gap: 5px; align-content: center; margin: 0; }
+    .passport-fields div {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 8px;
+      align-items: baseline;
+    }
+    .passport-fields dt {
+      font: 500 6.5px/1.3 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .passport-fields dd { margin: 0; font: 400 10px/1.3 var(--mono); color: var(--fg); }
+    .passport-entries-label {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      font: 500 6.5px/1.2 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .passport-entries-label span { color: var(--dim); letter-spacing: 0.08em; }
+    .passport-stamps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .passport-stamps span {
+      padding: 2px 4px;
+      border: 1px solid var(--red);
+      color: var(--red);
+      font: 500 7.5px/1.2 var(--mono);
+      letter-spacing: 0.05em;
+      opacity: 0.8;
+      transform: rotate(-2deg);
+    }
+    .passport-stamps span:nth-child(2n) {
+      border-color: var(--accent-line);
+      color: var(--accent-ink);
+      transform: rotate(1.5deg);
+    }
+    /* Empty band on purpose: an entry stamp needs a clear page. */
+    .passport-slot {
+      position: relative;
+      display: grid;
+      place-items: center;
+      height: 46px;
+      flex: none;
+      border: 1px dashed var(--line-2);
+    }
+    .slot-hint,
+    .slot-still {
+      font: 500 7px/1.2 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .slot-still { display: none; color: var(--accent-ink); }
+    .visa {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      padding: 4px 8px 5px;
+      border: 1px solid var(--red);
+      box-shadow: inset 0 0 0 2px var(--panel), inset 0 0 0 3px var(--red);
+      color: var(--red);
+      font: 600 10px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+      white-space: nowrap;
+      transform: translate(-50%, -50%) rotate(-7deg);
+    }
+    .visa em {
+      display: block;
+      margin-top: 3px;
+      font: 500 6px/1 var(--mono);
+      font-style: normal;
+      letter-spacing: 0.12em;
+      color: inherit;
+    }
+    .passport-dpkg {
+      font: 400 8px/1.3 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .passport-dpkg b { font-weight: 500; color: var(--fg); }
+    .pkgs-after,
+    .pkgs-delta { display: none; }
+    .passport-mrz {
+      margin-top: auto;
+      font: 400 8px/1.35 var(--mono);
+      letter-spacing: 0.02em;
+      color: var(--dim);
+      white-space: nowrap;
+    }
+    .passport-mrz span { display: block; }
+    /* Border post between the books: perforation plus a customs seal. */
+    .passport-border {
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+    .passport-border::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: repeating-linear-gradient(
+        to bottom,
+        var(--line-2) 0 3px,
+        transparent 3px 7px
+      );
+    }
+    .passport-seal {
+      position: relative;
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 1px;
+      width: 58px;
+      aspect-ratio: 1;
+      border: 1px solid var(--red);
+      border-radius: 50%;
+      background: var(--panel-2);
+      box-shadow: inset 0 0 0 2px var(--panel-2), inset 0 0 0 3px var(--red);
+      color: var(--red);
+      text-align: center;
+      transform: rotate(-8deg);
+    }
+    .passport-seal b { font: 400 21px/0.85 var(--serif); }
+    .passport-seal span {
+      font: 500 6px/1.1 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .passport-seal em {
+      font: 500 5.5px/1.1 var(--mono);
+      font-style: normal;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    /* The install event is the control; pressing it stamps SBX-01 only. */
+    .passport-install {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 12px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--line);
+      background: var(--panel);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .passport-install:hover { background: var(--panel-2); }
+    .pi-event {
+      font: 500 7.5px/1.4 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .pi-cmd { font: 400 12px/1.4 var(--mono); color: var(--accent-ink); }
+    .pi-act {
+      margin-left: auto;
+      padding: 4px 7px;
+      border: 1px dashed var(--red);
+      color: var(--red);
+      font: 500 7px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transform: rotate(-2deg);
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .passport-install:hover .pi-act {
+      border-style: solid;
+      background: var(--red-soft);
+    }
+    .pi-on { display: none; }
+    .visa-input:focus-visible ~ .passport-install {
+      outline: 2px solid var(--red-hi);
+      outline-offset: -3px;
+    }
+    .visa-input:checked ~ .passport-install .pi-off { display: none; }
+    .visa-input:checked ~ .passport-install .pi-on { display: inline; }
+    .visa-input:checked ~ .passport-install .pi-act {
+      border-style: solid;
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-ink);
+    }
+    .visa-input:checked ~ .passport-books .slot-hint { display: none; }
+    .visa-input:checked ~ .passport-books .passport-b .slot-still { display: block; }
+    .visa-input:checked ~ .passport-books .passport-a .passport-slot {
+      border-color: var(--red);
+      background: var(--red-soft);
+    }
+    .visa-input:checked ~ .passport-books .passport-a .visa {
+      display: block;
+      animation: stamp-press 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.2) forwards;
+    }
+    .visa-input:checked ~ .passport-books .passport-a .pkgs-before { display: none; }
+    .visa-input:checked ~ .passport-books .passport-a .pkgs-after {
+      display: inline;
+      color: var(--accent-ink);
+    }
+    .visa-input:checked ~ .passport-books .passport-a .pkgs-delta {
+      display: inline;
+      margin-left: 3px;
+      color: var(--red);
+    }
+    @keyframes stamp-press {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(-16deg) scale(1.9);
+      }
+      60% {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(-7deg) scale(0.96);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(-7deg) scale(1);
+      }
+    }
+    .passport-foot {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 7px 14px;
+      border-top: 1px solid var(--line);
+      font: 500 9px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .passport-foot .right { margin-left: auto; color: var(--dim); }
+
+    @media (hover: hover) {
+      .passport { transition: transform 0.15s, box-shadow 0.15s; }
+      .passport:hover {
+        position: relative;
+        z-index: 1;
+        transform: translate(-2px, -2px);
+        box-shadow: 4px 4px 0 var(--accent);
+      }
+    }
+    @media (max-width: 560px) {
+      .passport-books { grid-template-columns: 1fr; }
+      .passport-border { height: 40px; }
+      .passport-border::before {
+        top: 50%;
+        bottom: auto;
+        left: 0;
+        right: 0;
+        width: auto;
+        height: 1px;
+        background: repeating-linear-gradient(
+          to right,
+          var(--line-2) 0 3px,
+          transparent 3px 7px
+        );
+      }
+      .passport-seal { width: 54px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .passport-bar-state i { animation: none; }
+      .visa-input:checked ~ .passport-books .passport-a .visa { animation: none; }
+    }
+</style>

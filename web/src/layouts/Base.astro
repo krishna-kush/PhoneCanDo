@@ -20,9 +20,14 @@ const {
 } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 
+// Cascade layer order for src/styles (see global.css). Inline and first in
+// <head>, so it is declared before any bundled CSS and the minifier never
+// touches it. Component <style>s stay unlayered and beat both.
+const layerOrder = "@layer base, primitives;";
+
 // theme/tokens.json is the single source for the site and the app. Roles map
-// onto the var names global.css already uses, so the stylesheet needs no
-// renames when a token changes.
+// onto the var names the stylesheets already use, so they need no renames
+// when a token changes.
 const VAR_NAMES: [keyof typeof tokens.dark, string][] = [
     ["bg", "bg"],
     ["panel", "panel"],
@@ -70,6 +75,7 @@ const themeInit = `(() => {
         <link rel="canonical" href={canonical} />
         <meta name="theme-color" content={tokens.dark.bg} />
         {noindex ? <meta name="robots" content="noindex" /> : null}
+        <style is:inline set:html={layerOrder} />
         <style is:inline set:html={themeCss} />
         <style is:inline set:html={logoLoaderCss} />
         <script is:inline set:html={themeInit} />
