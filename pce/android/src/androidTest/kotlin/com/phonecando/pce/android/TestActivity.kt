@@ -122,9 +122,9 @@ class TestActivity : Activity() {
         val backend = A11yBackend(
             serviceProvider = A11yServiceProvider { TestAccessibilityService.instance },
             activityNameProvider = A11yActivityNameProvider { pkg ->
-                TestAccessibilityService.instance?.activityName?.takeIf {
-                    pkg != null && it.startsWith(pkg)
-                }
+                TestAccessibilityService.instance
+                    ?.takeIf { pkg != null && it.activityPackage == pkg }
+                    ?.activityName
             },
         )
         val pce = Pce.create(backend)

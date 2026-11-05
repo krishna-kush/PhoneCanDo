@@ -467,6 +467,13 @@ class A11yBackend @JvmOverloads constructor(
 
     private fun Rect.toBounds() = Bounds(left, top, right, bottom)
 
+    // Android reports inverted rects for nodes mid-layout or clipped away
+    // (seen on Android 16 right after an activity starts: top=190, bottom=0).
+    // A snapshot node must have valid bounds; collapse those to an empty rect
+    // at the same origin, which no point or selector hit-test can match.
+    private fun Rect.toSnapshotBounds() =
+        Bounds(left, top, maxOf(left, right), maxOf(top, bottom))
+
     private fun AccessibilityNodeInfo.findScrollable(): AccessibilityNodeInfo? {
         if (isScrollable) return this
         for (index in 0 until childCount) {
@@ -493,7 +500,7 @@ class A11yBackend @JvmOverloads constructor(
             viewId = viewIdResourceName,
             text = text?.toString(),
             contentDescription = contentDescription?.toString(),
-            bounds = rect.toBounds(),
+            bounds = rect.toSnapshotBounds(),
             flags = buildSet {
                 if (isClickable) add(NodeFlag.CLICKABLE)
                 if (isLongClickable) add(NodeFlag.LONG_CLICKABLE)

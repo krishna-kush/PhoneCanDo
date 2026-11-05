@@ -81,9 +81,10 @@ class ImeBackend(
             if (!connection.performContextMenuAction(android.R.id.selectAll)) {
                 return error(ErrorCode.UNSUPPORTED_ACTION, "Input connection rejected select-all")
             }
-            // shortcut: clear is select-all + Delete; upgrade if a field rejects select-all.
-            connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
-            connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+            // shortcut: clear is select-all, then commitText replaces the selection;
+            // upgrade if a field rejects select-all. No Delete key here: key events
+            // reach the app on another queue than commitText and could land after
+            // the new text, eating its last character.
         }
         return if (connection.commitText(action.text, 1)) {
             ok()
