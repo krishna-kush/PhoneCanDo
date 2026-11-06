@@ -48,6 +48,17 @@ export function siteDailyCases(make: Make, opts: StoreContractOptions): void {
     );
 
     it(
+      'a download written with { rollup: false } adds nothing to site_daily (the download op: not a person)',
+      using(make, async (s) => {
+        value(await s.store.writeDownloadPoint(downloadPoint({ uaClass: 'bot' }), { rollup: false }), 'writeDownloadPoint (no rollup)');
+        assert.deepEqual(await listed(s.store), []);
+        await download(s.store);
+        assert.deepEqual(await listed(s.store), [daily('2026-11-01', 'download', 'lite', 'IN')]);
+        await expectEmpty(s, ['site_daily']);
+      }),
+    );
+
+    it(
       'keeps a separate row per day, kind, key and country; other point fields never split a row',
       using(make, async (s) => {
         await view(s.store, { day: '2026-11-01', path: '/' });

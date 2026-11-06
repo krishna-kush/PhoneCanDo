@@ -62,7 +62,7 @@ async function postRaw(ctx: FakeCtx<MemoryStore>, text: string): Promise<{ statu
     method: 'POST',
     path: '/v1/report',
     query: {},
-    headers: { userAgent: null, referer: null, origin: null, host: null, contentType: 'application/json' },
+    headers: { userAgent: null, referer: null, origin: null, host: null, contentType: 'application/json', secFetchMode: null },
     contentLength: bytes.byteLength,
     readBody: async (limit) => (bytes.byteLength > limit ? { ok: false, reason: 'too_large' } : { ok: true, bytes }),
   };

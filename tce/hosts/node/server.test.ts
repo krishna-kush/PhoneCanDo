@@ -134,7 +134,7 @@ describe('node host over sqlite :memory:', () => {
 
   it('redirects /v1/dl/lite to the GitHub asset of the current release (GET and HEAD)', async () => {
     for (const method of ['GET', 'HEAD']) {
-      const reply = await call(port, method, '/v1/dl/lite');
+      const reply = await call(port, method, '/v1/dl/lite', { headers: { 'sec-fetch-mode': 'navigate' } });
       assert.equal(reply.status, 302, `${method}: ${reply.text}`);
       const location = String(reply.headers.location);
       assert.ok(

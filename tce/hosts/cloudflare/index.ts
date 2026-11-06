@@ -89,6 +89,7 @@ function hostRequest(request: Request, url: URL): HostRequest {
       origin: h.get('origin'),
       host: h.get('host'),
       contentType: h.get('content-type'),
+      secFetchMode: h.get('sec-fetch-mode'),
     },
     contentLength: parseContentLength(h.get('content-length')),
     readBody: (limit) => readCapped(request.body, limit),

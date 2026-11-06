@@ -11,8 +11,14 @@ function setup(store: MemoryStore = createMemoryStore()): FakeCtx<MemoryStore> {
   return fakeCtx({ store });
 }
 
+/** A browser following a download link (Sec-Fetch-Mode: navigate) unless `over.headers` says otherwise. */
 function download(ctx: FakeCtx<MemoryStore>, channel: string, over: HttpRequestOverrides = {}): Promise<TceResult<HttpResponse>> {
-  return callHttp(downloadOp, httpRequest({ method: 'GET', path: `/v1/dl/${channel}`, params: { channel }, ...over }), ctx);
+  const { headers, ...rest } = over;
+  return callHttp(
+    downloadOp,
+    httpRequest({ method: 'GET', path: `/v1/dl/${channel}`, params: { channel }, ...rest, headers: { secFetchMode: 'navigate', ...headers } }),
+    ctx,
+  );
 }
 
 const LITE = 'https://github.com/krishna-kush/PhoneCanDo/releases/download/v0.1.2/phonecando-0.1.2-lite-arm64.apk';
@@ -58,6 +64,28 @@ describe('download', () => {
         { day: '2026-11-02', kind: 'download', key: 'lite', country: 'IN', count: 1 },
       ],
     });
+  });
+
+  it('counts only a browser navigation: anything else redirects and is kept as a bot point', async () => {
+    const ctx = setup();
+    const cases: Array<HttpRequestOverrides['headers']> = [
+      { secFetchMode: null, userAgent: 'curl/8.5.0' }, // curl, scripts
+      { secFetchMode: null, userAgent: UA.desktop }, // a crawler faking a browser user agent
+      { secFetchMode: 'cors', userAgent: UA.desktop }, // fetch() from a page
+      { secFetchMode: 'no-cors', userAgent: UA.android },
+      { secFetchMode: 'navigate', userAgent: UA.bot }, // a crawler that names itself
+    ];
+    for (const headers of cases) {
+      const r = await download(ctx, 'lite', { headers });
+      assert.deepEqual(r, { ok: true, value: { status: 302, location: LITE, headers: { 'Cache-Control': 'no-store' } } });
+    }
+    assert.deepEqual(ctx.store.downloadPoints.map((p) => p.uaClass), ['bot', 'bot', 'bot', 'bot', 'bot']);
+    assert.deepEqual(ctx.store.tables.site_daily, []);
+
+    // The same request from a person's browser counts.
+    await download(ctx, 'lite', { headers: { userAgent: UA.desktop } });
+    assert.equal(ctx.store.downloadPoints.at(-1)!.uaClass, 'desktop');
+    assert.deepEqual(ctx.store.tables.site_daily, [{ day: '2026-11-01', kind: 'download', key: 'lite', country: 'IN', count: 1 }]);
   });
 
   it('redirects HEAD requests without counting them', async () => {

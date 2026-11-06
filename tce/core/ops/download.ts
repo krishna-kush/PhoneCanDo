@@ -1,6 +1,13 @@
 // GET /v1/dl/:channel: count an APK download, then redirect to the GitHub release
 // asset of the current version. The redirect never waits on a failed count,
 // and a caller over the host's rate limit is redirected without being counted.
+//
+// Only a person's browser counts in site_daily: a navigation (Sec-Fetch-Mode:
+// navigate, which browsers send when someone clicks a link or opens a URL, a
+// scanned QR code included) from a client that does not name itself a bot.
+// Anything else (curl, scripts, crawlers faking a browser user agent, which
+// send no Sec-Fetch headers) still gets the redirect and is kept in the
+// analytics point as client 'bot', so bot volume stays visible.
 
 import type { HttpOp, HttpResponse, RequestCtx } from '../op.ts';
 import { writePointSafely } from '../points.ts';
@@ -24,6 +31,8 @@ export interface DownloadInput {
    * host's rate limit: both redirect but are not counted as a download.
    */
   countable: boolean;
+  /** Sec-Fetch-Mode was 'navigate': a browser followed a link or opened the URL. */
+  navigation: boolean;
 }
 
 /** GitHub release asset URL of the arm64 APK for `channel` at `version`. */
@@ -50,12 +59,15 @@ export const downloadOp: HttpOp<DownloadInput> = {
       referer: req.headers.referer,
       host: req.headers.host,
       countable: req.method !== 'HEAD' && !req.limited,
+      navigation: req.headers.secFetchMode === 'navigate',
     });
   },
 
   async run(input, ctx: RequestCtx): Promise<TceResult<HttpResponse>> {
     const { repo, version } = ctx.config.release;
     if (input.countable) {
+      const client = uaClass(input.userAgent);
+      const person = input.navigation && client !== 'bot';
       const point: DownloadPoint = {
         day: utcDay(ctx.clock.now()),
         channel: input.channel,
@@ -63,9 +75,9 @@ export const downloadOp: HttpOp<DownloadInput> = {
         country: ctx.edge.country,
         androidMajor: androidMajor(input.userAgent),
         refHost: refHost(input.referer, input.host),
-        uaClass: uaClass(input.userAgent),
+        uaClass: person ? client : 'bot',
       };
-      await writePointSafely(ctx.log, 'download', () => ctx.store.writeDownloadPoint(point));
+      await writePointSafely(ctx.log, 'download', () => ctx.store.writeDownloadPoint(point, { rollup: person }));
     }
     // no-store: the target moves with every release, so a cached redirect would serve an old APK.
     return ok({ status: 302, location: apkUrl(repo, version, input.channel), headers: { 'Cache-Control': 'no-store' } });

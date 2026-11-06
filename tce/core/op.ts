@@ -78,6 +78,12 @@ export interface HttpRequest {
     origin: string | null;
     host: string | null;
     contentType: string | null;
+    /**
+     * Sec-Fetch-Mode: 'navigate' when a browser follows a link or opens a URL
+     * (Chrome 76+, Firefox 90+, Safari 16.4+); null from anything that is not
+     * a browser, such as the app's own requests, curl or most crawlers.
+     */
+    secFetchMode: string | null;
   };
   /** Parsed JSON body, or undefined when there was none. */
   body: unknown;

@@ -56,7 +56,7 @@ function post(ctx: FakeCtx<MemoryStore>, path: string, body: unknown): Promise<{
     method: 'POST',
     path,
     query: {},
-    headers: { userAgent: null, referer: null, origin: null, host: null, contentType: 'application/json' },
+    headers: { userAgent: null, referer: null, origin: null, host: null, contentType: 'application/json', secFetchMode: null },
     contentLength: bytes.byteLength,
     readBody: async () => ({ ok: true, bytes }),
   };

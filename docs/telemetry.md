@@ -294,8 +294,13 @@ redirect to that version's APK on GitHub. Stored in Analytics Engine for about
 agent, the referrer's host and the user-agent class. Also counted, for good,
 in `site_daily`: +1 on the row (UTC day, `download`, channel, country). No ID,
 no IP. A `HEAD` request or one over the rate limit still redirects but is not
-counted. The computer commands link GitHub directly. `./manage stats --d1`
-prints the `site_daily` summaries.
+counted. Only a person's browser counts in `site_daily`: a navigation (the
+`Sec-Fetch-Mode: navigate` header browsers send when someone clicks a link or
+opens a URL, a scanned QR code included; Chrome 76+, Firefox 90+, Safari
+16.4+) from a client that does not name itself a bot. Anything else (curl,
+scripts, crawlers, and browsers older than those) still redirects and is kept
+in Analytics Engine with the user-agent class `bot`. The computer commands
+link GitHub directly. `./manage data` shows both.
 
 ## Capacity (`GET /v1/health`)
 

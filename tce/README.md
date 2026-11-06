@@ -38,7 +38,7 @@ keeps all its paths for pages. `pnpm -C tce cf:dev` sets `API_HOSTS` to
 | `report` | `POST /v1/report` | a user's Send report → `reports`; also upserts the phone's `devices` row (pins its verifier) |
 | `forget` | `POST /v1/forget` | Delete my data: every row of that device |
 | `hit` | `POST /v1/hit` | site page view → Analytics Engine, +1 on `site_daily` |
-| `download` | `GET /v1/dl/lite`, `GET /v1/dl/full` | count (Analytics Engine, +1 on `site_daily`), then 302 to the current version's GitHub APK |
+| `download` | `GET /v1/dl/lite`, `GET /v1/dl/full` | count (Analytics Engine; +1 on `site_daily` only for a person's browser: `Sec-Fetch-Mode: navigate` and no bot user agent, else the point's class is `bot`), then 302 to the current version's GitHub APK |
 | `health` | `GET /v1/health` | public capacity facts: database size, limit, ratios, `ingestPaused`, the retention switch and the oldest kept row's age per table (`HealthResponse` in `core/schema/wire.ts`); no identity, never cached |
 | `github_daily` | `17 3 * * *` | GitHub's release and repo counters → D1 |
 | `retention` | not scheduled (would be `*/15 * * * *`) | **currently off**; when on: reports > 90 days deleted first, then events > 90 days, errors > 180 days ([Retention](#retention)) |

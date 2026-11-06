@@ -37,7 +37,7 @@ function server(store: MemoryStore, clock: FakeClock, limited: () => boolean = (
           method: 'POST',
           path: new URL(url).pathname,
           query: {},
-          headers: { userAgent: 'okhttp/4', referer: null, origin: null, host: 't.example', contentType: 'application/json' },
+          headers: { userAgent: 'okhttp/4', referer: null, origin: null, host: 't.example', contentType: 'application/json', secFetchMode: null },
           contentLength: bytes.length,
           readBody: async (limit) => (bytes.length > limit ? { ok: false, reason: 'too_large' } : { ok: true, bytes }),
         },

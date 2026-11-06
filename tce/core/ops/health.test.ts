@@ -22,7 +22,7 @@ function hostGet(method = 'GET'): HostRequest {
     method,
     path: '/v1/health',
     query: {},
-    headers: { userAgent: 'check-limits', referer: null, origin: null, host: 'phonecando.app', contentType: null },
+    headers: { userAgent: 'check-limits', referer: null, origin: null, host: 'phonecando.app', contentType: null, secFetchMode: null },
     contentLength: null,
     readBody: async () => {
       throw new Error('a GET body must never be read');

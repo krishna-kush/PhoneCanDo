@@ -108,7 +108,7 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
   });
 
   it('counts a download (AE point and site_daily) and redirects /v1/dl/lite to the GitHub asset', async () => {
-    const res = await call('/v1/dl/lite', { headers: { referer: 'https://www.google.com/' } });
+    const res = await call('/v1/dl/lite', { headers: { referer: 'https://www.google.com/', 'sec-fetch-mode': 'navigate' } });
     assert.equal(res.status, 302);
     const location = String(res.headers.get('location'));
     assert.match(location, /^https:\/\/github\.com\/krishna-kush\/PhoneCanDo\/releases\/download\/v\d+\.\d+\.\d+\/.+lite.+\.apk$/);
@@ -121,6 +121,21 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
       { kind: 'download', key: 'lite', country: 'IN', count: 1 },
       { kind: 'view', key: '/install', country: 'IN', count: 2 },
     ]);
+  });
+
+  it('redirects a download that is not a browser navigation without counting it, keeping it in Analytics Engine as a bot', async () => {
+    const before = downloads.calls.length;
+    const counted = await rollup();
+    const cases: Array<Record<string, string>> = [{}, { 'sec-fetch-mode': 'cors' }, { 'sec-fetch-mode': 'navigate', 'user-agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' }];
+    for (const headers of cases) {
+      const res = await call('/v1/dl/full', { headers });
+      assert.equal(res.status, 302);
+    }
+    assert.deepEqual(await rollup(), counted);
+    const points = downloads.calls.slice(before);
+    assert.equal(points.length, 3);
+    // blob6 is the client class (stores/cloudflare/analytics.ts).
+    assert.deepEqual(points.map((p) => p?.blobs?.[5]), ['bot', 'bot', 'bot']);
   });
 
   it('answers GET /v1/health with the database size from D1, the capacity ratios and no caching', async () => {

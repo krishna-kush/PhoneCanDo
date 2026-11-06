@@ -8,7 +8,7 @@
 import { err, ok } from '../../core/result.ts';
 import type { TceResult } from '../../core/result.ts';
 import type { Logger } from '../../core/op.ts';
-import type { BatchCounts, BatchWrite, Store, StoreUsage } from '../../core/store.ts';
+import type { BatchCounts, BatchWrite, PointOptions, Store, StoreUsage } from '../../core/store.ts';
 import type {
   ArchivableTable,
   ArchiveRowMap,
@@ -250,14 +250,15 @@ export function createSqlStore(
 
   /**
    * A point's two writes (Store.writePagePoint): hand it to the points sink,
-   * then add it to the site_daily rollup. A sink failure is logged and never
-   * stops the rollup, so the answer is the rollup's: ok when it landed or was
-   * skipped by the storage gate, `unavailable` when the driver failed.
+   * then add it to the site_daily rollup (`rollup` null: sink only). A sink
+   * failure is logged and never stops the rollup, so the answer is the
+   * rollup's: ok when it landed or was skipped by the storage gate,
+   * `unavailable` when the driver failed.
    */
   async function writePoint(
     op: string,
     toSink: (sink: PointsSink) => void,
-    rollup: () => SiteDailyRow,
+    rollup: (() => SiteDailyRow) | null,
   ): Promise<TceResult<void>> {
     if (sinks.points) {
       try {
@@ -266,6 +267,7 @@ export function createSqlStore(
         log.error(`tce sql store: ${op} analytics sink failed; rollup still written`, { op, error: describe(e) });
       }
     }
+    if (!rollup) return ok(undefined);
     return guard(op, async () => {
       const row = rollup();
       if (paused()) {
@@ -363,8 +365,8 @@ export function createSqlStore(
       return writePoint('writePagePoint', (sink) => sink.page(point), () => pageRollup(point));
     },
 
-    writeDownloadPoint(point: DownloadPoint): Promise<TceResult<void>> {
-      return writePoint('writeDownloadPoint', (sink) => sink.download(point), () => downloadRollup(point));
+    writeDownloadPoint(point: DownloadPoint, options: PointOptions = {}): Promise<TceResult<void>> {
+      return writePoint('writeDownloadPoint', (sink) => sink.download(point), options.rollup === false ? null : () => downloadRollup(point));
     },
 
     listSiteDaily(fromDay: string, toDay: string): Promise<TceResult<SiteDailyRow[]>> {

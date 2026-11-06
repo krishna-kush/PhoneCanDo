@@ -25,7 +25,7 @@ import type {
   SiteDailyRow,
   TableName,
 } from '../../core/schema/rows.ts';
-import type { BatchCounts, BatchWrite, Store, StoreUsage } from '../../core/store.ts';
+import type { BatchCounts, BatchWrite, PointOptions, Store, StoreUsage } from '../../core/store.ts';
 
 /** Row type of every table. */
 export interface TableRows {
@@ -218,10 +218,11 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
    * when it breaks a NOT NULL column), keep the detail unless the sink is
    * failing, then add the row's count to site_daily.
    */
-  const writePoint = <P>(point: P, rollup: SiteDailyRow, detail: P[]): TceResult<void> => {
+  const writePoint = <P>(point: P, rollup: SiteDailyRow, detail: P[], counted = true): TceResult<void> => {
     const bad = missingColumn('site_daily', rollup);
     if (bad !== null) return err('internal', `memory store: ${bad} must not be null`, bad);
     if (!opts.failingPointSink) detail.push({ ...point });
+    if (!counted) return ok(undefined);
     const stored = data.site_daily.get(KEY.site_daily(rollup));
     put('site_daily', stored ? { ...stored, count: stored.count + rollup.count } : rollup);
     return ok(undefined);
@@ -340,8 +341,8 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
       return writePoint(point, pageViewRollup(point), pagePoints);
     },
 
-    async writeDownloadPoint(point: DownloadPoint): Promise<TceResult<void>> {
-      return writePoint(point, downloadRollup(point), downloadPoints);
+    async writeDownloadPoint(point: DownloadPoint, options: PointOptions = {}): Promise<TceResult<void>> {
+      return writePoint(point, downloadRollup(point), downloadPoints, options.rollup !== false);
     },
 
     async listSiteDaily(fromDay: string, toDay: string): Promise<TceResult<SiteDailyRow[]>> {

@@ -52,7 +52,7 @@ function hostRequest(over: Partial<HostRequest> & { body?: string | Uint8Array }
     method: 'POST',
     path: '/v1/echo',
     query: {},
-    headers: { userAgent: null, referer: null, origin: null, host: null, contentType: 'application/json' },
+    headers: { userAgent: null, referer: null, origin: null, host: null, contentType: 'application/json', secFetchMode: null },
     contentLength: bytes.byteLength,
     readBody: async (limit): Promise<BodyRead> => {
       reads.push(limit);

@@ -80,6 +80,7 @@ export function createNodeServer(opts: NodeServerOptions): Server {
         origin: header(req, 'origin'),
         host: header(req, 'host'),
         contentType: header(req, 'content-type'),
+        secFetchMode: header(req, 'sec-fetch-mode'),
       },
       contentLength: parseContentLength(header(req, 'content-length')),
       readBody: (limit) => readCapped(req, limit),

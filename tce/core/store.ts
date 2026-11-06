@@ -38,6 +38,12 @@ export interface BatchCounts {
   errors: number;
 }
 
+/** How an analytics point is written. */
+export interface PointOptions {
+  /** Add +1 to the permanent site_daily rollup (default true). */
+  rollup?: boolean;
+}
+
 export interface Store {
   /**
    * Atomic and idempotent: replaying the same write changes nothing.
@@ -82,7 +88,8 @@ export interface Store {
    * subject to the storage guard; an analytics-sink failure never fails it.
    */
   writePagePoint(point: PagePoint): Promise<TceResult<void>>;
-  writeDownloadPoint(point: DownloadPoint): Promise<TceResult<void>>;
+  /** `{ rollup: false }` writes only the analytics point: a download not counted in site_daily (download op). */
+  writeDownloadPoint(point: DownloadPoint, options?: PointOptions): Promise<TceResult<void>>;
 
   /** site_daily rows with day in [fromDay, toDay] (YYYY-MM-DD, inclusive). */
   listSiteDaily(fromDay: string, toDay: string): Promise<TceResult<SiteDailyRow[]>>;

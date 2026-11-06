@@ -390,6 +390,7 @@ export function httpRequest(over: HttpRequestOverrides = {}): HttpRequest {
       origin: null,
       host: SITE_HOST,
       contentType: 'application/json',
+      secFetchMode: null,
       ...headers,
     },
   };
