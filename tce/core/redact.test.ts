@@ -121,7 +121,7 @@ describe('redactPaths', () => {
       '"/sdcardx/My Notes"',
       '`/data/local/tmp/a b`',
       '{"name":"My Documents","path":null}',
-      '"https://phonecando.tarf.app/docs and more"',
+      '"https://phonecando.app/docs and more"',
     ]);
   });
 
@@ -178,7 +178,7 @@ describe('redactPaths', () => {
       'at render (index.android.bundle:1:2048)',
       'java.lang.IllegalStateException: boom',
       'Class.method(File.kt:42)',
-      'see https://phonecando.tarf.app/docs',
+      'see https://phonecando.app/docs',
       '/sdcardx/notes',
       'tmp/data/data/x',
       '/data/apps/x',

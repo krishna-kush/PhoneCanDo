@@ -75,8 +75,8 @@ that version's APK on GitHub). See `tce/README.md`.
 
 Cloudflare Workers Builds builds and deploys it on every push to `prod`; there
 is no local deploy step, and GitHub Actions deploys nothing (`web.yml` and
-`tce.yml` only check). It is live at `https://phonecando.tarf.app`; `site` in
-`astro.config.mjs` is the future domain, used for canonical and OG URLs.
+`tce.yml` only check). It is live at `https://phonecando.app`, the `site` in
+`astro.config.mjs`.
 
 Without the Worker (`pnpm dev`, `pnpm preview`, CI's static server) the pages
 work but the download buttons 404, and the beacon stays silent off https and

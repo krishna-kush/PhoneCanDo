@@ -2,14 +2,14 @@
 import { encode } from "uqr";
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
-import { dlUrl, liveOrigin, site } from "../../data/site";
+import { dlUrl, site } from "../../data/site";
 
-// The plate's code is real: the starter's download route on the live host
-// (absolute, since a phone scans it), so a visitor on a computer can scan the
+// The plate's code is real: the starter's download route on `site` from
+// astro.config.mjs (absolute, since a phone scans it), so a visitor on a computer can scan the
 // download onto the phone. Encoded at build time, so the page ships one SVG
 // path and no script. Each run of dark modules in a row is one rectangle;
 // the 4-module border is the spec's quiet zone.
-const qr = encode(`${liveOrigin}${dlUrl("lite")}`, { ecc: "M", border: 4 });
+const qr = encode(new URL(dlUrl("lite"), Astro.site).href, { ecc: "M", border: 4 });
 const qrPath = qr.data
     .map((row, y) => {
         let d = "";

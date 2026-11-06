@@ -8,8 +8,8 @@ import { cryptoModule } from './crypto';
 import { log } from './log';
 import { envPort, netPort } from './ports';
 
-/** The one production endpoint. phonecando.app is the future domain and is not live yet. */
-export const TELEMETRY_BASE = 'https://phonecando.tarf.app';
+/** The one production endpoint: the Worker that also serves the site. */
+export const TELEMETRY_BASE = 'https://phonecando.app';
 /** What is collected and why, in plain words. */
 export const PRIVACY_URL = `${TELEMETRY_BASE}/privacy/`;
 

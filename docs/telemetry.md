@@ -44,7 +44,7 @@ crashes and engine failures to fix first.
 
 | | |
 |---|---|
-| Endpoint | `https://phonecando.tarf.app` (the Worker that also serves the site; `phonecando.app` later) |
+| Endpoint | `https://phonecando.app` (the Worker that also serves the site) |
 | Code | `tce/` (Telemetry Collection Engine); Cloudflare host in `tce/hosts/cloudflare/` |
 | Storage | Our Cloudflare account: D1 database `phonecando-stats` (the app's rows and the `site_daily` traffic totals) and Analytics Engine datasets `phonecando_pageviews` and `phonecando_downloads`. There is no archive and no backup copy beyond D1's own 7-day Time Travel. Cloudflare processes it on our behalf. |
 | Not stored | Nothing analytics-related is written to the GitHub repo. Nothing is sold or shared. |
@@ -338,7 +338,7 @@ numbers.
 |---|---|---|
 | `GET https://github.com/krishna-kush/PhoneCanDo/releases/latest/download/latest.json` | on launch (full; lite unless muted in Settings → Update) and from Settings → Update; never in play builds | nothing beyond a normal request |
 | The release APK from `github.com` (redirected to GitHub's file host) | only after you tap install (an update, or lite → full) | nothing beyond a normal request |
-| `https://phonecando.tarf.app/api/*` | release builds, while sharing is on; report and delete only when you tap them | the fields on this page |
+| `https://phonecando.app/api/*` | release builds, while sharing is on; report and delete only when you tap them | the fields on this page |
 | `GET https://models.opencode.ai/api.json` (opencode's models.dev catalog) | by the engine (opencode v2.0.26) when it starts, then again every 5 minutes while it runs: the whole catalog (over 2 MB) each time; `OPENCODE_DISABLE_MODELS_FETCH` is not set | a `User-Agent: opencode/<channel>/<version>/<name>` header |
 | The model providers you configure | whenever the agent runs | your prompts and that provider's key, straight from the phone to the provider; PhoneCanDo's server is never in that path |
 | Whatever you or the agent start | the agent's web fetch and web search tools, a `curl` or a package install in the terminal | what that command sends |

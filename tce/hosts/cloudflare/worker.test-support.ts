@@ -19,7 +19,7 @@ import type { Env } from './index.ts';
 const CONFIG_PATH = fileURLToPath(new URL('./wrangler.jsonc', import.meta.url));
 /** Every shared migration (0001, 0002, 0003, ...), in the order wrangler applies them. */
 export const MIGRATIONS = loadMigrations(SHARED_MIGRATIONS_DIR);
-export const BASE = 'https://phonecando.tarf.app';
+export const BASE = 'https://phonecando.app';
 const CF = { country: 'IN', regionCode: 'KA', region: 'Karnataka', asn: 24560, colo: 'BLR', city: 'Bengaluru' };
 /** The client address every request carries unless a test says otherwise. */
 export const CLIENT_IP = '203.0.113.77';

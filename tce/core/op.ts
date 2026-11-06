@@ -40,7 +40,7 @@ export interface TceConfig {
   release: { repo: string; version: string };
   /** Optional fine-grained PAT (Administration: read) for repo traffic. */
   githubToken: string | null;
-  /** Origins allowed to post /api/hit, e.g. https://phonecando.tarf.app. */
+  /** Origins allowed to post /api/hit, e.g. https://phonecando.app. */
   allowedOrigins: readonly string[];
   /**
    * The retention cron deletes expired rows only when true. Off for now

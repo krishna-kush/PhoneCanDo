@@ -84,7 +84,7 @@ export type FakeCtxOptions<S extends Store> = {
 export const DEFAULT_CONFIG: TceConfig = {
   release: { repo: 'krishna-kush/PhoneCanDo', version: '0.1.2' },
   githubToken: null,
-  allowedOrigins: ['https://phonecando.tarf.app'],
+  allowedOrigins: ['https://phonecando.app'],
   retentionEnabled: true,
 };
 

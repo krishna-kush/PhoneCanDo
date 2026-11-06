@@ -84,7 +84,7 @@ export const STRANGER_PROOF = '8aca4f36774f82a67c507cb9c96679482e2cc767f2d385022
 export const STRANGER_VERIFIER = 'a6510c843d0ba18fc7430941efed86256b23d241f80bd6c3b6cf38624adefff5';
 
 /** Production site host and origin. */
-export const SITE_HOST = 'phonecando.tarf.app';
+export const SITE_HOST = 'phonecando.app';
 export const SITE_ORIGIN = `https://${SITE_HOST}`;
 
 /** User-Agent strings, one per UaClass. */

@@ -26,9 +26,6 @@ exclude = [
   '^https?://10\.\d+\.\d+\.\d+',
   # Release assets only exist once a release is published.
   '^https?://github\.com/krishna-kush/PhoneCanDo/releases',
-  # Domain not registered yet (site lives at phonecando.tarf.app);
-  # web/README.md links it. Drop this line once the domain is live.
-  '^https?://(www\.)?phonecando\.app',
   # XML namespace URIs, not documents.
   '^https?://schemas\.android\.com/',
 ]

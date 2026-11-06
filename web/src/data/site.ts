@@ -29,14 +29,6 @@ if (release.version !== version) {
 }
 
 /**
- * The host that serves this site and its Worker routes today. phonecando.app
- * is the future name and stays in astro.config.mjs for canonical and OG URLs;
- * anything a visitor must reach right now (the QR code) uses this. The one
- * place the live host is written on the web side.
- */
-export const liveOrigin = 'https://phonecando.tarf.app';
-
-/**
  * Same-origin download route. The Worker (tce/hosts/cloudflare) counts the
  * download without identifying anyone, then redirects to this version's
  * GitHub asset. The computer commands keep the direct GitHub URL, because

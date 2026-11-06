@@ -51,8 +51,8 @@ describe('androidMajor', () => {
 
 describe('refHost', () => {
   it('keeps the lowercased host of a foreign referrer', () => {
-    assert.equal(refHost('https://News.YCombinator.com/item?id=1', 'phonecando.tarf.app'), 'news.ycombinator.com');
-    assert.equal(refHost('http://localhost:3000/x', 'phonecando.tarf.app'), 'localhost');
+    assert.equal(refHost('https://News.YCombinator.com/item?id=1', 'phonecando.app'), 'news.ycombinator.com');
+    assert.equal(refHost('http://localhost:3000/x', 'phonecando.app'), 'localhost');
   });
 
   it('is null for missing, unparsable and same-host referrers', () => {

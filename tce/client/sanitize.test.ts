@@ -90,7 +90,7 @@ describe('redact', () => {
       'a/b/c',
       'at render (index.android.bundle:1:2048)',
       'Class.method(File.kt:42)',
-      'see https://phonecando.tarf.app/docs',
+      'see https://phonecando.app/docs',
       'a bearer token was missing',
       'sk-learn',
     ]) {

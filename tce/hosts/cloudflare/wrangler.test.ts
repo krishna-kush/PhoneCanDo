@@ -247,7 +247,6 @@ describe('hosts/cloudflare/wrangler.jsonc', () => {
     // Invocation logs would persist request headers (client IP); they must stay off.
     assert.deepEqual(raw.observability, { enabled: true, logs: { enabled: true, invocation_logs: false } });
     assert.deepEqual(parseOriginList(raw.vars['ALLOWED_ORIGINS']), [
-      'https://phonecando.tarf.app',
       'https://phonecando.app',
       'https://phonecando.krishnakumarkush.workers.dev',
     ]);

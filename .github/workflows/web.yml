@@ -338,9 +338,8 @@ jobs:
           exit 1
 
   # Nightly / manual only, non-blocking: other people's servers fail for
-  # reasons unrelated to a change. The canonical/og domain (phonecando.app)
-  # is excluded until it is registered; APK downloads are checked through the
-  # API by release-links instead of fetching 100+ MB files.
+  # reasons unrelated to a change. APK downloads are checked through the API
+  # by release-links instead of fetching 100+ MB files.
   external-links:
     name: External links
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -363,7 +362,6 @@ jobs:
             --accept 200..=299,429
             --root-dir ${{ github.workspace }}/web/dist
             --scheme https --scheme http
-            --exclude '^https?://(www\.)?phonecando\.app'
             --exclude '/releases/download/'
             --exclude '/dl/(lite|full)$'
             -- 'web/dist/**/*.html'

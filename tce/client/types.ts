@@ -64,7 +64,7 @@ export interface EnvPort {
 }
 
 export interface ClientOptions {
-  /** e.g. https://phonecando.tarf.app (no trailing slash). */
+  /** e.g. https://phonecando.app (no trailing slash). */
   baseUrl: string;
   storage: StoragePort;
   net: NetPort;

@@ -1,6 +1,6 @@
 // Worker `phonecando`: static site (web/dist) + telemetry ops + crons.
 // Built and deployed by Cloudflare Workers Builds on push to prod. The custom
-// domain phonecando.tarf.app is managed outside this file: never add routes here.
+// domain phonecando.app is managed outside this file: never add routes here.
 // Paths are relative to this file. hosts/cloudflare/wrangler.test.ts checks
 // crons and run_worker_first against core/ops/registry.ts and every key
 // against wrangler's schema.
@@ -56,7 +56,7 @@
     "logs": { "enabled": true, "invocation_logs": false }
   },
   "vars": {
-    "ALLOWED_ORIGINS": "https://phonecando.tarf.app,https://phonecando.app,https://phonecando.krishnakumarkush.workers.dev",
+    "ALLOWED_ORIGINS": "https://phonecando.app,https://phonecando.krishnakumarkush.workers.dev",
     // Retention cron deletes nothing while "false" (we keep all data until the
     // backup exists). The privacy page promises deletion after 90/180 days:
     // `./manage limits` and every build warn 14 days before the oldest row gets
