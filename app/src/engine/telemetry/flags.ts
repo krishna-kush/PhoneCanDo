@@ -8,9 +8,6 @@ export const DEV_LOCAL_KEY = 'phonecando.telemetry.devLocal.v1';
 export const flags = {
   /** startTelemetry finished (or failed): the UI may trust the other flags. */
   ready: false,
-  // Nothing is sent until the first-launch notice was answered; an unreadable
-  // answer counts as not given.
-  noticeShown: false,
   /** Debug builds only: send to the local dev host. */
   devLocal: false,
 };

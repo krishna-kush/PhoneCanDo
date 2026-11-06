@@ -15,11 +15,11 @@ caps in `tce/core/schema/limits.ts`, event names in
 
 ## In short
 
-- **On by default** in release builds. A notice on first launch says so.
+- **On by default** in release builds, from the first launch. There is no
+  prompt: Settings → Privacy shows it, and this page and the site's privacy
+  page describe it.
 - **One switch** turns it off: Settings → Privacy. Off clears the unsent queue
   and nothing more is sent.
-- **Nothing is sent until the first-launch notice is answered.** "Turn off"
-  there means nothing is ever sent.
 - **Delete my data** (Settings → Privacy) deletes every row the server holds
   for the phone, across every install on it (also after a reinstall or Reset
   anonymous ID), then turns sharing off and makes a new install ID.

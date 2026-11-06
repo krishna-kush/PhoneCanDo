@@ -5,7 +5,6 @@
 // launch on a higher versionCode records update.installed.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, type AppStateStatus } from 'react-native';
-import { STORAGE_KEYS } from '../../../../tce/client/index.ts';
 import { getTelemetrySnapshot } from '../runner';
 import { currentClient, getClient } from './client';
 import { DEV_LOCAL_KEY, flags } from './flags';
@@ -84,17 +83,8 @@ async function boot(): Promise<TelemetryState> {
       // no dev sending
     }
   }
-  try {
-    flags.noticeShown = (await AsyncStorage.getItem(STORAGE_KEYS.noticeShown)) === '1';
-  } catch {
-    // Unknown counts as not answered: the notice shows again and nothing is
-    // sent until it is answered.
-    flags.noticeShown = false;
-  }
   const c = getClient();
   if (!c) {
-    // Nothing can be sent from this build, so there is nothing to announce.
-    flags.noticeShown = true;
     mirrorEnabled();
     flags.ready = true;
     emit();
@@ -107,7 +97,7 @@ async function boot(): Promise<TelemetryState> {
   void noteVersionChange();
   // Splits what native holds between the previous run and this one; last
   // run's crashes go out early, since a crash loop never reaches the
-  // background (sent once the notice is answered; dropped while off).
+  // background (dropped while off).
   const crashed = (before?.nativeCrashes?.length ?? 0) > 0;
   void collectAtBoot(c, before).then(() => (crashed ? flushSafe() : undefined));
   setTimeout(() => void flushSafe(), FIRST_FLUSH_MS - BOOT_DELAY_MS);

@@ -17,7 +17,6 @@ import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
-import TelemetryNotice from './src/ui/common/TelemetryNotice';
 import { useAppStore } from './src/state/app';
 import { ensureServeRunning } from './src/engine/ensureServe';
 import {
@@ -152,7 +151,6 @@ export default function App() {
           <UnlockDialog />
           <AccessibilityDialog />
           <UpdateDialog />
-          <TelemetryNotice />
         </SafeAreaProvider>
         </KeyboardProvider>
       </TamaguiProvider>

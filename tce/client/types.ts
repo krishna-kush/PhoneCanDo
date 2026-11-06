@@ -26,8 +26,6 @@ export const STORAGE_KEYS = {
   queue: 'phonecando.telemetry.queue.v1',
   /** '1' when this phone is marked as one of our test devices. */
   tester: 'phonecando.telemetry.tester.v1',
-  /** '1' once the first-launch notice was shown. */
-  noticeShown: 'phonecando.telemetry.noticeShown.v1',
 } as const;
 
 /** AsyncStorage-compatible. */

@@ -5,8 +5,8 @@
 // counters) and own flush timing. Screens import this index, never tce and
 // never a module inside this folder. Below: the user's actions.
 //
-// Release builds send to TELEMETRY_BASE, on by default, but nothing at all
-// until the first-launch notice was answered. Debug builds send nothing
+// Release builds send to TELEMETRY_BASE, on by default from the first launch,
+// with no prompt: Settings → Privacy shows it and turns it off. Debug builds send nothing
 // unless the dev-only "Send to local dev host" switch is on; then they send
 // to 127.0.0.1:8787 (`pnpm -C tce dev` + `adb reverse tcp:8787 tcp:8787`).
 // Off means off: no session fields, events or errors from the off period are
@@ -14,7 +14,6 @@
 // engine output goes only into a report the user sends. Everything here is
 // fire-and-forget: a telemetry failure is logged and never reaches the caller.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS } from '../../../../tce/client/index.ts';
 import { getTelemetrySnapshot } from '../runner';
 import { getClient } from './client';
 import { DEV_LOCAL_KEY, flags } from './flags';
@@ -117,23 +116,6 @@ export async function forgetMe(): Promise<TelemetryOutcome> {
     mirrorEnabled();
     emit();
   }
-}
-
-/**
- * The first-launch notice was answered. "Keep on" sends what is queued now;
- * "Turn off" clears it (it was never sent). Android back counts as keep on.
- */
-export async function answerTelemetryNotice(keepOn: boolean): Promise<void> {
-  // Off first: the queue is gone before the gate opens.
-  if (!keepOn) await setTelemetryEnabled(false);
-  flags.noticeShown = true;
-  emit();
-  try {
-    await AsyncStorage.setItem(STORAGE_KEYS.noticeShown, '1');
-  } catch {
-    // shown again next launch at worst
-  }
-  if (keepOn) void flushSafe();
 }
 
 /** Debug builds only: send to the local dev host (127.0.0.1:8787). No-op in release. */

@@ -4,8 +4,8 @@ Every Cloudflare write is stated as an exact command and waits for an explicit y
 
 ## App release
 
-- [ ] On a release-signed build: first-launch notice, then device, install
-  and session rows; reinstall keeps the device id; a forced JS and a native
+- [ ] On a release-signed build: no prompt on first launch, then device,
+  install and session rows; reinstall keeps the device id; a forced JS and a native
   crash each arrive once; Send report and Delete my data work; the switch off
   sends nothing; boot time unchanged.
 

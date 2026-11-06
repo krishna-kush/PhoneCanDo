@@ -10,7 +10,6 @@ export type TelemetryState = {
   ready: boolean;
   enabled: boolean;
   tester: boolean;
-  noticeShown: boolean;
   devLocal: boolean;
 };
 
@@ -24,7 +23,6 @@ export function getTelemetryState(): TelemetryState {
     ready: flags.ready,
     enabled: c?.isEnabled() ?? false,
     tester: c?.isTester() ?? false,
-    noticeShown: flags.noticeShown,
     devLocal: flags.devLocal,
   };
 }
