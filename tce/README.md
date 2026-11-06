@@ -22,7 +22,7 @@ platform by replacing one folder.
 | `stores/cloudflare/` | D1 (with the storage guard) + Analytics Engine. |
 | `hosts/node/` | `node:http` server over the sqlite store. |
 | `hosts/cloudflare/` | The `phonecando` Worker: `index.ts` and `wrangler.jsonc`. |
-| `scripts/` | `typecheck.mjs`, `check-deps.mjs`, `stats.mjs`, `check-limits.mjs` (free-plan capacity check) and their small helpers, with `*.test.mjs`. |
+| `scripts/` | `typecheck.mjs`, `check-deps.mjs`, `stats.mjs`, `check-limits.mjs` (free-plan capacity check), `data.mjs` with `data/` (usage data, interactive or as a report) and their small helpers, with `*.test.mjs`. |
 
 ## Routes and crons
 
@@ -95,6 +95,37 @@ build. It runs before `./manage build` and `./manage release`, in the
 `capacity` job of `tce.yml`, and at the end of the Workers Builds build
 command (Deploys).
 
+## Usage data
+
+`scripts/data.mjs` (`./manage data`, `pnpm -C tce data`) reads what the app and
+the site have sent: devices, installs and versions, sessions with engine and
+phone health, events, errors, reports, site traffic, and the GitHub counters.
+In a terminal it is a full-screen view: tabs (`1`–`9`, arrows), scrolling, the
+stack frames of an error and the note, phone and log of a report (enter),
+the window (`w`: 7, 30 or 90 days), our tester devices (`t`, hidden by
+default) and reload (`r`); `?` lists the keys. Elsewhere, or with `--report`,
+it prints the same screens as text, aggregates only: no report notes, logs or
+stack frames, and never a device id. `--json` prints everything.
+
+Only SELECTs run (`data/queries.mjs`). Each refresh is one D1 batch whose
+rows read count toward the free plan's 5M a day; the output says how many.
+Sources (`data/source.mjs`):
+
+- `TCE_READ_TOKEN`: a read-only API token with D1: Read and Account
+  Analytics: Read (the second adds the Analytics Engine detail: bots apart,
+  referrers), from the environment or the repo-root `.env` (`.env.example`;
+  only this key and `CLOUDFLARE_ACCOUNT_ID` are read from it).
+  `CLOUDFLARE_API_TOKEN` works too. Set `CLOUDFLARE_ACCOUNT_ID` next to it: a
+  read-only token usually cannot look up its account (only when it can, and
+  sees exactly one, is the variable optional).
+- otherwise the logged-in `cf` CLI (D1 only).
+
+The report runs after the limit check in `./manage build` and
+`./manage release`, and never blocks them. It runs only on our own machines:
+it skips itself under GitHub Actions (public logs; usage data never goes to
+GitHub) and under Workers Builds (usage data stays out of Cloudflare's build
+logs), so the token is never a build secret.
+
 ## Commands
 
 | Command | Does |
@@ -102,11 +133,12 @@ command (Deploys).
 | `pnpm -C tce install --frozen-lockfile` | deps (Node ≥ 22.18, pnpm 11) |
 | `pnpm -C tce check` | `tsc` per module, then the dependency law |
 | `pnpm -C tce test` | `node --test` over every `*.test.ts` (sources run directly, type stripping) |
-| `node --test 'tce/scripts/*.test.mjs'` | the scripts' tests (check-limits with Cloudflare mocked, stats helpers) |
+| `node --test 'tce/scripts/**/*.test.mjs'` | the scripts' tests (check-limits and data with Cloudflare mocked, stats helpers) |
 | `pnpm -C tce dev` | node host + sqlite on `http://127.0.0.1:8787` (`PORT`, `HOST`, `TCE_DB`; data in `tce/.data/`) |
 | `pnpm -C tce cf:dev` | the Worker under `wrangler dev --local` with simulated D1 and AE; build the site first (`pnpm -C web build`) |
 | `pnpm -C tce stats`, `./manage stats [--d1]` | GitHub download counts; `--d1` adds read-only D1 summaries through the `cf` CLI, including `site_daily` (downloads per channel per day, top paths, all-time totals) |
 | `./manage limits [--strict]` | usage against the free plan ([Capacity](#capacity)); `TCE_BASE` picks another site |
+| `./manage data [--days N] [--testers] [--report \| --json]` | usage data, interactive in a terminal ([Usage data](#usage-data)) |
 
 CI: [`../.github/workflows/tce.yml`](../.github/workflows/tce.yml) runs check
 (with the scripts' tests), the tests on Node 22 and 24, and a credential-free

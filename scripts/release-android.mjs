@@ -74,7 +74,7 @@ function main() {
   }
   const releaseEnv = process.env.PHONECANDO_RELEASE_ENV;
   if (!releaseEnv || !existsSync(releaseEnv)) {
-    fail('Set PHONECANDO_RELEASE_ENV to the private env file');
+    fail('Set PHONECANDO_RELEASE_ENV to the env file with the signing settings (./manage uses the repo-root .env; see .env.example)');
   }
   // Gradle runs from app/android; keep the env path absolute for both shells.
   process.env.PHONECANDO_RELEASE_ENV = resolve(releaseEnv);
@@ -306,7 +306,7 @@ Options:
   --clean           Regenerate android/ from scratch before building
 
 Env:
-  PHONECANDO_RELEASE_ENV  path to the private signing env file
+  PHONECANDO_RELEASE_ENV  env file with the signing settings (./manage: the repo-root .env)
   GITHUB_REPO             owner/repo for the release
   ANDROID_HOME            Android SDK (or ANDROID_SDK_ROOT)`);
 }

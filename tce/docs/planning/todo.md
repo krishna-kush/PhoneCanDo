@@ -2,14 +2,6 @@
 
 Every Cloudflare write is stated as an exact command and waits for an explicit yes.
 
-## API host
-
-- [ ] After the push that moves the routes to `api.phonecando.app` (custom
-  domain added 2026-11-06): `GET https://api.phonecando.app/v1/health` answers 200
-  and `./manage limits` reads it; `/v1/dl/lite` there redirects to the GitHub
-  asset; `https://phonecando.app/v1/health` is the site's 404; a page view
-  adds a `site_daily` row; the build is green in `cf builds list`.
-
 ## App release
 
 - [ ] On a release-signed build: first-launch notice, then device, install

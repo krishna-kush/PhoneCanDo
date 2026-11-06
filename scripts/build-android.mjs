@@ -26,8 +26,12 @@ const APK = join(APP, `android/app/build/outputs/apk/${channel}/release/app-${ch
 const task = `assemble${channel.charAt(0).toUpperCase()}${channel.slice(1)}Release`;
 const clean = process.argv.includes('--clean');
 
-const envFile = process.env.PHONECANDO_RELEASE_ENV ?? join(homedir(), '.config/phonecando/release.env');
-if (!existsSync(envFile)) fail(`Set PHONECANDO_RELEASE_ENV (no ${envFile})`);
+// The repo-root .env (gitignored) holds the signing settings; the old
+// ~/.config path is used only while .env is absent.
+const LOCAL_ENV = join(ROOT, '.env');
+const LEGACY_ENV = join(homedir(), '.config/phonecando/release.env');
+const envFile = process.env.PHONECANDO_RELEASE_ENV ?? (existsSync(LOCAL_ENV) || !existsSync(LEGACY_ENV) ? LOCAL_ENV : LEGACY_ENV);
+if (!existsSync(envFile)) fail(`no env file at ${envFile}: copy .env.example to .env and fill it in (or set PHONECANDO_RELEASE_ENV)`);
 process.env.PHONECANDO_RELEASE_ENV = resolve(envFile);
 
 const appJson = JSON.parse(readFileSync(join(APP, 'app.json'), 'utf8')).expo;

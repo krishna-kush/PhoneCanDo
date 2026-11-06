@@ -81,11 +81,11 @@ jobs:
       - name: Syntax-check tce scripts (node --check)
         run: |
           set -euo pipefail
-          for f in tce/scripts/*.mjs; do node --check "$f"; done
-          echo "node --check: $(find tce/scripts -maxdepth 1 -name '*.mjs' | wc -l) files OK"
+          find tce/scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
+          echo "node --check: $(find tce/scripts -name '*.mjs' | wc -l) files OK"
 
-  # pnpm -C tce test runs every *.test.ts plus tce/scripts/*.test.mjs
-  # (check-limits and stats helpers, Cloudflare mocked, no network beyond 127.0.0.1).
+  # pnpm -C tce test runs every *.test.ts plus tce/scripts/**/*.test.mjs
+  # (check-limits, data and stats helpers, Cloudflare mocked, no network beyond 127.0.0.1).
   test:
     name: test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest

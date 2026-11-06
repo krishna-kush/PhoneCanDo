@@ -27,9 +27,11 @@ The release key (path in `PHONECANDO_STORE_FILE`) is the app's identity. Every
 future update must be signed with it; losing it forces every user to uninstall
 (data loss). Back it up in two places, offline.
 
-Passwords live in a private env file outside the repo (mode 600; never commit
-it). Set `PHONECANDO_RELEASE_ENV` to its path. The Gradle plugin
-`app/plugins/withReleaseSigning.js` reads:
+Passwords live in the repo-root `.env`: gitignored, mode 600, never
+committed; `.env.example` lists its keys. `./manage` and
+`scripts/build-android.mjs` read it by default (set `PHONECANDO_RELEASE_ENV`
+to use another file). The Gradle plugin `app/plugins/withReleaseSigning.js`
+reads:
 
 ```
 PHONECANDO_STORE_FILE      (path to the release keystore)
@@ -44,7 +46,8 @@ Debug builds keep the debug keystore; only `release` uses this key.
 
 Prerequisites:
 
-- `PHONECANDO_RELEASE_ENV` points to the private env file.
+- The repo-root `.env` holds the signing settings (or `PHONECANDO_RELEASE_ENV`
+  points to another file).
 - `GITHUB_REPO=owner/PhoneCanDo`.
 - `ANDROID_HOME` (or `ANDROID_SDK_ROOT`) points to the Android SDK.
 - `gh auth login` has been run for the release repo.

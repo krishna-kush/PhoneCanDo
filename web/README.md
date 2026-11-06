@@ -26,7 +26,8 @@ Astro is pinned to 7.3.0 (7.4 needs Node ≥ 22.23.4); bump the two together.
 | Version, APK links, the adb command | nothing: derived from `app/app.json` |
 | Live host (QR code), download route | `liveOrigin`, `dlUrl()` in `src/data/site.ts` |
 | Page-view beacon | the inline script at the end of `src/layouts/Base.astro` |
-| Privacy note | `src/pages/privacy.astro`; change it with `docs/telemetry.md` |
+| Privacy note | `src/components/privacy/*.astro` (one per section) · `src/pages/privacy.astro`; change it with `docs/telemetry.md` |
+| What the mascot says (per section, when you scroll too fast) | `src/data/mascot.ts`; 17 characters a line at most |
 | Section copy · order | `src/components/sections/*.astro` · `src/pages/index.astro` |
 | Demo cards | `src/data/demos.ts` |
 | Colours (shared with the app) | `theme/tokens.json` |

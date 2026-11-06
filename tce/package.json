@@ -12,10 +12,11 @@
     "typecheck": "node scripts/typecheck.mjs",
     "deps": "node scripts/check-deps.mjs",
     "check": "node scripts/typecheck.mjs && node scripts/check-deps.mjs",
-    "test": "node --test --test-timeout=120000 \"core/**/*.test.ts\" \"client/**/*.test.ts\" \"stores/**/*.test.ts\" \"hosts/**/*.test.ts\" \"testkit/**/*.test.ts\" \"scripts/*.test.mjs\"",
+    "test": "node --test --test-timeout=120000 \"core/**/*.test.ts\" \"client/**/*.test.ts\" \"stores/**/*.test.ts\" \"hosts/**/*.test.ts\" \"testkit/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
     "dev": "node hosts/node/main.ts",
     "cf:dev": "wrangler dev -c hosts/cloudflare/wrangler.jsonc --local --var API_HOSTS:localhost",
-    "stats": "node scripts/stats.mjs"
+    "stats": "node scripts/stats.mjs",
+    "data": "node scripts/data.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261104.1",

@@ -18,10 +18,13 @@
   ./manage device log                              logcat for update / install / Play Protect
   ./manage stats [--d1]                            GitHub download counts; --d1 adds D1 usage (cf CLI)
   ./manage limits [--strict]                       usage vs the Cloudflare free plan (warns at 70%)
+  ./manage data [--days N] [--testers] [--report]  usage data from Cloudflare, interactive in a terminal
 
 Defaults: GITHUB_REPO from app/src/engine/updates.ts, PHONECANDO_RELEASE_ENV
-from ~/.config/phonecando/release.env, ANDROID_HOME from /opt/android-sdk.
-build and release run the limits check first; it never blocks them.
+from the repo-root .env (release signing, TCE_READ_TOKEN; .env.example lists
+the keys), ANDROID_HOME from /opt/android-sdk.
+build and release run the limits check and print the data report first;
+neither ever blocks them.
 Never runs git.
 """
 import os
@@ -54,10 +57,18 @@ def die(msg):
     sys.exit(2)
 
 
+def local_env_file():
+    # The repo-root .env (gitignored) holds the release signing settings and
+    # TCE_READ_TOKEN. The old ~/.config path is used only while .env is absent.
+    local = ROOT / ".env"
+    legacy = Path.home() / ".config/phonecando/release.env"
+    return local if local.exists() or not legacy.exists() else legacy
+
+
 def release_env():
     env = os.environ.copy()
     env.setdefault("ANDROID_HOME", "/opt/android-sdk")
-    env.setdefault("PHONECANDO_RELEASE_ENV", str(Path.home() / ".config/phonecando/release.env"))
+    env.setdefault("PHONECANDO_RELEASE_ENV", str(local_env_file()))
     if "GITHUB_REPO" not in env:
         m = re.search(r"const REPO = '([^']+)'", (APP / "src/engine/updates.ts").read_text())
         if m:
@@ -84,15 +95,17 @@ def channel_arg(args):
 
 
 def limits_first():
-    # The free-plan check runs on every build (tce/scripts/check-limits.mjs).
-    # Never blocks: the script exits 0 without --strict, and anything else
-    # (no node, a crash) only prints a note before the build goes on.
-    try:
-        sh(["node", str(TCE / "scripts" / "check-limits.mjs")])
-    except SystemExit:
-        print("manage: limits check failed; continuing", file=sys.stderr)
-    except OSError as e:
-        print(f"manage: limits check skipped ({e}); continuing", file=sys.stderr)
+    # The free-plan check (tce/scripts/check-limits.mjs) and the usage data
+    # report (tce/scripts/data.mjs --report, aggregates only) run on every
+    # build. Never blocks: a failure or a missing node only prints a note
+    # before the build goes on.
+    for name, script, args in (("limits check", "check-limits.mjs", []), ("data report", "data.mjs", ["--report"])):
+        try:
+            sh(["node", str(TCE / "scripts" / script), *args], env=release_env())
+        except SystemExit:
+            print(f"manage: {name} failed; continuing", file=sys.stderr)
+        except OSError as e:
+            print(f"manage: {name} skipped ({e}); continuing", file=sys.stderr)
 
 
 def cmd_release(args):
@@ -188,6 +201,13 @@ def cmd_stats(args):
     sh(["node", str(TCE / "scripts" / "stats.mjs"), *args])
 
 
+def cmd_data(args):
+    # Read-only: D1 through TCE_READ_TOKEN (from .env; it also adds the
+    # Analytics Engine detail) or else the cf CLI login. Interactive in a
+    # terminal; --report prints the plain report. See tce/README.md, Usage data.
+    sh(["node", str(TCE / "scripts" / "data.mjs"), *args], env=release_env())
+
+
 def cmd_limits(args):
     # Read-only: GET /v1/health on the live API host; with CLOUDFLARE_API_TOKEN
     # and CLOUDFLARE_ACCOUNT_ID also today's D1 rows and Worker requests.
@@ -208,6 +228,7 @@ COMMANDS = {
     "device": cmd_device,
     "stats": cmd_stats,
     "limits": cmd_limits,
+    "data": cmd_data,
 }
 
 
