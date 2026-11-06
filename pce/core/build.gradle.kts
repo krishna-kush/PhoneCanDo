@@ -10,7 +10,7 @@ kotlin {
 
 dependencies {
     api(project(":api"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     testImplementation(project(":testkit"))
     testImplementation(kotlin("test-junit5"))
