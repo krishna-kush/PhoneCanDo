@@ -1,4 +1,4 @@
-// POST /api/report: a user-initiated bundle (recent events, a note, a redacted
+// POST /v1/report: a user-initiated bundle (recent events, a note, a redacted
 // engine-log tail and the device snapshot) stored as one reports row.
 // Idempotent on reportId: a resend answers the same 200.
 // Two storage bounds, because the endpoint is public: at most
@@ -112,12 +112,12 @@ export function fitReportRow(
   return { row: { ...base, events: JSON.stringify(events.slice(start)) }, dropped: start };
 }
 
-/** POST /api/report. */
+/** POST /v1/report. */
 export const reportOp: HttpOp<ReportInput> = {
   kind: 'http',
   name: 'report',
   method: 'POST',
-  path: '/api/report',
+  path: '/v1/report',
   maxBodyBytes: LIMITS.reportBodyBytes,
 
   parse(req) {

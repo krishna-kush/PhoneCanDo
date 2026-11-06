@@ -1,4 +1,4 @@
-// GET /api/health: public, identity-free capacity facts for the limit check
+// GET /v1/health: public, identity-free capacity facts for the limit check
 // that runs on every build (scripts/check-limits.mjs): the database size next
 // to the free-plan limit and the ratios from CAPACITY, whether the storage
 // guard is pausing ingest, and the retention switch with the age of the oldest
@@ -60,12 +60,12 @@ export function healthBody(serverTime: number, usage: StoreUsage, retentionEnabl
   };
 }
 
-/** GET /api/health. */
+/** GET /v1/health. */
 export const healthOp: HttpOp<null> = {
   kind: 'http',
   name: 'health',
   method: 'GET',
-  path: '/api/health',
+  path: '/v1/health',
   maxBodyBytes: 0,
   // whenLimited: default 'reject'. Why: the endpoint writes nothing, so a
   // degraded run would cost the same database read; a caller over the limit gets 429.

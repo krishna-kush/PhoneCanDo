@@ -1,5 +1,5 @@
 // site_daily summaries for scripts/stats.mjs --d1: the permanent daily rollup
-// of site page views and /dl downloads (migration 0003; Analytics Engine keeps
+// of site page views and /v1/dl downloads (migration 0003; Analytics Engine keeps
 // the detail only ~3 months). Pure: SQL in, text out.
 import { formatTable } from './text-table.mjs';
 
@@ -57,6 +57,6 @@ export function renderSiteDaily([downloads, paths, totals], { since, today }) {
   );
   // Why say so: the rollup has no UA class, so bot traffic is in these totals;
   // the Analytics Engine detail below can exclude it.
-  out.push('\nsite_daily counts every user agent, bots included; rate-limited requests and HEAD /dl are not counted.');
+  out.push('\nsite_daily counts every user agent, bots included; rate-limited requests and HEAD /v1/dl are not counted.');
   return out.join('\n');
 }

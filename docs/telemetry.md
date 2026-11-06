@@ -44,19 +44,19 @@ crashes and engine failures to fix first.
 
 | | |
 |---|---|
-| Endpoint | `https://phonecando.app` (the Worker that also serves the site) |
+| Endpoint | `https://api.phonecando.app/v1/*` (the Worker that also serves the site at `phonecando.app`; the API answers only on its own host) |
 | Code | `tce/` (Telemetry Collection Engine); Cloudflare host in `tce/hosts/cloudflare/` |
 | Storage | Our Cloudflare account: D1 database `phonecando-stats` (the app's rows and the `site_daily` traffic totals) and Analytics Engine datasets `phonecando_pageviews` and `phonecando_downloads`. There is no archive and no backup copy beyond D1's own 7-day Time Travel. Cloudflare processes it on our behalf. |
 | Not stored | Nothing analytics-related is written to the GitHub repo. Nothing is sold or shared. |
 
 | Route | Body cap | Sent by |
 |---|---|---|
-| `POST /api/batch` | 32 KB (≤ 10 sessions, 200 events, 20 errors) | the app, while sharing is on |
-| `POST /api/report` | 16 KB (≤ 50 events) | the app, when you tap Send report |
-| `POST /api/forget` | 2 KB | the app, when you tap Delete my data |
-| `POST /api/hit` | 2 KB | the site, once per page load |
-| `GET /dl/lite`, `GET /dl/full` | none | the site's download buttons and QR code |
-| `GET /api/health` | none | the capacity check on every build ([Capacity](#capacity-get-apihealth)); public |
+| `POST /v1/batch` | 32 KB (≤ 10 sessions, 200 events, 20 errors) | the app, while sharing is on |
+| `POST /v1/report` | 16 KB (≤ 50 events) | the app, when you tap Send report |
+| `POST /v1/forget` | 2 KB | the app, when you tap Delete my data |
+| `POST /v1/hit` | 2 KB | the site, once per page load |
+| `GET /v1/dl/lite`, `GET /v1/dl/full` | none | the site's download buttons and QR code |
+| `GET /v1/health` | none | the capacity check on every build ([Capacity](#capacity-get-v1health)); public |
 
 The app queues events locally (at most 500; the oldest drop first) and sends
 them in batches: about 10 seconds after launch, every 15 minutes while it is
@@ -98,7 +98,7 @@ deleted row is gone.
 
 A backup is planned for when the database nears its free-plan limit, not
 before. A capacity check runs on every build (`tce/scripts/check-limits.mjs`,
-`./manage limits`): it reads [`GET /api/health`](#capacity-get-apihealth)
+`./manage limits`): it reads [`GET /v1/health`](#capacity-get-v1health)
 and warns from 70% of the 500 MB (CRITICAL from 90%, where the storage guard
 starts refusing new data). If a backup is added, this page says what it holds
 and for how long before it ships.
@@ -131,7 +131,7 @@ belongs to another phone is refused too, and so is a report sent under a
 phone's ID with the wrong verifier. A session's build (version and channel)
 is kept from its first write and never re-attributed.
 
-## Batch (`POST /api/batch`)
+## Batch (`POST /v1/batch`)
 
 Every batch carries `schema: 1`, a `batchId` (UUID, tracing only), `sentAt`
 (the phone's clock, used to correct clock skew), the identity above, and:
@@ -246,7 +246,7 @@ so one bug on many phones is one key.
 - Every field is cut to the caps above; only an oversized body or list is
   rejected.
 
-## Send report (`POST /api/report`, `reports` table)
+## Send report (`POST /v1/report`, `reports` table)
 
 Only when you tap it, only while sharing is on: `reportId`, the identity,
 device and app fields above, the current `sessionId`, your note (≤ 500 chars),
@@ -257,7 +257,7 @@ Delete my data. A report also records the phone's device row and verifier
 (the same rules as a batch), so Delete my data can find and remove it even
 if the phone never sent a batch.
 
-## Delete my data (`POST /api/forget`)
+## Delete my data (`POST /v1/forget`)
 
 Sends `deviceId` and the device proof (see [Identity](#identity)); it is the
 only request that carries the proof. If the proof matches the verifier the
@@ -271,7 +271,7 @@ phone, the app says so instead of claiming a deletion. Not reached: D1's
 7-day backups and the 3-day Workers Logs (see [Retention](#retention)); there
 is no other copy.
 
-## Site page views (`POST /api/hit`, Analytics Engine `phonecando_pageviews`, `site_daily`)
+## Site page views (`POST /v1/hit`, Analytics Engine `phonecando_pageviews`, `site_daily`)
 
 The site's one inline script sends `path` (no query string) and `ref`
 (`document.referrer`) once per page load. Stored in Analytics Engine for about
@@ -285,9 +285,10 @@ Track or Global Privacy Control, from a page not served over https, or from
 localhost (so local and CI runs never count). A page view over the rate limit
 is not counted anywhere.
 
-## Downloads (`GET /dl/<channel>`, Analytics Engine `phonecando_downloads`, `site_daily`)
+## Downloads (`GET /v1/dl/<channel>`, Analytics Engine `phonecando_downloads`, `site_daily`)
 
-The site's buttons and QR code go through `/dl/lite` and `/dl/full`, which
+The site's buttons and QR code go through `https://api.phonecando.app/v1/dl/lite`
+and `.../v1/dl/full`, which
 redirect to that version's APK on GitHub. Stored in Analytics Engine for about
 3 months: channel, version, country, the Android major version from the user
 agent, the referrer's host and the user-agent class. Also counted, for good,
@@ -296,7 +297,7 @@ no IP. A `HEAD` request or one over the rate limit still redirects but is not
 counted. The computer commands link GitHub directly. `./manage stats --d1`
 prints the `site_daily` summaries.
 
-## Capacity (`GET /api/health`)
+## Capacity (`GET /v1/health`)
 
 Public, no login, no body. Apart from the rate limiter's key (see Abuse
 limits above) it reads nothing from the request, and it answers only figures
@@ -338,7 +339,7 @@ numbers.
 |---|---|---|
 | `GET https://github.com/krishna-kush/PhoneCanDo/releases/latest/download/latest.json` | on launch (full; lite unless muted in Settings → Update) and from Settings → Update; never in play builds | nothing beyond a normal request |
 | The release APK from `github.com` (redirected to GitHub's file host) | only after you tap install (an update, or lite → full) | nothing beyond a normal request |
-| `https://phonecando.app/api/*` | release builds, while sharing is on; report and delete only when you tap them | the fields on this page |
+| `https://api.phonecando.app/v1/*` | release builds, while sharing is on; report and delete only when you tap them | the fields on this page |
 | `GET https://models.opencode.ai/api.json` (opencode's models.dev catalog) | by the engine (opencode v2.0.26) when it starts, then again every 5 minutes while it runs: the whole catalog (over 2 MB) each time; `OPENCODE_DISABLE_MODELS_FETCH` is not set | a `User-Agent: opencode/<channel>/<version>/<name>` header |
 | The model providers you configure | whenever the agent runs | your prompts and that provider's key, straight from the phone to the provider; PhoneCanDo's server is never in that path |
 | Whatever you or the agent start | the agent's web fetch and web search tools, a `curl` or a package install in the terminal | what that command sends |

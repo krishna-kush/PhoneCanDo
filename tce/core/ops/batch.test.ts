@@ -51,7 +51,7 @@ function rejected(body: unknown): TceError {
 }
 
 async function send(ctx: FakeCtx<MemoryStore>, body: unknown): Promise<BatchResponse> {
-  const r = await callHttp(batchOp, httpRequest({ path: '/api/batch', body }), ctx);
+  const r = await callHttp(batchOp, httpRequest({ path: '/v1/batch', body }), ctx);
   if (!r.ok) assert.fail(`batch failed: ${JSON.stringify(r.error)}`);
   assert.equal(r.value.status, 200);
   return r.value.json as BatchResponse;
@@ -540,7 +540,7 @@ describe('batch run', () => {
   it('passes a store failure through unchanged', async () => {
     const store = createMemoryStore();
     const ctx = setup({ ...store, applyBatch: async () => err('unavailable', 'database is down') });
-    const r = await callHttp(batchOp, httpRequest({ path: '/api/batch', body: batchRequest() }), ctx);
+    const r = await callHttp(batchOp, httpRequest({ path: '/v1/batch', body: batchRequest() }), ctx);
     assert.deepEqual(r, { ok: false, error: { code: 'unavailable', message: 'database is down' } });
   });
 
@@ -599,7 +599,7 @@ describe('batch run', () => {
 
   it("an attacker's batch with the victim's deviceId and another verifier answers 403 and changes nothing (reviewer scenario)", async () => {
     const ctx = setup();
-    const victim = await post(ctx, '/api/batch', batchRequest());
+    const victim = await post(ctx, '/v1/batch', batchRequest());
     assert.equal(victim.status, 200);
     const before = JSON.stringify(ctx.store.tables);
 
@@ -611,7 +611,7 @@ describe('batch run', () => {
       errors: [errorWire({ errorId: ERROR_ID_2, sessionId: SESSION_ID_2 })],
     });
     ctx.clock.advance(1000);
-    const res = await post(ctx, '/api/batch', attack);
+    const res = await post(ctx, '/v1/batch', attack);
     assert.equal(res.status, 403);
     assert.equal(HTTP_STATUS.forbidden, 403);
     assert.deepEqual((res.json as { error: { code: string } }).error.code, 'forbidden');
@@ -628,7 +628,7 @@ describe('batch run', () => {
     const before = JSON.stringify(ctx.store.tables);
     const other = identityWire({ installId: INSTALL_ID_3, deviceId: DEVICE_ID_2, deviceVerifier: DEVICE_VERIFIER_2 });
     // A correctly verified device 2 tries to append to device 1's session.
-    const res = await post(ctx, '/api/batch', batchRequest({ identity: other, sessions: [], events: [eventWire({ seq: 9 })], errors: [] }));
+    const res = await post(ctx, '/v1/batch', batchRequest({ identity: other, sessions: [], events: [eventWire({ seq: 9 })], errors: [] }));
     assert.equal(res.status, 403);
     assert.equal(JSON.stringify(ctx.store.tables), before);
     assert.equal(ctx.store.tables.events.some((e) => e.device_id === DEVICE_ID_2), false);

@@ -21,7 +21,7 @@ let health = { status: 404, body: { error: { code: 'not_found', message: 'no rou
 
 before(async () => {
   server = createServer((req, res) => {
-    if (req.url !== '/api/health') {
+    if (req.url !== '/v1/health') {
       res.writeHead(404).end();
       return;
     }
@@ -76,7 +76,7 @@ test('404: "health endpoint not deployed yet", exit 0, even with --strict', asyn
     const { code, out } = await run(args);
     assert.equal(code, 0, out);
     assert.match(out, /No usage figures available\./);
-    assert.match(out, /^warning: health endpoint not deployed yet \(GET http:\/\/127\.0\.0\.1:\d+\/api\/health answered 404\)$/m);
+    assert.match(out, /^warning: health endpoint not deployed yet \(GET http:\/\/127\.0\.0\.1:\d+\/v1\/health answered 404\)$/m);
     assert.match(out, /^note: Cloudflare usage: skipped \(set CLOUDFLARE_API_TOKEN/m);
   }
 });
@@ -84,7 +84,7 @@ test('404: "health endpoint not deployed yet", exit 0, even with --strict', asyn
 test('unreachable host: a warning, exit 0', async () => {
   const { code, out } = await run(['--strict'], { TCE_BASE: 'http://127.0.0.1:9' });
   assert.equal(code, 0, out);
-  assert.match(out, /^warning: health check failed: GET http:\/\/127\.0\.0\.1:9\/api\/health: /m);
+  assert.match(out, /^warning: health check failed: GET http:\/\/127\.0\.0\.1:9\/v1\/health: /m);
 });
 
 test('72% storage under GitHub Actions: warning annotation pointing at the backup plan, and a job summary', async () => {

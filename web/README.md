@@ -68,16 +68,18 @@ centred.
 
 The site itself is static: `pnpm build` writes `dist/`. The server around it
 is the `phonecando` Cloudflare Worker in `tce/hosts/cloudflare/` (config:
-`wrangler.jsonc` there). It serves `dist/` as static assets with the 404 page
-and answers two kinds of route itself: `/api/*` (app usage stats and the
-page-view beacon) and `/dl/lite`, `/dl/full` (count the download, then 302 to
-that version's APK on GitHub). See `tce/README.md`.
+`wrangler.jsonc` there). On `phonecando.app` it serves only `dist/`, as static
+assets with the 404 page, so every path there is a page. Its routes live on
+the API host `https://api.phonecando.app` (`apiOrigin` in `src/data/site.ts`):
+`/v1/*` for app usage stats, the page-view beacon (`/v1/hit`) and the
+download buttons (`/v1/dl/lite`, `/v1/dl/full`: count the download, then 302
+to that version's APK on GitHub). See `tce/README.md`.
 
 Cloudflare Workers Builds builds and deploys it on every push to `prod`; there
 is no local deploy step, and GitHub Actions deploys nothing (`web.yml` and
 `tce.yml` only check). It is live at `https://phonecando.app`, the `site` in
 `astro.config.mjs`.
 
-Without the Worker (`pnpm dev`, `pnpm preview`, CI's static server) the pages
-work but the download buttons 404, and the beacon stays silent off https and
-on localhost.
+The download buttons and the QR code always point at the live API host, also
+from `pnpm dev` and `pnpm preview`; the beacon stays silent off https and on
+localhost.

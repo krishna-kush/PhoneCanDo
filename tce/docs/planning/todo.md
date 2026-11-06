@@ -2,16 +2,13 @@
 
 Every Cloudflare write is stated as an exact command and waits for an explicit yes.
 
-## First deploy
+## API host
 
-- [ ] Push to `prod`; Workers Builds deploys `tce/`. Migrations 0001–0003 are
-  already on the remote D1; a new one is applied with `cf` before its push.
-- [ ] Then simplify the Workers Builds trigger to the plain commands in
-  `../../README.md` (drop the old `web/` fallback).
-- [ ] Live checks: the site answers 200; `/dl/lite` redirects to the GitHub
-  asset; `GET /api/health` answers 200 and `./manage limits` prints the
-  storage and retention rows; a page view adds a `site_daily` row; the build
-  is green in `cf builds list`.
+- [ ] After the push that moves the routes to `api.phonecando.app` (custom
+  domain added 2026-11-06): `GET https://api.phonecando.app/v1/health` answers 200
+  and `./manage limits` reads it; `/v1/dl/lite` there redirects to the GitHub
+  asset; `https://phonecando.app/v1/health` is the site's 404; a page view
+  adds a `site_daily` row; the build is green in `cf builds list`.
 
 ## App release
 

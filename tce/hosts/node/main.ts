@@ -8,7 +8,7 @@
 //   PORT              listen port, default 8787 (0 picks a free one)
 //   HOST              listen address, default 127.0.0.1
 //   TCE_DB            sqlite file, default <tce>/.data/tce.sqlite (':memory:' allowed)
-//   ALLOWED_ORIGINS   comma list for /api/hit, default this server's own origins
+//   ALLOWED_ORIGINS   comma list for /v1/hit, default this server's own origins
 //   GITHUB_STATS_PAT  optional token for the GitHub traffic counters
 //   RETENTION_ENABLED 'true' lets retention delete expired rows; default off (keep everything)
 

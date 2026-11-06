@@ -36,7 +36,7 @@ export async function forget(c: ClientContext): Promise<TceResult<ForgetResponse
         deviceId: id.value.wire.deviceId,
         deviceProof: id.value.proof,
       };
-      const out = await postJson(c.net, `${c.baseUrl}/api/forget`, JSON.stringify(req), c.timeoutMs, () => now(c));
+      const out = await postJson(c.net, `${c.baseUrl}/v1/forget`, JSON.stringify(req), c.timeoutMs, () => now(c));
       // The server's own not_found: it holds nothing for this device.
       const nothingStored = !out.ok && out.fromBody && out.error.code === 'not_found';
       if (!out.ok && !nothingStored) {

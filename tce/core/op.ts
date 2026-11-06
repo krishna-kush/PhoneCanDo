@@ -36,11 +36,11 @@ export interface HashPort {
 }
 
 export interface TceConfig {
-  /** Current public release, for /dl and the GitHub counters. */
+  /** Current public release, for /v1/dl and the GitHub counters. */
   release: { repo: string; version: string };
   /** Optional fine-grained PAT (Administration: read) for repo traffic. */
   githubToken: string | null;
-  /** Origins allowed to post /api/hit, e.g. https://phonecando.app. */
+  /** Origins allowed to post /v1/hit, e.g. https://phonecando.app. */
   allowedOrigins: readonly string[];
   /**
    * The retention cron deletes expired rows only when true. Off for now
@@ -69,7 +69,7 @@ export interface RequestCtx extends OpCtx {
 export interface HttpRequest {
   method: string;
   path: string;
-  /** Route params, e.g. { channel: 'lite' } for /dl/:channel. */
+  /** Route params, e.g. { channel: 'lite' } for /v1/dl/:channel. */
   params: Record<string, string>;
   query: Record<string, string>;
   headers: {
@@ -101,7 +101,7 @@ export interface HttpOp<In> {
   readonly kind: 'http';
   readonly name: string;
   readonly method: 'GET' | 'POST';
-  /** Exact path or with `:param` segments, e.g. '/dl/:channel'. */
+  /** Exact path or with `:param` segments, e.g. '/v1/dl/:channel'. */
   readonly path: string;
   /** 0 for bodiless GET routes. */
   readonly maxBodyBytes: number;
@@ -127,7 +127,7 @@ export interface CronOp {
 export type AnyHttpOp = HttpOp<any>;
 export type Op = AnyHttpOp | CronOp;
 
-/** Match '/dl/:channel' against '/dl/lite'. Returns params, or null when it does not match. */
+/** Match '/v1/dl/:channel' against '/v1/dl/lite'. Returns params, or null when it does not match. */
 export function matchPath(pattern: string, path: string): Record<string, string> | null {
   const p = pattern.split('/');
   const a = path.split('/');

@@ -26,18 +26,25 @@ platform by replacing one folder.
 
 ## Routes and crons
 
+The ops answer only on the API host, `https://api.phonecando.app` (the
+Worker var `API_HOSTS`), all under `/v1/`. On every other host, the site's
+`phonecando.app` included, `/v1/*` is the static site's 404, so the site
+keeps all its paths for pages. `pnpm -C tce cf:dev` sets `API_HOSTS` to
+`localhost`; with it unset (the Worker tests), every host answers.
+
 | Op | Route / schedule (UTC) | Does |
 |---|---|---|
-| `batch` | `POST /api/batch` | app identity, device, sessions, events, errors → D1 |
-| `report` | `POST /api/report` | a user's Send report → `reports`; also upserts the phone's `devices` row (pins its verifier) |
-| `forget` | `POST /api/forget` | Delete my data: every row of that device |
-| `hit` | `POST /api/hit` | site page view → Analytics Engine, +1 on `site_daily` |
-| `download` | `GET /dl/lite`, `GET /dl/full` | count (Analytics Engine, +1 on `site_daily`), then 302 to the current version's GitHub APK |
-| `health` | `GET /api/health` | public capacity facts: database size, limit, ratios, `ingestPaused`, the retention switch and the oldest kept row's age per table (`HealthResponse` in `core/schema/wire.ts`); no identity, never cached |
+| `batch` | `POST /v1/batch` | app identity, device, sessions, events, errors → D1 |
+| `report` | `POST /v1/report` | a user's Send report → `reports`; also upserts the phone's `devices` row (pins its verifier) |
+| `forget` | `POST /v1/forget` | Delete my data: every row of that device |
+| `hit` | `POST /v1/hit` | site page view → Analytics Engine, +1 on `site_daily` |
+| `download` | `GET /v1/dl/lite`, `GET /v1/dl/full` | count (Analytics Engine, +1 on `site_daily`), then 302 to the current version's GitHub APK |
+| `health` | `GET /v1/health` | public capacity facts: database size, limit, ratios, `ingestPaused`, the retention switch and the oldest kept row's age per table (`HealthResponse` in `core/schema/wire.ts`); no identity, never cached |
 | `github_daily` | `17 3 * * *` | GitHub's release and repo counters → D1 |
 | `retention` | not scheduled (would be `*/15 * * * *`) | **currently off**; when on: reports > 90 days deleted first, then events > 90 days, errors > 180 days ([Retention](#retention)) |
 
-Every other path is the static site (`../web/dist`, the Worker's assets).
+Every other path, on any host, is the static site (`../web/dist`, the
+Worker's assets).
 
 ## Retention
 
@@ -78,7 +85,7 @@ deletes that report.
 
 `scripts/check-limits.mjs` (`./manage limits`) compares usage with the free
 plan (`CAPACITY` in `core/schema/limits.ts`): the database size from
-`GET /api/health` and, when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+`GET /v1/health` and, when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
 are set (a read-only token: Account Analytics: Read, D1: Read), today's D1 rows
 read and written and the Worker's requests from Cloudflare's GraphQL Analytics
 API. It warns from 70% of a limit and says CRITICAL from 90% (where the

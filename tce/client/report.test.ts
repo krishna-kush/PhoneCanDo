@@ -21,7 +21,7 @@ describe('report', () => {
     const r = await client.report({ note: '  it broke at /sdcard/x  ', logTail: 'boom at /data/user/0/app/f.log\n' });
     assert.ok(r.ok);
     assert.deepEqual(r.value, { reportId: 'r-1', serverTime: 9 });
-    const req = net.to('/api/report')[0]!.json as ReportRequest;
+    const req = net.to('/v1/report')[0]!.json as ReportRequest;
     assert.equal(req.schema, 1);
     assert.match(req.reportId, UUID);
     assert.equal(req.sessionId, sid);
@@ -39,7 +39,7 @@ describe('report', () => {
     client.startSession();
     for (let i = 0; i < 200; i++) client.track('chat.open', { a: 'x'.repeat(200), b: 'y'.repeat(200) });
     await client.report({ logTail: 'L'.repeat(40_000) });
-    const body = net.to('/api/report')[0]!.body;
+    const body = net.to('/v1/report')[0]!.body;
     assert.ok(utf8Length(body) <= LIMITS.reportBodyBytes, `report ${utf8Length(body)} bytes`);
     const req = JSON.parse(body) as ReportRequest;
     assert.ok(req.events.length >= REPORT_EVENTS_FLOOR, `${req.events.length} events`);
@@ -79,7 +79,7 @@ describe('report', () => {
       assert.ok(!r.ok && r.error.code === 'unavailable', what);
       const again = await client.report({ note: 'n' });
       assert.ok(again.ok, what);
-      assert.equal(again.value.reportId, net.to('/api/report')[1]!.json.reportId, what);
+      assert.equal(again.value.reportId, net.to('/v1/report')[1]!.json.reportId, what);
     }
   });
 });

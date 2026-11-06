@@ -62,7 +62,7 @@ export const RETENTION_RUN = { rowsPerRun: 250 } as const;
 
 /**
  * Free-plan capacity the limit check compares against (scripts/check-limits.mjs,
- * GET /api/health). warnRatio: warn on every build; guardRatio: the D1 size
+ * GET /v1/health). warnRatio: warn on every build; guardRatio: the D1 size
  * guard pauses ingest (stores/cloudflare/guard.ts uses the same 450 MB).
  */
 export const CAPACITY = {

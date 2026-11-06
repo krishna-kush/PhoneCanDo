@@ -1,6 +1,6 @@
 // The Worker's exported fetch and scheduled handlers over local D1
 // (worker.test-support.ts): every op route end to end, the site_daily rollup
-// behind hits and downloads, GET /api/health, the static-site fallback and the
+// behind hits and downloads, GET /v1/health, the static-site fallback and the
 // cron ops. index-limits.test.ts covers rate limiting. Tests run in order and
 // share one database.
 
@@ -28,7 +28,7 @@ import {
   STRANGER_PROOF,
 } from '../../testkit/fixtures.ts';
 import worker from './index.ts';
-import { ADDRESS_NEEDLES, BASE, CLIENT_IP, MIGRATIONS, cfRequest, stream, useWorker } from './worker.test-support.ts';
+import { ADDRESS_NEEDLES, BASE, CLIENT_IP, MIGRATIONS, SITE_BASE, cfRequest, stream, useWorker } from './worker.test-support.ts';
 
 /** The retention op's cron, from the registry (wrangler.test.ts pins it to wrangler.jsonc). */
 
@@ -51,7 +51,7 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
   });
 
   it('accepts a batch into D1 with edge facts from request.cf and no IP', async () => {
-    const res = await postJson('/api/batch', batchRequest());
+    const res = await postJson('/v1/batch', batchRequest());
     assert.equal(res.status, 200, await res.clone().text());
     assert.equal(res.headers.get('cache-control'), 'no-store');
     assert.match(String(res.headers.get('content-type')), /^application\/json/);
@@ -70,7 +70,7 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
   });
 
   it('treats a replayed batch as nothing new', async () => {
-    const res = await postJson('/api/batch', batchRequest());
+    const res = await postJson('/v1/batch', batchRequest());
     assert.equal(res.status, 200);
     const body = (await res.json()) as BatchResponse;
     assert.equal(body.accepted.events, 0);
@@ -79,7 +79,7 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
   });
 
   it('writes a page view point and bumps site_daily for an allowed Origin (204); refuses one without (403)', async () => {
-    const ok = await call('/api/hit', {
+    const ok = await call('/v1/hit', {
       method: 'POST',
       body: JSON.stringify(hitRequest()),
       headers: { 'content-type': 'text/plain;charset=UTF-8', origin: SITE_ORIGIN },
@@ -88,7 +88,7 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
     assert.equal(await ok.text(), '');
     assert.equal(pageviews.calls.length, 1);
     assert.ok(!JSON.stringify(pageviews.calls).includes(CLIENT_IP));
-    const refused = await call('/api/hit', { method: 'POST', body: JSON.stringify(hitRequest()), headers: { 'content-type': 'text/plain' } });
+    const refused = await call('/v1/hit', { method: 'POST', body: JSON.stringify(hitRequest()), headers: { 'content-type': 'text/plain' } });
     assert.equal(refused.status, 403);
     assert.equal(((await refused.json()) as ErrorBody).error.code, 'forbidden');
     assert.equal(pageviews.calls.length, 1);
@@ -98,7 +98,7 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
   });
 
   it('counts two page views of a path on one site_daily row', async () => {
-    const res = await call('/api/hit', {
+    const res = await call('/v1/hit', {
       method: 'POST',
       body: JSON.stringify(hitRequest()),
       headers: { 'content-type': 'text/plain;charset=UTF-8', origin: SITE_ORIGIN },
@@ -107,14 +107,14 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
     assert.deepEqual(await rollup(), [{ kind: 'view', key: '/install', country: 'IN', count: 2 }]);
   });
 
-  it('counts a download (AE point and site_daily) and redirects /dl/lite to the GitHub asset', async () => {
-    const res = await call('/dl/lite', { headers: { referer: 'https://www.google.com/' } });
+  it('counts a download (AE point and site_daily) and redirects /v1/dl/lite to the GitHub asset', async () => {
+    const res = await call('/v1/dl/lite', { headers: { referer: 'https://www.google.com/' } });
     assert.equal(res.status, 302);
     const location = String(res.headers.get('location'));
     assert.match(location, /^https:\/\/github\.com\/krishna-kush\/PhoneCanDo\/releases\/download\/v\d+\.\d+\.\d+\/.+lite.+\.apk$/);
     assert.equal(res.headers.get('cache-control'), 'no-store');
     assert.equal(downloads.calls.length, 1);
-    const unknown = await call('/dl/beta');
+    const unknown = await call('/v1/dl/beta');
     assert.equal(unknown.status, 404);
     assert.equal(downloads.calls.length, 1);
     assert.deepEqual(await rollup(), [
@@ -123,8 +123,8 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
     ]);
   });
 
-  it('answers GET /api/health with the database size from D1, the capacity ratios and no caching', async () => {
-    const res = await call('/api/health');
+  it('answers GET /v1/health with the database size from D1, the capacity ratios and no caching', async () => {
+    const res = await call('/v1/health');
     assert.equal(res.status, 200, await res.clone().text());
     assert.equal(res.headers.get('cache-control'), 'no-store');
     assert.match(String(res.headers.get('content-type')), /^application\/json/);
@@ -137,87 +137,108 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
     );
     assert.ok(Math.abs(body.serverTime - Date.now()) < 60_000);
     assert.ok(!JSON.stringify(body).includes(CLIENT_IP));
-    const wrong = await call('/api/health', { method: 'POST', body: '{}', headers: { 'content-type': 'application/json' } });
+    const wrong = await call('/v1/health', { method: 'POST', body: '{}', headers: { 'content-type': 'application/json' } });
     assert.equal(wrong.status, 405);
     assert.equal(wrong.headers.get('allow'), 'GET, HEAD');
   });
 
   it('stores a report', async () => {
-    const res = await postJson('/api/report', reportRequest());
+    const res = await postJson('/v1/report', reportRequest());
     assert.equal(res.status, 200, await res.clone().text());
     assert.equal(((await res.json()) as ReportResponse).reportId, reportRequest().reportId);
     assert.equal(await count('reports'), 1);
   });
 
   it('forgets every row of the device', async () => {
-    const res = await postJson('/api/forget', forgetRequest());
+    const res = await postJson('/v1/forget', forgetRequest());
     assert.equal(res.status, 200, await res.clone().text());
     const { deleted } = (await res.json()) as ForgetResponse;
     assert.equal(deleted['events'], 2);
     assert.equal(deleted['reports'], 1);
     for (const table of ['devices', 'installs', 'sessions', 'events', 'errors', 'reports']) assert.equal(await count(table), 0, table);
-    const again = await postJson('/api/forget', forgetRequest());
+    const again = await postJson('/v1/forget', forgetRequest());
     assert.equal(again.status, 404);
   });
 
   it('a phone that only ever sent a report is pinned by it in D1, and Delete my data removes the report', async () => {
     const identity = identityWire({ installId: INSTALL_ID_3, deviceId: DEVICE_ID_2, deviceVerifier: DEVICE_VERIFIER_2 });
-    const sent = await postJson('/api/report', reportRequest({ reportId: REPORT_ID_2, identity, sessionId: null }));
+    const sent = await postJson('/v1/report', reportRequest({ reportId: REPORT_ID_2, identity, sessionId: null }));
     assert.equal(sent.status, 200, await sent.clone().text());
     assert.deepEqual(await w.env.DB.prepare('SELECT device_id, verifier, country, asn FROM devices').all().then((r) => r.results), [
       { device_id: DEVICE_ID_2, verifier: DEVICE_VERIFIER_2, country: 'IN', asn: 24560 },
     ]);
-    const wrong = await postJson('/api/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: STRANGER_PROOF }));
+    const wrong = await postJson('/v1/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: STRANGER_PROOF }));
     assert.equal(wrong.status, 404);
     assert.equal(await count('reports'), 1);
-    const res = await postJson('/api/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }));
+    const res = await postJson('/v1/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }));
     assert.equal(res.status, 200, await res.clone().text());
     assert.deepEqual(((await res.json()) as ForgetResponse).deleted, { events: 0, errors: 0, reports: 1, sessions: 0, installs: 0, devices: 1 });
     for (const table of ['devices', 'reports']) assert.equal(await count(table), 0, table);
   });
 
   it('rejects an oversized body by Content-Length and while streaming (413)', async () => {
-    const byHeader = await call('/api/batch', {
+    const byHeader = await call('/v1/batch', {
       method: 'POST',
       body: '{}',
       headers: { 'content-type': 'application/json', 'content-length': String(LIMITS.batchBodyBytes + 1) },
     });
     assert.equal(byHeader.status, 413);
     assert.equal(((await byHeader.json()) as ErrorBody).error.code, 'too_large');
-    const byStream = await call('/api/batch', { method: 'POST', body: stream(LIMITS.batchBodyBytes + 5000), headers: { 'content-type': 'application/json' } });
+    const byStream = await call('/v1/batch', { method: 'POST', body: stream(LIMITS.batchBodyBytes + 5000), headers: { 'content-type': 'application/json' } });
     assert.equal(byStream.status, 413);
     assert.equal(((await byStream.json()) as ErrorBody).error.message, `body is over the ${LIMITS.batchBodyBytes}-byte limit`);
   });
 
   it('rejects invalid JSON with 400 and echoes cf-ray as the request id', async () => {
-    const res = await call('/api/batch', { method: 'POST', body: '{"schema":', headers: { 'content-type': 'application/json', 'cf-ray': '8f00aa11bb22cc33-BLR' } });
+    const res = await call('/v1/batch', { method: 'POST', body: '{"schema":', headers: { 'content-type': 'application/json', 'cf-ray': '8f00aa11bb22cc33-BLR' } });
     assert.equal(res.status, 400);
     assert.deepEqual(((await res.json()) as ErrorBody).error, { code: 'bad_request', message: 'body is not valid JSON', requestId: '8f00aa11bb22cc33-BLR' });
   });
 
   it('answers unknown op paths with 404 and wrong methods with 405 + Allow', async () => {
-    const missing = await call('/api/nope');
+    const missing = await call('/v1/nope');
     assert.equal(missing.status, 404);
     assert.equal(missing.headers.get('cache-control'), 'no-store');
-    const wrong = await call('/api/batch');
+    const wrong = await call('/v1/batch');
     assert.equal(wrong.status, 405);
     assert.equal(wrong.headers.get('allow'), 'POST');
   });
 
   it('hands every other path to ASSETS untouched', async () => {
     const before = assets.calls.length;
-    for (const path of ['/', '/privacy/', '/apix', '/api']) {
+    for (const path of ['/', '/privacy/', '/v1x', '/v1']) {
       const res = await call(path);
       assert.equal(res.status, 200);
       assert.match(await res.text(), /PhoneCanDo/);
     }
-    assert.deepEqual(assets.calls.slice(before), [`${BASE}/`, `${BASE}/privacy/`, `${BASE}/apix`, `${BASE}/api`]);
+    assert.deepEqual(assets.calls.slice(before), [`${BASE}/`, `${BASE}/privacy/`, `${BASE}/v1x`, `${BASE}/v1`]);
+  });
+
+  it('answers /v1/* only on the API host: on the site host it is the static site', async () => {
+    const before = assets.calls.length;
+    const counted = { downloads: downloads.calls.length, rollup: await rollup() };
+    for (const path of ['/v1/health', '/v1/dl/lite', '/v1/batch']) {
+      const res = await call(path, { base: SITE_BASE, method: path === '/v1/batch' ? 'POST' : 'GET', body: path === '/v1/batch' ? '{}' : undefined });
+      assert.equal(res.status, 200);
+      assert.match(await res.text(), /PhoneCanDo/);
+    }
+    assert.deepEqual(assets.calls.slice(before), [`${SITE_BASE}/v1/health`, `${SITE_BASE}/v1/dl/lite`, `${SITE_BASE}/v1/batch`]);
+    assert.deepEqual({ downloads: downloads.calls.length, rollup: await rollup() }, counted);
+    // The same path on the API host is the op (HEAD redirects without counting).
+    assert.equal((await call('/v1/dl/lite', { method: 'HEAD' })).status, 302);
+  });
+
+  it('answers /v1/* on every host when API_HOSTS is unset (local dev)', async () => {
+    const { API_HOSTS: _, ...open } = w.env;
+    const res = await call('/v1/health', { base: SITE_BASE }, open as typeof w.env);
+    assert.equal(res.status, 200);
+    assert.equal(((await res.json()) as { db: { limitBytes: number } }).db.limitBytes, CAPACITY.dbLimitBytes);
   });
 
   it('works without request.cf (edge facts become null)', async () => {
-    const res = await postJson('/api/batch', batchRequest({ batchId: '11111111-2222-4333-8444-555555555555' }), {});
+    const res = await postJson('/v1/batch', batchRequest({ batchId: '11111111-2222-4333-8444-555555555555' }), {});
     assert.equal(res.status, 200);
-    const noCf = await worker.fetch(cfRequest('/api/nope', { cf: null }) as Request<unknown, IncomingRequestCfProperties>, w.env, ctx);
+    const noCf = await worker.fetch(cfRequest('/v1/nope', { cf: null }) as Request<unknown, IncomingRequestCfProperties>, w.env, ctx);
     assert.equal(noCf.status, 404);
     assert.match(String(((await noCf.json()) as ErrorBody).error.requestId), /^[0-9a-f-]{36}$/);
   });

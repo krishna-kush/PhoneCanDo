@@ -49,12 +49,12 @@ export type Reply = { status: number; body?: unknown; retryAfter?: string } | { 
  * response for exactly what was sent.
  */
 export function serverReply(path: string, req: any): Reply {
-  if (path === '/api/batch') {
+  if (path === '/v1/batch') {
     const accepted = { sessions: req.sessions?.length ?? 0, events: req.events?.length ?? 0, errors: req.errors?.length ?? 0 };
     return { status: 200, body: { serverTime: 1_750_000_000_000, accepted, droppedEvents: 0 } };
   }
-  if (path === '/api/report') return { status: 200, body: { reportId: req.reportId, serverTime: 1_750_000_000_000 } };
-  if (path === '/api/forget') return { status: 200, body: { deleted: {} } };
+  if (path === '/v1/report') return { status: 200, body: { reportId: req.reportId, serverTime: 1_750_000_000_000 } };
+  if (path === '/v1/forget') return { status: 200, body: { deleted: {} } };
   return { status: 404, body: { error: { code: 'not_found', message: `no route for ${path}` } } };
 }
 

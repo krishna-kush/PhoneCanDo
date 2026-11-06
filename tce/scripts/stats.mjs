@@ -12,7 +12,7 @@
 // --d1 adds summaries from the remote D1 database through the `cf` CLI
 // (`cf d1 query`, logged in; the database id is read from
 // tce/hosts/cloudflare/wrangler.jsonc). Only SELECTs run. Tester devices are
-// excluded. Site page views and /dl downloads: daily totals from the
+// excluded. Site page views and /v1/dl downloads: daily totals from the
 // `site_daily` rollup in D1 (kept forever; scripts/site-daily.mjs), and the
 // `cf analytics-engine sql query` commands for the ~3-month detail in
 // Analytics Engine.
@@ -225,7 +225,7 @@ function aeHint(config) {
   const pageviews = datasets.PAGEVIEWS ?? 'phonecando_pageviews';
   const downloads = datasets.DOWNLOADS ?? 'phonecando_downloads';
   const week = "timestamp > NOW() - INTERVAL '7' DAY";
-  heading('Site page views and /dl downloads in detail (Analytics Engine, no identity, ~3 months kept)');
+  heading('Site page views and /v1/dl downloads in detail (Analytics Engine, no identity, ~3 months kept)');
   console.log('The detail is not in D1 (site_daily keeps daily totals only). Run these yourself (read-only, sample-weighted):\n');
   console.log(
     `  cf analytics-engine sql query --body "SELECT blob1 AS path, SUM(_sample_interval * double1) AS views FROM ${pageviews} WHERE ${week} AND blob4 != 'bot' GROUP BY path ORDER BY views DESC LIMIT 20"`,

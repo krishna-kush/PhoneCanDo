@@ -189,7 +189,7 @@ def cmd_stats(args):
 
 
 def cmd_limits(args):
-    # Read-only: GET /api/health on the live site; with CLOUDFLARE_API_TOKEN
+    # Read-only: GET /v1/health on the live API host; with CLOUDFLARE_API_TOKEN
     # and CLOUDFLARE_ACCOUNT_ID also today's D1 rows and Worker requests.
     sh(["node", str(TCE / "scripts" / "check-limits.mjs"), *args])
 

@@ -12,7 +12,7 @@
 - **Limit check on every build:** warns from 70%, CRITICAL from 90%, never blocks a build.
 - **Abuse bounds on a free plan:** small caps, 100 reports/day, per-IP limits (IP never stored), a 450 MB ingest guard.
 - **No analytics data in the repo;** GitHub's counters are pulled into D1 by a cron.
-- **`/dl` redirects; `latest.json` is not proxied,** so the updater never depends on the Worker.
+- **`/v1/dl` redirects; `latest.json` is not proxied,** so the updater never depends on the Worker.
 - **Worker config lives in `tce/`;** `web/` stays a pure static build.
 - **Migrations before the push:** the Workers Builds token has no D1 permission.
 - **Truncate, don't reject;** paths and secrets are redacted again on the server; unknown event names are dropped.

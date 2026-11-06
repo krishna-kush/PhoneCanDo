@@ -166,7 +166,7 @@ jobs:
 
   capacity:
     # Usage against the free plan (CAPACITY in tce/core/schema/limits.ts):
-    # GET /api/health on the live site, plus today's D1 rows and Worker
+    # GET /v1/health on the live API host, plus today's D1 rows and Worker
     # requests from Cloudflare's GraphQL Analytics API when the optional
     # read-only token is set (Account Analytics: Read, D1: Read). Warns from
     # 70%, CRITICAL from 90%, as annotations and in the job summary. Never

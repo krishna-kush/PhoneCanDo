@@ -151,7 +151,7 @@ export interface ForgetResponse {
   deleted: Record<string, number>;
 }
 
-/** Site page view (sendBeacon, same origin). Country comes from the edge. */
+/** Site page view (sendBeacon from the site to the API host, text/plain). Country comes from the edge. */
 export interface HitRequest {
   path: string;
   /** document.referrer; only its host is kept. */
@@ -159,7 +159,7 @@ export interface HitRequest {
 }
 
 /**
- * GET /api/health — public, no identity, for the limit check run on every
+ * GET /v1/health — public, no identity, for the limit check run on every
  * build (scripts/check-limits.mjs). Ratios come from CAPACITY in limits.ts.
  */
 export interface HealthResponse {

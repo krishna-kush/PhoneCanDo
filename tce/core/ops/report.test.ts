@@ -40,7 +40,7 @@ function setup(store: MemoryStore = createMemoryStore()): FakeCtx<MemoryStore> {
 }
 
 function send(ctx: FakeCtx<MemoryStore>, body: unknown): Promise<TceResult<HttpResponse>> {
-  return callHttp(reportOp, httpRequest({ path: '/api/report', body }), ctx);
+  return callHttp(reportOp, httpRequest({ path: '/v1/report', body }), ctx);
 }
 
 /** A fresh lowercase UUID v4 per n, for seeding many reports. */
@@ -60,7 +60,7 @@ async function postRaw(ctx: FakeCtx<MemoryStore>, text: string): Promise<{ statu
   const bytes = new TextEncoder().encode(text);
   const req: HostRequest = {
     method: 'POST',
-    path: '/api/report',
+    path: '/v1/report',
     query: {},
     headers: { userAgent: null, referer: null, origin: null, host: null, contentType: 'application/json' },
     contentLength: bytes.byteLength,
@@ -187,7 +187,7 @@ describe('report', () => {
 describe('report ownership', () => {
   it("answers 403 to a report under a pinned device's id with another verifier, and stores nothing", async () => {
     const ctx = setup();
-    const seeded = await callHttp(batchOp, httpRequest({ path: '/api/batch', body: batchRequest() }), ctx);
+    const seeded = await callHttp(batchOp, httpRequest({ path: '/v1/batch', body: batchRequest() }), ctx);
     assert.equal(seeded.ok, true, 'the victim pinned DEVICE_VERIFIER with its first batch');
 
     const devicesBefore = ctx.store.tables.devices;
@@ -224,7 +224,7 @@ describe('report ownership', () => {
 
     // The same phone's first batch at the same moment, on a fresh store.
     const viaBatch = setup();
-    const batched = await callHttp(batchOp, httpRequest({ path: '/api/batch', body: batchRequest({ identity: other, device }) }), viaBatch);
+    const batched = await callHttp(batchOp, httpRequest({ path: '/v1/batch', body: batchRequest({ identity: other, device }) }), viaBatch);
     assert.equal(batched.ok, true);
     assert.deepEqual(ctx.store.tables.devices, viaBatch.store.tables.devices);
     assert.deepEqual(ctx.store.tables.devices, [
@@ -249,7 +249,7 @@ describe('report ownership', () => {
 
     // Pinned: a later batch or report under that deviceId with another verifier is refused.
     const stranger = identityWire({ installId: INSTALL_ID_3, deviceId: DEVICE_ID_2, deviceVerifier: STRANGER_VERIFIER });
-    const batch = await callHttp(batchOp, httpRequest({ path: '/api/batch', body: batchRequest({ identity: stranger }) }), ctx);
+    const batch = await callHttp(batchOp, httpRequest({ path: '/v1/batch', body: batchRequest({ identity: stranger }) }), ctx);
     assert.equal(!batch.ok && batch.error.code, 'forbidden');
     assert.equal((await postRaw(ctx, JSON.stringify(reportRequest({ reportId: REPORT_ID_2, identity: stranger })))).status, 403);
     assert.equal(ctx.store.tables.reports.length, 1);

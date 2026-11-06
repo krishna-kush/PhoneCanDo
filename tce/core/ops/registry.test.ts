@@ -9,12 +9,12 @@ describe('registry', () => {
     assert.deepEqual(
       httpOps.map((op) => [op.method, op.path, op.name, op.maxBodyBytes]),
       [
-        ['POST', '/api/batch', 'batch', LIMITS.batchBodyBytes],
-        ['POST', '/api/hit', 'hit', LIMITS.smallBodyBytes],
-        ['GET', '/dl/:channel', 'download', 0],
-        ['POST', '/api/report', 'report', LIMITS.reportBodyBytes],
-        ['POST', '/api/forget', 'forget', LIMITS.smallBodyBytes],
-        ['GET', '/api/health', 'health', 0],
+        ['POST', '/v1/batch', 'batch', LIMITS.batchBodyBytes],
+        ['POST', '/v1/hit', 'hit', LIMITS.smallBodyBytes],
+        ['GET', '/v1/dl/:channel', 'download', 0],
+        ['POST', '/v1/report', 'report', LIMITS.reportBodyBytes],
+        ['POST', '/v1/forget', 'forget', LIMITS.smallBodyBytes],
+        ['GET', '/v1/health', 'health', 0],
       ],
     );
     assert.ok(httpOps.every((op) => op.kind === 'http'));
@@ -50,6 +50,6 @@ describe('registry', () => {
         if (a !== b && a.method === b.method) assert.equal(matchPath(a.path, b.path.replace(/:\w+/g, 'x')), null, `${a.path} vs ${b.path}`);
       }
     }
-    assert.deepEqual(matchPath('/dl/:channel', '/dl/lite'), { channel: 'lite' });
+    assert.deepEqual(matchPath('/v1/dl/:channel', '/v1/dl/lite'), { channel: 'lite' });
   });
 });

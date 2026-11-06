@@ -11,19 +11,21 @@ import type { DispatchOptions } from '../../core/http.ts';
 
 /** Bindings and vars declared in wrangler.jsonc. */
 export interface Env {
-  /** web/dist, served for every path outside /api/* and /dl/*. */
+  /** web/dist: every path outside /v1/*, and /v1/* on a host that does not serve the API. */
   ASSETS: Fetcher;
   DB: D1Database;
   PAGEVIEWS?: AnalyticsEngineDataset;
   DOWNLOADS?: AnalyticsEngineDataset;
-  /** Rate limiter for /api/batch. Absent: not limited. */
+  /** Rate limiter for /v1/batch. Absent: not limited. */
   RL_INGEST?: RateLimit;
-  /** Rate limiter for /api/report and /api/forget. Absent: not limited. */
+  /** Rate limiter for /v1/report and /v1/forget. Absent: not limited. */
   RL_RARE?: RateLimit;
-  /** Rate limiter for /api/hit, /dl/* and /api/health. Absent: not limited. */
+  /** Rate limiter for /v1/hit, /v1/dl/* and /v1/health. Absent: not limited. */
   RL_PUBLIC?: RateLimit;
-  /** Comma list of origins allowed to post /api/hit. */
+  /** Comma list of origins allowed to post /v1/hit. */
   ALLOWED_ORIGINS?: string;
+  /** Comma list of hostnames that answer /v1/* (the API host). Unset or empty: every host does (local dev, tests). */
+  API_HOSTS?: string;
   /** 'true' lets the retention cron delete expired rows; anything else (the default) keeps everything. */
   RETENTION_ENABLED?: string;
   /** Optional secret: fine-grained PAT (Administration: read) for GitHub traffic. */
@@ -57,6 +59,18 @@ export function configFromEnv(env: Env): TceConfig {
     allowedOrigins: env.ALLOWED_ORIGINS,
     retentionEnabled: env.RETENTION_ENABLED,
   });
+}
+
+/**
+ * True when `hostname` answers /v1/*. Every other host serves only the static
+ * site, so the site's domain keeps all its paths for pages.
+ */
+export function servesApi(env: Env, hostname: string): boolean {
+  const hosts = (env.API_HOSTS ?? '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter((h) => h !== '');
+  return hosts.length === 0 || hosts.includes(hostname.toLowerCase());
 }
 
 /** Parses an IPv6 address into its eight 16-bit groups, or null when it is not one. */

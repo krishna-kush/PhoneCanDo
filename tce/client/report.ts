@@ -36,7 +36,7 @@ async function doReport(c: ClientContext, input: { note?: string; logTail?: stri
     if (logTail) req.logTail = logTail;
     // Forget may have started while the identity was read.
     if (!c.enabled || c.forgetting) return err('forbidden', 'usage stats are off');
-    const out = await postJson(c.net, `${c.baseUrl}/api/report`, fitReport(req), c.timeoutMs, () => now(c));
+    const out = await postJson(c.net, `${c.baseUrl}/v1/report`, fitReport(req), c.timeoutMs, () => now(c));
     if (!out.ok) {
       c.log.warn('telemetry: report not delivered', { code: out.error.code, status: out.status });
       return { ok: false, error: out.error };

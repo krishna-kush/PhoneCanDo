@@ -76,7 +76,7 @@ async function doFlush(c: ClientContext): Promise<TceResult<BatchResponse> | nul
       const sentAt = now(c);
       if (!isEpochMs(sentAt)) return err('unavailable', 'device clock is out of range');
       const req = toRequest(envR.value, plan, newUuid(c), sentAt);
-      const out = await postJson(c.net, `${c.baseUrl}/api/batch`, JSON.stringify(req), c.timeoutMs, () => now(c));
+      const out = await postJson(c.net, `${c.baseUrl}/v1/batch`, JSON.stringify(req), c.timeoutMs, () => now(c));
       const resp = out.ok ? readBatchResponse(out.json) : null;
       if (resp) {
         settle(c.queue, plan, revs, currentId(c));

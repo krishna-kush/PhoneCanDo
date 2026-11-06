@@ -32,7 +32,7 @@ function echoOp(over: Partial<AnyHttpOp> = {}): AnyHttpOp & { seen: HttpRequest[
     kind: 'http',
     name: 'echo',
     method: 'POST',
-    path: '/api/echo',
+    path: '/v1/echo',
     maxBodyBytes: 32,
     parse: (req) => {
       seen.push(req);
@@ -50,7 +50,7 @@ function hostRequest(over: Partial<HostRequest> & { body?: string | Uint8Array }
   const bytes = typeof body === 'string' ? encoder.encode(body) : (body ?? new Uint8Array(0));
   return {
     method: 'POST',
-    path: '/api/echo',
+    path: '/v1/echo',
     query: {},
     headers: { userAgent: null, referer: null, origin: null, host: null, contentType: 'application/json' },
     contentLength: bytes.byteLength,
@@ -73,11 +73,11 @@ function json(body: string | null): unknown {
 }
 
 describe('resolveRoute', () => {
-  const get = echoOp({ name: 'dl', method: 'GET', path: '/dl/:channel', maxBodyBytes: 0 });
+  const get = echoOp({ name: 'dl', method: 'GET', path: '/v1/dl/:channel', maxBodyBytes: 0 });
   const post = echoOp();
 
   it('matches method and path and decodes params', () => {
-    const m = resolveRoute([get, post], 'GET', '/dl/li%74e');
+    const m = resolveRoute([get, post], 'GET', '/v1/dl/li%74e');
     assert.equal(m.kind, 'op');
     if (m.kind === 'op') {
       assert.equal(m.op.name, 'dl');
@@ -86,17 +86,17 @@ describe('resolveRoute', () => {
   });
 
   it('serves HEAD from the GET route', () => {
-    assert.equal(resolveRoute([get], 'HEAD', '/dl/full').kind, 'op');
+    assert.equal(resolveRoute([get], 'HEAD', '/v1/dl/full').kind, 'op');
   });
 
   it('reports the allowed methods on a method mismatch', () => {
-    assert.deepEqual(resolveRoute([get, post], 'POST', '/dl/lite'), { kind: 'method_not_allowed', allow: ['GET', 'HEAD'] });
-    assert.deepEqual(resolveRoute([get, post], 'GET', '/api/echo'), { kind: 'method_not_allowed', allow: ['POST'] });
+    assert.deepEqual(resolveRoute([get, post], 'POST', '/v1/dl/lite'), { kind: 'method_not_allowed', allow: ['GET', 'HEAD'] });
+    assert.deepEqual(resolveRoute([get, post], 'GET', '/v1/echo'), { kind: 'method_not_allowed', allow: ['POST'] });
   });
 
   it('returns not_found for unknown paths', () => {
-    assert.deepEqual(resolveRoute([get, post], 'GET', '/api/nope'), { kind: 'not_found' });
-    assert.deepEqual(resolveRoute([get, post], 'GET', '/dl/lite/extra'), { kind: 'not_found' });
+    assert.deepEqual(resolveRoute([get, post], 'GET', '/v1/nope'), { kind: 'not_found' });
+    assert.deepEqual(resolveRoute([get, post], 'GET', '/v1/dl/lite/extra'), { kind: 'not_found' });
   });
 });
 
@@ -182,8 +182,8 @@ describe('dispatch', () => {
   });
 
   it('never reads a body for GET routes and passes params and query', async () => {
-    const op = echoOp({ method: 'GET', path: '/dl/:channel', maxBodyBytes: 0, run: async () => ok({ status: 302, location: 'https://example.com/a.apk' }) });
-    const req = hostRequest({ method: 'GET', path: '/dl/lite', query: { ref: 'x' }, contentLength: null });
+    const op = echoOp({ method: 'GET', path: '/v1/dl/:channel', maxBodyBytes: 0, run: async () => ok({ status: 302, location: 'https://example.com/a.apk' }) });
+    const req = hostRequest({ method: 'GET', path: '/v1/dl/lite', query: { ref: 'x' }, contentLength: null });
     const res = await dispatch(req, [op], ctx());
     assert.equal(res.status, 302);
     assert.equal(res.headers['location'], 'https://example.com/a.apk');
@@ -194,8 +194,8 @@ describe('dispatch', () => {
   });
 
   it('serves HEAD without a body and tells the op it was HEAD', async () => {
-    const op = echoOp({ method: 'GET', path: '/api/info', maxBodyBytes: 0, run: async () => ok({ status: 200, json: { a: 1 } }) });
-    const res = await dispatch(hostRequest({ method: 'HEAD', path: '/api/info' }), [op], ctx());
+    const op = echoOp({ method: 'GET', path: '/v1/info', maxBodyBytes: 0, run: async () => ok({ status: 200, json: { a: 1 } }) });
+    const res = await dispatch(hostRequest({ method: 'HEAD', path: '/v1/info' }), [op], ctx());
     assert.equal(res.status, 200);
     assert.equal(res.body, null);
     assert.equal(res.headers['content-type'], 'application/json; charset=utf-8');
@@ -250,7 +250,7 @@ describe('dispatch', () => {
   });
 
   it('answers 404 and 405 (with Allow) as JSON errors', async () => {
-    const notFound = await dispatch(hostRequest({ path: '/api/missing' }), [echoOp()], ctx());
+    const notFound = await dispatch(hostRequest({ path: '/v1/missing' }), [echoOp()], ctx());
     assert.equal(notFound.status, 404);
     assert.equal((json(notFound.body) as { error: { code: string } }).error.code, 'not_found');
     const wrong = await dispatch(hostRequest({ method: 'GET' }), [echoOp()], ctx());
@@ -261,8 +261,8 @@ describe('dispatch', () => {
 
   it('omits requestId when the host has none', async () => {
     const c = fakeCtx({ store: createMemoryStore(), edge: { requestId: null } });
-    const res = await dispatch(hostRequest({ path: '/api/missing' }), [echoOp()], c);
-    assert.deepEqual(json(res.body), { error: { code: 'not_found', message: 'no route for /api/missing' } });
+    const res = await dispatch(hostRequest({ path: '/v1/missing' }), [echoOp()], c);
+    assert.deepEqual(json(res.body), { error: { code: 'not_found', message: 'no route for /v1/missing' } });
   });
 });
 
@@ -287,8 +287,8 @@ describe('dispatch rate limiting', () => {
   });
 
   it('answers a limited HEAD with 429 and no body', async () => {
-    const op = echoOp({ method: 'GET', path: '/api/info', maxBodyBytes: 0 });
-    const res = await dispatch(hostRequest({ method: 'HEAD', path: '/api/info' }), [op], ctx(), { limit: refuse });
+    const op = echoOp({ method: 'GET', path: '/v1/info', maxBodyBytes: 0 });
+    const res = await dispatch(hostRequest({ method: 'HEAD', path: '/v1/info' }), [op], ctx(), { limit: refuse });
     assert.equal(res.status, 429);
     assert.equal(res.body, null);
     assert.equal(res.headers['retry-after'], '60');
@@ -315,7 +315,7 @@ describe('dispatch rate limiting', () => {
     };
     const op = echoOp();
     await dispatch(hostRequest({ body: '{}' }), [op], ctx(), { limit });
-    await dispatch(hostRequest({ path: '/api/missing' }), [op], ctx(), { limit });
+    await dispatch(hostRequest({ path: '/v1/missing' }), [op], ctx(), { limit });
     await dispatch(hostRequest({ method: 'GET' }), [op], ctx(), { limit });
     assert.deepEqual(asked, ['echo']);
   });
@@ -345,19 +345,19 @@ describe('dispatch rate limiting', () => {
     const store = createMemoryStore();
     const c = fakeCtx({ store, edge: { requestId: 'req-1' } });
 
-    const batch = await dispatch(hostRequest({ path: '/api/batch', body: JSON.stringify(batchRequest()) }), httpOps, c, { limit: refuse });
+    const batch = await dispatch(hostRequest({ path: '/v1/batch', body: JSON.stringify(batchRequest()) }), httpOps, c, { limit: refuse });
     assert.equal(batch.status, 429);
     assert.equal(batch.headers['retry-after'], '60');
     assert.equal(store.tables.devices.length, 0);
 
-    const hitReq = hostRequest({ path: '/api/hit', body: JSON.stringify(hitRequest()) });
+    const hitReq = hostRequest({ path: '/v1/hit', body: JSON.stringify(hitRequest()) });
     hitReq.headers.origin = SITE_ORIGIN;
     hitReq.headers.host = SITE_HOST;
     const hit = await dispatch(hitReq, httpOps, c, { limit: refuse });
     assert.equal(hit.status, 204);
     assert.equal(hit.body, null);
 
-    const dl = await dispatch(hostRequest({ method: 'GET', path: '/dl/lite', contentLength: null }), httpOps, c, { limit: refuse });
+    const dl = await dispatch(hostRequest({ method: 'GET', path: '/v1/dl/lite', contentLength: null }), httpOps, c, { limit: refuse });
     assert.equal(dl.status, 302);
     assert.match(dl.headers['location'] ?? '', /\/releases\/download\/v0\.1\.2\/phonecando-0\.1\.2-lite-arm64\.apk$/);
 
@@ -366,7 +366,7 @@ describe('dispatch rate limiting', () => {
 
     // The same requests unlimited do write their points.
     await dispatch(hitReq, httpOps, c, { limit: async () => true });
-    await dispatch(hostRequest({ method: 'GET', path: '/dl/lite', contentLength: null }), httpOps, c);
+    await dispatch(hostRequest({ method: 'GET', path: '/v1/dl/lite', contentLength: null }), httpOps, c);
     assert.equal(store.pagePoints.length, 1);
     assert.equal(store.downloadPoints.length, 1);
   });
@@ -413,11 +413,11 @@ describe('runCron', () => {
 });
 
 describe('helpers', () => {
-  it('isOpPath covers /api/* and /dl/* only', () => {
-    assert.ok(isOpPath('/api/batch'));
-    assert.ok(isOpPath('/dl/lite'));
+  it('isOpPath covers /v1/* only', () => {
+    assert.ok(isOpPath('/v1/batch'));
+    assert.ok(isOpPath('/v1/dl/lite'));
     assert.ok(!isOpPath('/'));
-    assert.ok(!isOpPath('/api'));
+    assert.ok(!isOpPath('/v1'));
     assert.ok(!isOpPath('/apix/batch'));
     assert.ok(!isOpPath('/download'));
   });

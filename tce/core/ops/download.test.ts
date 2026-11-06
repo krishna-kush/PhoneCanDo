@@ -12,7 +12,7 @@ function setup(store: MemoryStore = createMemoryStore()): FakeCtx<MemoryStore> {
 }
 
 function download(ctx: FakeCtx<MemoryStore>, channel: string, over: HttpRequestOverrides = {}): Promise<TceResult<HttpResponse>> {
-  return callHttp(downloadOp, httpRequest({ method: 'GET', path: `/dl/${channel}`, params: { channel }, ...over }), ctx);
+  return callHttp(downloadOp, httpRequest({ method: 'GET', path: `/v1/dl/${channel}`, params: { channel }, ...over }), ctx);
 }
 
 const LITE = 'https://github.com/krishna-kush/PhoneCanDo/releases/download/v0.1.2/phonecando-0.1.2-lite-arm64.apk';
@@ -79,7 +79,7 @@ describe('download', () => {
 
   it('follows the configured release', async () => {
     const ctx = fakeCtx({ store: createMemoryStore(), config: { release: { repo: 'someone/fork', version: '9.9.9' } } });
-    const r = await callHttp(downloadOp, httpRequest({ method: 'GET', path: '/dl/full', params: { channel: 'full' } }), ctx);
+    const r = await callHttp(downloadOp, httpRequest({ method: 'GET', path: '/v1/dl/full', params: { channel: 'full' } }), ctx);
     assert.equal(r.ok && r.value.location, 'https://github.com/someone/fork/releases/download/v9.9.9/phonecando-9.9.9-full-arm64.apk');
     assert.equal(ctx.store.downloadPoints[0]!.version, '9.9.9');
   });

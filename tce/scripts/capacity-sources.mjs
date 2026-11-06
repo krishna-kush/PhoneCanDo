@@ -1,5 +1,5 @@
 // Usage sources for scripts/check-limits.mjs: the Worker's public
-// GET /api/health and, with a read-only token, Cloudflare's GraphQL Analytics
+// GET /v1/health and, with a read-only token, Cloudflare's GraphQL Analytics
 // API (today's D1 rows, Worker requests) and D1 REST API (database size).
 // Fetch is injected and nothing here throws: every call resolves to
 // { ok: true, ... } or { ok: false, problem }. The token goes only into the
@@ -73,9 +73,9 @@ export function parseRetention(r) {
   return { enabled: r.enabled, days: pick(r.days), oldestDays: pick(r.oldestDays) };
 }
 
-/** GET <base>/api/health. A 404 is state 'missing' (endpoint not deployed yet), a network failure 'unreachable'. */
+/** GET <base>/v1/health. A 404 is state 'missing' (endpoint not deployed yet), a network failure 'unreachable'. */
 export async function fetchHealth(base, { fetch: fetchImpl = globalThis.fetch, timeoutMs = TIMEOUT_MS } = {}) {
-  const url = `${base.replace(/\/+$/, '')}/api/health`;
+  const url = `${base.replace(/\/+$/, '')}/v1/health`;
   let res;
   try {
     res = await fetchImpl(url, { headers: { accept: 'application/json', 'user-agent': UA }, signal: AbortSignal.timeout(timeoutMs) });

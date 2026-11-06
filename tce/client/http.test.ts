@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import { FakeNet } from './fakes.ts';
 import { postJson } from './http.ts';
 
-const URL_ = 'https://t.example/api/batch';
+const URL_ = 'https://t.example/v1/batch';
 const ROUTER_405 = { error: { code: 'bad_request', message: 'method GET not allowed; use POST' } };
 
 async function classify(reply: Parameters<FakeNet['reply']>[0]) {

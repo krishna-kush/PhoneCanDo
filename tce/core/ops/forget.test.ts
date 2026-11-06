@@ -36,17 +36,17 @@ function setup(store: MemoryStore = createMemoryStore()): FakeCtx<MemoryStore> {
 }
 
 function forget(ctx: FakeCtx<MemoryStore>, body: unknown): Promise<TceResult<HttpResponse>> {
-  return callHttp(forgetOp, httpRequest({ path: '/api/forget', body }), ctx);
+  return callHttp(forgetOp, httpRequest({ path: '/v1/forget', body }), ctx);
 }
 
-async function seed(ctx: FakeCtx<MemoryStore>, body: unknown, op: AnyHttpOp = batchOp, path = '/api/batch'): Promise<void> {
+async function seed(ctx: FakeCtx<MemoryStore>, body: unknown, op: AnyHttpOp = batchOp, path = '/v1/batch'): Promise<void> {
   const r = await callHttp(op, httpRequest({ path, body }), ctx);
   if (!r.ok) assert.fail(`seed failed: ${JSON.stringify(r.error)}`);
 }
 
-/** POST /api/forget through the host-neutral dispatch, as a host would. */
+/** POST /v1/forget through the host-neutral dispatch, as a host would. */
 function postForget(ctx: FakeCtx<MemoryStore>, body: unknown): Promise<{ status: number; body: string | null }> {
-  return post(ctx, '/api/forget', body);
+  return post(ctx, '/v1/forget', body);
 }
 
 /** POST a JSON body to `path` through the host-neutral dispatch over the real registry. */
@@ -78,7 +78,7 @@ describe('forget', () => {
   it('a wrong proof answers 404 with the same message and leaves every row intact', async () => {
     const ctx = setup();
     await seed(ctx, batchRequest());
-    await seed(ctx, reportRequest(), reportOp, '/api/report');
+    await seed(ctx, reportRequest(), reportOp, '/v1/report');
     const before = JSON.stringify(ctx.store.tables);
     // The attacker knows the victim's deviceId (e.g. from a leaked log), not its proof.
     for (const deviceProof of [STRANGER_PROOF, DEVICE_PROOF_2, DEVICE_VERIFIER]) {
@@ -103,11 +103,11 @@ describe('forget', () => {
         errors: [],
       }),
     );
-    await seed(ctx, reportRequest(), reportOp, '/api/report');
+    await seed(ctx, reportRequest(), reportOp, '/v1/report');
     // Another phone.
     const other = identityWire({ installId: INSTALL_ID_3, deviceId: DEVICE_ID_2, deviceVerifier: DEVICE_VERIFIER_2 });
     await seed(ctx, batchRequest({ identity: other, sessions: [sessionWire({ sessionId: SESSION_ID_3 })], events: [eventWire({ sessionId: SESSION_ID_3 })], errors: [] }));
-    await seed(ctx, reportRequest({ reportId: REPORT_ID_2, identity: other, sessionId: SESSION_ID_3 }), reportOp, '/api/report');
+    await seed(ctx, reportRequest({ reportId: REPORT_ID_2, identity: other, sessionId: SESSION_ID_3 }), reportOp, '/v1/report');
 
     const res = await postForget(ctx, forgetRequest());
     assert.equal(res.status, 200);
@@ -140,21 +140,21 @@ describe('forget', () => {
   it('a phone that only ever sent a report can delete it: the report pinned the device, forget answers 200 (through dispatch)', async () => {
     const ctx = setup();
     const other = identityWire({ installId: INSTALL_ID_3, deviceId: DEVICE_ID_2, deviceVerifier: DEVICE_VERIFIER_2 });
-    const sent = await post(ctx, '/api/report', reportRequest({ identity: other, sessionId: null }));
+    const sent = await post(ctx, '/v1/report', reportRequest({ identity: other, sessionId: null }));
     assert.equal(sent.status, 200, String(sent.body));
     assert.deepEqual(ctx.store.tables.reports.map((r) => r.device_id), [DEVICE_ID_2]);
     assert.deepEqual(ctx.store.tables.devices.map((d) => [d.device_id, d.verifier]), [[DEVICE_ID_2, DEVICE_VERIFIER_2]]);
 
     // A wrong proof still finds nothing.
-    const wrong = await post(ctx, '/api/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: STRANGER_PROOF }));
+    const wrong = await post(ctx, '/v1/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: STRANGER_PROOF }));
     assert.equal(wrong.status, 404);
     assert.equal(ctx.store.tables.reports.length, 1);
 
-    const res = await post(ctx, '/api/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }));
+    const res = await post(ctx, '/v1/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }));
     assert.equal(res.status, 200, String(res.body));
     assert.deepEqual(JSON.parse(res.body!), { deleted: { devices: 1, installs: 0, sessions: 0, events: 0, errors: 0, reports: 1 } });
     for (const rows of Object.values(ctx.store.tables)) assert.deepEqual(rows, []);
-    assert.equal((await post(ctx, '/api/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }))).status, 404);
+    assert.equal((await post(ctx, '/v1/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }))).status, 404);
   });
 
   it('validates the body: schema, deviceId and deviceProof shapes', () => {

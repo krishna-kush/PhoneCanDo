@@ -252,6 +252,11 @@ describe('hosts/cloudflare/wrangler.jsonc', () => {
     ]);
   });
 
+  it('answers the API on api.phonecando.app only', () => {
+    // The host the app and the site call; every other host keeps /v1/* for the static site.
+    assert.equal(raw.vars['API_HOSTS'], 'api.phonecando.app');
+  });
+
   it('ships with retention off (we keep all data until the backup exists)', () => {
     // Turning it on is a deliberate edit to "true"; scripts/check-limits.mjs
     // warns before the oldest row passes the age the privacy page promises.

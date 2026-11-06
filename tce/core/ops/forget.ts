@@ -1,4 +1,4 @@
-// POST /api/forget: "Delete my data". The device proves it owns the deviceId
+// POST /v1/forget: "Delete my data". The device proves it owns the deviceId
 // with its forget proof: SHA-256 of the proof must equal the verifier the
 // store pinned from the device's first batch (see HASH_PEPPER in
 // schema/limits.ts). Then every row of that device, across all its installs,
@@ -34,12 +34,12 @@ export function proofVerifier(ctx: Pick<RequestCtx, 'hash'>, deviceProof: string
   return ctx.hash.sha256Hex(deviceProof);
 }
 
-/** POST /api/forget. */
+/** POST /v1/forget. */
 export const forgetOp: HttpOp<ForgetInput> = {
   kind: 'http',
   name: 'forget',
   method: 'POST',
-  path: '/api/forget',
+  path: '/v1/forget',
   maxBodyBytes: LIMITS.smallBodyBytes,
 
   parse(req) {

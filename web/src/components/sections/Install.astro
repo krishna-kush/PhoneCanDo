@@ -4,12 +4,12 @@ import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
 import { dlUrl, site } from "../../data/site";
 
-// The plate's code is real: the starter's download route on `site` from
-// astro.config.mjs (absolute, since a phone scans it), so a visitor on a computer can scan the
+// The plate's code is real: the starter's download route (absolute, on the
+// API host), so a visitor on a computer can scan the
 // download onto the phone. Encoded at build time, so the page ships one SVG
 // path and no script. Each run of dark modules in a row is one rectangle;
 // the 4-module border is the spec's quiet zone.
-const qr = encode(new URL(dlUrl("lite"), Astro.site).href, { ecc: "M", border: 4 });
+const qr = encode(dlUrl("lite"), { ecc: "M", border: 4 });
 const qrPath = qr.data
     .map((row, y) => {
         let d = "";
@@ -140,8 +140,9 @@ const pcScripts = [
         <div class="install-steps">
             <!-- Computer: full APK first (adb skips Play Protect). Phone:
                  the full button hides and the starter becomes primary.
-                 Both go through the Worker's /dl route, which counts the
-                 download and redirects to the GitHub asset. -->
+                 Both go through the Worker's /v1/dl route on the API host,
+                 which counts the download and redirects to the GitHub
+                 asset. -->
             <a class="btn btn-primary install-full" href={dlUrl("full")}>
                 Full APK for adb · v{site.version}
             </a>

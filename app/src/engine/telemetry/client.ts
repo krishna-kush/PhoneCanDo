@@ -8,10 +8,13 @@ import { cryptoModule } from './crypto';
 import { log } from './log';
 import { envPort, netPort } from './ports';
 
-/** The one production endpoint: the Worker that also serves the site. */
-export const TELEMETRY_BASE = 'https://phonecando.app';
-/** What is collected and why, in plain words. */
-export const PRIVACY_URL = `${TELEMETRY_BASE}/privacy/`;
+/**
+ * The one production endpoint: the tce Worker's API host (paths /v1/*). Kept
+ * apart from the site's domain so the backend can move without an app update.
+ */
+export const TELEMETRY_BASE = 'https://api.phonecando.app';
+/** What is collected and why, in plain words: a page on the website. */
+export const PRIVACY_URL = 'https://phonecando.app/privacy/';
 
 const DEV_LOCAL_BASE = 'http://127.0.0.1:8787';
 const NET_TIMEOUT_MS = 10_000;

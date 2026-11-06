@@ -13,14 +13,14 @@ import { healthBody, healthOp } from './health.ts';
 import { httpOps } from './registry.ts';
 
 function get(ctx: FakeCtx) {
-  return callHttp(healthOp, httpRequest({ method: 'GET', path: '/api/health' }), ctx);
+  return callHttp(healthOp, httpRequest({ method: 'GET', path: '/v1/health' }), ctx);
 }
 
 /** A bodiless GET as a host hands it to dispatch. */
 function hostGet(method = 'GET'): HostRequest {
   return {
     method,
-    path: '/api/health',
+    path: '/v1/health',
     query: {},
     headers: { userAgent: 'check-limits', referer: null, origin: null, host: 'phonecando.app', contentType: null },
     contentLength: null,
@@ -46,7 +46,7 @@ function retention(enabled: boolean): HealthResponse['retention'] {
 
 describe('health', () => {
   it('is a public bodiless GET with the default whenLimited (reject)', () => {
-    assert.deepEqual([healthOp.kind, healthOp.name, healthOp.method, healthOp.path, healthOp.maxBodyBytes], ['http', 'health', 'GET', '/api/health', 0]);
+    assert.deepEqual([healthOp.kind, healthOp.name, healthOp.method, healthOp.path, healthOp.maxBodyBytes], ['http', 'health', 'GET', '/v1/health', 0]);
     assert.equal(healthOp.whenLimited, undefined);
     assert.deepEqual(RATIOS, { limitBytes: 500_000_000, warnRatio: 0.7, guardRatio: 0.9 });
   });

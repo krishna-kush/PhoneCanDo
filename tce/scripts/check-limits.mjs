@@ -5,7 +5,7 @@
 //   (./manage limits; ./manage build and ./manage release run it first; the
 //   tce.yml capacity job; the Workers Builds build command)
 //
-// 1. GET ${TCE_BASE:-https://phonecando.app}/api/health: the database size
+// 1. GET ${TCE_BASE:-https://api.phonecando.app}/v1/health: the database size
 //    against its limit, whether the storage guard is pausing ingest, and the
 //    retention switch with the oldest kept row per table: while retention is
 //    off, it warns 14 days before the age the privacy page promises
@@ -30,7 +30,7 @@ import { cloudflareSetup, fetchCloudflareUsage, fetchHealth } from './capacity-s
 import { hasCritical, renderRetention, retentionFindings } from './retention-watch.mjs';
 import { TCE, d1DatabaseOf, readWranglerConfig } from './wrangler-config.mjs';
 
-const DEFAULT_BASE = 'https://phonecando.app';
+const DEFAULT_BASE = 'https://api.phonecando.app';
 const LIMITS_TS = join(TCE, 'core/schema/limits.ts');
 
 const HELP = `usage: node tce/scripts/check-limits.mjs [--strict]
@@ -38,7 +38,7 @@ const HELP = `usage: node tce/scripts/check-limits.mjs [--strict]
   Compares usage with the Cloudflare free plan (CAPACITY in
   tce/core/schema/limits.ts): warns at 70%, CRITICAL at 90%.
 
-  TCE_BASE                 site to ask for /api/health (default ${DEFAULT_BASE})
+  TCE_BASE                 API host to ask for /v1/health (default ${DEFAULT_BASE})
   CLOUDFLARE_API_TOKEN     optional, read-only (Account Analytics: Read, D1: Read)
   CLOUDFLARE_ACCOUNT_ID    optional; with the token adds today's D1 rows and
                            Worker requests

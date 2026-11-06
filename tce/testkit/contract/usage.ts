@@ -1,4 +1,4 @@
-// Contract cases for usage(), which GET /api/health reports: a well-formed
+// Contract cases for usage(), which GET /v1/health reports: a well-formed
 // StoreUsage, a fresh store that is not pausing ingest, and the oldest kept
 // `received` per retained table (what the limit check compares with the
 // promised retention while deletion is switched off).

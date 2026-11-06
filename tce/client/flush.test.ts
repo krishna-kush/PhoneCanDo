@@ -20,7 +20,7 @@ describe('flush', () => {
     const r = await client.flush();
     assert.ok(r?.ok);
     assert.deepEqual(r.value, { serverTime: 77, accepted: { sessions: 1, events: 2, errors: 0 }, droppedEvents: 0 });
-    assert.equal(net.sent[0]!.url, 'https://t.example/api/batch');
+    assert.equal(net.sent[0]!.url, 'https://t.example/v1/batch');
     assert.equal(net.sent[0]!.timeoutMs, DEFAULT_TIMEOUT_MS);
     const b = batches(net)[0]!;
     assert.equal(b.schema, 1);

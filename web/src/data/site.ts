@@ -29,12 +29,22 @@ if (release.version !== version) {
 }
 
 /**
- * Same-origin download route. The Worker (tce/hosts/cloudflare) counts the
+ * The API host: the tce Worker answers /v1/* only here, so every path on the
+ * site's own domain stays a page. The one place it is written on the web side
+ * (.github/ci/web/check-release.mjs reads it from this line).
+ */
+export const apiOrigin = 'https://api.phonecando.app';
+
+/** Where the inline page-view beacon posts (Base.astro). */
+export const hitUrl = `${apiOrigin}/v1/hit`;
+
+/**
+ * Download route on the API host. The Worker (tce/hosts/cloudflare) counts the
  * download without identifying anyone, then redirects to this version's
  * GitHub asset. The computer commands keep the direct GitHub URL, because
  * they pin its SHA-256.
  */
-export const dlUrl = (channel: 'lite' | 'full') => `/dl/${channel}`;
+export const dlUrl = (channel: 'lite' | 'full') => `${apiOrigin}/v1/dl/${channel}`;
 
 export const site = {
   name: 'PhoneCanDo',

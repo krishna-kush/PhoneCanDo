@@ -6,8 +6,9 @@
 // A page links a download in one of two ways:
 //   - directly: a https://github.com/<repo>/releases/download/... URL (the
 //     computer commands, which pin the SHA-256)
-//   - through the Worker: an href="/dl/lite" or "/dl/full" (the buttons). The
-//     Worker (tce/hosts/cloudflare) redirects it to
+//   - through the Worker: an href="<apiOrigin>/v1/dl/lite" or ".../full" (the
+//     buttons; apiOrigin from web/src/data/site.ts). The Worker
+//     (tce/hosts/cloudflare) redirects it to
 //     releases/download/v<version>/phonecando-<version>-<channel>-arm64.apk,
 //     the same name site.ts builds, so that asset counts as linked.
 // This asks the GitHub API for that release and checks, for every linked
@@ -15,7 +16,7 @@
 //   - the release exists, is published (not a draft), and has that asset
 //   - the asset's size and sha256 digest equal release.json for its channel
 // and that a page with a direct link shows both pinned checksums, a page
-// with a /dl/<channel> link shows that channel's, and dist has at least one
+// with a /v1/dl/<channel> link shows that channel's, and dist has at least one
 // download link of either kind. Read-only; GITHUB_TOKEN (optional) only
 // raises the API rate limit.
 //
@@ -32,6 +33,11 @@ const app = JSON.parse(await readFile(path.join(repoRoot, 'app/app.json'), 'utf8
 const version = app.expo.version;
 const tag = `v${version}`;
 const CHANNELS = ['lite', 'full'];
+// The API host, from the one line in site.ts that writes it.
+const siteTs = await readFile(path.join(repoRoot, 'web/src/data/site.ts'), 'utf8');
+const apiOrigin = /^export const apiOrigin = '(https:\/\/[^']+)';$/m.exec(siteTs)?.[1];
+if (!apiOrigin) throw new Error("web/src/data/site.ts: no `export const apiOrigin = 'https://...';` line");
+const dlPrefix = `${apiOrigin}/v1/dl/`;
 
 const errors = [];
 const rows = [];
@@ -59,11 +65,11 @@ function hrefs(html) {
 }
 
 const prefix = `https://github.com/${release.repo}/releases/download/`;
-// The asset the Worker's /dl/<channel> redirects to (site.ts apkUrl, tce download op).
+// The asset the Worker's /v1/dl/<channel> redirects to (site.ts apkUrl, tce download op).
 const assetUrl = (channel) => `${prefix}${tag}/phonecando-${version}-${channel}-arm64.apk`;
 
 // Download links in the built pages: url → { pages, via } where via holds
-// 'direct' and/or '/dl/<channel>'.
+// 'direct' and/or '/v1/dl/<channel>'.
 const links = new Map();
 const addLink = (url, page, via) => {
   if (!links.has(url)) links.set(url, { pages: new Set(), via: new Set() });
@@ -82,20 +88,20 @@ for (const page of await htmlPages(dist)) {
   }
   const routed = new Set();
   for (const href of hrefs(html)) {
-    const m = /^\/dl\/([^/?#]*)\/?(?:[?#].*)?$/.exec(href);
-    if (!m) continue;
-    if (!CHANNELS.includes(m[1])) {
-      errors.push(`${page}: href="${href}": the Worker serves /dl/lite and /dl/full only`);
+    if (!href.startsWith(dlPrefix)) continue;
+    const ch = /^([^/?#]*)\/?(?:[?#].*)?$/.exec(href.slice(dlPrefix.length))?.[1];
+    if (!CHANNELS.includes(ch)) {
+      errors.push(`${page}: href="${href}": the Worker serves ${dlPrefix}lite and ${dlPrefix}full only`);
       continue;
     }
-    routed.add(m[1]);
+    routed.add(ch);
   }
   for (const ch of routed) {
-    addLink(assetUrl(ch), page, `/dl/${ch}`);
-    if (!html.includes(release[ch].sha256)) errors.push(`${page} links /dl/${ch} but does not show the ${ch} SHA-256 from release.json`);
+    addLink(assetUrl(ch), page, `/v1/dl/${ch}`);
+    if (!html.includes(release[ch].sha256)) errors.push(`${page} links /v1/dl/${ch} but does not show the ${ch} SHA-256 from release.json`);
   }
 }
-if (!links.size) errors.push('no download links in dist: neither releases/download URLs nor /dl/<channel> hrefs');
+if (!links.size) errors.push(`no download links in dist: neither releases/download URLs nor ${dlPrefix}<channel> hrefs`);
 
 async function getRelease() {
   const headers = { accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' };

@@ -19,7 +19,10 @@ import type { Env } from './index.ts';
 const CONFIG_PATH = fileURLToPath(new URL('./wrangler.jsonc', import.meta.url));
 /** Every shared migration (0001, 0002, 0003, ...), in the order wrangler applies them. */
 export const MIGRATIONS = loadMigrations(SHARED_MIGRATIONS_DIR);
-export const BASE = 'https://phonecando.app';
+/** The API host (API_HOSTS in wrangler.jsonc): where every call goes unless a test says otherwise. */
+export const BASE = 'https://api.phonecando.app';
+/** The site's host: /v1/* there is the static site, not an op. */
+export const SITE_BASE = 'https://phonecando.app';
 const CF = { country: 'IN', regionCode: 'KA', region: 'Karnataka', asn: 24560, colo: 'BLR', city: 'Bengaluru' };
 /** The client address every request carries unless a test says otherwise. */
 export const CLIENT_IP = '203.0.113.77';
@@ -74,6 +77,8 @@ export interface CallOptions {
   cf?: Record<string, unknown> | null;
   /** cf-connecting-ip / x-forwarded-for value; null sends neither. Default CLIENT_IP. */
   ip?: string | null;
+  /** Scheme and host the request goes to. Default BASE (the API host). */
+  base?: string;
 }
 
 /** A Request as Cloudflare's edge would hand it over (request.cf set unless `cf: null`). */
@@ -87,7 +92,7 @@ export function cfRequest(path: string, opts: CallOptions = {}): Request {
     init.body = opts.body;
     if (typeof opts.body !== 'string') init.duplex = 'half';
   }
-  const request = new Request(`${BASE}${path}`, init);
+  const request = new Request(`${opts.base ?? BASE}${path}`, init);
   // request.cf is set by the Cloudflare edge; Node's Request has none.
   if (opts.cf !== null) Object.defineProperty(request, 'cf', { value: opts.cf ?? CF });
   return request;
@@ -201,6 +206,7 @@ export function useWorker(): WorkerHarness {
       PAGEVIEWS: pageviews,
       DOWNLOADS: downloads,
       ALLOWED_ORIGINS: real.vars['ALLOWED_ORIGINS'] as string,
+      API_HOSTS: real.vars['API_HOSTS'] as string,
     };
     // Only the Worker's own log lines from here on.
     printed.length = 0;

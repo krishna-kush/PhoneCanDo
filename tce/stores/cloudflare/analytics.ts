@@ -10,7 +10,7 @@
 //   blob4   UA class: bot | android | ios | desktop | other
 //   double1 1 (count)
 //
-// Dataset `phonecando_downloads` (binding DOWNLOADS), one point per /dl hit:
+// Dataset `phonecando_downloads` (binding DOWNLOADS), one point per /v1/dl hit:
 //   index1  channel
 //   blob1   channel: lite | full
 //   blob2   version

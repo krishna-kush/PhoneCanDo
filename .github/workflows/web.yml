@@ -363,7 +363,7 @@ jobs:
             --root-dir ${{ github.workspace }}/web/dist
             --scheme https --scheme http
             --exclude '/releases/download/'
-            --exclude '/dl/(lite|full)$'
+            --exclude '/v1/dl/(lite|full)$'
             -- 'web/dist/**/*.html'
           fail: true
           jobSummary: true

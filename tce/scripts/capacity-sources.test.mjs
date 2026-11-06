@@ -60,12 +60,12 @@ test('parseHealth keeps a well-formed retention block and drops a malformed one'
   assert.deepEqual(parseHealth({ ...HEALTH, retention: { ...retention, days: { events: 90 } } }), HEALTH);
 });
 
-test('fetchHealth: GET <base>/api/health with a timeout signal; 200 gives the health', async () => {
+test('fetchHealth: GET <base>/v1/health with a timeout signal; 200 gives the health', async () => {
   const m = mockFetch(() => reply(200, HEALTH));
   const r = await fetchHealth('https://example.test/', { fetch: m.fn });
   assert.deepEqual(r, { ok: true, health: HEALTH });
   assert.equal(m.calls.length, 1);
-  assert.equal(m.calls[0].url, 'https://example.test/api/health');
+  assert.equal(m.calls[0].url, 'https://example.test/v1/health');
   assert.ok(m.calls[0].init.signal instanceof AbortSignal);
   assert.equal(m.calls[0].init.headers.accept, 'application/json');
 });
@@ -74,7 +74,7 @@ test('fetchHealth: 404 means the endpoint is not deployed yet', async () => {
   const r = await fetchHealth('https://example.test', { fetch: mockFetch(() => reply(404, { error: { code: 'not_found' } })).fn });
   assert.equal(r.ok, false);
   assert.equal(r.state, 'missing');
-  assert.match(r.problem, /^health endpoint not deployed yet \(GET https:\/\/example\.test\/api\/health answered 404\)$/);
+  assert.match(r.problem, /^health endpoint not deployed yet \(GET https:\/\/example\.test\/v1\/health answered 404\)$/);
 });
 
 test('fetchHealth: other statuses, non-JSON and wrong shapes are errors', async () => {

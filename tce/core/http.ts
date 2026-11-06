@@ -10,7 +10,7 @@ import type { TceError, TceResult } from './result.ts';
 import type { ErrorBody } from './schema/wire.ts';
 
 /** Path prefixes that belong to ops; every other path is the static site. */
-export const OP_PATH_PREFIXES: readonly string[] = ['/api/', '/dl/'];
+export const OP_PATH_PREFIXES: readonly string[] = ['/v1/'];
 
 /** True when `path` is under one of OP_PATH_PREFIXES. */
 export function isOpPath(path: string): boolean {

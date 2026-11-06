@@ -24,9 +24,9 @@ describe('Cloudflare host (index.ts): rate limits', () => {
     const before = { devices: await count('devices'), events: await count('events'), reports: await count('reports') };
     const fresh = '22222222-3333-4444-8555-666666666666';
     for (const [path, body] of [
-      ['/api/batch', batchRequest({ batchId: fresh })],
-      ['/api/report', reportRequest({ reportId: fresh })],
-      ['/api/forget', forgetRequest()],
+      ['/v1/batch', batchRequest({ batchId: fresh })],
+      ['/v1/report', reportRequest({ reportId: fresh })],
+      ['/v1/forget', forgetRequest()],
     ] as const) {
       const res = await call(path, { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' } }, limited);
       assert.equal(res.status, 429, `${path}: ${await res.clone().text()}`);
@@ -35,7 +35,7 @@ describe('Cloudflare host (index.ts): rate limits', () => {
       assert.equal(((await res.json()) as ErrorBody).error.code, 'unavailable');
     }
     // Refused before the body is read: an oversized body is a 429, not a 413.
-    const huge = await call('/api/batch', { method: 'POST', body: stream(LIMITS.batchBodyBytes + 5000), headers: { 'content-type': 'application/json' } }, limited);
+    const huge = await call('/v1/batch', { method: 'POST', body: stream(LIMITS.batchBodyBytes + 5000), headers: { 'content-type': 'application/json' } }, limited);
     assert.equal(huge.status, 429);
     assert.deepEqual(ingest.calls, [`batch:${CLIENT_IP}`, `batch:${CLIENT_IP}`]);
     assert.deepEqual(rare.calls, [`report:${CLIENT_IP}`, `forget:${CLIENT_IP}`]);
@@ -45,7 +45,7 @@ describe('Cloudflare host (index.ts): rate limits', () => {
   it('keys IPv6 clients by their /64 network, and an allowed caller is served', async () => {
     const ingest = fakeLimiter(() => true);
     const res = await call(
-      '/api/batch',
+      '/v1/batch',
       { method: 'POST', body: JSON.stringify(batchRequest({ batchId: '33333333-4444-4555-8666-777777777777' })), headers: { 'content-type': 'application/json' }, ip: CLIENT_IP6 },
       { ...w.env, RL_INGEST: ingest },
     );
@@ -59,12 +59,12 @@ describe('Cloudflare host (index.ts): rate limits', () => {
     const points = { pageviews: pageviews.calls.length, downloads: downloads.calls.length };
     const site = await rollup();
     const hit = await call(
-      '/api/hit',
+      '/v1/hit',
       { method: 'POST', body: JSON.stringify(hitRequest()), headers: { 'content-type': 'text/plain;charset=UTF-8', origin: SITE_ORIGIN } },
       limited,
     );
     assert.equal(hit.status, 204, await hit.clone().text());
-    const dl = await call('/dl/lite', {}, limited);
+    const dl = await call('/v1/dl/lite', {}, limited);
     assert.equal(dl.status, 302);
     assert.match(String(dl.headers.get('location')), /^https:\/\/github\.com\/.+lite.+\.apk$/);
     assert.deepEqual({ pageviews: pageviews.calls.length, downloads: downloads.calls.length }, points, 'nothing counted');
@@ -72,18 +72,18 @@ describe('Cloudflare host (index.ts): rate limits', () => {
     assert.deepEqual(pub.calls, [`hit:${CLIENT_IP}`, `download:${CLIENT_IP}`]);
     // Under the limit the same calls count again.
     const open: Env = { ...w.env, RL_PUBLIC: fakeLimiter(() => true) };
-    assert.equal((await call('/dl/lite', {}, open)).status, 302);
+    assert.equal((await call('/v1/dl/lite', {}, open)).status, 302);
     assert.equal(downloads.calls.length, points.downloads + 1);
   });
 
-  it('limits GET /api/health on RL_PUBLIC: 429 + Retry-After over the limit, served under it', async () => {
+  it('limits GET /v1/health on RL_PUBLIC: 429 + Retry-After over the limit, served under it', async () => {
     const pub = fakeLimiter(() => false);
-    const refused = await call('/api/health', {}, { ...w.env, RL_PUBLIC: pub });
+    const refused = await call('/v1/health', {}, { ...w.env, RL_PUBLIC: pub });
     assert.equal(refused.status, 429, await refused.clone().text());
     assert.equal(refused.headers.get('retry-after'), '60');
     assert.deepEqual(pub.calls, [`health:${CLIENT_IP}`]);
     const open = fakeLimiter(() => true);
-    const served = await call('/api/health', {}, { ...w.env, RL_PUBLIC: open });
+    const served = await call('/v1/health', {}, { ...w.env, RL_PUBLIC: open });
     assert.equal(served.status, 200);
     assert.deepEqual(open.calls, [`health:${CLIENT_IP}`]);
   });
@@ -94,7 +94,7 @@ describe('Cloudflare host (index.ts): rate limits', () => {
         throw new Error(`rate limit backend unreachable for ${key} (from ${CLIENT_IP})`);
       },
     };
-    const res = await call('/dl/full', {}, { ...w.env, RL_PUBLIC: throwing });
+    const res = await call('/v1/dl/full', {}, { ...w.env, RL_PUBLIC: throwing });
     assert.equal(res.status, 302);
     const failed = logs('rate limiter failed; request allowed');
     assert.equal(failed.length, 1);
@@ -105,15 +105,15 @@ describe('Cloudflare host (index.ts): rate limits', () => {
     const pub = fakeLimiter(() => false);
     // No RL_INGEST binding: batch is not limited (and RL_PUBLIC is never asked for it).
     const batch = await call(
-      '/api/batch',
+      '/v1/batch',
       { method: 'POST', body: JSON.stringify(batchRequest({ batchId: '44444444-5555-4666-8777-888888888888' })), headers: { 'content-type': 'application/json' } },
       { ...w.env, RL_PUBLIC: pub },
     );
     assert.equal(batch.status, 200, await batch.clone().text());
     // No cf-connecting-ip (not through Cloudflare's edge), or an empty one: nothing to key on, allowed.
-    const noIp = await call('/dl/lite', { ip: null }, { ...w.env, RL_PUBLIC: pub });
+    const noIp = await call('/v1/dl/lite', { ip: null }, { ...w.env, RL_PUBLIC: pub });
     assert.equal(noIp.status, 302);
-    const emptyIp = await call('/dl/lite', { ip: '' }, { ...w.env, RL_PUBLIC: pub });
+    const emptyIp = await call('/v1/dl/lite', { ip: '' }, { ...w.env, RL_PUBLIC: pub });
     assert.equal(emptyIp.status, 302);
     assert.deepEqual(pub.calls, []);
   });

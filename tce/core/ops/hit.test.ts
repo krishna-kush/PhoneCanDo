@@ -16,7 +16,7 @@ function setup(store: MemoryStore = createMemoryStore()): FakeCtx<MemoryStore> {
 function hit(ctx: FakeCtx<MemoryStore>, body: unknown, over: HttpRequestOverrides = {}): Promise<TceResult<HttpResponse>> {
   return callHttp(
     hitOp,
-    httpRequest({ ...over, path: '/api/hit', body, headers: { origin: SITE_ORIGIN, ...over.headers } }),
+    httpRequest({ ...over, path: '/v1/hit', body, headers: { origin: SITE_ORIGIN, ...over.headers } }),
     ctx,
   );
 }
@@ -136,12 +136,20 @@ describe('hit run', () => {
     );
   });
 
+  it('judges internal navigation by the page host (Origin), not the API host', async () => {
+    const ctx = setup();
+    for (const ref of [`https://${SITE_HOST}/privacy/`, 'https://api.phonecando.app/', 'https://news.ycombinator.com/']) {
+      await hit(ctx, { path: '/', ref }, { headers: { host: 'api.phonecando.app' } });
+    }
+    assert.deepEqual(ctx.store.pagePoints.map((p) => p.refHost), [null, 'api.phonecando.app', 'news.ycombinator.com']);
+  });
+
   it('treats the same host on the dev server (with port) as internal', async () => {
     const ctx = fakeCtx({ store: createMemoryStore(), config: { allowedOrigins: ['http://127.0.0.1:8787'] } });
     await callHttp(
       hitOp,
       httpRequest({
-        path: '/api/hit',
+        path: '/v1/hit',
         body: { path: '/', ref: 'http://127.0.0.1:8787/faq' },
         headers: { origin: 'http://127.0.0.1:8787', host: '127.0.0.1:8787' },
       }),

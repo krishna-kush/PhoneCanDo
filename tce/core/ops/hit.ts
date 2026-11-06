@@ -1,4 +1,5 @@
-// POST /api/hit: one site page view from the inline beacon. Same-origin only.
+// POST /v1/hit: one site page view from the inline beacon, posted
+// cross-origin from the site (ALLOWED_ORIGINS) to the API host.
 // Stores an identity-free analytics point (UTC day, path, referrer host,
 // country, UA class; the store also counts it in the site_daily rollup) and
 // always answers 204, even when the store is down or the caller is over the
@@ -34,7 +35,20 @@ export function originAllowed(origin: string | null, host: string | null, config
   return host !== null && origin === `https://${host}`;
 }
 
-/** Validate a hit: origin first (forbidden), then `{ path, ref? }`. */
+/** Host of an allowed Origin header (the page that sent the beacon), or null. */
+function originHost(origin: string): string | null {
+  try {
+    return new URL(origin).host || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validate a hit: origin first (forbidden), then `{ path, ref? }`. A referrer
+ * on the page's own host is internal navigation, so the site host comes from
+ * Origin: the beacon is posted to the API host, not to the page's host.
+ */
 export function parseHit(req: HttpRequest, config: TceConfig): TceResult<HitInput> {
   if (!originAllowed(req.headers.origin, req.headers.host, config)) {
     return err('forbidden', 'page views are accepted from the site origin only');
@@ -46,15 +60,16 @@ export function parseHit(req: HttpRequest, config: TceConfig): TceResult<HitInpu
   if (r.error) return r.done({ path: '', refHost: null, uaClass: 'other', limited: req.limited });
   const path = cleanPath(rawPath);
   if (path === null) return err('bad_request', "must start with '/'", 'path');
-  return ok({ path, refHost: refHost(ref, req.headers.host), uaClass: uaClass(req.headers.userAgent), limited: req.limited });
+  const siteHost = originHost(req.headers.origin ?? '') ?? req.headers.host;
+  return ok({ path, refHost: refHost(ref, siteHost), uaClass: uaClass(req.headers.userAgent), limited: req.limited });
 }
 
-/** POST /api/hit. */
+/** POST /v1/hit. */
 export const hitOp: HttpOp<HitInput> = {
   kind: 'http',
   name: 'hit',
   method: 'POST',
-  path: '/api/hit',
+  path: '/v1/hit',
   maxBodyBytes: LIMITS.smallBodyBytes,
   // Why degrade: a beacon has no retry and the page must not see errors.
   whenLimited: 'degrade',

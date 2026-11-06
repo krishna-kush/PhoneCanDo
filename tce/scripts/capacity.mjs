@@ -1,7 +1,7 @@
 // Free-plan capacity for scripts/check-limits.mjs: thresholds, messages and
 // output. Pure (no I/O, no clock). The limits are CAPACITY in
 // core/schema/limits.ts, read as text because scripts may not import core
-// (scripts/check-deps.mjs); GET /api/health reports the same ratios live.
+// (scripts/check-deps.mjs); GET /v1/health reports the same ratios live.
 import { formatTable } from './text-table.mjs';
 
 /** CAPACITY fields the check needs. */

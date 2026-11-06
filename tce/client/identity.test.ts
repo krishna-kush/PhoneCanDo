@@ -43,8 +43,8 @@ describe('identity and the device proof', () => {
     await client.forget();
     for (const r of net.sent) {
       const hasProof = r.body.includes(env.deviceProof);
-      assert.equal(hasProof, r.path === '/api/forget', r.path);
-      if (r.path !== '/api/forget') assert.equal(r.json.identity.deviceVerifier, '9'.repeat(64));
+      assert.equal(hasProof, r.path === '/v1/forget', r.path);
+      if (r.path !== '/v1/forget') assert.equal(r.json.identity.deviceVerifier, '9'.repeat(64));
     }
     assertServerAccepts(net);
     assert.ok(log.lines.every((l) => !JSON.stringify(l).includes(env.deviceProof)));

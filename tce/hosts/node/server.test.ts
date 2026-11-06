@@ -88,7 +88,7 @@ describe('node host over sqlite :memory:', () => {
   });
 
   it('accepts a batch and stores its rows', async () => {
-    const reply = await postJson(port, '/api/batch', batchRequest());
+    const reply = await postJson(port, '/v1/batch', batchRequest());
     assert.equal(reply.status, 200, reply.text);
     assert.match(String(reply.headers['content-type']), /^application\/json/);
     assert.equal(reply.headers['cache-control'], 'no-store');
@@ -100,7 +100,7 @@ describe('node host over sqlite :memory:', () => {
   });
 
   it('treats a replayed batch as nothing new', async () => {
-    const reply = await postJson(port, '/api/batch', batchRequest());
+    const reply = await postJson(port, '/v1/batch', batchRequest());
     assert.equal(reply.status, 200, reply.text);
     const body = JSON.parse(reply.text) as BatchResponse;
     assert.equal(body.accepted.events, 0);
@@ -108,19 +108,19 @@ describe('node host over sqlite :memory:', () => {
   });
 
   it('records a page hit from an allowed Origin (204) and refuses one without (403)', async () => {
-    const allowed = await call(port, 'POST', '/api/hit', {
+    const allowed = await call(port, 'POST', '/v1/hit', {
       body: JSON.stringify(hitRequest()),
       headers: { 'content-type': 'text/plain;charset=UTF-8', origin: SITE_ORIGIN },
     });
     assert.equal(allowed.status, 204, allowed.text);
     assert.equal(allowed.text, '');
-    const missing = await call(port, 'POST', '/api/hit', {
+    const missing = await call(port, 'POST', '/v1/hit', {
       body: JSON.stringify(hitRequest()),
       headers: { 'content-type': 'text/plain;charset=UTF-8' },
     });
     assert.equal(missing.status, 403, missing.text);
     assert.equal(errorOf(missing).code, 'forbidden');
-    const foreign = await call(port, 'POST', '/api/hit', {
+    const foreign = await call(port, 'POST', '/v1/hit', {
       body: JSON.stringify(hitRequest()),
       headers: { 'content-type': 'application/json', origin: 'https://evil.example' },
     });
@@ -132,9 +132,9 @@ describe('node host over sqlite :memory:', () => {
     });
   });
 
-  it('redirects /dl/lite to the GitHub asset of the current release (GET and HEAD)', async () => {
+  it('redirects /v1/dl/lite to the GitHub asset of the current release (GET and HEAD)', async () => {
     for (const method of ['GET', 'HEAD']) {
-      const reply = await call(port, method, '/dl/lite');
+      const reply = await call(port, method, '/v1/dl/lite');
       assert.equal(reply.status, 302, `${method}: ${reply.text}`);
       const location = String(reply.headers.location);
       assert.ok(
@@ -144,7 +144,7 @@ describe('node host over sqlite :memory:', () => {
       assert.ok(location.includes(DEFAULT_CONFIG.release.version), location);
       assert.equal(reply.text, '');
     }
-    const unknown = await call(port, 'GET', '/dl/beta');
+    const unknown = await call(port, 'GET', '/v1/dl/beta');
     assert.equal(unknown.status, 404, unknown.text);
     const site = await store.listSiteDaily('2000-01-01', '2999-12-31');
     assert.ok(site.ok);
@@ -155,8 +155,8 @@ describe('node host over sqlite :memory:', () => {
     );
   });
 
-  it('answers GET /api/health with the sqlite file size and no paused ingest', async () => {
-    const reply = await call(port, 'GET', '/api/health');
+  it('answers GET /v1/health with the sqlite file size and no paused ingest', async () => {
+    const reply = await call(port, 'GET', '/v1/health');
     assert.equal(reply.status, 200, reply.text);
     assert.equal(reply.headers['cache-control'], 'no-store');
     const body = JSON.parse(reply.text) as HealthResponse;
@@ -176,26 +176,26 @@ describe('node host over sqlite :memory:', () => {
   });
 
   it('stores a report', async () => {
-    const reply = await postJson(port, '/api/report', reportRequest());
+    const reply = await postJson(port, '/v1/report', reportRequest());
     assert.equal(reply.status, 200, reply.text);
     assert.equal((JSON.parse(reply.text) as ReportResponse).reportId, reportRequest().reportId);
   });
 
   it('forgets every row of the device, then reports not_found', async () => {
-    const reply = await postJson(port, '/api/forget', forgetRequest());
+    const reply = await postJson(port, '/v1/forget', forgetRequest());
     assert.equal(reply.status, 200, reply.text);
     const { deleted } = JSON.parse(reply.text) as ForgetResponse;
     assert.deepEqual(
       { devices: deleted['devices'], installs: deleted['installs'], sessions: deleted['sessions'], events: deleted['events'], errors: deleted['errors'], reports: deleted['reports'] },
       { devices: 1, installs: 1, sessions: 1, events: 2, errors: 1, reports: 1 },
     );
-    const again = await postJson(port, '/api/forget', forgetRequest());
+    const again = await postJson(port, '/v1/forget', forgetRequest());
     assert.equal(again.status, 404, again.text);
     assert.equal(errorOf(again).code, 'not_found');
   });
 
   it('rejects a body over the cap by Content-Length (413)', async () => {
-    const reply = await call(port, 'POST', '/api/batch', {
+    const reply = await call(port, 'POST', '/v1/batch', {
       body: new Uint8Array(LIMITS.batchBodyBytes + 1).fill(0x20),
       headers: { 'content-type': 'application/json' },
     });
@@ -204,7 +204,7 @@ describe('node host over sqlite :memory:', () => {
   });
 
   it('rejects a body over the cap while streaming when there is no Content-Length (413)', async () => {
-    const reply = await call(port, 'POST', '/api/batch', {
+    const reply = await call(port, 'POST', '/v1/batch', {
       body: new Uint8Array(LIMITS.batchBodyBytes + 1000).fill(0x20),
       headers: { 'content-type': 'application/json' },
       chunked: true,
@@ -214,12 +214,12 @@ describe('node host over sqlite :memory:', () => {
   });
 
   it('keeps serving after a 413 (the socket survives the drain)', async () => {
-    const reply = await call(port, 'GET', '/dl/full');
+    const reply = await call(port, 'GET', '/v1/dl/full');
     assert.equal(reply.status, 302);
   });
 
   it('rejects invalid JSON with 400 bad_request and a request id', async () => {
-    const reply = await call(port, 'POST', '/api/batch', { body: '{"schema":', headers: { 'content-type': 'application/json' } });
+    const reply = await call(port, 'POST', '/v1/batch', { body: '{"schema":', headers: { 'content-type': 'application/json' } });
     assert.equal(reply.status, 400, reply.text);
     const error = errorOf(reply);
     assert.equal(error.code, 'bad_request');
@@ -228,21 +228,21 @@ describe('node host over sqlite :memory:', () => {
   });
 
   it('answers unknown paths with 404 and a wrong method with 405 + Allow', async () => {
-    for (const path of ['/api/nope', '/', '/index.html']) {
+    for (const path of ['/v1/nope', '/', '/index.html']) {
       const reply = await call(port, 'GET', path);
       assert.equal(reply.status, 404, path);
       assert.equal(errorOf(reply).code, 'not_found');
     }
-    const wrong = await call(port, 'GET', '/api/batch');
+    const wrong = await call(port, 'GET', '/v1/batch');
     assert.equal(wrong.status, 405);
     assert.equal(wrong.headers.allow, 'POST');
-    const wrongDl = await call(port, 'POST', '/dl/lite', { body: '{}', headers: { 'content-type': 'application/json' } });
+    const wrongDl = await call(port, 'POST', '/v1/dl/lite', { body: '{}', headers: { 'content-type': 'application/json' } });
     assert.equal(wrongDl.status, 405);
     assert.equal(wrongDl.headers.allow, 'GET, HEAD');
   });
 
   it('logged one line per request and no op failures', () => {
-    assert.ok(log.entries.some((e) => e.message === 'request' && e.data?.['path'] === '/api/batch' && e.data?.['status'] === 200));
+    assert.ok(log.entries.some((e) => e.message === 'request' && e.data?.['path'] === '/v1/batch' && e.data?.['status'] === 200));
     assert.deepEqual(
       log.entries.filter((e) => e.level === 'error'),
       [],
@@ -285,9 +285,9 @@ describe('node host main.ts', () => {
       assert.ok(existsSync(dbPath), 'TCE_DB directory and file created');
       const started = lines.find((l) => l['message'] === 'tce dev server listening');
       assert.deepEqual(Object.keys(started ?? {}).filter((k) => /archive/i.test(k)), [], 'no archive settings are logged');
-      const reply = await call(port, 'GET', '/dl/lite');
+      const reply = await call(port, 'GET', '/v1/dl/lite');
       assert.equal(reply.status, 302);
-      const health = await call(port, 'GET', '/api/health');
+      const health = await call(port, 'GET', '/v1/health');
       assert.equal(health.status, 200, health.text);
       assert.equal(typeof (JSON.parse(health.text) as HealthResponse).db.bytes, 'number');
       child.kill('SIGTERM');

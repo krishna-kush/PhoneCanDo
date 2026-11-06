@@ -1,4 +1,4 @@
-// POST /api/batch: one flush from the app. Identity, device, sessions, events
+// POST /v1/batch: one flush from the app. Identity, device, sessions, events
 // and errors become normalized rows written atomically by the store. Client
 // times are corrected by the batch's clock skew; unknown event names are
 // dropped and counted; props, counters and error text are bounded and redacted.
@@ -213,12 +213,12 @@ export async function buildBatchWrite(
   return { write, droppedEvents };
 }
 
-/** POST /api/batch. */
+/** POST /v1/batch. */
 export const batchOp: HttpOp<BatchInput> = {
   kind: 'http',
   name: 'batch',
   method: 'POST',
-  path: '/api/batch',
+  path: '/v1/batch',
   maxBodyBytes: LIMITS.batchBodyBytes,
 
   parse(req) {

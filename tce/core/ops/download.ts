@@ -1,4 +1,4 @@
-// GET /dl/:channel: count an APK download, then redirect to the GitHub release
+// GET /v1/dl/:channel: count an APK download, then redirect to the GitHub release
 // asset of the current version. The redirect never waits on a failed count,
 // and a caller over the host's rate limit is redirected without being counted.
 
@@ -31,12 +31,12 @@ export function apkUrl(repo: string, version: string, channel: DownloadChannel):
   return `https://github.com/${repo}/releases/download/v${version}/phonecando-${version}-${channel}-arm64.apk`;
 }
 
-/** GET /dl/:channel. */
+/** GET /v1/dl/:channel. */
 export const downloadOp: HttpOp<DownloadInput> = {
   kind: 'http',
   name: 'download',
   method: 'GET',
-  path: '/dl/:channel',
+  path: '/v1/dl/:channel',
   maxBodyBytes: 0,
   // Why degrade: a user clicking Download must always get the APK.
   whenLimited: 'degrade',

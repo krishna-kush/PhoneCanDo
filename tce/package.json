@@ -14,7 +14,7 @@
     "check": "node scripts/typecheck.mjs && node scripts/check-deps.mjs",
     "test": "node --test --test-timeout=120000 \"core/**/*.test.ts\" \"client/**/*.test.ts\" \"stores/**/*.test.ts\" \"hosts/**/*.test.ts\" \"testkit/**/*.test.ts\" \"scripts/*.test.mjs\"",
     "dev": "node hosts/node/main.ts",
-    "cf:dev": "wrangler dev -c hosts/cloudflare/wrangler.jsonc --local",
+    "cf:dev": "wrangler dev -c hosts/cloudflare/wrangler.jsonc --local --var API_HOSTS:localhost",
     "stats": "node scripts/stats.mjs"
   },
   "devDependencies": {

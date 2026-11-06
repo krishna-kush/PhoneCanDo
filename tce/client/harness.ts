@@ -46,13 +46,13 @@ export async function until(cond: () => boolean): Promise<void> {
 
 /** Every batch request the client sent, in order. */
 export function batches(net: FakeNet): BatchRequest[] {
-  return net.to('/api/batch').map((r) => r.json as BatchRequest);
+  return net.to('/v1/batch').map((r) => r.json as BatchRequest);
 }
 
 /** Throws unless every request the client sent passes the server's own parser. */
 export function assertServerAccepts(net: FakeNet): void {
   for (const r of net.sent) {
-    const parse = r.path === '/api/batch' ? parseBatch : r.path === '/api/report' ? parseReport : parseForget;
+    const parse = r.path === '/v1/batch' ? parseBatch : r.path === '/v1/report' ? parseReport : parseForget;
     const res = parse(r.json);
     if (!res.ok) throw new Error(`${r.path} rejected: ${res.error.field ?? ''} ${res.error.message}`);
   }

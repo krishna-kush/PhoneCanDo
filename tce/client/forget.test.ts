@@ -18,7 +18,7 @@ describe('forget', () => {
     const r = await client.forget();
     assert.ok(r.ok);
     assert.deepEqual(r.value, { deleted: { devices: 1, events: 3 } });
-    assert.equal(net.sent[0]!.path, '/api/forget');
+    assert.equal(net.sent[0]!.path, '/v1/forget');
     // No install id: the delete covers every install of this phone.
     assert.deepEqual(net.sent[0]!.json, { schema: 1, deviceId: 'a'.repeat(64), deviceProof: '7'.repeat(64) });
     assertServerAccepts(net);
@@ -91,7 +91,7 @@ describe('forget', () => {
     assert.equal(await flushing, null); // stopped after the batch already on the wire
     const r = await forgetting;
     assert.ok(r.ok);
-    assert.deepEqual(net.sent.map((x) => x.path), ['/api/batch', '/api/forget']);
+    assert.deepEqual(net.sent.map((x) => x.path), ['/v1/batch', '/v1/forget']);
   });
 
   it('waits for a report on the wire and refuses a new one', async () => {
@@ -110,7 +110,7 @@ describe('forget', () => {
     release();
     await reporting;
     await forgetting;
-    assert.deepEqual(net.sent.map((x) => x.path), ['/api/report', '/api/forget']);
+    assert.deepEqual(net.sent.map((x) => x.path), ['/v1/report', '/v1/forget']);
   });
 });
 

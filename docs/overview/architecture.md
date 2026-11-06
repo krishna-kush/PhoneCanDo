@@ -68,9 +68,10 @@ rename only with a native rebuild.
   (CNG-generated, gitignored).
 - **App vs TCE.** `tce/` is the usage-data backend and client SDK, with its
   own dependency law (`tce/AGENTS.md`). Only `app/src/engine/telemetry/`
-  imports it (`tce/client`, `tce/core`); the site only posts to `/api/hit`.
-  The Cloudflare Worker that serves `web/dist` and the `/api`, `/dl` routes
-  lives in `tce/hosts/cloudflare/`.
+  imports it (`tce/client`, `tce/core`); the site only posts its page-view
+  beacon and links its downloads to the API host (`api.phonecando.app/v1/*`).
+  The Cloudflare Worker that serves `web/dist` on `phonecando.app` and the
+  `/v1` routes on `api.phonecando.app` lives in `tce/hosts/cloudflare/`.
 - **Docs vs code.** Repo-wide docs live under `docs/`, app/engine docs under
   `app/docs/`, PCE docs under `pce/docs/`, and TCE docs under `tce/docs/`.
   `research/` holds background notes.
