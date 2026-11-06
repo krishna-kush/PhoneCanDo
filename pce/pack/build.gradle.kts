@@ -1,7 +1,7 @@
 plugins {
     `java-library`
     kotlin("jvm")
-    kotlin("plugin.serialization") version "2.1.20"
+    kotlin("plugin.serialization") version "2.4.21"
     `maven-publish`
 }
 
@@ -12,7 +12,7 @@ kotlin {
 dependencies {
     api(project(":api"))
     implementation(project(":json"))
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
 
     testImplementation(project(":core"))
     testImplementation(project(":testkit"))
