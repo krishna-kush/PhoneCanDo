@@ -16,7 +16,8 @@ on:
     branches: [prod]
     paths:
       - tce/**
-      - app/src/engine/telemetry/**
+      # All of app/src: check-deps fails any import of tce outside app/src/engine/telemetry/.
+      - app/src/**
       - app/modules/phonecando-runner/src/telemetry.types.ts
       - app/app.json
       - web/**
@@ -25,7 +26,8 @@ on:
   pull_request:
     paths:
       - tce/**
-      - app/src/engine/telemetry/**
+      # All of app/src: check-deps fails any import of tce outside app/src/engine/telemetry/.
+      - app/src/**
       - app/modules/phonecando-runner/src/telemetry.types.ts
       - app/app.json
       - web/**

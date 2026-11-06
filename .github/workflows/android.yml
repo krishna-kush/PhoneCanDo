@@ -8,29 +8,42 @@ name: Android
 on:
   push:
     branches: [prod]
+    # Only what goes into the APK; the nightly run builds everything anyway.
+    # Order matters: the .md exclusion comes after the includes, and the
+    # packaged opencode config (which has an AGENTS.md) is re-included last.
     paths:
-      - '**'
-      - '!**/*.md'
-      - '!docs/**'
-      - '!research/**'
-      - '!web/**'
-      - '!scripts/bootstrap/**'
-      - '!.github/**'
+      - 'app/**'
+      # Pulled into the app's Gradle build (app/android/settings.gradle includeBuild).
+      - 'pce/**'
+      # Bundled into the app by its telemetry adapter (app/src/engine/telemetry/).
+      - 'tce/client/**'
+      - 'tce/core/**'
+      # App colours and icons (app/tamagui.config.ts, app/src/globals/theme.ts).
+      - 'theme/**'
       - '.github/workflows/android.yml'
       - '.github/ci/android/**'
+      - '!**/*.md'
+      - '!app/docs/**'
       # Packaged into the APK and audited byte for byte.
       - 'app/modules/phonecando-runner/opencode-config*/**'
   pull_request:
+    # Only what goes into the APK; the nightly run builds everything anyway.
+    # Order matters: the .md exclusion comes after the includes, and the
+    # packaged opencode config (which has an AGENTS.md) is re-included last.
     paths:
-      - '**'
-      - '!**/*.md'
-      - '!docs/**'
-      - '!research/**'
-      - '!web/**'
-      - '!scripts/bootstrap/**'
-      - '!.github/**'
+      - 'app/**'
+      # Pulled into the app's Gradle build (app/android/settings.gradle includeBuild).
+      - 'pce/**'
+      # Bundled into the app by its telemetry adapter (app/src/engine/telemetry/).
+      - 'tce/client/**'
+      - 'tce/core/**'
+      # App colours and icons (app/tamagui.config.ts, app/src/globals/theme.ts).
+      - 'theme/**'
       - '.github/workflows/android.yml'
       - '.github/ci/android/**'
+      - '!**/*.md'
+      - '!app/docs/**'
+      # Packaged into the APK and audited byte for byte.
       - 'app/modules/phonecando-runner/opencode-config*/**'
   schedule:
     - cron: '37 2 * * *'

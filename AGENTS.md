@@ -108,3 +108,9 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
 10. PCE work: read `pce/AGENTS.md`. The PCE is a separate Gradle build
    owned by PhoneCanDo; modularity, dependency direction and typed errors are
    quality gates.
+11. CI path filters: `android.yml`, `tce.yml`, `web.yml`, `pce.yml` and
+   `engine.yml` run only for the `paths:` they list. When a change gives a
+   build or check a new input (the app importing a new folder, a CI script
+   reading a new file, a new packaged asset), add that path to the matching
+   lists in the same change. `ci`, `lint`, `security` and `codeql` run on
+   everything; never filter them. The nightly runs catch what a list misses.
