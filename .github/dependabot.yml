@@ -116,6 +116,36 @@ updates:
       web-minor-patch:
         update-types: [minor, patch]
 
+  # tce/: dev-only toolchain (TypeScript, wrangler, Workers/Node types). core
+  # and client have no npm deps by design. wrangler and workers-types move
+  # together (wrangler pins the types as a peer).
+  - package-ecosystem: npm
+    directory: /tce
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: '05:00'
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    groups:
+      cloudflare:
+        patterns:
+          - wrangler
+          - '@cloudflare/workers-types'
+      tce-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Stay on the TypeScript line the app uses; TS 7 (native) is a separate decision.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # Node types track the CI floor (Node 22).
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+
   # pce/ only: pce/consumer-sample is a separate build that resolves the
   # unpublished com.phonecando.pce artifacts, so Dependabot cannot update it.
   - package-ecosystem: gradle

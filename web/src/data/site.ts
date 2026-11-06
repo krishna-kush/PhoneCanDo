@@ -28,13 +28,30 @@ if (release.version !== version) {
   console.warn(message);
 }
 
+/**
+ * The host that serves this site and its Worker routes today. phonecando.app
+ * is the future name and stays in astro.config.mjs for canonical and OG URLs;
+ * anything a visitor must reach right now (the QR code) uses this. The one
+ * place the live host is written on the web side.
+ */
+export const liveOrigin = 'https://phonecando.tarf.app';
+
+/**
+ * Same-origin download route. The Worker (tce/hosts/cloudflare) counts the
+ * download without identifying anyone, then redirects to this version's
+ * GitHub asset. The computer commands keep the direct GitHub URL, because
+ * they pin its SHA-256.
+ */
+export const dlUrl = (channel: 'lite' | 'full') => `/dl/${channel}`;
+
 export const site = {
   name: 'PhoneCanDo',
   tagline: 'AI that can use your phone.',
   repo,
   releases,
   version,
-  // Starter (lite) build: the phone download. Full is for adb installs.
+  // Direct GitHub asset URLs. The buttons go through dlUrl() instead; the
+  // starter (lite) is the phone download, full is for adb installs.
   apk: apkUrl('lite'),
   fullApk: apkUrl('full'),
   fullApkFile: apkFile('full'),

@@ -14,6 +14,7 @@ import { useAppStore } from '../../state/app';
 import LogoLoader from '../common/LogoLoader';
 import { TUI } from '../common/globals';
 import { isTerminalAvailable } from '../../engine/terminal';
+import { track } from '../../engine/telemetry';
 
 type PageMsg =
   | { type: 'ready'; cols: number; rows: number; pxW: number; pxH: number; cellW?: number; cellH?: number }
@@ -34,6 +35,11 @@ export default function TerminalScreen() {
   const webRef = useRef<WebView>(null);
 
   const available = useMemo(() => isTerminalAvailable(), []);
+
+  // One per terminal opened (the screen is keyed by folder).
+  useEffect(() => {
+    track('terminal.open');
+  }, []);
 
   const { termSize, error: ptyError, applySize, sendText, boostPump } = usePtySession({
     available,

@@ -6,7 +6,7 @@
 #                         byte-identical (app/plugins/gradleBlock.js promises
 #                         repeated prebuilds are)
 # Run from the repo root, on CI only: locally, prebuild would rewrite the
-# owner's app/android.
+# our local app/android.
 set -euo pipefail
 
 export CI=1 EXPO_NO_GIT_STATUS=1 EXPO_NO_TELEMETRY=1

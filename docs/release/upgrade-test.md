@@ -58,7 +58,7 @@ Screenshot each Play Protect dialog (`adb exec-out screencap -p > step.png`).
 
 | Date | Device / Android | Region | Method | Outcome | Restricted settings |
 | --- | --- | --- | --- | --- | --- |
-| 2026-11-03 | Moto G96 5G, Android 16, patch 2026-10-01, Play services 26.41.31 | India | browser (baseline) | blocked (confirmed earlier by the owner) | |
+| 2026-11-03 | Moto G96 5G, Android 16, patch 2026-10-01, Play services 26.41.31 | India | browser (baseline) | blocked (confirmed earlier on this phone) | |
 | 2026-11-03 | same | India | installer intent (production path) | **installed**. Only prompt: "install unknown apps" for PhoneCanDo. Play Protect log: `Originating app: com.phonecando.app`, `Installer app: com.google.android.packageinstaller`, verdict `VERIFICATION_ALLOW` | Toggle refused with "app was denied access" (`ACCESS_RESTRICTED_SETTINGS: deny`, `packageSource=3`). App info → ⋮ → Allow restricted settings fixed it; service then enabled |
 
 Lite was installed from Files by Google (`initiatingPackageName=com.google.android.apps.nbu.files`,

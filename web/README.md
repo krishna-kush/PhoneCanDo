@@ -6,7 +6,7 @@
 
 <p align="center">
   The site at <a href="https://phonecando.app">phonecando.app</a><br/>
-  Static Astro · no backend · no CDN · no external JS
+  Static Astro · served by the tce Worker · no CDN · no external JS
 </p>
 
 ```sh
@@ -24,6 +24,9 @@ Astro is pinned to 7.3.0 (7.4 needs Node ≥ 22.23.4); bump the two together.
 | Release facts: date, sizes, both SHA-256s, repo | nothing: `./manage release` writes `src/data/release.json` |
 | Site name, tagline, specs, media paths | `src/data/site.ts` |
 | Version, APK links, the adb command | nothing: derived from `app/app.json` |
+| Live host (QR code), download route | `liveOrigin`, `dlUrl()` in `src/data/site.ts` |
+| Page-view beacon | the inline script at the end of `src/layouts/Base.astro` |
+| Privacy note | `src/pages/privacy.astro`; change it with `docs/telemetry.md` |
 | Section copy · order | `src/components/sections/*.astro` · `src/pages/index.astro` |
 | Demo cards | `src/data/demos.ts` |
 | Colours (shared with the app) | `theme/tokens.json` |
@@ -63,6 +66,18 @@ centred.
 
 ## Deploy
 
-Any static host serving `dist/`. Cloudflare: root `web`, build `pnpm build`,
-output `dist`; `wrangler.jsonc` adds the 404 page. `site` in
-`astro.config.mjs` sets the domain for canonical and OG URLs.
+The site itself is static: `pnpm build` writes `dist/`. The server around it
+is the `phonecando` Cloudflare Worker in `tce/hosts/cloudflare/` (config:
+`wrangler.jsonc` there). It serves `dist/` as static assets with the 404 page
+and answers two kinds of route itself: `/api/*` (app usage stats and the
+page-view beacon) and `/dl/lite`, `/dl/full` (count the download, then 302 to
+that version's APK on GitHub). See `tce/README.md`.
+
+Cloudflare Workers Builds builds and deploys it on every push to `prod`; there
+is no local deploy step, and GitHub Actions deploys nothing (`web.yml` and
+`tce.yml` only check). It is live at `https://phonecando.tarf.app`; `site` in
+`astro.config.mjs` is the future domain, used for canonical and OG URLs.
+
+Without the Worker (`pnpm dev`, `pnpm preview`, CI's static server) the pages
+work but the download buttons 404, and the beacon stays silent off https and
+on localhost.

@@ -17,6 +17,7 @@ import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
+import TelemetryNotice from './src/ui/common/TelemetryNotice';
 import { useAppStore } from './src/state/app';
 import { ensureServeRunning } from './src/engine/ensureServe';
 import {
@@ -77,6 +78,8 @@ export default function App() {
     // health probe. The service owns the port — adopt the effective one.
     // Quiet shutdown on idle-close still applies (see usePtySession/store).
     void hydrate().finally(() => {
+      // Usage stats: deferred and fire-and-forget, never on the boot path.
+      void useAppStore.getState().startTelemetry();
       setTimeout(() => {
         try {
           const requested = useAppStore.getState().enginePort;
@@ -149,6 +152,7 @@ export default function App() {
           <UnlockDialog />
           <AccessibilityDialog />
           <UpdateDialog />
+          <TelemetryNotice />
         </SafeAreaProvider>
         </KeyboardProvider>
       </TamaguiProvider>

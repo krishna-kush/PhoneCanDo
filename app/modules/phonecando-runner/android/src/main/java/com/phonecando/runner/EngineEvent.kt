@@ -14,8 +14,11 @@ import org.json.JSONObject
 // FAILED; session.deleted = GONE. Deliberately ignored: catalog/agent/
 // command/skill/websearch/reference/plugin/integration updates, usage,
 // instructions, renamed (title poll covers it), server.connected.
+// Telemetry: `sessionCreated` is true for session.created of a top-level
+// session (no parentID: subagent child sessions are not counted); its kind
+// stays OTHER, so the watch logic is unchanged.
 object EngineEvent {
-  data class Parsed(val kind: Kind, val sessionId: String?)
+  data class Parsed(val kind: Kind, val sessionId: String?, val sessionCreated: Boolean = false)
 
   enum class Kind {
     /** Generation activity: step/text/part/message movement. */
@@ -44,6 +47,8 @@ object EngineEvent {
     var sid = data?.let {
       it.optString("sessionID", "").ifEmpty { it.optString("sessionId", "") }
     }.orEmpty()
+    // The object carrying the session fields (parentID or info.parentID).
+    var body: JSONObject? = data
     if (sid.isEmpty()) {
       sid = data?.optJSONObject("form")?.optString("sessionID", "").orEmpty()
     }
@@ -57,14 +62,16 @@ object EngineEvent {
       // v1 envelope: {"payload":{"type":…,"properties":{"sessionID":…}}}.
       val payload = root.optJSONObject("payload") ?: return null
       type = payload.optString("type", "")
-      sid = payload.optJSONObject("properties")?.let {
+      body = payload.optJSONObject("properties")
+      sid = body?.let {
         it.optString("sessionID", "").ifEmpty { it.optString("sessionId", "") }
       }.orEmpty()
       if (type == "sync") {
         val se = payload.optJSONObject("syncEvent") ?: return null
         type = se.optString("type", "")
+        body = se.optJSONObject("data")
         sid = se.optString("aggregateID", "").ifEmpty {
-          se.optJSONObject("data")?.optString("sessionID", "").orEmpty()
+          body?.optString("sessionID", "").orEmpty()
         }
       }
     }
@@ -87,6 +94,15 @@ object EngineEvent {
       // (title poll covers it), server.connected, compaction.
       else -> Kind.OTHER
     }
-    return Parsed(kind, sid.ifEmpty { null })
+    val created = type == "session.created" && !hasParent(body)
+    return Parsed(kind, sid.ifEmpty { null }, created)
+  }
+
+  private fun hasParent(body: JSONObject?): Boolean {
+    if (body == null) return false
+    val direct = body.opt("parentID")
+    if (direct is String && direct.isNotEmpty()) return true
+    val nested = body.optJSONObject("info")?.opt("parentID")
+    return nested is String && nested.isNotEmpty()
   }
 }

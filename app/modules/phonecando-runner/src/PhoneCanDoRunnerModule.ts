@@ -1,5 +1,9 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
+import type { TelemetryNativeSnapshot } from './telemetry.types';
+
+export type { EngineHealth, NativeCrash, TelemetryNativeSnapshot } from './telemetry.types';
+
 export type ServeParams = {
   binary?: string;
   port?: string;
@@ -38,6 +42,9 @@ declare class PhoneCanDoRunnerModule extends NativeModule {
   getServePassword(): string;
   requestNotificationPermission(): string;
   health(params: { port?: string }): string;
+  getTelemetrySnapshot(): TelemetryNativeSnapshot | null;
+  consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null;
+  setTelemetryEnabled(enabled: boolean): void;
 }
 
 const mod = requireNativeModule<PhoneCanDoRunnerModule>('PhoneCanDoRunner');
@@ -160,6 +167,46 @@ export function requestNotificationPermission(): string {
 
 export function serveHealth(port = '4097'): string {
   return mod.health({ port });
+}
+
+// Telemetry counters (contract: telemetry.types.ts). Null when the native
+// method is missing (a build before telemetry) or fails: telemetry must never
+// break its caller.
+export function getTelemetrySnapshot(): TelemetryNativeSnapshot | null {
+  const m = mod as unknown as { getTelemetrySnapshot?: () => TelemetryNativeSnapshot | null };
+  if (typeof m.getTelemetrySnapshot !== 'function') return null;
+  try {
+    return m.getTelemetrySnapshot() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Same shape; also zeroes the native counters, clears lastExitCode,
+// lastDiedAt and lastBootMs and drains the crash list, so each is returned
+// once. lastStderrTail stays until the next unexpected exit replaces it.
+// Callers peek, fold and store first, and consume last (telemetry.types.ts).
+export function consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null {
+  const m = mod as unknown as { consumeTelemetrySnapshot?: () => TelemetryNativeSnapshot | null };
+  if (typeof m.consumeTelemetrySnapshot !== 'function') return null;
+  try {
+    return m.consumeTelemetrySnapshot() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Mirrors the user's telemetry on/off choice into native prefs. While off,
+// the serve service no longer opens the engine event stream just to count
+// sessions. No-op when the native method is missing or fails.
+export function setTelemetryEnabled(enabled: boolean): void {
+  const m = mod as unknown as { setTelemetryEnabled?: (v: boolean) => void };
+  if (typeof m.setTelemetryEnabled !== 'function') return;
+  try {
+    m.setTelemetryEnabled(enabled);
+  } catch {
+    // Telemetry must never break its caller.
+  }
 }
 
 export default mod;

@@ -16,9 +16,12 @@
   ./manage apk info <file.apk>                     package, version, channel, signer, a11y
   ./manage device push <file.apk>                  copy to /sdcard/Download/phonecando/
   ./manage device log                              logcat for update / install / Play Protect
+  ./manage stats [--d1]                            GitHub download counts; --d1 adds D1 usage (cf CLI)
+  ./manage limits [--strict]                       usage vs the Cloudflare free plan (warns at 70%)
 
 Defaults: GITHUB_REPO from app/src/engine/updates.ts, PHONECANDO_RELEASE_ENV
 from ~/.config/phonecando/release.env, ANDROID_HOME from /opt/android-sdk.
+build and release run the limits check first; it never blocks them.
 Never runs git.
 """
 import os
@@ -31,6 +34,7 @@ ROOT = Path(__file__).resolve().parent
 APP = ROOT / "app"
 WEB = ROOT / "web"
 SCRIPTS = ROOT / "scripts"
+TCE = ROOT / "tce"
 CHANNELS = ("lite", "full", "play")
 
 
@@ -79,9 +83,22 @@ def channel_arg(args):
     return args[0]
 
 
+def limits_first():
+    # The free-plan check runs on every build (tce/scripts/check-limits.mjs).
+    # Never blocks: the script exits 0 without --strict, and anything else
+    # (no node, a crash) only prints a note before the build goes on.
+    try:
+        sh(["node", str(TCE / "scripts" / "check-limits.mjs")])
+    except SystemExit:
+        print("manage: limits check failed; continuing", file=sys.stderr)
+    except OSError as e:
+        print(f"manage: limits check skipped ({e}); continuing", file=sys.stderr)
+
+
 def cmd_release(args):
     if not args or args[0].startswith("--"):
         die("usage: manage release <version> [--notes TEXT] [--publish] [--dry-run]")
+    limits_first()
     sh(["node", str(SCRIPTS / "release-android.mjs"), "--version", args[0], *args[1:]], env=release_env())
 
 
@@ -89,6 +106,7 @@ def cmd_build(args):
     ch = channel_arg(args)
     if ch == "play":
         die("play is a later feature; build lite or full")
+    limits_first()
     sh(["node", str(SCRIPTS / "build-android.mjs"), ch, *args[1:]], env=release_env())
 
 
@@ -163,6 +181,19 @@ def cmd_device(args):
         die("usage: manage device push <file.apk> | log")
 
 
+
+def cmd_stats(args):
+    # Read-only. GITHUB_TOKEN (optional) raises the API rate limit; --d1 needs
+    # the cf CLI logged in. See tce/README.md.
+    sh(["node", str(TCE / "scripts" / "stats.mjs"), *args])
+
+
+def cmd_limits(args):
+    # Read-only: GET /api/health on the live site; with CLOUDFLARE_API_TOKEN
+    # and CLOUDFLARE_ACCOUNT_ID also today's D1 rows and Worker requests.
+    sh(["node", str(TCE / "scripts" / "check-limits.mjs"), *args])
+
+
 COMMANDS = {
     "release": cmd_release,
     "build": cmd_build,
@@ -175,6 +206,8 @@ COMMANDS = {
     "engine": cmd_engine,
     "apk": cmd_apk,
     "device": cmd_device,
+    "stats": cmd_stats,
+    "limits": cmd_limits,
 }
 
 

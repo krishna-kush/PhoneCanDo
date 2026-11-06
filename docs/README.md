@@ -54,6 +54,14 @@ Kotlin library API. The library API is in `pce/docs/api/`.
   lifecycle and current implementation status.
 - `app/docs/context.md` — project context and hard-won platform notes.
 
+## Telemetry
+
+- `telemetry.md` — the published schema: every field the app and site send,
+  retention, storage, controls and every outbound network call.
+- `../tce/README.md` — the Telemetry Collection Engine (backend, client SDK,
+  Cloudflare Worker); rules in `../tce/AGENTS.md`, open work in
+  `../tce/docs/planning/todo.md`.
+
 ## Guides
 
 - `guides/testing.md` — app checks, automation test layers and telemetry.
@@ -77,9 +85,10 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 ## Related trees
 
 - `pce/docs/README.md` — the PCE product and API docs.
+- `tce/README.md`, `tce/AGENTS.md` — the telemetry backend and its rules.
 - `docs/bootstrap/README.md`, `docs/bootstrap/oc-build.md`,
   `scripts/bootstrap/` — native payload build.
-- `web/README.md` — marketing site.
+- `web/README.md` — the site (static Astro, served by the `tce/` Worker).
 - `AGENTS.md` — coding rules and quality gates.
 
 Local reference clones live in `reference/` (gitignored); they are not part of

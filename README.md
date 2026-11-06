@@ -26,7 +26,9 @@ PhoneCanDo is an independent project. It is not affiliated with or endorsed by
 opencode or anomalyco; opencode is MIT-licensed and is used as the on-device
 engine.
 
-Model calls go to the provider you configure. Everything else stays local.
+Model calls go to the provider you configure. Your sessions, files and keys
+stay local; the app's network calls are listed in
+[`docs/telemetry.md`](docs/telemetry.md).
 
 ## What it does
 
@@ -36,7 +38,7 @@ Model calls go to the provider you configure. Everything else stays local.
 | **Terminal** | A real PTY and TUI, rendered by xterm.js. |
 | **Phone control** | Accessibility-driven observe/act, gated by an in-app switch. |
 | **Three channels** | `full` with phone control; `lite` without it, the download that installs `full` in place; `play` with neither. |
-| **Local by default** | No telemetry. Sessions and keys stay on the device. |
+| **Local by default** | Sessions, files and keys stay on the device. Anonymous usage stats are on by default, one switch turns them off (Settings → Privacy), and they carry nothing from your sessions or keys: [`docs/telemetry.md`](docs/telemetry.md). |
 
 ## How it fits
 
@@ -109,6 +111,8 @@ both and drafts the GitHub release; add `--publish` to publish.
 | Vectors | `pnpm -C app check:vectors` |
 | Web dev | `pnpm -C web dev` |
 | Web build | `pnpm -C web build` |
+| Telemetry backend checks | `pnpm -C tce check && pnpm -C tce test` |
+| Download and usage counts | `./manage stats [--d1]` |
 
 ## Docs
 
@@ -118,6 +122,7 @@ both and drafts the GitHub release; add `--publish` to publish.
 | App + engine | [`app/docs/README.md`](app/docs/README.md) |
 | opencode build | [`docs/bootstrap/oc-build.md`](docs/bootstrap/oc-build.md) |
 | Phone control | [`pce/README.md`](pce/README.md) |
+| Telemetry (schema, privacy) | [`docs/telemetry.md`](docs/telemetry.md), [`tce/README.md`](tce/README.md) |
 | Research | [`research/README.md`](research/README.md) |
 
 ## Security

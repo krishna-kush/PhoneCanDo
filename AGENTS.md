@@ -47,6 +47,12 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
   read `pce/AGENTS.md`, plan in `pce/docs/planning/plan.md`, work in
   `pce/docs/planning/todo.md`.
   Keep its modules free of PhoneCanDo/React Native types.
+- `tce/` — Telemetry Collection Engine (own pnpm package): usage-data schema,
+  ops, stores, hosts, the client SDK and the Cloudflare Worker config
+  (`tce/hosts/cloudflare/wrangler.jsonc`, deployed by Workers Builds on push
+  to `prod`). Read `tce/AGENTS.md`; open work in `tce/docs/planning/todo.md`.
+  Only `app/src/engine/telemetry/` imports it; a new field ships with its
+  line in `docs/telemetry.md`.
 
 ## Dev loop (physical Android 16 device on adb, Metro :8081)
 

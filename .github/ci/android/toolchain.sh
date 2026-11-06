@@ -3,7 +3,7 @@
 # Ubuntu runner (4 vCPU, 16 GB). Run from the repo root after prebuild.sh
 # (the NDK version is read from the installed react-native).
 #  - Gradle: user-home gradle.properties beats the project's, which
-#    app/plugins/withBuildPerf.js sizes for the owner's 9 GB laptop. The PCE
+#    app/plugins/withBuildPerf.js sizes for our 9 GB dev laptop. The PCE
 #    (included build) compiles with a JDK 17 toolchain; point Gradle at the
 #    JDKs setup-java installed.
 #  - NDK: the version React Native's catalog pins (Expo's root project reads

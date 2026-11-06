@@ -126,5 +126,25 @@ const themeInit = `(() => {
                 }
             })();
         </script>
+        <script is:inline>
+            // Page view, first party: one POST to this site's own Worker
+            // (tce, POST /api/hit) with the path (no query string) and the
+            // referrer, of which only the host is kept. No cookie, no id,
+            // nothing stored in the browser; country comes from the edge.
+            // Skipped under Do Not Track or Global Privacy Control, and
+            // anywhere but a public https host, so the dev server, CI's static
+            // server, Playwright and Lighthouse never send one.
+            // docs/telemetry.md and /privacy describe it.
+            (() => {
+                const nav = navigator;
+                if (nav.doNotTrack === "1" || nav.globalPrivacyControl === true) return;
+                const host = location.hostname;
+                if (location.protocol !== "https:") return;
+                if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") return;
+                if (typeof nav.sendBeacon !== "function") return;
+                const body = JSON.stringify({ path: location.pathname, ref: document.referrer });
+                nav.sendBeacon("/api/hit", new Blob([body], { type: "application/json" }));
+            })();
+        </script>
     </body>
 </html>

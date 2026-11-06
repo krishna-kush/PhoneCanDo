@@ -365,6 +365,7 @@ jobs:
             --scheme https --scheme http
             --exclude '^https?://(www\.)?phonecando\.app'
             --exclude '/releases/download/'
+            --exclude '/dl/(lite|full)$'
             -- 'web/dist/**/*.html'
           fail: true
           jobSummary: true

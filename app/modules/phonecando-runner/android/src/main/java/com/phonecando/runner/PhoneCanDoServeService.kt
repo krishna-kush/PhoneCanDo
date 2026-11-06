@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import java.io.File
 
@@ -23,11 +25,29 @@ class PhoneCanDoServeService : Service() {
       liveServe = value
     }
   private var bridge: BridgeServer? = null
+  // Telemetry watch of the current serve process (boot time, unexpected
+  // exit; ServeWatch.kt). Main thread only, like serveProcess.
+  private var serveWatch: ServeWatch? = null
+  // The serve process once it answered health, until it stops or dies.
+  // Main thread only.
+  private var healthyServe: Process? = null
+  private val mainHandler = Handler(Looper.getMainLooper())
+  // The user's telemetry on/off choice (TelemetrySwitch.setEnabled), heard
+  // on the caller's thread and handled on the main thread.
+  private val telemetryToggle: (Boolean) -> Unit = { enabled ->
+    mainHandler.post { onTelemetryToggled(enabled) }
+  }
 
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onCreate() {
     super.onCreate()
+    // Normally done by TelemetryInitProvider at process start; repeated here
+    // (idempotent) so engine counters never depend on it.
+    TelemetryRecorder.install(applicationContext)
+    TelemetrySwitch.addEnabledListener(telemetryToggle)
+    // Before anything can start the event stream (onEngineEvent reads it).
+    loadSessionIds()
     val manager = getSystemService(NotificationManager::class.java)
     val channel = NotificationChannel(
       CHANNEL_ID, "PhoneCanDo engine",
@@ -170,14 +190,23 @@ class PhoneCanDoServeService : Service() {
         return START_NOT_STICKY
       }
       Log.i(TAG, "null intent restart with live chats, relaunching serve")
+      val requestedAt = SystemClock.elapsedRealtime()
+      TelemetryRecorder.engineStartRequested()
+      var launched = false
       try {
         val port = savedPort() ?: DEFAULT_PORT
-        serveProcess = launchServe(port, intent)
+        val proc = launchServe(port, intent)
+        launched = true
+        serveProcess = proc
         savePort(port)
+        watchServe(proc, port, requestedAt)
         ensureSse()
         startSupervisor()
         renderNotification()
       } catch (e: Exception) {
+        // Only a launch that threw is a failed start; the steps after it
+        // are the watch machinery.
+        if (!launched) TelemetryRecorder.engineStartFailed()
         Log.e(TAG, "serve relaunch failed", e)
         stopSelf(startId)
         return START_NOT_STICKY
@@ -185,12 +214,17 @@ class PhoneCanDoServeService : Service() {
       return START_STICKY
     }
     if (serveProcess == null) {
+      val requestedAt = startRequestedAt(intent)
+      TelemetryRecorder.engineStartRequested()
       try {
         val port = resolvePort(intent?.getStringExtra(EXTRA_PORT))
-        serveProcess = launchServe(port, intent)
+        val proc = launchServe(port, intent)
+        serveProcess = proc
         savePort(port)
+        watchServe(proc, port, requestedAt)
         Log.i(TAG, "serve started on $port")
       } catch (e: Exception) {
+        TelemetryRecorder.engineStartFailed()
         Log.e(TAG, "serve start failed", e)
         stopSelf(startId)
         return START_NOT_STICKY
@@ -200,11 +234,13 @@ class PhoneCanDoServeService : Service() {
   }
 
   override fun onDestroy() {
+    TelemetrySwitch.removeEnabledListener(telemetryToggle)
     stopSupervisor()
     stopSse()
     stopServeProcess()
     bridge?.stop()
     bridge = null
+    mainHandler.removeCallbacksAndMessages(null)
     super.onDestroy()
   }
 
@@ -240,6 +276,10 @@ class PhoneCanDoServeService : Service() {
   // that ignored SIGTERM would otherwise freeze the app, and at the Android
   // 15+ time limit Android would crash it anyway.
   private fun stopServeProcess() {
+    // Before destroy(): the exit that follows was asked for, not a death.
+    serveWatch?.markStopping()
+    serveWatch = null
+    healthyServe = null
     val proc = serveProcess
     if (proc != null) {
       try {
@@ -255,6 +295,90 @@ class PhoneCanDoServeService : Service() {
       }
     }
     serveProcess = null
+  }
+
+  // The module stamps startServeService intents with the JS request time, so
+  // boot time includes the service's own start. Missing or implausible
+  // (another boot, clock skew) means now.
+  private fun startRequestedAt(intent: Intent?): Long {
+    val now = SystemClock.elapsedRealtime()
+    val stamped = intent?.getLongExtra(EXTRA_REQUESTED_AT, 0L) ?: 0L
+    return if (stamped in 1..now && now - stamped < MAX_REQUEST_AGE_MS) stamped else now
+  }
+
+  // Telemetry only: watches the new serve process for its first healthy
+  // answer and for an exit without a stop request. Never throws, so a watch
+  // that cannot start leaves the engine start untouched. Once serve is
+  // healthy, and while telemetry is on, the engine event stream is ensured
+  // so session creations are counted (onEngineEvent); events for sessions
+  // nobody watches change nothing else. With telemetry off the stream opens
+  // only for watched chats, as before telemetry. A death drops that stream
+  // unless chats are watched, so a dead engine is not redialled every 30 s
+  // for counting alone.
+  private fun watchServe(proc: Process, port: String, requestedAt: Long) {
+    try {
+      val pw = prefs().getString(KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() }
+      val token = prefs().getString(KEY_BRIDGE_TOKEN, null)?.takeIf { it.isNotEmpty() }
+      val watch = ServeWatch(
+        process = proc,
+        port = port,
+        password = pw,
+        logFile = File(File(filesDir, "phonecando-home"), "serve.log"),
+        requestedAt = requestedAt,
+        secrets = PathRedactor.engineSecrets(pw, token),
+        onHealthy = {
+          mainHandler.post {
+            try {
+              if (serveProcess === proc) {
+                healthyServe = proc
+                if (TelemetrySwitch.isEnabled()) ensureSse()
+              }
+            } catch (e: Exception) {
+              Log.w(TAG, "event stream start failed", e)
+            }
+          }
+        },
+        onUnexpectedExit = {
+          mainHandler.post {
+            try {
+              if (serveProcess === proc) {
+                healthyServe = null
+                stopSseIfUnwatched()
+              }
+            } catch (e: Exception) {
+              Log.w(TAG, "event stream stop failed", e)
+            }
+          }
+        },
+      )
+      serveWatch = watch
+      watch.start()
+    } catch (t: Throwable) {
+      serveWatch = null
+      Log.w(TAG, "serve watch not started", t)
+    }
+  }
+
+  private fun stopSseIfUnwatched() {
+    synchronized(watchLock) {
+      if (readMap(KEY_WATCHED_MAP).isEmpty() && readMap(KEY_TRACKED_MAP).isEmpty()) stopSse()
+    }
+  }
+
+  // Telemetry turned on: open the counting stream now if serve is already
+  // healthy (otherwise onHealthy does). Turned off: close it unless chats
+  // are watched, which keep it open as before telemetry.
+  private fun onTelemetryToggled(enabled: Boolean) {
+    try {
+      if (enabled) {
+        val proc = serveProcess
+        if (proc != null && healthyServe === proc && !hasExited(proc)) ensureSse()
+      } else {
+        stopSseIfUnwatched()
+      }
+    } catch (e: Exception) {
+      Log.w(TAG, "telemetry toggle failed", e)
+    }
   }
 
   // Process.isAlive needs API 26; exitValue works everywhere.
@@ -404,6 +528,9 @@ class PhoneCanDoServeService : Service() {
     const val EXTRA_SSL_CERT = "sslCertFile"
     const val EXTRA_SESSION_ID = "sessionId"
     const val EXTRA_TITLE = "title"
+    const val EXTRA_REQUESTED_AT = "requestedAtElapsed"
+    private const val MAX_REQUEST_AGE_MS = 10 * 60_000L
+    private const val CREATED_SEEN_MAX = 128
     const val PREFS = "phonecando-engine"
     const val KEY_PORT = "serve_port"
     const val KEY_PASSWORD = "serve_password"
@@ -503,8 +630,30 @@ class PhoneCanDoServeService : Service() {
     try {
       val o = org.json.JSONObject()
       m.forEach { (k, v) -> o.put(k, v) }
-      prefs().edit().putString(key, o.toString()).apply()
+      synchronized(idsLock) {
+        prefs().edit().putString(key, o.toString()).apply()
+        val ids = m.keys.toSet()
+        when (key) {
+          KEY_WATCHED_MAP -> watchedIds = ids
+          KEY_TRACKED_MAP -> trackedIds = ids
+        }
+      }
     } catch (_: Exception) {
+    }
+  }
+
+  // The watched/tracked session ids as stored, so onEngineEvent can skip a
+  // frame for any other session without parsing prefs JSON. writeMap (the
+  // only writer of both maps) keeps them equal to what it stored, under
+  // idsLock so concurrent writers land in the same order in both.
+  @Volatile private var watchedIds: Set<String> = emptySet()
+  @Volatile private var trackedIds: Set<String> = emptySet()
+  private val idsLock = Any()
+
+  private fun loadSessionIds() {
+    synchronized(idsLock) {
+      watchedIds = readMap(KEY_WATCHED_MAP).keys.toSet()
+      trackedIds = readMap(KEY_TRACKED_MAP).keys.toSet()
     }
   }
 
@@ -607,7 +756,24 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
+  // Session ids already counted as created; a frame seen twice (e.g. across
+  // a stream replacement) counts once. Bounded, oldest dropped first.
+  private val createdSeen = object : LinkedHashMap<String, Boolean>() {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?): Boolean =
+      size > CREATED_SEEN_MAX
+  }
+
+  private fun countSessionCreated(sid: String?) {
+    if (sid != null) {
+      synchronized(createdSeen) {
+        if (createdSeen.put(sid, true) != null) return
+      }
+    }
+    TelemetryRecorder.sessionCreated()
+  }
+
   private fun onEngineEvent(p: EngineEvent.Parsed) {
+    if (p.sessionCreated) countSessionCreated(p.sessionId)
     val sid = p.sessionId
     if (sid == null) {
       // Parser miss on a meaningful event = blind spot. Logged so a live
@@ -615,6 +781,10 @@ class PhoneCanDoServeService : Service() {
       if (p.kind != EngineEvent.Kind.OTHER) Log.w(TAG, "event without session: $p")
       return
     }
+    // Not ours (the common case: the stream runs for counting too): no
+    // prefs parse per frame. Watched/tracked ones take the path below as
+    // before, which reads the maps again under the lock.
+    if (sid !in watchedIds && sid !in trackedIds) return
     synchronized(watchLock) {
       val watched = readMap(KEY_WATCHED_MAP)
       val tracked = readMap(KEY_TRACKED_MAP)
@@ -732,6 +902,7 @@ class PhoneCanDoServeService : Service() {
     val want = requested?.takeIf { it.isNotEmpty() } ?: savedPort() ?: DEFAULT_PORT
     val num = want.toIntOrNull() ?: DEFAULT_PORT.toInt()
     if (isPortFree(num)) return num.toString()
+    TelemetryRecorder.portSquat()
     Log.w(TAG, "port $num occupied, picking a free one")
     return pickFreePort().toString()
   }
