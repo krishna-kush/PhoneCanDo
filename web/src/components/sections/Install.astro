@@ -2,13 +2,14 @@
 import { encode } from "uqr";
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
-import { site } from "../../data/site";
+import { dlUrl, liveOrigin, site } from "../../data/site";
 
-// The plate's code is real: the starter APK's URL, so a visitor on a
-// computer can scan the download onto the phone. Encoded at build time, so
-// the page ships one SVG path and no script. Each run of dark modules in a
-// row is one rectangle; the 4-module border is the spec's quiet zone.
-const qr = encode(site.apk, { ecc: "M", border: 4 });
+// The plate's code is real: the starter's download route on the live host
+// (absolute, since a phone scans it), so a visitor on a computer can scan the
+// download onto the phone. Encoded at build time, so the page ships one SVG
+// path and no script. Each run of dark modules in a row is one rectangle;
+// the 4-module border is the spec's quiet zone.
+const qr = encode(`${liveOrigin}${dlUrl("lite")}`, { ecc: "M", border: 4 });
 const qrPath = qr.data
     .map((row, y) => {
         let d = "";
@@ -138,11 +139,13 @@ const pcScripts = [
 
         <div class="install-steps">
             <!-- Computer: full APK first (adb skips Play Protect). Phone:
-                 the full button hides and the starter becomes primary. -->
-            <a class="btn btn-primary install-full" href={site.fullApk}>
+                 the full button hides and the starter becomes primary.
+                 Both go through the Worker's /dl route, which counts the
+                 download and redirects to the GitHub asset. -->
+            <a class="btn btn-primary install-full" href={dlUrl("full")}>
                 Full APK for adb · v{site.version}
             </a>
-            <a class="btn btn-ghost install-starter" href={site.apk}>
+            <a class="btn btn-ghost install-starter" href={dlUrl("lite")}>
                 Starter APK for the phone · v{site.version}
             </a>
             <ol class="steps">

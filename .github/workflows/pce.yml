@@ -415,7 +415,7 @@ jobs:
     # harnesses, not instrumentation (am instrument force-stops the package and
     # kills the service under test), so this runs them the way their module
     # docs do and reads the PASS/FAIL line from logcat. Blocking: green 9/9 on
-    # the owner's Android 16 phone from fresh installs (2026-11-05).
+    # our Android 16 test phone from fresh installs (2026-11-05).
     name: Device harness API ${{ matrix.api }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -423,7 +423,7 @@ jobs:
       fail-fast: false
       matrix:
         # 30 is the floor (the a11y harness requires screenshots, API 30+);
-        # 36 matches the owner's phone. API 34 was dropped: its emulator
+        # 36 matches our test phone. API 34 was dropped: its emulator
         # missed the activity's window-state event (unresolved, 2026-11-05).
         api: [30, 36]
     defaults:

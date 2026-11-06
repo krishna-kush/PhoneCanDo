@@ -2,6 +2,7 @@ package com.phonecando.runner
 
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -36,6 +37,12 @@ class PhoneCanDoRunnerModule : Module() {
     return reactContext.applicationContext.filesDir
   }
 
+  private fun telemetryContext(): android.content.Context? {
+    val context = appContext.reactContext ?: return null
+    TelemetryRecorder.install(context)
+    return context
+  }
+
   private fun opt(params: Map<String, Any>, key: String): String? {
     return (params[key] as? String)?.takeIf { it.isNotEmpty() }
   }
@@ -63,6 +70,10 @@ class PhoneCanDoRunnerModule : Module() {
       // any screen and without depending on UI code; a per-resume hook would
       // repeat it for nothing.
       appContext.reactContext?.let { PackageReplacedReceiver.clearNotice(it) }
+      // Telemetry is installed by TelemetryInitProvider before
+      // Application.onCreate; this idempotent repeat covers a merged
+      // manifest that lacks the provider.
+      appContext.reactContext?.let { TelemetryRecorder.install(it) }
     }
     OnDestroy {
       if (instance === this@PhoneCanDoRunnerModule) instance = null
@@ -131,6 +142,9 @@ class PhoneCanDoRunnerModule : Module() {
       val context = appContext.reactContext ?: throw Exception("no react context")
       val intent = Intent(context, PhoneCanDoServeService::class.java).apply {
         action = PhoneCanDoServeService.ACTION_START
+        // Boot time (telemetry) runs from this request, not from the
+        // service's own start.
+        putExtra(PhoneCanDoServeService.EXTRA_REQUESTED_AT, SystemClock.elapsedRealtime())
         opt(params, "binary")?.let { putExtra(PhoneCanDoServeService.EXTRA_BINARY, it) }
         opt(params, "port")?.let { putExtra(PhoneCanDoServeService.EXTRA_PORT, it) }
         opt(params, "libDir")?.let { putExtra(PhoneCanDoServeService.EXTRA_LIB_DIR, it) }
@@ -400,6 +414,33 @@ class PhoneCanDoRunnerModule : Module() {
           .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
       )
       "opened"
+    }
+
+    // Telemetry (src/telemetry.types.ts, TelemetryNativeSnapshot). Both are
+    // synchronous and record nothing. getTelemetrySnapshot peeks;
+    // consumeTelemetrySnapshot returns the same shape and, under the
+    // telemetry store's one lock, zeroes the counters, clears lastExitCode,
+    // lastDiedAt and lastBootMs (lastStderrTail stays) and drains the crash
+    // list (TelemetrySnapshot). fgServiceRunning is this module's
+    // serve-running check (isServeRunning); the other state fields are read
+    // live.
+    Function("getTelemetrySnapshot") {
+      val context = telemetryContext() ?: return@Function null
+      TelemetrySnapshot.peek(context, checkServeProcess() || PhoneCanDoServeService.isServeAlive())
+    }
+
+    Function("consumeTelemetrySnapshot") {
+      val context = telemetryContext() ?: return@Function null
+      TelemetrySnapshot.consume(context, checkServeProcess() || PhoneCanDoServeService.isServeAlive())
+    }
+
+    // Mirrors the user's telemetry on/off choice into the telemetry prefs
+    // (default on). While off, the serve service opens the engine event
+    // stream only for watched chats, not to count sessions; counters and
+    // crash capture stay local either way. Synchronous.
+    Function("setTelemetryEnabled") { enabled: Boolean ->
+      telemetryContext()
+      TelemetrySwitch.setEnabled(enabled)
     }
 
     Function("getServePort") {

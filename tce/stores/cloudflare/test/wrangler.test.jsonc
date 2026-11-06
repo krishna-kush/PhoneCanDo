@@ -1,0 +1,16 @@
+// Test-only config for stores/cloudflare tests: local D1 emulation via
+// wrangler's getPlatformProxy (no account, no network). Never deployed; the
+// real config is hosts/cloudflare/wrangler.jsonc. Analytics Engine is not
+// emulated locally, so the tests use a recording fake for those bindings.
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "tce-store-test",
+  "compatibility_date": "2025-09-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tce-store-test",
+      "database_id": "00000000-0000-4000-8000-000000000000"
+    }
+  ]
+}

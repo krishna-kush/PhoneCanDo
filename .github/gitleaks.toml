@@ -1,8 +1,10 @@
 # Gitleaks config for the `gitleaks` job in .github/workflows/security.yml.
 # Starts from gitleaks' built-in rules and only adds path allowlists for
 # third-party or generated files whose minified code trips the generic-api-key
-# rule (e.g. `t.TwoKeyMap=void` in xterm.js). Keep this list short: every
-# entry here is a file nobody will ever see a secret finding for.
+# rule (e.g. `t.TwoKeyMap=void` in xterm.js), and for redaction tests whose
+# inputs are made-up keys (limited to the rules they trip). Keep this list
+# short: every entry here is a file nobody will ever see a secret finding for.
+# Path entries, not inline `gitleaks:allow`, because the job scans full history.
 
 title = "PhoneCanDo gitleaks config"
 
@@ -14,4 +16,12 @@ description = "Vendored upstream xterm.js build, and the generated terminal page
 paths = [
   '''(?:^|/)app/assets/xterm/xterm\.js$''',
   '''(?:^|/)app/assets/xterm/terminal\.bundle\.html$''',
+]
+
+[[allowlists]]
+description = "Made-up keys the telemetry redaction tests feed in to check they come out as <secret>; only the rules they trip, so a real token of another kind in these files still fails"
+targetRules = ["generic-api-key", "curl-auth-header", "gcp-api-key"]
+paths = [
+  '''(?:^|/)app/modules/phonecando-runner/android/src/test/java/com/phonecando/runner/PathRedactorTest\.kt$''',
+  '''(?:^|/)tce/core/redact\.test\.ts$''',
 ]

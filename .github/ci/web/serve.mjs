@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Zero-dependency static server for the built site (web/dist), used by the
 // smoke tests. It mimics the production host (Cloudflare static assets with
-// `not_found_handling: "404-page"`, see web/wrangler.jsonc) closely enough
+// `not_found_handling: "404-page"`, see tce/hosts/cloudflare/wrangler.jsonc) closely enough
 // for CI:
 //   /x        → x, x.html or x/index.html, whichever exists first
 //   /x/       → x/index.html or x.html

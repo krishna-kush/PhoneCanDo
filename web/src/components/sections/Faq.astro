@@ -89,7 +89,21 @@ import { site } from "../../data/site";
         <p>
             The agent and your files run locally. Model calls go to
             the provider you configure, so it needs network for
-            those — unless you point it at a local endpoint.
+            those — unless you point it at a local endpoint. The
+            update check and the usage stats use the network too,
+            but nothing waits for them.
+        </p>
+    </details>
+    <details>
+        <summary>Does it send anything about me?</summary>
+        <p>
+            Anonymous usage stats, on by default: phone model, Android
+            and app version, which features get used, crashes and
+            engine errors. Never your prompts, sessions, files, keys or
+            screen. One switch in Settings → Privacy turns it off, and
+            Delete my data erases what the server holds for your phone.
+            Every field is listed in the{" "}
+            <a href="/privacy/">privacy note</a>.
         </p>
     </details>
     <details>
@@ -151,4 +165,6 @@ import { site } from "../../data/site";
       color: var(--red);
     }
     .faq details p code { font: 400 12.5px var(--mono); color: var(--fg); }
+    .faq details p a { color: var(--fg); border-bottom: 1px solid var(--line-2); }
+    .faq details p a:hover { color: var(--red); border-bottom-color: var(--red); }
 </style>

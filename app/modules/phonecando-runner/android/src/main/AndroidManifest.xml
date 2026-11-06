@@ -33,5 +33,13 @@
         <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
       </intent-filter>
     </receiver>
+    <!-- Telemetry: installs the crash handler before Application.onCreate
+         in every process start (TelemetryInitProvider.kt). Serves no data.
+         The authority carries the applicationId, so each dev channel
+         package gets its own. -->
+    <provider
+      android:name="com.phonecando.runner.TelemetryInitProvider"
+      android:authorities="${applicationId}.phonecando-telemetry-init"
+      android:exported="false" />
   </application>
 </manifest>

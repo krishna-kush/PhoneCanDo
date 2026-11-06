@@ -13,6 +13,7 @@ import {
   type UpdateProgress,
   type UpdateManifest,
 } from '../../engine/updates';
+import { track } from '../../engine/telemetry';
 import AppButton from './AppButton';
 import { useTheme } from './globals';
 
@@ -64,14 +65,17 @@ export default function UpdateDialog() {
     try {
       const m = await checkForUpdate(ctrl.signal);
       if (ctrl.signal.aborted) return;
+      track(m ? 'update.check.newer' : 'update.check.none', { manual: !quiet });
       if (m) {
         setManifest(m);
         setPhase('available');
+        track('update.offered', { version: m.version, lite });
       } else if (!quiet) {
         setPhase('none');
       }
     } catch (e) {
       if (ctrl.signal.aborted) return;
+      track('update.check.failed', { manual: !quiet });
       if (quiet) return; // offline at launch: the site is the fallback
       setError(`Could not reach GitHub: ${errText(e)}`);
       setPhase('error');
@@ -105,6 +109,7 @@ export default function UpdateDialog() {
 
   async function downloadAndInstall() {
     if (!manifest) return;
+    track('update.accepted', { version: manifest.version, lite });
     if (__DEV__) {
       // Debug signature: Android refuses the release APK over this app.
       setError(
@@ -124,12 +129,14 @@ export default function UpdateDialog() {
         onProgress: setProgress,
       });
       fileRef.current = file;
+      track('update.downloaded', { version: manifest.version });
       await install();
     } catch (e) {
       if (ctrl.signal.aborted) {
         setPhase('available');
         return;
       }
+      track('update.failed', { stage: 'download' });
       setError(errText(e));
       setPhase('error');
     } finally {
@@ -154,8 +161,12 @@ export default function UpdateDialog() {
     try {
       await installDownloaded(file);
       // The app survives only if the user backed out of the installer.
+      // (A finished install replaces the process; telemetry counts it as
+      // update.installed on the next launch.)
+      track('update.cancelled', { stage: 'installer' });
       setPhase('ready');
     } catch (e) {
+      track('update.failed', { stage: 'install' });
       setError(errText(e));
       setPhase('error');
     }
@@ -172,6 +183,10 @@ export default function UpdateDialog() {
   }, [phase]);
 
   function close() {
+    // Walking away from the offer, the download or Android's install switch.
+    if (phase === 'available' || phase === 'downloading' || phase === 'permission') {
+      track('update.cancelled', { stage: phase === 'available' ? 'offer' : phase });
+    }
     abortRef.current?.abort();
     checkRef.current?.abort();
     setPhase('idle');

@@ -3,6 +3,7 @@ import { AppState, Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as runner from '../../engine/runner';
+import { track } from '../../engine/telemetry';
 import AppButton from './AppButton';
 import { useTheme } from './globals';
 
@@ -52,6 +53,7 @@ export default function UnlockDialog() {
         setMsg('This install has no phone-control driver.');
         return;
       }
+      track('control.unlock');
       setOpen(false);
     } catch (e) {
       // Keep the bridge waiting so the user can retry; "Not now" resolves false.

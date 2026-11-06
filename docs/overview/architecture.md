@@ -66,9 +66,14 @@ rename only with a native rebuild.
 - **Native vs CNG.** All native code lives in Expo modules under
   `app/modules/` and is autolinked. Nothing is hand-edited in `app/android/`
   (CNG-generated, gitignored).
+- **App vs TCE.** `tce/` is the usage-data backend and client SDK, with its
+  own dependency law (`tce/AGENTS.md`). Only `app/src/engine/telemetry/`
+  imports it (`tce/client`, `tce/core`); the site only posts to `/api/hit`.
+  The Cloudflare Worker that serves `web/dist` and the `/api`, `/dl` routes
+  lives in `tce/hosts/cloudflare/`.
 - **Docs vs code.** Repo-wide docs live under `docs/`, app/engine docs under
-  `app/docs/`, and PCE docs under `pce/docs/`. `research/` holds background
-  notes.
+  `app/docs/`, PCE docs under `pce/docs/`, and TCE docs under `tce/docs/`.
+  `research/` holds background notes.
 
 ## Repo map
 
@@ -83,6 +88,7 @@ rename only with a native rebuild.
 | opencode build | `docs/bootstrap/`, `scripts/bootstrap/` | `../bootstrap/oc-build.md` |
 | PCE | `pce/` | `../../pce/docs/README.md` |
 | Marketing site | `web/` | `../../web/README.md` |
+| Telemetry (TCE) and the Worker | `tce/` | `../../tce/README.md`, `../telemetry.md` |
 | Docs | `docs/` | `../README.md` |
 
 ## Why this shape

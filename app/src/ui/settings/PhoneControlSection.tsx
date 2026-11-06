@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { Text } from 'tamagui';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as runner from '../../engine/runner';
+import { track } from '../../engine/telemetry';
 import { useAppStore } from '../../state/app';
 import AccessibilitySetup from '../accessibility/AccessibilitySetup';
 import { COPY } from '../accessibility/guide';
@@ -66,6 +67,7 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
       }
       const ok = runner.setAutomationEnabled(true);
       setUnlocked(ok);
+      if (ok) track('control.unlock');
       // Unlocked shows no text under the button; only a failure explains itself.
       setTrustMsg(ok ? '' : 'This install has no phone-control driver; rebuild the app.');
     } catch (e) {

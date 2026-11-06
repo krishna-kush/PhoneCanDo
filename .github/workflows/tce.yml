@@ -1,0 +1,221 @@
+name: TCE
+
+# The Telemetry Collection Engine (tce/, its own pnpm package): per-module
+# type-check plus the tce/AGENTS.md dependency law, the unit and store
+# contract tests on the Node floor and current LTS, and a credential-free
+# `wrangler deploy --dry-run` of the Cloudflare Worker, which bundles the
+# built site (web/dist) as its static assets and reads the release facts
+# from app/app.json. Nothing here deploys: Cloudflare Workers Builds deploys
+# the Worker on every push to prod (tce/README.md). Runs when tce, the app
+# files that talk to it, the site or the app version change; nightly for
+# drift; on demand. Outside pull requests the capacity job also compares live
+# usage with the Cloudflare free plan (warnings only, never a gate).
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - tce/**
+      - app/src/engine/telemetry/**
+      - app/modules/phonecando-runner/src/telemetry.types.ts
+      - app/app.json
+      - web/**
+      - .github/workflows/tce.yml
+      - .github/ci/tce/**
+  pull_request:
+    paths:
+      - tce/**
+      - app/src/engine/telemetry/**
+      - app/modules/phonecando-runner/src/telemetry.types.ts
+      - app/app.json
+      - web/**
+      - .github/workflows/tce.yml
+      - .github/ci/tce/**
+  workflow_dispatch:
+  schedule:
+    - cron: '47 2 * * *'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Wrangler's own usage metrics: never from CI.
+  WRANGLER_SEND_METRICS: 'false'
+
+jobs:
+  check:
+    name: check (types + dependency law)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # pnpm version comes from the root package.json packageManager field.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: tce/pnpm-lock.yaml
+      - name: Install tce deps (frozen lockfile)
+        run: pnpm -C tce install --frozen-lockfile
+      # tsc per module with only the globals that layer may use, then
+      # scripts/check-deps.mjs: module edges, bare imports, and that only
+      # app/src/engine/telemetry/ imports tce from outside.
+      - name: pnpm -C tce check
+        run: pnpm -C tce check
+      # The .mjs scripts have no tsconfig; ci.yml's node --check covers only
+      # the root scripts/.
+      - name: Syntax-check tce scripts (node --check)
+        run: |
+          set -euo pipefail
+          for f in tce/scripts/*.mjs; do node --check "$f"; done
+          echo "node --check: $(find tce/scripts -maxdepth 1 -name '*.mjs' | wc -l) files OK"
+
+  # pnpm -C tce test runs every *.test.ts plus tce/scripts/*.test.mjs
+  # (check-limits and stats helpers, Cloudflare mocked, no network beyond 127.0.0.1).
+  test:
+    name: test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 is the floor (tce/package.json engines, type stripping and
+        # node:sqlite unflagged); 24 is the current LTS devs run.
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+          cache-dependency-path: tce/pnpm-lock.yaml
+      - name: Install tce deps (frozen lockfile)
+        run: pnpm -C tce install --frozen-lockfile
+      - name: pnpm -C tce test
+        run: pnpm -C tce test
+
+  worker-bundle:
+    name: worker bundle (wrangler dry run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ASTRO_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            tce/pnpm-lock.yaml
+      - name: Install web and tce deps (frozen lockfiles)
+        run: |
+          set -euo pipefail
+          pnpm -C web install --frozen-lockfile
+          pnpm -C tce install --frozen-lockfile
+      # The Worker serves ../../web/dist as its assets, so the site is built
+      # first, exactly as the Workers Builds build command does.
+      - name: Build the site (astro build)
+        run: pnpm -C web build
+      # --dry-run bundles and validates the config, bindings and assets
+      # directory without contacting Cloudflare, so no credentials are needed.
+      - name: Bundle the Worker (wrangler deploy --dry-run)
+        run: |
+          set -euo pipefail
+          pnpm -C tce exec wrangler deploy --dry-run -c hosts/cloudflare/wrangler.jsonc \
+            --outdir "$RUNNER_TEMP/worker" 2>&1 | tee "$RUNNER_TEMP/wrangler.log"
+      - name: Summary
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/worker"
+          total=$(grep -m1 'Total Upload' "$RUNNER_TEMP/wrangler.log" | sed 's/^[^T]*//' || true)
+          {
+            echo "### Worker bundle (dry run)"
+            echo
+            echo "${total:-wrangler printed no upload size}"
+            echo
+            echo "| File | Bytes | gzip -9 |"
+            echo "|---|---:|---:|"
+            find "$out" -type f -printf '%P\n' | sort | while read -r f; do
+              echo "| \`$f\` | $(stat -c %s "$out/$f") | $(gzip -9c "$out/$f" | wc -c) |"
+            done
+            echo
+            echo "Static assets: $(find web/dist -type f | wc -l) files, $(du -sh web/dist | cut -f1) in web/dist."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  capacity:
+    # Usage against the free plan (CAPACITY in tce/core/schema/limits.ts):
+    # GET /api/health on the live site, plus today's D1 rows and Worker
+    # requests from Cloudflare's GraphQL Analytics API when the optional
+    # read-only token is set (Account Analytics: Read, D1: Read). Warns from
+    # 70%, CRITICAL from 90%, as annotations and in the job summary. Never
+    # fails the run and is not part of tce-ok. Skipped on pull requests: they
+    # change nothing live, and fork PRs get no secrets.
+    name: capacity (free-plan limits)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      # An empty secret or variable means "not set": the script then checks
+      # the health endpoint only. It never prints the token.
+      - name: Check usage against the free-plan limits
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tce/scripts/check-limits.mjs
+
+  tce-ok:
+    # The one TCE check to require in branch protection: green only when every
+    # job above succeeded (a skipped or cancelled job counts as a failure).
+    name: tce-ok
+    if: always()
+    needs: [check, test, worker-bundle]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All gates passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### TCE gates"
+            echo
+            echo "| Job | Result |"
+            echo "|---|---|"
+            jq -r 'to_entries[] | "| \(.key) | \(.value.result) |"' <<< "$NEEDS"
+          } >> "$GITHUB_STEP_SUMMARY"
+          bad=$(jq -r '[to_entries[] | select(.value.result != "success") | "\(.key)=\(.value.result)"] | join(", ")' <<< "$NEEDS")
+          if [ -n "$bad" ]; then
+            echo "::error::gates not successful: $bad"
+            exit 1
+          fi
+          echo "all gates succeeded"

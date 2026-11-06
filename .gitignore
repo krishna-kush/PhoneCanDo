@@ -31,3 +31,7 @@ app/android/
 app/ios/
 # Staged engine payload (built by scripts/bootstrap; not committed)
 app/modules/phonecando-runner/android/src/main/libs/
+
+# tce local state: dev sqlite/archive and wrangler's dev/dry-run scratch
+tce/.data/
+.wrangler/

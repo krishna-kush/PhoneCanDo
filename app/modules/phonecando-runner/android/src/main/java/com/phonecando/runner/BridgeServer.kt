@@ -73,7 +73,21 @@ class BridgeServer private constructor(
       Log.w(TAG, "$method ${session.uri} failed", e)
       Response.Status.INTERNAL_ERROR to errorJson("internal", e.message ?: "bridge failure")
     }
+    countToolCall(session.uri, status)
     return json(status, payload)
+  }
+
+  // Telemetry: one call per authorized request to a known route, whatever
+  // its outcome (locked, unavailable and failed calls are still calls). A
+  // 404 means the route does not exist in this build or for this method,
+  // so it is not a tool call.
+  private fun countToolCall(path: String, status: Response.Status) {
+    if (status == Response.Status.NOT_FOUND) return
+    val name = TOOL_ROUTES[path] ?: return
+    try {
+      TelemetryRecorder.toolCall(name)
+    } catch (_: Throwable) {
+    }
   }
 
   private fun route(method: String, path: String, body: String): Pair<Response.Status, String> {
@@ -512,6 +526,17 @@ class BridgeServer private constructor(
     private const val MAX_BODY = 256L * 1024
     private val ALLOWED_SCHEMES = setOf("http", "https", "mailto", "tel", "geo", "market")
     private val APP_TABS = setOf("home", "env", "settings")
+
+    // Telemetry key per bridge route: the path without its leading slash,
+    // `/` as `_` (tce's tool.<name> allows [a-z0-9_] only). Keys are route
+    // names, not mobile_* tool names: that mapping lives in the agent
+    // plugins (opencode-config/plugins/), and many tools share /pce/act.
+    // A fixed table, so an unknown path never becomes a key.
+    private val TOOL_ROUTES: Map<String, String> = listOf(
+      "/ping", "/battery", "/notify", "/share", "/open", "/clipboard", "/app",
+      "/unlock", "/accessibility", "/pce/describe", "/pce/observe", "/pce/act",
+      "/pce/pack",
+    ).associateWith { it.removePrefix("/").replace('/', '_') }
 
     // The app's unlock modal resolves this when the user finishes biometrics
     // (or cancels). The bridge request blocks until then, so the agent can

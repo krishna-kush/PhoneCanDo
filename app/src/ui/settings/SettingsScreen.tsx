@@ -12,6 +12,7 @@ import LogoMark from '../common/LogoMark';
 import ThumbIcon from '../common/ThumbIcon';
 import { TUI, useScheme } from '../common/globals';
 import PhoneControlSection from './PhoneControlSection';
+import PrivacySection from './PrivacySection';
 
 const runnerAvailable = runner.isRunnerAvailable();
 const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark'];
@@ -33,6 +34,8 @@ export default function SettingsScreen() {
   const updatePromptMuted = useAppStore((s) => s.updatePromptMuted);
   const setUpdatePromptMuted = useAppStore((s) => s.setUpdatePromptMuted);
   const [confirmReset, setConfirmReset] = useState(false);
+  // For our own test phones: long-press About reveals the tester-device switch.
+  const [showTester, setShowTester] = useState(false);
   const version = installedVersion();
   // Build channel (only full ships the automation driver).
   // Sync native call; pre-channel installs and Expo Go read as full.
@@ -86,6 +89,7 @@ export default function SettingsScreen() {
         chevron={false}
         icon={<LogoMark size={36} />}
         plate={false}
+        onLongPress={() => setShowTester((v) => !v)}
       />
 
       {/* Lite has no phone control; saying so belongs next to what the build is. */}
@@ -155,6 +159,8 @@ export default function SettingsScreen() {
       </XStack>
 
       {channel !== 'lite' ? <PhoneControlSection channel={channel} /> : null}
+
+      <PrivacySection showTester={showTester} />
 
       <SectionTitle>Engine (on-device serve)</SectionTitle>
       <AppCard

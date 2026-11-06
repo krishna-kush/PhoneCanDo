@@ -7,6 +7,7 @@ import { useAppStore, type ThemeMode } from '../../state/app';
 import { setWebBackHandler, setWebHomeHandler } from './webNavigation';
 import { ensureServeRunning } from '../../engine/ensureServe';
 import { engineBaseUrl, isRunnerAvailable } from '../../engine/runner';
+import { track } from '../../engine/telemetry';
 import {
   createPairingCode,
   pairingUrl,
@@ -144,6 +145,7 @@ export default function ChatWebScreen() {
           // Log the base (never the single-use code) for diagnostics.
           console.log(`[phonecando] web pair ok base=${engineBaseUrl(port)}`);
           setUrl(pairingUrl(port, pair.code));
+          track('chat.open');
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));

@@ -1,0 +1,66 @@
+// Worker `phonecando`: static site (web/dist) + telemetry ops + crons.
+// Built and deployed by Cloudflare Workers Builds on push to prod. The custom
+// domain phonecando.tarf.app is managed outside this file: never add routes here.
+// Paths are relative to this file. hosts/cloudflare/wrangler.test.ts checks
+// crons and run_worker_first against core/ops/registry.ts and every key
+// against wrangler's schema.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "phonecando",
+  "main": "index.ts",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "../../../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*", "/dl/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "phonecando-stats",
+      "database_id": "64a28b32-a61f-4ad8-b9a4-c7ae7cea8b66",
+      "migrations_dir": "../../stores/sql/migrations"
+    }
+  ],
+  "analytics_engine_datasets": [
+    { "binding": "PAGEVIEWS", "dataset": "phonecando_pageviews" },
+    { "binding": "DOWNLOADS", "dataset": "phonecando_downloads" }
+  ],
+  // Per-op limits keyed by "<op>:<client network>" (hosts/cloudflare/config.ts:
+  // IPv4 address or IPv6 /64). Workers Rate Limiting counts per Cloudflare
+  // location and is eventually consistent, so these are a cheap brake on
+  // floods, not exact quotas. The address is only the limiter key: never
+  // logged, never passed to an op, never stored. Limits are generous for one
+  // client (the app flushes a batch every few minutes) because many phones can
+  // share one carrier NAT address; a refused client gets 429 + Retry-After and
+  // the app retries later. A missing binding means no limit.
+  "ratelimits": [
+    // POST /api/batch
+    { "name": "RL_INGEST", "namespace_id": "1001", "simple": { "limit": 6, "period": 60 } },
+    // POST /api/report, POST /api/forget
+    { "name": "RL_RARE", "namespace_id": "1002", "simple": { "limit": 3, "period": 60 } },
+    // POST /api/hit, GET /dl/* (over the limit they still answer, without counting), GET /api/health
+    { "name": "RL_PUBLIC", "namespace_id": "1003", "simple": { "limit": 30, "period": 60 } }
+  ],
+  "triggers": {
+    // github_daily (UTC). The retention cron ("*/15 * * * *") is not scheduled
+    // while we keep all data; core/ops/registry.ts says how to turn it on.
+    "crons": ["17 3 * * *"]
+  },
+  // Only the Worker's own structured log lines (op, status, error code, request
+  // id). Invocation logs stay off: they would keep request headers, which
+  // carry the client IP, and tce never stores IPs (tce/AGENTS.md §5).
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": false }
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://phonecando.tarf.app,https://phonecando.app,https://phonecando.krishnakumarkush.workers.dev",
+    // Retention cron deletes nothing while "false" (we keep all data until the
+    // backup exists). The privacy page promises deletion after 90/180 days:
+    // `./manage limits` and every build warn 14 days before the oldest row gets
+    // there. Set "true" and push to turn deletion on.
+    "RETENTION_ENABLED": "false"
+  }
+}

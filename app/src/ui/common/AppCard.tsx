@@ -52,6 +52,7 @@ export default function AppCard({
       backgroundColor={t.panel}
       pressStyle={onPress ? { opacity: 0.9, scale: 0.99 } : undefined}
       onPress={onPress}
+      onLongPress={onLongPress}
     >
       <YStack
         width={48}

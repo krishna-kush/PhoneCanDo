@@ -1,6 +1,10 @@
 // Engine seam: the ONLY importer of the phonecando-runner native module.
 // UI code must import serve lifecycle from here, never from modules/*.
 // Lazy require keeps this importable where native code is absent (Expo Go).
+import type { NativeCrash, TelemetryNativeSnapshot } from '../../modules/phonecando-runner/src/telemetry.types';
+
+export type { NativeCrash, TelemetryNativeSnapshot };
+
 export type ServeParams = {
   binary?: string;
   port?: string;
@@ -326,6 +330,62 @@ export function serveHealth(port: string): string {
 
 export function engineBaseUrl(port: string): string {
   return `http://127.0.0.1:${port}`;
+}
+
+// Telemetry counters (contract: modules/phonecando-runner/src/telemetry.types.ts).
+// These go through the module file's own exports (which already guard a
+// missing native method), not the raw native object load() returns.
+// Typed from the module file itself, so a changed signature fails tsc here;
+// Partial because an older bundle may lack an export.
+type TelemetryExports = Partial<
+  Pick<
+    typeof import('../../modules/phonecando-runner/src/PhoneCanDoRunnerModule'),
+    'getTelemetrySnapshot' | 'consumeTelemetrySnapshot' | 'setTelemetryEnabled'
+  >
+>;
+
+function loadTelemetryExports(): TelemetryExports | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('../../modules/phonecando-runner/src/PhoneCanDoRunnerModule') as TelemetryExports;
+  } catch {
+    return null;
+  }
+}
+
+// Read-only peek at the native counters and state. Null when unavailable.
+export function getTelemetrySnapshot(): TelemetryNativeSnapshot | null {
+  try {
+    const m = loadTelemetryExports();
+    return typeof m?.getTelemetrySnapshot === 'function' ? (m.getTelemetrySnapshot() ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Same shape, but zeroes the counters, clears the last exit and boot and
+// drains native crashes, so each is returned once; the last stderr tail
+// stays until the next unexpected exit. Call it only after what a peek
+// returned is folded and stored. Null when unavailable.
+export function consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null {
+  try {
+    const m = loadTelemetryExports();
+    return typeof m?.consumeTelemetrySnapshot === 'function' ? (m.consumeTelemetrySnapshot() ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Mirrors the user's usage-stats on/off choice into native prefs, so the
+// serve service skips telemetry-only work while off. Native defaults to on
+// and ignores a repeated value; a no-op on builds without the method.
+export function setTelemetryEnabled(enabled: boolean): void {
+  try {
+    const m = loadTelemetryExports();
+    if (typeof m?.setTelemetryEnabled === 'function') m.setTelemetryEnabled(enabled);
+  } catch {
+    // telemetry must never break the app
+  }
 }
 
 // Container path canonicalization: /data/data/<pkg>/... and

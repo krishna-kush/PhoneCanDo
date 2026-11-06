@@ -110,4 +110,12 @@ dependencies {
   fullImplementation 'com.phonecando.pce:pce-json:0.1.0-dev'
   fullImplementation 'com.phonecando.pce:pce-android:0.1.0-dev'
   fullImplementation 'com.phonecando.pce:pce-pack:0.1.0-dev'
+
+  // JVM tests of the pure telemetry redaction (src/test, PathRedactor.kt)
+  // and of what a consume keeps (TelemetryStore and TelemetryRecorder over an
+  // in-memory store): ./gradlew :phonecando-runner:testLiteDebugUnitTest
+  testImplementation 'junit:junit:4.13.2'
+  // android.jar's org.json is a stub on the JVM; the telemetry store parses
+  // its file with it.
+  testImplementation 'org.json:json:20250517'
 }

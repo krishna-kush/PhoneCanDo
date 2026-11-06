@@ -201,6 +201,93 @@ attempt that Android 10+ usually blocks from the background. The module's
 `OnCreate` cancels that notification on every app start; each way back after
 an update cold-starts the new build.
 
+## Telemetry counters
+
+The native half of telemetry records only and never does network.
+`TelemetryRecorder.kt` is its entry point: `install` and the events counted
+below. They land in `TelemetryStore.kt`: the SharedPreferences file
+`phonecando_telemetry`, its keys and the one lock that every write, read and
+consume holds. JS reads it through `TelemetrySnapshot.kt` with
+`getTelemetrySnapshot` (a peek) or `consumeTelemetrySnapshot` (same shape;
+under that lock it zeroes the counters, clears `lastExitCode`, `lastDiedAt`
+and `lastBootMs` and drains the crash list). `lastStderrTail` survives a
+consume: only the next unexpected exit replaces it, so a report the user
+sends later, even from a new process, can still attach it. The shape is
+`src/telemetry.types.ts`. A corrupt store is cleared, never thrown.
+
+- On/off (`TelemetrySwitch.kt`): `setTelemetryEnabled` (synchronous)
+  mirrors the user's choice into the same file (`telemetry_enabled`, default
+  on; no reset or consume clears it). Off changes two things: the service
+  no longer opens the engine event stream just to count sessions, so it
+  opens only for watched chats, as before telemetry; and the engine stderr
+  tail is dropped when sharing turns off and none is kept while it stays
+  off, so a report sent after turning it back on never carries output from
+  the off period. Counters and crash capture go on, local only (the app
+  drops what it consumes while off). Turning it on while serve is healthy
+  opens the stream at once; turning it off closes it unless chats are
+  watched.
+- Install: `TelemetryInitProvider` (manifest provider, runs before
+  `Application.onCreate` in every process start) calls
+  `TelemetryRecorder.install`, which installs a default uncaught-exception
+  handler (`TelemetryCrashCapture.kt`) and the memory callbacks once per
+  process; the module's `OnCreate` and the service's `onCreate` repeat it
+  (idempotent). A crash is stored with `commit()` (id, time, class, message
+  ≤200 chars, top 5 frames, thread, versionName; newest 10 kept), then
+  always handed to the previous handler. Message and frames go through the
+  redaction below.
+- Engine (service): `starts` counts launch attempts, `startFails` a launch
+  that threw, no healthy answer within 120 s, or an exit before the first
+  one; `portSquats` counts `resolvePort` fallbacks. `ServeWatch.kt` (one
+  daemon thread per serve) polls the same authenticated `/api/session` as
+  `health` until the first 200: `lastBootMs` runs from the module's
+  `startServeService` call. An exit without a stop request counts `died`
+  and keeps the exit code, the time it was noticed (`lastDiedAt`) and,
+  while sharing is on, the last ≤2 KB of `serve.log` (serve's stdout and
+  stderr, as before; an exit that left none clears the old tail). The tail
+  reads at most the last 16 KB, redacts all of it, drops the cut-off start
+  (the first line, or in a line longer than 16 KB its first token and,
+  after a possible credential label, the next), then keeps the last 2 KB
+  on a UTF-8 boundary. It can hold prompt text, so the app sends it only in
+  a user-initiated report. The direct-start `startServe` (unused) is not
+  counted.
+- Redaction (`PathRedactor.kt`, pure; JVM tests in `src/test`,
+  `./gradlew :phonecando-runner:testLiteDebugUnitTest`): a whole path
+  becomes `<path>`, not just its prefix. A path starts at this app's data or
+  files dir (as given and canonical), `/data/user/N`, `/data/user_de/N`,
+  `/data/data`, `/data/media/N`, `/data/app`, `/storage/<any>`, `/sdcard`,
+  `/mnt/<any>`, `~/`, `file://`, `content://` or a URL-encoded `/data`,
+  `/storage`, `/sdcard` or `/mnt`, and runs to whitespace or one of
+  `` '"`()<>[]{},; ``. A path right after an opening quote (`"`, `'` or
+  `` ` ``) runs to the matching closing quote on the same line instead,
+  spaces included; a backslash escapes the next character there, as in a
+  JSON string. With no closing quote on the line, an unquoted path that a
+  Java file-error suffix ends later on the same line runs up to it, spaces
+  included: `: open failed:`, or a space and `(No such file or directory)`,
+  `(Permission denied)`, `(Is a directory)` or `(Read-only file system)`
+  (case-insensitive). Whichever rule ends a path, only a trailing
+  `:line[:col]` (a stack frame) stays. The serve password, its Basic
+  credential and the bridge token, `Authorization`/`x-api-key` values,
+  Bearer/Basic credentials and common provider key shapes (`sk-…`, `gsk_`,
+  `xai-`, `gh*_`, `AIza…`) become `<secret>`, also inside a path.
+- Sessions: once serve is healthy, and while telemetry is on, the service
+  ensures the event stream; `session.created` of a top-level session (no
+  `parentID`) counts once per id. A frame for any session that is not
+  watched or tracked returns at once (an in-memory copy of those ids, kept
+  by the one writer of their prefs maps, so no JSON parse per frame); a
+  death drops the stream unless chats are watched.
+- Tool calls: `BridgeServer` counts every authorized call to a known route
+  that is not a 404, keyed by route name (`notify`, `pce_act`: the path
+  without its slash, `/` as `_`). The `mobile_*` names live in the plugins,
+  and several tools share `/pce/act`.
+- Low memory (`TelemetryMemoryCallbacks.kt`): `onTrimMemory` at
+  `RUNNING_LOW`, `RUNNING_CRITICAL` or `COMPLETE`, and `onLowMemory`.
+  Android 14+ delivers none of these, so the counter stays 0 there.
+- Live fields (`TelemetrySnapshot.kt`, read on every call):
+  `installSource` (installer package), `batteryOptIgnored`,
+  `fgServiceRunning` (the `isServeRunning` check), `a11yConnected` (the
+  `isUiAutomationConnected` check, false in lite/play) and `drmIdHash`, null
+  while `TELEMETRY_DRM_ID_ENABLED` is false (MediaDrm is then never touched).
+
 ## Not implemented yet
 
 - Boot receiver (note: Android 15+ forbids dataSync FGS from BOOT_COMPLETED).

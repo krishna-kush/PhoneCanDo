@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as runner from '../../engine/runner';
+import { trackOnce } from '../../engine/telemetry';
 import { useAppStore } from '../../state/app';
 import { A11Y_STEPS, type A11yStep, COPY, RESTRICTED_FLOW, stepCopy, stepFixes } from './guide';
 
@@ -33,11 +34,15 @@ export function useAccessibilitySteps() {
   function refresh() {
     const on = runner.isUiAutomationConnected();
     const switchedOn = on || runner.isAccessibilityServiceEnabled();
+    // Whether the guide was showing before this refresh (same rule as `guided`).
+    const wasGuided = LOCK_OS && !enabled && (forced || (RESTRICTED_FLOW && !ranBefore));
     setConnected(on);
     setEnabled(switchedOn);
     setRanBefore(runner.hasAccessibilityConnectedBefore());
     setNote(runner.canShowRestrictedSettingNote());
     if (switchedOn) {
+      // The switch turning on finishes whichever step the guide was on.
+      if (wasGuided) trackOnce(`a11y.step.${step}.done`);
       pendingAdvance.current = false;
       if (step !== 1) void setStep(1);
       if (forced) setForced(false);
@@ -45,7 +50,10 @@ export function useAccessibilitySteps() {
     }
     if (pendingAdvance.current) {
       pendingAdvance.current = false;
-      if (step < 3) void setStep((step + 1) as A11yStep);
+      if (step < 3) {
+        trackOnce(`a11y.step.${step}.done`);
+        void setStep((step + 1) as A11yStep);
+      }
     }
   }
 
@@ -60,6 +68,12 @@ export function useAccessibilitySteps() {
 
   const guided = LOCK_OS && !enabled && (forced || (RESTRICTED_FLOW && !ranBefore));
 
+  // Funnel: each guide step counts once per run, however often it renders
+  // (this hook runs in Settings and in the agent's dialog at once).
+  useEffect(() => {
+    if (guided) trackOnce(`a11y.step.${step}.reached`);
+  }, [guided, step]);
+
   function openAccessibility(advance: boolean): boolean {
     const ok = runner.openAccessibilitySettings() === 'opened';
     pendingAdvance.current = ok && advance;
@@ -73,6 +87,8 @@ export function useAccessibilitySteps() {
     if (step === 1 && note) {
       if (runner.showRestrictedSettingNote() === 'opened') {
         // The note sits over the app; dismissing it lands on step 2.
+        trackOnce('a11y.restricted_seen');
+        trackOnce('a11y.step.1.done');
         pendingAdvance.current = false;
         void setStep(2);
         return true;
@@ -89,6 +105,8 @@ export function useAccessibilitySteps() {
   }
 
   function goTo(next: A11yStep) {
+    // "Already did it, skip ahead": the user vouches the step is done.
+    if (next > step) trackOnce(`a11y.step.${step}.done`);
     pendingAdvance.current = false;
     void setStep(next);
   }
@@ -96,6 +114,7 @@ export function useAccessibilitySteps() {
   // The plain flow was showing and Android refused the switch: that refusal
   // was the note, so the guide starts at step 2.
   function forceGuide() {
+    trackOnce('a11y.restricted_seen');
     pendingAdvance.current = false;
     setForced(true);
     void setStep(2);

@@ -10,8 +10,12 @@
 //   - no subresource (CSS, JS, font, image, icon, media) from another origin:
 //     the site ships no CDN and no external JS (web/README.md)
 //   - 404.html uses only root-absolute URLs: the host serves it for ANY
-//     missing path, at any depth (web/wrangler.jsonc not_found_handling)
+//     missing path, at any depth (tce/hosts/cloudflare/wrangler.jsonc
+//     not_found_handling)
 //   - index.html and 404.html exist
+//   - /dl/lite, /dl/full and /api/* are Worker routes, not files (run_worker_first
+//     in tce/hosts/cloudflare/wrangler.jsonc): accepted without a file;
+//     check-release.mjs verifies the release asset behind each /dl link
 // Unreferenced files are listed as a notice. External links are listed, not
 // fetched (the scheduled external job does that).
 //
@@ -25,6 +29,8 @@ const dist = path.resolve(process.argv[2] ?? 'web/dist');
 const REQUIRED = ['index.html', '404.html'];
 // Files a browser or crawler asks for by convention, never by a link.
 const CONVENTIONAL = new Set(['/404.html', '/robots.txt', '/favicon.ico', '/sitemap.xml', '/sitemap-index.xml']);
+// Paths the Worker answers before the static assets (tce/hosts/cloudflare/wrangler.jsonc).
+const WORKER_ROUTE = /^\/(?:api\/[^/]+|dl\/(?:lite|full))$/;
 
 const errors = [];
 const external = new Map(); // url → Set of pages
@@ -124,6 +130,7 @@ async function check(raw, { from, base, kind, what }) {
     }
     target = new URL(url, `https://x.invalid${base}`);
   }
+  if (WORKER_ROUTE.test(target.pathname)) return;
   const file = target.pathname === base && url.startsWith('#') ? from : await resolvePath(dist, target.pathname);
   if (!file) {
     errors.push(`${where}: no file for ${target.pathname}`);

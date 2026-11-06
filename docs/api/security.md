@@ -11,7 +11,9 @@ them.
 - Risk levels on every action; high-risk requires confirmation.
 - Redact `password` fields and OTP inputs from observations and screenshots.
 - Audit log: timestamp, package, action, selector, result, trace ID. Local
-  only; exportable; no telemetry.
+  only; exportable; never sent anywhere. Usage telemetry is separate and
+  carries no audit entries, selectors, screen content or package names of
+  controlled apps: see `../telemetry.md`.
 - Bridge stays loopback-only with a bearer; rotate the token per serve start
   (target; current builds use an install-stable token).
 - Packs are signed data. No raw shell action is exposed to the model.

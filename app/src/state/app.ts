@@ -9,6 +9,13 @@ import {
   startServeService,
 } from '../engine/runner';
 import { listSessions, waitForEngine } from '../engine/sessions';
+import {
+  getTelemetryState,
+  startTelemetry,
+  subscribeTelemetry,
+  track,
+  type TelemetryState,
+} from '../engine/telemetry';
 import { DEFAULT_ENV, loadEnvs, saveEnvs, type Env } from './envs';
 
 export type FooterTab = 'home' | 'env' | 'settings';
@@ -83,6 +90,8 @@ interface AppState {
    * was showing: run the guide anyway. In-memory only.
    */
   a11yGuideForced: boolean;
+  /** Usage-stats flags, mirrored from engine/telemetry after it starts. */
+  telemetry: TelemetryState;
 
   hydrate: () => Promise<void>;
   setEnginePort: (port: string) => Promise<void>;
@@ -103,7 +112,11 @@ interface AppState {
   setA11yGuideForced: (forced: boolean) => void;
   quietEngineIfIdle: () => Promise<void>;
   resetWorkspace: () => Promise<string>;
+  /** Starts telemetry once (after hydrate) and keeps `telemetry` in sync. */
+  startTelemetry: () => Promise<void>;
 }
+
+let telemetrySubscribed = false;
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -121,6 +134,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   updatePromptMuted: false,
   a11yStep: 1,
   a11yGuideForced: false,
+  telemetry: getTelemetryState(),
 
   hydrate: async () => {
     const { envs, activeEnvId } = await loadEnvs();
@@ -159,6 +173,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const env: Env = { id: newId(), name: name.trim() || 'env', directory: directory.trim() };
     const envs = [...get().envs, env];
     set({ envs, activeEnvId: env.id });
+    track('env.add');
     await saveEnvs(envs, env.id);
   },
 
@@ -214,6 +229,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   quietEngineIfIdle: async () => {
     await stopEngineIfIdle(get().enginePort);
+  },
+
+  startTelemetry: async () => {
+    // Subscribed once: startTelemetry() itself only ever starts once.
+    if (!telemetrySubscribed) {
+      telemetrySubscribed = true;
+      subscribeTelemetry(() => set({ telemetry: getTelemetryState() }));
+    }
+    set({ telemetry: await startTelemetry() });
   },
 
   resetWorkspace: async () => {
