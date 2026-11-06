@@ -1,9 +1,12 @@
-package com.phonecando.runner
+package com.phonecando.runner.agents.oc
 
+import com.phonecando.runner.agents.EngineEvent
+import com.phonecando.runner.agents.EngineEvent.Kind
 import org.json.JSONObject
 
-// Parsed engine event. Pure Kotlin, zero Android imports — feed it the exact
-// frames captured on-device (see SseClient) and it extracts (type, session).
+// opencode event frames → EngineEvent. Pure Kotlin, zero Android imports —
+// feed it the exact frames captured on-device (see SseClient) and it extracts
+// (type, session).
 // v2 wire (device-captured): data: {"id":"evt_…","type":"session.text.delta",
 // "data":{"sessionID":"ses_…",…}} — type at top level, session in data.
 // v1 shapes (payload.*) are still accepted defensively.
@@ -17,23 +20,8 @@ import org.json.JSONObject
 // Telemetry: `sessionCreated` is true for session.created of a top-level
 // session (no parentID: subagent child sessions are not counted); its kind
 // stays OTHER, so the watch logic is unchanged.
-object EngineEvent {
-  data class Parsed(val kind: Kind, val sessionId: String?, val sessionCreated: Boolean = false)
-
-  enum class Kind {
-    /** Generation activity: step/text/part/message movement. */
-    WORKING,
-    /** A step ended cleanly. */
-    FINISHED,
-    /** A step failed. */
-    FAILED,
-    /** Session deleted elsewhere. */
-    GONE,
-    /** Anything else (server.connected, catalog, TUI toasts…). */
-    OTHER,
-  }
-
-  fun parse(data: String): Parsed? {
+internal object EventParser {
+  fun parse(data: String): EngineEvent? {
     val root = try {
       JSONObject(data)
     } catch (_: Exception) {
@@ -95,7 +83,7 @@ object EngineEvent {
       else -> Kind.OTHER
     }
     val created = type == "session.created" && !hasParent(body)
-    return Parsed(kind, sid.ifEmpty { null }, created)
+    return EngineEvent(kind, sid.ifEmpty { null }, created)
   }
 
   private fun hasParent(body: JSONObject?): Boolean {

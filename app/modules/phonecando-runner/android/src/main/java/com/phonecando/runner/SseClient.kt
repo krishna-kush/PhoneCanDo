@@ -1,18 +1,20 @@
 package com.phonecando.runner
 
 import android.util.Log
+import com.phonecando.runner.agents.EngineEvent
+import com.phonecando.runner.agents.HttpProbe
 import java.net.HttpURLConnection
-import java.net.URL
 
-// Minimal SSE client: one daemon thread holding GET <eventsUrl>,
-// assembling `data:` frames and dispatching parsed engine events. Reconnects
-// with capped backoff; a 60s read timeout doubles as a dead-socket detector.
-// Only android.util.Log is Android-specific. The service owns exactly one.
+// Minimal SSE client: one daemon thread holding the engine's event stream
+// (AgentKind.eventStream), assembling `data:` frames and dispatching them as
+// engine events through the kind's parser. Reconnects with capped backoff; a
+// 60s read timeout doubles as a dead-socket detector. Only android.util.Log
+// is Android-specific. The service owns exactly one.
 class SseClient(
-  private val url: String,
+  private val stream: HttpProbe,
   private val tag: String,
-  private val onEvent: (EngineEvent.Parsed) -> Unit,
-  private val password: String? = null,
+  private val parse: (String) -> EngineEvent?,
+  private val onEvent: (EngineEvent) -> Unit,
 ) {
   @Volatile private var running = false
   private var thread: Thread? = null
@@ -41,16 +43,7 @@ class SseClient(
     while (running) {
       var conn: HttpURLConnection? = null
       try {
-        conn = URL(url).openConnection() as HttpURLConnection
-        conn.setRequestProperty("Accept", "text/event-stream")
-        if (!password.isNullOrEmpty()) {
-          val cred = android.util.Base64.encodeToString(
-            "opencode:$password".toByteArray(), android.util.Base64.NO_WRAP,
-          )
-          conn.setRequestProperty("Authorization", "Basic $cred")
-        }
-        conn.connectTimeout = 10000
-        conn.readTimeout = 60000
+        conn = stream.open(connectTimeoutMs = 10000, readTimeoutMs = 60000)
         if (conn.responseCode != 200) throw Exception("sse http-${conn.responseCode}")
         backoff = 1000L
         readFrames(conn) { running }
@@ -94,7 +87,7 @@ class SseClient(
         data.clear()
         if (frame.isNotEmpty()) {
           try {
-            EngineEvent.parse(frame)?.let(onEvent)
+            parse(frame)?.let(onEvent)
           } catch (_: Exception) {
             // one bad frame never kills the stream
           }

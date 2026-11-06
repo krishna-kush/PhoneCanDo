@@ -6,7 +6,7 @@
 - Android SDK and an adb device.
 - The staged opencode payload in
   `app/modules/phonecando-runner/android/src/main/libs/arm64-v8a/`
-  (`libopencode2.so`, `libopentui.so`). It is gitignored; build it via
+  (`liboc-engine.so`, `liboc-opentui.so`). It is gitignored; build it via
   `../../../docs/bootstrap/README.md`.
 
 ## Install and run

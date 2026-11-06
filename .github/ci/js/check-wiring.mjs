@@ -92,7 +92,7 @@ def record(cmd, cwd=m.ROOT, env=None):
 m.sh = record
 m.capture = lambda cmd: ""
 probes = [("check", []), ("logos", []), ("xterm", []), ("prebuild", []), ("prebuild", ["--clean"]),
-          ("web", ["dev"]), ("web", ["build"]), ("web", ["preview"]), ("engine", ["build"]), ("engine", ["stage"]),
+          ("web", ["dev"]), ("web", ["build"]), ("web", ["preview"]), ("engine", ["oc", "build"]), ("engine", ["oc", "stage"]),
           ("release", ["0.0.0", "--dry-run"]), ("build", ["lite"]), ("build", ["full"])]
 probes += [("android", [c]) for c in m.CHANNELS]
 for name, args in probes:

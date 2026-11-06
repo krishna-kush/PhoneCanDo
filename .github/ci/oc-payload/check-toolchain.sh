@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Prove the toolchain the setup-* actions installed is the one engine.yml pins,
+# Prove the toolchain the setup-* actions installed is the one oc-payload.yml pins,
 # and that the host tools the driver and upstream build.ts shell out to exist,
 # before an hour goes into the build.
 # Usage: check-toolchain.sh <ndk-root>    (zig and bun on PATH)
-# Env in (engine.yml): NDK_VERSION ZIG_VERSION BUN_VERSION ANDROID_API
+# Env in (oc-payload.yml): NDK_VERSION ZIG_VERSION BUN_VERSION ANDROID_API
 #   markdown table on stdout, exit 1 on any mismatch.
 set -euo pipefail
 
@@ -44,7 +44,7 @@ fi
 same "Zig" "$ZIG_VERSION" "$(zig version 2>/dev/null || true)"
 same "Bun" "$BUN_VERSION" "$(bun --version 2>/dev/null || true)"
 
-# git/python3 (driver), readelf (stage-v2.sh), unzip (build.ts unpacks the
+# git/python3 (driver), readelf (scripts/agents/oc/stage.sh), unzip (build.ts unpacks the
 # bun cross-compile runtime), file/sha256sum (verify-payload.sh), jq.
 missing=""
 for t in git python3 readelf unzip file sha256sum jq; do

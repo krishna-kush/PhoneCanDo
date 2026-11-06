@@ -1,8 +1,9 @@
 // Engine start (Task 3, quiet-when-idle revision): health-gated, no
 // duplicate start, dynamic port. Called on app launch (warm engine keeps
 // chat opens instant) and on chat open (covers engine stopped while away).
-// If `/global/health` is already ok this is a no-op; otherwise it fires the
-// foreground-service start intent and reports the effective port.
+// If the engine already answers its health probe this is a no-op; otherwise
+// it fires the foreground-service start intent and reports the effective
+// port.
 // Ports are plumbing, never a user decision: 4097 is only the first request.
 // The service persists the last-good port (survives null-intent restarts)
 // and falls back to an OS-assigned free port when the requested one is

@@ -1,17 +1,15 @@
 package com.phonecando.runner
 
 import android.os.SystemClock
-import android.util.Base64
 import android.util.Log
+import com.phonecando.runner.agents.HttpProbe
 import java.io.File
 import java.io.RandomAccessFile
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.atomic.AtomicBoolean
 
 // Engine health for telemetry: one daemon thread per serve process the
 // service launched. It measures the boot (start request to serve's first
-// healthy answer, the same authenticated GET /api/session on 127.0.0.1 as the
+// healthy answer to the kind's health probe, the same request as the
 // module's `health`), then waits for the process to end. An end nobody asked
 // for (no markStopping() first) records the exit code, the time and the
 // redacted tail of serve.log, where the service already sends serve's stdout
@@ -20,8 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 // its only traffic is that loopback probe to our own child during boot.
 internal class ServeWatch(
   private val process: Process,
-  private val port: String,
-  private val password: String?,
+  /** AgentKind.healthProbe; null while the password is unknown (never healthy). */
+  private val healthProbe: HttpProbe?,
   private val logFile: File,
   /** SystemClock.elapsedRealtime() of the start request. */
   private val requestedAt: Long,
@@ -109,23 +107,11 @@ internal class ServeWatch(
   }
 
   private fun healthy(): Boolean {
-    val pw = password ?: return false
-    var conn: HttpURLConnection? = null
+    val probe = healthProbe ?: return false
     return try {
-      conn = URL("http://127.0.0.1:$port/api/session").openConnection() as HttpURLConnection
-      conn.connectTimeout = PROBE_CONNECT_TIMEOUT_MS
-      conn.readTimeout = PROBE_READ_TIMEOUT_MS
-      conn.useCaches = false
-      val cred = Base64.encodeToString("opencode:$pw".toByteArray(), Base64.NO_WRAP)
-      conn.setRequestProperty("Authorization", "Basic $cred")
-      conn.responseCode == 200
+      probe.status(PROBE_CONNECT_TIMEOUT_MS, PROBE_READ_TIMEOUT_MS) == 200
     } catch (_: Exception) {
       false
-    } finally {
-      try {
-        conn?.disconnect()
-      } catch (_: Exception) {
-      }
     }
   }
 

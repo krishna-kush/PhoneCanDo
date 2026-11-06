@@ -1,6 +1,7 @@
 package com.phonecando.runner
 
 import android.content.Context
+import com.phonecando.runner.agents.AgentKinds
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -65,6 +66,7 @@ internal object TelemetryCrashCapture {
     return try {
       val engine = context.getSharedPreferences(PhoneCanDoServeService.PREFS, Context.MODE_PRIVATE)
       PathRedactor.engineSecrets(
+        AgentKinds.default,
         engine.getString(PhoneCanDoServeService.KEY_PASSWORD, null),
         engine.getString(PhoneCanDoServeService.KEY_BRIDGE_TOKEN, null),
       )

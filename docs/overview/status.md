@@ -5,7 +5,7 @@ As of 2026-11-05. Device evidence is Android 16 / API 36.
 ## App and engine
 
 - opencode payload: self-built bionic `opencode v2.0.26-android-phonecando.1`
-  (`libopencode2.so` + `libopentui.so`), web UI embedded, pair API live.
+  (`liboc-engine.so` + `liboc-opentui.so`), web UI embedded, pair API live.
 - Home is the pair-loaded opencode web UI; the terminal tab is the TUI over
   the own JNI PTY. Sessions and projects live in the web UI.
 - `serve` runs in a foreground service on a service-owned dynamic port, is

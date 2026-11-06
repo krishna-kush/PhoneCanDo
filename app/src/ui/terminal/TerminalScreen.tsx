@@ -13,6 +13,7 @@ import { KB_BREATHE, spacerPad } from './sizing';
 import { useAppStore } from '../../state/app';
 import LogoLoader from '../common/LogoLoader';
 import { TUI } from '../common/globals';
+import { activeAgentKind } from '../../engine/agents/registry';
 import { isTerminalAvailable } from '../../engine/terminal';
 import { track } from '../../engine/telemetry';
 
@@ -152,7 +153,7 @@ export default function TerminalScreen() {
     return (
       <YStack flex={1} backgroundColor={TUI.bg} padding="$3" gap="$2">
         <Text color="#0f0" fontFamily="$mono">
-          $ opencode
+          $ {activeAgentKind().id}
         </Text>
         <Text color={TUI.fg} fontFamily="$mono">
           Native PTY terminal needs a dev build (Expo Go can't load it).

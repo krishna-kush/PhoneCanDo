@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Sheet, Text, XStack } from 'tamagui';
+import { activeAgentKind } from '../../engine/agents/registry';
 import { useAppStore } from '../../state/app';
 import { webGoBack, webGoHome } from '../chat/webNavigation';
 import BackIcon from './BackIcon';
@@ -36,7 +37,7 @@ export default function AppHeader() {
       ]
     : [
         {
-          label: 'OpenCode home',
+          label: `${activeAgentKind().label} home`,
           onSelect: () => {
             setFooterTab('home');
             webGoHome();
@@ -101,7 +102,7 @@ export default function AppHeader() {
             </Text>
           </XStack>
           <Text fontSize={15} color="$color10">
-            On-device opencode chat for Android. Home is the web UI; the terminal tab
+            On-device coding agents for Android. Home is the agent's web UI; the terminal tab
             attaches a TUI to any folder in the container.
           </Text>
           <AppButton

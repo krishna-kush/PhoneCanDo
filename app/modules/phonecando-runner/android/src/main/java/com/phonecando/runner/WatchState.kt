@@ -1,5 +1,7 @@
 package com.phonecando.runner
 
+import com.phonecando.runner.agents.EngineEvent
+
 // Which sessions are generating right now. Pure Kotlin, zero Android imports:
 // feed it parsed engine events, ask who is working. Started/part/text events
 // mark working; finished/failed/gone clear. Unknown sessions are learned on

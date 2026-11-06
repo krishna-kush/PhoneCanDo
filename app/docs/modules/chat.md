@@ -8,8 +8,9 @@ and there is no app-side chat or project creation.
 
 - `ChatWebScreen.tsx` starts the engine through `ensureServeRunning` and
   adopts the service-owned port.
-- Each mount requests a fresh pairing code (`POST /api/pair`) and loads
-  `/auth/connect/{code}`; the cookie authenticates the WebView. A 401/403
+- Each mount asks the agent kind for a one-time pairing URL (opencode:
+  `POST /api/pair`, then `/auth/connect/{code}`); the cookie authenticates
+  the WebView. A 401/403
   shows an error with a retry that re-pairs.
 - The page starts at the web home (projects + sessions). Project selection
   persists in the page profile.
@@ -20,8 +21,9 @@ and there is no app-side chat or project creation.
 
 - Android back walks the web UI history before exiting. The header back arrow
   appears only when the web UI is away from home.
-- Footer Home (while already on Home) and ⋮ → **OpenCode home** load the
-  captured opencode home URL, so a session never strands the user.
+- Footer Home (while already on Home) and ⋮ → **opencode home** (the
+  kind's label) load the captured web home URL, so a session never strands
+  the user.
 - The terminal is a separate view of the same engine; use the header menu to
   switch. See `terminal.md`.
 
@@ -36,7 +38,8 @@ this wrapper is chat-only. Verified with screenshots on the test device.
 
 ## Theme
 
-`ChatWebScreen.themeScript` maps the app palette onto opencode v2's internal
+The opencode web adapter's `themeScript` (`src/engine/agents/oc/web.ts`)
+maps the app palette onto opencode v2's internal
 `--v2-*` CSS variables and writes the `opencode-color-scheme` key. It runs
 before content load and again on load/theme changes so scroll and session
 state survive a switch. Neither the variables nor the key is a public API:
@@ -49,5 +52,6 @@ the UI falls back to opencode's palette.
 
 - `../../src/ui/chat/ChatWebScreen.tsx`
 - `../../src/ui/chat/webNavigation.ts`
-- `../../src/engine/sessions.ts` (pairing, health waits, session listing)
+- `../../src/engine/agents/oc/` (opencode REST client, web adapter, TUI recipe)
+- `../../src/engine/connection.ts` (engine address and health waits)
 - Engine and port ownership: `runner.md`

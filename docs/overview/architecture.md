@@ -24,7 +24,7 @@ RN shell (Expo / Tamagui / Zustand)
 - The web UI owns projects and sessions end to end. There is no app-side chat
   or project creation.
 - The terminal is a separate view of the same engine, not a second server.
-  The recipe is `libopencode2.so --server <url> [--session <id>] <dir>`,
+  The recipe is `liboc-engine.so --server <url> [--session <id>] <dir>`,
   so the terminal and web UI stay on one live session.
 - Full builds add the PCE automation stack; play builds strip the
   accessibility host and PCE. See `../../app/docs/modules/bridge.md` and
@@ -38,9 +38,13 @@ RN shell (Expo / Tamagui / Zustand)
   `opencode serve` in the runner's foreground service. In docs, "engine" never
   means opencode; write "opencode engine" or "opencode payload" when you mean
   that specific one.
-- **`oc-`** — prefix for opencode-specific things we own: the `oc-v2` build
-  workdir, and the planned `oc-config/` + `oc-*` payload names. Generic seams
-  (`app/src/engine/`, `phonecando-runner`) stay unprefixed.
+- **`oc-`** — prefix for opencode-specific things we own where they sit
+  next to generic ones: the `oc-v2` build workdir, the `oc-config` assets
+  folder, the `liboc-*.so` payload, `oc-payload.yml`. Each agent kind has
+  one folder per side named for it (`agents/oc/` in `app/src/engine/`,
+  `phonecando-runner` and its Kotlin package, `scripts/agents/oc/`); files
+  inside an `oc` folder need no prefix. Generic seams (`app/src/engine/`,
+  `phonecando-runner`) stay unprefixed.
 - **Upstream names are frozen** — `opencode.json`, `OPENCODE_*` env vars,
   `~/.config/opencode/`, `~/.local/share/opencode/`, the web UI and plugin API
   come from upstream opencode; do not rename them.
@@ -50,8 +54,6 @@ stays behind `app/src/engine/`; screens and state import the seam, not an
 agent. Adding an agent means adding an implementation there, not conditionals
 in screens.
 
-Debt: `opencode-config/` and `libopencode2.so` predate the `oc-` rule; they
-rename only with a native rebuild.
 
 ## Boundaries
 
@@ -86,7 +88,7 @@ rename only with a native rebuild.
 | Engine seam | `app/src/engine/` | `../../app/docs/modules/runner.md` |
 | Native modules | `app/modules/{phonecando-terminal,phonecando-runner}/` | `../../app/docs/modules/terminal.md`, `../../app/docs/modules/runner.md` |
 | Terminal page | `app/assets/xterm/` | `../../app/docs/modules/terminal.md` |
-| opencode build | `docs/bootstrap/`, `scripts/bootstrap/` | `../bootstrap/oc-build.md` |
+| opencode build | `docs/bootstrap/`, `scripts/agents/oc/` | `../bootstrap/oc-build.md` |
 | PCE | `pce/` | `../../pce/docs/README.md` |
 | Marketing site | `web/` | `../../web/README.md` |
 | Telemetry (TCE) and the Worker | `tce/` | `../../tce/README.md`, `../telemetry.md` |

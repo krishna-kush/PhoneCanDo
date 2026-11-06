@@ -530,7 +530,7 @@ class BridgeServer private constructor(
     // Telemetry key per bridge route: the path without its leading slash,
     // `/` as `_` (tce's tool.<name> allows [a-z0-9_] only). Keys are route
     // names, not mobile_* tool names: that mapping lives in the agent
-    // plugins (opencode-config/plugins/), and many tools share /pce/act.
+    // plugins (agents/<kind>/…/plugins/), and many tools share /pce/act.
     // A fixed table, so an unknown path never becomes a key.
     private val TOOL_ROUTES: Map<String, String> = listOf(
       "/ping", "/battery", "/notify", "/share", "/open", "/clipboard", "/app",

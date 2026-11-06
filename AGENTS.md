@@ -33,14 +33,17 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
   adopted from the service via `getServePort`; never user-edited).
 - `app/modules/{phonecando-terminal,phonecando-runner}/` — own Expo modules
   (Kotlin/JNI `forkpty.c` + TS shims, clean-room). Never Termux code.
-  Agent config source: `app/modules/phonecando-runner/opencode-config/`.
+  Agent config source: `app/modules/phonecando-runner/agents/<kind>/`
+  (opencode: `agents/oc/config/`, `config-lite/`). Agent kinds: one folder
+  per side (`app/src/engine/agents/oc/`, the runner's `agents/oc/` Kotlin
+  package), listed in a registry; files inside an `oc` folder need no prefix.
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
 - `docs/README.md` — repo docs map; `app/docs/README.md` — app/engine docs.
   Read `app/docs/modules/*.md` and `app/docs/context.md` before
   touching native/IME/sizing/automation code. `research/` holds background notes
   and open questions.
-- `docs/bootstrap/` — opencode payload build docs; `scripts/bootstrap/` — engine
+- `docs/bootstrap/` — opencode payload build docs; `scripts/agents/oc/` — engine
   build/stage scripts and patches. `reference/` is a gitignored local-clone
   area, not a build input.
 - `pce/` — separate Gradle phone-control engine (PCE) build owned by PhoneCanDo;
@@ -109,7 +112,7 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
    owned by PhoneCanDo; modularity, dependency direction and typed errors are
    quality gates.
 11. CI path filters: `android.yml`, `tce.yml`, `web.yml`, `pce.yml` and
-   `engine.yml` run only for the `paths:` they list. When a change gives a
+   `oc-payload.yml` run only for the `paths:` they list. When a change gives a
    build or check a new input (the app importing a new folder, a CI script
    reading a new file, a new packaged asset), add that path to the matching
    lists in the same change. `ci`, `lint`, `security` and `codeql` run on

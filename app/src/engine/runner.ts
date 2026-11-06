@@ -5,18 +5,11 @@ import type { NativeCrash, TelemetryNativeSnapshot } from '../../modules/phoneca
 
 export type { NativeCrash, TelemetryNativeSnapshot };
 
-export type ServeParams = {
-  binary?: string;
-  port?: string;
-  libDir?: string;
-  sslCertFile?: string;
-};
+export type ServeParams = { port?: string };
 
 type RunnerModule = {
   getPrefix(): string;
   isServeRunning(): boolean;
-  startServe(params: ServeParams): string;
-  stopServe(): string;
   startServeService(params: ServeParams): string;
   stopServeService(): string;
   setActiveSession(params: { sessionId?: string; title?: string }): string;
@@ -49,16 +42,14 @@ export function getPrefix(): string {
   return load().getPrefix();
 }
 
+// The engine's HOME: its config, database and the folders the TUI and the
+// folder picker show.
+export function engineHome(): string {
+  return `${getPrefix()}/phonecando-home`;
+}
+
 export function isServeRunning(): boolean {
   return load().isServeRunning();
-}
-
-export function startServe(params: ServeParams): string {
-  return load().startServe(params);
-}
-
-export function stopServe(): string {
-  return load().stopServe();
 }
 
 export function startServeService(params: ServeParams): string {
@@ -306,8 +297,8 @@ export function getServePort(): string {
   return load().getServePort();
 }
 
-// v2 random server password ("" until the service captures it from serve.log).
-// Every serve REST/SSE call needs it as HTTP Basic (user `opencode`).
+// The engine's install-stable password ("" until the service first starts
+// the engine). How it rides on a request is the agent kind's business.
 export function getServePassword(): string {
   try {
     const m = load() as unknown as { getServePassword?: () => string };

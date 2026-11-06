@@ -24,7 +24,18 @@ const RUNNER = join(ROOT, 'app/modules/phonecando-runner');
 const CHANNELS = ['full', 'lite', 'play'];
 const PTY_LIB = 'libphonecando_pty.so';
 const BUNDLE = 'assets/index.android.bundle';
-const AGENT_CONFIG = 'assets/opencode-config';
+// Every agent kind's config as phonecando-runner's syncAgentConfig packages
+// it: only full ships the full-only part; the other channels swap in the
+// lite overlay's AGENTS.md.
+const AGENT_CONFIGS = [
+  {
+    assets: 'assets/oc-config',
+    full: 'agents/oc/config',
+    lite: 'agents/oc/config-lite',
+    required: 'opencode.json',
+    fullOnly: 'plugins/automation/',
+  },
+];
 
 const args = parseArgs(process.argv.slice(2));
 const apk = resolve(args.apk ?? usage('--apk is required'));
@@ -117,19 +128,21 @@ check('JS bundle', () => {
   return build === 'release' ? `embedded, ${mib(size)}` : 'not embedded (Metro)';
 });
 check('agent config', () => {
-  if (!entries.has(`${AGENT_CONFIG}/opencode.json`)) throw new Error('opencode.json missing');
-  // phonecando-runner's syncAgentConfig: only full ships the automation
-  // plugin; the other channels swap in the lite instructions.
-  const automation = [...entries.keys()].some((n) => n.startsWith(`${AGENT_CONFIG}/plugins/automation/`));
-  if (channel === 'full' && !automation) throw new Error('full lacks plugins/automation');
-  if (channel !== 'full' && automation) throw new Error(`${channel} ships plugins/automation`);
-  const agents = entries.get(`${AGENT_CONFIG}/AGENTS.md`);
-  if (!agents) throw new Error('AGENTS.md missing');
-  const source = join(RUNNER, channel === 'full' ? 'opencode-config' : 'opencode-config-lite', 'AGENTS.md');
-  if (!readZipEntry(bytes, agents).equals(readFileSync(source))) {
-    throw new Error(`AGENTS.md differs from ${source.slice(ROOT.length + 1)}`);
+  const notes = [];
+  for (const cfg of AGENT_CONFIGS) {
+    if (!entries.has(`${cfg.assets}/${cfg.required}`)) throw new Error(`${cfg.assets}/${cfg.required} missing`);
+    const fullOnly = [...entries.keys()].some((n) => n.startsWith(`${cfg.assets}/${cfg.fullOnly}`));
+    if (channel === 'full' && !fullOnly) throw new Error(`full lacks ${cfg.assets}/${cfg.fullOnly}`);
+    if (channel !== 'full' && fullOnly) throw new Error(`${channel} ships ${cfg.assets}/${cfg.fullOnly}`);
+    const agents = entries.get(`${cfg.assets}/AGENTS.md`);
+    if (!agents) throw new Error(`${cfg.assets}/AGENTS.md missing`);
+    const source = join(RUNNER, channel === 'full' ? cfg.full : cfg.lite, 'AGENTS.md');
+    if (!readZipEntry(bytes, agents).equals(readFileSync(source))) {
+      throw new Error(`${cfg.assets}/AGENTS.md differs from ${source.slice(ROOT.length + 1)}`);
+    }
+    notes.push(`${basename(cfg.assets)}: ${channel === 'full' ? 'full' : 'lite'} AGENTS.md${fullOnly ? ` + ${cfg.fullOnly}` : ''}`);
   }
-  return `${channel === 'full' ? 'full' : 'lite'} AGENTS.md${automation ? ' + automation plugin' : ''}`;
+  return notes.join('; ');
 });
 check('signer', () => {
   if (build === 'debug') {

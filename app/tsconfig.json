@@ -4,5 +4,5 @@
     "strict": true,
     "allowImportingTsExtensions": true
   },
-  "exclude": ["android", "modules/*/android", "modules/phonecando-runner/opencode-config"]
+  "exclude": ["android", "modules/*/android", "modules/phonecando-runner/agents"]
 }

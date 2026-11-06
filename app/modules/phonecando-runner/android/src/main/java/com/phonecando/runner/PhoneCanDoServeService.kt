@@ -14,9 +14,18 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import com.phonecando.runner.agents.AgentKind
+import com.phonecando.runner.agents.AgentKinds
+import com.phonecando.runner.agents.AssetManagerTree
+import com.phonecando.runner.agents.ConfigSeeder
+import com.phonecando.runner.agents.EngineEvent
+import com.phonecando.runner.agents.LaunchContext
 import java.io.File
 
 class PhoneCanDoServeService : Service() {
+  // The one engine this service runs is the default kind's; per-agent kinds
+  // come with several agents. Everything kind-specific goes through it.
+  private val kind: AgentKind = AgentKinds.default
   // Mirrored into the companion (liveServe) so the module's isServeRunning
   // can see this engine from the JS thread.
   private var serveProcess: Process? = null
@@ -60,7 +69,7 @@ class PhoneCanDoServeService : Service() {
         NotificationManager.IMPORTANCE_DEFAULT,
       )
     )
-    val notification = buildNotification("PhoneCanDo engine running", "opencode serve on 127.0.0.1")
+    val notification = buildNotification("PhoneCanDo engine running", neutralText())
     if (Build.VERSION.SDK_INT >= 29) {
       startForeground(
         NOTIFICATION_ID, notification,
@@ -195,7 +204,7 @@ class PhoneCanDoServeService : Service() {
       var launched = false
       try {
         val port = savedPort() ?: DEFAULT_PORT
-        val proc = launchServe(port, intent)
+        val proc = launchServe(port)
         launched = true
         serveProcess = proc
         savePort(port)
@@ -218,7 +227,7 @@ class PhoneCanDoServeService : Service() {
       TelemetryRecorder.engineStartRequested()
       try {
         val port = resolvePort(intent?.getStringExtra(EXTRA_PORT))
-        val proc = launchServe(port, intent)
+        val proc = launchServe(port)
         serveProcess = proc
         savePort(port)
         watchServe(proc, port, requestedAt)
@@ -321,11 +330,10 @@ class PhoneCanDoServeService : Service() {
       val token = prefs().getString(KEY_BRIDGE_TOKEN, null)?.takeIf { it.isNotEmpty() }
       val watch = ServeWatch(
         process = proc,
-        port = port,
-        password = pw,
+        healthProbe = pw?.let { kind.healthProbe(port, it) },
         logFile = File(File(filesDir, "phonecando-home"), "serve.log"),
         requestedAt = requestedAt,
-        secrets = PathRedactor.engineSecrets(pw, token),
+        secrets = PathRedactor.engineSecrets(kind, pw, token),
         onHealthy = {
           mainHandler.post {
             try {
@@ -414,88 +422,45 @@ class PhoneCanDoServeService : Service() {
     prefs().edit().putString(KEY_BRIDGE_URL, server.url).apply()
   }
 
-  // Seed agent config (Slice 0): serve reads global config from
-  // $HOME/.config/opencode (HOME=phonecando-home). The module's Gradle
-  // syncAgentConfig task packages opencode-config/ into assets at build time.
-  // plugins/skills/AGENTS.md refresh every start; opencode.json seeds only when
-  // absent so user edits and BYOK keys survive restarts.
+  // Agent config: the kind's assets folder (packaged per variant by the
+  // module's Gradle syncAgentConfig task) is copied into its config dir under
+  // HOME on every start, pruning files we no longer ship (ConfigSeeder).
   private fun seedAgentConfig(home: File) {
+    val config = kind.config ?: return
     try {
-      val top = assets.list("opencode-config")?.toSet() ?: emptySet()
-      if (top.isEmpty()) return // dev build without staged config: skip silently
-      val dest = File(home, ".config/opencode").apply { mkdirs() }
-      for (name in top) {
-        val target = File(dest, name)
-        if (name == "opencode.json" && target.exists()) continue
-        copyAssetPath("opencode-config/$name", target)
-      }
+      ConfigSeeder(AssetManagerTree(assets)).seed(config, home)
     } catch (e: Exception) {
       Log.w(TAG, "agent config seed failed", e)
     }
   }
 
-  private fun copyAssetPath(assetPath: String, target: File) {
-    val kids = try {
-      assets.list(assetPath)
-    } catch (_: Exception) {
-      null
-    }
-    if (kids == null || kids.isEmpty()) {
-      try {
-        target.parentFile?.mkdirs()
-        assets.open(assetPath).use { inp ->
-          target.outputStream().use { out -> inp.copyTo(out) }
-        }
-      } catch (_: Exception) {
-        target.mkdirs() // empty dir
-      }
-      return
-    }
-    target.mkdirs()
-    for (child in kids) copyAssetPath("$assetPath/$child", File(target, child))
-  }
-
-  private fun launchServe(port: String, intent: Intent?): Process {
-    val prefix = filesDir
-    val home = File(prefix, "phonecando-home").apply { mkdirs() }
+  private fun launchServe(port: String): Process {
+    val home = File(filesDir, "phonecando-home").apply { mkdirs() }
     seedAgentConfig(home)
-    // No model pin: fresh sessions inherit the upstream default. (A
-    // big-pickle pin lived here while exo-free 503'd; removed per user call —
-    // fresh chats now prove whatever the current upstream default does.)
-    // The engine is a native bionic binary executed directly (its INTERP is
-    // the OS linker). Renderer lib path + filewatcher-disable come from the
-    // wrapper contract.
-    val libDir = intent?.getStringExtra(EXTRA_LIB_DIR) ?: applicationInfo.nativeLibraryDir
-    val binary = File(intent?.getStringExtra(EXTRA_BINARY) ?: "$libDir/libopencode2.so")
-    require(binary.exists()) { "opencode binary missing: ${binary.absolutePath}" }
-    if (!binary.canExecute()) binary.setExecutable(true)
-
-    val pb = ProcessBuilder(
-      binary.absolutePath,
-      "serve", "--port", port, "--hostname", "127.0.0.1"
-    )
-    pb.directory(home)
-    // v2 serve is auth-first. We generate one stable password per install
-    // (not per boot) and hand it to serve via env: deterministic for every
-    // consumer (SSE, native health, JS bridge) with no log parsing and no
-    // rotation races on restart. Loopback-only, so prefs storage is fine.
+    // One stable password per install (not per boot), handed to the engine
+    // via the kind's launch env: deterministic for every consumer (SSE,
+    // native health, JS) with no log parsing and no rotation races on
+    // restart. Loopback-only, so prefs storage is fine.
     val pw = prefs().getString(KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() }
       ?: java.util.UUID.randomUUID().toString().replace("-", "").let {
         prefs().edit().putString(KEY_PASSWORD, it).apply()
         it
       }
+    val spec = kind.launch(LaunchContext(applicationInfo.nativeLibraryDir, home, port, pw))
+    val binary = File(spec.argv.first())
+    require(binary.exists()) { "${kind.displayName} engine missing: ${binary.absolutePath}" }
+    if (!binary.canExecute()) binary.setExecutable(true)
+
+    val pb = ProcessBuilder(spec.argv)
+    pb.directory(home)
     pb.environment().apply {
       put("HOME", home.absolutePath)
-      put("OPENCODE_DISABLE_AUTOUPDATE", "1")
-      put("OPENCODE_DISABLE_LSP_DOWNLOAD", "1")
-      put("OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER", "true")
-      put("OPENCODE_SERVER_PASSWORD", pw)
-      put("OPENTUI_LIB_PATH", "$libDir/libopentui.so")
+      put("TMPDIR", home.absolutePath)
       bridge?.let {
         put("PHONECANDO_BRIDGE_URL", it.url)
         put("PHONECANDO_BRIDGE_TOKEN", it.token)
       }
-      // The mobile plugin registers UI tools only in full builds.
+      // The agent's plugins register phone-control tools only in full builds.
       val channel = try {
         packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.GET_META_DATA)
           .metaData?.getString("com.phonecando.channel") ?: "full"
@@ -503,10 +468,7 @@ class PhoneCanDoServeService : Service() {
         "full"
       }
       put("PHONECANDO_CHANNEL", channel)
-      // Keep the old variable for existing agent configs.
-      put("PHONECANDO_AUTOMATION", if (channel == "full") "full" else "play")
-      put("TMPDIR", home.absolutePath)
-      intent?.getStringExtra(EXTRA_SSL_CERT)?.let { put("SSL_CERT_FILE", it) }
+      putAll(spec.env)
     }
     pb.redirectOutput(File(home, "serve.log"))
     pb.redirectErrorStream(true)
@@ -522,10 +484,7 @@ class PhoneCanDoServeService : Service() {
     const val ACTION_SESSION = "com.phonecando.runner.ACTIVE_SESSION"
     const val ACTION_LEAVE = "com.phonecando.runner.LEAVE_SESSION"
     const val ACTION_TITLE = "com.phonecando.runner.SESSION_TITLE"
-    const val EXTRA_BINARY = "binary"
     const val EXTRA_PORT = "port"
-    const val EXTRA_LIB_DIR = "libDir"
-    const val EXTRA_SSL_CERT = "sslCertFile"
     const val EXTRA_SESSION_ID = "sessionId"
     const val EXTRA_TITLE = "title"
     const val EXTRA_REQUESTED_AT = "requestedAtElapsed"
@@ -592,10 +551,12 @@ class PhoneCanDoServeService : Service() {
   }
 
   private fun pushNeutral() {
-    pushNotification("PhoneCanDo engine running", "opencode serve on 127.0.0.1")
+    pushNotification("PhoneCanDo engine running", neutralText())
   }
 
-  // Event-driven watch: one SSE stream (`/global/event`) feeds a pure state
+  private fun neutralText() = "${kind.displayName} on 127.0.0.1"
+
+  // Event-driven watch: one SSE stream (the kind's eventStream) feeds a pure state
   // machine; the notification renders on events, not on a poll cadence.
   // Watched = chats currently open. Tracked = left-while-open sessions kept
   // until their run finishes (then they ping once with sound and are
@@ -670,9 +631,11 @@ class PhoneCanDoServeService : Service() {
 
   private fun ensureSse() {
     val port = savedPort() ?: DEFAULT_PORT
-    val pw = prefs().getString(KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() }
-    // Password rotates on every serve restart: same port + stale auth would
-    // 401-reconnect forever, so the password is part of the identity check.
+    // No password yet means no engine was ever launched: nothing to stream.
+    val pw = prefs().getString(KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() } ?: return
+    val stream = kind.eventStream(port, pw) ?: return
+    // Same port + stale auth would 401-reconnect forever, so the password is
+    // part of the identity check.
     if (sse != null && sse!!.isAlive() && ssePort == port && ssePassword == pw) return
     try {
       sse?.stop()
@@ -680,7 +643,7 @@ class PhoneCanDoServeService : Service() {
     }
     ssePort = port
     ssePassword = pw
-    sse = SseClient("http://127.0.0.1:$port/api/event", TAG, ::onEngineEvent, pw).also {
+    sse = SseClient(stream, TAG, kind::parseEvent, ::onEngineEvent).also {
       it.start()
     }
   }
@@ -772,7 +735,7 @@ class PhoneCanDoServeService : Service() {
     TelemetryRecorder.sessionCreated()
   }
 
-  private fun onEngineEvent(p: EngineEvent.Parsed) {
+  private fun onEngineEvent(p: EngineEvent) {
     if (p.sessionCreated) countSessionCreated(p.sessionId)
     val sid = p.sessionId
     if (sid == null) {

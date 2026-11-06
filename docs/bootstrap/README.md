@@ -1,10 +1,10 @@
 # Bootstrap — build the opencode payload
 
 The app ships ~200 MB of native payload that is not in git. The scripts in
-`scripts/bootstrap/` build it; this page is the docs entry.
+`scripts/agents/oc/` build it; this page is the docs entry.
 
-- `libopencode2.so` — the opencode engine (Bun, bionic aarch64);
-- `libopentui.so` — the TUI renderer (Zig, bionic aarch64).
+- `liboc-engine.so` — the opencode engine (Bun, bionic aarch64);
+- `liboc-opentui.so` — the TUI renderer (Zig, bionic aarch64).
 
 The app build does **not** build the payload. Stage the payload first, then
 build the app.
@@ -23,13 +23,13 @@ git clone --depth 1 --branch v2.0.26 \
 export ANDROID_NDK_HOME=/path/to/android-ndk-r28c
 export ZIG_BIN=/path/to/zig
 
-./scripts/bootstrap/build-engine-android.sh "$WORK"
-./scripts/bootstrap/stage-v2.sh "$WORK/out"
+./scripts/agents/oc/build.sh "$WORK"
+./scripts/agents/oc/stage.sh "$WORK/out"
 
 pnpm -C app android:full
 ```
 
-`scripts/bootstrap/stage-v2.sh` writes to
+`scripts/agents/oc/stage.sh` writes to
 `app/modules/phonecando-runner/android/src/main/libs/arm64-v8a/`.
 
 ## Why self-built

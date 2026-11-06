@@ -137,7 +137,7 @@ export default function App() {
             ) : folderPickerOpen ? (
               <FolderPicker />
             ) : (
-              // Home IS the web UI (pair-loaded opencode home — projects and
+              // Home IS the web UI (the agent's pair-loaded home — projects and
               // sessions live there, no app-side project/chat creation).
               // Terminal opens above via the header menu + folder picker.
               <TabPager

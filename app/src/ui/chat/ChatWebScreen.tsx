@@ -3,84 +3,23 @@ import { View } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { WebView } from 'react-native-webview';
-import { useAppStore, type ThemeMode } from '../../state/app';
+import { useAppStore } from '../../state/app';
 import { setWebBackHandler, setWebHomeHandler } from './webNavigation';
+import { activeAgentKind } from '../../engine/agents/registry';
+import { engineConn, waitForEngine } from '../../engine/connection';
 import { ensureServeRunning } from '../../engine/ensureServe';
 import { engineBaseUrl, isRunnerAvailable } from '../../engine/runner';
 import { track } from '../../engine/telemetry';
-import {
-  createPairingCode,
-  pairingUrl,
-  waitForEngine,
-} from '../../engine/sessions';
 import AppButton from '../common/AppButton';
 import LogoLoader from '../common/LogoLoader';
-import { useTheme, type Theme } from '../common/globals';
+import { useTheme } from '../common/globals';
 
-// opencode's web UI reads this key before boot (`oc-theme-preload.js`) and
-// listens for storage events after boot. Pass the app's mode so the embedded
-// UI follows the shell, including `system`. Its palette is a set of v2 CSS
-// variables; override only the shell-facing ones, leaving syntax/state colors
-// to opencode.
-function themeScript(mode: ThemeMode, theme: Theme) {
-  const value = JSON.stringify(mode);
-  const vars: Record<string, string> = {
-    '--v2-background-bg-base': theme.bg,
-    '--v2-background-bg-deep': theme.bg,
-    '--v2-background-bg-layer-01': theme.panel,
-    '--v2-background-bg-layer-02': theme.panel2,
-    '--v2-background-bg-layer-03': theme.panel2,
-    '--v2-background-bg-layer-04': theme.panel2,
-    '--v2-text-text-base': theme.fg,
-    '--v2-text-text-muted': theme.muted,
-    '--v2-text-text-faint': theme.dim,
-    '--v2-icon-icon-base': theme.muted,
-    '--v2-icon-icon-muted': theme.dim,
-    '--v2-icon-icon-faint': theme.faint,
-    '--v2-border-border-base': theme.line,
-    '--v2-border-border-strong': theme.lineStrong,
-    '--v2-border-border-muted': theme.line,
-    '--v2-background-bg-accent': theme.primary,
-    '--v2-text-text-accent': theme.primary,
-    '--v2-text-text-accent-hover': theme.primaryHi,
-    '--v2-icon-icon-accent': theme.primary,
-    '--v2-icon-icon-accent-hover': theme.primaryHi,
-    '--v2-border-border-focus': theme.primary,
-  };
-  const css = JSON.stringify(
-    `html:root{background-color:${theme.bg}!important;${Object.entries(vars)
-      .map(([key, val]) => `${key}:${val};`)
-      .join('')}}`,
-  );
-  return `(function () {
-    try {
-      localStorage.setItem('opencode-color-scheme', ${value});
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'opencode-color-scheme',
-        newValue: ${value},
-        storageArea: localStorage,
-      }));
-      var style = document.getElementById('phonecando-theme');
-      if (!style) {
-        style = document.createElement('style');
-        style.id = 'phonecando-theme';
-        (document.head || document.documentElement).appendChild(style);
-      }
-      style.textContent = ${css};
-    } catch (e) {}
-  })();
-  true;`;
-}
-
-// Default chat view: the v2 web UI in a WebView, authed via a fresh pairing
-// code per mount (`POST /api/pair` → `/auth/connect/{code}` sets the cookie).
-// Lands on the web home (project/session overview with tappable, named
-// projects). Home project selection persists in the page profile. App chrome
-// adds a web-history back arrow and an OpenCode home action so a session
-// never strands the user; the TUI (`TerminalScreen`) is untouched — the
-// header menu switches views.
-// Web home: pair-loaded opencode home (projects + sessions live there).
-// No app-side chats: the web UI owns sessions end to end.
+// Default chat view: the agent's web UI in a WebView, signed in with a fresh
+// one-time pairing URL per mount (the agent kind's pairUrl). Lands on the web
+// home (projects and sessions live there; no app-side chats). App chrome
+// adds a web-history back arrow and a Home action so a session never strands
+// the user; the TUI (`TerminalScreen`) is untouched — the header menu
+// switches views. Theme and embed scripts come from the kind's web adapter.
 export default function ChatWebScreen() {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +32,7 @@ export default function ChatWebScreen() {
   const setWebCanGoBack = useAppStore((s) => s.setWebCanGoBack);
   const themeMode = useAppStore((s) => s.themeMode);
   const t = useTheme();
+  const kind = activeAgentKind();
 
   // The web UI owns its history and its project-list home. Chrome calls these
   // handlers so Android back, the header back arrow, and the Home menu item
@@ -120,8 +60,8 @@ export default function ChatWebScreen() {
   // The web app stays mounted across app theme changes; re-assert the scheme
   // in place so the session/scroll state survives the switch.
   useEffect(() => {
-    web.current?.injectJavaScript(themeScript(themeMode, t));
-  }, [themeMode, t]);
+    web.current?.injectJavaScript(kind.web.themeScript(themeMode, t));
+  }, [themeMode, t, kind]);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,14 +77,15 @@ export default function ChatWebScreen() {
           port = res.port;
           void st.setEnginePort(res.port);
         }
+        const conn = engineConn(port);
         if (res.status !== 'already-running') {
-          await waitForEngine(port);
+          await waitForEngine(kind, conn);
         }
-        const pair = await createPairingCode(port);
+        const pairUrl = await kind.pairUrl(conn);
         if (!cancelled) {
-          // Log the base (never the single-use code) for diagnostics.
+          // Log the base (never the single-use URL) for diagnostics.
           console.log(`[phonecando] web pair ok base=${engineBaseUrl(port)}`);
-          setUrl(pairingUrl(port, pair.code));
+          setUrl(pairUrl);
           track('chat.open');
         }
       } catch (e) {
@@ -211,37 +152,22 @@ export default function ChatWebScreen() {
           domStorageEnabled
           sharedCookiesEnabled
           thirdPartyCookiesEnabled
-          injectedJavaScriptBeforeContentLoaded={themeScript(themeMode, t)}
+          injectedJavaScriptBeforeContentLoaded={kind.web.themeScript(themeMode, t)}
           onLoadStart={() => setPageLoading(true)}
           onLoadEnd={() => {
             setPageLoading(false);
-            web.current?.injectJavaScript(themeScript(themeMode, t));
+            web.current?.injectJavaScript(kind.web.themeScript(themeMode, t));
           }}
           onNavigationStateChange={(nav) => {
             currentUrlRef.current = nav.url;
-            if (!homeUrlRef.current && nav.url && !nav.url.includes('/auth/connect/')) {
+            if (!homeUrlRef.current && nav.url && !kind.web.isAuthUrl(nav.url)) {
               homeUrlRef.current = nav.url;
             }
             const atHome = homeUrlRef.current === nav.url;
             canGoBackRef.current = nav.canGoBack && !atHome;
             setWebCanGoBack(nav.canGoBack && !atHome);
           }}
-          // The embedded web shell renders its own titlebar (tab strip chrome)
-          // above the content — dead space inside our app, which already has
-          // AppHeader. Hide it in-page (persists across SPA navigations;
-          // re-injected on every real page load).
-          injectedJavaScript={`
-            (function () {
-              var style = document.getElementById('phonecando-embed');
-              if (!style) {
-                style = document.createElement('style');
-                style.id = 'phonecando-embed';
-                style.textContent = '[data-slot="titlebar-v2"]{display:none !important}';
-                document.documentElement.appendChild(style);
-              }
-            })();
-            true;
-          `}
+          injectedJavaScript={kind.web.embedScript}
           onHttpError={(e) => {
             const code = e.nativeEvent.statusCode;
             if (code === 401 || code === 403) {

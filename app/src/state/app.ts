@@ -1,14 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState as RNAppState } from 'react-native';
 import { create } from 'zustand';
-import { stopServeService } from '../engine/runner';
+import { activeAgentKind } from '../engine/agents/registry';
+import { engineConn, waitForEngine } from '../engine/connection';
 import {
-  getPrefix,
+  engineHome,
   isAutomationEnabled,
   isRunnerAvailable,
   startServeService,
+  stopServeService,
 } from '../engine/runner';
-import { listSessions, waitForEngine } from '../engine/sessions';
 import {
   getTelemetryState,
   startTelemetry,
@@ -29,9 +30,9 @@ const A11Y_STEP_KEY = 'phonecando.a11yStep.v3';
 const A11Y_STEP_KEYS_OLD = ['phonecando.a11yStep.v1', 'phonecando.a11yStep.v2'];
 
 // Quiet-when-idle stop: runs ONLY when the app UI goes away (backgrounded;
-// swipe-kill is covered by the service self-stop backstop). The stop veto is
-// recency only: anything touched in the last minute (live generation bumps
-// `time.updated`) keeps the engine. Errors mean unreachable → also stop.
+// swipe-kill is covered by the service self-stop backstop). The agent kind
+// decides what idle means (opencode: nothing touched in the last minute).
+// Errors mean unreachable → also stop.
 async function stopEngineIfIdle(port: string): Promise<void> {
   // Phone control unlocked means the agent may be driving another app while
   // PhoneCanDo is backgrounded (mobile_home/launch); killing serve here strands the
@@ -51,9 +52,7 @@ async function stopEngineIfIdle(port: string): Promise<void> {
     }
   };
   try {
-    const sessions = await listSessions(port);
-    const recent = sessions.some((s) => (s.time?.updated ?? 0) > Date.now() - 60_000);
-    if (!recent) stop();
+    if (await activeAgentKind().isIdle(engineConn(port))) stop();
   } catch {
     stop();
   }
@@ -74,7 +73,7 @@ interface AppState {
   terminalDir: string | null;
   /** Folder picker overlay (TUI entry point). */
   folderPickerOpen: boolean;
-  /** Web view can go back to the opencode home/project list. */
+  /** Web view can go back to the web UI's home/project list. */
   webCanGoBack: boolean;
   /** Bumped by Settings → Update; UpdateDialog re-checks GitHub on change. */
   updatePromptNonce: number;
@@ -241,11 +240,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   resetWorkspace: async () => {
-    // Full fresh start in one go: envs back to default, the engine's
-    // database (sessions + server projects — the project list has no delete
-    // API, so this is the only way to clear stale rows) wiped, serve
-    // restarted. Auth password lives in prefs (not the DB) so it survives.
-    // Working directories are left alone (user data, never deleted here).
+    // Full fresh start in one go: envs back to default, the agent's own
+    // database (sessions + server projects; the agent kind's wipeData)
+    // wiped, the engine restarted. Auth password lives in prefs (not the DB)
+    // so it survives. Working directories are left alone (user data, never
+    // deleted here).
     if (!isRunnerAvailable()) {
       const envs = [DEFAULT_ENV];
       set({ envs, activeEnvId: 'default' });
@@ -259,24 +258,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       // already down
     }
     await new Promise((r) => setTimeout(r, 2500));
+    const kind = activeAgentKind();
     let removed = 0;
     try {
-      const { Directory } = await import('expo-file-system');
-      const dir = new Directory(`file://${getPrefix()}/phonecando-home/.local/share/opencode`);
-      for (const entry of dir.list()) {
-        const name = entry.name ?? '';
-        if (
-          name.startsWith('opencode-') &&
-          (name.endsWith('.db') || name.endsWith('.db-shm') || name.endsWith('.db-wal'))
-        ) {
-          try {
-            entry.delete();
-            removed++;
-          } catch {
-            // locked or gone — restart will surface it
-          }
-        }
-      }
+      removed = await kind.wipeData(engineHome());
     } catch (e) {
       return `reset failed: ${e instanceof Error ? e.message : String(e)}`;
     }
@@ -288,7 +273,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (e) {
       return `workspace cleared, engine db wiped (${removed} files), but restart failed: ${e instanceof Error ? e.message : String(e)}`;
     }
-    const up = await waitForEngine(port, 15000);
+    const up = await waitForEngine(kind, engineConn(port), 15000);
     return up
       ? `fresh start ready (engine db wiped, ${removed} files removed)`
       : 'workspace cleared and db wiped, but serve did not answer — check status';

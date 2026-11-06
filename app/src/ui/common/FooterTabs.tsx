@@ -20,7 +20,7 @@ export default function FooterTabs() {
 
   function press(tab: FooterTab) {
     if (tab === 'home') {
-      // Already on the web tab: Home again returns to opencode's project list.
+      // Already on the web tab: Home again returns to the web UI's project list.
       if (footerTab === 'home') webGoHome();
       else goHome();
     } else {

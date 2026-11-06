@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Upstream contract for the engine build: does PhoneCanDo's bootstrap still fit
+# Upstream contract for the engine build: does PhoneCanDo's opencode payload build still fit
 # an anomalyco/opencode tree (+ the anomalyco/opentui tree it pins)? These are
 # the checks docs/bootstrap/oc-build.md "Bumping versions" asks a human to make.
-# engine.yml runs them strict on the pinned tags (patch-check) and report-only
+# oc-payload.yml runs them strict on the pinned tags (patch-check) and report-only
 # on the newest upstream tag (upstream-drift).
 #
 #   upstream.sh latest-tag <git-url>    newest plain vX.Y.Z tag (ls-remote, sort -V)
@@ -10,7 +10,7 @@
 #   upstream.sh check <strict|report> <oc-dir> <opentui-dir>
 #
 # `check` prints a markdown table (+ failure details) and exits 1 on any FAIL.
-# A pin that differs from engine.yml's env is FAIL in strict mode and DRIFT
+# A pin that differs from oc-payload.yml's env is FAIL in strict mode and DRIFT
 # (informational) in report mode. Env in: BUN_VERSION OPENTUI_VERSION ZIG_VERSION.
 set -euo pipefail
 export LC_ALL=C
@@ -42,10 +42,10 @@ check() {
   row() { printf '| %s | %s | %s |\n' "$1" "$2" "$3"; }
   ok() { row "$1" OK "$2"; }
   bad() { row "$1" "**FAIL**" "$2"; fail=1; }
-  pin() { # <what> <engine.yml value> <tree value>
+  pin() { # <what> <oc-payload.yml value> <tree value>
     if [ "$2" = "$3" ]; then ok "$1" "\`$3\`"
-    elif [ "$mode" = strict ]; then bad "$1" "tree \`${3:-?}\`, engine.yml \`$2\`"
-    else row "$1" DRIFT "tree \`${3:-?}\`, engine.yml \`$2\` (a bump moves both)"; fi
+    elif [ "$mode" = strict ]; then bad "$1" "tree \`${3:-?}\`, oc-payload.yml \`$2\`"
+    else row "$1" DRIFT "tree \`${3:-?}\`, oc-payload.yml \`$2\` (a bump moves both)"; fi
   }
   apply_check() { # <what> <repo> <patch>
     local log
@@ -60,11 +60,11 @@ check() {
   echo "|---|---|---|"
 
   # 1. The two patches the driver applies (patch → tree mapping; pins.sh
-  #    keeps this list in step with scripts/bootstrap/patches/).
+  #    keeps this list in step with scripts/agents/oc/patches/).
   apply_check "build-android-target.patch → opencode" "$oc" \
-    "$ROOT/scripts/bootstrap/patches/build-android-target.patch"
+    "$ROOT/scripts/agents/oc/patches/build-android-target.patch"
   apply_check "opentui-android-build.patch → opentui" "$otui" \
-    "$ROOT/scripts/bootstrap/patches/opentui-android-build.patch"
+    "$ROOT/scripts/agents/oc/patches/opentui-android-build.patch"
 
   # 2. The CLI surface the driver drives build.ts through.
   local bts="$oc/packages/cli/script/build.ts" missing="" probe
@@ -95,8 +95,8 @@ check() {
           | sed -E 's/[^0-9,]//g; s/,/./g' | paste -sd' ' - || true)"
   case " $zigs " in
     *" $ZIG_VERSION "*) ok "Zig supported by opentui build.zig" "\`$zigs\`" ;;
-    *) if [ "$mode" = strict ]; then bad "Zig supported by opentui build.zig" "supports \`${zigs:-?}\`, engine.yml \`$ZIG_VERSION\`"
-       else row "Zig supported by opentui build.zig" DRIFT "supports \`${zigs:-?}\`, engine.yml \`$ZIG_VERSION\`"; fi ;;
+    *) if [ "$mode" = strict ]; then bad "Zig supported by opentui build.zig" "supports \`${zigs:-?}\`, oc-payload.yml \`$ZIG_VERSION\`"
+       else row "Zig supported by opentui build.zig" DRIFT "supports \`${zigs:-?}\`, oc-payload.yml \`$ZIG_VERSION\`"; fi ;;
   esac
 
   # 4. The driver's step 3.5 edits the first chunk-bun-*.js of @opentui/core
@@ -128,11 +128,11 @@ check() {
   if [ -z "$missing" ]; then ok "pair-era API" "\`/api/pair\`, \`/auth/connect/\`"
   else bad "pair-era API" "routes gone:$missing"; fi
 
-  # 6. Web UI theme: ChatWebScreen writes opencode v2's internal --v2-* vars
+  # 6. Web UI theme: the web adapter (agents/oc/web.ts) writes opencode v2's internal --v2-* vars
   #    and the color-scheme key; neither is public API and a rename fails
   #    silently on device (oc-build.md "Web UI theme").
   local css="$oc/packages/ui/src/styles/tokens/theme.css" var vars n=0
-  local screen="$ROOT/app/src/ui/chat/ChatWebScreen.tsx"
+  local screen="$ROOT/app/src/engine/agents/oc/web.ts"
   missing=""
   vars="$(grep -oE -- '--v2-[a-z0-9-]+' "$screen" | sort -u || true)"
   if [ -f "$css" ]; then
@@ -140,8 +140,8 @@ check() {
       n=$((n + 1))
       grep -qF -- "$var:" "$css" || missing+=" \`$var\`"
     done
-    if [ "$n" -eq 0 ]; then bad "web UI theme vars" "no --v2-* vars found in ChatWebScreen.tsx"
-    elif [ -z "$missing" ]; then ok "web UI theme vars" "all $n ChatWebScreen \`--v2-*\` vars defined in theme.css"
+    if [ "$n" -eq 0 ]; then bad "web UI theme vars" "no --v2-* vars found in agents/oc/web.ts"
+    elif [ -z "$missing" ]; then ok "web UI theme vars" "all $n agents/oc/web.ts \`--v2-*\` vars defined in theme.css"
     else bad "web UI theme vars" "undefined in theme.css:$missing"; fi
   else
     bad "web UI theme vars" "packages/ui/src/styles/tokens/theme.css missing"

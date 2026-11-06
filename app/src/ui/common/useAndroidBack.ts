@@ -6,7 +6,7 @@ import { webGoBack } from '../chat/webNavigation';
 // Central Android back behavior: walk the same stack the UI shows
 // (terminal -> folder picker -> home tab -> web history) instead of exiting
 // the app immediately. Returns true (consumed) for every in-app step; only
-// the opencode home lets the OS handle the press (exit). Register once in App.
+// the web UI's home lets the OS handle the press (exit). Register once in App.
 export function useAndroidBack() {
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {

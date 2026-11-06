@@ -17,7 +17,7 @@ service.
 
 ### AGP drops non-`.so` jniLibs silently
 Only `*.so` names are packaged. The build output (`opencode2.bin`) is staged as
-`libopencode2.so`, next to `libopentui.so`. Verify with
+`liboc-engine.so`, next to `liboc-opentui.so`. Verify with
 `unzip -l app-debug.apk | grep lib/arm64`.
 
 ### `extractNativeLibs=true` required
@@ -32,7 +32,7 @@ Run `expo install --check/--fix` after EVERY dep change (15.0.8-vs-core
 `AnyTypeProvider` boot crash).
 
 ### ghost sockets + stale serves
-Match native processes by the engine library name (`libopencode2.so`), never
+Match native processes by the engine library name (`liboc-engine.so`), never
 the bare `opencode`. A dead serve can leave an ownerless LISTEN socket (only
 reboot clears). Never `adb reverse` the engine port; forward only. The service
 owns/persists/picks a free port; the app adopts it via `getServePort`.
@@ -58,7 +58,7 @@ are in `modules/chat.md`. The non-negotiables:
 ## Theme
 
 `theme/tokens.json` is the only palette; web and app read it directly, so they
-cannot drift. The terminal canvas stays `#0a0a0a`; chat's `themeScript` maps
+cannot drift. The terminal canvas stays `#0a0a0a`; the opencode web adapter's `themeScript` maps
 the palette onto opencode's `--v2-*` vars (see `modules/chat.md`).
 
 ## Related

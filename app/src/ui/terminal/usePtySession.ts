@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WebView } from 'react-native-webview';
-import {
-  getLibDir,
-  openAttachSession,
-  ptyClose,
-  ptyRead,
-  ptyResize,
-  ptyWrite,
-} from '../../engine/terminal';
+import { getLibDir, openPty, ptyClose, ptyRead, ptyResize, ptyWrite } from '../../engine/terminal';
+import { activeAgentKind } from '../../engine/agents/registry';
+import { engineConn, waitForEngine } from '../../engine/connection';
 import { ensureServeRunning } from '../../engine/ensureServe';
-import { waitForEngine } from '../../engine/sessions';
 import { useAppStore } from '../../state/app';
-import { canonicalizeContainerPath, getPrefix } from '../../engine/runner';
+import { canonicalizeContainerPath, engineHome } from '../../engine/runner';
 import { toB64 } from './keys';
 
 export type TermSize = { cols: number; rows: number };
@@ -54,8 +48,8 @@ export function usePtySession({ available, htmlUri, enginePort, webRef, dir }: O
     let stopped = false;
     (async () => {
       try {
-        const prefix = getPrefix();
-        const homeDir = `${prefix}/phonecando-home`;
+        const kind = activeAgentKind();
+        const homeDir = engineHome();
         const projectDir = canonicalizeContainerPath(dir);
         const libDir = getLibDir();
         // Lazy engine start (quiet-when-idle: no autostart on launch).
@@ -72,19 +66,23 @@ export function usePtySession({ available, htmlUri, enginePort, webRef, dir }: O
           }
           console.log(`[phonecando] engine ensure: ${res.status} port=${port}`);
           if (res.status !== 'already-running' && res.status !== 'unavailable') {
-            await waitForEngine(port);
+            await waitForEngine(kind, engineConn(port));
           }
         } catch (e) {
           console.warn(`[phonecando] engine ensure failed err=${e instanceof Error ? e.message : String(e)}`);
         }
-        fd = openAttachSession({
-          libDir,
-          homeDir,
-          projectDir,
-          serverUrl: `http://127.0.0.1:${port}`,
-          rows: termSize.rows,
-          cols: termSize.cols,
-        });
+        const conn = engineConn(port);
+        let password = '';
+        try {
+          password = conn.password();
+        } catch {
+          // native bridge absent: the TUI shows the health error, nothing crashes
+        }
+        fd = openPty(
+          kind.tui({ libDir, homeDir, projectDir, serverUrl: conn.baseUrl, password }),
+          termSize.rows,
+          termSize.cols,
+        );
         if (stopped) {
           ptyClose(fd);
           return;

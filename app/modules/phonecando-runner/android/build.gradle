@@ -13,12 +13,19 @@ expoModule {
   canBePublished false
 }
 
-// Shared agent config lives at the module root so an iOS implementation can
-// consume the same source. Android packages a generated copy per variant;
-// non-full flavors drop the full-only automation plugin and use lite
-// instructions.
-def agentConfigDir = file("../opencode-config")
-def liteAgentConfigDir = file("../opencode-config-lite")
+// Agent config, one entry per agent kind: the source under agents/<kind>/
+// (module root, so an iOS implementation can consume the same files) and the
+// assets folder the service seeds from (AgentKind.config.assetDir). Android
+// packages a generated copy per variant; non-full channels drop the
+// full-only files and take the overlay's instead.
+def agentConfigs = [
+  [
+    assetDir: "oc-config",
+    source: file("../agents/oc/config"),
+    fullOnly: ["AGENTS.md", "plugins/automation/**"],
+    overlay: file("../agents/oc/config-lite"),
+  ],
+]
 
 android {
   namespace "com.phonecando.runner"
@@ -42,8 +49,9 @@ android {
   }
   sourceSets {
     main {
-      // Ship the v2 bionic engine as native libs (CNG-safe: module-owned
-      // dir). Executed from nativeLibraryDir where SELinux permits exec.
+      // Ship the agent engines (bionic executables named lib*.so) as native
+      // libs (CNG-safe: module-owned dir). Executed from nativeLibraryDir,
+      // the only place SELinux permits exec.
       jniLibs.srcDirs += ['src/main/libs']
     }
     // The a11y driver, PCE host and pack keys exist only in full.
@@ -58,7 +66,7 @@ android {
   }
 }
 
-// Copies the agent config one variant ships. The Android plugin owns the
+// Copies the agent configs one variant ships. The Android plugin owns the
 // output folder (addGeneratedSourceDirectory below), so it knows this task
 // produces those assets and runs it before every task that reads them: asset
 // merging, lint, and any reader a later plugin version adds. Registering the
@@ -74,23 +82,23 @@ androidComponents {
     def channel = variant.flavorName
     def sync = tasks.register("syncAgentConfig${variant.name.capitalize()}", AgentConfigSync) {
       into(outputDir)
-      from(agentConfigDir) {
-        into "opencode-config"
-        exclude "**/node_modules/**"
-        if (channel != "full") {
-          exclude "AGENTS.md"
-          exclude "plugins/automation/**"
+      agentConfigs.each { cfg ->
+        from(cfg.source) {
+          into cfg.assetDir
+          exclude "**/node_modules/**"
+          if (channel != "full") exclude cfg.fullOnly
         }
-      }
-      if (channel != "full") {
-        from(liteAgentConfigDir) {
-          into "opencode-config"
-          include "AGENTS.md"
+        if (channel != "full") {
+          from(cfg.overlay) {
+            into cfg.assetDir
+          }
         }
       }
       doFirst {
-        if (!agentConfigDir.isDirectory() || (channel != "full" && !liteAgentConfigDir.isDirectory())) {
-          throw new GradleException("Missing agent config for channel ${channel}")
+        agentConfigs.each { cfg ->
+          if (!cfg.source.isDirectory() || (channel != "full" && !cfg.overlay.isDirectory())) {
+            throw new GradleException("Missing agent config ${cfg.assetDir} for channel ${channel}")
+          }
         }
       }
     }

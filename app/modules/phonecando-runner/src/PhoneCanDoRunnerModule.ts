@@ -4,12 +4,7 @@ import type { TelemetryNativeSnapshot } from './telemetry.types';
 
 export type { EngineHealth, NativeCrash, TelemetryNativeSnapshot } from './telemetry.types';
 
-export type ServeParams = {
-  binary?: string;
-  port?: string;
-  libDir?: string;
-  sslCertFile?: string;
-};
+export type ServeParams = { port?: string };
 
 declare class PhoneCanDoRunnerModule extends NativeModule {
   getPrefix(): string;
@@ -31,8 +26,6 @@ declare class PhoneCanDoRunnerModule extends NativeModule {
   canShowRestrictedSettingNote(): boolean;
   showRestrictedSettingNote(): string;
   openAppInfoSettings(): string;
-  startServe(params: ServeParams): string;
-  stopServe(): string;
   startServeService(params: ServeParams): string;
   stopServeService(): string;
   setActiveSession(params: { sessionId?: string; title?: string }): string;
@@ -121,14 +114,6 @@ export function markSelfUpdatePending(): boolean {
   const m = mod as unknown as { markSelfUpdatePending?: () => boolean };
   if (typeof m.markSelfUpdatePending !== 'function') return false;
   return m.markSelfUpdatePending();
-}
-
-export function startServe(params: ServeParams): string {
-  return mod.startServe(params);
-}
-
-export function stopServe(): string {
-  return mod.stopServe();
 }
 
 export function startServeService(params: ServeParams): string {

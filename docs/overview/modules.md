@@ -28,7 +28,7 @@ features. The PCE is a separate Gradle product at `pce/`.
 
 | Area | Path | Doc |
 |---|---|---|
-| Native payload build | `docs/bootstrap/`, `scripts/bootstrap/` | `../bootstrap/README.md` |
+| Native payload build | `docs/bootstrap/`, `scripts/agents/oc/` | `../bootstrap/README.md` |
 | Site | `web/` | `../../web/README.md` |
 | PCE | `pce/` | `../../pce/docs/README.md` |
 

@@ -3,10 +3,7 @@ import { bridgeTool, call, type Args } from "../mobile/shared"
 
 // Full-channel phone control. This plugin folder is excluded from lite/play
 // agent configs, so those builds carry no PCE or accessibility tool code.
-const CHANNEL =
-  process.env.PHONECANDO_CHANNEL ??
-  (process.env.PHONECANDO_AUTOMATION === "play" ? "play" : "full")
-const PHONE_CONTROL = CHANNEL === "full"
+const PHONE_CONTROL = (process.env.PHONECANDO_CHANNEL ?? "full") === "full"
 
 // The compatibility tools below are thin wrappers over the typed PCE API.
 // Keep their names stable: prompts and saved chats already use them.

@@ -67,8 +67,8 @@ pnpm -C app install
 
 # Payload: Bun 1.4.2, NDK r28c, Zig 0.16. The workdir needs oc-v2/
 # (pinned upstream clone) and the env vars; full steps: docs/bootstrap/README.md
-./scripts/bootstrap/build-engine-android.sh /path/to/workdir
-./scripts/bootstrap/stage-v2.sh /path/to/workdir/out
+./scripts/agents/oc/build.sh /path/to/workdir
+./scripts/agents/oc/stage.sh /path/to/workdir/out
 
 pnpm -C app android:full
 ```

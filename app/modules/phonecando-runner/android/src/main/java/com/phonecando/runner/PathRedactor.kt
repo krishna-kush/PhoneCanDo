@@ -1,6 +1,6 @@
 package com.phonecando.runner
 
-import java.util.Base64
+import com.phonecando.runner.agents.AgentKind
 
 // Redaction for everything telemetry keeps as text: crash messages and
 // frames, and the serve stderr tail. Pure JVM (no Android imports), so
@@ -231,15 +231,11 @@ internal class PathRedactor private constructor(
       return PathRedactor(Regex("((?<=[$QUOTES])(?:$starts))|$unquoted"), Regex(unquoted))
     }
 
-    // The engine's own secrets: the serve password, its HTTP Basic
-    // credential exactly as every client sends it (user `opencode`), and the
-    // bridge token.
-    fun engineSecrets(password: String?, bridgeToken: String?): List<String> {
+    // The engine's own secrets: every form of its password the kind knows
+    // (the raw value, its HTTP Basic credential…) and the bridge token.
+    fun engineSecrets(kind: AgentKind, password: String?, bridgeToken: String?): List<String> {
       val out = ArrayList<String>(3)
-      if (!password.isNullOrEmpty()) {
-        out += password
-        out += Base64.getEncoder().encodeToString("opencode:$password".toByteArray(Charsets.UTF_8))
-      }
+      if (!password.isNullOrEmpty()) out += kind.passwordForms(password)
       if (!bridgeToken.isNullOrEmpty()) out += bridgeToken
       return out
     }

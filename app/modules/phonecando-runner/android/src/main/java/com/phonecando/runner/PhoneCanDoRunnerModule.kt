@@ -3,16 +3,12 @@ package com.phonecando.runner
 import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
-import android.util.Log
+import com.phonecando.runner.agents.AgentKinds
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 class PhoneCanDoRunnerModule : Module() {
-  private var serveProcess: Process? = null
-
   companion object {
     private var instance: PhoneCanDoRunnerModule? = null
 
@@ -47,17 +43,6 @@ class PhoneCanDoRunnerModule : Module() {
     return (params[key] as? String)?.takeIf { it.isNotEmpty() }
   }
 
-  private fun checkServeProcess(): Boolean {
-    val proc = serveProcess ?: return false
-    return try {
-      proc.exitValue()
-      serveProcess = null
-      false
-    } catch (_: IllegalThreadStateException) {
-      true
-    }
-  }
-
   override fun definition() = ModuleDefinition {
     Name("PhoneCanDoRunner")
     Events("phonecandoLaunchTab", "phonecandoUnlockRequest", "phonecandoAccessibilityRequest")
@@ -83,59 +68,10 @@ class PhoneCanDoRunnerModule : Module() {
       appFilesDir().absolutePath
     }
 
-    // This module's own direct-start child (startServe) or the engine the
-    // foreground service runs. The updater stops the engine before a
-    // self-update and polls this until serve has exited.
+    // The engine the foreground service runs. The updater stops the engine
+    // before a self-update and polls this until serve has exited.
     Function("isServeRunning") {
-      checkServeProcess() || PhoneCanDoServeService.isServeAlive()
-    }
-
-    Function("startServe") { params: Map<String, Any> ->
-      if (checkServeProcess()) {
-        return@Function "already-running"
-      }
-      val prefix = appFilesDir()
-      val home = File(prefix, "phonecando-home").apply { mkdirs() }
-      // v2 native binary: executed directly (bionic INTERP), no loader.
-      // Ships in jniLibs, so it lives in the app's native library dir.
-      val nativeLibDir = appContext.reactContext?.applicationInfo?.nativeLibraryDir
-      val binary = File(
-        opt(params, "binary")
-          ?: (if (nativeLibDir != null) "$nativeLibDir/libopencode2.so" else "${prefix.absolutePath}/opencode-runtime/opencode2"),
-      )
-      if (!binary.exists()) {
-        throw Exception("opencode binary missing: ${binary.absolutePath}")
-      }
-      if (!binary.canExecute()) binary.setExecutable(true)
-
-      val port = opt(params, "port") ?: "4097"
-      val libDir = opt(params, "libDir")
-      val pb = ProcessBuilder(
-        binary.absolutePath, "serve", "--port", port, "--hostname", "127.0.0.1"
-      )
-      pb.directory(home)
-      pb.environment().apply {
-        put("HOME", home.absolutePath)
-        put("OPENCODE_DISABLE_AUTOUPDATE", "1")
-        put("OPENCODE_DISABLE_LSP_DOWNLOAD", "1")
-        put("OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER", "true")
-        if (libDir != null) put("OPENTUI_LIB_PATH", "$libDir/libopentui.so")
-        put("TMPDIR", home.absolutePath)
-        opt(params, "ldPreload")?.let { put("LD_PRELOAD", it) }
-        opt(params, "ldLibraryPath")?.let { put("LD_LIBRARY_PATH", it) }
-        opt(params, "sslCertFile")?.let { put("SSL_CERT_FILE", it) }
-      }
-      pb.redirectOutput(File(home, "serve.log"))
-      pb.redirectErrorStream(true)
-      serveProcess = pb.start()
-      Log.i("PhoneCanDoRunner", "serve started")
-      "started"
-    }
-
-    Function("stopServe") {
-      serveProcess?.destroy()
-      serveProcess = null
-      "stopped"
+      PhoneCanDoServeService.isServeAlive()
     }
 
     Function("startServeService") { params: Map<String, Any> ->
@@ -145,10 +81,7 @@ class PhoneCanDoRunnerModule : Module() {
         // Boot time (telemetry) runs from this request, not from the
         // service's own start.
         putExtra(PhoneCanDoServeService.EXTRA_REQUESTED_AT, SystemClock.elapsedRealtime())
-        opt(params, "binary")?.let { putExtra(PhoneCanDoServeService.EXTRA_BINARY, it) }
         opt(params, "port")?.let { putExtra(PhoneCanDoServeService.EXTRA_PORT, it) }
-        opt(params, "libDir")?.let { putExtra(PhoneCanDoServeService.EXTRA_LIB_DIR, it) }
-        opt(params, "sslCertFile")?.let { putExtra(PhoneCanDoServeService.EXTRA_SSL_CERT, it) }
       }
       if (Build.VERSION.SDK_INT >= 26) {
         context.startForegroundService(intent)
@@ -421,17 +354,16 @@ class PhoneCanDoRunnerModule : Module() {
     // consumeTelemetrySnapshot returns the same shape and, under the
     // telemetry store's one lock, zeroes the counters, clears lastExitCode,
     // lastDiedAt and lastBootMs (lastStderrTail stays) and drains the crash
-    // list (TelemetrySnapshot). fgServiceRunning is this module's
-    // serve-running check (isServeRunning); the other state fields are read
-    // live.
+    // list (TelemetrySnapshot). fgServiceRunning is the serve-running check
+    // (isServeRunning); the other state fields are read live.
     Function("getTelemetrySnapshot") {
       val context = telemetryContext() ?: return@Function null
-      TelemetrySnapshot.peek(context, checkServeProcess() || PhoneCanDoServeService.isServeAlive())
+      TelemetrySnapshot.peek(context, PhoneCanDoServeService.isServeAlive())
     }
 
     Function("consumeTelemetrySnapshot") {
       val context = telemetryContext() ?: return@Function null
-      TelemetrySnapshot.consume(context, checkServeProcess() || PhoneCanDoServeService.isServeAlive())
+      TelemetrySnapshot.consume(context, PhoneCanDoServeService.isServeAlive())
     }
 
     // Mirrors the user's telemetry on/off choice into the telemetry prefs
@@ -450,10 +382,10 @@ class PhoneCanDoRunnerModule : Module() {
     }
 
 
-    // v2 serve is auth-first: every REST/SSE call needs HTTP Basic with the
-    // install-stable server password (generated once by the service, handed
-    // to serve via env, stashed in prefs). JS reads it here and attaches the
-    // header itself.
+    // The engine is auth-first: every REST/SSE call needs the install-stable
+    // server password (generated once by the service, handed to the engine
+    // via env, stashed in prefs). JS reads it here; the agent kind decides
+    // how it rides on a request.
     Function("getServePassword") {
       val context = appContext.reactContext ?: throw Exception("no react context")
       context.getSharedPreferences(PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE)
@@ -461,21 +393,13 @@ class PhoneCanDoRunnerModule : Module() {
     }
 
     Function("health") { params: Map<String, Any> ->
-      val port = opt(params, "port") ?: "4097"
+      val port = opt(params, "port") ?: PhoneCanDoServeService.DEFAULT_PORT
       try {
         val context = appContext.reactContext ?: throw Exception("no react context")
         val pw = context.getSharedPreferences(PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE)
           .getString(PhoneCanDoServeService.KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() }
           ?: return@Function "starting"
-        val conn = URL("http://127.0.0.1:$port/api/session").openConnection() as HttpURLConnection
-        conn.connectTimeout = 5000
-        conn.readTimeout = 5000
-        val cred = android.util.Base64.encodeToString(
-          "opencode:$pw".toByteArray(), android.util.Base64.NO_WRAP,
-        )
-        conn.setRequestProperty("Authorization", "Basic $cred")
-        val code = conn.responseCode
-        conn.disconnect()
+        val code = AgentKinds.default.healthProbe(port, pw).status(5000, 5000)
         if (code == 200) "ok" else "http-$code"
       } catch (e: Exception) {
         "error:${e.message}"

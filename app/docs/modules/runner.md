@@ -7,14 +7,17 @@ All native code is autolinked; `app/android/` is generated.
 
 ## Native API
 
-- `PhoneCanDoRunnerModule.kt`: `getPrefix`, `isServeRunning`, `startServe`,
-  `stopServe`, `startServeService`, `stopServeService`, `setActiveSession`,
+- `PhoneCanDoRunnerModule.kt`: `getPrefix`, `isServeRunning`,
+  `startServeService`, `stopServeService`, `setActiveSession`,
   `getServePort`, `health`, `markSelfUpdatePending`.
-- `isServeRunning` is true while either serve process is alive: the module's
-  own direct-start child (`startServe`, which the app does not call) or the
-  engine the service runs (`PhoneCanDoServeService.isServeAlive`, safe to read
-  from the JS thread). The updater relies on it to stop the engine before a
-  self-update.
+- `isServeRunning` is true while the engine the service runs is alive
+  (`PhoneCanDoServeService.isServeAlive`, safe to read from the JS thread).
+  The updater relies on it to stop the engine before a self-update.
+- `agents/`: the agent-kind seam. `AgentKind` says how to launch a kind's
+  engine, probe its health, read its event stream and seed its config;
+  `AgentKinds` lists the kinds. opencode lives in `agents/oc/`
+  (`OpencodeKind`, its launch recipe, auth and event parser). The service,
+  health checks, SSE and redaction go through a kind, never an agent name.
 - `PhoneCanDoServeService.kt`: the foreground service (`dataSync` type).
 - `PackageReplacedReceiver.kt`: brings the app back after a self-update
   (see Self-update install).
@@ -23,15 +26,15 @@ All native code is autolinked; `app/android/` is generated.
 
 ## opencode payload (v2)
 
-Ships the native bionic opencode payload (`libopencode2.so` + `libopentui.so` as
+Ships the native bionic opencode payload (`liboc-engine.so` + `liboc-opentui.so` as
 `jniLibs` `*.so` names, `extractNativeLibs=true`): executed directly (its
 INTERP is the OS linker; bionic system libs only). Payload is self-built
 (`opencode v2.0.26-android-phonecando.1`: upstream + embedded web UI + pair API,
 see `docs/bootstrap/oc-build.md`): staged via
-`scripts/bootstrap/stage-v2.sh` into module `jniLibs`.
+`scripts/agents/oc/stage.sh` into module `jniLibs`.
 
 On an opencode/web-UI bump, recheck the embedded theme override
-(`ChatWebScreen.themeScript`, opencode's internal `--v2-*` vars); see
+(`src/engine/agents/oc/web.ts`, opencode's internal `--v2-*` vars); see
 `docs/bootstrap/oc-build.md` → Bumping versions.
 
 ## Serve service
@@ -59,7 +62,7 @@ quiet shutdown. Native session-report paths are kept idle-neutral (no rebuild
 needed); delete them only with a native rebuild.
 
 The service also owns the native invoke from `nativeLibraryDir`
-(`libopencode2.so` executed directly), `START_STICKY`, and the live
+(`liboc-engine.so` executed directly), `START_STICKY`, and the live
 notification described below.
 
 Android 15+ lets a `dataSync` foreground service run 6 hours in any 24 while
@@ -75,9 +78,10 @@ the engine again when it next comes to the foreground (`App.tsx` calls
 ## Live notification
 
 The service owns the live notification: UI reports opens (`ACTION_SESSION`
-id + title) and leaves (`ACTION_LEAVE`); one SSE stream (`/global/event`,
-`SseClient` w/ reconnect) feeds a pure `WatchState` machine (`EngineEvent`
-parser handles direct + sync frames). Watched chats + background-tracked
+id + title) and leaves (`ACTION_LEAVE`); one SSE stream (the kind's event stream,
+`SseClient` w/ reconnect) feeds a pure `WatchState` machine (the kind's
+parser maps frames to `EngineEvent`; opencode's handles direct + sync
+frames). Watched chats + background-tracked
 sessions render multi-line (`●`/`○` per chat); background finishes post a
 sounding `phonecando-done` one-shot that retracts if you return first. A 30s
 supervisor heals the stream, drops idle tracked entries, and shuts down a
@@ -91,13 +95,17 @@ learn session ids from the app.
 
 ## Agent config seeding
 
-The shared source is `phonecando-runner/opencode-config/`. The module's Gradle
-`syncAgentConfig` task packages it into generated Android assets at build time
-(a future iOS implementation can copy the same directory).
-`PhoneCanDoServeService.seedAgentConfig` writes it to
-`files/phonecando-home/.config/opencode/` on every serve start (plugins/skills/
-`AGENTS.md` refresh, `opencode.json` only when absent so edits and BYOK keys
-survive).
+Each kind's source lives under `phonecando-runner/agents/<kind>/`
+(opencode: `agents/oc/config/`, plus `config-lite/` for the non-full
+channels). The module's Gradle `syncAgentConfig` task packages it into
+generated Android assets at build time (opencode: the `oc-config` assets
+folder; a future iOS implementation can copy the same directory).
+`ConfigSeeder` writes it to the kind's config dir under HOME on every serve
+start (opencode: `files/phonecando-home/.config/opencode/`): plugins, skills
+and `AGENTS.md` refresh, `opencode.json` is seeded only when absent so edits
+and BYOK keys survive. A manifest of the seeded files
+(`.phonecando-seeded`) lets the next start delete files we no longer ship,
+so a renamed plugin never loads twice; user files are never touched.
 
 v2 loads **`plugins/<id>/index.ts`** (`@opencode/plugin`, `Plugin.define` +
 `ctx.tool.transform`), auto-discovered from the global config dir and from
@@ -248,8 +256,7 @@ sends later, even from a new process, can still attach it. The shape is
   (the first line, or in a line longer than 16 KB its first token and,
   after a possible credential label, the next), then keeps the last 2 KB
   on a UTF-8 boundary. It can hold prompt text, so the app sends it only in
-  a user-initiated report. The direct-start `startServe` (unused) is not
-  counted.
+  a user-initiated report.
 - Redaction (`PathRedactor.kt`, pure; JVM tests in `src/test`,
   `./gradlew :phonecando-runner:testLiteDebugUnitTest`): a whole path
   becomes `<path>`, not just its prefix. A path starts at this app's data or

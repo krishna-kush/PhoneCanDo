@@ -3,22 +3,22 @@
 # Output: <workdir>/out/opencode2.bin (bionic aarch64) + libopentui.so.
 # The web UI is embedded (opencode-web-ui.gen.ts) and the pair API comes with
 # the newer upstream pin. The android compile target (absent upstream) is
-# added via scripts/bootstrap/patches/build-android-target.patch.
+# added via scripts/agents/oc/patches/build-android-target.patch.
 #
 # Toolchain (all overridable, none machine-local):
 #   ANDROID_NDK_HOME  Android NDK r28 (downloaded once, cached in workdir)
 #   ZIG_BIN           zig 0.16.0 binary
 #   OPENCODE_WORKTREE upstream checkout (must be at a pair-era tag, e.g. v2.0.26)
 #   WORK_DIR          scratch (bionic includes, dist, packages)
-# Usage: ./scripts/bootstrap/build-engine-android.sh [workdir]
+# Usage: ./scripts/agents/oc/build.sh [workdir]
 set -euo pipefail
 cd "$(dirname "$0")"
-PHONECANDO_ROOT="$(cd ../.. && pwd)"
+PHONECANDO_ROOT="$(cd ../../.. && pwd)"
 
 WORK="${1:-${XDG_CACHE_HOME:-$HOME/.cache}/opencode/v2build}"
 DIST="$WORK/dist"
 OUT="$WORK/out"
-PATCH="$PHONECANDO_ROOT/scripts/bootstrap/patches/build-android-target.patch"
+PATCH="$PHONECANDO_ROOT/scripts/agents/oc/patches/build-android-target.patch"
 
 export BUN_VERSION="${BUN_VERSION:-1.4.2}"
 export BUN_COMPILE_RELEASE="bun-v${BUN_VERSION}"
@@ -56,7 +56,7 @@ if [ ! -d "$OPENTUI_SRC/.git" ]; then
 fi
 # Our build.zig fixes (bionic includes for translate-c, NDK lib dir for the
 # link, no libpthread on bionic). Idempotent like the cli patch above.
-OPENTUI_PATCH="$PHONECANDO_ROOT/scripts/bootstrap/patches/opentui-android-build.patch"
+OPENTUI_PATCH="$PHONECANDO_ROOT/scripts/agents/oc/patches/opentui-android-build.patch"
 if git -C "$OPENTUI_SRC" apply --check "$OPENTUI_PATCH" 2>/dev/null; then
   git -C "$OPENTUI_SRC" apply "$OPENTUI_PATCH"
   echo "opentui android patch applied"

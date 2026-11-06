@@ -12,7 +12,7 @@
   ./manage logos                                   regenerate brand assets from theme/
   ./manage xterm                                   re-inline the terminal page bundle
   ./manage web dev|build                           the website
-  ./manage engine build|stage [args]               opencode payload (scripts/bootstrap)
+  ./manage engine oc build|stage [args]            opencode payload (scripts/agents/oc)
   ./manage apk info <file.apk>                     package, version, channel, signer, a11y
   ./manage device push <file.apk>                  copy to /sdcard/Download/phonecando/
   ./manage device log                              logcat for update / install / Play Protect
@@ -39,6 +39,8 @@ WEB = ROOT / "web"
 SCRIPTS = ROOT / "scripts"
 TCE = ROOT / "tce"
 CHANNELS = ("lite", "full", "play")
+# Agent kinds whose engine payload builds here (scripts/agents/<kind>/).
+ENGINE_KINDS = ("oc",)
 
 
 def sh(cmd, cwd=ROOT, env=None):
@@ -151,10 +153,9 @@ def cmd_web(args):
 
 
 def cmd_engine(args):
-    if not args or args[0] not in ("build", "stage"):
-        die("usage: manage engine build|stage [args]")
-    script = {"build": "build-engine-android.sh", "stage": "stage-v2.sh"}[args[0]]
-    sh([str(SCRIPTS / "bootstrap" / script), *args[1:]])
+    if len(args) < 2 or args[0] not in ENGINE_KINDS or args[1] not in ("build", "stage"):
+        die(f"usage: manage engine {'|'.join(ENGINE_KINDS)} build|stage [args]")
+    sh([str(SCRIPTS / "agents" / args[0] / f"{args[1]}.sh"), *args[2:]])
 
 
 def cmd_apk(args):

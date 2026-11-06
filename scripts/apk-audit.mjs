@@ -11,8 +11,12 @@ import { basename } from 'node:path';
 export const RELEASE_CERT_SHA256 =
   'f334c3893832ab660dc15b808c16440d70d52b68ddd7ebd9bf5571598ffd75a0';
 
-// The engine is built outside git (docs/bootstrap/); a fresh clone has none.
-export const ENGINE_LIBS = ['lib/arm64-v8a/libopencode2.so', 'lib/arm64-v8a/libopentui.so'];
+// Every bundled agent kind's engine libraries. They are built outside git
+// (opencode: docs/bootstrap/); a fresh clone has none.
+const AGENT_ENGINE_LIBS = {
+  oc: ['lib/arm64-v8a/liboc-engine.so', 'lib/arm64-v8a/liboc-opentui.so'],
+};
+export const ENGINE_LIBS = Object.values(AGENT_ENGINE_LIBS).flat();
 
 // Full-only code: the accessibility driver (uiauto), packs and the PCE.
 const SERVICE_CLASS = 'Lcom/phonecando/runner/uiauto/PhoneCanDoAccessibilityService;';
@@ -84,7 +88,7 @@ export function auditChannel(apk, channel, tools) {
   }
 }
 
-// Both engine libraries are packaged and non-empty.
+// Every engine library is packaged and non-empty.
 export function checkEngine(apk) {
   const sizes = new Map();
   for (const line of tool('unzip', ['-l', apk]).split('\n')) {

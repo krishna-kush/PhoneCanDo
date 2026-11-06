@@ -1,5 +1,6 @@
 package com.phonecando.runner
 
+import com.phonecando.runner.agents.oc.OpencodeKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -46,7 +47,7 @@ class PathRedactorTest {
     both("/data/user_de/0/$pkg/shared_prefs/a.xml", "<path>")
     both("/data/user/10/com.other.app/files/notes.txt", "<path>")
     both("/data/media/0/DCIM/Camera/IMG_1.jpg", "<path>")
-    both("/data/app/~~Zx3==/$pkg-Q1==/lib/arm64/libopencode2.so", "<path>")
+    both("/data/app/~~Zx3==/$pkg-Q1==/lib/arm64/liboc-engine.so", "<path>")
     both("/data/user/0", "<path>")
   }
 
@@ -213,10 +214,10 @@ class PathRedactorTest {
 
   @Test fun engineSecrets() {
     val basic = Base64.getEncoder().encodeToString("opencode:$pw".toByteArray())
-    assertEquals(listOf(pw, basic, token), PathRedactor.engineSecrets(pw, token))
-    assertEquals(listOf(token), PathRedactor.engineSecrets(null, token))
-    assertEquals(emptyList<String>(), PathRedactor.engineSecrets("", null))
-    val secrets = PathRedactor.engineSecrets(pw, token)
+    assertEquals(listOf(pw, basic, token), PathRedactor.engineSecrets(OpencodeKind, pw, token))
+    assertEquals(listOf(token), PathRedactor.engineSecrets(OpencodeKind, null, token))
+    assertEquals(emptyList<String>(), PathRedactor.engineSecrets(OpencodeKind, "", null))
+    val secrets = PathRedactor.engineSecrets(OpencodeKind, pw, token)
     assertEquals("pw=<secret> token=<secret>", app.redact("pw=$pw token=$token", secrets))
     assertEquals("cred <secret> ok", app.redact("cred $basic ok", secrets))
     // Too short to be one of ours: left alone.
@@ -244,13 +245,13 @@ class PathRedactorTest {
   }
 
   @Test fun secretInsideAPathKeepsThePathWhole() {
-    val secrets = PathRedactor.engineSecrets(pw, token)
+    val secrets = PathRedactor.engineSecrets(OpencodeKind, pw, token)
     both("/data/user/0/$pkg/files/sk-learn-experiments-2024/salaries.csv x", "<path> x")
     assertEquals("<path> x", app.redact("/sdcard/$token/salaries.csv x", secrets))
   }
 
   @Test fun redactingTwiceChangesNothing() {
-    val secrets = PathRedactor.engineSecrets(pw, token)
+    val secrets = PathRedactor.engineSecrets(OpencodeKind, pw, token)
     val sample = "Authorization: Bearer $token\nat f (/data/user/0/$pkg/files/a.ts:1:2) ~/x " +
       "sk-abcdefghijklmnopqrst file:///sdcard/y %2Fdata%2Fdata%2Fz Basic abcdefghijk"
     val once = app.redact(sample, secrets)
@@ -268,7 +269,7 @@ class PathRedactorTest {
   private fun tailOf(log: String, windowBytes: Int = window): String? {
     val bytes = log.toByteArray(Charsets.UTF_8)
     val start = maxOf(0, bytes.size - windowBytes)
-    return app.tail(bytes.copyOfRange(start, bytes.size), start > 0, cap, PathRedactor.engineSecrets(pw, token))
+    return app.tail(bytes.copyOfRange(start, bytes.size), start > 0, cap, PathRedactor.engineSecrets(OpencodeKind, pw, token))
   }
 
   private fun assertCapped(tail: String?) {

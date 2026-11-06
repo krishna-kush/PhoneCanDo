@@ -79,7 +79,7 @@ The script:
    rotation), never the Android debug key; package, version and versionCode;
    channel meta-data; full declares the accessibility service and carries its
    class and the PCE classes, lite has neither; both carry non-empty
-   `lib/arm64-v8a/libopencode2.so` and `libopentui.so`. A check that cannot
+   `lib/arm64-v8a/liboc-engine.so` and `liboc-opentui.so`. A check that cannot
    run (missing tool, unreadable APK) fails.
 5. Stages `dist/release/v<version>/phonecando-<version>-full-arm64.apk`,
    `phonecando-<version>-lite-arm64.apk` and `latest.json` (size and SHA-256

@@ -7,8 +7,9 @@ Produces the two native files the app ships:
 | `out/opencode2.bin` | opencode engine, Bun-compiled, bionic aarch64 |
 | `out/libopentui.so` | TUI renderer, Zig-built, bionic aarch64 |
 
-`scripts/bootstrap/stage-v2.sh` renames the payload to `libopencode2.so` (AGP only packages
-`*.so` files) and copies both into the runner module.
+`scripts/agents/oc/stage.sh` copies both into the runner module as `liboc-engine.so` and
+`liboc-opentui.so` (AGP only packages `*.so` files; `oc-` marks them as
+opencode's next to other agents' engines).
 
 ## Prerequisites
 
@@ -32,13 +33,13 @@ git clone --depth 1 --branch v2.0.26 \
 export ANDROID_NDK_HOME=/path/to/android-ndk-r28c
 export ZIG_BIN=/path/to/zig
 
-./scripts/bootstrap/build-engine-android.sh "$WORK"
-./scripts/bootstrap/stage-v2.sh "$WORK/out"
+./scripts/agents/oc/build.sh "$WORK"
+./scripts/agents/oc/stage.sh "$WORK/out"
 
 pnpm -C app android:full
 ```
 
-`scripts/bootstrap/build-engine-android.sh` defaults `OPENCODE_WORKTREE` to `$WORK/oc-v2`,
+`scripts/agents/oc/build.sh` defaults `OPENCODE_WORKTREE` to `$WORK/oc-v2`,
 clones `anomalyco/opentui` at `OPENTUI_VERSION` into `$WORK/`, and writes to
 `$WORK/out`.
 
@@ -46,7 +47,7 @@ clones `anomalyco/opentui` at `OPENTUI_VERSION` into `$WORK/`, and writes to
 
 Upstream `packages/cli/script/build.ts` has no Android target; any
 `--target=opencode-*-android` throws `Unknown build target`.
-`scripts/bootstrap/patches/build-android-target.patch` adds:
+`scripts/agents/oc/patches/build-android-target.patch` adds:
 
 - `{os:"linux", arch:"arm64", abi:"android"}`;
 - `@opencode-ai/pty` resolve failure → `undefined` (no bionic binding; the
@@ -57,7 +58,7 @@ Upstream `packages/cli/script/build.ts` has no Android target; any
 The web UI stays on (no `--skip-web-ui`): `buildAppArchive()` compiles the
 Solid app and embeds it as `opencode-web-ui.gen.ts`.
 
-`scripts/bootstrap/patches/opentui-android-build.patch` plus driver steps handle:
+`scripts/agents/oc/patches/opentui-android-build.patch` plus driver steps handle:
 
 - NDK sysroot copied into the workdir, with clang nullability annotations
   stripped (`_Nullable`/`_Nonnull`/`_Null_unspecified`); zig translate-c
@@ -80,13 +81,13 @@ Solid app and embeds it as `opencode-web-ui.gen.ts`.
 - `readelf -d` on both files: `NEEDED` system-only (`libc`, `libm`, `libdl`).
 - `strings` on the payload: `auth/connect`, `/api/pair`, `wasm-unsafe-eval`
   (embedded UI), `OPENTUI_LIB_PATH`.
-- Undefined-symbol scan of `libopentui.so` against the NDK api-29 stubs: zero
+- Undefined-symbol scan of `liboc-opentui.so` against the NDK api-29 stubs: zero
   gaps. This catches the next `dlopen ... cannot locate symbol` before it
   ships.
 - AGP `stripDebugDebugSymbols` shrinks both files (~60 KB payload, ~16 MB
   renderer), so APK sizes differ from `out/` by design.
 
-`scripts/bootstrap/stage-v2.sh` runs the linkage guard and refuses non-system `NEEDED` entries.
+`scripts/agents/oc/stage.sh` runs the linkage guard and refuses non-system `NEEDED` entries.
 
 ## Device E2E
 
@@ -108,8 +109,8 @@ grep -R '"@opentui/core"' "$WORK/oc-v2" --include='package.json' | head
 
 export OPENCODE_VERSION="${TAG#v}-android-phonecando.1"
 export OPENTUI_VERSION=<version-from-that-pin>
-./scripts/bootstrap/build-engine-android.sh "$WORK"
-./scripts/bootstrap/stage-v2.sh "$WORK/out"
+./scripts/agents/oc/build.sh "$WORK"
+./scripts/agents/oc/stage.sh "$WORK/out"
 pnpm -C app android:full
 ```
 
@@ -125,7 +126,7 @@ decide for you.
 - **Renderer:** `OPENTUI_VERSION` must match the `@opentui/core` npm pin in the
   opencode tree's catalog, or the JS/ABI drifts. The failure is at runtime, not
   build time.
-- **Web UI theme:** `ChatWebScreen.themeScript` maps the app palette onto
+- **Web UI theme:** `themeScript` in `app/src/engine/agents/oc/web.ts` maps the app palette onto
   opencode v2's internal `--v2-*` CSS variables and writes the
   `opencode-color-scheme` key. Neither is a public API. After a bump, re-check
   `packages/ui/src/styles/tokens/theme.css` (variable names),
@@ -138,7 +139,7 @@ decide for you.
 - **Patch already applied:** the driver applies patches idempotently; the
   message is expected on reruns.
 - **`resolveNativeLibraryPath` anchor missing:** the `@opentui/core` chunk
-  changed; update the anchor in `scripts/bootstrap/build-engine-android.sh`.
+  changed; update the anchor in `scripts/agents/oc/build.sh`.
 - **`pthread_tryjoin_np` at dlopen:** the opentui patch did not apply; check
   `git -C "$OPENTUI_SRC" status`.
 - **Zig can't find headers:** confirm `ANDROID_NDK_HOME` points at r28c and

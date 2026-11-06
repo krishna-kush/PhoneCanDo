@@ -10,7 +10,7 @@ on:
     branches: [prod]
     # Only what goes into the APK; the nightly run builds everything anyway.
     # Order matters: the .md exclusion comes after the includes, and the
-    # packaged opencode config (which has an AGENTS.md) is re-included last.
+    # packaged agent configs (which have an AGENTS.md) are re-included last.
     paths:
       - 'app/**'
       # Pulled into the app's Gradle build (app/android/settings.gradle includeBuild).
@@ -25,11 +25,11 @@ on:
       - '!**/*.md'
       - '!app/docs/**'
       # Packaged into the APK and audited byte for byte.
-      - 'app/modules/phonecando-runner/opencode-config*/**'
+      - 'app/modules/phonecando-runner/agents/**'
   pull_request:
     # Only what goes into the APK; the nightly run builds everything anyway.
     # Order matters: the .md exclusion comes after the includes, and the
-    # packaged opencode config (which has an AGENTS.md) is re-included last.
+    # packaged agent configs (which have an AGENTS.md) are re-included last.
     paths:
       - 'app/**'
       # Pulled into the app's Gradle build (app/android/settings.gradle includeBuild).
@@ -44,14 +44,14 @@ on:
       - '!**/*.md'
       - '!app/docs/**'
       # Packaged into the APK and audited byte for byte.
-      - 'app/modules/phonecando-runner/opencode-config*/**'
+      - 'app/modules/phonecando-runner/agents/**'
   schedule:
     - cron: '37 2 * * *'
   workflow_dispatch:
     inputs:
-      engine_run_id:
+      oc_payload_run_id:
         description: >-
-          Optional run id of an engine.yml run: its engine-payload-arm64
+          Optional run id of an oc-payload.yml run: its oc-payload-arm64
           artifact is packaged into the release-shape build and the audit's
           engine gate is enforced.
         required: false
@@ -207,34 +207,34 @@ jobs:
         run: bash .github/ci/android/prebuild.sh
       - name: NDK, CMake and Gradle sizing
         run: bash .github/ci/android/toolchain.sh
-      - name: Fetch engine payload (optional)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.engine_run_id != '' }}
+      - name: Fetch opencode payload (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.oc_payload_run_id != '' }}
         continue-on-error: true
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: engine-payload-arm64
-          run-id: ${{ inputs.engine_run_id }}
+          name: oc-payload-arm64
+          run-id: ${{ inputs.oc_payload_run_id }}
           github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/engine-payload
-      - name: Stage engine payload
+          path: ${{ runner.temp }}/oc-payload
+      - name: Stage opencode payload
         id: engine
         env:
-          PAYLOAD: ${{ runner.temp }}/engine-payload
+          PAYLOAD: ${{ runner.temp }}/oc-payload
         run: |
           set -euo pipefail
           # Not in the repository (docs/bootstrap/); without it the build is
           # complete except for the engine, and the audit skips that gate.
           mode=optional
           if [ -d "$PAYLOAD" ]; then
-            a=$(find "$PAYLOAD" -name libopencode2.so -size +0 | head -n 1)
-            b=$(find "$PAYLOAD" -name libopentui.so -size +0 | head -n 1)
+            a=$(find "$PAYLOAD" -name liboc-engine.so -size +0 | head -n 1)
+            b=$(find "$PAYLOAD" -name liboc-opentui.so -size +0 | head -n 1)
             if [ -n "$a" ] && [ -n "$b" ]; then
               libs=app/modules/phonecando-runner/android/src/main/libs/arm64-v8a
               mkdir -p "$libs"
               cp "$a" "$b" "$libs/"
               mode=required
             else
-              echo "::warning title=Engine payload::artifact has no non-empty libopencode2.so + libopentui.so; building without the engine"
+              echo "::warning title=opencode payload::artifact has no non-empty liboc-engine.so + liboc-opentui.so; building without the engine"
             fi
           fi
           echo "mode=$mode" >>"$GITHUB_OUTPUT"

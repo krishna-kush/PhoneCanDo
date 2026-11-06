@@ -3,7 +3,7 @@ import { ScrollView } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { Directory } from 'expo-file-system';
 import { useAppStore } from '../../state/app';
-import { getPrefix, isRunnerAvailable } from '../../engine/runner';
+import { engineHome, isRunnerAvailable } from '../../engine/runner';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
 import Screen from '../common/Screen';
@@ -26,7 +26,7 @@ export default function FolderPicker() {
   useEffect(() => {
     try {
       if (!isRunnerAvailable()) throw new Error('native module unavailable');
-      const home = `${getPrefix()}/phonecando-home`;
+      const home = engineHome();
       setRoot(home);
       setCwd(home);
     } catch (e) {

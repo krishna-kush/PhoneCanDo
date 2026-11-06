@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Static checks on the staged engine payload (stage-v2.sh's libs/arm64-v8a).
+# Static checks on the staged engine payload (scripts/agents/oc/stage.sh's libs/arm64-v8a).
 # The payload is bionic (INTERP /system/bin/linker64): no CI runner can exec it,
 # ubuntu-24.04-arm included (glibc, no bionic linker), so the proof is
 # ELF-level, mirroring oc-build.md "Verify before staging".
@@ -15,8 +15,8 @@
 set -euo pipefail
 export LC_ALL=C
 
-PAYLOAD=libopencode2.so
-RENDERER=libopentui.so
+PAYLOAD=liboc-engine.so
+RENDERER=liboc-opentui.so
 fail=0
 row() { printf '| %s | %s | %s | %s |\n' "$1" "$2" "$3" "$4"; }
 bad() { row "$1" "$2" "$3" "**FAIL**"; fail=1; }

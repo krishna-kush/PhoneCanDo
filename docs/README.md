@@ -87,7 +87,7 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 - `pce/docs/README.md` — the PCE product and API docs.
 - `tce/README.md`, `tce/AGENTS.md` — the telemetry backend and its rules.
 - `docs/bootstrap/README.md`, `docs/bootstrap/oc-build.md`,
-  `scripts/bootstrap/` — native payload build.
+  `scripts/agents/oc/` — native payload build.
 - `web/README.md` — the site (static Astro, served by the `tce/` Worker).
 - `AGENTS.md` — coding rules and quality gates.
 
