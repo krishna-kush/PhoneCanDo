@@ -3,6 +3,8 @@ import { site } from '../data/site';
 import LogoMark from './LogoMark.astro';
 ---
 
+<!-- One-shot linear fill; wire it to video/asset load progress later. -->
+<div class="load-bar" aria-hidden="true"></div>
 <header class="nav">
   <a href="/" class="brand" aria-label={`${site.name} home`}>
     <LogoMark size={13} />
