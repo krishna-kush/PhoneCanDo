@@ -4,7 +4,7 @@ PhoneCanDo sends anonymous usage statistics to its own server. This page is
 the published schema: every field the app and the site send, what the server
 adds, where it is kept and for how long, and every other network call the app
 makes. The plain-language version is the site's privacy note
-(`web/src/pages/privacy.astro`, `/privacy`).
+(`web/src/components/privacy/`, one file per section; `/privacy`).
 
 The code is the source of truth and this page changes with it in the same
 commit (`tce/AGENTS.md` §5): wire shapes in `tce/core/schema/wire.ts`, size

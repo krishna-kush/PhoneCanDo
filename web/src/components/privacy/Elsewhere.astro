@@ -1,0 +1,196 @@
+---
+// Everything else the app connects to: a map with the phone in the middle,
+// A-01 on its screen glancing at each line, and packets running out along
+// dashed wires to the four places it calls.
+import Mug from './Mug.astro';
+---
+
+<section class="pv-sec" id="elsewhere" aria-labelledby="pv-elsewhere-h">
+  <header class="pv-head">
+    <p class="pv-num" aria-hidden="true">7</p>
+    <p class="pv-kicker">Who else it calls</p>
+    <h2 id="pv-elsewhere-h">Everything else the app connects to</h2>
+  </header>
+
+  <div class="pv-map">
+    <div class="pv-hub" aria-hidden="true">
+      <div class="pv-hub-phone">
+        <Mug size={44} />
+        <span>your phone</span>
+      </div>
+    </div>
+    <ul class="pv-calls">
+      <li>
+        <p class="pv-call-when">At start · on install</p>
+        <h3>GitHub</h3>
+        <p>
+          To check for updates when the app starts (full and lite), and to
+          download an update when you tap install.
+        </p>
+      </li>
+      <li>
+        <p class="pv-call-when">At start · every 5 min</p>
+        <h3>opencode's model catalog</h3>
+        <p>
+          models.opencode.ai, which the engine downloads when it starts and
+          every 5 minutes while it runs, so it knows which models exist.
+        </p>
+      </li>
+      <li class="pv-call-direct">
+        <p class="pv-call-when">Your key · direct</p>
+        <h3>The model providers you set up</h3>
+        <p>
+          Straight from your phone with your key. Our server is never in
+          between.
+        </p>
+        <span class="pv-call-stamp" aria-hidden="true">No middleman</span>
+      </li>
+      <li>
+        <p class="pv-call-when">Your call</p>
+        <h3>Whatever you or the agent start</h3>
+        <p>A web search, a download in the terminal.</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<style is:global>
+  /* Wide: the list is a three-column grid with its middle left empty, two
+     calls each side wired to the phone, which sits over that middle. */
+  .pv-map {
+    --wire: 56px;
+    position: relative;
+  }
+  .pv-hub {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+  }
+  .pv-hub-phone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: 130px;
+    aspect-ratio: 9 / 18;
+    border: 6px solid var(--art-bg);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--art-bg) 92%, var(--art-fg));
+    box-shadow: var(--phone-shadow), 6px 6px 0 var(--accent);
+  }
+  .pv-hub-phone::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    width: 34px;
+    height: 5px;
+    background: var(--art-bg);
+  }
+  .pv-hub-phone span {
+    font: 500 8px/1 var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--art-muted);
+  }
+  /* On the map A-01 checks each side in turn, slower than its idle look. */
+  .pv-hub .pv-mug-eye b { animation-name: pv-hub-look; animation-duration: 4s; }
+
+  .pv-calls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1fr);
+    gap: 26px var(--wire);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pv-calls li {
+    position: relative;
+    padding: 18px 20px 20px;
+    border: 1px solid var(--line-2);
+    background: var(--panel);
+  }
+  .pv-calls li:nth-child(1) { grid-area: 1 / 1; }
+  .pv-calls li:nth-child(2) { grid-area: 2 / 1; }
+  .pv-calls li:nth-child(3) { grid-area: 1 / 3; }
+  .pv-calls li:nth-child(4) { grid-area: 2 / 3; }
+  /* Wires to the phone: dashes with packets running outward. */
+  .pv-calls li::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: var(--wire);
+    height: 2px;
+    background: repeating-linear-gradient(to right, var(--accent) 0 6px, transparent 6px 12px);
+    animation: pv-packets 0.8s linear infinite;
+  }
+  .pv-calls li:nth-child(-n + 2)::after { left: 100%; animation-direction: reverse; }
+  .pv-calls li:nth-child(n + 3)::after { right: 100%; }
+  .pv-call-direct { border-color: var(--red); box-shadow: 4px 4px 0 var(--accent); }
+  .pv-call-when {
+    font: 500 9px/1.4 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+  .pv-calls h3 {
+    margin: 6px 0 6px;
+    font: 400 24px/1.08 var(--serif);
+    letter-spacing: -0.01em;
+  }
+  .pv-calls li > p:not(.pv-call-when) {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .pv-call-stamp {
+    position: absolute;
+    top: -12px;
+    right: 14px;
+    padding: 4px 7px;
+    border: 1px solid var(--red);
+    background: var(--bg);
+    color: var(--red-hi);
+    font: 500 8.5px/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    rotate: 5deg;
+  }
+
+  @keyframes pv-packets {
+    to { background-position: 12px 0; }
+  }
+  @keyframes pv-hub-look {
+    0%, 45% { translate: calc(-1.5 * var(--u)) 0; }
+    50%, 95% { translate: calc(1.5 * var(--u)) 0; }
+  }
+
+  /* Narrow: the phone on top, the calls stacked under it on one wire that
+     shows in the gaps between them. */
+  @media (max-width: 860px) {
+    .pv-hub { position: static; margin-bottom: 30px; }
+    .pv-hub-phone { width: 108px; }
+    .pv-calls {
+      position: relative;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .pv-calls::before {
+      content: '';
+      position: absolute;
+      top: -30px;
+      bottom: 30px;
+      left: calc(50% - 1px);
+      width: 2px;
+      background: repeating-linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 12px);
+    }
+    .pv-calls li:nth-child(n) { grid-area: auto; }
+    .pv-calls li:nth-child(n)::after { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-calls li::after { animation: none; }
+  }
+</style>

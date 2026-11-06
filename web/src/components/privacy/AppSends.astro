@@ -1,0 +1,309 @@
+---
+// What the app sends, as a packing list: one luggage tag per kind of data,
+// then the IDs as "hello, my name is" badges. The name on each badge says
+// what the ID is made of, never a value.
+const tags: [string, string, string][] = [
+  [
+    'phone',
+    'Your phone, roughly',
+    'Maker and model, Android version, processor type, memory in whole gigabytes, language setting, and which app installed PhoneCanDo (a browser, a file manager, its own updater).',
+  ],
+  ['app', 'The app', 'Version and build (full, lite or play).'],
+  [
+    'usage',
+    'Usage',
+    'Named events such as "update offered", "terminal opened", "setup step 2 done", "phone control unlocked", and which phone-control features were used and how often. Update events add the version and the step they reached. Never what you typed or what came back.',
+  ],
+  [
+    'health',
+    'Health',
+    'How long the engine took to start, how often it started, failed to start or stopped unexpectedly, and the exit code of such a stop. Its log is never sent automatically, because it can contain text from your chats; it goes only into a report you choose to send. Also low-memory warnings, and whether battery optimisation, the background service and the accessibility service are on.',
+  ],
+  [
+    'oops',
+    'Errors and crashes',
+    'The error type, a short message and the top few lines of the stack trace, with folder paths on your phone blanked out.',
+  ],
+  [
+    'where',
+    'Where, coarsely',
+    "The server notes the country and the network operator from the connection. It does not store your IP address. To stop abuse, Cloudflare's rate limiter counts requests per IP address for one minute; that count is never logged or stored with your data.",
+  ],
+];
+
+const badges: [string, string, string][] = [
+  [
+    'Install ID',
+    'random',
+    'Random, made on first launch. New after a reinstall, after Reset anonymous ID, or after Delete my data.',
+  ],
+  [
+    'Device ID',
+    'hash(android id)',
+    "A hash of Android's ID for this app on this phone. It stays the same across reinstalls and changes after a factory reset.",
+  ],
+  [
+    'Device key',
+    'hash₂(android id)',
+    "A second, different hash of the same ID, which only your phone can compute. The server uses it to make sure only your phone can add to or delete your phone's data.",
+  ],
+  [
+    'Hardware hash',
+    'hash(model + build)',
+    "A hash of the phone's model and system build details. It groups phones of the same model and build; identical phones on the same build share it, and it changes with a system update.",
+  ],
+];
+---
+
+<section class="pv-sec pv-tint" id="sends" aria-labelledby="pv-sends-h">
+  <header class="pv-head">
+    <p class="pv-num" aria-hidden="true">2</p>
+    <p class="pv-kicker">The packing list</p>
+    <h2 id="pv-sends-h">What the app <em>sends</em></h2>
+  </header>
+
+  <ul class="pv-tags">
+    {tags.map(([tag, title, text], i) => (
+      <li class="pv-tag">
+        <div class="pv-tag-card">
+          <p class="pv-tag-no" aria-hidden="true">
+            Tag {String(i + 1).padStart(2, '0')} <span>/ {tag}</span>
+          </p>
+          <h3>{title}</h3>
+          <p>{text}</p>
+        </div>
+      </li>
+    ))}
+  </ul>
+
+  <div class="pv-ids">
+    <div class="pv-ids-head">
+      <h3>Name tags, minus the names</h3>
+      <p>
+        So we can count the same phone over time, each send carries IDs. None
+        of them is your name, number or account, and the hardware ones are
+        scrambled (hashed) on the phone before they leave it:
+      </p>
+    </div>
+    <ul class="pv-badges">
+      {badges.map(([name, made, text]) => (
+        <li class="pv-badge">
+          <p class="pv-badge-hello" aria-hidden="true">Hello</p>
+          <div class="pv-badge-body">
+            <p class="pv-badge-my" aria-hidden="true">my name is</p>
+            <h4>{name}</h4>
+            <code>{made}</code>
+            <p>{text}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+    <p class="pv-badge-void">
+      <span class="pv-badge-void-stamp" aria-hidden="true">Switched off</span>
+      <span>
+        <b>DRM ID</b> An ID from the phone's DRM system is in the code but
+        switched off, so it is never sent.
+      </span>
+    </p>
+  </div>
+</section>
+
+<style is:global>
+  /* Luggage tags: a notched end with a square eyelet, hung on a string, and
+     they swing when the pointer brushes them. */
+  .pv-tags {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px 26px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pv-tag {
+    position: relative;
+    filter: drop-shadow(4px 4px 0 var(--accent));
+    transform-origin: 18px 50%;
+  }
+  .pv-tag:hover { animation: pv-swing 0.9s ease-in-out; }
+  /* The string runs from the eyelet's centre (17px in) up and out. */
+  .pv-tag::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -19px;
+    z-index: 1;
+    width: 36px;
+    height: 1px;
+    background: var(--muted);
+    rotate: 32deg;
+    transform-origin: right center;
+  }
+  .pv-tag-card {
+    position: relative;
+    height: 100%;
+    padding: 20px 20px 20px 46px;
+    background: var(--bg);
+    clip-path: polygon(22px 0, 100% 0, 100% 100%, 22px 100%, 0 calc(100% - 22px), 0 22px);
+  }
+  .pv-tag-card::before {
+    content: '';
+    position: absolute;
+    top: calc(50% - 5px);
+    left: 12px;
+    width: 10px;
+    height: 10px;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+  }
+  .pv-tag-no {
+    font: 500 9px/1.4 var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .pv-tag-no span { color: var(--red-hi); }
+  .pv-tag h3 {
+    margin: 8px 0 8px;
+    font: 400 26px/1.05 var(--serif);
+    letter-spacing: -0.01em;
+  }
+  .pv-tag p:last-child {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+
+  /* The IDs: conference badges, red band on top, the name written in. */
+  .pv-ids { margin-top: clamp(56px, 7vw, 84px); }
+  .pv-ids-head {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 16px 40px;
+    align-items: end;
+    margin-bottom: 34px;
+  }
+  .pv-ids-head h3 {
+    font: 400 clamp(30px, 3.6vw, 44px)/1 var(--serif);
+    letter-spacing: -0.015em;
+  }
+  .pv-ids-head p {
+    max-width: 58ch;
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .pv-badges {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pv-badge {
+    --tilt: -1.5deg;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+    box-shadow: 4px 4px 0 var(--accent);
+    rotate: var(--tilt);
+    transition: rotate 0.35s var(--pv-spring), translate 0.35s var(--pv-spring);
+  }
+  .pv-badge:nth-child(even) { --tilt: 1.5deg; }
+  .pv-badge:hover { rotate: 0deg; translate: 0 -4px; }
+  .pv-badge-hello {
+    padding: 10px 14px 8px;
+    background: var(--red);
+    color: var(--on-primary);
+    font: 400 30px/1 var(--serif);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .pv-badge-body { display: flex; flex-direction: column; flex: 1; padding: 12px 16px 18px; }
+  .pv-badge-my {
+    font: 500 9px/1.4 var(--mono);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--faint);
+    text-align: center;
+  }
+  .pv-badge h4 {
+    margin: 6px 0 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line-2);
+    font: italic 400 30px/1.05 var(--serif);
+    text-align: center;
+    rotate: -2deg;
+  }
+  .pv-badge code {
+    align-self: center;
+    margin: 12px 0 12px;
+    padding: 3px 7px;
+    background: var(--accent-soft);
+    font: 500 11px/1.4 var(--mono);
+    color: var(--accent-ink);
+  }
+  .pv-badge p:last-child {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .pv-badge-void {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 34px;
+    padding: 14px 18px;
+    border: 1px dashed var(--line-2);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .pv-badge-void b {
+    margin-right: 6px;
+    font: italic 400 20px/1 var(--serif);
+    color: var(--fg);
+    text-decoration: line-through 2px var(--red);
+  }
+  .pv-badge-void-stamp {
+    flex: none;
+    padding: 5px 8px;
+    border: 1.5px solid var(--red-hi);
+    color: var(--red-hi);
+    font: 500 9px/1 var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    rotate: -6deg;
+  }
+
+  @keyframes pv-swing {
+    0%, 100% { rotate: 0deg; }
+    25% { rotate: -3deg; }
+    55% { rotate: 2deg; }
+    80% { rotate: -1deg; }
+  }
+
+  @media (max-width: 1100px) {
+    .pv-badges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 980px) {
+    .pv-tags { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    .pv-ids-head { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 620px) {
+    .pv-tags,
+    .pv-badges { grid-template-columns: 1fr; }
+    .pv-badge-void { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-tag:hover { animation: none; }
+    .pv-badge { transition: none; }
+  }
+</style>

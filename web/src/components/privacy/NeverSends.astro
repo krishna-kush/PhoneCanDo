@@ -1,0 +1,132 @@
+---
+// What it never sends: every item struck through, locked in a vault drawn
+// like the phone's screen (dark in both themes, like every artefact here).
+// One row per sentence of the old paragraph, so the groups stay together.
+const never: string[][] = [
+  ['Prompts', 'Chats', 'Model replies'],
+  ['Files', 'Folder paths', 'Anything in the terminal'],
+  ['Environment variables', 'API keys'],
+  ['Screenshots', 'Anything on the screen'],
+  ['Which apps the agent opened or used'],
+  ['Contacts', 'Messages', 'Notifications'],
+  ['Your IP address', 'Precise location', 'Advertising ID', 'Name', 'Email', 'Phone number'],
+  ["Android's raw device ID"],
+];
+// Each strike-through leans the other way from the last, flatter the longer
+// the word, so every line drops about the same few px across its box.
+let n = 0;
+const slant = (item: string) => `--slant:${((n++ % 2 ? 1 : -1) * Math.min(7, 60 / item.length)).toFixed(1)}deg`;
+---
+
+<section class="pv-sec" id="never" aria-labelledby="pv-never-h">
+  <header class="pv-head">
+    <p class="pv-num" aria-hidden="true">3</p>
+    <p class="pv-kicker">The no-fly list</p>
+    <h2 id="pv-never-h">What it <em>never</em> sends</h2>
+  </header>
+
+  <div class="pv-vault">
+    <p class="pv-vault-label">
+      <svg width="12" height="14" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+        <rect x="1" y="5" width="8" height="6"></rect>
+        <path d="M3 5V3.5a2 2 0 0 1 4 0V5"></path>
+      </svg>
+      Stays on the phone
+    </p>
+    <ul class="pv-nope">
+      {never.map((group) => (
+        <li>
+          <ul>
+            {group.map((item) => <li style={slant(item)}>{item}</li>)}
+          </ul>
+        </li>
+      ))}
+    </ul>
+    <p class="pv-vault-stamp" aria-hidden="true">Never<br />leaves</p>
+  </div>
+</section>
+
+<style is:global>
+  .pv-vault {
+    position: relative;
+    padding: clamp(28px, 4vw, 48px) clamp(20px, 4vw, 48px) clamp(34px, 5vw, 56px);
+    border: 1px solid var(--line-2);
+    background-color: var(--art-bg);
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--art-fg) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--art-fg) 5%, transparent) 1px, transparent 1px);
+    background-size: 28px 28px;
+    box-shadow: 8px 8px 0 var(--red);
+    color: var(--art-fg);
+    overflow: hidden;
+  }
+  .pv-vault-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 26px;
+    font: 500 10px/1 var(--mono);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--art-accent);
+  }
+  .pv-nope,
+  .pv-nope ul {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pv-nope { gap: 14px 18px; max-width: 880px; }
+  .pv-nope ul { gap: 14px 10px; }
+  /* Each one crossed out with a red line, at its own slant; a brush of the
+     pointer makes it shake its head. */
+  .pv-nope ul li {
+    position: relative;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--art-fg) 22%, transparent);
+    font: 500 12.5px/1.2 var(--mono);
+    color: var(--art-muted);
+    white-space: nowrap;
+  }
+  .pv-nope ul li::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -5px;
+    right: -5px;
+    height: 2px;
+    background: var(--red);
+    rotate: var(--slant);
+  }
+  .pv-nope ul li:hover { animation: pv-nope 0.4s linear; color: var(--art-fg); }
+  .pv-vault-stamp {
+    position: absolute;
+    right: clamp(14px, 4vw, 44px);
+    bottom: clamp(16px, 3vw, 30px);
+    padding: 10px 16px 8px;
+    border: 3px double var(--red);
+    color: var(--red);
+    font: 400 clamp(30px, 4vw, 46px)/0.9 var(--serif);
+    text-transform: uppercase;
+    text-align: center;
+    rotate: -10deg;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  @keyframes pv-nope {
+    0%, 100% { translate: 0 0; }
+    25%, 75% { translate: -3px 0; }
+    50% { translate: 3px 0; }
+  }
+
+  @media (max-width: 760px) {
+    .pv-vault { padding-bottom: 110px; }
+    .pv-nope ul li { white-space: normal; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-nope ul li:hover { animation: none; }
+  }
+</style>

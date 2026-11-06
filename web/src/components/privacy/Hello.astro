@@ -1,0 +1,409 @@
+---
+// The note's opening: the claim, a jump list, and the postcard the app sends
+// home, with A-01 as its stamp. The switch under it is a demo that changes
+// this page only (CSS, like the Linux plate's visa); A-01 reacts to it.
+import Mug from './Mug.astro';
+
+const jumps: [string, string][] = [
+  ['tldr', 'tl;dr'],
+  ['sends', 'What it sends'],
+  ['never', 'Never sends'],
+  ['controls', 'Your controls'],
+  ['site', 'This website'],
+  ['kept', 'How long'],
+  ['elsewhere', 'Who else'],
+  ['questions', 'Questions'],
+];
+// The caution tape: facts from the sections below, nothing new.
+const tape = [
+  'No cookies',
+  'Nothing sold or shared',
+  'One switch turns it off',
+  'Delete my data, any time',
+  'Development builds send nothing',
+  'Your prompts stay on the phone',
+];
+---
+
+<section class="pv-hello pv-paper" id="note">
+  <div class="pv-hello-grid">
+    <div class="pv-hello-copy">
+      <p class="eyebrow">
+        <span class="dot" aria-hidden="true"></span>
+        Privacy note · FM-01
+      </p>
+      <h1>What it <em>sends home.</em></h1>
+      <p class="hero-sub">
+        PhoneCanDo shares anonymous usage stats so we can see how many phones
+        run it and what breaks. It is{" "}
+        <strong>on by default and one switch turns it off.</strong>{" "}
+        Your prompts, sessions, files and keys never leave the phone for us.
+      </p>
+      <nav class="pv-jump" aria-label="On this page">
+        <ol>
+          {jumps.map(([id, label], i) => (
+            <li>
+              <a href={`#${id}`}><span>{String(i + 1).padStart(2, '0')}</span>{label}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </div>
+
+    <figure class="pv-mail">
+      <input class="pv-share-input" type="checkbox" id="pv-share" checked />
+      <div class="pv-postcard">
+        <div class="pv-pc-note">
+          <p class="pv-pc-hi">Hi from a phone!</p>
+          <p>
+            Still running. Opened the terminal, finished setup step 2, the
+            engine started fine. Nothing broke.
+          </p>
+          <p class="pv-pc-ps">P.S. no prompts, files or keys in here.</p>
+          <p class="pv-pc-sign">— an install ID, not a name</p>
+        </div>
+        <div class="pv-pc-side">
+          <div class="pv-pc-stamp" aria-hidden="true">
+            <Mug size={34} />
+            <span>A-01 · post paid</span>
+          </div>
+          <svg class="pv-pc-cancel" viewBox="0 0 80 34" fill="none" aria-hidden="true">
+            <path d="M0 5q5-4 10 0t10 0 10 0 10 0 10 0 10 0 10 0 10 0M0 13q5-4 10 0t10 0 10 0 10 0 10 0 10 0 10 0 10 0M0 21q5-4 10 0t10 0 10 0 10 0 10 0 10 0 10 0 10 0M0 29q5-4 10 0t10 0 10 0 10 0 10 0 10 0 10 0 10 0" stroke="currentColor" stroke-width="1.4"></path>
+          </svg>
+          <dl class="pv-pc-to">
+            <div><dt>To</dt><dd>our own server</dd></div>
+            <div><dt>On</dt><dd>Cloudflare</dd></div>
+            <div><dt>Sold</dt><dd>never</dd></div>
+          </dl>
+        </div>
+        <p class="pv-pc-binned" aria-hidden="true">Not sent<small>binned on the phone</small></p>
+      </div>
+      <label class="pv-switch" for="pv-share">
+        <span class="pv-switch-track" aria-hidden="true"><span></span></span>
+        <span class="pv-switch-text">
+          <b>Usage stats <i>demo</i></b>
+          <span class="pv-switch-on" aria-hidden="true">On · the postcard goes out</span>
+          <span class="pv-switch-off" aria-hidden="true">Off · nothing more is sent, the waiting pile is binned</span>
+        </span>
+      </label>
+      <figcaption class="pv-mail-cap">
+        Flip it. It only changes this page; the real one is in the app,
+        under Settings → Privacy.
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="pv-tape">
+    <ul class="pv-tape-run">
+      {tape.map((t) => <li>{t}</li>)}
+    </ul>
+    <ul class="pv-tape-run" aria-hidden="true">
+      {tape.map((t) => <li>{t}</li>)}
+    </ul>
+  </div>
+</section>
+
+<style is:global>
+  .pv-hello {
+    position: relative;
+    padding: clamp(48px, 7vh, 80px) var(--pad) 0;
+    overflow: clip;
+  }
+  .pv-hello-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+    gap: clamp(36px, 6vw, 80px);
+    align-items: center;
+  }
+
+  /* Jump list: luggage-label tabs, each hung at its own angle. */
+  .pv-jump { margin-top: 34px; }
+  .pv-jump ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pv-jump a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px 7px 8px;
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+    font: 500 10px/1 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg);
+    rotate: -2deg;
+    transition: rotate 0.3s var(--pv-spring), translate 0.3s var(--pv-spring), box-shadow 0.2s, border-color 0.2s;
+  }
+  .pv-jump li:nth-child(3n + 2) a { rotate: 1.5deg; }
+  .pv-jump li:nth-child(3n) a { rotate: -0.5deg; }
+  .pv-jump a span { color: var(--red-hi); }
+  .pv-jump a:hover {
+    rotate: 0deg;
+    translate: 0 -3px;
+    border-color: var(--accent-ink);
+    box-shadow: 3px 3px 0 var(--accent);
+  }
+
+  /* The postcard: the back of one, written in the agent's hand, stamped
+     with A-01. */
+  .pv-mail { position: relative; margin: 0; }
+  .pv-share-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .pv-postcard {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    min-height: 250px;
+    border: 1px solid var(--line-2);
+    background: var(--panel-2);
+    box-shadow: 6px 6px 0 var(--accent);
+    rotate: -3deg;
+    transition: rotate 0.45s var(--pv-spring), translate 0.45s var(--pv-spring);
+  }
+  .pv-postcard > * { transition: opacity 0.3s, filter 0.3s; }
+  .pv-mail:hover .pv-postcard { rotate: -1deg; translate: 0 -4px; }
+  .pv-pc-note {
+    padding: 20px 18px 18px 20px;
+    border-right: 1px solid var(--line-2);
+    font: italic 400 17px/1.35 var(--serif);
+    color: var(--fg);
+  }
+  .pv-pc-note p + p { margin-top: 10px; }
+  .pv-pc-hi { font-size: 26px; line-height: 1.05; color: var(--red); }
+  .pv-pc-ps { font-size: 15px; color: var(--muted); }
+  .pv-pc-sign { font-size: 15px; color: var(--muted); }
+  .pv-pc-side {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 16px 18px;
+  }
+  .pv-pc-stamp {
+    align-self: flex-end;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    width: 72px;
+    height: 90px;
+    padding: 12px 4px 8px;
+    background: var(--bg);
+    /* Perforated edge: half holes every 9px around a solid middle. */
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      radial-gradient(circle 3px, transparent 96%, #000) -4.5px -4.5px / 9px 9px;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      radial-gradient(circle 3px, transparent 96%, #000) -4.5px -4.5px / 9px 9px;
+    rotate: 4deg;
+  }
+  .pv-pc-stamp span {
+    font: 500 6.5px/1.2 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+  .pv-pc-cancel {
+    position: absolute;
+    top: 46px;
+    right: 58px;
+    width: 80px;
+    color: var(--red);
+    opacity: 0.75;
+    rotate: -8deg;
+  }
+  .pv-pc-to { margin: auto 0 0; }
+  .pv-pc-to div {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 0 3px;
+    border-bottom: 1px dashed var(--line-2);
+  }
+  .pv-pc-to dt {
+    width: 30px;
+    font: 500 8px/1.4 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .pv-pc-to dd { margin: 0; font: italic 400 16px/1.2 var(--serif); }
+
+  /* Off: the card drops, greys out and gets a stamp; A-01 looks down. */
+  .pv-pc-binned {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 14px 7px;
+    border: 2px solid var(--red);
+    background: var(--bg);
+    color: var(--red);
+    font: 400 34px/1 var(--serif);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    translate: -50% -50%;
+    rotate: -12deg;
+    scale: 2.4;
+    opacity: 0;
+    pointer-events: none;
+    transition: scale 0.32s var(--pv-spring), opacity 0.18s;
+  }
+  .pv-pc-binned small {
+    margin-top: 4px;
+    font: 500 8.5px/1 var(--mono);
+    letter-spacing: 0.16em;
+    color: var(--red-hi);
+  }
+  .pv-share-input:not(:checked) ~ .pv-postcard {
+    rotate: 7deg;
+    translate: 0 14px;
+  }
+  .pv-share-input:not(:checked) ~ .pv-postcard > :not(.pv-pc-binned) { filter: grayscale(1); opacity: 0.7; }
+  .pv-share-input:not(:checked) ~ .pv-postcard .pv-pc-binned { scale: 1; opacity: 1; }
+  .pv-share-input:not(:checked) ~ .pv-postcard .pv-mug-eye { scale: 1 0.6; }
+  .pv-share-input:not(:checked) ~ .pv-postcard .pv-mug-eye b {
+    animation: none;
+    translate: 0 calc(1.5 * var(--u));
+  }
+
+  /* The switch: square like everything here; the knob runs red when on. */
+  .pv-switch {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 42px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .pv-switch-track {
+    position: relative;
+    flex: none;
+    width: 56px;
+    height: 30px;
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+    box-shadow: 3px 3px 0 var(--accent);
+    transition: box-shadow 0.15s, translate 0.15s;
+  }
+  .pv-switch:hover .pv-switch-track { translate: -1px -1px; box-shadow: 4px 4px 0 var(--accent); }
+  .pv-switch:active .pv-switch-track { translate: 1px 1px; box-shadow: 1px 1px 0 var(--accent); }
+  .pv-switch-track span {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 20px;
+    height: 20px;
+    background: var(--line-2);
+    transition: translate 0.3s var(--pv-spring), background-color 0.2s;
+  }
+  .pv-share-input:checked ~ .pv-switch .pv-switch-track span {
+    translate: 26px 0;
+    background: var(--red);
+  }
+  .pv-share-input:focus-visible ~ .pv-switch .pv-switch-track {
+    outline: 2px solid var(--red-hi);
+    outline-offset: 3px;
+  }
+  .pv-switch-text { display: grid; gap: 3px; }
+  .pv-switch-text b {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font: 500 11px/1.3 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .pv-switch-text i {
+    padding: 2px 5px;
+    border: 1px solid var(--accent-line);
+    font: 500 8px/1 var(--mono);
+    font-style: normal;
+    letter-spacing: 0.14em;
+    color: var(--accent-ink);
+  }
+  .pv-switch-on,
+  .pv-switch-off { font-size: 13px; line-height: 1.4; color: var(--muted); }
+  .pv-share-input:checked ~ .pv-switch .pv-switch-off,
+  .pv-share-input:not(:checked) ~ .pv-switch .pv-switch-on { display: none; }
+  .pv-mail-cap {
+    margin-top: 12px;
+    font: 500 9px/1.6 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  /* Caution tape across the sheet, running facts from the note. */
+  .pv-tape {
+    display: flex;
+    margin: clamp(56px, 8vw, 88px) calc(var(--pad) * -1 - 24px) 28px;
+    border-block: 6px solid transparent;
+    border-image: repeating-linear-gradient(-45deg, var(--accent) 0 8px, var(--fg) 8px 16px) 6;
+    background: var(--fg);
+    color: var(--bg);
+    rotate: -1.2deg;
+    overflow: hidden;
+  }
+  .pv-tape-run {
+    display: flex;
+    flex: none;
+    gap: 22px;
+    margin: 0;
+    padding: 11px 22px 11px 0;
+    list-style: none;
+    animation: pv-tape 36s linear infinite;
+  }
+  .pv-tape-run li {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    font: 500 11px/1 var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .pv-tape-run li::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    background: var(--red);
+  }
+  .pv-tape:hover .pv-tape-run { animation-play-state: paused; }
+  @keyframes pv-tape { to { translate: -100% 0; } }
+
+  @media (max-width: 860px) {
+    .pv-hello-grid { grid-template-columns: 1fr; gap: 56px; }
+    .pv-mail { width: min(430px, 100%); margin-inline: auto; }
+  }
+  @media (max-width: 420px) {
+    .pv-postcard { grid-template-columns: minmax(0, 1fr) 118px; }
+    .pv-pc-note { padding: 16px 12px 14px 14px; font-size: 15px; }
+    .pv-pc-hi { font-size: 22px; }
+    .pv-pc-side { padding: 12px 10px 14px; }
+    .pv-pc-cancel { right: 44px; width: 64px; }
+    .pv-pc-to dd { font-size: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-jump a,
+    .pv-postcard,
+    .pv-pc-binned,
+    .pv-switch-track,
+    .pv-switch-track span { transition: none; }
+    .pv-tape-run { animation: none; }
+  }
+</style>

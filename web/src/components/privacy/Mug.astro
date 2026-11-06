@@ -1,0 +1,78 @@
+---
+// A-01's portrait for the privacy note's pictures: the mascot's body and
+// eyes (components/Mascot.astro) at any size, standing still. It blinks and
+// glances around on its own. Geometry comes from theme/logo.json, like the
+// mark; the eyes keep the mascot's 24px proportions.
+import logo from '../../../../theme/logo.json';
+
+interface Props {
+  size: number;
+}
+const { size } = Astro.props;
+const offset = Math.max(logo.shadow.minUiPx, Math.round(size * logo.shadow.ratio));
+---
+
+<span class="pv-mug" style={`--mug:${size}px;--mug-o:${offset}px`} aria-hidden="true">
+  <i class="pv-mug-eye"><b></b></i>
+  <i class="pv-mug-eye"><b></b></i>
+</span>
+
+<style is:global>
+  .pv-mug {
+    --u: calc(var(--mug) / 24);
+    position: relative;
+    display: block;
+    flex: none;
+    width: calc(var(--mug) + var(--mug-o));
+    height: calc(var(--mug) + var(--mug-o));
+  }
+  .pv-mug::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--mug);
+    height: var(--mug);
+    background: var(--red);
+    box-shadow: var(--mug-o) var(--mug-o) 0 var(--accent);
+  }
+  .pv-mug-eye {
+    position: absolute;
+    top: calc(7 * var(--u));
+    left: calc(5 * var(--u));
+    width: calc(6 * var(--u));
+    height: calc(7 * var(--u));
+    background: var(--on-primary);
+    animation: pv-mug-blink 4.6s infinite;
+    transition: scale 0.2s;
+  }
+  .pv-mug-eye + .pv-mug-eye { left: calc(13 * var(--u)); }
+  .pv-mug-eye b {
+    position: absolute;
+    left: calc(1.5 * var(--u));
+    top: calc(2 * var(--u));
+    width: calc(3 * var(--u));
+    height: calc(3 * var(--u));
+    background: var(--art-bg);
+    animation: pv-mug-look 7s steps(1) infinite;
+    transition: translate 0.2s;
+  }
+
+  @keyframes pv-mug-blink {
+    0%, 93%, 97%, 100% { scale: 1 1; }
+    95% { scale: 1 0.15; }
+  }
+  /* Right, left, up at you, then right again: half-unit steps, like the
+     mascot's pupils. */
+  @keyframes pv-mug-look {
+    0% { translate: calc(1.5 * var(--u)) 0; }
+    30% { translate: calc(-1.5 * var(--u)) 0; }
+    55% { translate: 0 calc(-1.5 * var(--u)); }
+    75% { translate: calc(1.5 * var(--u)) calc(1.5 * var(--u)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pv-mug-eye,
+    .pv-mug-eye b { animation: none; }
+  }
+</style>

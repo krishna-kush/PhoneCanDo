@@ -2,23 +2,22 @@
 import Base from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import Footer from "../components/Footer.astro";
+import Mascot from "../components/Mascot.astro";
+import Hello from "../components/privacy/Hello.astro";
+import ShortVersion from "../components/privacy/ShortVersion.astro";
+import AppSends from "../components/privacy/AppSends.astro";
+import NeverSends from "../components/privacy/NeverSends.astro";
+import Controls from "../components/privacy/Controls.astro";
+import ThisSite from "../components/privacy/ThisSite.astro";
+import Retention from "../components/privacy/Retention.astro";
+import Elsewhere from "../components/privacy/Elsewhere.astro";
+import Questions from "../components/privacy/Questions.astro";
 import { site } from "../data/site";
 
-// Plain-language twin of docs/telemetry.md (the published schema). Change
-// both together; tce/AGENTS.md §5 says a new field ships with its docs.
-const schema = `${site.repo}/blob/HEAD/docs/telemetry.md`;
-const issues = `${site.repo}/issues`;
-
-const retention: [string, string][] = [
-    ["Usage events", "90 days, then deleted"],
-    ["Errors and crashes", "180 days, then deleted"],
-    ["Reports you send", "90 days, then deleted"],
-    ["Device, install and app-run rows", "until you tap Delete my data"],
-    ["Site page views and downloads in detail", "about 3 months"],
-    ["Daily site totals", "kept for good: counts per page or download channel and country, nothing about you"],
-    ["Database backups", "7 days, so deleted rows are fully gone after that"],
-    ["The server's own request logs", "3 days, for debugging"],
-];
+// The privacy note: the plain-language twin of docs/telemetry.md (the
+// published schema). Its copy lives in components/privacy/, one file per
+// section; change it with that page. tce/AGENTS.md §5 says a new field ships
+// with its docs. Section ids are A-01's scenes (data/mascot.ts).
 ---
 
 <Base
@@ -29,256 +28,104 @@ const retention: [string, string][] = [
         <Nav />
 
         <main class="privacy">
-            <header class="privacy-intro">
-                <p class="eyebrow">
-                    <span class="dot" aria-hidden="true"></span>
-                    Privacy note · FM-01
-                </p>
-                <h1>What it <em>sends home.</em></h1>
-                <p class="hero-sub">
-                    PhoneCanDo shares anonymous usage stats so we can see
-                    how many phones run it and what breaks. It is{" "}
-                    <strong>on by default and one switch turns it off.</strong>{" "}
-                    Your prompts, sessions, files and keys never leave
-                    the phone for us.
-                </p>
-            </header>
-
-            <section class="privacy-sec" aria-labelledby="p-short">
-                <p class="kicker">01</p>
-                <div class="privacy-body">
-                    <h2 id="p-short">The short version</h2>
-                    <ul>
-                        <li>Release builds send usage stats by default. A notice on first launch says so, and nothing is sent until you answer it.</li>
-                        <li>Settings → Privacy has one switch that turns it off. Off means nothing more is sent, and whatever was waiting to be sent is thrown away.</li>
-                        <li><b>Delete my data</b> erases what the server holds for your phone, then turns sharing off.</li>
-                        <li>Development builds send nothing.</li>
-                        <li>Nothing is sold or shared, and none of it goes into the public code repository.</li>
-                    </ul>
-                </div>
-            </section>
-
-            <section class="privacy-sec" aria-labelledby="p-app">
-                <p class="kicker">02</p>
-                <div class="privacy-body">
-                    <h2 id="p-app">What the app sends</h2>
-                    <ul>
-                        <li><b>Your phone, roughly:</b> maker and model, Android version, processor type, memory in whole gigabytes, language setting, and which app installed PhoneCanDo (a browser, a file manager, its own updater).</li>
-                        <li><b>The app:</b> version and build (full, lite or play).</li>
-                        <li><b>Usage:</b> named events such as "update offered", "terminal opened", "setup step 2 done", "phone control unlocked", and which phone-control features were used and how often. Update events add the version and the step they reached. Never what you typed or what came back.</li>
-                        <li><b>Health:</b> how long the engine took to start, how often it started, failed to start or stopped unexpectedly, and the exit code of such a stop. Its log is never sent automatically, because it can contain text from your chats; it goes only into a report you choose to send. Also low-memory warnings, and whether battery optimisation, the background service and the accessibility service are on.</li>
-                        <li><b>Errors and crashes:</b> the error type, a short message and the top few lines of the stack trace, with folder paths on your phone blanked out.</li>
-                        <li><b>Where, coarsely:</b> the server notes the country and the network operator from the connection. It does not store your IP address. To stop abuse, Cloudflare's rate limiter counts requests per IP address for one minute; that count is never logged or stored with your data.</li>
-                    </ul>
-                    <p>
-                        So we can count the same phone over time, each send
-                        carries IDs. None of them is your name, number or
-                        account, and the hardware ones are scrambled
-                        (hashed) on the phone before they leave it:
-                    </p>
-                    <ul>
-                        <li><b>Install ID:</b> random, made on first launch. New after a reinstall, after Reset anonymous ID, or after Delete my data.</li>
-                        <li><b>Device ID:</b> a hash of Android's ID for this app on this phone. It stays the same across reinstalls and changes after a factory reset.</li>
-                        <li><b>Device key:</b> a second, different hash of the same ID, which only your phone can compute. The server uses it to make sure only your phone can add to or delete your phone's data.</li>
-                        <li><b>Hardware hash:</b> a hash of the phone's model and system build details. It groups phones of the same model and build; identical phones on the same build share it, and it changes with a system update.</li>
-                        <li>An ID from the phone's DRM system is in the code but switched off, so it is never sent.</li>
-                    </ul>
-                </div>
-            </section>
-
-            <section class="privacy-sec" aria-labelledby="p-never">
-                <p class="kicker">03</p>
-                <div class="privacy-body">
-                    <h2 id="p-never">What it never sends</h2>
-                    <p>
-                        Prompts, chats and model replies. Files, folder
-                        paths and anything in the terminal. Environment
-                        variables and API keys. Screenshots or anything on
-                        the screen. Which apps the agent opened or used.
-                        Contacts, messages and notifications. Your IP
-                        address, precise location, advertising ID, name,
-                        email or phone number. Android's raw device ID.
-                    </p>
-                </div>
-            </section>
-
-            <section class="privacy-sec" aria-labelledby="p-controls">
-                <p class="kicker">04</p>
-                <div class="privacy-body">
-                    <h2 id="p-controls">Your controls</h2>
-                    <p>All in the app, under Settings → Privacy:</p>
-                    <ul>
-                        <li><b>The switch:</b> off stops all sending at once. Turn it back on any time.</li>
-                        <li><b>Delete my data:</b> deletes every row the server holds for your phone (device, every install, app runs, events, errors, reports), even from before a reinstall or an ID reset, then turns sharing off and makes a new install ID. If nothing was stored, the app says so. Only the 7-day database backups still hold the deleted rows until they expire; there is no other copy.</li>
-                        <li><b>Reset anonymous ID:</b> starts over with a new install ID and throws away anything not yet sent. Past data from this phone stays linked to it; use Delete my data to remove it.</li>
-                        <li><b>Send report:</b> only when you tap it. Sends your note, the last 50 usage events and the last 2 KB of the engine's log from its last crash, with folder paths, passwords and keys blanked out.</li>
-                    </ul>
-                </div>
-            </section>
-
-            <section class="privacy-sec" aria-labelledby="p-site">
-                <p class="kicker">05</p>
-                <div class="privacy-body">
-                    <h2 id="p-site">This website</h2>
-                    <p>
-                        No cookies, no third-party scripts, nothing stored
-                        in your browser. Each page load sends one count to
-                        our own server: the page's path, the site you came
-                        from (its name only), your country and the kind of
-                        browser (phone, computer or bot). It is skipped
-                        when your browser asks not to be tracked (Do Not
-                        Track or Global Privacy Control).
-                    </p>
-                    <p>
-                        Page views and downloads are also added up per
-                        day, page (or download channel) and country, and
-                        those totals are kept for good. They say how many,
-                        never who.
-                    </p>
-                    <p>
-                        The download buttons and the QR code pass through
-                        our server, which counts the download (channel,
-                        version, country, Android version) and sends you on
-                        to the file on GitHub. GitHub counts it too. The
-                        computer commands download from GitHub directly.
-                    </p>
-                </div>
-            </section>
-
-            <section class="privacy-sec" aria-labelledby="p-where">
-                <p class="kicker">06</p>
-                <div class="privacy-body">
-                    <h2 id="p-where">Where it is kept, and for how long</h2>
-                    <p>
-                        On Cloudflare, which runs this website and its
-                        server and stores the data on our behalf (a
-                        database and an analytics store). There is no
-                        archive: once its time below is up, data is
-                        deleted.
-                    </p>
-                    <dl class="privacy-rows">
-                        {retention.map(([what, kept]) => (
-                            <div>
-                                <dt>{what}</dt>
-                                <dd>{kept}</dd>
-                            </div>
-                        ))}
-                    </dl>
-                </div>
-            </section>
-
-            <section class="privacy-sec" aria-labelledby="p-net">
-                <p class="kicker">07</p>
-                <div class="privacy-body">
-                    <h2 id="p-net">Everything else the app connects to</h2>
-                    <ul>
-                        <li><b>GitHub,</b> to check for updates when the app starts (full and lite), and to download an update when you tap install.</li>
-                        <li><b>opencode's model catalog</b> (models.opencode.ai), which the engine downloads when it starts and every 5 minutes while it runs, so it knows which models exist.</li>
-                        <li><b>The model providers you set up,</b> straight from your phone with your key. Our server is never in between.</li>
-                        <li><b>Whatever you or the agent start:</b> a web search, a download in the terminal.</li>
-                    </ul>
-                </div>
-            </section>
-
-            <section class="privacy-sec" aria-labelledby="p-more">
-                <p class="kicker">08</p>
-                <div class="privacy-body">
-                    <h2 id="p-more">Every field, and questions</h2>
-                    <p>
-                        The full list of fields, limits and network calls is
-                        the{" "}
-                        <a href={schema} target="_blank" rel="noreferrer">published schema</a>,
-                        next to the code that sends it. Questions or a
-                        problem: open an{" "}
-                        <a href={issues} target="_blank" rel="noreferrer">issue on GitHub</a>.
-                    </p>
-                </div>
-            </section>
+            <Hello />
+            <ShortVersion />
+            <AppSends />
+            <NeverSends />
+            <Controls />
+            <ThisSite />
+            <Retention />
+            <Elsewhere />
+            <Questions />
         </main>
 
         <Footer />
     </div>
+    <Mascot />
 </Base>
 
 <style is:global>
+    /* What every section of the note shares: a numbered sticker slapped on
+       at an angle, a mono kicker with the joke, then the plain heading.
+       Each section's own look lives in its component. */
     .privacy {
-      padding: clamp(48px, 7vh, 84px) var(--pad) clamp(64px, 9vh, 104px);
+      --pv-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .privacy-intro {
-      padding-bottom: clamp(36px, 5vw, 56px);
-      border-bottom: 1px solid var(--line);
+    .pv-sec {
+      position: relative;
+      padding: clamp(64px, 8vw, 104px) var(--pad);
+      border-top: 1px solid var(--line);
+      scroll-margin-top: 58px;
     }
-    .privacy-sec {
+    /* Graph paper, fading out from the top left. */
+    .pv-paper::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, var(--grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 32px 32px;
+      -webkit-mask-image: radial-gradient(80% 90% at 20% 30%, #000 0%, transparent 80%);
+      mask-image: radial-gradient(80% 90% at 20% 30%, #000 0%, transparent 80%);
+      pointer-events: none;
+    }
+    .pv-paper > * { position: relative; }
+    .pv-tint { background: var(--panel); }
+
+    .pv-head {
       display: grid;
-      grid-template-columns: 200px minmax(0, 1fr);
-      align-items: start;
-      gap: clamp(16px, 4vw, 48px);
-      padding: clamp(28px, 4vw, 44px) 0;
-      border-bottom: 1px solid var(--line);
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      column-gap: clamp(18px, 2.6vw, 30px);
+      margin-bottom: clamp(32px, 4.6vw, 52px);
     }
-    .privacy-sec .kicker { padding-top: 8px; }
-    .privacy-body {
-      max-width: 72ch;
-      border-left: 1px solid var(--line-2);
-      padding-left: clamp(20px, 3vw, 36px);
+    .pv-num {
+      grid-row: span 2;
+      display: grid;
+      place-items: center;
+      width: clamp(56px, 6vw, 74px);
+      aspect-ratio: 1;
+      background: var(--red);
+      color: var(--on-primary);
+      font: 400 clamp(30px, 3.4vw, 40px)/1 var(--serif);
+      box-shadow: 4px 4px 0 var(--accent);
+      rotate: -6deg;
+      transition: rotate 0.35s var(--pv-spring), scale 0.35s var(--pv-spring);
     }
-    .privacy-body h2 {
-      margin-bottom: 14px;
-      font: 400 clamp(28px, 3.2vw, 40px)/1.05 var(--serif);
-      letter-spacing: -0.015em;
+    .pv-sec:nth-child(odd) .pv-num { rotate: 5deg; }
+    .pv-head:hover .pv-num { rotate: 0deg; scale: 1.08; }
+    .pv-kicker {
+      align-self: end;
+      font: 500 10px/1.4 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
     }
-    .privacy-body p,
-    .privacy-body li {
-      font-size: 14.5px;
-      line-height: 1.7;
+    .pv-head h2 {
+      align-self: start;
+      margin-top: 6px;
+      font: 400 clamp(38px, 5.2vw, 66px)/0.98 var(--serif);
+      letter-spacing: -0.02em;
+    }
+    .pv-head h2 em { font-style: italic; color: var(--red); }
+    .pv-lead {
+      grid-column: 2;
+      margin-top: 16px;
+      max-width: 60ch;
+      font-size: 15px;
+      line-height: 1.65;
       color: var(--muted);
       text-wrap: pretty;
     }
-    .privacy-body p + p,
-    .privacy-body p + ul,
-    .privacy-body ul + p,
-    .privacy-body p + .privacy-rows { margin-top: 14px; }
-    .privacy-body ul { margin: 0; padding: 0; list-style: none; }
-    .privacy-body li {
-      position: relative;
-      padding: 0 0 8px 20px;
-    }
-    .privacy-body li::before {
-      content: '';
-      position: absolute;
-      left: 2px;
-      top: 0.72em;
-      width: 6px;
-      height: 1px;
-      background: var(--accent);
-    }
-    .privacy-body b { color: var(--fg); font-weight: 500; }
-    .privacy-body a { color: var(--fg); border-bottom: 1px solid var(--line-2); }
-    .privacy-body a:hover { color: var(--red); border-bottom-color: var(--red); }
-    .privacy-rows { margin: 0; border-top: 1px solid var(--line); }
-    .privacy-rows div {
-      display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      gap: 16px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--line);
-    }
-    .privacy-rows dt {
-      font: 500 10px/1.6 var(--mono);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--faint);
-    }
-    .privacy-rows dd { margin: 0; font: 400 12.5px/1.6 var(--mono); color: var(--fg); }
+    .pv-lead b { color: var(--fg); font-weight: 500; }
 
-    @media (max-width: 980px) {
-      .privacy-sec { grid-template-columns: 120px minmax(0, 1fr); gap: 16px; }
-      .privacy-body { padding-left: 20px; }
+    @media (max-width: 620px) {
+      .pv-head { grid-template-columns: 1fr; row-gap: 12px; }
+      .pv-num { grid-row: auto; width: 52px; font-size: 28px; }
+      .pv-lead { grid-column: 1; margin-top: 4px; }
     }
-    @media (max-width: 760px) {
-      .privacy-sec { grid-template-columns: 1fr; gap: 10px; }
-      .privacy-sec .kicker { padding-top: 0; }
-      .privacy-body { border-left: 0; padding-left: 0; }
-      .privacy-rows div { grid-template-columns: 1fr; gap: 2px; }
+    @media (prefers-reduced-motion: reduce) {
+      .pv-num { transition: none; }
     }
 </style>

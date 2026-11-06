@@ -1,0 +1,199 @@
+---
+// Where it is kept and for how long, as shelf life: one bar per kind of
+// data, shortest first, on a log scale that ends at a year. Two have no
+// date: device rows last until you delete them, daily site totals for good.
+type Shelf = { what: string; kept: string; tag: string; days?: number; end?: 'delete' | 'forever' };
+const shelf: Shelf[] = [
+  { what: "The server's own request logs", kept: '3 days, for debugging', tag: '3 d', days: 3 },
+  { what: 'Database backups', kept: '7 days, so deleted rows are fully gone after that', tag: '7 d', days: 7 },
+  { what: 'Usage events', kept: '90 days, then deleted', tag: '90 d', days: 90 },
+  { what: 'Reports you send', kept: '90 days, then deleted', tag: '90 d', days: 90 },
+  { what: 'Site page views and downloads in detail', kept: 'about 3 months', tag: '~3 mo', days: 91 },
+  { what: 'Errors and crashes', kept: '180 days, then deleted', tag: '180 d', days: 180 },
+  { what: 'Device, install and app-run rows', kept: 'until you tap Delete my data', tag: 'you say', end: 'delete' },
+  {
+    what: 'Daily site totals',
+    kept: 'kept for good: counts per page or download channel and country, nothing about you',
+    tag: '∞',
+    end: 'forever',
+  },
+];
+const YEAR = 365;
+const at = (days: number) => `${((Math.log(days) / Math.log(YEAR)) * 100).toFixed(1)}%`;
+const ticks: [string, number][] = [
+  ['1 wk', 7],
+  ['1 mo', 30],
+  ['3 mo', 91],
+  ['6 mo', 182],
+  ['1 yr', YEAR],
+];
+---
+
+<section class="pv-sec pv-tint" id="kept" aria-labelledby="pv-kept-h">
+  <header class="pv-head">
+    <p class="pv-num" aria-hidden="true">6</p>
+    <p class="pv-kicker">Shelf life · best before</p>
+    <h2 id="pv-kept-h">Where it is kept, and for <em>how long</em></h2>
+    <p class="pv-lead">
+      On <b>Cloudflare</b>, which runs this website and its server and stores
+      the data on our behalf (a database and an analytics store). There is no
+      archive: once its time below is up, data is deleted.
+    </p>
+  </header>
+
+  <div class="pv-shelf">
+    <div class="pv-shelf-axis" aria-hidden="true">
+      <span></span>
+      <div>
+        {ticks.map(([label, days]) => (
+          <span style={`--at:${at(days)}`}>{label}</span>
+        ))}
+      </div>
+    </div>
+    <ol class="pv-shelf-rows">
+      {shelf.map((s) => (
+        <li data-end={s.end}>
+          <p class="pv-shelf-what">{s.what}</p>
+          <div class="pv-shelf-track" aria-hidden="true">
+            <span class="pv-shelf-bar" style={`--w:${s.days ? at(s.days) : '100%'}`}>
+              <b>{s.tag}</b>
+            </span>
+          </div>
+          <p class="pv-shelf-kept">{s.kept}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style is:global>
+  .pv-shelf {
+    --label: minmax(0, 0.8fr);
+    --track: minmax(0, 1.6fr);
+    padding: 22px clamp(18px, 3vw, 32px) 26px;
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+    box-shadow: 6px 6px 0 var(--accent);
+  }
+  .pv-shelf-axis,
+  .pv-shelf-rows li {
+    display: grid;
+    grid-template-columns: var(--label) var(--track);
+    column-gap: 24px;
+  }
+  /* The axis sits over the track column: an empty first cell, then ticks. */
+  .pv-shelf-axis { margin-bottom: 4px; }
+  .pv-shelf-axis div { position: relative; height: 22px; }
+  .pv-shelf-axis div span {
+    position: absolute;
+    left: var(--at);
+    translate: -50% 0;
+    font: 500 8.5px/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+  .pv-shelf-axis div span:last-child { translate: -100% 0; }
+  .pv-shelf-axis div span::after {
+    content: '';
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 50%;
+    width: 1px;
+    height: 5px;
+    background: var(--line-2);
+  }
+  .pv-shelf-axis div span:last-child::after { left: auto; right: 0; }
+  .pv-shelf-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pv-shelf-rows li {
+    grid-template-areas:
+      'what track'
+      'what kept';
+    align-items: center;
+    row-gap: 4px;
+    padding: 12px 0;
+    border-top: 1px dashed var(--line-2);
+  }
+  .pv-shelf-what {
+    grid-area: what;
+    font: 500 10px/1.5 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+  .pv-shelf-track {
+    grid-area: track;
+    position: relative;
+    height: 22px;
+    background: linear-gradient(var(--line-2) 0 0) 0 50% / 100% 1px no-repeat;
+  }
+  .pv-shelf-bar {
+    position: absolute;
+    inset: 3px auto 3px 0;
+    width: var(--w);
+    background: repeating-linear-gradient(-45deg, var(--red) 0 6px, var(--red-hi) 6px 12px);
+  }
+  /* Bar length is the data, so nothing animates it; a hover only lifts
+     its tag. */
+  .pv-shelf-rows li:hover .pv-shelf-bar b { rotate: 0deg; scale: 1.15; }
+  .pv-shelf-bar b {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 8px);
+    translate: 0 -50%;
+    padding: 3px 6px;
+    border: 1px solid var(--red);
+    background: var(--bg);
+    font: 500 9px/1 var(--mono);
+    letter-spacing: 0.08em;
+    color: var(--red-hi);
+    white-space: nowrap;
+    rotate: -4deg;
+    transition: rotate 0.3s var(--pv-spring), scale 0.3s var(--pv-spring);
+  }
+  .pv-shelf-kept {
+    grid-area: kept;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  /* No date: until you delete it, a hatched amber bar to the edge that
+     ends where you say; for good, a solid arrow off the end of the shelf. */
+  .pv-shelf-rows li[data-end] .pv-shelf-bar { inset-inline-end: 0; width: auto; }
+  .pv-shelf-rows li[data-end] .pv-shelf-bar b { left: auto; right: 6px; rotate: 0deg; }
+  .pv-shelf-rows li[data-end='delete'] .pv-shelf-bar {
+    background: repeating-linear-gradient(-45deg, var(--accent) 0 6px, transparent 6px 12px);
+    border: 1px solid var(--accent-line);
+  }
+  .pv-shelf-rows li[data-end='delete'] .pv-shelf-bar b { border-color: var(--accent-ink); color: var(--accent-ink); }
+  .pv-shelf-rows li[data-end='forever'] .pv-shelf-bar {
+    right: -14px;
+    background: var(--fg);
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+  }
+  .pv-shelf-rows li[data-end='forever'] .pv-shelf-bar b {
+    right: 18px;
+    border: 0;
+    background: none;
+    color: var(--bg);
+    font-size: 15px;
+  }
+
+
+  @media (max-width: 760px) {
+    .pv-shelf-axis { display: none; }
+    .pv-shelf-rows li {
+      grid-template-columns: 1fr;
+      grid-template-areas: 'what' 'track' 'kept';
+      row-gap: 8px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-shelf-bar b { transition: none; }
+  }
+</style>

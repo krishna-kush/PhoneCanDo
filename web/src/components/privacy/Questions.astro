@@ -1,0 +1,80 @@
+---
+// The way out: the published schema and the issue tracker, under one big
+// spinning question mark.
+import { site } from '../../data/site';
+
+const schema = `${site.repo}/blob/HEAD/docs/telemetry.md`;
+const issues = `${site.repo}/issues`;
+---
+
+<section class="pv-sec pv-paper" id="questions" aria-labelledby="pv-questions-h">
+  <div class="pv-ask">
+    <p class="pv-ask-mark" aria-hidden="true">?</p>
+    <div>
+      <header class="pv-head">
+        <p class="pv-num" aria-hidden="true">8</p>
+        <p class="pv-kicker">Still curious?</p>
+        <h2 id="pv-questions-h">Every field, and questions</h2>
+      </header>
+      <p class="pv-ask-text">
+        The full list of fields, limits and network calls is the published
+        schema, next to the code that sends it. Questions or a problem: open
+        an issue on GitHub.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href={schema} target="_blank" rel="noreferrer">
+          Read the published schema
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </a>
+        <a class="btn btn-ghost" href={issues} target="_blank" rel="noreferrer">
+          Open an issue on GitHub
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  .pv-ask {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: clamp(28px, 5vw, 64px);
+    align-items: center;
+    padding: clamp(28px, 4vw, 48px);
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+    box-shadow: var(--plate-shadow);
+  }
+  .pv-ask .pv-head { margin-bottom: 20px; }
+  .pv-ask-mark {
+    font: italic 400 clamp(140px, 18vw, 230px)/0.8 var(--serif);
+    color: var(--red);
+    text-shadow: 6px 6px 0 var(--accent);
+    animation: pv-ponder 3.2s ease-in-out infinite;
+  }
+  .pv-ask-text {
+    max-width: 58ch;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+
+  @keyframes pv-ponder {
+    0%, 100% { rotate: -8deg; }
+    50% { rotate: 8deg; }
+  }
+
+  @media (max-width: 620px) {
+    .pv-ask { grid-template-columns: 1fr; }
+    .pv-ask-mark { font-size: 120px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-ask-mark { animation: none; }
+  }
+</style>

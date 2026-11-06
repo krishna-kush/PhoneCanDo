@@ -43,6 +43,7 @@ const vars = [
       </svg>
     </span>
     <span class="mascot-prop mascot-ask">?</span>
+    <span class="mascot-prop mascot-cookie"></span>
     <span class="mascot-prop mascot-zz"><i>z</i><i>z</i></span>
     <p class="mascot-cap"><span>A-01 ·</span> <b></b></p>
 
@@ -65,24 +66,12 @@ const vars = [
   // Every frame is pure maths plus style writes; layout is read only when the
   // page reflows (measure) or on a press or a hover, never in the loop.
   import logo from '../../../theme/logo.json';
+  import { sceneLines as lines, slowDownLines } from '../data/mascot';
 
   type Pose = 'square' | 'wide' | 'tall';
   type Fly = { mode: 'drag' | 'air' | 'rest' | 'home'; x: number; y: number; vx: number; vy: number; t0: number; sx: number; sy: number };
   type Press = { x0: number; y0: number; gx: number; gy: number; trail: [number, number, number][]; dragged: boolean };
 
-  // What A-01 says beside each part of the page. Keys are section ids, or the
-  // first class where there is none: the hero, the footer, the 404's main.
-  const lines: Record<string, string> = {
-    hero: 'on duty',
-    demos: 'watching plates',
-    models: 'thinking…',
-    linux: 'apt install fun',
-    gate: '403 · needs you',
-    install: 'sideload me',
-    faq: 'any questions?',
-    footer: 'end of manual',
-    missing: '404 · lost too',
-  };
   const { poses, holdMs, morphMs: morph, endHoldMs } = logo.loader;
   const step = holdMs + morph;
 
@@ -133,6 +122,7 @@ const vars = [
     let lastScrollAt = 0;
     let dizziness = 0;
     let jumpUntil = 0;
+    let slowDownAt = -1;
     let hovered: Element | null = null;
     let pressedAt = 0;
     let readTimer = 0;
@@ -428,10 +418,14 @@ const vars = [
       window.setTimeout(blink, 2400 + Math.random() * 3600);
     };
 
+    // A different line each time: any of them but the one it said last.
     const dizzy = () => {
       if (root.hasAttribute('data-dizzy')) return;
       flag('dizzy', true);
-      speak('whoa · slow down', 1800);
+      let i = Math.floor(Math.random() * (slowDownLines.length - 1));
+      if (i >= slowDownAt) i += 1;
+      slowDownAt = i;
+      speak(slowDownLines[i], 1800);
       window.setTimeout(() => flag('dizzy', false), 1800);
     };
 
@@ -618,6 +612,18 @@ const vars = [
       } else {
         speak('apt remove · ok', 1400);
         twinSpeak('still clean', 1400);
+      }
+    });
+
+    // The privacy note's demo switch: on, it cheers; off, it shrugs it off.
+    document.getElementById('pv-share')?.addEventListener('change', (e) => {
+      if (!shown.matches) return;
+      if (e.target instanceof HTMLInputElement && e.target.checked) {
+        speak('sharing on · ty!', 1600);
+        hop();
+      } else {
+        speak('sharing off · ok', 1600);
+        shake();
       }
     });
 
@@ -883,10 +889,11 @@ const vars = [
      compositor runs them and an idle page does no work. */
   .mascot-prop { position: absolute; display: none; }
   .mascot[data-scene='models'] .mascot-dots,
-  .mascot[data-scene='linux'] .mascot-keys { display: flex; }
-  .mascot[data-scene='gate'] .mascot-lock,
+  .mascot:is([data-scene='linux'], [data-scene='controls'], [data-scene='source']) .mascot-keys { display: flex; }
+  .mascot:is([data-scene='gate'], [data-scene='never']) .mascot-lock,
   .mascot[data-scene='install'] .mascot-arrow,
-  .mascot:is([data-scene='faq'], [data-scene='missing']) .mascot-ask,
+  .mascot:is([data-scene='faq'], [data-scene='missing'], [data-scene='questions']) .mascot-ask,
+  .mascot[data-scene='site'] .mascot-cookie,
   .mascot:is([data-asleep], [data-scene='footer']) .mascot-zz { display: block; }
   .mascot[data-asleep] .mascot-prop:not(.mascot-zz) { display: none; }
   .mascot[data-away] .mascot-prop,
@@ -930,6 +937,22 @@ const vars = [
     font: 400 20px/1 var(--serif);
     color: var(--accent-ink);
     animation: mascot-wobble 1.6s ease-in-out infinite;
+  }
+  /* The privacy note's "no cookies": it holds one anyway, square like
+     everything here, with a bite out of it. */
+  .mascot-cookie {
+    top: 7px;
+    right: 52px;
+    width: 11px;
+    height: 11px;
+    background:
+      linear-gradient(var(--art-bg) 0 0) 2px 3px / 2px 2px no-repeat,
+      linear-gradient(var(--art-bg) 0 0) 6px 6px / 2px 2px no-repeat,
+      linear-gradient(var(--art-bg) 0 0) 3px 8px / 2px 2px no-repeat,
+      var(--accent);
+    -webkit-mask: radial-gradient(circle at 100% 0, transparent 4px, #000 4.5px);
+    mask: radial-gradient(circle at 100% 0, transparent 4px, #000 4.5px);
+    animation: mascot-bob 0.9s ease-in-out infinite alternate;
   }
   .mascot-zz { top: -4px; right: 38px; width: 0; height: 0; }
   .mascot-zz i {
@@ -1007,6 +1030,7 @@ const vars = [
     .mascot-keys i::after,
     .mascot-arrow,
     .mascot-ask,
+    .mascot-cookie,
     .mascot-zz i { animation: none; }
     .mascot[data-dizzy] .mascot-eye b { transform: translate(var(--lx, 1.5px), var(--ly, 0px)); }
     .mascot-zz i { opacity: 1; }

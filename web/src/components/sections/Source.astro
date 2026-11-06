@@ -1,0 +1,290 @@
+---
+// Sec. 05, right after install: the files behind the manual's claims, linked
+// straight into the public repo, so a reader can check instead of trusting
+// us. A plate like the rest of the manual's, closed by the privacy note's
+// pondering mark. Every path here must exist on the default branch.
+import { site } from '../../data/site';
+
+const blob = (path: string) => `${site.repo}/blob/HEAD/${path}`;
+const tree = (path: string) => `${site.repo}/tree/HEAD/${path}`;
+const files: { path: string; href: string; title: string; text: string }[] = [
+  {
+    path: 'docs/telemetry.md',
+    href: blob('docs/telemetry.md'),
+    title: 'Every field it sends',
+    text: 'The published schema: what the app and this site send, where it is kept and for how long.',
+  },
+  {
+    path: 'app/src/engine/telemetry/',
+    href: tree('app/src/engine/telemetry'),
+    title: 'The code that sends it',
+    text: 'How the app collects, queues and sends usage stats. Hold it up against the schema.',
+  },
+  {
+    path: 'tce/',
+    href: tree('tce'),
+    title: 'The server it reports to',
+    text: 'Our Cloudflare Worker that receives the stats, with its schema and its storage.',
+  },
+  {
+    path: 'docs/api/security.md',
+    href: blob('docs/api/security.md'),
+    title: 'How phone control is gated',
+    text: 'The rules phone control is held to, and where the code stands on each one.',
+  },
+  {
+    path: 'scripts/apk-audit.mjs',
+    href: blob('scripts/apk-audit.mjs'),
+    title: 'Checks on every release',
+    text: 'The signer, channel and engine checks a release APK must pass before it ships.',
+  },
+  {
+    path: '.github/workflows/',
+    href: tree('.github/workflows'),
+    title: 'Automated scans',
+    text: 'CodeQL, OpenSSF Scorecard, secret scanning and dependency audits, plus a build from a clean checkout.',
+  },
+  {
+    path: 'THIRD_PARTY_NOTICES.md',
+    href: blob('THIRD_PARTY_NOTICES.md'),
+    title: "Other people's code inside",
+    text: 'Every component PhoneCanDo bundles or uses, with its license.',
+  },
+  {
+    path: 'LICENSE',
+    href: blob('LICENSE'),
+    title: 'What you may do with it',
+    text: 'Source-available: read it, study it, contribute to it. Copying or redistributing it needs our written permission.',
+  },
+];
+---
+
+<section class="section source" id="source">
+  <div class="sec-head">
+    <div class="sec-rail">
+      <p class="kicker">Sec. 05 / Read the source</p>
+      <p class="fig-label">FIG. 07 — Source files</p>
+    </div>
+    <div class="sec-body">
+      <h2>Read the code yourself.</h2>
+      <p class="lead">
+        PhoneCanDo is source-available: the app, this site and the server the
+        app reports to are all public on GitHub. If anything in this manual
+        makes you wonder, don't take our word for it.{" "}
+        <em>Open the file and see.</em>
+      </p>
+    </div>
+  </div>
+
+  <figure class="src-plate">
+    <span class="stamp src-stamp">All public</span>
+    <div class="src-bar">
+      <span>Source files / A-01</span>
+      <span class="src-bar-state">
+        <i aria-hidden="true"></i>{files.length} files · open to read
+      </span>
+    </div>
+
+    <div class="src-body">
+      <ul class="src-files">
+        {files.map((f) => (
+          <li>
+            <code><span aria-hidden="true">$ open</span> {f.path}</code>
+            <h3>
+              <a href={f.href} target="_blank" rel="noreferrer">{f.title}</a>
+            </h3>
+            <p>{f.text}</p>
+            <svg class="src-go" width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </li>
+        ))}
+      </ul>
+
+      <div class="src-end">
+        <div class="hero-actions">
+          <a class="btn btn-primary" href={site.repo} target="_blank" rel="noreferrer">
+            Browse the source on GitHub
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </a>
+          <a class="btn btn-ghost" href={site.releases} target="_blank" rel="noreferrer">
+            Every release
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </a>
+        </div>
+        <p class="src-mark" aria-hidden="true">{'{ }'}</p>
+      </div>
+    </div>
+
+    <figcaption class="src-foot">
+      <p>
+        <span>Got an APK?</span> its SHA-256 is in the install plate and the
+        computer command above
+      </p>
+      <p>Source-available · read, study, contribute</p>
+    </figcaption>
+  </figure>
+</section>
+
+<style is:global>
+  /* A plate like the gate's and the manifest's: a bar on top, the body, a
+     caption bar under it, a stamp on the corner. */
+  .src-plate {
+    position: relative;
+    margin: 0;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    box-shadow: var(--plate-shadow);
+  }
+  .src-stamp {
+    position: absolute;
+    z-index: 2;
+    top: -11px;
+    right: -8px;
+    border-color: var(--red-hi);
+    background: var(--panel);
+    color: var(--red-hi);
+    opacity: 1;
+    transform: rotate(-12deg);
+  }
+  .src-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    font: 500 9px/1 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .src-bar-state { display: flex; align-items: center; gap: 7px; margin-right: 60px; color: var(--muted); }
+  .src-bar-state i { width: 6px; height: 6px; background: var(--red); }
+  .src-body { padding: clamp(24px, 3.4vw, 40px) clamp(20px, 3vw, 36px); }
+  .src-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 24px;
+    align-items: baseline;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    font: 500 8.5px/1.5 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .src-foot span { margin-right: 6px; color: var(--accent-ink); }
+  /* The closing row: the buttons, and the braces pondering at the far end
+     (the "?" of the privacy note, for code). */
+  .src-end {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px 32px;
+    margin-top: 30px;
+  }
+  .src-end .hero-actions { margin-top: 0; }
+  .src-mark {
+    margin-right: 8px;
+    font: italic 400 clamp(72px, 8vw, 104px)/0.8 var(--serif);
+    letter-spacing: -0.06em;
+    color: var(--red);
+    text-shadow: 6px 6px 0 var(--accent);
+    white-space: nowrap;
+    animation: src-ponder 3.2s ease-in-out infinite;
+  }
+
+  /* The files: one card each, the whole card a link (its title's), with
+     the command you would type to open it. */
+  .src-files {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .src-files li {
+    position: relative;
+    padding: 0 18px 16px;
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+    transition: translate 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .src-files li:hover {
+    translate: -2px -2px;
+    border-color: var(--red);
+    box-shadow: 4px 4px 0 var(--accent);
+  }
+  .src-files li:has(a:focus-visible) { outline: 2px solid var(--red-hi); outline-offset: 3px; }
+  /* One line, so every title in a row starts level; a path too long for
+     the narrowest four-up card is clipped, never wrapped. */
+  .src-files code {
+    display: block;
+    margin: 0 -18px 12px;
+    padding: 7px 14px;
+    border-bottom: 1px dashed var(--line-2);
+    background: var(--panel);
+    font: 500 10.5px/1.4 var(--mono);
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .src-files code span { color: var(--red-hi); }
+  .src-files h3 {
+    padding-right: 20px;
+    font: 400 23px/1.1 var(--serif);
+    letter-spacing: -0.01em;
+  }
+  .src-files a { outline: none; }
+  .src-files a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .src-files li > p {
+    margin-top: 6px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .src-go {
+    position: absolute;
+    top: 44px;
+    right: 16px;
+    color: var(--muted);
+    transition: translate 0.15s, color 0.15s;
+  }
+  .src-files li:hover .src-go { translate: 2px -2px; color: var(--red); }
+
+  @keyframes src-ponder {
+    0%, 100% { rotate: -6deg; }
+    50% { rotate: 6deg; }
+  }
+
+  @media (max-width: 1200px) {
+    .src-files { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 860px) {
+    .src-foot { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 620px) {
+    .src-files { grid-template-columns: 1fr; }
+    .src-end { flex-direction: column-reverse; align-items: flex-start; }
+    .src-mark { margin: 0 0 0 4px; font-size: 72px; }
+    .src-bar-state { margin-right: 0; }
+    .src-bar { flex-wrap: wrap; padding-right: 60px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .src-mark { animation: none; }
+    .src-files li,
+    .src-go { transition: none; }
+  }
+</style>

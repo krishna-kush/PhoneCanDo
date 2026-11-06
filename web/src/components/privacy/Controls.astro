@@ -1,0 +1,165 @@
+---
+// Your controls: the four in Settings → Privacy, each with a chunky keycap
+// that presses in when you hover its card. Pictures only: the real buttons
+// are in the app.
+---
+
+<section class="pv-sec pv-paper" id="controls" aria-labelledby="pv-controls-h">
+  <header class="pv-head">
+    <p class="pv-num" aria-hidden="true">4</p>
+    <p class="pv-kicker">Your buttons, your call</p>
+    <h2 id="pv-controls-h">Your controls</h2>
+    <p class="pv-lead">All in the app, under <b>Settings → Privacy</b>:</p>
+  </header>
+
+  <ul class="pv-keys">
+    <li class="pv-key">
+      <span class="pv-cap pv-cap-switch" aria-hidden="true"><i></i></span>
+      <div>
+        <h3>The switch</h3>
+        <p>Off stops all sending at once. Turn it back on any time.</p>
+      </div>
+    </li>
+    <li class="pv-key pv-key-big">
+      <span class="pv-cap pv-cap-red" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square">
+          <path d="M2.5 4h11M6 4V2h4v2M4 4l.8 10h6.4L12 4M6.8 7v4.5M9.2 7v4.5"></path>
+        </svg>
+      </span>
+      <div>
+        <h3>Delete my data</h3>
+        <p>
+          Deletes every row the server holds for your phone (device, every
+          install, app runs, events, errors, reports), even from before a
+          reinstall or an ID reset, then turns sharing off and makes a new
+          install ID. If nothing was stored, the app says so. Only the 7-day
+          database backups still hold the deleted rows until they expire;
+          there is no other copy.
+        </p>
+      </div>
+    </li>
+    <li class="pv-key">
+      <span class="pv-cap pv-cap-dice" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+      <div>
+        <h3>Reset anonymous ID</h3>
+        <p>
+          Starts over with a new install ID and throws away anything not yet
+          sent. Past data from this phone stays linked to it; use Delete my
+          data to remove it.
+        </p>
+      </div>
+    </li>
+    <li class="pv-key">
+      <span class="pv-cap" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="1.5" y="3.5" width="13" height="9"></rect>
+          <path d="m1.5 3.5 6.5 5 6.5-5"></path>
+        </svg>
+      </span>
+      <div>
+        <h3>Send report</h3>
+        <p>
+          Only when you tap it. Sends your note, the last 50 usage events and
+          the last 2 KB of the engine's log from its last crash, with folder
+          paths, passwords and keys blanked out.
+        </p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<style is:global>
+  .pv-keys {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pv-key {
+    display: flex;
+    align-items: flex-start;
+    gap: 22px;
+    padding: 24px 24px 26px;
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+  }
+  .pv-key h3 {
+    margin: 2px 0 8px;
+    font: 400 28px/1.05 var(--serif);
+    letter-spacing: -0.01em;
+  }
+  .pv-key p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .pv-key-big { border-color: var(--red); background: linear-gradient(var(--red-soft) 0 0), var(--bg); }
+  .pv-key-big h3 { color: var(--red); }
+
+  /* A keycap: a face on a deep amber skirt. Hovering the card pushes it in. */
+  .pv-cap {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 8px;
+    border: 1px solid var(--line-2);
+    background: var(--panel-2);
+    color: var(--fg);
+    box-shadow: 0 8px 0 var(--accent);
+    transition: translate 0.12s, box-shadow 0.12s;
+  }
+  .pv-key:hover .pv-cap { translate: 0 6px; box-shadow: 0 2px 0 var(--accent); }
+  .pv-cap-red { border-color: var(--red); background: var(--red); color: var(--on-primary); }
+  .pv-cap-switch i {
+    position: relative;
+    width: 38px;
+    height: 20px;
+    border: 1px solid var(--line-2);
+    background: var(--bg);
+  }
+  .pv-cap-switch i::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 12px;
+    height: 12px;
+    background: var(--red);
+    transition: right 0.3s var(--pv-spring);
+  }
+  .pv-key:hover .pv-cap-switch i::after { right: 21px; background: var(--line-2); }
+  /* A die showing five: a fresh random ID is a fresh roll. */
+  .pv-cap-dice {
+    grid-template: repeat(3, 8px) / repeat(3, 8px);
+    gap: 4px;
+    place-content: center;
+  }
+  .pv-cap-dice i { width: 8px; height: 8px; background: var(--fg); }
+  .pv-cap-dice i:nth-child(1) { grid-area: 1 / 1; }
+  .pv-cap-dice i:nth-child(2) { grid-area: 1 / 3; }
+  .pv-cap-dice i:nth-child(3) { grid-area: 2 / 2; background: var(--red); }
+  .pv-cap-dice i:nth-child(4) { grid-area: 3 / 1; }
+  .pv-cap-dice i:nth-child(5) { grid-area: 3 / 3; }
+  .pv-key:hover .pv-cap-dice { animation: pv-roll 0.5s var(--pv-spring); }
+
+  @keyframes pv-roll {
+    from { rotate: -90deg; }
+  }
+
+  @media (max-width: 860px) {
+    .pv-keys { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 420px) {
+    .pv-key { flex-direction: column; gap: 14px; padding: 20px 18px 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-cap,
+    .pv-cap-switch i::after { transition: none; }
+    .pv-key:hover .pv-cap-dice { animation: none; }
+  }
+</style>

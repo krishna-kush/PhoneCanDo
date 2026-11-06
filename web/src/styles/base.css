@@ -12,6 +12,9 @@
   --glow: rgba(240, 32, 56, 0.16);
   --phone-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   --media-shadow: none;
+  /* The button language at plate size: the big framed figures sit on a
+     hard amber offset. */
+  --plate-shadow: 8px 8px 0 var(--accent);
   --grain: none;
   /* product artefacts (phone screen, demo media) stay dark in both themes */
   --art-bg: #070707;
