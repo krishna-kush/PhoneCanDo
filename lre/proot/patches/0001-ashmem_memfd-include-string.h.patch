@@ -1,0 +1,19 @@
+Ours (PhoneCanDo), not from termux-packages. Add the missing <string.h> to
+src/extension/ashmem_memfd/ashmem_memfd.c, which calls strcmp() and memset()
+without it. The file only compiles for Android (#if __ANDROID__), so
+upstream's glibc CI never sees it; Termux builds pass because termux-packages
+patches the NDK sysroot (ndk-patches/30/stdio.h.patch makes <stdio.h> include
+<string.h>, which this file gets via <talloc.h>). With a stock NDK r28c
+clang (19) the implicit declarations are hard errors.
+Upstreamable as is; drop this patch once termux/proot has the include.
+
+--- a/src/extension/ashmem_memfd/ashmem_memfd.c
++++ b/src/extension/ashmem_memfd/ashmem_memfd.c
+@@ -1,6 +1,7 @@
+ #if defined(__ANDROID__) || defined(__BIONIC__)
+ 
+ #include <stdlib.h>
++#include <string.h>  /* strcmp, memset, */
+ #include <signal.h>
+ #include <unistd.h>
+ #include <sys/syscall.h>  /* __NR_memfd_create,  */

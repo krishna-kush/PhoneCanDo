@@ -1,0 +1,225 @@
+name: proot
+
+# termux/proot for the Linux runtime (lre/proot): pinned sources (pins.env),
+# loader unbundled (proot execs $PROOT_LOADER, never a copy in tmp), talloc
+# linked statically. build-android cross-builds the arm64 jniLibs
+# (libproot.so + libproot-loader.so) with the pinned NDK and proves them at
+# the ELF level, since no runner can exec bionic; build-glibc builds the same
+# sources natively on ubuntu-24.04-arm and boots the pinned Alpine aarch64
+# minirootfs under them; source packs the GPL corresponding source. Nothing
+# here creates or touches a release. Runs on proot build changes, weekly
+# (upstream URLs and runner images drift), on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - 'lre/proot/**'
+      - '.github/workflows/proot.yml'
+      - '.github/ci/proot/**'
+  pull_request:
+    paths:
+      - 'lre/proot/**'
+      - '.github/workflows/proot.yml'
+      - '.github/ci/proot/**'
+  workflow_dispatch:
+  schedule:
+    - cron: '47 5 * * 1'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Explicit bash runs steps with -eo pipefail (the unset default is plain
+# `bash -e`), so a `check.sh | tee -a "$GITHUB_STEP_SUMMARY"` step fails when
+# the check does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-android:
+    name: build-android
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pins.env is the only copy of the versions; this also puts
+      # NDK_VERSION in the env for the NDK step.
+      - name: Pins (lre/proot/pins.env)
+        run: bash .github/ci/proot/pins.sh | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Host tools (gawk, make, readelf)
+        run: bash .github/ci/proot/host-tools.sh
+
+      # Not cached: the zip comes from dl.google.com about as fast as a cache
+      # restore would (as in oc-payload.yml).
+      - name: Set up Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
+        with:
+          ndk-version: ${{ env.NDK_VERSION }}
+          add-to-path: false
+
+      - name: Build (lre/proot/build-android.sh)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: bash lre/proot/build-android.sh "$RUNNER_TEMP/proot-work" "$RUNNER_TEMP/proot-android"
+
+      - name: ELF checks and SHA256SUMS (lre/proot/verify.sh)
+        run: bash lre/proot/verify.sh "$RUNNER_TEMP/proot-android" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Consumers fetch it by this exact name and stage it with
+      # lre/proot/stage.sh. The zip drops the exec bit; stage.sh sets 0755.
+      - name: Upload proot-android-arm64
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: proot-android-arm64
+          path: |
+            ${{ runner.temp }}/proot-android/libproot.so
+            ${{ runner.temp }}/proot-android/libproot-loader.so
+            ${{ runner.temp }}/proot-android/SHA256SUMS
+          retention-days: 14
+          if-no-files-found: error
+
+      # After the upload on purpose: a build that fails here is still there
+      # to inspect. Same sources, another workdir: the bytes must not move
+      # (the GPL source tarball promises a rebuild matches SHA256SUMS).
+      - name: Reproducible (second build in another workdir)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/proot-work-2"
+          cp -r "$RUNNER_TEMP/proot-work/downloads" "$RUNNER_TEMP/proot-work-2/"
+          bash lre/proot/build-android.sh "$RUNNER_TEMP/proot-work-2" "$RUNNER_TEMP/proot-android-2"
+          cd "$RUNNER_TEMP/proot-android-2"
+          if sha256sum -c "$RUNNER_TEMP/proot-android/SHA256SUMS"; then
+            echo "Second build in another workdir: bit-identical." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::the second build differs from the first: the build is not reproducible"
+            exit 1
+          fi
+
+  build-glibc:
+    name: build-glibc
+    # The arch we ship; the smoke rootfs (pins.env) is aarch64 too.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Host tools (gawk, make, readelf)
+        run: bash .github/ci/proot/host-tools.sh
+
+      - name: Build (lre/proot/build-glibc.sh)
+        run: bash lre/proot/build-glibc.sh "$RUNNER_TEMP/proot-work" "$RUNNER_TEMP/proot-glibc"
+
+      - name: Fetch the pinned Alpine aarch64 minirootfs
+        run: bash .github/ci/proot/fetch-rootfs.sh "$RUNNER_TEMP/rootfs/alpine-minirootfs.tar.gz" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The app's way: PROOT_LOADER at the unbundled loader, PROOT_TMP_DIR set.
+      - name: Smoke test (-0, the app's flags, no loader fallback)
+        run: |
+          bash .github/ci/proot/smoke.sh "$RUNNER_TEMP/proot-glibc" \
+            "$RUNNER_TEMP/rootfs/alpine-minirootfs.tar.gz" "$RUNNER_TEMP/smoke" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: SHA256SUMS
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/proot-glibc"
+          sha256sum libproot.so libproot-loader.so | tee SHA256SUMS
+
+      # For later distro-image tests on plain Linux; only uploaded once the
+      # smoke test passed.
+      - name: Upload proot-glibc-arm64
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: proot-glibc-arm64
+          path: |
+            ${{ runner.temp }}/proot-glibc/libproot.so
+            ${{ runner.temp }}/proot-glibc/libproot-loader.so
+            ${{ runner.temp }}/proot-glibc/SHA256SUMS
+          retention-days: 14
+          if-no-files-found: error
+
+  source:
+    name: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pins (lre/proot/pins.env)
+        run: bash .github/ci/proot/pins.sh > /dev/null
+
+      - name: Pack (lre/proot/source-tarball.sh)
+        run: |
+          bash lre/proot/source-tarball.sh "$RUNNER_TEMP/proot-work" \
+            "$RUNNER_TEMP/proot-source/phonecando-proot-$PROOT_VERSION-source.tar.gz" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The tarball is published with every release that ships proot, so
+      # the same pins and scripts must give the same bytes.
+      - name: Deterministic (pack again in another workdir, compare)
+        run: |
+          set -euo pipefail
+          first="$RUNNER_TEMP/proot-source/phonecando-proot-$PROOT_VERSION-source.tar.gz"
+          again="$RUNNER_TEMP/proot-source-again/again.tar.gz"
+          mkdir -p "$RUNNER_TEMP/proot-work-again"
+          cp -r "$RUNNER_TEMP/proot-work/downloads" "$RUNNER_TEMP/proot-work-again/"
+          bash lre/proot/source-tarball.sh "$RUNNER_TEMP/proot-work-again" "$again" > /dev/null
+          a="$(sha256sum < "$first" | cut -d' ' -f1)"
+          b="$(sha256sum < "$again" | cut -d' ' -f1)"
+          if [ "$a" != "$b" ]; then
+            echo "::error::source tarball is not deterministic: $a vs $b"
+            exit 1
+          fi
+          echo "Packed twice: same sha256 \`$a\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload proot-source
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: proot-source
+          path: ${{ runner.temp }}/proot-source/phonecando-proot-${{ env.PROOT_VERSION }}-source.tar.gz
+          retention-days: 14
+          if-no-files-found: error
+
+  proot-ok:
+    # The one proot check to require in branch protection: green only when
+    # every job above succeeded (a skipped or cancelled job counts as a
+    # failure).
+    name: proot-ok
+    if: always()
+    needs: [build-android, build-glibc, source]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every blocking proot job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=proot-ok::not green: $failed"
+            exit 1
+          fi
