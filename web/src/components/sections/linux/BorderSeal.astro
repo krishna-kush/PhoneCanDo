@@ -1,0 +1,143 @@
+---
+// The border post between the two passports: a perforation and a customs
+// seal. The seal is a rubber stamp; slam it as often as you like, the count
+// of shared pages stays 0, and both books jump.
+---
+
+<div class="passport-border">
+    <button class="passport-seal" type="button" data-seal aria-label="Stamp the border: 0 shared pages">
+        <b aria-hidden="true">0</b>
+        <span aria-hidden="true">shared</span>
+        <em aria-hidden="true">pages</em>
+    </button>
+</div>
+
+<script>
+    import { cueMascot } from "../../../lib/mascotCue";
+    import { toyLines } from "../../../data/mascot";
+
+    const seal = document.querySelector<HTMLButtonElement>("[data-seal]");
+    const books = seal?.closest<HTMLElement>(".passport-books");
+    if (seal && books) {
+        let slams = 0;
+        seal.addEventListener("click", () => {
+            books.removeAttribute("data-slam");
+            void books.offsetWidth;
+            books.setAttribute("data-slam", "");
+            cueMascot({ say: toyLines.seal[slams++ % toyLines.seal.length], move: "hop" });
+        });
+        books.addEventListener("animationend", (e) => {
+            if (e.target === seal) books.removeAttribute("data-slam");
+        });
+    }
+</script>
+
+<style is:global>
+    .passport-border {
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+    .passport-border::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: repeating-linear-gradient(
+        to bottom,
+        var(--line-2) 0 3px,
+        transparent 3px 7px
+      );
+    }
+    .passport-seal {
+      position: relative;
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 1px;
+      width: 58px;
+      aspect-ratio: 1;
+      padding: 0;
+      border: 1px solid var(--red);
+      border-radius: 50%;
+      background: var(--panel-2);
+      box-shadow: inset 0 0 0 2px var(--panel-2), inset 0 0 0 3px var(--red);
+      color: var(--red);
+      text-align: center;
+      cursor: pointer;
+      transform: rotate(-8deg);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .passport-seal:hover { transform: rotate(-14deg) scale(1.06); }
+    .passport-seal b { font: 400 21px/0.85 var(--serif); }
+    .passport-seal span {
+      font: 500 6px/1.1 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .passport-seal em {
+      font: 500 5.5px/1.1 var(--mono);
+      font-style: normal;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    /* Ink: a ring that spreads off the seal when it lands. */
+    .passport-seal::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border: 2px solid var(--red);
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* The slam: lifted, brought down hard, and the books jump with it. */
+    .passport-books[data-slam] .passport-seal { animation: seal-slam 0.5s cubic-bezier(0.3, 0, 0.3, 1); }
+    .passport-books[data-slam] .passport-seal::after { animation: seal-ink 0.5s ease-out; }
+    .passport-books[data-slam] .passport { animation: seal-jolt 0.5s ease-out; }
+    @keyframes seal-slam {
+      0% { transform: rotate(-8deg); }
+      35% { transform: translateY(-14px) rotate(-26deg) scale(1.35); }
+      55% { transform: rotate(-8deg) scale(0.9); }
+      75% { transform: rotate(-8deg) scale(1.04); }
+      100% { transform: rotate(-8deg); }
+    }
+    @keyframes seal-ink {
+      0%, 50% { opacity: 0; scale: 1; }
+      55% { opacity: 0.7; }
+      100% { opacity: 0; scale: 1.8; }
+    }
+    @keyframes seal-jolt {
+      0%, 50%, 100% { translate: 0 0; }
+      58% { translate: 0 3px; }
+      70% { translate: 0 -1px; }
+    }
+
+    @media (max-width: 560px) {
+      .passport-border { height: 40px; }
+      .passport-border::before {
+        top: 50%;
+        bottom: auto;
+        left: 0;
+        right: 0;
+        width: auto;
+        height: 1px;
+        background: repeating-linear-gradient(
+          to right,
+          var(--line-2) 0 3px,
+          transparent 3px 7px
+        );
+      }
+      .passport-seal { width: 54px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .passport-seal { transition: none; }
+      .passport-seal:hover { transform: rotate(-8deg); }
+      .passport-books[data-slam] :is(.passport-seal, .passport),
+      .passport-books[data-slam] .passport-seal::after { animation: none; }
+    }
+</style>

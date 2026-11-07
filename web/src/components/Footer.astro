@@ -1,6 +1,18 @@
 ---
 import { site } from '../data/site';
+import { code128 } from '../lib/code128';
 import LogoMark from './LogoMark.astro';
+
+// The colophon's barcode is real: Code 128 of the site's own address, dark
+// bars on the paper (a white label on the dark theme). Encoded at build time
+// into one SVG path, like the install plate's QR; each bar is one rectangle,
+// and the 10-module margins either side are the spec's quiet zone.
+if (!Astro.site) throw new Error('astro.config.mjs needs `site`: the footer barcode encodes it');
+const home = Astro.site.origin;
+const QUIET = 10;
+const code = code128(home);
+const codeModules = code.width + 2 * QUIET;
+const codePath = code.bars.map(({ x, w }) => `M${x + QUIET} 0h${w}v1h-${w}z`).join('');
 ---
 
 <footer class="footer">
@@ -30,7 +42,18 @@ import LogoMark from './LogoMark.astro';
   </div>
 
   <div class="colophon">
-    <div class="barcode" aria-hidden="true"></div>
+    <figure class="colophon-code" style={`--modules:${codeModules}`}>
+      <svg
+        viewBox={`0 0 ${codeModules} 1`}
+        preserveAspectRatio="none"
+        shape-rendering="crispEdges"
+        role="img"
+        aria-label="Barcode of this site's address"
+      >
+        <path d={codePath} />
+      </svg>
+      <figcaption>{home}</figcaption>
+    </figure>
     <p>PhoneCanDo Field Manual / Ed. {site.version} / Set in Instrument Serif &amp; Geist Mono / Printed on a phone.</p>
     <p class="serial">FM-01 · A-01 · {site.arch}</p>
   </div>
@@ -121,20 +144,48 @@ import LogoMark from './LogoMark.astro';
     padding-top: 16px;
     border-top: 1px solid var(--line);
   }
-  .colophon .barcode { width: 160px; height: 28px; margin: 0; flex: none; opacity: 0.55; }
+  /* The barcode, with the address it holds under it: the sheet's ink on
+     the paper, and on the dark theme black on a white label, like the
+     product artefacts. A module is a whole number of CSS px (--mod), so
+     bars land on whole pixels: two where the colophon has the room, one on
+     narrower screens. */
+  .colophon-code {
+    --mod: 1px;
+    --bar-h: 34px;
+    flex: none;
+    margin: 0;
+    padding: 6px 0 5px;
+    color: var(--fg);
+  }
+  [data-theme='dark'] .colophon-code { background: var(--art-fg); color: var(--art-bg); }
+  .colophon-code svg {
+    display: block;
+    width: calc(var(--modules) * var(--mod));
+    height: var(--bar-h);
+    fill: currentColor;
+  }
+  .colophon-code figcaption {
+    margin-top: 4px;
+    font: 500 7.5px/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-align: center;
+  }
+
+  @media (min-width: 1100px) {
+    .colophon-code { --mod: 2px; --bar-h: 44px; }
+  }
   .colophon p {
     font: 500 8px/1.5 var(--mono);
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--faint);
   }
-  .colophon .serial { margin-left: auto; text-align: right; }
+  .colophon .serial { margin-left: auto; text-align: right; white-space: nowrap; }
 
   @media (max-width: 760px) {
     .footer-inner { grid-template-columns: 1fr; }
     .footer-links { justify-content: flex-start; }
     .colophon { flex-wrap: wrap; align-items: flex-start; }
-    .colophon .barcode { width: 130px; }
     .colophon .serial { margin-left: 0; text-align: left; }
   }
   @media (max-width: 420px) {

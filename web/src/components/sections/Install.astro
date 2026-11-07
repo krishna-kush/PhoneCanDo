@@ -2,6 +2,7 @@
 import { encode } from "uqr";
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
+import Steps from "./install/Steps.astro";
 import { dlUrl, site } from "../../data/site";
 
 // The plate's code is real: the starter's download route (absolute, on the
@@ -119,14 +120,16 @@ const pcScripts = [
                  barcode, a computer gets the code. -->
             <div class="barcode install-phone-only" aria-hidden="true"></div>
             <div class="install-qr install-pc-only">
-                <svg
-                    viewBox={`0 0 ${qr.size} ${qr.size}`}
-                    shape-rendering="crispEdges"
-                    role="img"
-                    aria-label={`QR code for the starter APK, v${site.version}`}
-                >
-                    <path d={qrPath} />
-                </svg>
+                <span class="install-qr-code">
+                    <svg
+                        viewBox={`0 0 ${qr.size} ${qr.size}`}
+                        shape-rendering="crispEdges"
+                        role="img"
+                        aria-label={`QR code for the starter APK, v${site.version}`}
+                    >
+                        <path d={qrPath} />
+                    </svg>
+                </span>
                 <p class="install-qr-cap">
                     <b>Scan with the phone</b>
                     Gets the starter: step 01
@@ -149,31 +152,7 @@ const pcScripts = [
             <a class="btn btn-ghost install-starter" href={dlUrl("lite")}>
                 Starter APK for the phone · v{site.version}
             </a>
-            <ol class="steps">
-                <li>
-                    <span>
-                        <b>Grab the starter.</b> Open it, tap Install.
-                        No superpowers yet, so Play Protect lets it in.
-                        First launch unpacks the brain: one coffee.
-                    </span>
-                </li>
-                <li>
-                    <span>
-                        <b>Give it hands.</b> Tap{" "}
-                        <em>Install full build</em> in the app and let
-                        PhoneCanDo install it. It moves in over the
-                        starter and keeps your stuff.
-                    </span>
-                </li>
-                <li>
-                    <span>
-                        <b>Flip the switch.</b> Settings → Phone control
-                        walks you through Android's safety lock in
-                        three taps. Your fingerprint stays the final
-                        key.
-                    </span>
-                </li>
-            </ol>
+            <Steps />
             <p class="note">
                 Why two installs? Play Protect blocks any browser
                 download that can drive the screen. The starter
@@ -345,7 +324,6 @@ const pcScripts = [
       }
       .install .btn.install-starter:hover { background: var(--red-hi); border-color: var(--red-hi); }
     }
-    .steps li em { font-style: normal; color: var(--fg); font-weight: 500; }
     .install-media {
       display: flex;
       flex-direction: column;
@@ -371,30 +349,6 @@ const pcScripts = [
       text-align: center;
       color: var(--art-dim);
     }
-    .steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
-    .steps li {
-      counter-increment: s;
-      display: grid;
-      grid-template-columns: 20px minmax(0, 1fr);
-      gap: 12px;
-      padding: 12px 0;
-      border-top: 1px solid var(--line);
-      font-size: 13.5px;
-      line-height: 1.6;
-      color: var(--muted);
-    }
-    .steps li:first-child { border-top: 0; padding-top: 0; }
-    .steps li::before {
-      content: counter(s, decimal-leading-zero);
-      width: 18px;
-      height: 18px;
-      display: grid;
-      place-items: center;
-      border: 1px solid var(--line-2);
-      font: 500 8px/1 var(--mono);
-      color: var(--accent-ink);
-    }
-    .steps b { color: var(--fg); font-weight: 500; }
     .cmd {
       margin-top: 14px;
       padding: 11px 13px;
@@ -483,13 +437,32 @@ const pcScripts = [
       margin-top: 26px;
     }
     .install-qr svg {
-      flex: none;
+      display: block;
       width: 120px;
       height: 120px;
       border: 1px solid var(--line);
       background: var(--panel-2);
       fill: var(--qr-ink);
     }
+    /* Pointed at, a scanner's amber line sweeps the code, up and down. */
+    .install-qr-code { position: relative; flex: none; }
+    .install-qr-code::after {
+      content: '';
+      position: absolute;
+      top: 1px;
+      left: -6px;
+      right: -6px;
+      height: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 10px 1px var(--accent);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .install-qr:hover .install-qr-code::after {
+      opacity: 1;
+      animation: qr-scan 0.9s ease-in-out infinite alternate;
+    }
+    @keyframes qr-scan { to { translate: 0 116px; } }
     .install-qr-cap {
       margin: 0;
       font: 400 10px/1.7 var(--mono);
@@ -514,5 +487,8 @@ const pcScripts = [
     }
     @media (max-width: 760px) {
       .rows div { grid-template-columns: 104px minmax(0, 1fr); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .install-qr:hover .install-qr-code::after { animation: none; opacity: 0; }
     }
 </style>

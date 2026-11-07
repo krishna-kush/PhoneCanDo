@@ -1,5 +1,6 @@
 ---
 import { site } from "../../data/site";
+import RollDie from "./faq/RollDie.astro";
 ---
 
 <section class="section faq" id="faq">
@@ -15,6 +16,7 @@ import { site } from "../../data/site";
                 the answers we give most often, in full,{" "}
                 <em>license terms included.</em>
             </p>
+            <RollDie />
         </div>
     </div>
 
@@ -140,13 +142,21 @@ import { site } from "../../data/site";
       letter-spacing: 0.08em;
       color: var(--accent-ink);
     }
+    .faq summary:hover::before { animation: faq-q 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    /* Open, the plus spins round into a red cross. */
     .faq summary::after {
       content: '+';
       margin-left: auto;
       font: 400 15px/1 var(--mono);
       color: var(--faint);
+      transition: rotate 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s;
     }
-    .faq details[open] summary::after { content: '−'; }
+    .faq summary:hover::after { color: var(--fg); }
+    .faq details[open] summary::after { rotate: 135deg; color: var(--red); }
+    .faq details[open] p { animation: faq-open 0.3s ease-out; }
+    /* The question the die picked flashes amber. */
+    .faq details[data-rolled] summary { animation: faq-rolled 1.2s ease-out; }
+    .faq details[data-rolled] summary::before { color: var(--red); }
     .faq details p {
       position: relative;
       padding: 0 0 18px 26px;
@@ -167,4 +177,17 @@ import { site } from "../../data/site";
     .faq details p code { font: 400 12.5px var(--mono); color: var(--fg); }
     .faq details p a { color: var(--fg); border-bottom: 1px solid var(--line-2); }
     .faq details p a:hover { color: var(--red); border-bottom-color: var(--red); }
+
+    @keyframes faq-q { 50% { translate: 0 -4px; } }
+    @keyframes faq-open { from { opacity: 0; translate: 0 -6px; } }
+    @keyframes faq-rolled {
+      from { background-color: var(--accent-soft); box-shadow: 0 0 0 10px var(--accent-soft); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .faq summary::after { transition: none; }
+      .faq summary:hover::before,
+      .faq details[open] p,
+      .faq details[data-rolled] summary { animation: none; }
+    }
 </style>

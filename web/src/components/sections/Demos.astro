@@ -8,6 +8,10 @@ import { demos } from "../../data/demos";
         <div class="sec-rail">
             <p class="kicker">Sec. 01 / Phone control demo</p>
             <p class="fig-label">FIG. 02 — Plates 01–08</p>
+            <button class="toy-btn deal" type="button" data-deal>
+                <span class="deal-deck" aria-hidden="true"><i></i><i></i><i></i></span>
+                Shuffle the plates
+            </button>
         </div>
         <div class="sec-body">
             <h2 class="slogan">
@@ -33,6 +37,61 @@ import { demos } from "../../data/demos";
     <span class="ticks-bottom" aria-hidden="true"></span>
 </section>
 
+<script>
+    // The plates deal themselves into a new order: each one flies from
+    // where it was to where it lands (measured before and after the move),
+    // with a lift and a tilt on the way, one after the other.
+    import { cueMascot } from "../../lib/mascotCue";
+    import { toyLines } from "../../data/mascot";
+
+    const deal = document.querySelector<HTMLButtonElement>("[data-deal]");
+    const grid = document.querySelector<HTMLElement>(".demos");
+    if (deal && grid) {
+        const still = matchMedia("(prefers-reduced-motion: reduce)");
+        let deals = 0;
+        const shuffled = <T,>(list: T[]) => {
+            const out = [...list];
+            for (let i = out.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [out[i], out[j]] = [out[j], out[i]];
+            }
+            return out;
+        };
+
+        deal.addEventListener("click", () => {
+            const cards = [...grid.children] as HTMLElement[];
+            const from = new Map(cards.map((card) => [card, card.getBoundingClientRect()]));
+            let order = cards;
+            while (order.every((card, i) => card === cards[i])) order = shuffled(cards);
+            grid.append(...order);
+            cueMascot({ say: toyLines.shuffled[deals++ % toyLines.shuffled.length], move: "hop" });
+            if (still.matches) return;
+
+            order.forEach((card, i) => {
+                const a = from.get(card);
+                const b = card.getBoundingClientRect();
+                if (!a) return;
+                const dx = a.left - b.left;
+                const dy = a.top - b.top;
+                if (!dx && !dy) return;
+                for (const old of card.getAnimations()) old.cancel();
+                const tilt = (Math.random() * 2 - 1) * 9;
+                card.style.zIndex = String(1 + i);
+                const flight = card.animate(
+                    [
+                        { transform: `translate(${dx}px, ${dy}px)` },
+                        { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 22}px) rotate(${tilt}deg) scale(1.05)`, offset: 0.45 },
+                        { transform: "none" },
+                    ],
+                    { duration: 560, delay: i * 35, easing: "cubic-bezier(0.34, 1.25, 0.64, 1)", fill: "backwards" },
+                );
+                const done = () => (card.style.zIndex = "");
+                flight.finished.then(done, done);
+            });
+        });
+    }
+</script>
+
 <style is:global>
     /* Demos heading doubles as the slogan: heading scale, red italic, marker on the wordmark. */
     .sec-head h2.slogan {
@@ -54,6 +113,26 @@ import { demos } from "../../data/demos";
       background: var(--red);
       clip-path: polygon(3% 14%, 100% 0, 97% 84%, 0 100%);
     }
+    /* Point at the slogan and the marker swipes across the word again. */
+    .sec-head .slogan:hover span::before { animation: slogan-swipe 0.42s cubic-bezier(0.2, 0.9, 0.25, 1); }
+    @keyframes slogan-swipe {
+      from { clip-path: polygon(3% 14%, 3% 14%, 0 100%, 0 100%); }
+    }
+
+    /* The shuffle: a little deck that fans out when pointed at. */
+    .deal { margin-top: 18px; }
+    .deal-deck { position: relative; width: 14px; height: 16px; }
+    .deal-deck i {
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--fg);
+      background: var(--bg);
+      transform-origin: 50% 100%;
+      transition: rotate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .deal-deck i:last-child { background: var(--red); border-color: var(--red); }
+    .deal:hover .deal-deck i:first-child { rotate: -24deg; }
+    .deal:hover .deal-deck i:nth-child(2) { rotate: 12deg; }
 
     /* demo gallery: plates */
     .demos {
@@ -80,6 +159,7 @@ import { demos } from "../../data/demos";
         margin-inline: calc(-1 * var(--pad));
         padding: 0 var(--pad) 6px;
       }
+      .deal { margin-top: 0; }
       .swipe-hint {
         display: block;
         margin-top: 12px;
@@ -88,5 +168,11 @@ import { demos } from "../../data/demos";
         text-transform: uppercase;
         color: var(--faint);
       }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sec-head .slogan:hover span::before { animation: none; }
+      .deal-deck i { transition: none; }
+      .deal:hover .deal-deck i { rotate: none; }
     }
 </style>

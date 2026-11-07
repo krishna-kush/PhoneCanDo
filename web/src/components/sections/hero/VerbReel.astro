@@ -1,0 +1,91 @@
+---
+// The headline's verb is a slot reel: press it and it rattles through the
+// things the agent does to a phone, then lands on the next one. The page
+// ships with the first; every verb here has to be true of the app.
+const verbs = ['use', 'read', 'drive', 'tap', 'silence', 'run'];
+---
+
+<em><button class="reel" type="button" data-reel data-verbs={JSON.stringify(verbs)} aria-describedby="reel-hint">{verbs[0]}</button></em>
+<span id="reel-hint" hidden>Spins the verb</span>
+
+<script>
+  import { cueMascot } from '../../../lib/mascotCue';
+  import { toyLines } from '../../../data/mascot';
+
+  const reel = document.querySelector<HTMLButtonElement>('[data-reel]');
+  if (reel) {
+    const verbs: string[] = JSON.parse(reel.dataset.verbs ?? '[]');
+    const still = matchMedia('(prefers-reduced-motion: reduce)');
+    // Each blurred tick waits longer than the last, like a reel running down.
+    const TICKS = [0, 60, 130, 215, 320];
+    const SETTLE = 430;
+    let at = 0;
+    let spinning = false;
+
+    const tick = (word: string) => {
+      reel.textContent = word;
+      reel.animate(
+        [
+          { translate: '0 -0.32em', opacity: 0.2, filter: 'blur(3px)' },
+          { translate: '0 0', opacity: 1, filter: 'blur(0)' },
+        ],
+        { duration: 90, easing: 'ease-out' }
+      );
+    };
+    const land = () => {
+      spinning = false;
+      reel.textContent = verbs[at];
+      if (!still.matches)
+        reel.animate(
+          [{ translate: '0 -0.42em', scale: '1 1.12' }, { translate: '0 0.06em', scale: '1.06 0.94', offset: 0.55 }, { translate: '0 0', scale: '1' }],
+          { duration: 420, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+        );
+      cueMascot({ say: toyLines.verb(verbs[at]), move: 'hop' });
+    };
+
+    reel.addEventListener('click', () => {
+      if (spinning) return;
+      at = (at + 1) % verbs.length;
+      if (still.matches) return land();
+      spinning = true;
+      // The rattle never shows the verb it is about to land on, nor the same
+      // one twice running.
+      let shown = reel.textContent ?? '';
+      for (const ms of TICKS)
+        window.setTimeout(() => {
+          const pool = verbs.filter((v) => v !== shown && v !== verbs[at]);
+          shown = pool[Math.floor(Math.random() * pool.length)];
+          tick(shown);
+        }, ms);
+      window.setTimeout(land, SETTLE);
+    });
+  }
+</script>
+
+<style is:global>
+  /* The verb is the headline's own italic, with a wavy amber rule under it
+     saying it moves. */
+  .reel {
+    display: inline-block;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline wavy var(--accent);
+    text-decoration-thickness: 0.035em;
+    text-underline-offset: 0.16em;
+    transform-origin: 50% 85%;
+    transition: rotate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .reel:hover { rotate: -4deg; }
+  .reel:active { rotate: 3deg; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reel { transition: none; }
+    .reel:hover,
+    .reel:active { rotate: none; }
+  }
+</style>

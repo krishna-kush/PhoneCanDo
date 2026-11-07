@@ -66,7 +66,8 @@ const vars = [
   // Every frame is pure maths plus style writes; layout is read only when the
   // page reflows (measure) or on a press or a hover, never in the loop.
   import logo from '../../../theme/logo.json';
-  import { sceneLines as lines, slowDownLines } from '../data/mascot';
+  import { sceneLines as lines, slowDownLines, toyLines } from '../data/mascot';
+  import { MASCOT_CUE, type MascotCue } from '../lib/mascotCue';
 
   type Pose = 'square' | 'wide' | 'tall';
   type Fly = { mode: 'drag' | 'air' | 'rest' | 'home'; x: number; y: number; vx: number; vy: number; t0: number; sx: number; sy: number };
@@ -130,6 +131,9 @@ const vars = [
     let gazeQueued = false;
     let pointerX = 0;
     let pointerY = 0;
+    // The gate's demo armed it (lib/mascotCue.ts): at the gate it keeps its
+    // colour and moves.
+    let armed = false;
 
     // Layout the loop needs, measured on load and whenever the page reflows.
     let range = 0;
@@ -148,6 +152,7 @@ const vars = [
     };
 
     const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+    const gated = () => scene === 'gate' && !armed;
     const flag = (name: string, on: boolean, el: HTMLElement = root) => el.toggleAttribute(`data-${name}`, on);
     const timers = new Map<HTMLElement, number>();
     const pose = (p: Pose, el: HTMLElement = body) => {
@@ -175,7 +180,8 @@ const vars = [
 
     const caption = () => {
       const saying = performance.now() < sayUntil;
-      const text = saying ? say : asleep && scene !== 'footer' ? 'zz · idle' : lines[scene] ?? '';
+      const idle = scene === 'gate' && armed ? toyLines.armedIdle : lines[scene] ?? '';
+      const text = saying ? say : asleep && scene !== 'footer' ? 'zz · idle' : idle;
       word.toggleAttribute('data-code', saying && sayCode);
       if (word.textContent !== text) word.textContent = text;
     };
@@ -257,11 +263,11 @@ const vars = [
       const was = scene;
       scene = next;
       root.dataset.scene = next;
-      if (next === 'gate' && !fly) {
+      if (next === 'gate' && !armed && !fly) {
         pose('square');
         flag('swap', false, body);
       }
-      if (was === 'gate' && !root.hasAttribute('data-dizzy')) {
+      if (was === 'gate' && !armed && !root.hasAttribute('data-dizzy')) {
         speak('free!', 1200);
         hop();
       }
@@ -365,7 +371,7 @@ const vars = [
       // Moving: it inches, tall then square. Climbing back up the inks swap,
       // amber in front. Stopping squashes it wide for one morph. At the
       // gate nothing moves: it slides, locked.
-      const locked = scene === 'gate';
+      const locked = gated();
       if (fly) {
         moving = false;
         if (fly.mode !== 'drag') flyStep(fly, dt, now);
@@ -450,7 +456,7 @@ const vars = [
     };
 
     const tap = () => {
-      if (scene === 'gate') {
+      if (gated()) {
         speak('nope · locked', 1400);
         shake();
         return;
@@ -481,7 +487,7 @@ const vars = [
       if (!press) return;
       if (!press.dragged) {
         if (Math.hypot(e.clientX - press.x0, e.clientY - press.y0) < 5 || still.matches || dancing) return;
-        if (scene === 'gate') {
+        if (gated()) {
           press = null;
           speak('nope · locked', 1400);
           shake();
@@ -594,7 +600,7 @@ const vars = [
       if (document.documentElement.dataset.theme === 'light') speak('too bright!', 1600);
       else {
         speak('lights out · yawn', 1600);
-        if (!fly && !dancing && scene !== 'gate' && !still.matches) poseThen('tall', 'square', 700);
+        if (!fly && !dancing && !gated() && !still.matches) poseThen('tall', 'square', 700);
       }
     }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
@@ -625,6 +631,25 @@ const vars = [
         speak('sharing off · ok', 1600);
         shake();
       }
+    });
+
+    // The home page's toys (lib/mascotCue.ts). Their click lands after the
+    // tap narration below, so the toy's own line wins. Locking the gate's
+    // demo again while it stands there drains it and stops it, as on arrival.
+    document.addEventListener(MASCOT_CUE, (e) => {
+      const cue = (e as CustomEvent<MascotCue>).detail;
+      if (cue.armed !== undefined && cue.armed !== armed) {
+        armed = cue.armed;
+        flag('armed', armed);
+        if (gated() && !fly) {
+          pose('square');
+          flag('swap', false, body);
+        }
+      }
+      if (!shown.matches) return;
+      speak(cue.say, cue.ms ?? 1600, cue.code);
+      if (cue.move === 'hop') hop();
+      else if (cue.move === 'shake') shake();
     });
 
     // Narration: the visitor's own actions, written the way the hero's
@@ -704,7 +729,7 @@ const vars = [
     if (shown.matches) poke();
     blink();
     window.setTimeout(() => {
-      if (scene === 'gate' || !shown.matches) return;
+      if (gated() || !shown.matches) return;
       speak('hello!', 1500);
       hop();
     }, 900);
@@ -805,9 +830,10 @@ const vars = [
   .mascot-face { --io: 0px; z-index: 2; }
   .mascot-unit[data-swap] > .mascot-red { z-index: 0; }
   .mascot-unit[data-swap] > .mascot-amber { z-index: 1; }
-  /* Locked at the gate: the ink drains to the footer mark's resting grey. */
-  .mascot[data-scene='gate'] .mascot-bod > .mascot-red { background-color: var(--line-2); }
-  .mascot[data-scene='gate'] .mascot-bod > .mascot-amber { background-color: var(--line); }
+  /* Locked at the gate: the ink drains to the footer mark's resting grey,
+     until the gate's demo arms it. */
+  .mascot[data-scene='gate']:not([data-armed]) .mascot-bod > .mascot-red { background-color: var(--line-2); }
+  .mascot[data-scene='gate']:not([data-armed]) .mascot-bod > .mascot-amber { background-color: var(--line); }
 
   .mascot-eye {
     position: absolute;
@@ -890,7 +916,7 @@ const vars = [
   .mascot-prop { position: absolute; display: none; }
   .mascot[data-scene='models'] .mascot-dots,
   .mascot:is([data-scene='linux'], [data-scene='controls'], [data-scene='source']) .mascot-keys { display: flex; }
-  .mascot:is([data-scene='gate'], [data-scene='never']) .mascot-lock,
+  .mascot:is([data-scene='gate']:not([data-armed]), [data-scene='never']) .mascot-lock,
   .mascot[data-scene='install'] .mascot-arrow,
   .mascot:is([data-scene='faq'], [data-scene='missing'], [data-scene='questions']) .mascot-ask,
   .mascot[data-scene='site'] .mascot-cookie,

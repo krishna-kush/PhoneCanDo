@@ -1,6 +1,7 @@
 ---
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
+import ArmPad from "./gate/ArmPad.astro";
 import { site } from "../../data/site";
 ---
 
@@ -24,7 +25,7 @@ import { site } from "../../data/site";
         <div class="gate-bar">
             <span>Phone control / A-01</span>
             <span class="gate-bar-state">
-                <i aria-hidden="true"></i>Default · locked
+                <i aria-hidden="true"></i><span class="gate-is-locked">Default · locked</span><span class="gate-is-armed">Demo · armed</span>
             </span>
         </div>
 
@@ -68,9 +69,11 @@ import { site } from "../../data/site";
                     ) : null}
                 </div>
                 <p class="gate-media-cap">The agent asks · you press</p>
+                <ArmPad />
             </div>
 
             <div class="gate-panel gate-panel-armed">
+                <span class="gate-armed-stamp" aria-hidden="true">Armed by you</span>
                 <p class="gate-no">02 / Armed</p>
                 <h3>You unlocked it.</h3>
                 <p>
@@ -143,7 +146,9 @@ import { site } from "../../data/site";
     }
     .gate-panel { background: var(--panel); padding: clamp(20px, 2.6vw, 28px); display: flex; flex-direction: column; justify-content: center; }
     .gate-panel-armed {
+      position: relative;
       background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--panel);
+      transition: box-shadow 0.3s;
     }
     .gate-no {
       display: flex;
@@ -280,6 +285,47 @@ import { site } from "../../data/site";
     }
     .gate-foot span { margin-right: 6px; color: var(--accent-ink); }
 
+    /* Armed by the pad's demo (gate/ArmPad.astro): the bar says so, the
+       refusal is crossed out, each thing it may now do lights up in turn,
+       and the armed side gets its stamp. */
+    .gate-is-armed,
+    .gate-plate[data-armed] .gate-is-locked { display: none; }
+    .gate-plate[data-armed] .gate-is-armed { display: inline; color: var(--accent-ink); }
+    .gate-plate[data-armed] .gate-bar-state i { background: var(--accent); }
+    .gate-plate[data-armed] .gate-panel code { text-decoration: line-through 2px var(--fg); }
+    .gate-list li { transition: color 0.2s; }
+    .gate-list li::before { transition: background-color 0.2s, scale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .gate-plate[data-armed] .gate-list li { color: var(--fg); }
+    .gate-plate[data-armed] .gate-list li::before { background: var(--red); scale: 1.6; }
+    .gate-plate[data-armed] .gate-list li:nth-child(2),
+    .gate-plate[data-armed] .gate-list li:nth-child(2)::before { transition-delay: 0.08s; }
+    .gate-plate[data-armed] .gate-list li:nth-child(3),
+    .gate-plate[data-armed] .gate-list li:nth-child(3)::before { transition-delay: 0.16s; }
+    .gate-plate[data-armed] .gate-list li:nth-child(4),
+    .gate-plate[data-armed] .gate-list li:nth-child(4)::before { transition-delay: 0.24s; }
+    .gate-plate[data-armed] .gate-panel-armed { box-shadow: inset 0 0 0 2px var(--accent); }
+    .gate-armed-stamp {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: none;
+      padding: 5px 8px;
+      border: 1.5px solid var(--red);
+      color: var(--red);
+      font: 500 9px/1 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      rotate: 8deg;
+    }
+    .gate-plate[data-armed] .gate-armed-stamp {
+      display: block;
+      animation: gate-stamp 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+    }
+    @keyframes gate-stamp {
+      from { opacity: 0; scale: 2.2; rotate: -4deg; }
+      60% { opacity: 1; scale: 0.94; }
+    }
+
     @media (max-width: 980px) {
       .gate-states { grid-template-columns: minmax(0, 1fr) 240px minmax(0, 1fr); }
       .gate-frame { height: 420px; }
@@ -296,5 +342,11 @@ import { site } from "../../data/site";
     }
     @media (max-width: 420px) {
       .gate-frame { height: 320px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .gate-panel-armed,
+      .gate-list li,
+      .gate-list li::before { transition: none; }
+      .gate-plate[data-armed] .gate-armed-stamp { animation: none; }
     }
 </style>

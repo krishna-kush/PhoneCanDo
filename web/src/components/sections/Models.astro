@@ -1,3 +1,7 @@
+---
+import Crate from "./models/Crate.astro";
+---
+
 <section class="section models" id="models">
     <div class="sec-head">
         <div class="sec-rail">
@@ -35,28 +39,7 @@
 
             <span class="freight-arrow arrow-in" aria-hidden="true"></span>
 
-            <div class="crate" aria-hidden="true">
-                <span class="crate-tape">
-                    <span>PhoneCanDo</span>
-                    <span>Model</span>
-                </span>
-                <div class="crate-label">
-                    <p class="crate-label-head">
-                        <span>Packing list</span>
-                        <span>1 of 1</span>
-                    </p>
-                    <ul class="crate-list">
-                        <li>weights.gguf</li>
-                        <li>tokenizer.json</li>
-                        <li>config.json</li>
-                    </ul>
-                    <div class="crate-barcode"></div>
-                </div>
-                <span class="crate-stamp">Stays on device</span>
-                <span class="crate-up">
-                    <b aria-hidden="true">↑↑</b> this side up
-                </span>
-            </div>
+            <Crate />
 
             <span class="freight-arrow arrow-out" aria-hidden="true"></span>
 
@@ -150,16 +133,22 @@
       color: var(--faint);
       white-space: nowrap;
     }
+    /* Dashes, not a border, so they can march: pointing at a route sends
+       its arrow's dashes running into the crate. */
     .freight-arrow {
       position: relative;
       width: 100%;
-      height: 0;
-      border-top: 1px dashed var(--accent);
+      height: 1px;
+      background: repeating-linear-gradient(to right, var(--accent) 0 3px, transparent 3px 6px);
     }
+    .freight-body:has(.route-left:hover) .arrow-in,
+    .freight-body:has(.route-right:hover) .arrow-out,
+    .freight-body:has(.crate-wrap:hover) .freight-arrow { animation: freight-march 0.5s linear infinite; }
+    @keyframes freight-march { to { background-position: 6px 0; } }
     .freight-arrow::after {
       content: '';
       position: absolute;
-      top: -4px;
+      top: -3px;
       right: -1px;
       width: 7px;
       height: 7px;
@@ -169,107 +158,6 @@
     }
     .arrow-out { transform: scaleX(-1); }
 
-    /* the crate is a printed object, not a screen */
-    .crate {
-      position: relative;
-      width: 300px;
-      max-width: 100%;
-      min-height: 260px;
-      padding: 38px 14px 42px;
-      border: 1px solid var(--line-2);
-      background: var(--art-bg);
-      box-shadow: 6px 6px 0 var(--accent);
-    }
-    .crate-tape {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 8px 14px;
-      background: var(--red);
-      color: var(--on-primary);
-      font: 500 8px/1 var(--mono);
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-    }
-    .crate-label {
-      padding: 11px 12px 10px;
-      border: 1px solid rgba(7, 7, 7, 0.2);
-      background: var(--art-fg);
-      color: var(--art-bg);
-      transform: rotate(-1deg);
-      box-shadow: 2px 2px 0 rgba(7, 7, 7, 0.2);
-    }
-    .crate-label-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid rgba(7, 7, 7, 0.25);
-      font: 500 7px/1.4 var(--mono);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-    .crate-list {
-      margin: 6px 0 0;
-      padding: 0;
-      list-style: none;
-      font: 400 10px/1.7 var(--mono);
-    }
-    .crate-list li {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .crate-list li::after {
-      content: '✓';
-      color: var(--red);
-      font-size: 8px;
-    }
-    .crate-barcode {
-      height: 22px;
-      margin-top: 9px;
-      background: repeating-linear-gradient(
-        90deg,
-        currentColor 0 2px,
-        transparent 2px 4px,
-        currentColor 4px 5px,
-        transparent 5px 9px,
-        currentColor 9px 12px,
-        transparent 12px 14px,
-        currentColor 14px 15px,
-        transparent 15px 19px
-      );
-      opacity: 0.65;
-    }
-    .crate-stamp {
-      position: absolute;
-      right: 16px;
-      bottom: 16px;
-      padding: 4px 6px;
-      border: 1px solid var(--red);
-      color: var(--red);
-      font: 500 8px/1 var(--mono);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      transform: rotate(-6deg);
-    }
-    .crate-up {
-      position: absolute;
-      left: 16px;
-      bottom: 17px;
-      font: 500 7px/1.4 var(--mono);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--art-dim);
-    }
-    .crate-up b {
-      color: var(--art-accent);
-      font-weight: 400;
-    }
     .freight-foot {
       display: flex;
       flex-wrap: wrap;
@@ -301,19 +189,19 @@
       }
       .freight-route { align-items: flex-start; text-align: left; }
       .freight-route p { max-width: 52ch; }
-      .crate { justify-self: center; }
       .freight-arrow {
-        width: 0;
+        width: 1px;
         height: 40px;
         justify-self: center;
-        border-top: 0;
-        border-left: 1px dashed var(--accent);
+        background: repeating-linear-gradient(to bottom, var(--accent) 0 3px, transparent 3px 6px);
       }
+      @keyframes freight-march { to { background-position: 0 6px; } }
+      .arrow-out { animation-direction: reverse; }
       .freight-arrow::after {
         top: auto;
         right: auto;
         bottom: -1px;
-        left: -4px;
+        left: -3px;
         transform: rotate(135deg);
       }
       .arrow-out { transform: none; }
@@ -322,5 +210,9 @@
         bottom: auto;
         transform: rotate(-45deg);
       }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .freight-body .freight-arrow { animation: none; }
     }
 </style>

@@ -1,5 +1,6 @@
 ---
 import { site } from "../../data/site";
+import BorderSeal from "./linux/BorderSeal.astro";
 ---
 
 <section class="section linux" id="linux">
@@ -115,13 +116,7 @@ import { site } from "../../data/site";
                     </div>
                 </div>
 
-                <div class="passport-border" aria-hidden="true">
-                    <span class="passport-seal">
-                        <b>0</b>
-                        <span>shared</span>
-                        <em>pages</em>
-                    </span>
-                </div>
+                <BorderSeal />
 
                 <div class="passport passport-b">
                     <div class="passport-page">
@@ -394,6 +389,11 @@ import { site } from "../../data/site";
       color: var(--accent-ink);
       transform: rotate(1.5deg);
     }
+    /* Each entry is inked again when the pointer passes over it. */
+    .passport-stamps span:hover { animation: entry-ink 0.3s ease-out; }
+    @keyframes entry-ink {
+      40% { scale: 1.25; opacity: 1; }
+    }
     /* Empty band on purpose: an entry stamp needs a clear page. */
     .passport-slot {
       position: relative;
@@ -452,54 +452,6 @@ import { site } from "../../data/site";
       white-space: nowrap;
     }
     .passport-mrz span { display: block; }
-    /* Border post between the books: perforation plus a customs seal. */
-    .passport-border {
-      position: relative;
-      display: grid;
-      place-items: center;
-    }
-    .passport-border::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 50%;
-      width: 1px;
-      background: repeating-linear-gradient(
-        to bottom,
-        var(--line-2) 0 3px,
-        transparent 3px 7px
-      );
-    }
-    .passport-seal {
-      position: relative;
-      display: grid;
-      place-content: center;
-      justify-items: center;
-      gap: 1px;
-      width: 58px;
-      aspect-ratio: 1;
-      border: 1px solid var(--red);
-      border-radius: 50%;
-      background: var(--panel-2);
-      box-shadow: inset 0 0 0 2px var(--panel-2), inset 0 0 0 3px var(--red);
-      color: var(--red);
-      text-align: center;
-      transform: rotate(-8deg);
-    }
-    .passport-seal b { font: 400 21px/0.85 var(--serif); }
-    .passport-seal span {
-      font: 500 6px/1.1 var(--mono);
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-    }
-    .passport-seal em {
-      font: 500 5.5px/1.1 var(--mono);
-      font-style: normal;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--dim);
-    }
     /* The install event is the control; pressing it stamps SBX-01 only. */
     .passport-install {
       display: flex;
@@ -606,25 +558,11 @@ import { site } from "../../data/site";
     }
     @media (max-width: 560px) {
       .passport-books { grid-template-columns: 1fr; }
-      .passport-border { height: 40px; }
-      .passport-border::before {
-        top: 50%;
-        bottom: auto;
-        left: 0;
-        right: 0;
-        width: auto;
-        height: 1px;
-        background: repeating-linear-gradient(
-          to right,
-          var(--line-2) 0 3px,
-          transparent 3px 7px
-        );
-      }
-      .passport-seal { width: 54px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .passport-bar-state i { animation: none; }
       .visa-input:checked ~ .passport-books .passport-a .visa { animation: none; }
+      .passport-stamps span:hover { animation: none; }
     }
 </style>

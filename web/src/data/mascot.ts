@@ -29,6 +29,29 @@ export const sceneLines: Record<string, string> = {
   questions: 'ask me anything',
 };
 
+/**
+ * Said when the visitor plays with a toy on the home page; the toys send
+ * them through lib/mascotCue.ts. Lists take turns, functions fill in what
+ * changed; both stay inside 17 characters.
+ */
+export const toyLines = {
+  verb: (verb: string) => `ai can ${verb}`,
+  shuffled: ['shuffled!', 'new deal', 'again! again!', 'plates · mixed'],
+  upsideDown: 'wrong way up!',
+  upright: 'phew · upright',
+  seal: ['still 0 shared', 'yep · 0 shared', 'stamp all u like', 'nothing leaks'],
+  armed: 'armed · ty!',
+  armedIdle: 'armed · by you',
+  tooQuick: 'hold it longer',
+  relocked: 'locked again',
+  step: (n: number, done: boolean) => (done ? `step ${n} ✓` : `step ${n} undone`),
+  allSet: 'all set!',
+  opened: (n: number, of: number) => `read ${n} of ${of}`,
+  audited: 'you read it all!',
+  rolled: (q: number) => `rolled Q${q}`,
+  allAnswered: 'all answered!',
+};
+
 /** Said when a hard spin of the wheel makes it dizzy; never twice in a row. */
 export const slowDownLines = [
   'whoa · slow down',

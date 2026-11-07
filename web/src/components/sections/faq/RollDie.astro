@@ -1,0 +1,95 @@
+---
+// Can't pick a question? Roll for one: the die tumbles, lands, and a
+// question still closed opens and flashes. Once every one is open the next
+// roll closes them all again.
+---
+
+<button class="toy-btn roll" type="button" data-roll>
+    <span class="roll-die" data-face="5" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </span>
+    Roll a question
+</button>
+
+<script>
+    import { cueMascot } from "../../../lib/mascotCue";
+    import { toyLines } from "../../../data/mascot";
+
+    const roll = document.querySelector<HTMLButtonElement>("[data-roll]");
+    const die = roll?.querySelector<HTMLElement>(".roll-die");
+    const questions = [...document.querySelectorAll<HTMLDetailsElement>(".faq details")];
+    if (roll && die && questions.length) {
+        const still = matchMedia("(prefers-reduced-motion: reduce)");
+        const d6 = () => String(1 + Math.floor(Math.random() * 6));
+        // Faces flicker past while it tumbles, slower as it stops.
+        const FLICKS = [0, 70, 150, 250, 380];
+        const LANDS = 560;
+        let rolling = false;
+
+        const land = (pick: HTMLDetailsElement) => {
+            rolling = false;
+            die.dataset.face = d6();
+            pick.open = true;
+            pick.scrollIntoView({ block: "nearest", behavior: still.matches ? "auto" : "smooth" });
+            pick.removeAttribute("data-rolled");
+            void pick.offsetWidth;
+            pick.setAttribute("data-rolled", "");
+            cueMascot({ say: toyLines.rolled(questions.indexOf(pick) + 1), move: "hop" });
+        };
+
+        roll.addEventListener("click", () => {
+            if (rolling) return;
+            const closed = questions.filter((q) => !q.open);
+            if (!closed.length) {
+                for (const q of questions) q.open = false;
+                return cueMascot({ say: toyLines.allAnswered, move: "hop" });
+            }
+            const pick = closed[Math.floor(Math.random() * closed.length)];
+            if (still.matches) return land(pick);
+            rolling = true;
+            die.animate([{ rotate: "0deg", scale: 1 }, { rotate: "-200deg", scale: 1.25, offset: 0.4 }, { rotate: "-360deg", scale: 1 }], {
+                duration: LANDS,
+                easing: "cubic-bezier(0.2, 0.8, 0.3, 1)",
+            });
+            for (const ms of FLICKS) window.setTimeout(() => (die.dataset.face = d6()), ms);
+            window.setTimeout(() => land(pick), LANDS);
+        });
+        for (const q of questions)
+            q.addEventListener("animationend", (e) => e.animationName === "faq-rolled" && q.removeAttribute("data-rolled"));
+    }
+</script>
+
+<style is:global>
+    .roll { margin-top: 22px; }
+    /* A die on a 3 × 3 grid of pips: each face shows its own, the centre
+       one red, like the privacy note's. */
+    .roll-die {
+      display: grid;
+      grid-template: repeat(3, 4px) / repeat(3, 4px);
+      gap: 2px;
+      place-content: center;
+      width: 22px;
+      height: 22px;
+      border: 1px solid var(--fg);
+      background: var(--bg);
+    }
+    .roll-die i { background: var(--fg); visibility: hidden; }
+    .roll-die i:nth-child(5) { background: var(--red); }
+    .roll-die[data-face='1'] i:nth-child(5),
+    .roll-die[data-face='2'] i:is(:nth-child(1), :nth-child(9)),
+    .roll-die[data-face='3'] i:is(:nth-child(1), :nth-child(5), :nth-child(9)),
+    .roll-die[data-face='4'] i:is(:nth-child(1), :nth-child(3), :nth-child(7), :nth-child(9)),
+    .roll-die[data-face='5'] i:is(:nth-child(1), :nth-child(3), :nth-child(5), :nth-child(7), :nth-child(9)),
+    .roll-die[data-face='6'] i:is(:nth-child(1), :nth-child(3), :nth-child(4), :nth-child(6), :nth-child(7), :nth-child(9)) {
+      visibility: visible;
+    }
+    .roll:hover .roll-die { animation: roll-wobble 0.5s ease-in-out; }
+    @keyframes roll-wobble {
+      30% { rotate: -14deg; }
+      65% { rotate: 8deg; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .roll:hover .roll-die { animation: none; }
+    }
+</style>

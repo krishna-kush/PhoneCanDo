@@ -1,0 +1,187 @@
+---
+// The session card beside the phone: the agent's run as its own trace. The
+// clock in its bar replays it, call by call, with the next session number,
+// and A-01 reads each call out as it lands.
+---
+
+<div class="hero-trace" data-trace>
+    <div class="hero-trace-bar">
+        <span>Session <span data-session>001</span></span>
+        <button class="trace-replay" type="button" data-replay aria-label="Replay the session">
+            <span class="trace-replay-icon" aria-hidden="true">↻</span>
+            <span data-clock>9s</span>
+        </button>
+    </div>
+    <div class="hero-trace-body" aria-hidden="true">
+        <p style="--i:0">
+            <span class="tc">screen.read()</span>
+            <span class="tr">whatsapp</span>
+        </p>
+        <p class="ind" style="--i:1">
+            <span class="tc">tap("Sam")</span>
+            <span class="tr">open</span>
+        </p>
+        <p class="ind" style="--i:2">
+            <span class="tc">send()</span>
+            <span class="tr">approved</span>
+        </p>
+        <p class="last" style="--i:3">
+            <span class="tok">✓ sent · 9s</span>
+            <span class="tcursor"></span>
+        </p>
+    </div>
+</div>
+
+<script>
+    import { cueMascot } from '../../../lib/mascotCue';
+
+    const card = document.querySelector<HTMLElement>('[data-trace]');
+    const replay = card?.querySelector<HTMLButtonElement>('[data-replay]');
+    const clock = card?.querySelector<HTMLElement>('[data-clock]');
+    const session = card?.querySelector<HTMLElement>('[data-session]');
+    if (card && replay && clock && session) {
+        // One line every STEP ms, as the CSS staggers them (--i × 0.6s); the
+        // clock runs the agent's nine seconds over the same stretch.
+        const STEP = 600;
+        const SECONDS = 9;
+        const lines = [...card.querySelectorAll<HTMLElement>('.hero-trace-body p')];
+        const timers: number[] = [];
+        let runs = 1;
+
+        replay.addEventListener('click', () => {
+            for (const t of timers.splice(0)) window.clearTimeout(t);
+            runs += 1;
+            session.textContent = String(runs).padStart(3, '0');
+            card.removeAttribute('data-playing');
+            void card.offsetWidth;
+            card.setAttribute('data-playing', '');
+
+            const total = STEP * (lines.length - 1);
+            for (let s = 0; s <= SECONDS; s++)
+                timers.push(window.setTimeout(() => (clock.textContent = `${s}s`), (total * s) / SECONDS));
+            lines.forEach((line, i) => {
+                const call = line.querySelector('.tc, .tok')?.textContent ?? '';
+                timers.push(window.setTimeout(() => cueMascot({ say: call, code: true, ms: STEP + 200 }), i * STEP));
+            });
+            timers.push(window.setTimeout(() => card.removeAttribute('data-playing'), total + 600));
+        });
+    }
+</script>
+
+<style is:global>
+    .hero-trace {
+      position: absolute;
+      left: -26px;
+      bottom: -68px;
+      z-index: 2;
+      width: 250px;
+      border: 1px solid var(--accent-line);
+      border-radius: 0;
+      background: var(--panel-2);
+      font: 400 10px/1.7 var(--mono);
+      color: var(--muted);
+    }
+    .hero-trace::before {
+      content: '';
+      position: absolute;
+      left: 100%;
+      top: 20px;
+      width: 24px;
+      height: 1px;
+      background: var(--accent);
+    }
+    .hero-trace::after {
+      content: '';
+      position: absolute;
+      left: calc(100% + 24px);
+      top: 17px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .hero-trace-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 4px 4px 4px 10px;
+      border-bottom: 1px solid var(--line);
+      font: 500 8.5px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+    }
+    /* The clock is the replay button: it rewinds when pointed at. */
+    .trace-replay {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 6px;
+      border: 1px solid transparent;
+      background: none;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      color: var(--faint);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .trace-replay-icon { display: inline-block; transition: rotate 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .trace-replay:hover { border-color: var(--accent-line); color: var(--accent-ink); }
+    .trace-replay:hover .trace-replay-icon { rotate: -200deg; }
+    .hero-trace[data-playing] .trace-replay { color: var(--red); }
+    .hero-trace[data-playing] .trace-replay-icon { animation: trace-rewind 0.6s linear infinite; }
+    .hero-trace-body { padding: 9px 10px 10px; }
+    .hero-trace-body p {
+      margin: 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      white-space: nowrap;
+    }
+    .hero-trace .ind { padding-left: 10px; }
+    .hero-trace .last { justify-content: flex-start; }
+    .hero-trace .tc { color: var(--fg); }
+    .hero-trace p:first-child .tc::before { content: '$ '; color: var(--red); }
+    .hero-trace .tr { color: var(--faint); }
+    .hero-trace .tok { color: var(--dim); }
+    .hero-trace .tcursor {
+      display: inline-block;
+      width: 5px;
+      height: 9px;
+      margin-left: 3px;
+      background: var(--red);
+      vertical-align: -1px;
+      animation: blink 1.15s steps(1) infinite;
+    }
+
+    /* Replaying: each call types itself out, its result pops in after it. */
+    .hero-trace[data-playing] .tc,
+    .hero-trace[data-playing] .tok {
+      display: inline-block;
+      animation: trace-type 0.32s steps(12) calc(var(--i) * 0.6s) both;
+    }
+    .hero-trace[data-playing] .tr {
+      animation: trace-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 0.6s + 0.34s) both;
+    }
+    .hero-trace[data-playing] .tcursor { animation: trace-pop 0.1s calc(var(--i) * 0.6s + 0.32s) both, blink 1.15s steps(1) 2.2s infinite; }
+    @keyframes trace-type { from { clip-path: inset(0 100% 0 0); } }
+    @keyframes trace-pop { from { opacity: 0; translate: 6px 0; } }
+    @keyframes trace-rewind { to { rotate: -360deg; } }
+
+    @media (max-width: 760px) {
+      .hero-trace {
+        position: static;
+        width: min(280px, 100%);
+        margin: 16px auto 0;
+      }
+      .hero-trace::before,
+      .hero-trace::after { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-trace .tcursor { animation: none; }
+      .trace-replay-icon { transition: none; }
+      .hero-trace[data-playing] :is(.tc, .tok, .tr, .tcursor, .trace-replay-icon) { animation: none; }
+    }
+</style>

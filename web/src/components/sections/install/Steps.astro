@@ -1,0 +1,170 @@
+---
+// The three install steps as a checklist: each step's number is a box to
+// tick as you go, and three of three slams an "All set" stamp across the
+// list. Ticks last as long as the page; A-01 counts along.
+---
+
+<div class="steps-card" data-steps>
+    <ol class="steps">
+        <li>
+            <label class="step-tick">
+                <input type="checkbox" aria-label="Step 01 done" />
+                <span data-n="01" aria-hidden="true"></span>
+            </label>
+            <span>
+                <b>Grab the starter.</b> Open it, tap Install.
+                No superpowers yet, so Play Protect lets it in.
+                First launch unpacks the brain: one coffee.
+            </span>
+        </li>
+        <li>
+            <label class="step-tick">
+                <input type="checkbox" aria-label="Step 02 done" />
+                <span data-n="02" aria-hidden="true"></span>
+            </label>
+            <span>
+                <b>Give it hands.</b> Tap{" "}
+                <em>Install full build</em> in the app and let
+                PhoneCanDo install it. It moves in over the
+                starter and keeps your stuff.
+            </span>
+        </li>
+        <li>
+            <label class="step-tick">
+                <input type="checkbox" aria-label="Step 03 done" />
+                <span data-n="03" aria-hidden="true"></span>
+            </label>
+            <span>
+                <b>Flip the switch.</b> Settings → Phone control
+                walks you through Android's safety lock in
+                three taps. Your fingerprint stays the final
+                key.
+            </span>
+        </li>
+    </ol>
+    <p class="steps-stamp" aria-hidden="true">All set<small>now just ask</small></p>
+</div>
+
+<script>
+    import { cueMascot } from "../../../lib/mascotCue";
+    import { toyLines } from "../../../data/mascot";
+
+    const card = document.querySelector<HTMLElement>("[data-steps]");
+    if (card) {
+        const boxes = [...card.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
+        card.addEventListener("change", (e) => {
+            const box = e.target;
+            if (!(box instanceof HTMLInputElement)) return;
+            if (boxes.every((b) => b.checked)) return cueMascot({ say: toyLines.allSet, move: "hop" });
+            cueMascot({ say: toyLines.step(boxes.indexOf(box) + 1, box.checked), move: box.checked ? "hop" : "shake" });
+        });
+    }
+</script>
+
+<style is:global>
+    .steps-card { position: relative; }
+    .steps { margin: 0; padding: 0; list-style: none; }
+    .steps li {
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr);
+      gap: 12px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--muted);
+      transition: color 0.2s;
+    }
+    .steps li:first-child { border-top: 0; padding-top: 0; }
+    .steps b { color: var(--fg); font-weight: 500; }
+    .steps li em { font-style: normal; color: var(--fg); font-weight: 500; }
+
+    /* The tick box is the step's number until it is ticked. The real
+       checkbox covers it, invisible, so it takes the click and the focus. */
+    .step-tick {
+      position: relative;
+      display: grid;
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      cursor: pointer;
+    }
+    .step-tick input {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .step-tick span {
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-2);
+      background: var(--bg);
+      font: 500 8px/1 var(--mono);
+      color: var(--accent-ink);
+      transition: translate 0.15s, box-shadow 0.15s, border-color 0.15s, background-color 0.15s, color 0.15s;
+    }
+    .step-tick span::before { content: attr(data-n); }
+    .step-tick:hover span {
+      translate: -1px -1px;
+      border-color: var(--red);
+      box-shadow: 2px 2px 0 var(--accent);
+    }
+    .step-tick input:focus-visible + span { outline: 2px solid var(--red-hi); outline-offset: 2px; }
+    .step-tick input:checked + span {
+      border-color: var(--red);
+      background: var(--red);
+      color: var(--on-primary);
+      animation: step-thunk 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .step-tick input:checked + span::before { content: '✓'; font-size: 11px; }
+    .steps li:has(input:checked) { color: var(--faint); }
+    .steps li:has(input:checked) b { text-decoration: line-through 2px var(--red); }
+
+    /* Three of three: the stamp, slammed across the list. */
+    .steps-stamp {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 18px 7px;
+      border: 3px double var(--red);
+      background: var(--bg);
+      color: var(--red);
+      font: 400 44px/1 var(--serif);
+      text-transform: uppercase;
+      white-space: nowrap;
+      translate: -50% -50%;
+      rotate: -10deg;
+      pointer-events: none;
+    }
+    .steps-stamp small {
+      margin-top: 4px;
+      font: 500 9px/1 var(--mono);
+      letter-spacing: 0.18em;
+      color: var(--red-hi);
+    }
+    .steps-card:not(:has(input:not(:checked))) .steps-stamp {
+      display: flex;
+      animation: steps-slam 0.4s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+    }
+
+    @keyframes step-thunk {
+      from { scale: 1.5; rotate: -12deg; }
+    }
+    @keyframes steps-slam {
+      from { opacity: 0; scale: 2.4; }
+      60% { opacity: 1; scale: 0.95; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .steps li,
+      .step-tick span { transition: none; }
+      .step-tick input:checked + span,
+      .steps-card:not(:has(input:not(:checked))) .steps-stamp { animation: none; }
+    }
+</style>

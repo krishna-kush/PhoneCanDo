@@ -78,10 +78,11 @@ const files: { path: string; href: string; title: string; text: string }[] = [
 
   <figure class="src-plate">
     <span class="stamp src-stamp">All public</span>
+    <span class="stamp src-audited" aria-hidden="true">Read by you</span>
     <div class="src-bar">
       <span>Source files / A-01</span>
       <span class="src-bar-state">
-        <i aria-hidden="true"></i>{files.length} files · open to read
+        <i aria-hidden="true"></i><span data-read>{files.length} files · open to read</span>
       </span>
     </div>
 
@@ -89,11 +90,12 @@ const files: { path: string; href: string; title: string; text: string }[] = [
       <ul class="src-files">
         {files.map((f) => (
           <li>
-            <code><span aria-hidden="true">$ open</span> {f.path}</code>
+            <code><span class="src-cmd" aria-hidden="true">$ open</span> <span class="src-path" style={`--n:${f.path.length}`}>{f.path}</span></code>
             <h3>
               <a href={f.href} target="_blank" rel="noreferrer">{f.title}</a>
             </h3>
             <p>{f.text}</p>
+            <span class="src-opened" aria-hidden="true">✓ Opened</span>
             <svg class="src-go" width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
@@ -129,6 +131,33 @@ const files: { path: string; href: string; title: string; text: string }[] = [
     </figcaption>
   </figure>
 </section>
+
+<script>
+  // Every file opened from here gets ticked, the bar counts them, and the
+  // last one stamps the plate "Read by you". Counted per visit, on the page.
+  import { cueMascot } from '../../lib/mascotCue';
+  import { toyLines } from '../../data/mascot';
+
+  const plate = document.querySelector<HTMLElement>('.src-plate');
+  const state = plate?.querySelector<HTMLElement>('[data-read]');
+  if (plate && state) {
+    const cards = [...plate.querySelectorAll<HTMLElement>('.src-files li')];
+    const open = (card: HTMLElement) => {
+      if (card.hasAttribute('data-opened')) return;
+      card.setAttribute('data-opened', '');
+      const n = cards.filter((c) => c.hasAttribute('data-opened')).length;
+      state.textContent = `${n} of ${cards.length} opened`;
+      if (n < cards.length) return cueMascot({ say: toyLines.opened(n, cards.length), move: 'hop' });
+      plate.setAttribute('data-audited', '');
+      cueMascot({ say: toyLines.audited, move: 'hop', ms: 2400 });
+    };
+    for (const card of cards) {
+      const link = card.querySelector('a');
+      link?.addEventListener('click', () => open(card));
+      link?.addEventListener('auxclick', (e) => e.button === 1 && open(card));
+    }
+  }
+</script>
 
 <style is:global>
   /* A plate like the gate's and the manifest's: a bar on top, the body, a
@@ -236,7 +265,69 @@ const files: { path: string; href: string; title: string; text: string }[] = [
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .src-files code span { color: var(--red-hi); }
+  .src-files code .src-cmd { color: var(--red-hi); }
+  /* Pointed at, the card types its path out again, one key at a time. */
+  .src-path {
+    display: inline-block;
+    width: calc(var(--n) * 1ch);
+    overflow: hidden;
+    vertical-align: bottom;
+  }
+  .src-files li:hover .src-path { animation: src-type calc(var(--n) * 30ms) steps(var(--n)) both; }
+  .src-files li:hover code::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 11px;
+    margin-left: 2px;
+    background: var(--red);
+    vertical-align: -1px;
+    animation: blink 0.7s steps(1) infinite;
+  }
+  @keyframes src-type { from { width: 0; } }
+
+  /* Opened: a tick on the card's edge. All eight: a second stamp on the
+     plate, beside "All public". */
+  .src-opened {
+    position: absolute;
+    top: -9px;
+    right: 10px;
+    display: none;
+    padding: 3px 6px;
+    border: 1px solid var(--red);
+    background: var(--bg);
+    color: var(--red-hi);
+    font: 500 8px/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    rotate: 4deg;
+  }
+  .src-files li[data-opened] .src-opened {
+    display: block;
+    animation: src-thunk 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+  }
+  .src-audited {
+    position: absolute;
+    z-index: 2;
+    top: -12px;
+    right: 108px;
+    display: none;
+    border-color: var(--accent-ink);
+    background: var(--panel);
+    color: var(--accent-ink);
+    opacity: 1;
+    transform: rotate(7deg);
+  }
+  .src-plate[data-audited] .src-audited {
+    display: inline-block;
+    animation: src-thunk 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+  }
+  .src-plate[data-audited] .src-bar-state { color: var(--accent-ink); }
+  .src-plate[data-audited] .src-bar-state i { background: var(--accent); }
+  @keyframes src-thunk {
+    from { opacity: 0; scale: 2.2; }
+    60% { opacity: 1; scale: 0.94; }
+  }
   .src-files h3 {
     padding-right: 20px;
     font: 400 23px/1.1 var(--serif);
@@ -283,7 +374,11 @@ const files: { path: string; href: string; title: string; text: string }[] = [
     .src-bar { flex-wrap: wrap; padding-right: 60px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .src-mark { animation: none; }
+    .src-mark,
+    .src-files li:hover .src-path,
+    .src-files li:hover code::after,
+    .src-files li[data-opened] .src-opened,
+    .src-plate[data-audited] .src-audited { animation: none; }
     .src-files li,
     .src-go { transition: none; }
   }

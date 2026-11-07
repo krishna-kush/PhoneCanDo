@@ -1,0 +1,187 @@
+---
+// The crate between the two routes: a printed object, not a screen. Its
+// "this side up" is a button that turns it the wrong way up (the packing
+// list slides down to the new floor) and back again.
+---
+
+<div class="crate-wrap">
+    <div class="crate" data-crate>
+        <span class="crate-tape" aria-hidden="true">
+            <span>PhoneCanDo</span>
+            <span>Model</span>
+        </span>
+        <div class="crate-label" aria-hidden="true">
+            <p class="crate-label-head">
+                <span>Packing list</span>
+                <span>1 of 1</span>
+            </p>
+            <ul class="crate-list">
+                <li>weights.gguf</li>
+                <li>tokenizer.json</li>
+                <li>config.json</li>
+            </ul>
+            <div class="crate-barcode"></div>
+        </div>
+        <span class="crate-stamp" aria-hidden="true">Stays on device</span>
+        <button class="crate-up" type="button" data-crate-flip aria-label="Turn the crate over">
+            <b aria-hidden="true">↑↑</b> this side up
+        </button>
+    </div>
+</div>
+
+<script>
+    import { cueMascot } from "../../../lib/mascotCue";
+    import { toyLines } from "../../../data/mascot";
+
+    const crate = document.querySelector<HTMLElement>("[data-crate]");
+    crate?.querySelector("[data-crate-flip]")?.addEventListener("click", () => {
+        const over = !crate.hasAttribute("data-flipped");
+        crate.toggleAttribute("data-flipped", over);
+        cueMascot(over ? { say: toyLines.upsideDown, move: "shake" } : { say: toyLines.upright, move: "hop" });
+    });
+</script>
+
+<style is:global>
+    /* The hard amber shadow is a drop shadow on the wrapper, so it stays
+       bottom right whichever way up the crate is. */
+    .crate-wrap {
+      width: 300px;
+      max-width: 100%;
+      filter: drop-shadow(6px 6px 0 var(--accent));
+    }
+    .crate-wrap:hover .crate { animation: crate-rattle 0.45s ease-in-out; }
+    .crate {
+      position: relative;
+      min-height: 260px;
+      padding: 38px 14px 42px;
+      border: 1px solid var(--line-2);
+      background: var(--art-bg);
+      transition: rotate 0.75s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .crate[data-flipped] { rotate: 180deg; }
+    .crate-tape {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 14px;
+      background: var(--red);
+      color: var(--on-primary);
+      font: 500 8px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .crate-label {
+      padding: 11px 12px 10px;
+      border: 1px solid rgba(7, 7, 7, 0.2);
+      background: var(--art-fg);
+      color: var(--art-bg);
+      transform: rotate(-1deg);
+      box-shadow: 2px 2px 0 rgba(7, 7, 7, 0.2);
+      transition: translate 0.4s cubic-bezier(0.5, 0, 0.75, 0), rotate 0.4s;
+    }
+    /* Upside down, the list drops to what is now the floor, after the turn. */
+    .crate[data-flipped] .crate-label {
+      translate: 0 -12px;
+      rotate: 4deg;
+      transition: translate 0.35s cubic-bezier(0.5, 0, 0.75, 0) 0.55s, rotate 0.35s 0.55s;
+    }
+    .crate-label-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(7, 7, 7, 0.25);
+      font: 500 7px/1.4 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .crate-list {
+      margin: 6px 0 0;
+      padding: 0;
+      list-style: none;
+      font: 400 10px/1.7 var(--mono);
+    }
+    .crate-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .crate-list li::after {
+      content: '✓';
+      color: var(--red);
+      font-size: 8px;
+    }
+    .crate-barcode {
+      height: 22px;
+      margin-top: 9px;
+      background: repeating-linear-gradient(
+        90deg,
+        currentColor 0 2px,
+        transparent 2px 4px,
+        currentColor 4px 5px,
+        transparent 5px 9px,
+        currentColor 9px 12px,
+        transparent 12px 14px,
+        currentColor 14px 15px,
+        transparent 15px 19px
+      );
+      opacity: 0.65;
+    }
+    .crate-stamp {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      padding: 4px 6px;
+      border: 1px solid var(--red);
+      color: var(--red);
+      font: 500 8px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transform: rotate(-6deg);
+    }
+    .crate-up {
+      position: absolute;
+      left: 10px;
+      bottom: 11px;
+      padding: 6px;
+      border: 1px dashed transparent;
+      background: none;
+      font: 500 7px/1.4 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--art-dim);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .crate-up:hover { border-color: var(--art-accent); color: var(--art-fg); }
+    .crate-up b {
+      display: inline-block;
+      color: var(--art-accent);
+      font-weight: 400;
+    }
+    .crate-up:hover b { animation: crate-arrows 0.6s ease-in-out infinite alternate; }
+
+    @keyframes crate-rattle {
+      0%, 100% { translate: 0 0; }
+      20% { translate: -2px 0; }
+      40% { translate: 2px -1px; }
+      60% { translate: -1px 0; }
+      80% { translate: 1px 0; }
+    }
+    @keyframes crate-arrows { to { translate: 0 -2px; } }
+
+    @media (max-width: 860px) {
+      .crate-wrap { justify-self: center; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .crate,
+      .crate-label,
+      .crate[data-flipped] .crate-label { transition: none; }
+      .crate-wrap:hover .crate,
+      .crate-up:hover b { animation: none; }
+    }
+</style>

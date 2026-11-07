@@ -1,0 +1,164 @@
+---
+// The gate's demo, under the recording: hold the pad as you would hold a
+// finger on the sensor, and phone control arms, on this page only. A tap
+// locks it again. A press let go too soon gets a shake; a keyboard press
+// arms or locks at once. The plate shows the state (Gate.astro, data-armed)
+// and A-01 gets its colour back.
+---
+
+<button class="arm-pad" type="button" data-arm aria-pressed="false" aria-label="Phone control demo: hold to arm">
+    <span class="arm-print" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+            <path d="M6.5 5.2a8.6 8.6 0 0 1 11 0"></path>
+            <path d="M5 18v-6.5a7 7 0 0 1 14 0V14"></path>
+            <path d="M19 17c0 1.4-.3 2.5-.8 3.4"></path>
+            <path d="M8.5 20.5v-8.8a3.5 3.5 0 0 1 7 0v3.8"></path>
+            <path d="M15.5 18.5v2"></path>
+            <path d="M12 11.5v8"></path>
+        </svg>
+    </span>
+    <span class="arm-text" aria-hidden="true">
+        <b class="arm-off">Hold to arm</b>
+        <b class="arm-on">Armed · tap to lock</b>
+        <small>Demo · this page only</small>
+    </span>
+</button>
+
+<script>
+    import { cueMascot } from "../../../lib/mascotCue";
+    import { toyLines } from "../../../data/mascot";
+
+    const pad = document.querySelector<HTMLButtonElement>("[data-arm]");
+    const plate = pad?.closest<HTMLElement>(".gate-plate");
+    if (pad && plate) {
+        // As long as the ring takes to fill (.arm-pad[data-holding]).
+        const HOLD = 900;
+        let timer = 0;
+        // What this press did, read when its click arrives.
+        let armedNow = false;
+        let letGo = false;
+
+        const isArmed = () => plate.hasAttribute("data-armed");
+        const set = (on: boolean) => {
+            plate.toggleAttribute("data-armed", on);
+            pad.setAttribute("aria-pressed", String(on));
+            pad.setAttribute("aria-label", on ? "Phone control demo: armed, press to lock" : "Phone control demo: hold to arm");
+            cueMascot(
+                on ? { say: toyLines.armed, move: "hop", armed: true } : { say: toyLines.relocked, move: "shake", armed: false },
+            );
+        };
+        const release = () => {
+            if (!pad.hasAttribute("data-holding")) return;
+            window.clearTimeout(timer);
+            pad.removeAttribute("data-holding");
+            letGo = true;
+        };
+
+        pad.addEventListener("pointerdown", (e) => {
+            armedNow = letGo = false;
+            if (e.button !== 0 || isArmed()) return;
+            pad.setAttribute("data-holding", "");
+            timer = window.setTimeout(() => {
+                pad.removeAttribute("data-holding");
+                armedNow = true;
+                set(true);
+            }, HOLD);
+        });
+        for (const type of ["pointerup", "pointerleave", "pointercancel"]) pad.addEventListener(type, release);
+        // A long press on a phone would open the context menu instead.
+        pad.addEventListener("contextmenu", (e) => e.preventDefault());
+
+        // The click comes after the mascot's tap narration, so each branch
+        // has the last word.
+        pad.addEventListener("click", (e) => {
+            if (e.detail === 0) return set(!isArmed());
+            if (armedNow) {
+                armedNow = false;
+                return cueMascot({ say: toyLines.armed });
+            }
+            if (letGo) {
+                letGo = false;
+                pad.removeAttribute("data-nope");
+                void pad.offsetWidth;
+                pad.setAttribute("data-nope", "");
+                return cueMascot({ say: toyLines.tooQuick, move: "shake" });
+            }
+            if (isArmed()) set(false);
+        });
+    }
+</script>
+
+<style is:global>
+    /* The ring is the hold: --arm runs 0 to 1 round the pad while pressed,
+       and drains back when let go. */
+    @property --arm {
+      syntax: '<number>';
+      inherits: false;
+      initial-value: 0;
+    }
+    .arm-pad {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 7px 14px 7px 7px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: none;
+      color: var(--art-fg);
+      text-align: left;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: none;
+      transition: border-color 0.15s;
+    }
+    .arm-pad:hover { border-color: var(--art-accent); }
+    .arm-pad[data-nope] { animation: arm-nope 0.4s linear; }
+    .arm-print {
+      --arm: 0;
+      display: grid;
+      flex: none;
+      width: 46px;
+      height: 46px;
+      padding: 2px;
+      background: conic-gradient(var(--red) calc(var(--arm) * 1turn), rgba(255, 255, 255, 0.14) 0);
+      transition: --arm 0.25s ease-out;
+    }
+    .arm-print svg {
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+      background: var(--art-bg);
+      color: var(--art-muted);
+      transition: background-color 0.2s, color 0.2s;
+    }
+    .arm-pad[data-holding] .arm-print { --arm: 1; transition: --arm 0.9s linear; }
+    .arm-pad[data-holding] .arm-print svg { color: var(--art-fg); }
+    .arm-pad[aria-pressed='true'] .arm-print { --arm: 1; }
+    .arm-pad[aria-pressed='true'] .arm-print svg { background: var(--red); color: var(--on-primary); }
+    .arm-text { display: grid; gap: 4px; }
+    .arm-text b {
+      font: 500 9.5px/1.2 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .arm-text small {
+      font: 500 7.5px/1.2 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--art-dim);
+    }
+    .arm-on,
+    .arm-pad[aria-pressed='true'] .arm-off { display: none; }
+    .arm-pad[aria-pressed='true'] .arm-on { display: block; color: var(--art-accent); }
+
+    @keyframes arm-nope {
+      0%, 100% { translate: 0 0; }
+      20%, 60% { translate: -4px 0; }
+      40%, 80% { translate: 4px 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .arm-pad[data-nope] { animation: none; }
+    }
+</style>
