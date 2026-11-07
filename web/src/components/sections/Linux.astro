@@ -221,6 +221,10 @@ import BorderSeal from "./linux/BorderSeal.astro";
     .linux-cta { margin-top: 18px; }
     .linux-cta .btn:hover svg { transform: translate(1px, -1px); }
 
+    /* Two columns get tight here: give the passports the room their fields need. */
+    @media (max-width: 1180px) {
+      .linux-grid { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
+    }
     @media (max-width: 980px) {
       .linux-grid { grid-template-columns: 1fr; }
     }

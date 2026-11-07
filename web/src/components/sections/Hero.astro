@@ -259,6 +259,10 @@ import { site } from "../../data/site";
     @media (max-width: 420px) {
       .hero-note { gap: 8px 12px; }
     }
+    /* Landscape phones: centring on the tall phone pushes the headline off screen. */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .hero { align-items: start; }
+    }
 
     /* spec strip */
     .specs {

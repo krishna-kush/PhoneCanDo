@@ -74,12 +74,18 @@ import LogoMark from './LogoMark.astro';
   }
   .nav-links { display: flex; gap: 24px; margin-left: auto; }
   .nav-links a {
+    position: relative;
     font: 500 11px/1 var(--mono);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
   }
   .nav-links a:hover { color: var(--red); }
+  /* The labels are 11px tall: their hit areas reach a finger's size and meet
+     across the 24px gaps, so a tap between two links still lands on one. */
+  .nav-links a::before { content: ''; position: absolute; inset: -12px; }
+  .nav .brand { position: relative; }
+  .nav .brand::before { content: ''; position: absolute; inset: -10px -6px; }
   .nav-cta { display: flex; align-items: center; gap: 10px; margin-left: 4px; }
   .nav .btn { height: 34px; padding: 0 13px; font-size: 10px; }
   .theme-toggle {
@@ -110,11 +116,24 @@ import LogoMark from './LogoMark.astro';
   @media (max-width: 1100px) {
     .nav-doc { display: none; }
   }
+  /* The full row needs ~810px: drop GitHub (the footer has it) before the links. */
+  @media (max-width: 860px) {
+    .nav-cta .ghost { display: none; }
+  }
   @media (max-width: 760px) {
     .nav-links { display: none; }
     .nav { gap: 12px; }
     .nav-cta { margin-left: auto; }
-    .nav-cta .ghost { display: none; }
+  }
+  /* Brand, toggle and Download need ~330px: trim the chrome, keep the label. */
+  @media (max-width: 360px) {
+    .nav-cta { gap: 8px; }
+    .nav .btn { padding: 0 10px; }
+    .nav .btn-primary svg { display: none; }
+  }
+  /* Fold cover screens: the theme follows the system anyway. */
+  @media (max-width: 300px) {
+    .theme-toggle { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {

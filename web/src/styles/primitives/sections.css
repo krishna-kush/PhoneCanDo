@@ -72,7 +72,7 @@
 
 @media (max-width: 980px) {
   .sec-head { grid-template-columns: 150px minmax(0, 1fr); gap: 16px; }
-  .sec-rail .fig-label { font-size: 8px; }
+  .sec-rail .fig-label { font-size: 8px; white-space: normal; }
   .sec-rail .kicker { white-space: normal; }
   .sec-body { padding-left: 20px; }
 }
