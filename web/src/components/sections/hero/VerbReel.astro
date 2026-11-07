@@ -1,7 +1,8 @@
 ---
 // The headline's verb is a slot reel: press it and it rattles through the
 // things the agent does to a phone, then lands on the next one. The page
-// ships with the first; every verb here has to be true of the app.
+// ships with the first and spins once on load to land on it; every verb here
+// has to be true of the app.
 const verbs = ['use', 'read', 'drive', 'tap', 'silence', 'run'];
 ---
 
@@ -19,8 +20,12 @@ const verbs = ['use', 'read', 'drive', 'tap', 'silence', 'run'];
     // Each blurred tick waits longer than the last, like a reel running down.
     const TICKS = [0, 60, 130, 215, 320];
     const SETTLE = 430;
+    // The load spin waits for the page to finish loading and sit in view a
+    // beat, so it is seen and not lost in the first paint.
+    const INTRO_WAIT = 1200;
     let at = 0;
     let spinning = false;
+    let pressed = false;
 
     const tick = (word: string) => {
       reel.textContent = word;
@@ -32,7 +37,8 @@ const verbs = ['use', 'read', 'drive', 'tap', 'silence', 'run'];
         { duration: 90, easing: 'ease-out' }
       );
     };
-    const land = () => {
+    // The load spin lands quietly; only a press talks to the mascot.
+    const land = (cue: boolean) => {
       spinning = false;
       reel.textContent = verbs[at];
       if (!still.matches)
@@ -40,13 +46,9 @@ const verbs = ['use', 'read', 'drive', 'tap', 'silence', 'run'];
           [{ translate: '0 -0.42em', scale: '1 1.12' }, { translate: '0 0.06em', scale: '1.06 0.94', offset: 0.55 }, { translate: '0 0', scale: '1' }],
           { duration: 420, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
         );
-      cueMascot({ say: toyLines.verb(verbs[at]), move: 'hop' });
+      if (cue) cueMascot({ say: toyLines.verb(verbs[at]), move: 'hop' });
     };
-
-    reel.addEventListener('click', () => {
-      if (spinning) return;
-      at = (at + 1) % verbs.length;
-      if (still.matches) return land();
+    const spin = (cue: boolean) => {
       spinning = true;
       // The rattle never shows the verb it is about to land on, nor the same
       // one twice running.
@@ -57,8 +59,27 @@ const verbs = ['use', 'read', 'drive', 'tap', 'silence', 'run'];
           shown = pool[Math.floor(Math.random() * pool.length)];
           tick(shown);
         }, ms);
-      window.setTimeout(land, SETTLE);
+      window.setTimeout(() => land(cue), SETTLE);
+    };
+
+    reel.addEventListener('click', () => {
+      pressed = true;
+      if (spinning) return;
+      at = (at + 1) % verbs.length;
+      if (still.matches) return land(true);
+      spin(true);
     });
+
+    // A tab opened in the background starts its wait once it is shown; a
+    // press before the spin calls it off.
+    const intro = () => {
+      if (document.hidden) return document.addEventListener('visibilitychange', intro, { once: true });
+      window.setTimeout(() => pressed || spin(false), INTRO_WAIT);
+    };
+    if (!still.matches) {
+      if (document.readyState === 'complete') intro();
+      else window.addEventListener('load', intro, { once: true });
+    }
   }
 </script>
 
