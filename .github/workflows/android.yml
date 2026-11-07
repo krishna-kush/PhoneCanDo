@@ -15,6 +15,22 @@ on:
       - 'app/**'
       # Pulled into the app's Gradle build (app/android/settings.gradle includeBuild).
       - 'pce/**'
+      # Compiled into the APK by app/modules/phonecando-linux (CMake), and
+      # the Linux runtime modules it includes (app/plugins/withLreCompositeBuild.js).
+      # proot's stage script checks the staged artifact in the release job;
+      # the image lock names the Default image the release job stages.
+      - 'lre/launcher/**'
+      - 'lre/proot/stage.sh'
+      - 'lre/images/default/lock.json'
+      - 'lre/images/default/lock/**'
+      - 'lre/api/**'
+      - 'lre/tar/**'
+      - 'lre/oci/**'
+      - 'lre/image/**'
+      - 'lre/cli/build.gradle.kts'
+      - 'lre/*.kts'
+      - 'lre/gradle.properties'
+      - 'lre/gradle/**'
       # Bundled into the app by its telemetry adapter (app/src/engine/telemetry/).
       - 'tce/client/**'
       - 'tce/core/**'
@@ -34,6 +50,22 @@ on:
       - 'app/**'
       # Pulled into the app's Gradle build (app/android/settings.gradle includeBuild).
       - 'pce/**'
+      # Compiled into the APK by app/modules/phonecando-linux (CMake), and
+      # the Linux runtime modules it includes (app/plugins/withLreCompositeBuild.js).
+      # proot's stage script checks the staged artifact in the release job;
+      # the image lock names the Default image the release job stages.
+      - 'lre/launcher/**'
+      - 'lre/proot/stage.sh'
+      - 'lre/images/default/lock.json'
+      - 'lre/images/default/lock/**'
+      - 'lre/api/**'
+      - 'lre/tar/**'
+      - 'lre/oci/**'
+      - 'lre/image/**'
+      - 'lre/cli/build.gradle.kts'
+      - 'lre/*.kts'
+      - 'lre/gradle.properties'
+      - 'lre/gradle/**'
       # Bundled into the app by its telemetry adapter (app/src/engine/telemetry/).
       - 'tce/client/**'
       - 'tce/core/**'
@@ -57,6 +89,15 @@ on:
         required: false
         default: ''
         type: string
+      proot_run_id:
+        description: >-
+          Optional run id of a proot.yml run: its proot-android-arm64
+          artifact is staged into the release-shape build (lre/proot/stage.sh
+          checks it against its SHA256SUMS) and the audit's proot gate is
+          enforced.
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -77,6 +118,20 @@ defaults:
     shell: bash
 
 jobs:
+  # The PTY's plain POSIX core (app/modules/phonecando-terminal/android/src/
+  # main/cpp/pty) on the host: spawn, env, fds, signals, reaping, kill and
+  # resize, with close_range and with the fallback close loop.
+  pty-host-test:
+    name: PTY core host test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and run the PTY core test
+        run: sh app/modules/phonecando-terminal/android/src/test/c/run.sh | tee -a "$GITHUB_STEP_SUMMARY"
+
   prebuild:
     name: Prebuild (config plugins)
     runs-on: ubuntu-latest
@@ -148,6 +203,14 @@ jobs:
         id: build
         working-directory: app/android
         run: ./gradlew ":app:assemble${CHANNEL^}Debug" -PreactNativeArchitectures="$ABIS" --stacktrace --console=plain
+      # The engine host (agents, supervisor, bridge, redaction) and the Linux
+      # host (records, jobs, terminal recipes, play refusals) on the JVM, per
+      # channel: full adds the phone-control routes, play the Linux refusals.
+      - name: JVM tests (runner + linux, ${{ matrix.channel }})
+        working-directory: app/android
+        run: >-
+          ./gradlew ":phonecando-runner:test${CHANNEL^}DebugUnitTest"
+          ":phonecando-linux:test${CHANNEL^}DebugUnitTest" --stacktrace --console=plain
       - name: Audit APK
         run: >-
           node .github/ci/android/audit-apk.mjs
@@ -239,6 +302,50 @@ jobs:
           fi
           echo "mode=$mode" >>"$GITHUB_OUTPUT"
           echo "Engine payload: **$([ "$mode" = required ] && echo staged || echo 'not staged (not in the repository)')**" >>"$GITHUB_STEP_SUMMARY"
+      - name: Fetch proot (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.proot_run_id != '' }}
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: proot-android-arm64
+          run-id: ${{ inputs.proot_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/proot
+      - name: Stage proot
+        id: proot
+        env:
+          PROOT_DIR: ${{ runner.temp }}/proot
+        run: |
+          set -euo pipefail
+          # Not in the repository (lre/proot builds it); without it full and
+          # lite carry the launcher but no proot, and the audit skips that gate.
+          mode=optional
+          if [ -f "$PROOT_DIR/libproot.so" ] && [ -f "$PROOT_DIR/libproot-loader.so" ]; then
+            bash lre/proot/stage.sh "$PROOT_DIR"
+            mode=required
+          fi
+          echo "mode=$mode" >>"$GITHUB_OUTPUT"
+          echo "proot: **$([ "$mode" = required ] && echo staged || echo 'not staged (not in the repository)')**" >>"$GITHUB_STEP_SUMMARY"
+      - name: Stage the locked Default image
+        id: image
+        env:
+          IMAGES: ${{ runner.temp }}/images
+        run: |
+          set -euo pipefail
+          # lre/images/default/lock.json names the image the APK ships; all
+          # nulls means nothing is locked yet (exit 3): build without it.
+          rc=0
+          bash lre/images/default/lock/check.sh --locked || rc=$?
+          mode=optional
+          if [ "$rc" -eq 0 ]; then
+            bash lre/images/default/lock/fetch.sh "$IMAGES"
+            bash lre/images/default/lock/stage.sh "$IMAGES"
+            mode=required
+          elif [ "$rc" -ne 3 ]; then
+            exit "$rc"
+          fi
+          echo "mode=$mode" >>"$GITHUB_OUTPUT"
+          echo "Default image: **$([ "$mode" = required ] && echo 'staged from the lock' || echo 'not staged (nothing locked yet)')**" >>"$GITHUB_STEP_SUMMARY"
       - name: Generate a throwaway release key
         id: key
         run: |
@@ -277,6 +384,8 @@ jobs:
         env:
           CERT_SHA256: ${{ steps.key.outputs.cert_sha256 }}
           ENGINE: ${{ steps.engine.outputs.mode }}
+          PROOT: ${{ steps.proot.outputs.mode }}
+          IMAGE: ${{ steps.image.outputs.mode }}
         run: |
           set -uo pipefail
           status=0
@@ -284,7 +393,7 @@ jobs:
             node .github/ci/android/audit-apk.mjs \
               --apk "app/android/app/build/outputs/apk/$ch/release/app-$ch-release.apk" \
               --channel "$ch" --build release --abis "$ABIS" \
-              --cert-sha256 "$CERT_SHA256" --engine "$ENGINE" \
+              --cert-sha256 "$CERT_SHA256" --engine "$ENGINE" --proot "$PROOT" --image "$IMAGE" \
               --json "$RUNNER_TEMP/out/$ch/audit.json" || status=1
           done
           exit "$status"

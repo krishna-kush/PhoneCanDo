@@ -2,7 +2,8 @@
 // CI audit for one channel APK built by .github/workflows/android.yml:
 //   node .github/ci/android/audit-apk.mjs --apk <file> --channel lite|full|play
 //     --build debug|release --abis arm64-v8a[,x86_64]
-//     [--cert-sha256 <hex>] [--engine required|optional] [--json <out.json>]
+//     [--cert-sha256 <hex>] [--engine required|optional]
+//     [--proot required|optional] [--image required|optional] [--json <out.json>]
 // Reuses the release gate (scripts/apk-audit.mjs) where it applies to a CI
 // build: the channel audit always; the signer check against the run's
 // throwaway key (the real release key never reaches CI); the engine check
@@ -23,6 +24,10 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const RUNNER = join(ROOT, 'app/modules/phonecando-runner');
 const CHANNELS = ['full', 'lite', 'play'];
 const PTY_LIB = 'libphonecando_pty.so';
+// The Linux runtime (app/modules/phonecando-linux): our launcher is built on
+// every ABI; proot and its loader are staged for arm64 only.
+const LINUX_LAUNCHER = 'libphonecando_launch.so';
+const PROOT_LIBS = ['libproot.so', 'libproot-loader.so'];
 const BUNDLE = 'assets/index.android.bundle';
 // Every agent kind's config as phonecando-runner's syncAgentConfig packages
 // it: only full ships the full-only part; the other channels swap in the
@@ -33,7 +38,9 @@ const AGENT_CONFIGS = [
     full: 'agents/oc/config',
     lite: 'agents/oc/config-lite',
     required: 'opencode.json',
-    fullOnly: 'plugins/automation/',
+    // Phone-control code: the automation plugin and the generic tools'
+    // control/ part (agents/shared/phone-tools, packaged as phone-tools/).
+    fullOnly: ['plugins/automation/', 'phone-tools/control/'],
   },
 ];
 
@@ -46,6 +53,10 @@ if (!['debug', 'release'].includes(build)) usage('--build must be debug|release'
 const abis = (args.abis ?? usage('--abis is required')).split(',').map((a) => a.trim()).filter(Boolean);
 const engine = args.engine ?? 'optional';
 if (!['required', 'optional'].includes(engine)) usage('--engine must be required|optional');
+const prootGate = args.proot ?? 'optional';
+if (!['required', 'optional'].includes(prootGate)) usage('--proot must be required|optional');
+const imageGate = args.image ?? 'optional';
+if (!['required', 'optional'].includes(imageGate)) usage('--image must be required|optional');
 if (!existsSync(apk)) usage(`no APK at ${apk}`);
 
 const appJson = JSON.parse(readFileSync(join(ROOT, 'app/app.json'), 'utf8')).expo;
@@ -131,16 +142,19 @@ check('agent config', () => {
   const notes = [];
   for (const cfg of AGENT_CONFIGS) {
     if (!entries.has(`${cfg.assets}/${cfg.required}`)) throw new Error(`${cfg.assets}/${cfg.required} missing`);
-    const fullOnly = [...entries.keys()].some((n) => n.startsWith(`${cfg.assets}/${cfg.fullOnly}`));
-    if (channel === 'full' && !fullOnly) throw new Error(`full lacks ${cfg.assets}/${cfg.fullOnly}`);
-    if (channel !== 'full' && fullOnly) throw new Error(`${channel} ships ${cfg.assets}/${cfg.fullOnly}`);
+    const names = [...entries.keys()];
+    const shipped = cfg.fullOnly.filter((dir) => names.some((n) => n.startsWith(`${cfg.assets}/${dir}`)));
+    const lacking = cfg.fullOnly.filter((dir) => !shipped.includes(dir));
+    if (channel === 'full' && lacking.length) throw new Error(`full lacks ${lacking.map((d) => `${cfg.assets}/${d}`).join(', ')}`);
+    if (channel !== 'full' && shipped.length) throw new Error(`${channel} ships ${shipped.map((d) => `${cfg.assets}/${d}`).join(', ')}`);
+    const fullOnly = shipped.length > 0;
     const agents = entries.get(`${cfg.assets}/AGENTS.md`);
     if (!agents) throw new Error(`${cfg.assets}/AGENTS.md missing`);
     const source = join(RUNNER, channel === 'full' ? cfg.full : cfg.lite, 'AGENTS.md');
     if (!readZipEntry(bytes, agents).equals(readFileSync(source))) {
       throw new Error(`${cfg.assets}/AGENTS.md differs from ${source.slice(ROOT.length + 1)}`);
     }
-    notes.push(`${basename(cfg.assets)}: ${channel === 'full' ? 'full' : 'lite'} AGENTS.md${fullOnly ? ` + ${cfg.fullOnly}` : ''}`);
+    notes.push(`${basename(cfg.assets)}: ${channel === 'full' ? 'full' : 'lite'} AGENTS.md${fullOnly ? ` + ${shipped.join(' + ')}` : ''}`);
   }
   return notes.join('; ');
 });
@@ -165,6 +179,48 @@ check('engine payload', () => {
   const present = ENGINE_LIBS.filter((lib) => entries.has(lib));
   if (!present.length) return 'not staged (not in git); gate skipped';
   return `${present.length === ENGINE_LIBS.length ? 'present' : `partly present (${present.join(', ')})`}, not gated`;
+});
+// The baked Default env image (lre/images/default): assets/default-image/
+// in full and lite, exactly the locked one in a release, stored (xz is
+// compressed already), never a local build in a release; none in play.
+const IMAGE_DIR = 'assets/default-image';
+check('default image', () => {
+  const shipped = [...entries.keys()].filter((n) => n.startsWith(`${IMAGE_DIR}/`));
+  if (channel === 'play') {
+    if (shipped.length) throw new Error(`play ships ${shipped.join(', ')}`);
+    return 'none (play)';
+  }
+  const tarball = entries.get(`${IMAGE_DIR}/rootfs.tar.xz`);
+  const manifest = entries.get(`${IMAGE_DIR}/image.json`);
+  if (!tarball || !manifest) {
+    if (imageGate === 'required') throw new Error(`${IMAGE_DIR}/rootfs.tar.xz and image.json are required`);
+    return 'not staged, not gated';
+  }
+  if (tarball.method !== 0) throw new Error(`${IMAGE_DIR}/rootfs.tar.xz is deflated (method ${tarball.method}); it must be stored`);
+  const info = JSON.parse(readZipEntry(bytes, manifest).toString('utf8'));
+  if (build === 'release' && (info.local || !info.release)) {
+    throw new Error(`${IMAGE_DIR}/image.json is a local build (release ${info.release ?? 'null'}); a release ships only the locked image`);
+  }
+  const lock = JSON.parse(readFileSync(join(ROOT, 'lre/images/default/lock.json'), 'utf8'));
+  if (build === 'release' && lock.sha256 && (info.sha256 !== lock.sha256 || tarball.usize !== lock.size)) {
+    throw new Error(`${IMAGE_DIR} is not the locked image (lock ${lock.sha256.slice(0, 12)}, staged ${String(info.sha256).slice(0, 12)})`);
+  }
+  return `${info.version ?? '?'} (${mib(tarball.usize)}, stored${info.local ? ', local build' : ''})`;
+});
+check('linux runtime', () => {
+  const linuxNames = [LINUX_LAUNCHER, ...PROOT_LIBS];
+  const shipped = [...entries.keys()].filter((n) => linuxNames.includes(basename(n)) && n.startsWith('lib/'));
+  // play ships no Linux (Google Play forbids downloading executable code).
+  if (channel === 'play') {
+    if (shipped.length) throw new Error(`play ships ${shipped.join(', ')}`);
+    return 'none (play)';
+  }
+  const missing = abis.filter((abi) => !(entries.get(`lib/${abi}/${LINUX_LAUNCHER}`)?.usize > 0));
+  if (missing.length) throw new Error(`${LINUX_LAUNCHER} missing for ${missing.join(', ')}`);
+  const proot = PROOT_LIBS.filter((lib) => entries.get(`lib/arm64-v8a/${lib}`)?.usize > 0);
+  if (proot.length === 1) throw new Error(`only ${proot[0]} staged; proot needs ${PROOT_LIBS.join(' + ')}`);
+  if (prootGate === 'required' && !proot.length) throw new Error(`proot was staged but ${PROOT_LIBS.join(' + ')} are not in lib/arm64-v8a`);
+  return `launcher on ${abis.join(', ')}; proot ${proot.length ? 'staged' : 'not staged, not gated'}`;
 });
 
 const abiRows = abis.map((abi) => {

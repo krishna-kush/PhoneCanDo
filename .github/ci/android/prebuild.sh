@@ -46,7 +46,9 @@ need app/build.gradle '// phonecando: debuggable variants begin' withBuildChanne
 need app/build.gradle '// phonecando: release signing begin' withReleaseSigning
 need app/build.gradle 'signingConfig signingConfigs.release' withReleaseSigning
 need app/build.gradle '// phonecando: dev app id begin' withDevAppId
+need app/build.gradle '// phonecando: stored assets begin' withStoredAssets
 need settings.gradle '// phonecando: build the PCE from source begin' withPceCompositeBuild
+need settings.gradle '// phonecando: build the Linux runtime from source begin' withLreCompositeBuild
 need gradle.properties 'reactNativeArchitectures=' withBuildPerf
 need build.gradle '// phonecando: min sdk begin' withMinSdk
 need app/src/full/AndroidManifest.xml 'PhoneCanDoAccessibilityService' withBuildChannel
