@@ -8,6 +8,12 @@
   `app/modules/phonecando-runner/android/src/main/libs/arm64-v8a/`
   (`liboc-engine.so`, `liboc-opentui.so`). It is gitignored; build it via
   `../../../docs/bootstrap/README.md`.
+- For Linux images (full and lite): proot staged into
+  `app/modules/phonecando-linux/android/src/linux/libs/arm64-v8a/`
+  (`lre/proot/stage.sh`) and a Default image (`./manage image fetch` +
+  `./manage image stage` for the locked one, or `./manage image build` +
+  `./manage image stage --local` for a local one, debug builds only). Both are gitignored. Without them the app runs, and first launch
+  makes an Android image (no Linux).
 
 ## Install and run
 
@@ -38,11 +44,18 @@ from Metro; native module, manifest or dependency changes need another
 
 ## First boot
 
-- Home pairs the opencode web UI with a fresh code per mount; projects and
-  sessions live there.
-- The terminal opens from the header menu + folder picker and attaches to the
-  same engine.
-- Settings shows engine status and Start/Stop; ports are service-owned.
+- First launch makes the first agent and its machine: with Linux, an image
+  of the Default env (offline, about half a minute); without (play, or no
+  proot or Default image staged), an Android image. A failure says why, with
+  Retry and, on the Linux path, Continue without Linux.
+- Home pairs the active agent's web UI with a fresh code per mount; projects
+  and sessions live there. The header title switches agents.
+- The terminal opens from the header menu + folder picker and attaches to
+  the active agent's engine.
+- The Env tab lists envs and their machines (one image + its agent each) and
+  adds new ones. An agent's page holds its engine (state, Start/Stop), the
+  ways in (chat, terminal UI, Linux shell), its machine, Reset and Delete.
+- Settings holds app-wide options only; ports and passwords stay native.
 
 ## Checks
 

@@ -36,3 +36,16 @@ Every failure is structured:
 The recovery hint is part of the contract: the AI should be able to recover
 without guessing. The bridge envelope has the same shape; see
 `pce/docs/api/lifecycle.md` for the library-side `PceResult` rules.
+
+## Bridge refusals
+
+The host bridge refuses some calls itself, before the PCE sees them, with an
+HTTP status and a lowercase code (`../../app/docs/modules/bridge.md`):
+
+| Code | HTTP | Meaning | Recovery |
+|---|---|---|---|
+| `unauthorized` | 401 | missing bearer, or a token that belongs to no agent | stop; restart the agent's engine from the app |
+| `not_found` | 404 | no such route, or a full-only route in lite/play | use what `/ping` reports |
+| `automation_off` | 403 | phone control is locked | `mobile_request_unlock` |
+| `automation_unavailable` | 503 | the accessibility service is not connected | `mobile_open_accessibility` |
+| `control_busy` | 409 | another agent holds the screen; the body adds `holder` (its name) and `retryAfterMs` | wait `retryAfterMs`, then call again; tell the user if it stays busy |

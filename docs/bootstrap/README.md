@@ -31,6 +31,10 @@ pnpm -C app android:full
 
 `scripts/agents/oc/stage.sh` writes to
 `app/modules/phonecando-runner/android/src/main/libs/arm64-v8a/`.
+`./manage engine oc build|stage [args]` runs the same two scripts from the
+repo root. The Linux runtime's payloads (proot and the Default image) have
+their own builds under `lre/`; see `../../app/docs/guides/development.md` →
+Native payload.
 
 ## Why self-built
 

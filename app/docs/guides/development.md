@@ -24,17 +24,29 @@ UI. Fast Refresh dies silently.
 - `pnpm typecheck` (`tsc --noEmit`) for types.
 - `pnpm check:vectors` for the pure terminal vectors (`keys.ts`,
   `reconcile.ts`).
+- Host C tests: `sh app/modules/phonecando-terminal/android/src/test/c/run.sh`
+  (PTY core) and `bash lre/launcher/test/run.sh` (Linux launcher).
+- `cd lre && ./gradlew build` for the Linux runtime modules and their tests.
 - logcat tags: `[phonecando-kb]`, `[phonecando-size]`.
 - Pixels: `adb exec-out screencap`.
 - Never ship a sizing/layout claim without pixels or logs.
 
 ## Native payload
 
-The opencode and PTY payloads are built outside the JS loop. See
-`../../../docs/bootstrap/README.md` and
-`../../../docs/bootstrap/oc-build.md`. The app ships
-the staged `*.so` files from the runner/terminal module `jniLibs`; nothing in
-`app/android/` is hand-edited.
+The opencode payload, proot and the Default image are built outside the JS
+loop and the app build, then staged (all gitignored):
+
+- opencode: `../../../docs/bootstrap/README.md` and
+  `../../../docs/bootstrap/oc-build.md` (`./manage engine oc build|stage`),
+  into the runner module's `jniLibs`.
+- proot and its loader: `lre/proot/` (`build-android.sh`, `verify.sh`,
+  `stage.sh`), into `phonecando-linux`'s `src/linux/libs/`.
+- The Default image: `./manage image fetch|stage` (the locked one, every
+  full and lite build) or `./manage image build` + `stage --local` (a local
+  one, debug variants only).
+
+The PTY library and the Linux launcher are CMake targets of their modules and
+build with the app. Nothing in `app/android/` is hand-edited.
 
 ## Rules
 

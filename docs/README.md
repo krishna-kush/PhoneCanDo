@@ -2,11 +2,13 @@
 
 Repo-level docs plus the app docs tree. Start with the overview, then use the
 section you need. App implementation docs live in `app/docs/`; the PCE has its
-own tree at `pce/docs/README.md`.
+own tree at `pce/docs/README.md`, and so has the Linux runtime at
+`lre/docs/README.md` (how it fits the app: `overview/architecture.md`).
 
 ## Start here
 
-1. `overview/architecture.md` — how the app, engine and native layers fit.
+1. `overview/architecture.md` — how the app, agents, engines, Linux images and
+   native layers fit.
 2. `overview/modules.md` — where each subsystem lives.
 3. `app/docs/guides/quickstart.md` — install, build and first boot.
 4. `app/docs/guides/development.md` — build/reload loop and verification.
@@ -16,10 +18,11 @@ own tree at `pce/docs/README.md`.
 
 ## Overview
 
-- `overview/architecture.md` — product shape, boundaries, repo map and data
-  flow.
+- `overview/architecture.md` — product shape, agents and engines, envs and
+  images (the Linux runtime), boundaries and repo map.
 - `overview/modules.md` — subsystem map and links to module docs.
-- `overview/status.md` — current engine, automation and device-proof status.
+- `overview/status.md` — current engine, Linux, automation and device-proof
+  status.
 
 ## Automation contract (v1, host-facing)
 
@@ -43,16 +46,19 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 - `app/docs/README.md` — app docs index.
 - `app/docs/guides/quickstart.md` — install, build and first boot.
 - `app/docs/guides/development.md` — dev loop, stale-JS rule and verification.
-- `app/docs/modules/runner.md` — `phonecando-runner`: opencode payload, serve
-  service and notifications.
+- `app/docs/modules/runner.md` — `phonecando-runner`: agents, several engines
+  at once, the foreground service, opencode payload, config seeding and
+  telemetry counters.
 - `app/docs/modules/terminal.md` — `phonecando-terminal`: JNI PTY, xterm
-  renderer and input/sizing contract.
-- `app/docs/modules/chat.md` — pair-loaded opencode web UI in the app shell.
-- `app/docs/modules/bridge.md` — loopback bridge, `mobile_*` tools, trust gate
-  and full/lite/play channels.
+  renderer, input/sizing contract and terminal sessions.
+- `app/docs/modules/chat.md` — the active agent's pair-loaded web UI in the
+  app shell.
+- `app/docs/modules/bridge.md` — loopback bridge, per-agent tokens, prompts,
+  screen lease, `mobile_*` tools, trust gate and full/lite/play channels.
 - `app/docs/modules/automation.md` — PCE host integration, routes, pack
   lifecycle and current implementation status.
-- `app/docs/context.md` — project context and hard-won platform notes.
+- `app/docs/context.md` — project context and hard-won platform notes,
+  Linux images included.
 
 ## Telemetry
 
@@ -64,7 +70,8 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 
 ## Guides
 
-- `guides/testing.md` — app checks, automation test layers and telemetry.
+- `guides/testing.md` — app and Linux runtime checks, CI workflows and
+  automation test layers.
 
 ## Planning
 
@@ -88,6 +95,11 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 - `tce/README.md`, `tce/AGENTS.md` — the telemetry backend and its rules.
 - `docs/bootstrap/README.md`, `docs/bootstrap/oc-build.md`,
   `scripts/agents/oc/` — native payload build.
+- `lre/README.md`, `lre/AGENTS.md`, `lre/docs/README.md` — the Linux
+  runtime engine: Gradle modules, the launcher (`lre/launcher/src/conf.h`
+  is the launch.conf contract), the proot build and the Default image
+  (`./manage image`); open work in `lre/docs/planning/todo.md`. How it
+  fits the app: `overview/architecture.md`.
 - `web/README.md` — the site (static Astro, served by the `tce/` Worker).
 - `AGENTS.md` — coding rules and quality gates.
 

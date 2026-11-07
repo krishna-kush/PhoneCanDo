@@ -1,17 +1,24 @@
 # Status
 
-As of 2026-11-05. Device evidence is Android 16 / API 36.
+As of 2026-11-07. Device evidence is Android 16 / API 36.
 
 ## App and engine
 
 - opencode payload: self-built bionic `opencode v2.0.26-android-phonecando.1`
   (`liboc-engine.so` + `liboc-opentui.so`), web UI embedded, pair API live.
-- Home is the pair-loaded opencode web UI; the terminal tab is the TUI over
-  the own JNI PTY. Sessions and projects live in the web UI.
-- `serve` runs in a foreground service on a service-owned dynamic port, is
-  auth-first, and is quiet when idle.
-- The loopback bridge, `mobile_*` tools, biometric/master-switch gate,
-  five-minute bridge grace and full/lite/play channel split are live.
+- Several agents, each with its own engine in the runner's foreground
+  service (at most three running; the least recently used idle one stops to
+  make room), its own loopback port, password and bridge token. Engines are
+  auth-first and quiet when idle; a dead engine is relaunched by the next
+  start. Agent records live in `files/state/agents.json`.
+- Home is the active agent's pair-loaded web UI, re-paired on every switch;
+  the header switches agents. The terminal tab is the agent's TUI, or a
+  shell in its image, over the own JNI PTY. Sessions and projects live in
+  the web UI.
+- The loopback bridge (one for all agents, a token per agent), `mobile_*`
+  tools, biometric/master-switch gate, per-request prompts, screen lease
+  (one agent drives the screen at a time, 409 `control_busy` for the others)
+  and full/lite/play channel split are live.
 - The `play` channel builds but is a later feature: nothing is released from
   it and it is untested on a device.
 - The sideload path is device-proven (2026-11-03, Android 16, India): lite
@@ -27,6 +34,31 @@ As of 2026-11-05. Device evidence is Android 16 / API 36.
 - `activityName` and `eventSeq` are device-verified. The staged
   `mobile_wait` eventSeq comparison lands with the next APK because the
   generated asset was stale.
+
+## Linux images
+
+- In full and lite an agent's image can be VM-like Linux through proot:
+  the Default env (a Debian-based image baked into the APK), Own envs from
+  container registries, and the Android env (no Linux, the only one in
+  play). The Env tab lists envs and their machines and holds each agent's
+  page (engine, machine, reset, delete); first launch makes the first agent
+  and its machine.
+- Device-proven 2026-11-06 (Moto G96, full debug build): proot with its
+  unbundled loader runs from the engine's own process, the launcher runs by
+  its own name and through a symlinked shim, an Alpine image works as fake
+  root with `apk`, the engine's secrets are scrubbed, and there are no exec
+  denials. The hardened PTY passed on the same phone.
+- Not yet proven on a device: several engines at once, the Env tab and first
+  launch end to end, the dead-engine relaunch, and the baked Default image.
+- `lre/images/default/lock.json` locks no image yet, so builds carry the
+  Default image only when one is staged locally (`./manage image stage
+  --local`, debug builds); release builds refuse to ship without one unless
+  told `--without-linux`.
+- CI: `lre.yml` (runtime modules and launcher), `proot.yml` (the arm64 build
+  and a glibc build booting Alpine), `lre-image.yml` (the Default image,
+  reproducible and tier 1 through launcher and proot) and `lre-compat.yml`
+  (one registry image per package family, plus a weekly report-only
+  rotation); see `../guides/testing.md`.
 
 ## Automation
 

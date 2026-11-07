@@ -35,9 +35,11 @@ stay local; the app's network calls are listed in
 | | |
 |---|---|
 | **Chat** | The opencode web UI, paired with the local engine. |
-| **Terminal** | A real PTY and TUI, rendered by xterm.js. |
+| **Several agents** | Up to three agents run at once, each with its own engine, port and password; switch between them from the header. |
+| **Linux machines** | Each agent works in its own Linux image (proot): the Debian-based default ships in the APK, or pick any arm64 image from Docker Hub. Packages you or the agent install stay in that image. It keeps your work apart; it is not a security sandbox. |
+| **Terminal** | A real PTY and TUI, rendered by xterm.js; or a Linux shell inside an agent's image. |
 | **Phone control** | Accessibility-driven observe/act, gated by an in-app switch. |
-| **Three channels** | `full` with phone control; `lite` without it, the download that installs `full` in place; `play` with neither. |
+| **Three channels** | `full` with phone control and Linux; `lite` with Linux but no phone control, the download that installs `full` in place; `play` with neither (agents use Android's shell). |
 | **Local by default** | Sessions, files and keys stay on the device. Anonymous usage stats are on by default, one switch turns them off (Settings → Privacy), and they carry nothing from your sessions or keys: [`docs/telemetry.md`](docs/telemetry.md). |
 
 ## How it fits

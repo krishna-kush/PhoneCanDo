@@ -91,11 +91,14 @@ Solid app and embeds it as `opencode-web-ui.gen.ts`.
 
 ## Device E2E
 
-1. An old serve survives reinstalls as an orphaned native child. Kill it
-   (`run-as ... kill <pid>`) or the app health-checks the stale engine.
+1. An engine can survive a reinstall as an orphaned native child. Every
+   engine process carries its agent's `PHONECANDO_AGENT` tag, so the next
+   start of that agent's engine ends it; to clear it by hand, `run-as ...
+   kill <pid>`.
 2. `POST /api/pair` → `{code, expires_in}`; `GET /` → web app HTML.
 3. App: pair WebView loads, TUI attaches and renders (renderer init must not
-   throw), prompt → answer works, engine Start/Stop/Refresh healthy.
+   throw), prompt → answer works, engine Start/Stop on the agent's page (Env
+   tab) healthy.
 
 ## Updating to a newer opencode
 

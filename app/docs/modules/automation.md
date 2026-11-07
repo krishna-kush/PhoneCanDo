@@ -44,10 +44,13 @@ fallback) because React Native nodes report clickable without handling
 republish, without adding an Android type to `pce/api`. The service also exposes a
 monotonic `eventSeq`; the bridge snapshot includes it and `mobile_wait` compares
 it (falling back to the node signature) so a change that reverts between polls is
-still noticed. `PhoneCanDoServeService` records the last authenticated bridge call and
-keeps serve alive for five minutes after it; the JS `stopEngineIfIdle` also
-vetoes shutdown while phone control is enabled, so `mobile_home` does not strand
-the next tool call. Device-verified 2026-10-31: `activityName` and `eventSeq`
+still noticed. Every authenticated bridge call marks the calling agent's
+engine used, so it is not the one stopped to make room, and the JS
+background stop (`stopIdleAgents` in `src/state/agents.ts`) does nothing
+while phone control is unlocked, so `mobile_home` does not strand the next
+tool call. The screen routes take the screen lease: with several agents
+running, one drives the screen at a time and the others get 409
+`control_busy` (`bridge.md`). Device-verified 2026-10-31: `activityName` and `eventSeq`
 work; the staged `mobile_wait` eventSeq comparison lands with the next APK
 because the generated asset was stale.
 
@@ -90,10 +93,12 @@ The PCE-backed slice is live; the rest of the API tree is the target surface.
   present and falls back to the node signature. Device-verified 2026-10-31:
   `activityName` and `eventSeq`; the staged eventSeq comparison lands with the
   next APK because the generated asset was stale.
-- Cross-app lifecycle: with phone control enabled, `stopEngineIfIdle` does not
-  stop serve when PhoneCanDo is backgrounded, and the service keeps a five-minute
-  grace after an authenticated bridge call. `mobile_home` therefore no longer
-  strands the next tool call; the JS veto was verified on-device with Metro.
+- Cross-app lifecycle: with phone control enabled, the background stop
+  (`stopIdleAgents`) leaves every engine running when PhoneCanDo is
+  backgrounded, and each bridge call marks the calling agent's engine used.
+  `mobile_home` therefore does not strand the next tool call. The JS veto was
+  verified on-device with Metro in the single-engine build; the multi-agent
+  store keeps the same check.
 - Known limits: Android 11+ package visibility can hide an installed app from
   `getLaunchIntentForPackage` and from the bridge shell's `pm list packages`;
   `mobile_launch` may return `NOT_FOUND` for an app that is present. The app
@@ -149,7 +154,7 @@ a11y and IME. Selector tap behavior is in Bridge routes.
 
 ## Target layout
 
-The current P5 slice is `BridgeServer.kt` (`/pce/*`), the main-source
+The current P5 slice is `bridge/PceRoutes.kt` (`/pce/*`), the main-source
 `PceAutomation.kt` seam, and the full-only
 `src/uiauto/java/com/phonecando/runner/uiauto/PceAutomationImpl.kt`. The layout
 below is the target split, not the current tree.

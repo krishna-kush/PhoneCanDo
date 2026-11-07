@@ -1,10 +1,13 @@
 # AGENTS.md — PhoneCanDo (coding agents read this first)
 
-On-device opencode chat for Android. RN UI talks to a local `opencode serve`
-(foreground service, dynamic port — first request :4097, service persists
-last-good and picks a free one when squatted; see `ensureServe.ts`). The home
-tab is the pair-loaded opencode web UI; the terminal tab is a full TUI over an
-own JNI PTY, rendered by xterm.js in a WebView.
+On-device coding agents for Android (opencode first). Each agent has its own
+local engine (`opencode serve`) in the runner's foreground service: up to
+three at once, each on its own loopback port (its last-good one, else a free
+one), password and bridge token; JS starts them through `ensureEngine.ts`.
+Each agent lives in its own image: VM-like Linux through proot, or Android
+without Linux. The home tab is the active agent's pair-loaded web UI; the
+terminal tab is its TUI, or a shell in its image, over an own JNI PTY,
+rendered by xterm.js in a WebView.
 
 Engine = the local host for one agent; opencode is the first. New
 opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
@@ -13,15 +16,24 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{chat,terminal,env,settings,accessibility,common}/` — feature
-  screens. `accessibility/` is the whole Accessibility setup guide:
+- `app/src/ui/{chat,terminal,env,setup,settings,accessibility,common}/` —
+  feature screens. `accessibility/` is the whole Accessibility setup guide:
   `guide.ts` (pure: the `RESTRICTED_FLOW` switch, steps and every line of
   copy), the hook, the step list, the Settings block and the agent's dialog.
   Terminal split: `TerminalScreen.tsx` (layout only) + `keys.ts`,
   `reconcile.ts`, `sizing.ts` (pure, zero RN imports) + `usePtySession.ts`,
-  `useMirrorInput.ts` (hooks) + `ExtraKeysBar.tsx`.
+  `useMirrorInput.ts`, `useInitialInput.ts` (hooks) + `sessionRecipe.ts`
+  (agent TUI or image shell) + `ExtraKeysBar.tsx`, `FolderPicker.tsx`.
+  `env/` is the Env tab: envs (fixed base OS) → machines (one image + its
+  agent) → the agent's page, plus New env; pure parts in `env/logic/`.
+  `setup/` is first launch (the first agent and its machine). The header
+  agent switcher is `common/agent-switcher/`; Settings is app-wide only.
 - `app/src/engine/` — the ONLY importer of native modules (`terminal.ts`
-  recipe/transport, `runner.ts` prefix). Screens stay dumb.
+  PTY transport, `runner.ts` engine host, `linux/native.ts` Linux runtime,
+  `files.ts` file system, `auth.ts` biometrics). Agents and engines:
+  `engines.ts`, `ensureEngine.ts`, `connection.ts`; agent kinds in `agents/`
+  (`types.ts`, `registry.ts`, `records.ts`, one folder per kind). Screens
+  stay dumb.
 - `theme/tokens.json` — the ONLY palette (dark + light, web-sourced). Web
   (`Base.astro`) and app (`globals/theme.ts`, `tamagui.config.ts`) read it
   directly; never hardcode a theme colour on either side. Brand/favicon
@@ -29,14 +41,30 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
   native icon changes need `expo run:android`. `theme/logo.json` is the one
   shadow + loader spec: web CSS is generated from it in
   `web/src/lib/logoLoaderCss.ts`; the app imports it directly.
-- `app/src/state/` — zustand stores (`enginePort`: first request `'4097'`,
-  adopted from the service via `getServePort`; never user-edited).
-- `app/modules/{phonecando-terminal,phonecando-runner}/` — own Expo modules
-  (Kotlin/JNI `forkpty.c` + TS shims, clean-room). Never Termux code.
+- `app/src/state/` — zustand stores: `app.ts` (navigation, prefs and
+  telemetry slices in `app/`), `agents.ts` (agents, engine states, the
+  active agent), `linux.ts` (envs, images, job progress); multi-step flows in
+  `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
+  native, never in JS state.
+- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux}/` —
+  own Expo modules (Kotlin + TS shims, clean-room). The PTY's plain POSIX
+  core is `phonecando-terminal/android/src/main/cpp/pty/` (`forkpty.c` is the
+  JNI glue). `phonecando-linux` is the Linux runtime's Android host (env and
+  image records, jobs, setup/reset/delete, terminal recipes, the Docker Hub
+  catalog) and packages the launcher and the staged proot libs and Default
+  image (full and lite only; play refuses every Linux path). Its
+  `src/linux/dev-assets/` holds a local, unlocked image for debug variants
+  only (`./manage image stage --local`). Never Termux code in our own
+  modules; programs we ship as-is (opencode, proot from the termux fork) are
+  third-party payloads with their own licenses, built from pinned sources.
   Agent config source: `app/modules/phonecando-runner/agents/<kind>/`
-  (opencode: `agents/oc/config/`, `config-lite/`). Agent kinds: one folder
-  per side (`app/src/engine/agents/oc/`, the runner's `agents/oc/` Kotlin
-  package), listed in a registry; files inside an `oc` folder need no prefix.
+  (opencode: `agents/oc/config/`, `config-lite/`, packaged as assets
+  `oc-config`); kind-neutral phone tools in `agents/shared/phone-tools/`.
+  Agent kinds: one folder per side (`app/src/engine/agents/oc/`, the
+  runner's `agents/oc/` Kotlin package), listed in a registry; files inside
+  an `oc` folder need no prefix. The runner's `engine/` is the supervisor
+  (max 3, LRU idle stop, tagged-process reaper), `bridge/` the loopback
+  bridge (per-agent tokens, prompts, screen lease).
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
 - `docs/README.md` — repo docs map; `app/docs/README.md` — app/engine docs.
@@ -44,12 +72,27 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
   touching native/IME/sizing/automation code. `research/` holds background notes
   and open questions.
 - `docs/bootstrap/` — opencode payload build docs; `scripts/agents/oc/` — engine
-  build/stage scripts and patches. `reference/` is a gitignored local-clone
-  area, not a build input.
+  build/stage scripts and patches (`./manage engine oc build|stage`).
+  `reference/` is a gitignored local-clone area, not a build input.
 - `pce/` — separate Gradle phone-control engine (PCE) build owned by PhoneCanDo;
   read `pce/AGENTS.md`, plan in `pce/docs/planning/plan.md`, work in
   `pce/docs/planning/todo.md`.
   Keep its modules free of PhoneCanDo/React Native types.
+- `lre/` — Linux runtime engine: VM-like Linux images through proot; read
+  `lre/AGENTS.md`, docs in `lre/docs/README.md`, work in
+  `lre/docs/planning/todo.md`.
+  `lre/launcher/` is our clean-room C multi-call launcher (the launch.conf
+  contract is `src/conf.h`); `lre/proot/` builds the termux proot fork from
+  pinned sources (MIT build scripts, `lre/proot/LICENSE`);
+  `lre/images/default/` builds the baked Default image, and its `lock.json`
+  names the one the APK ships (`./manage image build|fetch|stage
+  [--local]|lock`). The pure-JVM Gradle build (`cd lre && ./gradlew build`)
+  has `api` (shared types; the on-disk image layout and the `run/` file
+  contracts are `ImageLayout`), `tar`, `oci`, `image` and `cli` (download +
+  setup on a plain JVM, for CI), with the law api ← tar, api ← oci,
+  api + tar ← image, oci + image ← cli (no android.*, no org.json, image
+  never imports oci). Overview: `docs/overview/architecture.md` → Linux
+  runtime. Only full and lite ship Linux; play has none.
 - `tce/` — Telemetry Collection Engine (own pnpm package): usage-data schema,
   ops, stores, hosts, the client SDK and the Cloudflare Worker config
   (`tce/hosts/cloudflare/wrangler.jsonc`, deployed by Workers Builds on push
@@ -78,8 +121,10 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
   when a build looks stale.
 - New JS native-module imports: restart Metro with `--clear` (stale haste
   map fails "Unable to resolve"). `adb reverse tcp:8081 tcp:8081`.
-- Verify with `tsc --noEmit`, `pnpm check:vectors`, logcat
-  (`[phonecando-kb]`, `[phonecando-size]`), and `adb exec-out screencap`.
+- Verify with `tsc --noEmit`, `pnpm check:vectors`, the host C tests
+  (`sh app/modules/phonecando-terminal/android/src/test/c/run.sh`,
+  `bash lre/launcher/test/run.sh`), logcat (`[phonecando-kb]`,
+  `[phonecando-size]`), and `adb exec-out screencap`.
 
 ## Rules
 
@@ -111,9 +156,10 @@ opencode-specific files get an `oc-` prefix; generic seams (`app/src/engine/`,
 10. PCE work: read `pce/AGENTS.md`. The PCE is a separate Gradle build
    owned by PhoneCanDo; modularity, dependency direction and typed errors are
    quality gates.
-11. CI path filters: `android.yml`, `tce.yml`, `web.yml`, `pce.yml` and
-   `oc-payload.yml` run only for the `paths:` they list. When a change gives a
-   build or check a new input (the app importing a new folder, a CI script
+11. CI path filters: `android.yml`, `tce.yml`, `web.yml`, `pce.yml`,
+   `oc-payload.yml`, `lre.yml`, `proot.yml`, `lre-image.yml` and
+   `lre-compat.yml` run only for the `paths:` they list. When a change gives
+   a build or check a new input (the app importing a new folder, a CI script
    reading a new file, a new packaged asset), add that path to the matching
    lists in the same change. `ci`, `lint`, `security` and `codeql` run on
    everything; never filter them. The nightly runs catch what a list misses.

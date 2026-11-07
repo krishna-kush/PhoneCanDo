@@ -170,7 +170,7 @@ The install row keeps `first_version`, `last_version`, `last_version_code`,
 | `engineStderrTail` | in the schema but **never sent automatically**: raw engine output can contain prompt text, so the app attaches the redacted tail only to a report you send |
 | `lowMemoryTrims` | times Android asked the app to free memory (running low or worse); always 0 on Android 14+, which no longer sends those levels |
 | `batteryOptIgnored` | the app is exempt from battery optimisation |
-| `fgServiceOk` | the engine's foreground service is running |
+| `fgServiceOk` | the engines' foreground service is running: at least one agent's engine is starting, running or stopping |
 | `a11yOn` | the accessibility service is connected (full builds) |
 | `counters` | running totals for this run, ≤ 64 keys of ≤ 64 chars from `[A-Za-z0-9_.:-]`, e.g. `{"tool.pce_act": 4, "session.create": 1}`: phone-control bridge calls per route (`tool.notify`, `tool.pce_act`, `tool.pce_observe`, ...; several `mobile_*` tools share one route), engine sessions created, and engine `engine.starts`, `engine.startFails`, `engine.died`, `engine.portSquats`. Names and counts only, never arguments |
 
@@ -194,7 +194,7 @@ The server drops names that are not in this list:
 | `a11y.step.<n>.reached`, `a11y.step.<n>.done` | step `n` (0–99) of the accessibility setup guide shown / finished |
 | `control.unlock` | phone control was unlocked with biometrics/PIN (Settings or the in-chat prompt) |
 | `chat.open`, `terminal.open` | the tab was opened |
-| `env.add` | an environment (a project folder the agent works in) was added; its name and path are not sent |
+| `env.add` | an Own env (a Linux base the user picked from a container registry) finished downloading; the image name and tag are not sent |
 | `report.sent` | you used Send report |
 
 Also in the server's vocabulary but **not sent by the app today**:
@@ -251,7 +251,8 @@ so one bug on many phones is one key.
 Only when you tap it, only while sharing is on: `reportId`, the identity,
 device and app fields above, the current `sessionId`, your note (≤ 500 chars),
 the last ≤ 50 events, and the engine log tail: the ≤ 2 KB tail from the last
-unexpected engine exit, with whole paths and secrets redacted on the phone and
+unexpected engine exit (the end of that agent's engine log, `logs/engine.log`
+in its image), with whole paths and secrets redacted on the phone and
 again on the server (the schema allows up to 4 KB). Kept 90 days, or until
 Delete my data. A report also records the phone's device row and verifier
 (the same rules as a batch), so Delete my data can find and remove it even
@@ -345,11 +346,15 @@ numbers.
 | `GET https://github.com/krishna-kush/PhoneCanDo/releases/latest/download/latest.json` | on launch (full; lite unless muted in Settings → Update) and from Settings → Update; never in play builds | nothing beyond a normal request |
 | The release APK from `github.com` (redirected to GitHub's file host) | only after you tap install (an update, or lite → full) | nothing beyond a normal request |
 | `https://api.phonecando.app/v1/*` | release builds, while sharing is on; report and delete only when you tap them | the fields on this page |
-| `GET https://models.opencode.ai/api.json` (opencode's models.dev catalog) | by the engine (opencode v2.0.26) when it starts, then again every 5 minutes while it runs: the whole catalog (over 2 MB) each time; `OPENCODE_DISABLE_MODELS_FETCH` is not set | a `User-Agent: opencode/<channel>/<version>/<name>` header |
+| `GET https://models.opencode.ai/api.json` (opencode's models.dev catalog) | by each running engine (opencode v2.0.26; up to three run at once, one per agent) when it starts, then again every 5 minutes while it runs: the whole catalog (over 2 MB) each time; `OPENCODE_DISABLE_MODELS_FETCH` is not set | a `User-Agent: opencode/<channel>/<version>/<name>` header |
+| `https://hub.docker.com` (Docker Hub's catalog: the official OS list and an image's tags) | full and lite, only while you pick an Own env (Env → New env → Own) | the repository name and the version filter you type; a `User-Agent: phonecando-lre` header |
+| The container registry of an Own env (Docker Hub's `registry-1.docker.io` and its token service, or the registry the image name gives), the storage it redirects downloads to and, for Docker Hub official images when Docker Hub refuses or fails, `public.ecr.aws` and `mirror.gcr.io` | full and lite, only when you add an Own env or retry its download | the image name and tag you picked; a `User-Agent: phonecando-lre` header |
 | The model providers you configure | whenever the agent runs | your prompts and that provider's key, straight from the phone to the provider; PhoneCanDo's server is never in that path |
-| Whatever you or the agent start | the agent's web fetch and web search tools, a `curl` or a package install in the terminal | what that command sends |
+| Whatever you or the agent start | the agent's web fetch and web search tools, a `curl` or a package install in the terminal or an agent's image | what that command sends |
 
 The engine's own auto-update and language-server downloads are off
-(`OPENCODE_DISABLE_AUTOUPDATE`, `OPENCODE_DISABLE_LSP_DOWNLOAD`, set in
-`PhoneCanDoServeService.kt`). The chat tab's web UI and the phone-control
-bridge talk to the engine over `127.0.0.1` only.
+(`OPENCODE_DISABLE_AUTOUPDATE`, `OPENCODE_DISABLE_LSP_DOWNLOAD`, set for every
+engine in `app/modules/phonecando-runner/android/src/main/java/com/phonecando/runner/agents/oc/Launch.kt`).
+The chat tab's web UI and the phone-control bridge talk to the engines over
+`127.0.0.1` only. The Default env's image ships inside the APK, so a Default
+machine is made without any network call.

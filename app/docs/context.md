@@ -12,8 +12,9 @@ class; the TUI drives the same server.
 ### exec wall → jniLibs
 Android 16/targetSdk 36 denies `execute_no_trans` on app-data files. Ship the
 engine as `jniLibs` (`nativeLibraryDir` permits exec) and execute it directly.
-Manual `run-as` exec works; service-context exec does not — always test via
-service.
+The same holds for everything a Linux image runs: our launcher, proot and its
+loader ship as `lib*.so` in `nativeLibraryDir`. Manual `run-as` exec works;
+service-context exec does not — always test via service.
 
 ### AGP drops non-`.so` jniLibs silently
 Only `*.so` names are packaged. The build output (`opencode2.bin`) is staged as
@@ -31,15 +32,77 @@ modules + config plugins, CNG (`app/android/` gitignored, never hand-edited).
 Run `expo install --check/--fix` after EVERY dep change (15.0.8-vs-core
 `AnyTypeProvider` boot crash).
 
-### ghost sockets + stale serves
+### ghost sockets + stale engines
 Match native processes by the engine library name (`liboc-engine.so`), never
-the bare `opencode`. A dead serve can leave an ownerless LISTEN socket (only
-reboot clears). Never `adb reverse` the engine port; forward only. The service
-owns/persists/picks a free port; the app adopts it via `getServePort`.
+the bare `opencode`. A dead engine can leave an ownerless LISTEN socket (only
+reboot clears). Never `adb reverse` an engine port; forward only. The
+supervisor owns the ports (each agent's last-good one, else a free one) and
+JS reads an engine's address with `getEngineAuth`. A 401 from an engine's own
+port means another engine answers there with another password, so ours never
+bound it: the supervisor relaunches on a fresh port. Everything an engine
+starts inherits `PHONECANDO_AGENT=<agentId>`, and a start or stop ends every
+process of our uid carrying that agent's tag (`/proc/<pid>/environ`), so a
+leftover from an earlier app process cannot squat or pile up.
 
-### projects, not envs
-Directory isolation = PROJECT (folder + chats). ENV is reserved for future hard
-isolation (own HOME/auth/serve). `attach --dir` enforces scoping.
+### projects, envs and images
+Directory isolation inside one agent = PROJECT (folder + chats). ENV = a fixed
+base OS that is never modified (the Default env baked into the APK, an Own env
+from a container registry, or Android with no Linux). IMAGE = a VM-like machine
+made from an env, with its own HOME (agent config, chats, projects, keys);
+reset replaces its system and keeps HOME. One agent per image, each with its
+own engine, port, password and bridge token. The TUI takes the project folder
+as its trailing argument (v2 has no `--dir`).
+
+## Linux images
+
+### proot runs from the engine's process
+proot with its loader unbundled (`PROOT_LOADER` points at
+`libproot-loader.so`, never a copy in tmp) and our launcher, invoked by its
+own name and through a symlinked shim, all exec from the engine's own
+process (`untrusted_app`) on Android 16 with no exec denials
+(device-verified on the Moto G96, full debug build, 2026-11-06). The engine
+itself stays a bionic binary outside proot; only its shell and commands go
+through the shims.
+
+### two spellings of the data dir
+Device-verified on the same run: inside the app process `getcwd()` says
+`/data/data/<pkg>/…` while Context's
+dirs and `run-as` say `/data/user/0/<pkg>/…`; both name one dir. So
+`launch.conf` binds `home/` and `tmp/` at their host path under both
+spellings and lists both as `same` paths, or a command loses its project
+folder (`lre/image` `PathSpellings`, `phonecando-linux`
+`DataDirSpellings`). A secondary user (`/data/user/<n>/<pkg>`) or adoptable
+storage has only one spelling.
+
+### a CMake executable as `lib*.so`
+AGP packages only `lib*.so` names, and it sets
+`CMAKE_RUNTIME_OUTPUT_DIRECTORY` to `obj/<abi>` as well, so an `EXECUTABLE`
+target whose output name is `libphonecando_launch.so` lands beside the
+libraries and ships in `lib/<abi>/`. NDK r27 does not align for 16 KB pages
+by itself: link with an explicit `-Wl,-z,max-page-size=16384`.
+
+### a library's `noCompress` doesn't reach the APK
+AGP decides asset compression from the APP module's list, so
+`phonecando-linux`'s own `noCompress 'xz'` left the Default image deflated
+in the APK (`unzip -v` showed `Defl:N`; checked 2026-11-07). The app gets it
+from `app/plugins/withStoredAssets.js`; the APK audit fails a deflated
+`assets/default-image/rootfs.tar.xz`. After first staging the dev image,
+Gradle reported the library's `mergeFullDebugAssets` up to date with an
+empty output once; `./gradlew :phonecando-linux:mergeFullDebugAssets
+--rerun` fixed it.
+
+### the proot loader has no INTERP
+`libproot-loader.so` is a static ELF with no `PT_INTERP`, by design: proot
+execs it in each traced process to load the guest program, so it cannot
+lean on a dynamic linker itself. An ELF check that expects an INTERP on
+every payload file must skip it.
+
+### paths and /proc
+Unix socket paths are capped at 108 bytes, so image ids stay short (setup
+flags an image whose `home/` or `tmp/` leaves too little room for socket
+names). Android's sepolicy hides `/proc/loadavg`, `stat`, `uptime`,
+`version` and `vmstat` from apps; each image binds static stand-ins over
+them so `top`, `ps`, `free` and `uptime` work.
 
 ## Terminal and chat
 
@@ -65,4 +128,5 @@ the palette onto opencode's `--v2-*` vars (see `modules/chat.md`).
 
 - Module docs: `modules/runner.md`, `modules/terminal.md`,
   `modules/chat.md`
+- Linux runtime: `../../docs/overview/architecture.md` → Linux runtime
 - Current limits: `../../docs/release/known-limits.md`

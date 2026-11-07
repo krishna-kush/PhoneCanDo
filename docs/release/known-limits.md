@@ -57,9 +57,13 @@ These are not scheduled work unless they are also listed in
   master switch is the gate until opencode is bumped.
 - The debug build uses a test-only pack public key; a release must set
   `phonecando_pack_public_key` and keep the private key offline.
-- The bridge bearer is install-stable and loopback-only. `open`/`share` work
-  only while the app is foreground; clipboard reads report `available:false`
-  to background apps (API 29+).
+- The bridge bearer is per agent (made with the agent, kept for its
+  lifetime) and loopback-only. `open`/`share` work only while the app is
+  foreground; clipboard reads report `available:false` to background apps
+  (API 29+).
+- With several agents running, one drives the screen at a time: the others
+  get `control_busy` until the holder has been idle for 30 s, and the phone
+  control switch is one switch for every agent.
 - The bridge shell runs as the PhoneCanDo UID, so its package listing is
   filtered; it is not proof an app is missing.
 
@@ -74,13 +78,32 @@ These are not scheduled work unless they are also listed in
   service from `BOOT_COMPLETED`.
 - Android 15+ lets the engine's foreground service (type `dataSync`) run 6
   hours in any 24 while PhoneCanDo is in the background; opening the app
-  resets the clock. At the limit the engine and the phone bridge stop: the
-  engine notification goes away and an agent turn still running ends there
-  (the chat is kept). Opening PhoneCanDo starts the engine again. This bounds
-  unattended background runs, including phone control left unlocked.
-- Battery-exemption prompting and health-check restart recovery are not
-  implemented.
-- One shared engine per device. The terminal and web UI share sessions; they
-  are not isolated servers.
+  resets the clock. At the limit every engine and the phone bridge stop: the
+  engine notification goes away and agent turns still running end there
+  (the chats are kept). Opening PhoneCanDo starts the active agent's engine
+  again; the others start when something uses them. This bounds unattended
+  background runs, including phone control left unlocked.
+- Battery-exemption prompting is not implemented, and a dead engine is not
+  restarted by itself: the next start (its chat or terminal opening, or the
+  app coming to the foreground for the active agent) launches it again.
+- At most three engines run at once. A further start stops the least
+  recently used engine that has been idle for a minute, and is refused
+  (`too_many_running`) when none has. An agent's terminal and web UI share
+  its engine; different agents are separate engines in separate images.
 - iOS cannot run the local container; it is remote-only (later phase).
+
+## Linux images
+
+- Play ships no Linux: its agents run commands with Android's shell.
+- proot is not a VM: there is one kernel (Android's), no systemd or other
+  init, and `/proc` files Android hides from apps are static stand-ins.
+- An Own env needs a linux/arm64 image. Docker Hub allows about ten
+  anonymous pulls per hour per IP; official images then come from
+  `public.ecr.aws` or `mirror.gcr.io`, other images have no mirror.
+- `lre/images/default/lock.json` locks no image yet, so no build ships a
+  Default image; a release needs `--without-linux` until one is locked.
+- Reset replaces an image's system and keeps `home/`; packages installed by
+  hand are offered for reinstall, not reinstalled by themselves.
+- Unix socket paths are capped at 108 bytes; image setup flags an image
+  whose `home/` or `tmp/` leaves too little room for socket names.
 - The native payload is large (hundreds of MB) and ships out of git.

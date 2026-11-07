@@ -59,7 +59,7 @@ Rules:
 - `app.versionCode` range prevents a stale pack from driving a redesigned app.
   The initial package must match `app.pkg` unless the first step launches it.
 - A pack that fails validation is never activated; the last good pack stays.
-- Packs live in `files/phonecando-home/automation/packs/<id>/<version>/` with an
+- Packs live in `files/automation/packs/<id>/<version>/` with an
   `active` pointer; previous versions stay for rollback.
 - Bundled baseline packs are planned, not implemented. Remote packs are
   installed by `mobile_pack refresh`.
