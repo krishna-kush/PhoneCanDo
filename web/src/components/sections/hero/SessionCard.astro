@@ -114,6 +114,7 @@
     }
     /* The clock is the replay button: it rewinds when pointed at. */
     .trace-replay {
+      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 5px;
@@ -128,8 +129,12 @@
       transition: color 0.15s, border-color 0.15s;
     }
     .trace-replay-icon { display: inline-block; transition: rotate 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    .trace-replay:hover { border-color: var(--accent-line); color: var(--accent-ink); }
-    .trace-replay:hover .trace-replay-icon { rotate: -200deg; }
+    /* The clock is small; its hit area reaches past it to a finger's size. */
+    .trace-replay::before { content: ''; position: absolute; inset: -8px -6px; }
+    @media (hover: hover) {
+      .trace-replay:hover { border-color: var(--accent-line); color: var(--accent-ink); }
+      .trace-replay:hover .trace-replay-icon { rotate: -200deg; }
+    }
     .hero-trace[data-playing] .trace-replay { color: var(--red); }
     .hero-trace[data-playing] .trace-replay-icon { animation: trace-rewind 0.6s linear infinite; }
     .hero-trace-body { padding: 9px 10px 10px; }

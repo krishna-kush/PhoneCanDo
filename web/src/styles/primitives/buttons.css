@@ -47,7 +47,9 @@
   box-shadow: 2px 2px 0 var(--accent);
   transition: translate 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
-.toy-btn:hover { translate: -1px -1px; border-color: var(--accent-ink); box-shadow: 3px 3px 0 var(--accent); }
+@media (hover: hover) {
+  .toy-btn:hover { translate: -1px -1px; border-color: var(--accent-ink); box-shadow: 3px 3px 0 var(--accent); }
+}
 .toy-btn:active { translate: 1px 1px; box-shadow: 1px 1px 0 var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {

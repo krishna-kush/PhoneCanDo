@@ -141,9 +141,11 @@ import Crate from "./models/Crate.astro";
       height: 1px;
       background: repeating-linear-gradient(to right, var(--accent) 0 3px, transparent 3px 6px);
     }
-    .freight-body:has(.route-left:hover) .arrow-in,
-    .freight-body:has(.route-right:hover) .arrow-out,
-    .freight-body:has(.crate-wrap:hover) .freight-arrow { animation: freight-march 0.5s linear infinite; }
+    @media (hover: hover) {
+      .freight-body:has(.route-left:hover) .arrow-in,
+      .freight-body:has(.route-right:hover) .arrow-out,
+      .freight-body:has(.crate-wrap:hover) .freight-arrow { animation: freight-march 0.5s linear infinite; }
+    }
     @keyframes freight-march { to { background-position: 6px 0; } }
     .freight-arrow::after {
       content: '';

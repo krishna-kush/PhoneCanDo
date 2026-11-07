@@ -112,7 +112,9 @@
       touch-action: none;
       transition: border-color 0.15s;
     }
-    .arm-pad:hover { border-color: var(--art-accent); }
+    @media (hover: hover) {
+      .arm-pad:hover { border-color: var(--art-accent); }
+    }
     .arm-pad[data-nope] { animation: arm-nope 0.4s linear; }
     .arm-print {
       --arm: 0;

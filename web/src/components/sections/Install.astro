@@ -116,10 +116,9 @@ const pcScripts = [
                     <dd>{site.license}</dd>
                 </div>
             </dl>
-            <!-- A phone can't scan its own screen: it keeps the printed
-                 barcode, a computer gets the code. -->
-            <div class="barcode install-phone-only" aria-hidden="true"></div>
-            <div class="install-qr install-pc-only">
+            <!-- The same code everywhere; a phone can't scan its own
+                 screen, so there the caption hands it to another phone. -->
+            <div class="install-qr">
                 <span class="install-qr-code">
                     <svg
                         viewBox={`0 0 ${qr.size} ${qr.size}`}
@@ -131,7 +130,8 @@ const pcScripts = [
                     </svg>
                 </span>
                 <p class="install-qr-cap">
-                    <b>Scan with the phone</b>
+                    <b class="install-pc-only">Scan with the phone</b>
+                    <b class="install-phone-only">Scan from another phone</b>
                     Gets the starter: step 01
                 </p>
             </div>
@@ -458,9 +458,11 @@ const pcScripts = [
       opacity: 0;
       pointer-events: none;
     }
-    .install-qr:hover .install-qr-code::after {
-      opacity: 1;
-      animation: qr-scan 0.9s ease-in-out infinite alternate;
+    @media (hover: hover) {
+      .install-qr:hover .install-qr-code::after {
+        opacity: 1;
+        animation: qr-scan 0.9s ease-in-out infinite alternate;
+      }
     }
     @keyframes qr-scan { to { translate: 0 116px; } }
     .install-qr-cap {

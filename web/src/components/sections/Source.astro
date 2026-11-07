@@ -273,16 +273,18 @@ const files: { path: string; href: string; title: string; text: string }[] = [
     overflow: hidden;
     vertical-align: bottom;
   }
-  .src-files li:hover .src-path { animation: src-type calc(var(--n) * 30ms) steps(var(--n)) both; }
-  .src-files li:hover code::after {
-    content: '';
-    display: inline-block;
-    width: 6px;
-    height: 11px;
-    margin-left: 2px;
-    background: var(--red);
-    vertical-align: -1px;
-    animation: blink 0.7s steps(1) infinite;
+  @media (hover: hover) {
+    .src-files li:hover .src-path { animation: src-type calc(var(--n) * 30ms) steps(var(--n)) both; }
+    .src-files li:hover code::after {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 11px;
+      margin-left: 2px;
+      background: var(--red);
+      vertical-align: -1px;
+      animation: blink 0.7s steps(1) infinite;
+    }
   }
   @keyframes src-type { from { width: 0; } }
 

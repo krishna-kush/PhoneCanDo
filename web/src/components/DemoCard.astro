@@ -131,11 +131,13 @@ const num = String(index + 1).padStart(2, '0');
   .demo:hover .demo-index span:first-child { color: var(--red); }
   .demo:hover .slate .glyph { transform: scale(1.08); }
   /* Pointed at, the plate focuses: the crop marks close in on the shot and
-     its number goes on air. */
-  .demo:hover .demo-media::before { translate: 8px 8px; }
-  .demo:hover .demo-media::after { translate: -8px -8px; }
-  .demo:hover .plate-no { background: var(--red); color: var(--on-primary); }
-  .demo:hover .plate-no::before { display: inline-block; }
+     its number goes on air. Pointers only: a tap would leave it on. */
+  @media (hover: hover) {
+    .demo:hover .demo-media::before { translate: 8px 8px; }
+    .demo:hover .demo-media::after { translate: -8px -8px; }
+    .demo:hover .plate-no { background: var(--red); color: var(--on-primary); }
+    .demo:hover .plate-no::before { display: inline-block; }
+  }
 
   @media (max-width: 760px) {
     .demo {

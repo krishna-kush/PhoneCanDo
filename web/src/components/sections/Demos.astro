@@ -131,8 +131,10 @@ import { demos } from "../../data/demos";
       transition: rotate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .deal-deck i:last-child { background: var(--red); border-color: var(--red); }
-    .deal:hover .deal-deck i:first-child { rotate: -24deg; }
-    .deal:hover .deal-deck i:nth-child(2) { rotate: 12deg; }
+    @media (hover: hover) {
+      .deal:hover .deal-deck i:first-child { rotate: -24deg; }
+      .deal:hover .deal-deck i:nth-child(2) { rotate: 12deg; }
+    }
 
     /* demo gallery: plates */
     .demos {
