@@ -35,6 +35,8 @@
       "./plugins/withBuildPerf.js",
       "./plugins/withMinSdk.js",
       "./plugins/withPceCompositeBuild.js",
+      "./plugins/withLreCompositeBuild.js",
+      "./plugins/withStoredAssets.js",
       "./plugins/withLoopbackCleartext.js",
       "./plugins/withReleaseSigning.js",
       "expo-asset"

@@ -1,0 +1,98 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.phonecando.linux'
+version = '0.1.0'
+
+expoModule {
+  // The Expo plugin publishes a single "release" component; with product
+  // flavors the components are <flavor>Release, so publishing is off (the
+  // module is consumed from source only).
+  canBePublished false
+}
+
+android {
+  namespace "com.phonecando.linux"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+    // Same architecture list as the app (reactNativeArchitectures).
+    ndk {
+      abiFilters((project.findProperty("reactNativeArchitectures") ?: "arm64-v8a")
+        .split(",").collect { it.trim() }.toArray(new String[0]))
+    }
+  }
+  // Channels are product flavors (app/plugins/withBuildChannel.js declares the
+  // same dimension on the app). play ships no Linux: CMake adds no launcher
+  // target there, and the staged proot libs are in full and lite only.
+  flavorDimensions += ["channel"]
+  productFlavors {
+    full { dimension "channel" }
+    lite { dimension "channel" }
+    play {
+      dimension "channel"
+      externalNativeBuild {
+        cmake {
+          arguments "-DPHONECANDO_LINUX=OFF"
+        }
+      }
+    }
+  }
+  // The launcher (lre/launcher, an executable named libphonecando_launch.so):
+  // AGP packages only lib*.so names, and nativeLibraryDir is the one place
+  // Android lets us exec from.
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
+    }
+  }
+  sourceSets {
+    // proot and its loader, staged from lre/proot, and the Default env image
+    // (assets/default-image/), staged from lre/images/default/lock.json.
+    // Neither is committed.
+    full {
+      jniLibs.srcDirs += ['src/linux/libs']
+      assets.srcDirs += ['src/linux/assets']
+    }
+    lite {
+      jniLibs.srcDirs += ['src/linux/libs']
+      assets.srcDirs += ['src/linux/assets']
+    }
+    // A locally built, unlocked image (./manage image stage --local): debug
+    // variants only, so no release APK can carry it. A variant source set
+    // outranks the flavor's, so in a debug build it wins over a locked one.
+    fullDebug {
+      assets.srcDirs += ['src/linux/dev-assets']
+    }
+    liteDebug {
+      assets.srcDirs += ['src/linux/dev-assets']
+    }
+  }
+  // The image is xz already: stored, not deflated again, so the app can
+  // stream it straight from the APK (AssetManager.openFd).
+  androidResources {
+    noCompress 'xz'
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // The Linux runtime engine (lre/), pure JVM: the app's settings plugin
+  // substitutes these coordinates with the included build
+  // (withLreCompositeBuild.js). Every flavor compiles them, so one source
+  // set serves all; play refuses each Linux path at run time (LinuxGate).
+  implementation 'com.phonecando.lre:lre-api:0.1.0-dev'
+  implementation 'com.phonecando.lre:lre-tar:0.1.0-dev'
+  implementation 'com.phonecando.lre:lre-oci:0.1.0-dev'
+  implementation 'com.phonecando.lre:lre-image:0.1.0-dev'
+
+  // JVM tests of the pure parts (records, ids, error codes, jobs, recipes,
+  // gates): ./gradlew :phonecando-linux:testLiteDebugUnitTest
+  testImplementation 'junit:junit:4.13.2'
+  // android.jar's org.json is a stub on the JVM; the record codec uses it.
+  testImplementation 'org.json:json:20250517'
+}

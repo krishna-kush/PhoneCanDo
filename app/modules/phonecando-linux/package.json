@@ -1,0 +1,13 @@
+{
+  "name": "phonecando-linux",
+  "version": "0.1.0",
+  "description": "PhoneCanDo Linux runtime host: envs, images, their jobs and the proot launcher.",
+  "main": "src/PhoneCanDoLinuxModule.ts",
+  "types": "src/PhoneCanDoLinuxModule.ts",
+  "license": "SEE LICENSE IN ../../../LICENSE",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}
