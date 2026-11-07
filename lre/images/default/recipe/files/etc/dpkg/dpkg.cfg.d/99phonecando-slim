@@ -1,0 +1,14 @@
+# PhoneCanDo: keep phone storage for what runs. No man pages, info pages,
+# translations or package docs, for what we bake and for what you install
+# later. Each package's copyright file stays (licence notices), and so do
+# the /usr/share/doc/<package> entries themselves (some are symlinks to the
+# doc dir that holds the copyright). dpkg's '*' also matches '/'.
+path-exclude /usr/share/doc/*/*
+path-include /usr/share/doc/*/copyright
+path-exclude /usr/share/man/*
+path-exclude /usr/share/info/*
+path-exclude /usr/share/groff/*
+path-exclude /usr/share/linda/*
+path-exclude /usr/share/lintian/*
+path-exclude /usr/share/locale/*
+path-include /usr/share/locale/locale.alias

@@ -1,0 +1,303 @@
+name: Linux image
+
+# The baked Default env (lre/images/default): a Debian-based arm64 rootfs
+# from Docker's official debian image (pinned digest) and a pinned
+# snapshot.debian.org, packed deterministically with xz. build builds it on
+# arm64 and proves a second build gives the same bytes; tier1 runs it
+# through our launcher and proot exactly as opencode would; sources fetches
+# and packs the exact Debian source packages (our GPL duty); lock checks
+# lock.json, the image the APK ships. publish (prod only: weekly with fresh
+# inputs, or on demand) releases a green image as the prerelease
+# linux-image-<version>, never latest; `./manage image lock <run-id>` then
+# adopts it. A red weekly run just means no new image.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - 'lre/images/default/**'
+      - 'lre/launcher/**'
+      - 'lre/proot/**'
+      - '.github/workflows/lre-image.yml'
+      - '.github/ci/lre-image/**'
+      - '.github/ci/proot/host-tools.sh'
+  pull_request:
+    paths:
+      - 'lre/images/default/**'
+      - 'lre/launcher/**'
+      - 'lre/proot/**'
+      - '.github/workflows/lre-image.yml'
+      - '.github/ci/lre-image/**'
+      - '.github/ci/proot/host-tools.sh'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the image as a linux-image-<version> prerelease if every check is green (prod only).
+        type: boolean
+        default: false
+      fresh:
+        description: Build from the newest debian:trixie and today's snapshot instead of pins.env.
+        type: boolean
+        default: false
+  schedule:
+    - cron: '7 6 * * 1'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Explicit bash runs steps with -eo pipefail (the unset default is plain
+# `bash -e`), so a `check.sh | tee -a "$GITHUB_STEP_SUMMARY"` step fails when
+# the check does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: build
+    # Native arm64: docker runs the arm64 debian image without emulation.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.inputs.outputs.version }}
+      asset: ${{ steps.inputs.outputs.asset }}
+      sde: ${{ steps.inputs.outputs.sde }}
+      publish: ${{ steps.inputs.outputs.publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Resolved once: both builds below and every later job use these.
+      - name: Inputs (pins.env, or fresh on the weekly run)
+        id: inputs
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          IN_PUBLISH: ${{ inputs.publish }}
+          IN_FRESH: ${{ inputs.fresh }}
+        run: bash .github/ci/lre-image/inputs.sh | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Build (lre/images/default/build.sh)
+        run: bash lre/images/default/build.sh "$RUNNER_TEMP/image"
+
+      # tier1, sources and publish take it by this exact name.
+      - name: Upload lre-image
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lre-image
+          path: |
+            ${{ runner.temp }}/image/${{ steps.inputs.outputs.asset }}
+            ${{ runner.temp }}/image/${{ steps.inputs.outputs.asset }}.sha256
+            ${{ runner.temp }}/image/phonecando-linux-default-${{ steps.inputs.outputs.version }}.json
+            ${{ runner.temp }}/image/packages.tsv
+            ${{ runner.temp }}/image/sources.tsv
+            ${{ runner.temp }}/image/inputs.env
+          retention-days: 14
+          if-no-files-found: error
+
+      # This and the next step after the upload on purpose: an image that
+      # fails here is still there to inspect (the job, so publish, still fails).
+      - name: Verify (lre/images/default/verify.py)
+        run: python3 -I lre/images/default/verify.py "$RUNNER_TEMP/image" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Same inputs, another out-dir: the bytes must not move.
+      - name: Reproducible (second build, compare)
+        env:
+          ASSET: ${{ steps.inputs.outputs.asset }}
+        run: |
+          set -euo pipefail
+          bash lre/images/default/build.sh "$RUNNER_TEMP/image-2"
+          a="$(cut -d' ' -f1 "$RUNNER_TEMP/image/$ASSET.sha256")"
+          b="$(cut -d' ' -f1 "$RUNNER_TEMP/image-2/$ASSET.sha256")"
+          if [ "$a" != "$b" ]; then
+            echo "::error::the second build differs: $a vs $b (the image build is not reproducible)"
+            exit 1
+          fi
+          echo "Second build in another out-dir: same sha256 \`$a\`." >> "$GITHUB_STEP_SUMMARY"
+
+  tier1:
+    name: tier1
+    needs: build
+    # The arch we ship: proot (build-glibc.sh) and the image both aarch64.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Host tools (gawk, make, readelf)
+        run: bash .github/ci/proot/host-tools.sh
+
+      - name: Build proot for this host (lre/proot/build-glibc.sh)
+        run: bash lre/proot/build-glibc.sh "$RUNNER_TEMP/proot-work" "$RUNNER_TEMP/proot-glibc"
+
+      - name: Download lre-image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lre-image
+          path: ${{ runner.temp }}/image
+
+      - name: Lay out the image (rootfs, home, launcher, shims, launch.conf)
+        env:
+          ASSET: ${{ needs.build.outputs.asset }}
+        run: |
+          bash .github/ci/lre-image/setup.sh "$RUNNER_TEMP/image/$ASSET" \
+            "$RUNNER_TEMP/proot-glibc" "$RUNNER_TEMP/tier1"
+
+      - name: Tier 1 (commands as opencode runs them)
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: bash .github/ci/lre-image/tier1.sh "$RUNNER_TEMP/tier1" "$VERSION" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  sources:
+    name: sources
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download lre-image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lre-image
+          path: ${{ runner.temp }}/image
+
+      - name: Resolve the exact source packages (snapshot.debian.org)
+        run: python3 -I lre/images/default/gpl/resolve.py "$RUNNER_TEMP/image/sources.tsv" "$RUNNER_TEMP/gpl/resolved.json"
+
+      - name: Fetch and verify them
+        run: python3 -I lre/images/default/gpl/fetch.py "$RUNNER_TEMP/gpl/resolved.json" "$RUNNER_TEMP/gpl/src"
+
+      - name: Pack (deterministic, parts under 2 GiB)
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          SDE: ${{ needs.build.outputs.sde }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/gpl/out"
+          python3 -I lre/images/default/gpl/pack.py "$RUNNER_TEMP/gpl/src" \
+            "$out/phonecando-linux-default-$VERSION-sources" "$SDE" > "$RUNNER_TEMP/gpl/parts.jsonl"
+          mv "$RUNNER_TEMP/gpl/parts.jsonl" "$out/parts.jsonl"
+          python3 -I lre/images/default/gpl/pack.py "$RUNNER_TEMP/gpl/src" \
+            "$RUNNER_TEMP/gpl/again/phonecando-linux-default-$VERSION-sources" "$SDE" > "$RUNNER_TEMP/gpl/again.jsonl"
+          if ! cmp -s "$out/parts.jsonl" "$RUNNER_TEMP/gpl/again.jsonl"; then
+            echo "::error::the source bundle is not deterministic"
+            exit 1
+          fi
+          {
+            echo "### GPL source bundle"
+            echo
+            echo "$(jq -r '.sources | length' "$RUNNER_TEMP/gpl/resolved.json") source packages, packed twice with the same bytes."
+            echo
+            echo "| Asset | Bytes | sha256 |"
+            echo "|---|---|---|"
+            jq -r '"| `\(.asset)` | \(.size) | `\(.sha256[:16])…` |"' "$out/parts.jsonl"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload lre-image-sources
+        if: needs.build.outputs.publish == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lre-image-sources
+          path: ${{ runner.temp }}/gpl/out/
+          retention-days: 3
+          if-no-files-found: error
+
+  lock:
+    name: lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: lre/images/default
+
+      # Read-only: the locked release exists, is a non-latest prerelease and
+      # its manifest matches. Nothing locked yet passes with a note.
+      - name: lock.json names a published, matching image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash lre/images/default/lock/check.sh --remote | tee -a "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: publish
+    # Not `lock`: a broken lock.json must not block the image that fixes it.
+    needs: [build, tier1, sources]
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The only job that writes: it creates the release.
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/ci/lre-image
+
+      - name: Download lre-image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lre-image
+          path: ${{ runner.temp }}/image
+
+      - name: Download lre-image-sources
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lre-image-sources
+          path: ${{ runner.temp }}/sources
+
+      - name: Release linux-image-<version> (prerelease, never latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          SHA: ${{ github.sha }}
+          SERVER_URL: ${{ github.server_url }}
+          EVENT: ${{ github.event_name }}
+        run: bash .github/ci/lre-image/publish.sh "$RUNNER_TEMP/image" "$RUNNER_TEMP/sources" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  lre-image-ok:
+    # The one image check to require in branch protection: green only when
+    # every job above succeeded (a skipped or cancelled job counts as a
+    # failure), except publish, which is skipped on runs that do not publish.
+    name: lre-image-ok
+    if: always()
+    needs: [build, tier1, sources, lock, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every blocking image job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          PUBLISH: ${{ needs.build.outputs.publish }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r --arg p "$PUBLISH" '[to_entries[]
+            | select(.value.result != "success")
+            | select(.key != "publish" or $p == "true" or .value.result != "skipped")
+            | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=lre-image-ok::not green: $failed"
+            exit 1
+          fi

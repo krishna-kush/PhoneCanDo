@@ -1,0 +1,3 @@
+// PhoneCanDo: apt runs under proot as a faked root (-0). There is no real
+// _apt user to drop privileges to, so apt's download sandbox stays root.
+APT::Sandbox::User "root";

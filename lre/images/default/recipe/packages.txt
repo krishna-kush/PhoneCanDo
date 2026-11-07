@@ -1,0 +1,20 @@
+# The "Standard" set of the Default env, installed with
+# --no-install-recommends on top of debian:trixie (pins.env). One package per
+# line; '#' starts a comment. Changing this list changes the image version.
+# C.UTF-8 is built into glibc (libc-bin), so no locales package.
+
+bash
+ca-certificates
+curl
+git
+less
+nano
+openssh-client
+procps
+python3
+python3-pip
+python3-venv
+ripgrep
+unzip
+xz-utils
+zip
