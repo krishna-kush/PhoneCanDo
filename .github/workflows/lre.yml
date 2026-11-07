@@ -1,0 +1,136 @@
+name: Linux runtime
+
+# Linux images through proot (lre/). `kotlin` builds and tests the pure-JVM
+# runtime modules (api, tar, oci, image, cli: unpacking, registry, setup,
+# the JVM host CI uses). The
+# launcher every guest command goes through (lre/launcher) is built with gcc
+# -std=c11 -Wall -Wextra -Werror and run against its host tests: the pure
+# parser and exec plan (unit.c), then end to end through a fake proot
+# (run.sh). The Android build of the same sources (NDK clang,
+# app/modules/phonecando-linux) runs in android.yml. Runs on runtime
+# changes, weekly, on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - 'lre/launcher/**'
+      - 'lre/api/**'
+      - 'lre/tar/**'
+      - 'lre/oci/**'
+      - 'lre/image/**'
+      - 'lre/cli/**'
+      - 'lre/*.kts'
+      - 'lre/gradle.properties'
+      - 'lre/gradle/**'
+      - 'lre/gradlew'
+      - '.github/workflows/lre.yml'
+  pull_request:
+    paths:
+      - 'lre/launcher/**'
+      - 'lre/api/**'
+      - 'lre/tar/**'
+      - 'lre/oci/**'
+      - 'lre/image/**'
+      - 'lre/cli/**'
+      - 'lre/*.kts'
+      - 'lre/gradle.properties'
+      - 'lre/gradle/**'
+      - 'lre/gradlew'
+      - '.github/workflows/lre.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '27 5 * * 1'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Explicit bash runs steps with -eo pipefail, so `run.sh | tee` fails when
+# the tests do.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  kotlin:
+    name: Runtime modules (JVM tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: lre
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Build and test every module
+        run: ./gradlew build --console=plain
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Linux runtime modules (lre/)'
+            echo
+            for f in */build/test-results/test/*.xml; do
+              [ -f "$f" ] || continue
+              grep -o 'testsuite name="[^"]*" tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' "$f"
+            done | sed 's/^/- /'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  launcher:
+    name: Launcher (gcc, host tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: lre/launcher
+      - name: Build and test (lre/launcher/test/run.sh)
+        env:
+          CC: gcc
+        run: bash lre/launcher/test/run.sh 2>&1 | tee "$RUNNER_TEMP/launcher.txt"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Linux launcher (lre/launcher)'
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/launcher.txt" 2>/dev/null || echo '(tests did not run)'
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  lre-ok:
+    # The one Linux-runtime check to require in branch protection: green only
+    # when every job above succeeded (a skipped or cancelled job counts as a
+    # failure).
+    name: lre-ok
+    if: always()
+    needs: [kotlin, launcher]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every blocking Linux-runtime job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=lre-ok::not green: $failed"
+            exit 1
+          fi

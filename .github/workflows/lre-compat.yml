@@ -1,0 +1,345 @@
+name: Linux image compatibility
+
+# Distro images on the Linux runtime (lre/), set up by the code the phone
+# runs and used the way opencode uses them. prep builds the payload once on
+# arm64: proot and its loader for glibc (lre/proot/build-glibc.sh), our
+# launcher (lre/launcher, gcc) and lre-cli (lre/cli: lre/oci's download and
+# lre/image's setup on a plain JVM). Every leg then pulls one registry image
+# with `cli setup --ref` and runs .github/ci/lre-compat/leg.sh: a shell
+# through the shims as fake root, the agent's tools installed with the setup
+# result's install command, git and rg through their shims, a commit in
+# home/, and the cwd contract.
+#
+# Tier 2 (blocking, lre-compat-ok): one image per package family we know.
+# Tier 3 (report-only, weekly and on demand): a few more images per ISO week
+# from .github/ci/lre-compat/tier3.txt; failures open or update one issue,
+# "Linux image compatibility report". Tier 1 (the baked Default image) is
+# lre-image.yml. Runs on runtime changes, weekly, on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - 'lre/api/**'
+      - 'lre/tar/**'
+      - 'lre/oci/**'
+      - 'lre/image/**'
+      - 'lre/cli/**'
+      - 'lre/launcher/**'
+      - 'lre/proot/**'
+      - 'lre/*.kts'
+      - 'lre/gradle.properties'
+      - 'lre/gradle/**'
+      - 'lre/gradlew'
+      - '.github/workflows/lre-compat.yml'
+      - '.github/ci/lre-compat/**'
+      - '.github/ci/proot/host-tools.sh'
+  pull_request:
+    paths:
+      - 'lre/api/**'
+      - 'lre/tar/**'
+      - 'lre/oci/**'
+      - 'lre/image/**'
+      - 'lre/cli/**'
+      - 'lre/launcher/**'
+      - 'lre/proot/**'
+      - 'lre/*.kts'
+      - 'lre/gradle.properties'
+      - 'lre/gradle/**'
+      - 'lre/gradlew'
+      - '.github/workflows/lre-compat.yml'
+      - '.github/ci/lre-compat/**'
+      - '.github/ci/proot/host-tools.sh'
+  workflow_dispatch:
+    inputs:
+      tier3:
+        description: Tier 3 images to run (rotation = this ISO week's pick from tier3.txt).
+        type: choice
+        options: [rotation, all, none]
+        default: rotation
+  schedule:
+    - cron: '17 7 * * 1'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Explicit bash runs steps with -eo pipefail (the unset default is plain
+# `bash -e`), so a `leg.sh | tee -a "$GITHUB_STEP_SUMMARY"` step fails when
+# the leg does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prep:
+    name: prep
+    # The arch we ship: proot, the launcher and every image are aarch64.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: lre-cli (test, installDist)
+        working-directory: lre
+        run: ./gradlew :cli:test :cli:installDist --console=plain
+
+      - name: Host tools (gawk, make, readelf)
+        run: bash .github/ci/proot/host-tools.sh
+
+      - name: Payload (proot for glibc, launcher, lre-cli)
+        env:
+          CC: gcc
+        run: |
+          bash .github/ci/lre-compat/payload.sh "$RUNNER_TEMP/payload-work" \
+            "$RUNNER_TEMP/out/lre-compat-payload.tar.gz" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Every leg takes it by this exact name; a tarball keeps the exec bits.
+      - name: Upload lre-compat-payload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lre-compat-payload
+          path: ${{ runner.temp }}/out/lre-compat-payload.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+  tier2:
+    name: tier2 (${{ matrix.name }})
+    needs: prep
+    runs-on: ubuntu-24.04-arm
+    # A prep and an install may each take up to leg.sh's 30-minute cap under
+    # ptrace (EPEL's dependencies on a RHEL-like are dozens of packages).
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      # One image per package family lre/image knows. No pacman: Arch has no
+      # official arm64 image (archlinux is amd64 only). yum and xbps have no
+      # current official arm64 image either.
+      matrix:
+        include:
+          - name: debian-stable
+            ref: debian:stable
+            family: apt
+          - name: ubuntu-24.04
+            ref: ubuntu:24.04
+            family: apt
+          - name: alpine
+            ref: alpine:latest
+            family: apk
+          - name: fedora
+            ref: fedora:latest
+            family: dnf
+          # The microdnf family. Docker Hub's library rockylinux stopped at
+          # 9.3 (2024); AlmaLinux's minimal image is current and, being an
+          # official image, has lre/oci's mirrors when Docker Hub refuses.
+          - name: almalinux-9-minimal
+            ref: almalinux:9-minimal
+            family: microdnf
+            prep: microdnf install -y epel-release
+          - name: opensuse-leap
+            ref: opensuse/leap:latest
+            family: zypper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/ci/lre-compat
+
+      # lre-cli's start script needs a JVM.
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download lre-compat-payload
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lre-compat-payload
+          path: ${{ runner.temp }}/dl
+
+      - name: Unpack the payload
+        run: mkdir -p "$RUNNER_TEMP/payload" && tar -xzf "$RUNNER_TEMP/dl/lre-compat-payload.tar.gz" -C "$RUNNER_TEMP/payload"
+
+      - name: Leg (.github/ci/lre-compat/leg.sh)
+        env:
+          REF: ${{ matrix.ref }}
+          FAMILY: ${{ matrix.family }}
+          PREP: ${{ matrix.prep }}
+          TIER: tier2
+        run: |
+          bash .github/ci/lre-compat/leg.sh "$REF" "$FAMILY" "$RUNNER_TEMP/payload" \
+            "$RUNNER_TEMP/leg" "$PREP" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lre-compat-result-tier2-${{ matrix.name }}
+          path: ${{ runner.temp }}/leg/result.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  tier3-plan:
+    name: tier3-plan
+    # Report-only and weekly: pushes and PRs run Tier 2 alone.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.tier3 != 'none')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+      count: ${{ steps.pick.outputs.count }}
+      week: ${{ steps.pick.outputs.week }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/ci/lre-compat
+
+      - name: This week's images (.github/ci/lre-compat/rotation.sh)
+        id: pick
+        env:
+          MODE: ${{ inputs.tier3 || 'rotation' }}
+        run: bash .github/ci/lre-compat/rotation.sh .github/ci/lre-compat/tier3.txt "$MODE" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  tier3:
+    name: tier3 (${{ matrix.name }})
+    needs: [prep, tier3-plan]
+    if: needs.tier3-plan.outputs.count != '0'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    # Report-only: a failing image is listed by tier3-report, never red here.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.tier3-plan.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/ci/lre-compat
+
+      # lre-cli's start script needs a JVM.
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download lre-compat-payload
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lre-compat-payload
+          path: ${{ runner.temp }}/dl
+
+      - name: Unpack the payload
+        run: mkdir -p "$RUNNER_TEMP/payload" && tar -xzf "$RUNNER_TEMP/dl/lre-compat-payload.tar.gz" -C "$RUNNER_TEMP/payload"
+
+      - name: Leg (.github/ci/lre-compat/leg.sh)
+        env:
+          REF: ${{ matrix.ref }}
+          FAMILY: ${{ matrix.family }}
+          PREP: ${{ matrix.prep }}
+          TIER: tier3
+        run: |
+          bash .github/ci/lre-compat/leg.sh "$REF" "$FAMILY" "$RUNNER_TEMP/payload" \
+            "$RUNNER_TEMP/leg" "$PREP" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # tier3-report takes every lre-compat-result-tier3-* artifact.
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lre-compat-result-tier3-${{ matrix.name }}
+          path: ${{ runner.temp }}/leg/result.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  tier3-report:
+    name: tier3-report
+    needs: [tier3-plan, tier3]
+    # Not when prep failed (tier3 skipped): lre-compat-ok is red then anyway.
+    if: always() && needs.tier3-plan.result == 'success' && needs.tier3-plan.outputs.count != '0' && needs.tier3.result != 'skipped' && needs.tier3.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The only job that writes: it opens or updates the report issue.
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/ci/lre-compat
+
+      # A leg that died before its checks uploaded nothing; report.sh counts
+      # every planned image without a result as failed.
+      - name: Download Tier 3 results
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: lre-compat-result-tier3-*
+          path: ${{ runner.temp }}/results
+
+      - name: Table (.github/ci/lre-compat/report.sh)
+        id: table
+        env:
+          MATRIX: ${{ needs.tier3-plan.outputs.matrix }}
+          WEEK: ${{ needs.tier3-plan.outputs.week }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          printf '%s\n' "$MATRIX" > "$RUNNER_TEMP/matrix.json"
+          mkdir -p "$RUNNER_TEMP/results"
+          bash .github/ci/lre-compat/report.sh "$RUNNER_TEMP/matrix.json" "$RUNNER_TEMP/results" \
+            | tee "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update "Linux image compatibility report"
+        if: steps.table.outputs.failures != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WEEK: ${{ needs.tier3-plan.outputs.week }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          url="$(bash .github/ci/lre-compat/issue.sh "$RUNNER_TEMP/report.md")"
+          echo "Tier 3 failures reported in $url" >> "$GITHUB_STEP_SUMMARY"
+
+  lre-compat-ok:
+    # The one image-compatibility check to require in branch protection:
+    # green only when prep and every Tier 2 leg succeeded (a skipped or
+    # cancelled job counts as a failure). Tier 3 never counts.
+    name: lre-compat-ok
+    if: always()
+    needs: [prep, tier2]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every blocking compatibility job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=lre-compat-ok::not green: $failed"
+            exit 1
+          fi

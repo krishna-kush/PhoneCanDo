@@ -1,0 +1,16 @@
+# Tier 3 of lre-compat.yml (report-only): rotation.sh picks a few of these
+# per ISO week, so every one runs every other week or so.
+#
+# One image per line: <ref> <family|none> [<prep command>]
+#   ref     what a person would type in the app (linux/arm64 must exist)
+#   family  the package family lre/image must detect; none = no package
+#           manager we know (the unknown-family path)
+#   prep    what the agent must run before the install command on this
+#           distro, the rest of the line (ripgrep is in EPEL on RHEL-likes)
+debian:11 apt
+ubuntu:20.04 apt
+almalinux:latest dnf dnf install -y epel-release
+amazonlinux:latest dnf
+oraclelinux:9 dnf dnf install -y oracle-epel-release-el9
+busybox:latest none
+kalilinux/kali-rolling:latest apt
