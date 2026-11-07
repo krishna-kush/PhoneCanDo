@@ -6,11 +6,15 @@ import com.phonecando.runner.agents.EngineEvent
 import com.phonecando.runner.agents.HttpProbe
 import com.phonecando.runner.agents.LaunchContext
 import com.phonecando.runner.agents.LaunchSpec
+import java.net.URLEncoder
+import org.json.JSONObject
 
 // opencode as an agent kind. Health is an authenticated GET /api/session;
-// events stream from /api/event. The config folder `oc-config` (assets) is
+// events stream from /api/event; a chat's title is in GET
+// /api/session/{id} ({"data":{"title":…}}, device-checked on 2.0.26). The config folder `oc-config` (assets) is
 // seeded into ~/.config/opencode, the global config dir upstream reads;
-// opencode.json is seeded once so user edits and BYOK keys survive.
+// opencode.json is seeded once so user edits and BYOK keys survive; the
+// image's OS note goes into the global AGENTS.md.
 object OpencodeKind : AgentKind {
   override val id = "opencode"
   override val displayName = "opencode"
@@ -18,6 +22,7 @@ object OpencodeKind : AgentKind {
     assetDir = "oc-config",
     homeDir = ".config/opencode",
     keepIfPresent = setOf("opencode.json"),
+    instructionsFile = "AGENTS.md",
   )
 
   override fun launch(ctx: LaunchContext): LaunchSpec = Launch.spec(ctx)
@@ -31,6 +36,17 @@ object OpencodeKind : AgentKind {
   )
 
   override fun parseEvent(frame: String): EngineEvent? = EventParser.parse(frame)
+
+  override fun sessionInfo(port: String, password: String, sessionId: String) = HttpProbe(
+    "http://127.0.0.1:$port/api/session/${URLEncoder.encode(sessionId, "UTF-8")}",
+    Auth.headers(password),
+  )
+
+  override fun parseSessionTitle(body: String): String? = try {
+    JSONObject(body).optJSONObject("data")?.optString("title", "")?.trim()?.ifEmpty { null }
+  } catch (_: Exception) {
+    null
+  }
 
   override fun passwordForms(password: String) = listOf(password, Auth.credential(password))
 }

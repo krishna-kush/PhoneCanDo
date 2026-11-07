@@ -29,6 +29,12 @@ interface AgentKind {
   /** One `data:` frame of that stream; null when it carries nothing we read. */
   fun parseEvent(frame: String): EngineEvent?
 
+  /** Request for one session (a chat), for its title; null when the kind has none. */
+  fun sessionInfo(port: String, password: String, sessionId: String): HttpProbe? = null
+
+  /** The chat's title from that response; null when it has none. */
+  fun parseSessionTitle(body: String): String? = null
+
   /** Every form of the engine password that can show up in a log line. */
   fun passwordForms(password: String): List<String>
 }
@@ -48,10 +54,13 @@ data class LaunchSpec(val argv: List<String>, val env: Map<String, String>)
 /**
  * A kind's config: an APK assets folder copied into a folder under the engine
  * HOME on every start. Files in [keepIfPresent] are seeded only when absent,
- * so user edits and keys in them survive.
+ * so user edits and keys in them survive. [instructionsFile] (relative to
+ * [homeDir]) is the agent's global instructions, where the image's OS note
+ * goes; null for a kind without one.
  */
 data class AgentConfig(
   val assetDir: String,
   val homeDir: String,
   val keepIfPresent: Set<String>,
+  val instructionsFile: String? = null,
 )

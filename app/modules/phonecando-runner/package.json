@@ -1,7 +1,7 @@
 {
   "name": "phonecando-runner",
   "version": "0.1.0",
-  "description": "PhoneCanDo on-device runner: opencode serve lifecycle in a foreground service.",
+  "description": "PhoneCanDo on-device runner: the agents' engines in a foreground service, their store and bridge.",
   "main": "src/PhoneCanDoRunnerModule.ts",
   "types": "src/PhoneCanDoRunnerModule.ts",
   "license": "SEE LICENSE IN ../../../LICENSE",

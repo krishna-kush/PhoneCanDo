@@ -1,22 +1,40 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
+import type {
+  NativeAgent,
+  NativeBridgePrompt,
+  NativeEngineAuth,
+  NativeEngineStatus,
+  NativeLaunchTarget,
+} from './PhoneCanDoRunner.types';
 import type { TelemetryNativeSnapshot } from './telemetry.types';
 
 export type { EngineHealth, NativeCrash, TelemetryNativeSnapshot } from './telemetry.types';
+export type {
+  NativeAgent,
+  NativeBridgePrompt,
+  NativeEngineAuth,
+  NativeEngineStatus,
+  NativeLaunchTarget,
+} from './PhoneCanDoRunner.types';
 
-export type ServeParams = { port?: string };
+type RunnerEvents = {
+  phonecandoLaunchTarget(e: NativeLaunchTarget): void;
+  phonecandoBridgePrompt(e: NativeBridgePrompt): void;
+  phonecandoEngineState(e: NativeEngineStatus): void;
+};
 
-declare class PhoneCanDoRunnerModule extends NativeModule {
+declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   getPrefix(): string;
-  isServeRunning(): boolean;
   getBuildChannel(): string;
   setAutomationEnabled(enabled: boolean): boolean;
   isAutomationEnabled(): boolean;
-  consumeLaunchTab(): string;
-  consumeUnlockRequest(): string;
-  resolveUnlock(ok: boolean): boolean;
-  consumeAccessibilityRequest(): string;
-  resolveAccessibility(ok: boolean, guided: boolean): boolean;
+  consumeLaunchTarget(): NativeLaunchTarget | null;
+  dismissAgentAlert(agentId: string): void;
+  setOpenChat(agentId: string | null, sessionId: string | null, title: string | null): void;
+  pendingPrompts(): NativeBridgePrompt[];
+  resolveUnlock(requestId: string, ok: boolean): boolean;
+  resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean;
   isUiAutomationConnected(): boolean;
   openAccessibilitySettings(): string;
   isAccessibilityServiceEnabled(): boolean;
@@ -26,15 +44,20 @@ declare class PhoneCanDoRunnerModule extends NativeModule {
   canShowRestrictedSettingNote(): boolean;
   showRestrictedSettingNote(): string;
   openAppInfoSettings(): string;
-  startServeService(params: ServeParams): string;
-  stopServeService(): string;
-  setActiveSession(params: { sessionId?: string; title?: string }): string;
-  leaveSession(params: { sessionId?: string }): string;
-  updateSessionTitle(params: { sessionId?: string; title?: string }): string;
-  getServePort(): string;
-  getServePassword(): string;
   requestNotificationPermission(): string;
-  health(params: { port?: string }): string;
+  listAgents(): NativeAgent[];
+  createAgent(params: { kind: string; name: string; imageId: string }): NativeAgent;
+  renameAgent(id: string, name: string): NativeAgent;
+  deleteAgent(id: string): Promise<boolean>;
+  startEngine(agentId: string): Promise<{ port: string }>;
+  stopEngine(agentId: string): Promise<void>;
+  stopAllEngines(): Promise<void>;
+  isAnyEngineAlive(): boolean;
+  touchEngine(agentId: string): void;
+  engineStatus(agentId: string): NativeEngineStatus;
+  engineStatuses(): NativeEngineStatus[];
+  getEngineAuth(agentId: string): NativeEngineAuth;
+  engineHealth(agentId: string): string;
   getTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   setTelemetryEnabled(enabled: boolean): void;
@@ -44,10 +67,6 @@ const mod = requireNativeModule<PhoneCanDoRunnerModule>('PhoneCanDoRunner');
 
 export function getPrefix(): string {
   return mod.getPrefix();
-}
-
-export function isServeRunning(): boolean {
-  return mod.isServeRunning();
 }
 
 export function getBuildChannel(): string {
@@ -68,34 +87,9 @@ export function isAutomationEnabled(): boolean {
   return m.isAutomationEnabled();
 }
 
-export function consumeLaunchTab(): string {
-  const m = mod as unknown as { consumeLaunchTab?: () => string };
-  if (typeof m.consumeLaunchTab !== 'function') return '';
-  return m.consumeLaunchTab();
-}
-
-export function consumeUnlockRequest(): string {
-  const m = mod as unknown as { consumeUnlockRequest?: () => string };
-  if (typeof m.consumeUnlockRequest !== 'function') return '';
-  return m.consumeUnlockRequest();
-}
-
-export function resolveUnlock(ok: boolean): boolean {
-  const m = mod as unknown as { resolveUnlock?: (v: boolean) => boolean };
-  if (typeof m.resolveUnlock !== 'function') return false;
-  return m.resolveUnlock(ok);
-}
-
-export function consumeAccessibilityRequest(): string {
-  const m = mod as unknown as { consumeAccessibilityRequest?: () => string };
-  if (typeof m.consumeAccessibilityRequest !== 'function') return '';
-  return m.consumeAccessibilityRequest();
-}
-
-export function resolveAccessibility(ok: boolean, guided: boolean): boolean {
-  const m = mod as unknown as { resolveAccessibility?: (v: boolean, g: boolean) => boolean };
-  if (typeof m.resolveAccessibility !== 'function') return false;
-  return m.resolveAccessibility(ok, guided);
+// Where the app should land, once ({tab, agentId}); null when nothing waits.
+export function consumeLaunchTarget(): NativeLaunchTarget | null {
+  return mod.consumeLaunchTarget() ?? null;
 }
 
 export function isUiAutomationConnected(): boolean {
@@ -116,42 +110,8 @@ export function markSelfUpdatePending(): boolean {
   return m.markSelfUpdatePending();
 }
 
-export function startServeService(params: ServeParams): string {
-  return mod.startServeService(params);
-}
-
-export function stopServeService(): string {
-  return mod.stopServeService();
-}
-
-export function setActiveSession(params: { sessionId?: string; title?: string }): string {
-  return mod.setActiveSession(params);
-}
-
-export function leaveSession(params: { sessionId?: string }): string {
-  return mod.leaveSession(params);
-}
-
-export function updateSessionTitle(params: { sessionId?: string; title?: string }): string {
-  return mod.updateSessionTitle(params);
-}
-
-export function getServePort(): string {
-  return mod.getServePort();
-}
-
-export function getServePassword(): string {
-  const m = mod as unknown as { getServePassword?: () => string };
-  if (typeof m.getServePassword !== 'function') return '';
-  return m.getServePassword();
-}
-
 export function requestNotificationPermission(): string {
   return mod.requestNotificationPermission();
-}
-
-export function serveHealth(port = '4097'): string {
-  return mod.health({ port });
 }
 
 // Telemetry counters (contract: telemetry.types.ts). Null when the native
@@ -182,8 +142,8 @@ export function consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null {
 }
 
 // Mirrors the user's telemetry on/off choice into native prefs. While off,
-// the serve service no longer opens the engine event stream just to count
-// sessions. No-op when the native method is missing or fails.
+// no engine event stream is opened just to count sessions. No-op when the
+// native method is missing or fails.
 export function setTelemetryEnabled(enabled: boolean): void {
   const m = mod as unknown as { setTelemetryEnabled?: (v: boolean) => void };
   if (typeof m.setTelemetryEnabled !== 'function') return;

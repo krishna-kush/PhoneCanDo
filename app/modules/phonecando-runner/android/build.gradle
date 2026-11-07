@@ -17,13 +17,23 @@ expoModule {
 // (module root, so an iOS implementation can consume the same files) and the
 // assets folder the service seeds from (AgentKind.config.assetDir). Android
 // packages a generated copy per variant; non-full channels drop the
-// full-only files and take the overlay's instead.
+// full-only files and take the overlay's instead. `shared` folders come from
+// agents/shared/ (kind-neutral code, e.g. the phone tools) and land inside
+// the kind's config, so its plugins import them by a relative path that
+// stays within the seeded tree; their full-only parts are dropped the same
+// way.
+def phoneTools = [
+  source: file("../agents/shared/phone-tools"),
+  into: "phone-tools",
+  fullOnly: ["control/**"],
+]
 def agentConfigs = [
   [
     assetDir: "oc-config",
     source: file("../agents/oc/config"),
     fullOnly: ["AGENTS.md", "plugins/automation/**"],
     overlay: file("../agents/oc/config-lite"),
+    shared: [phoneTools],
   ],
 ]
 
@@ -93,11 +103,23 @@ androidComponents {
             into cfg.assetDir
           }
         }
+        cfg.shared.each { part ->
+          from(part.source) {
+            into "${cfg.assetDir}/${part.into}"
+            exclude "**/node_modules/**"
+            if (channel != "full") exclude part.fullOnly
+          }
+        }
       }
       doFirst {
         agentConfigs.each { cfg ->
           if (!cfg.source.isDirectory() || (channel != "full" && !cfg.overlay.isDirectory())) {
             throw new GradleException("Missing agent config ${cfg.assetDir} for channel ${channel}")
+          }
+          cfg.shared.each { part ->
+            if (!part.source.isDirectory()) {
+              throw new GradleException("Missing shared agent code ${part.source} for ${cfg.assetDir}")
+            }
           }
         }
       }
@@ -119,9 +141,10 @@ dependencies {
   fullImplementation 'com.phonecando.pce:pce-android:0.1.0-dev'
   fullImplementation 'com.phonecando.pce:pce-pack:0.1.0-dev'
 
-  // JVM tests of the pure telemetry redaction (src/test, PathRedactor.kt)
-  // and of what a consume keeps (TelemetryStore and TelemetryRecorder over an
-  // in-memory store): ./gradlew :phonecando-runner:testLiteDebugUnitTest
+  // JVM tests of the pure telemetry redaction (src/test, PathRedactor.kt),
+  // of what a consume keeps (TelemetryStore and TelemetryRecorder over an
+  // in-memory store) and of the bridge's auth, routes, screen lease and
+  // prompts (src/test/.../bridge): ./gradlew :phonecando-runner:testLiteDebugUnitTest
   testImplementation 'junit:junit:4.13.2'
   // android.jar's org.json is a stub on the JVM; the telemetry store parses
   // its file with it.

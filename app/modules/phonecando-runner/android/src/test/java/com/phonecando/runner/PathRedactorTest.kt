@@ -1,5 +1,6 @@
 package com.phonecando.runner
 
+import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.agents.oc.OpencodeKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,7 +10,7 @@ import org.junit.Test
 import java.util.Base64
 
 // JVM checks for PathRedactor (pure): every path shape, the secrets, and the
-// serve stderr tail cut exactly as ServeWatch makes it.
+// engine stderr tail cut exactly as EngineWatch makes it.
 class PathRedactorTest {
   private val pkg = "com.phonecando.app"
   private val app = PathRedactor.forDirs(
@@ -224,6 +225,27 @@ class PathRedactorTest {
     assertEquals("abc", app.redact("abc", listOf("abc")))
   }
 
+  @Test fun everyAgentsSecrets() {
+    val pw2 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    val token2 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    val pw3 = "cccccccccccccccccccccccccccccccc"
+    val token3 = "dddddddddddddddddddddddddddddddd"
+    val agents = listOf(
+      AgentRecord("a1", "opencode", "One", "i1", "4097", pw, token, 1L),
+      AgentRecord("a2", "opencode", "Two", "i2", null, pw2, token2, 2L),
+      // A kind this build lacks: its raw values still go.
+      AgentRecord("a3", "future-kind", "Three", "i3", null, pw3, token3, 3L),
+    )
+    val basic2 = Base64.getEncoder().encodeToString("opencode:$pw2".toByteArray())
+    val secrets = PathRedactor.agentSecrets(agents)
+    assertEquals(PathRedactor.engineSecrets(OpencodeKind, pw, token) + listOf(pw2, basic2, token2, pw3, token3), secrets)
+    assertEquals(
+      "one <secret> <secret> two <secret> <secret> three <secret> <secret>",
+      app.redact("one $pw $token two $basic2 $token2 three $pw3 $token3", secrets),
+    )
+    assertEquals(emptyList<String>(), PathRedactor.agentSecrets(emptyList()))
+  }
+
   @Test fun authorizationValues() {
     both("Authorization: Basic b3BlbmNvZGU6c2VjcmV0", "Authorization: Basic <secret>")
     both("authorization: Bearer abc.def-ghi", "authorization: Bearer <secret>")
@@ -260,12 +282,12 @@ class PathRedactorTest {
     assertFalse(once.contains("files/a.ts"))
   }
 
-  // ---- stderr tail (ServeWatch) -----------------------------------------
+  // ---- stderr tail (EngineWatch) ----------------------------------------
 
   private val window = 16 * 1024
   private val cap = 2048
 
-  // What ServeWatch.stderrTail does with serve.log, minus the file.
+  // What EngineWatch.stderrTail does with engine.log, minus the file.
   private fun tailOf(log: String, windowBytes: Int = window): String? {
     val bytes = log.toByteArray(Charsets.UTF_8)
     val start = maxOf(0, bytes.size - windowBytes)

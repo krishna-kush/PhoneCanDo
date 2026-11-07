@@ -1,7 +1,7 @@
 package com.phonecando.runner
 
 import android.content.Context
-import com.phonecando.runner.agents.AgentKinds
+import com.phonecando.runner.agents.AgentStores
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -59,17 +59,12 @@ internal object TelemetryCrashCapture {
     TelemetryStore.appendCrash(p, crash)
   }
 
-  // The engine's secrets as the serve service stored them, for a crash
+  // Every agent's engine secrets from the agent store, for a crash
   // message; empty when they cannot be read.
   private fun storedEngineSecrets(): List<String> {
     val context = app ?: return emptyList()
     return try {
-      val engine = context.getSharedPreferences(PhoneCanDoServeService.PREFS, Context.MODE_PRIVATE)
-      PathRedactor.engineSecrets(
-        AgentKinds.default,
-        engine.getString(PhoneCanDoServeService.KEY_PASSWORD, null),
-        engine.getString(PhoneCanDoServeService.KEY_BRIDGE_TOKEN, null),
-      )
+      PathRedactor.agentSecrets(AgentStores.get(context).all())
     } catch (_: Throwable) {
       emptyList()
     }

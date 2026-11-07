@@ -7,7 +7,7 @@ import org.json.JSONObject
 import java.io.File
 
 // Native half of telemetry, entry point: the once-per-process install and the
-// events the service, ServeWatch and the bridge count (src/telemetry.types.ts
+// events the engine supervisor, EngineWatch and the bridge count (src/telemetry.types.ts
 // is the contract). Records only, into TelemetryStore; it never does network.
 // Beside it: TelemetryStore (the file, its one lock, consume),
 // TelemetrySwitch (the user's on/off choice), TelemetryCrashCapture (uncaught
@@ -26,7 +26,7 @@ object TelemetryRecorder {
 
   // Idempotent; the first call in a process wins. TelemetryInitProvider calls
   // it before Application.onCreate (the earliest hook a library gets, see
-  // there); the module's OnCreate and the serve service's onCreate repeat it
+  // there); the module's OnCreate and the engine service's onCreate repeat it
   // as fallbacks. Points the store at the app, installs the crash handler and
   // the memory callbacks once per process. Never throws.
   fun install(context: Context) {
@@ -59,10 +59,10 @@ object TelemetryRecorder {
   /** Real memory pressure (TelemetryMemoryCallbacks). */
   fun lowMemoryTrim() = TelemetryStore.bump(TelemetryStore.K_LOW_MEMORY)
 
-  /** A serve launch was attempted (counted before the attempt). */
+  /** An engine launch was attempted (counted before the attempt); any agent. */
   fun engineStartRequested() = TelemetryStore.bump(TelemetryStore.K_STARTS)
 
-  /** The launch threw, or serve never answered health within the boot window. */
+  /** The launch threw, or the engine never answered health within the boot window. */
   fun engineStartFailed() = TelemetryStore.bump(TelemetryStore.K_START_FAILS)
 
   /** The preferred port was taken and another was picked. */
@@ -71,12 +71,12 @@ object TelemetryRecorder {
   /** An engine session was created (engine event stream). */
   fun sessionCreated() = TelemetryStore.bump(TelemetryStore.K_SESSION_CREATES)
 
-  /** Ms from the start request to serve's first healthy answer. */
+  /** Ms from the start request to the engine's first healthy answer. */
   fun engineBooted(bootMs: Long) = TelemetryStore.mutate { _, e ->
     e.putLong(TelemetryStore.K_BOOT_MS, bootMs.coerceAtLeast(0L))
   }
 
-  // Serve exited without a stop request, noticed at `diedAt` (epoch ms).
+  // An engine exited without a stop request, noticed at `diedAt` (epoch ms).
   // `failedBoot`: it never answered health, so the start failed too. The
   // tail must already be redacted (redactedTail); it replaces the previous
   // exit's tail, also with nothing when this exit left none.
@@ -103,7 +103,7 @@ object TelemetryRecorder {
       }
     }
 
-  /** One bridge call, keyed by route name (see BridgeServer.TOOL_ROUTES). */
+  /** One bridge call, keyed by route name (Route.telemetryKey in bridge/Routes.kt). */
   fun toolCall(name: String) = TelemetryStore.mutate { p, e ->
     val calls = JSONObject(p.getString(TelemetryStore.K_TOOL_CALLS, null) ?: "{}")
     if (calls.has(name) || calls.length() < MAX_TOOL_KEYS) {
@@ -112,8 +112,8 @@ object TelemetryRecorder {
     }
   }
 
-  // The serve stderr tail for engineDied: the last ≤ STDERR_TAIL_BYTES of
-  // `window` (the end of serve.log; `midFile` when it does not start at the
+  // The engine stderr tail for engineDied: the last ≤ STDERR_TAIL_BYTES of
+  // `window` (the end of the image's logs/engine.log; `midFile` when it does not start at the
   // file's first byte), redacted with this app's dirs and `secrets`.
   fun redactedTail(window: ByteArray, midFile: Boolean, secrets: Collection<String>): String? =
     redactor.tail(window, midFile, STDERR_TAIL_BYTES, secrets)

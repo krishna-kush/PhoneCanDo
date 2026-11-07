@@ -20,9 +20,8 @@
 //   made in that gap, not the whole period. State fields (installSource, batteryOptIgnored,
 //       fgServiceRunning, a11yConnected, drmIdHash) are read live.
 //   setTelemetryEnabled(enabled: boolean): void
-//       Mirrors the user's on/off choice into native prefs. While off, the
-//       serve service does not open the engine event stream just to count
-//       sessions (it still opens it for watched chats, as before telemetry).
+//       Mirrors the user's on/off choice into native prefs. While off, no
+//       engine event stream is opened just to count sessions.
 
 export type NativeCrash = {
   /** UUID made when the crash was recorded; used as the error id. */
@@ -41,17 +40,17 @@ export type NativeCrash = {
 };
 
 export type EngineHealth = {
-  /** serve process starts / failed starts since the last reset. */
+  /** Engine starts / failed starts since the last reset, all agents together. */
   starts: number;
   startFails: number;
-  /** Times serve exited without being asked to stop. */
+  /** Times an engine exited without being asked to stop. */
   died: number;
   /** Exit code of the last unexpected exit, or null. */
   lastExitCode: number | null;
   /** Epoch ms of the last unexpected exit, or null (it may predate this process). */
   lastDiedAt: number | null;
   /**
-   * Last ≤2 KB of serve stderr at that exit, paths (whole path, not just its
+   * Last ≤2 KB of that engine's stderr at that exit, paths (whole path, not just its
    * prefix) and secrets redacted, or null. Raw engine output can contain prompt
    * text, so the app sends it ONLY inside a user-initiated report, never in
    * automatic telemetry.
@@ -70,6 +69,7 @@ export type TelemetryNativeSnapshot = {
    */
   installSource: string | null;
   batteryOptIgnored: boolean;
+  /** True while any agent's engine runs. */
   fgServiceRunning: boolean;
   a11yConnected: boolean;
   /**

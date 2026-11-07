@@ -1,4 +1,4 @@
-package com.phonecando.runner
+package com.phonecando.runner.engine
 
 import android.util.Log
 import com.phonecando.runner.agents.EngineEvent
@@ -9,10 +9,12 @@ import java.net.HttpURLConnection
 // (AgentKind.eventStream), assembling `data:` frames and dispatching them as
 // engine events through the kind's parser. Reconnects with capped backoff; a
 // 60s read timeout doubles as a dead-socket detector. Only android.util.Log
-// is Android-specific. The service owns exactly one.
-class SseClient(
+// is Android-specific. The supervisor holds one per ready engine
+// (EngineStreams).
+internal class SseClient(
   private val stream: HttpProbe,
   private val tag: String,
+  private val threadName: String,
   private val parse: (String) -> EngineEvent?,
   private val onEvent: (EngineEvent) -> Unit,
 ) {
@@ -23,7 +25,7 @@ class SseClient(
   fun start() {
     if (running) return
     running = true
-    thread = Thread({ loop() }, "phonecando-sse").also {
+    thread = Thread({ loop() }, threadName).also {
       it.isDaemon = true
       it.start()
     }
@@ -68,7 +70,6 @@ class SseClient(
   }
 
   // Blocks on the socket until `alive()` is false or the stream ends.
-  // Extracted for clarity; the service never calls it directly.
   private fun readFrames(conn: HttpURLConnection, alive: () -> Boolean) {
     val reader = conn.inputStream.bufferedReader()
     val data = StringBuilder()

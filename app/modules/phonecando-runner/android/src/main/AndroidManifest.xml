@@ -24,6 +24,14 @@
       android:name="com.phonecando.runner.PhoneCanDoServeService"
       android:exported="false"
       android:foregroundServiceType="dataSync" />
+    <!-- What agent notifications and the bridge's launch open: hands their
+         target (tab, agent) to the app, starts it and finishes before it
+         draws (notify/OpenTargetActivity.kt). Our own PendingIntents only. -->
+    <activity
+      android:name="com.phonecando.runner.notify.OpenTargetActivity"
+      android:exported="false"
+      android:noHistory="true"
+      android:theme="@android:style/Theme.NoDisplay" />
     <!-- Bring the app back after a self-update (system broadcast; the new
          build receives it). -->
     <receiver

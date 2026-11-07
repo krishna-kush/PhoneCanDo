@@ -43,7 +43,7 @@ class PackStore(
   pceVersion: String = "0.1.0",
 ) {
   private val appContext = context.applicationContext
-  private val root = File(appContext.filesDir, "phonecando-home/automation/packs")
+  private val root = File(appContext.filesDir, "automation/packs")
   private val key = trustedKey(appContext)
   private val runtime = key?.let { PackRuntime(pce, it, pceVersion) }
 

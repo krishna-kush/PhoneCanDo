@@ -1,9 +1,14 @@
 package com.phonecando.runner
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.os.SystemClock
-import com.phonecando.runner.agents.AgentKinds
+import com.phonecando.runner.api.agentFunctions
+import com.phonecando.runner.api.engineFunctions
+import com.phonecando.runner.api.notifyFunctions
+import com.phonecando.runner.bridge.BridgePrompts
+import com.phonecando.runner.engine.EngineStatus
+import com.phonecando.runner.engine.Engines
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
@@ -12,20 +17,30 @@ class PhoneCanDoRunnerModule : Module() {
   companion object {
     private var instance: PhoneCanDoRunnerModule? = null
 
-    // Bridge -> JS: switch tabs when the agent returns to PhoneCanDo or asks for
-    // unlock. Prefs are the fallback when JS is not attached yet.
-    fun emitLaunchTab(tab: String) {
-      instance?.sendEvent("phonecandoLaunchTab", mapOf("tab" to tab))
+    // Native -> JS: where the app should land, {tab, agentId}
+    // (notify/LaunchTargets: a notification tap, an agent's return, a
+    // prompt). Prefs are the fallback when JS is not attached yet
+    // (consumeLaunchTarget).
+    fun emitLaunchTarget(target: Map<String, Any?>) {
+      instance?.sendEvent("phonecandoLaunchTarget", target)
     }
 
-    fun emitUnlockRequest(reason: String) {
-      instance?.sendEvent("phonecandoUnlockRequest", mapOf("reason" to reason))
-    }
-
-    fun emitAccessibilityRequest(reason: String) {
-      instance?.sendEvent("phonecandoAccessibilityRequest", mapOf("reason" to reason))
+    // Bridge -> JS: a prompt an agent is waiting on (BridgePrompts shape:
+    // requestId, kind, agentId, agentName, reason). pendingPrompts covers
+    // the moments JS was not attached.
+    fun emitBridgePrompt(prompt: Map<String, Any?>) {
+      instance?.sendEvent("phonecandoBridgePrompt", prompt)
     }
   }
+
+  // Every engine change, as the phonecandoEngineState event (EngineStatus.toMap).
+  private val engineListener = object : Engines.Listener {
+    override fun onStatus(status: EngineStatus) {
+      sendEvent("phonecandoEngineState", status.toMap())
+    }
+  }
+
+  private fun context(): Context = appContext.reactContext ?: throw Exception("no react context")
 
   private fun appFilesDir(): File {
     val reactContext = appContext.reactContext ?: throw Exception("no react context")
@@ -39,13 +54,9 @@ class PhoneCanDoRunnerModule : Module() {
     return context
   }
 
-  private fun opt(params: Map<String, Any>, key: String): String? {
-    return (params[key] as? String)?.takeIf { it.isNotEmpty() }
-  }
-
   override fun definition() = ModuleDefinition {
     Name("PhoneCanDoRunner")
-    Events("phonecandoLaunchTab", "phonecandoUnlockRequest", "phonecandoAccessibilityRequest")
+    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState")
 
     OnCreate {
       instance = this@PhoneCanDoRunnerModule
@@ -59,90 +70,19 @@ class PhoneCanDoRunnerModule : Module() {
       // Application.onCreate; this idempotent repeat covers a merged
       // manifest that lacks the provider.
       appContext.reactContext?.let { TelemetryRecorder.install(it) }
+      Engines.addListener(engineListener)
     }
     OnDestroy {
+      Engines.removeListener(engineListener)
       if (instance === this@PhoneCanDoRunnerModule) instance = null
     }
 
+    agentFunctions { context() }
+    engineFunctions { context() }
+    notifyFunctions { context() }
+
     Function("getPrefix") {
       appFilesDir().absolutePath
-    }
-
-    // The engine the foreground service runs. The updater stops the engine
-    // before a self-update and polls this until serve has exited.
-    Function("isServeRunning") {
-      PhoneCanDoServeService.isServeAlive()
-    }
-
-    Function("startServeService") { params: Map<String, Any> ->
-      val context = appContext.reactContext ?: throw Exception("no react context")
-      val intent = Intent(context, PhoneCanDoServeService::class.java).apply {
-        action = PhoneCanDoServeService.ACTION_START
-        // Boot time (telemetry) runs from this request, not from the
-        // service's own start.
-        putExtra(PhoneCanDoServeService.EXTRA_REQUESTED_AT, SystemClock.elapsedRealtime())
-        opt(params, "port")?.let { putExtra(PhoneCanDoServeService.EXTRA_PORT, it) }
-      }
-      if (Build.VERSION.SDK_INT >= 26) {
-        context.startForegroundService(intent)
-      } else {
-        @Suppress("DEPRECATION")
-        context.startService(intent)
-      }
-      "service-started"
-    }
-
-    Function("stopServeService") {
-      val context = appContext.reactContext ?: throw Exception("no react context")
-      context.stopService(Intent(context, PhoneCanDoServeService::class.java))
-      "service-stopped"
-    }
-
-    Function("setActiveSession") { params: Map<String, Any> ->
-      val context = appContext.reactContext ?: throw Exception("no react context")
-      val intent = Intent(context, PhoneCanDoServeService::class.java).apply {
-        action = PhoneCanDoServeService.ACTION_SESSION
-        opt(params, "sessionId")?.let { putExtra(PhoneCanDoServeService.EXTRA_SESSION_ID, it) }
-        opt(params, "title")?.let { putExtra(PhoneCanDoServeService.EXTRA_TITLE, it) }
-      }
-      if (Build.VERSION.SDK_INT >= 26) {
-        context.startForegroundService(intent)
-      } else {
-        @Suppress("DEPRECATION")
-        context.startService(intent)
-      }
-      "session-updated"
-    }
-
-    Function("leaveSession") { params: Map<String, Any> ->
-      val context = appContext.reactContext ?: throw Exception("no react context")
-      val intent = Intent(context, PhoneCanDoServeService::class.java).apply {
-        action = PhoneCanDoServeService.ACTION_LEAVE
-        opt(params, "sessionId")?.let { putExtra(PhoneCanDoServeService.EXTRA_SESSION_ID, it) }
-      }
-      if (Build.VERSION.SDK_INT >= 26) {
-        context.startForegroundService(intent)
-      } else {
-        @Suppress("DEPRECATION")
-        context.startService(intent)
-      }
-      "leave-reported"
-    }
-
-    Function("updateSessionTitle") { params: Map<String, Any> ->
-      val context = appContext.reactContext ?: throw Exception("no react context")
-      val intent = Intent(context, PhoneCanDoServeService::class.java).apply {
-        action = PhoneCanDoServeService.ACTION_TITLE
-        opt(params, "sessionId")?.let { putExtra(PhoneCanDoServeService.EXTRA_SESSION_ID, it) }
-        opt(params, "title")?.let { putExtra(PhoneCanDoServeService.EXTRA_TITLE, it) }
-      }
-      if (Build.VERSION.SDK_INT >= 26) {
-        context.startForegroundService(intent)
-      } else {
-        @Suppress("DEPRECATION")
-        context.startService(intent)
-      }
-      "title-updated"
     }
 
     // System notification permission (Android 13+). Plain posts are silently
@@ -170,7 +110,7 @@ class PhoneCanDoRunnerModule : Module() {
 
     // Build channel: the Gradle flavor (full|lite|play) writes it into the
     // manifest meta-data com.phonecando.channel (withBuildChannel.js), and the
-    // serve service passes it to the engine as PHONECANDO_CHANNEL. Only full
+    // engine launcher passes it to every engine as PHONECANDO_CHANNEL. Only full
     // compiles the accessibility driver and PCE. Absent meta-data (Expo Go /
     // pre-channel installs) means full — dev default.
     Function("getBuildChannel") {
@@ -202,59 +142,23 @@ class PhoneCanDoRunnerModule : Module() {
       AutomationHosts.current?.enabled == true
     }
 
-    // One-shot tab requested by the bridge's /app route. Read-and-clear so a
-    // stale request cannot yank the user to Settings on a later resume.
-    Function("consumeLaunchTab") {
-      val context = appContext.reactContext ?: return@Function ""
-      val prefs = context.getSharedPreferences(
-        PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE,
-      )
-      val tab = prefs.getString(PhoneCanDoServeService.KEY_PENDING_TAB, "") ?: ""
-      if (tab.isNotEmpty()) {
-        prefs.edit().remove(PhoneCanDoServeService.KEY_PENDING_TAB).apply()
-      }
-      tab
+    // Prompts agents are waiting on (biometric unlock, accessibility setup),
+    // one per asking request. The app is the only caller; no agent process
+    // can reach these. resolveAccessibility's `guided`: the screen the user
+    // opened is a restricted-settings guide step. The bridge keeps waiting
+    // for the service either way; `guided` only makes its answer say
+    // `restricted: sideload`.
+    Function("pendingPrompts") {
+      BridgePrompts.pending()
     }
 
-    // One-shot biometric request from the bridge. The modal reads-and-clears
-    // it on mount/resume; the event covers the already-foreground case.
-    Function("consumeUnlockRequest") {
-      val context = appContext.reactContext ?: return@Function ""
-      val prefs = context.getSharedPreferences(
-        PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE,
-      )
-      val reason = prefs.getString(PhoneCanDoServeService.KEY_PENDING_UNLOCK, "") ?: ""
-      if (reason.isNotEmpty()) {
-        prefs.edit().remove(PhoneCanDoServeService.KEY_PENDING_UNLOCK).apply()
-      }
-      reason
-    }
-
-    // Resolve the bridge's waiting /unlock request after the user's biometric
-    // prompt. The app is the only caller; the agent process cannot reach this.
-    Function("resolveUnlock") { ok: Boolean ->
-      BridgeServer.resolveUnlock(ok)
+    Function("resolveUnlock") { requestId: String, ok: Boolean ->
+      BridgePrompts.resolveUnlock(requestId, ok)
       ok
     }
 
-    Function("consumeAccessibilityRequest") {
-      val context = appContext.reactContext ?: return@Function ""
-      val prefs = context.getSharedPreferences(
-        PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE,
-      )
-      val reason = prefs.getString(PhoneCanDoServeService.KEY_PENDING_ACCESSIBILITY, "") ?: ""
-      if (reason.isNotEmpty()) {
-        prefs.edit().remove(PhoneCanDoServeService.KEY_PENDING_ACCESSIBILITY).apply()
-      }
-      reason
-    }
-
-    // Resolve the bridge's waiting /accessibility request after the user
-    // confirms (or cancels) the in-chat prompt. `guided`: the app is running
-    // its restricted-settings guide, so the bridge answers at once instead of
-    // waiting for a service that cannot connect yet. The app is the only caller.
-    Function("resolveAccessibility") { ok: Boolean, guided: Boolean ->
-      BridgeServer.resolveAccessibility(ok, guided)
+    Function("resolveAccessibility") { requestId: String, ok: Boolean, guided: Boolean ->
+      BridgePrompts.resolveAccessibility(requestId, ok, guided)
       ok
     }
 
@@ -354,56 +258,24 @@ class PhoneCanDoRunnerModule : Module() {
     // consumeTelemetrySnapshot returns the same shape and, under the
     // telemetry store's one lock, zeroes the counters, clears lastExitCode,
     // lastDiedAt and lastBootMs (lastStderrTail stays) and drains the crash
-    // list (TelemetrySnapshot). fgServiceRunning is the serve-running check
-    // (isServeRunning); the other state fields are read live.
+    // list (TelemetrySnapshot). fgServiceRunning is true while any agent's
+    // engine runs; the other state fields are read live.
     Function("getTelemetrySnapshot") {
       val context = telemetryContext() ?: return@Function null
-      TelemetrySnapshot.peek(context, PhoneCanDoServeService.isServeAlive())
+      TelemetrySnapshot.peek(context, Engines.peek()?.anyLive() == true)
     }
 
     Function("consumeTelemetrySnapshot") {
       val context = telemetryContext() ?: return@Function null
-      TelemetrySnapshot.consume(context, PhoneCanDoServeService.isServeAlive())
+      TelemetrySnapshot.consume(context, Engines.peek()?.anyLive() == true)
     }
 
     // Mirrors the user's telemetry on/off choice into the telemetry prefs
-    // (default on). While off, the serve service opens the engine event
-    // stream only for watched chats, not to count sessions; counters and
-    // crash capture stay local either way. Synchronous.
+    // (default on). While off, no engine event stream is opened to count
+    // sessions; counters and crash capture stay local either way. Synchronous.
     Function("setTelemetryEnabled") { enabled: Boolean ->
       telemetryContext()
       TelemetrySwitch.setEnabled(enabled)
-    }
-
-    Function("getServePort") {
-      val context = appContext.reactContext ?: throw Exception("no react context")
-      context.getSharedPreferences(PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE)
-        .getString(PhoneCanDoServeService.KEY_PORT, "") ?: ""
-    }
-
-
-    // The engine is auth-first: every REST/SSE call needs the install-stable
-    // server password (generated once by the service, handed to the engine
-    // via env, stashed in prefs). JS reads it here; the agent kind decides
-    // how it rides on a request.
-    Function("getServePassword") {
-      val context = appContext.reactContext ?: throw Exception("no react context")
-      context.getSharedPreferences(PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE)
-        .getString(PhoneCanDoServeService.KEY_PASSWORD, "") ?: ""
-    }
-
-    Function("health") { params: Map<String, Any> ->
-      val port = opt(params, "port") ?: PhoneCanDoServeService.DEFAULT_PORT
-      try {
-        val context = appContext.reactContext ?: throw Exception("no react context")
-        val pw = context.getSharedPreferences(PhoneCanDoServeService.PREFS, android.content.Context.MODE_PRIVATE)
-          .getString(PhoneCanDoServeService.KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() }
-          ?: return@Function "starting"
-        val code = AgentKinds.default.healthProbe(port, pw).status(5000, 5000)
-        if (code == 200) "ok" else "http-$code"
-      } catch (e: Exception) {
-        "error:${e.message}"
-      }
     }
   }
 }

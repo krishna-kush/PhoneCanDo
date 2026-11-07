@@ -1,11 +1,21 @@
 // The engine runs as a separate process from the app, so the agent reaches
-// Android through the loopback bridge in PhoneCanDoServeService. URL + token come
-// from the serve env (never hardcoded, never on disk).
+// Android through the loopback bridge in the app process. URL + token come
+// from the engine env (never hardcoded, never on disk); the token is this
+// engine's own, so the bridge knows which agent is calling.
 const BASE = process.env.PHONECANDO_BRIDGE_URL
 const TOKEN = process.env.PHONECANDO_BRIDGE_TOKEN
 
-export type Args = Record<string, any>
+type Envelope = {
+  ok?: boolean
+  data?: unknown
+  code?: string
+  message?: string
+  holder?: string
+  retryAfterMs?: number
+}
 
+// One bridge call; the result is always text for the model: the data as
+// JSON, or a readable error. 15 s client timeout by default.
 export async function call(
   path: string,
   body?: unknown,
@@ -27,14 +37,14 @@ export async function call(
       signal: ctrl.signal,
     })
     const text = await res.text()
-    let parsed: { ok?: boolean; data?: unknown; code?: string; message?: string }
+    let parsed: Envelope
     try {
       parsed = JSON.parse(text)
     } catch {
       return `bridge ${res.status}: ${text.slice(0, 300)}`
     }
     if (parsed.ok === true) return JSON.stringify(parsed.data ?? {})
-    return `error ${parsed.code ?? res.status}: ${parsed.message ?? "unknown"}`
+    return errorText(parsed, res.status)
   } catch (e) {
     if (ctrl.signal.aborted) return `bridge timeout (${Math.round(timeoutMs / 1000)}s)`
     return `bridge call failed: ${e instanceof Error ? e.message : String(e)}`
@@ -44,22 +54,13 @@ export async function call(
   }
 }
 
-// shortcut: this engine build (2.0.26) has no ctx.permission.assert (newer v2
-// does), and Code Mode bypasses top-level rules for plugin tools. The trust
-// gate is the app-side master switch checked by the bridge; restore per-call
-// asserts when the engine is bumped.
-export function bridgeTool(
-  name: string,
-  description: string,
-  input: Record<string, unknown>,
-  run: (args: Args, signal?: AbortSignal) => Promise<string>,
-) {
-  return {
-    name,
-    description,
-    input,
-    execute: async (args: Args, context?: { signal?: AbortSignal }) => ({
-      content: await run(args ?? {}, context?.signal),
-    }),
+// `error <code>: <message>`. control_busy (another agent holds the screen)
+// names the holder and how long to wait, so the model waits instead of
+// hammering the bridge.
+export function errorText(e: Envelope, status: number): string {
+  if (e.code === "control_busy") {
+    const secs = Math.max(1, Math.ceil((e.retryAfterMs ?? 30_000) / 1000))
+    return `error control_busy: the screen is in use by ${e.holder ?? "another agent"}; try again in about ${secs}s. Wait, then call the tool again; do not loop quickly, and tell the user if it stays busy.`
   }
+  return `error ${e.code ?? status}: ${e.message ?? "unknown"}`
 }

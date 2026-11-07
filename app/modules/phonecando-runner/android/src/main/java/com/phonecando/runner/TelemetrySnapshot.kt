@@ -16,7 +16,7 @@ const val TELEMETRY_DRM_ID_ENABLED = false
 // consumeTelemetrySnapshot; the shape is src/telemetry.types.ts): the stored
 // half from TelemetryStore plus the device state read live on every call
 // (install source, battery optimisation, accessibility, the DRM id hash).
-// `fgServiceRunning` comes from the caller (the module's serve-running check).
+// `fgServiceRunning` comes from the caller: true while any agent's engine runs.
 object TelemetrySnapshot {
   private const val DRM_PEPPER = "phonecando.drm.v1:"
   private val WIDEVINE_UUID: UUID = UUID.fromString("edef8ba9-79d6-4ace-a3c8-27dcd51d21ed")

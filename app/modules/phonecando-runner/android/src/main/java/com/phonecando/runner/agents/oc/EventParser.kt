@@ -12,14 +12,23 @@ import org.json.JSONObject
 // v1 shapes (payload.*) are still accepted defensively.
 // Mapping notes (all device-verified on v2): execution.started OR any
 // step/reasoning/text/tool/inbox movement = WORKING; only
-// session.execution.succeeded clears (step.ended does NOT — multi-step runs
-// would flicker Idle between steps); execution.failed / session.error =
-// FAILED; session.deleted = GONE. Deliberately ignored: catalog/agent/
-// command/skill/websearch/reference/plugin/integration updates, usage,
-// instructions, renamed (title poll covers it), server.connected.
-// Telemetry: `sessionCreated` is true for session.created of a top-level
-// session (no parentID: subagent child sessions are not counted); its kind
-// stays OTHER, so the watch logic is unchanged.
+// session.execution.succeeded = FINISHED (step.ended is not the end of a
+// run: in multi-step runs it comes between steps); execution.failed /
+// session.error = FAILED; session.deleted = GONE. From the upstream schema
+// and session runner (packages/schema, packages/core), not yet captured on
+// device: a failed step is WORKING (it may be retried; a run's one verdict
+// per busy period is execution.succeeded/failed/interrupted), and
+// permission.asked and form.created are WAITING (the run is alive but
+// blocked on the user; their replies and a cancelled form are WORKING).
+// Deliberately OTHER: execution.interrupted (the user's own stop),
+// catalog/agent/command/skill/websearch/reference/plugin/integration
+// updates, usage, instructions, renamed, server.connected. The supervisor
+// reads the stream for activity, telemetry and alerts (engine/EngineStreams):
+// any kind but OTHER marks the engine used; notify/AlertRules alerts on
+// FINISHED, FAILED and WAITING.
+// session.created keeps kind OTHER: `sessionCreated` is true for a
+// top-level session (no parentID; telemetry counts it), `childCreated` for
+// a subagent's child session (its verdict raises no alert).
 internal object EventParser {
   fun parse(data: String): EngineEvent? {
     val root = try {
@@ -64,26 +73,38 @@ internal object EventParser {
       }
     }
     val kind = when {
-      // True end-of-run: only the execution verdict clears Working.
-      // step.ended deliberately does NOT — multi-step runs would flicker
-      // Idle between steps (device-verified: step.ended precedes the final
-      // verdict by ms).
+      // True end-of-run: only the execution verdict. step.ended is not
+      // (device-verified: in multi-step runs it comes between steps, and
+      // the last one precedes the final verdict by ms).
       "execution.succeeded" in type -> Kind.FINISHED
-      "execution.failed" in type || "step.failed" in type || type == "session.error" -> Kind.FAILED
+      "execution.failed" in type || type == "session.error" -> Kind.FAILED
+      // The user's own stop: the run is over, with no verdict.
+      "execution.interrupted" in type -> Kind.STOPPED
+      // A pending form/permission: the run is alive but blocked on the user.
+      type == "permission.asked" || type == "form.created" -> Kind.WAITING
       "execution.started" in type || "step.started" in type || "step.streamed" in type ||
+        "step.failed" in type ||
         "reasoning." in type || "text." in type || "part." in type || "tool." in type ||
         "inbox." in type || "prompt." in type || "shell.started" in type ||
-        // A pending form/permission means the run is alive but blocked on the
-        // user — latch Working until the execution verdict clears it.
         "form." in type || "permission." in type -> Kind.WORKING
       "session.deleted" in type -> Kind.GONE
-      // Deliberately ignored: catalog/agent/command/skill/websearch/
-      // reference/plugin/integration updates, usage, instructions, renamed
-      // (title poll covers it), server.connected, compaction.
+      // Deliberately OTHER: catalog/agent/command/skill/websearch/
+      // reference/plugin/integration updates, usage, instructions, renamed,
+      // server.connected, compaction.
       else -> Kind.OTHER
     }
-    val created = type == "session.created" && !hasParent(body)
-    return EngineEvent(kind, sid.ifEmpty { null }, created)
+    val created = type == "session.created"
+    val child = created && hasParent(body)
+    // session.renamed: {"sessionID":…,"title":…}; opencode names a chat
+    // after its first message, often after that run has ended.
+    val title = if (type == "session.renamed") body?.optString("title", "")?.trim()?.ifEmpty { null } else null
+    return EngineEvent(
+      kind,
+      sid.ifEmpty { null },
+      sessionCreated = created && !child,
+      childCreated = child,
+      title = title,
+    )
   }
 
   private fun hasParent(body: JSONObject?): Boolean {

@@ -1,50 +1,60 @@
 package com.phonecando.runner
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Build
 import android.os.Handler
-import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
-import com.phonecando.runner.agents.AgentKind
-import com.phonecando.runner.agents.AgentKinds
-import com.phonecando.runner.agents.AssetManagerTree
-import com.phonecando.runner.agents.ConfigSeeder
-import com.phonecando.runner.agents.EngineEvent
-import com.phonecando.runner.agents.LaunchContext
-import java.io.File
+import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.engine.EngineRequests
+import com.phonecando.runner.engine.EngineStartError
+import com.phonecando.runner.engine.EngineStartException
+import com.phonecando.runner.engine.EngineStatus
+import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.notify.ServiceNotification
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
+// The foreground service (dataSync) that keeps the agents' engines alive
+// while the app is in the background. The engines themselves live in the
+// process's EngineSupervisor (engine/); this service is their anchor: it
+// runs start requests (ACTION_START from the module's startEngine, one at a
+// time on its own thread), shows one notification listing the running
+// agents, and stops itself once nothing runs. Nothing restarts it: every
+// command answers START_NOT_STICKY, and a null-intent restart starts
+// nothing (the app ensures its engines again when it comes to the
+// foreground).
 class PhoneCanDoServeService : Service() {
-  // The one engine this service runs is the default kind's; per-agent kinds
-  // come with several agents. Everything kind-specific goes through it.
-  private val kind: AgentKind = AgentKinds.default
-  // Mirrored into the companion (liveServe) so the module's isServeRunning
-  // can see this engine from the JS thread.
-  private var serveProcess: Process? = null
-    set(value) {
-      field = value
-      liveServe = value
+  private val main = Handler(Looper.getMainLooper())
+  private lateinit var starts: ExecutorService
+  private lateinit var notification: ServiceNotification
+
+  // Main thread only. A stop is stopSelf(lastStartId): a newer
+  // startForegroundService() may already be queued, and stopping under it
+  // crashes the app (ForegroundServiceDidNotStartInTimeException); with the
+  // id the system ignores the stop and that start decides instead.
+  private var lastStartId = 0
+  private val pendingRequests = LinkedHashSet<String>()
+  private var pendingStarts = 0
+
+  private val engineListener = object : Engines.Listener {
+    override fun onStatus(status: EngineStatus) {
+      main.post { render() }
     }
-  private var bridge: BridgeServer? = null
-  // Telemetry watch of the current serve process (boot time, unexpected
-  // exit; ServeWatch.kt). Main thread only, like serveProcess.
-  private var serveWatch: ServeWatch? = null
-  // The serve process once it answered health, until it stops or dies.
-  // Main thread only.
-  private var healthyServe: Process? = null
-  private val mainHandler = Handler(Looper.getMainLooper())
-  // The user's telemetry on/off choice (TelemetrySwitch.setEnabled), heard
-  // on the caller's thread and handled on the main thread.
-  private val telemetryToggle: (Boolean) -> Unit = { enabled ->
-    mainHandler.post { onTelemetryToggled(enabled) }
+
+    override fun onIdle() {
+      main.post { stopIfIdle() }
+    }
+
+    override fun onChats() {
+      main.post { render() }
+    }
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -54,208 +64,79 @@ class PhoneCanDoServeService : Service() {
     // Normally done by TelemetryInitProvider at process start; repeated here
     // (idempotent) so engine counters never depend on it.
     TelemetryRecorder.install(applicationContext)
-    TelemetrySwitch.addEnabledListener(telemetryToggle)
-    // Before anything can start the event stream (onEngineEvent reads it).
-    loadSessionIds()
-    val manager = getSystemService(NotificationManager::class.java)
-    val channel = NotificationChannel(
-      CHANNEL_ID, "PhoneCanDo engine",
-      NotificationManager.IMPORTANCE_LOW
-    )
-    manager.createNotificationChannel(channel)
-    manager.createNotificationChannel(
-      NotificationChannel(
-        CHANNEL_DONE, "PhoneCanDo finished",
-        NotificationManager.IMPORTANCE_DEFAULT,
-      )
-    )
-    val notification = buildNotification("PhoneCanDo engine running", neutralText())
-    if (Build.VERSION.SDK_INT >= 29) {
-      startForeground(
-        NOTIFICATION_ID, notification,
-        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-      )
-    } else {
-      @Suppress("DEPRECATION")
-      startForeground(NOTIFICATION_ID, notification)
+    notification = ServiceNotification(this).also { it.createChannel() }
+    starts = Executors.newSingleThreadExecutor { r ->
+      Thread(r, "phonecando-engine-start").apply { isDaemon = true }
     }
-    startBridge()
+    Engines.addListener(engineListener)
+    goForeground()
   }
-
-  // Every stop below is stopSelf(startId): a newer startForegroundService()
-  // (App.tsx re-ensures serve on each foreground) may already be queued, and
-  // bringing the service down while that request is pending crashes the app
-  // (ForegroundServiceDidNotStartInTimeException). With the id, the system
-  // ignores the stop when a newer start exists; that start decides instead.
-  // shutdownQuietly() uses the latest id seen for the same reason.
-  private var lastStartId = 0
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     lastStartId = startId
-    if (intent?.action == ACTION_STOP) {
-      stopSupervisor()
-      stopSse()
-      stopServeProcess()
-      stopSelf(startId)
-      return START_NOT_STICKY
-    }
-    // Open/link/rename report: upsert the watched set (multi-chat: one entry
-    // per open chat), retract any completion ping on return, ensure the
-    // event stream is up. A link arriving also resolves any pending title.
-    if (intent?.action == ACTION_SESSION) {
-      stayAwake = false
-      idleStrikes = 0
-      sessionReported = true
-      val sid = intent.getStringExtra(EXTRA_SESSION_ID)?.takeIf { it.isNotEmpty() }
-      val title = intent.getStringExtra(EXTRA_TITLE)?.takeIf { it.isNotEmpty() }
-      if (sid != null) {
-        val watched = readMap(KEY_WATCHED_MAP)
-        watched[sid] = title ?: watched[sid] ?: "Chat"
-        writeMap(KEY_WATCHED_MAP, watched)
-        if (postedPings.remove(sid)) {
-          try {
-            notifyManager().cancel(doneNotifId(sid))
-          } catch (_: Exception) {
-          }
-        }
-        val tracked = readMap(KEY_TRACKED_MAP)
-        if (tracked.remove(sid) != null) writeMap(KEY_TRACKED_MAP, tracked)
-        prefs().edit().putString(KEY_PENDING, "").apply()
-      } else if (title != null) {
-        // Opened but not yet linked (adopt-or-create resolves seconds later):
-        // show the name now; the link push completes the entry.
-        prefs().edit().putString(KEY_PENDING, title).apply()
-      }
-      ensureSse()
-      startSupervisor()
-      renderNotification()
-      return START_STICKY
-    }
-    // Title-only update: renames watched/tracked entries without touching
-    // membership (backfills landing after the chat closed must still reach
-    // the notification). Never launches serve, never affects shutdown.
-    if (intent?.action == ACTION_TITLE) {
-      val sid = intent.getStringExtra(EXTRA_SESSION_ID)?.takeIf { it.isNotEmpty() }
-      val title = intent.getStringExtra(EXTRA_TITLE)?.takeIf { it.isNotEmpty() }
-      if (sid != null && title != null) {
-        var changed = false
-        val watched = readMap(KEY_WATCHED_MAP)
-        if (watched.containsKey(sid)) {
-          watched[sid] = title
-          writeMap(KEY_WATCHED_MAP, watched)
-          changed = true
-        }
-        val tracked = readMap(KEY_TRACKED_MAP)
-        if (tracked.containsKey(sid)) {
-          tracked[sid] = title
-          writeMap(KEY_TRACKED_MAP, tracked)
-          changed = true
-        }
-        if (changed) renderNotification()
-      }
-      return START_STICKY
-    }
-    // Leave report: drop from watched; if generating, keep tracking in the
-    // background set so the finish still pings. Idle ones are dropped by the
-    // supervisor (no ping — nothing finished).
-    if (intent?.action == ACTION_LEAVE) {
-      stayAwake = false
-      sessionReported = true
-      val sid = intent.getStringExtra(EXTRA_SESSION_ID)?.takeIf { it.isNotEmpty() }
-      if (sid != null) {
-        val watched = readMap(KEY_WATCHED_MAP)
-        val title = watched.remove(sid)
-        writeMap(KEY_WATCHED_MAP, watched)
-        if (title != null) {
-          val tracked = readMap(KEY_TRACKED_MAP)
-          tracked[sid] = title
-          writeMap(KEY_TRACKED_MAP, tracked)
-        }
+    // Every startForegroundService() wants a startForeground() back.
+    goForeground()
+    if (intent?.action == ACTION_START) {
+      val agentId = intent.getStringExtra(EXTRA_AGENT_ID)
+      val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
+      if (agentId.isNullOrEmpty()) {
+        EngineRequests.complete(requestId, failure("no agent given"))
       } else {
-        prefs().edit().putString(KEY_PENDING, "").apply()
-      }
-      ensureSse()
-      startSupervisor()
-      renderNotification()
-      return START_STICKY
-    }
-    // Explicit stay-awake request (manual Start, chat-open ensure). A null
-    // action is a system restart: transient, eligible for quiet shutdown.
-    if (intent?.action == ACTION_START) stayAwake = true
-    // System restart with no intent: distinguish crash-kill during live use
-    // from a truly idle stop. Watched/tracked non-empty means chats were
-    // open or runs were finishing when the system killed us — relaunch serve
-    // on the saved port so the UI (which saw no AppState transition and
-    // won't re-ensure) isn't left staring at a dead engine. Fully unwatched
-    // means quiet-when-idle already applied: stay stopped, and any orphaned
-    // serve keeps answering health on its own (launching another would only
-    // fork a ghost).
-    if (intent?.action == null) {
-      val watched = readMap(KEY_WATCHED_MAP)
-      val tracked = readMap(KEY_TRACKED_MAP)
-      if (watched.isEmpty() && tracked.isEmpty()) {
-        Log.i(TAG, "null intent restart with nothing watched, staying stopped")
-        stopSelf(startId)
-        return START_NOT_STICKY
-      }
-      Log.i(TAG, "null intent restart with live chats, relaunching serve")
-      val requestedAt = SystemClock.elapsedRealtime()
-      TelemetryRecorder.engineStartRequested()
-      var launched = false
-      try {
-        val port = savedPort() ?: DEFAULT_PORT
-        val proc = launchServe(port)
-        launched = true
-        serveProcess = proc
-        savePort(port)
-        watchServe(proc, port, requestedAt)
-        ensureSse()
-        startSupervisor()
-        renderNotification()
-      } catch (e: Exception) {
-        // Only a launch that threw is a failed start; the steps after it
-        // are the watch machinery.
-        if (!launched) TelemetryRecorder.engineStartFailed()
-        Log.e(TAG, "serve relaunch failed", e)
-        stopSelf(startId)
-        return START_NOT_STICKY
-      }
-      return START_STICKY
-    }
-    if (serveProcess == null) {
-      val requestedAt = startRequestedAt(intent)
-      TelemetryRecorder.engineStartRequested()
-      try {
-        val port = resolvePort(intent?.getStringExtra(EXTRA_PORT))
-        val proc = launchServe(port)
-        serveProcess = proc
-        savePort(port)
-        watchServe(proc, port, requestedAt)
-        Log.i(TAG, "serve started on $port")
-      } catch (e: Exception) {
-        TelemetryRecorder.engineStartFailed()
-        Log.e(TAG, "serve start failed", e)
-        stopSelf(startId)
+        runStart(agentId, requestId, requestedAt(intent))
         return START_NOT_STICKY
       }
     }
-    return START_STICKY
+    // A null-intent restart or nothing to do: start nothing.
+    stopIfIdle()
+    return START_NOT_STICKY
+  }
+
+  private fun runStart(agentId: String, requestId: String?, requestedAt: Long) {
+    pendingStarts++
+    requestId?.let(pendingRequests::add)
+    val supervisor = Engines.get(this)
+    try {
+      starts.execute {
+        val result = runCatching { supervisor.start(agentId, requestedAt) }
+        EngineRequests.complete(requestId, result)
+        main.post {
+          pendingStarts--
+          requestId?.let(pendingRequests::remove)
+          render()
+          stopIfIdle()
+        }
+      }
+    } catch (_: RejectedExecutionException) {
+      pendingStarts--
+      requestId?.let(pendingRequests::remove)
+      EngineRequests.complete(requestId, failure("the engine service is stopping"))
+    }
+  }
+
+  // The module stamps start intents with the JS request time, so boot time
+  // includes the service's own start. Missing or implausible (another boot,
+  // clock skew) means now.
+  private fun requestedAt(intent: Intent): Long {
+    val now = SystemClock.elapsedRealtime()
+    val stamped = intent.getLongExtra(EXTRA_REQUESTED_AT, 0L)
+    return if (stamped in 1..now && now - stamped < MAX_REQUEST_AGE_MS) stamped else now
+  }
+
+  private fun stopIfIdle() {
+    if (pendingStarts == 0 && Engines.peek()?.anyLive() != true) stopSelf(lastStartId)
   }
 
   override fun onDestroy() {
-    TelemetrySwitch.removeEnabledListener(telemetryToggle)
-    stopSupervisor()
-    stopSse()
-    stopServeProcess()
-    bridge?.stop()
-    bridge = null
-    mainHandler.removeCallbacksAndMessages(null)
+    Engines.removeListener(engineListener)
+    starts.shutdownNow()
+    for (id in pendingRequests) EngineRequests.complete(id, failure("the engine service stopped"))
+    pendingRequests.clear()
+    main.removeCallbacksAndMessages(null)
+    // Engines still running (the system ended the service): end them off
+    // the main thread, which can take up to 3 s. When nothing runs, a start
+    // that arrives right after must not be caught by a late stop-all.
+    Engines.peek()?.takeIf { it.anyLive() }?.stopAllAsync()
     super.onDestroy()
-  }
-
-  override fun onTaskRemoved(rootIntent: Intent?) {
-    // Nothing to do: the supervisor keeps working sessions alive with live
-    // status and shuts down idle ones on its own (quiet-when-idle).
   }
 
   // Android 15+ lets dataSync foreground services run 6 hours in any 24
@@ -263,629 +144,59 @@ class PhoneCanDoServeService : Service() {
   // resets the clock). At the limit Android calls this and allows a few
   // seconds to stop; a service still running then crashes the whole process
   // (RemoteServiceException), taking the bridge and the accessibility host
-  // with it. So stop everything now. The app starts the engine again on its
-  // next foreground: App.tsx calls ensureServeRunning (ensureServe.ts) on
-  // launch and on every return to 'active', its failed health check fires a
-  // fresh service start, and that foreground has reset the clock.
+  // with it. So drop the notification and stop at once; the engines end on
+  // their own thread (all of them within one 3 s grace). The app starts them
+  // again on its next foreground, which has reset the clock.
   override fun onTimeout(startId: Int, fgsType: Int) {
     Log.w(TAG, "foreground service time limit reached (type $fgsType), stopping")
-    stopSupervisor()
-    stopSse()
     stopForeground(STOP_FOREGROUND_REMOVE)
-    // stopSelf before the serve wait: it reaches the system at once, while
-    // serve may take a moment to exit. onDestroy repeats this harmlessly.
     stopSelf()
-    stopServeProcess()
-    bridge?.stop()
-    bridge = null
+    Engines.peek()?.stopAllAsync()
   }
 
-  // destroy() sends SIGTERM and serve normally exits at once. The wait is
-  // bounded because onTimeout and onDestroy run on the main thread: an engine
-  // that ignored SIGTERM would otherwise freeze the app, and at the Android
-  // 15+ time limit Android would crash it anyway.
-  private fun stopServeProcess() {
-    // Before destroy(): the exit that follows was asked for, not a death.
-    serveWatch?.markStopping()
-    serveWatch = null
-    healthyServe = null
-    val proc = serveProcess
-    if (proc != null) {
-      try {
-        proc.destroy()
-        val deadline = System.currentTimeMillis() + 3_000
-        while (System.currentTimeMillis() < deadline && !hasExited(proc)) {
-          Thread.sleep(50)
-        }
-        if (!hasExited(proc) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          proc.destroyForcibly()
-        }
-      } catch (_: Exception) {
-      }
-    }
-    serveProcess = null
-  }
-
-  // The module stamps startServeService intents with the JS request time, so
-  // boot time includes the service's own start. Missing or implausible
-  // (another boot, clock skew) means now.
-  private fun startRequestedAt(intent: Intent?): Long {
-    val now = SystemClock.elapsedRealtime()
-    val stamped = intent?.getLongExtra(EXTRA_REQUESTED_AT, 0L) ?: 0L
-    return if (stamped in 1..now && now - stamped < MAX_REQUEST_AGE_MS) stamped else now
-  }
-
-  // Telemetry only: watches the new serve process for its first healthy
-  // answer and for an exit without a stop request. Never throws, so a watch
-  // that cannot start leaves the engine start untouched. Once serve is
-  // healthy, and while telemetry is on, the engine event stream is ensured
-  // so session creations are counted (onEngineEvent); events for sessions
-  // nobody watches change nothing else. With telemetry off the stream opens
-  // only for watched chats, as before telemetry. A death drops that stream
-  // unless chats are watched, so a dead engine is not redialled every 30 s
-  // for counting alone.
-  private fun watchServe(proc: Process, port: String, requestedAt: Long) {
+  private fun goForeground() {
     try {
-      val pw = prefs().getString(KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() }
-      val token = prefs().getString(KEY_BRIDGE_TOKEN, null)?.takeIf { it.isNotEmpty() }
-      val watch = ServeWatch(
-        process = proc,
-        healthProbe = pw?.let { kind.healthProbe(port, it) },
-        logFile = File(File(filesDir, "phonecando-home"), "serve.log"),
-        requestedAt = requestedAt,
-        secrets = PathRedactor.engineSecrets(kind, pw, token),
-        onHealthy = {
-          mainHandler.post {
-            try {
-              if (serveProcess === proc) {
-                healthyServe = proc
-                if (TelemetrySwitch.isEnabled()) ensureSse()
-              }
-            } catch (e: Exception) {
-              Log.w(TAG, "event stream start failed", e)
-            }
-          }
-        },
-        onUnexpectedExit = {
-          mainHandler.post {
-            try {
-              if (serveProcess === proc) {
-                healthyServe = null
-                stopSseIfUnwatched()
-              }
-            } catch (e: Exception) {
-              Log.w(TAG, "event stream stop failed", e)
-            }
-          }
-        },
+      startForeground(
+        ServiceNotification.NOTIFICATION_ID, content(),
+        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
       )
-      serveWatch = watch
-      watch.start()
-    } catch (t: Throwable) {
-      serveWatch = null
-      Log.w(TAG, "serve watch not started", t)
-    }
-  }
-
-  private fun stopSseIfUnwatched() {
-    synchronized(watchLock) {
-      if (readMap(KEY_WATCHED_MAP).isEmpty() && readMap(KEY_TRACKED_MAP).isEmpty()) stopSse()
-    }
-  }
-
-  // Telemetry turned on: open the counting stream now if serve is already
-  // healthy (otherwise onHealthy does). Turned off: close it unless chats
-  // are watched, which keep it open as before telemetry.
-  private fun onTelemetryToggled(enabled: Boolean) {
-    try {
-      if (enabled) {
-        val proc = serveProcess
-        if (proc != null && healthyServe === proc && !hasExited(proc)) ensureSse()
-      } else {
-        stopSseIfUnwatched()
-      }
     } catch (e: Exception) {
-      Log.w(TAG, "telemetry toggle failed", e)
+      Log.w(TAG, "startForeground refused", e)
     }
   }
 
-  // Process.isAlive needs API 26; exitValue works everywhere.
-  private fun hasExited(proc: Process): Boolean =
+  private fun render() {
     try {
-      proc.exitValue()
-      true
-    } catch (_: IllegalThreadStateException) {
-      false
-    }
-
-  // Agent bridge: loopback HTTP for the mobile_* tools. Token is install-stable
-  // (like the serve password) so a service restart doesn't strand an orphaned
-  // serve whose plugin still holds the old env. URL goes to prefs for adb
-  // debugging; serve gets both via env at launch.
-  private fun startBridge() {
-    if (bridge != null) return
-    val token = prefs().getString(KEY_BRIDGE_TOKEN, null)?.takeIf { it.isNotEmpty() }
-      ?: java.util.UUID.randomUUID().toString().replace("-", "").let {
-        prefs().edit().putString(KEY_BRIDGE_TOKEN, it).apply()
-        it
-      }
-    val server = BridgeServer.open(applicationContext, token) {
-      // A live agent turn may background PhoneCanDo (mobile_home/launch). Keep the
-      // bridge/serve alive through the task instead of treating that as idle.
-      lastBridgeCall = System.currentTimeMillis()
-    }
-    if (server == null) {
-      Log.w(TAG, "agent bridge failed to bind")
-      return
-    }
-    bridge = server
-    prefs().edit().putString(KEY_BRIDGE_URL, server.url).apply()
-  }
-
-  // Agent config: the kind's assets folder (packaged per variant by the
-  // module's Gradle syncAgentConfig task) is copied into its config dir under
-  // HOME on every start, pruning files we no longer ship (ConfigSeeder).
-  private fun seedAgentConfig(home: File) {
-    val config = kind.config ?: return
-    try {
-      ConfigSeeder(AssetManagerTree(assets)).seed(config, home)
+      getSystemService(NotificationManager::class.java)
+        .notify(ServiceNotification.NOTIFICATION_ID, content())
     } catch (e: Exception) {
-      Log.w(TAG, "agent config seed failed", e)
+      Log.w(TAG, "notification update failed", e)
     }
   }
 
-  private fun launchServe(port: String): Process {
-    val home = File(filesDir, "phonecando-home").apply { mkdirs() }
-    seedAgentConfig(home)
-    // One stable password per install (not per boot), handed to the engine
-    // via the kind's launch env: deterministic for every consumer (SSE,
-    // native health, JS) with no log parsing and no rotation races on
-    // restart. Loopback-only, so prefs storage is fine.
-    val pw = prefs().getString(KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() }
-      ?: java.util.UUID.randomUUID().toString().replace("-", "").let {
-        prefs().edit().putString(KEY_PASSWORD, it).apply()
-        it
-      }
-    val spec = kind.launch(LaunchContext(applicationInfo.nativeLibraryDir, home, port, pw))
-    val binary = File(spec.argv.first())
-    require(binary.exists()) { "${kind.displayName} engine missing: ${binary.absolutePath}" }
-    if (!binary.canExecute()) binary.setExecutable(true)
-
-    val pb = ProcessBuilder(spec.argv)
-    pb.directory(home)
-    pb.environment().apply {
-      put("HOME", home.absolutePath)
-      put("TMPDIR", home.absolutePath)
-      bridge?.let {
-        put("PHONECANDO_BRIDGE_URL", it.url)
-        put("PHONECANDO_BRIDGE_TOKEN", it.token)
-      }
-      // The agent's plugins register phone-control tools only in full builds.
-      val channel = try {
-        packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.GET_META_DATA)
-          .metaData?.getString("com.phonecando.channel") ?: "full"
-      } catch (_: Exception) {
-        "full"
-      }
-      put("PHONECANDO_CHANNEL", channel)
-      putAll(spec.env)
-    }
-    pb.redirectOutput(File(home, "serve.log"))
-    pb.redirectErrorStream(true)
-    return pb.start()
+  // The chats the engines are busy with, each with its agent's name.
+  private fun content(): Notification {
+    val supervisor = Engines.peek()
+    val names = AgentStores.get(this).all().associate { it.id to it.name }
+    val running = supervisor?.statuses()?.filter { it.state.live }?.map { it.agentId }.orEmpty()
+    return notification.build(supervisor?.chats().orEmpty(), names, running)
   }
+
+  private fun failure(detail: String): Result<Int> =
+    Result.failure(EngineStartException(EngineStartError.START_FAILED, detail))
 
   companion object {
     const val TAG = "PhoneCanDoServeService"
-    const val CHANNEL_ID = "phonecando-engine"
-    const val NOTIFICATION_ID = 4101
-    const val ACTION_START = "com.phonecando.runner.START_SERVE"
-    const val ACTION_STOP = "com.phonecando.runner.STOP_SERVE"
-    const val ACTION_SESSION = "com.phonecando.runner.ACTIVE_SESSION"
-    const val ACTION_LEAVE = "com.phonecando.runner.LEAVE_SESSION"
-    const val ACTION_TITLE = "com.phonecando.runner.SESSION_TITLE"
-    const val EXTRA_PORT = "port"
-    const val EXTRA_SESSION_ID = "sessionId"
-    const val EXTRA_TITLE = "title"
+    const val ACTION_START = "com.phonecando.runner.START_ENGINE"
+    const val EXTRA_AGENT_ID = "agentId"
+    const val EXTRA_REQUEST_ID = "requestId"
     const val EXTRA_REQUESTED_AT = "requestedAtElapsed"
     private const val MAX_REQUEST_AGE_MS = 10 * 60_000L
-    private const val CREATED_SEEN_MAX = 128
+
+    // The runner's own prefs file: the launch target waiting for the app
+    // (notify/LaunchTargets), the notification-permission ask, the
+    // self-update mark, the accessibility-connected flag. Engine state lives
+    // in agents.json.
     const val PREFS = "phonecando-engine"
-    const val KEY_PORT = "serve_port"
-    const val KEY_PASSWORD = "serve_password"
-    const val KEY_BRIDGE_TOKEN = "bridge_token"
-    const val KEY_BRIDGE_URL = "bridge_url"
-    const val KEY_PENDING_TAB = "pending_tab"
-    const val KEY_PENDING_UNLOCK = "pending_unlock"
-    const val KEY_PENDING_ACCESSIBILITY = "pending_accessibility"
-    const val KEY_WATCHED_MAP = "watched_chats"
-    const val KEY_TRACKED_MAP = "tracked_chats"
-    const val KEY_PENDING = "pending_title"
-    const val CHANNEL_DONE = "phonecando-done"
-    const val DONE_ID_BASE = 4300
-    const val DEFAULT_PORT = "4097"
-    const val IDLE_TEXT = "○ Idle"
-    const val WORKING_TEXT = "● Working…"
-    const val SUPERVISOR_INTERVAL_MS = 30_000L
-    const val BRIDGE_GRACE_MS = 5 * 60_000L
-
-    // The service's current serve process: written on the main thread, read
-    // from the JS thread through isServeAlive.
-    @Volatile private var liveServe: Process? = null
-
-    // True while the service's serve process is alive. The updater stops the
-    // engine before a self-update and polls this until serve has exited.
-    fun isServeAlive(): Boolean {
-      val proc = liveServe ?: return false
-      return try {
-        proc.exitValue()
-        false
-      } catch (_: IllegalThreadStateException) {
-        true
-      }
-    }
-  }
-
-  // Live notification: the service owns the text because it outlives the UI
-  // (swipe-away kills JS, not the service). Tapping it reopens the app.
-  private fun notifyManager() = getSystemService(NotificationManager::class.java)
-
-  private fun buildNotification(title: String, text: String): Notification {
-    val launch = packageManager.getLaunchIntentForPackage(packageName)?.let {
-      PendingIntent.getActivity(
-        this, 0, it,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-      )
-    }
-    return Notification.Builder(this, CHANNEL_ID)
-      .setContentTitle(title)
-      .setContentText(text)
-      .setSmallIcon(android.R.drawable.ic_dialog_info)
-      .setContentIntent(launch)
-      .setOngoing(true)
-      .build()
-  }
-
-  private fun pushNotification(title: String, text: String) {
-    notifyManager().notify(NOTIFICATION_ID, buildNotification(title, text))
-  }
-
-  private fun pushNeutral() {
-    pushNotification("PhoneCanDo engine running", neutralText())
-  }
-
-  private fun neutralText() = "${kind.displayName} on 127.0.0.1"
-
-  // Event-driven watch: one SSE stream (the kind's eventStream) feeds a pure state
-  // machine; the notification renders on events, not on a poll cadence.
-  // Watched = chats currently open. Tracked = left-while-open sessions kept
-  // until their run finishes (then they ping once with sound and are
-  // dropped). A 30s supervisor only heals (SSE reconnect), drops idle
-  // tracked entries, and shuts down a fully unwatched idle engine.
-  private val watchLock = Any()
-  private val watch = WatchState()
-  private var sse: SseClient? = null
-  private var ssePort: String? = null
-  private var ssePassword: String? = null
-  private val postedPings = mutableSetOf<String>()
-  private var supThread: HandlerThread? = null
-  private var supHandler: Handler? = null
-  private var stayAwake = false
-  private var idleStrikes = 0
-  @Volatile private var lastBridgeCall = 0L
-  // True once any SESSION report arrived in this lifetime. Guards quiet
-  // shutdown: native code predating the UI reports must never trigger it.
-  private var sessionReported = false
-
-  private fun readMap(key: String): MutableMap<String, String> {
-    val out = mutableMapOf<String, String>()
-    try {
-      val o = org.json.JSONObject(prefs().getString(key, "{}") ?: "{}")
-      o.keys().forEach { k -> out[k] = o.optString(k, "") }
-    } catch (_: Exception) {
-    }
-    return out
-  }
-
-  private fun writeMap(key: String, m: Map<String, String>) {
-    try {
-      val o = org.json.JSONObject()
-      m.forEach { (k, v) -> o.put(k, v) }
-      synchronized(idsLock) {
-        prefs().edit().putString(key, o.toString()).apply()
-        val ids = m.keys.toSet()
-        when (key) {
-          KEY_WATCHED_MAP -> watchedIds = ids
-          KEY_TRACKED_MAP -> trackedIds = ids
-        }
-      }
-    } catch (_: Exception) {
-    }
-  }
-
-  // The watched/tracked session ids as stored, so onEngineEvent can skip a
-  // frame for any other session without parsing prefs JSON. writeMap (the
-  // only writer of both maps) keeps them equal to what it stored, under
-  // idsLock so concurrent writers land in the same order in both.
-  @Volatile private var watchedIds: Set<String> = emptySet()
-  @Volatile private var trackedIds: Set<String> = emptySet()
-  private val idsLock = Any()
-
-  private fun loadSessionIds() {
-    synchronized(idsLock) {
-      watchedIds = readMap(KEY_WATCHED_MAP).keys.toSet()
-      trackedIds = readMap(KEY_TRACKED_MAP).keys.toSet()
-    }
-  }
-
-  private fun doneNotifId(sid: String): Int = DONE_ID_BASE + (Math.abs(sid.hashCode()) % 500)
-
-  private fun launchPendingIntent(): PendingIntent? {
-    return packageManager.getLaunchIntentForPackage(packageName)?.let {
-      PendingIntent.getActivity(
-        this, 0, it,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-      )
-    }
-  }
-
-  private fun ensureSse() {
-    val port = savedPort() ?: DEFAULT_PORT
-    // No password yet means no engine was ever launched: nothing to stream.
-    val pw = prefs().getString(KEY_PASSWORD, null)?.takeIf { it.isNotEmpty() } ?: return
-    val stream = kind.eventStream(port, pw) ?: return
-    // Same port + stale auth would 401-reconnect forever, so the password is
-    // part of the identity check.
-    if (sse != null && sse!!.isAlive() && ssePort == port && ssePassword == pw) return
-    try {
-      sse?.stop()
-    } catch (_: Exception) {
-    }
-    ssePort = port
-    ssePassword = pw
-    sse = SseClient(stream, TAG, kind::parseEvent, ::onEngineEvent).also {
-      it.start()
-    }
-  }
-
-  private fun stopSse() {
-    try {
-      sse?.stop()
-    } catch (_: Exception) {
-    }
-    sse = null
-    ssePort = null
-    ssePassword = null
-  }
-
-  private fun startSupervisor() {
-    if (supThread == null) {
-      supThread = HandlerThread("phonecando-sup").also { it.start() }
-    }
-    if (supHandler == null) {
-      supHandler = Handler(supThread!!.looper).also { it.post(supervisorTick) }
-    }
-  }
-
-  private fun stopSupervisor() {
-    supHandler?.removeCallbacks(supervisorTick)
-    supHandler = null
-    supThread?.quitSafely()
-    supThread = null
-  }
-
-  private val supervisorTick = object : Runnable {
-    override fun run() {
-      try {
-        supervisorPass()
-      } catch (_: Exception) {
-      }
-      supHandler?.postDelayed(this, SUPERVISOR_INTERVAL_MS)
-    }
-  }
-
-  private fun supervisorPass() {
-    synchronized(watchLock) {
-      val watched = readMap(KEY_WATCHED_MAP)
-      val tracked = readMap(KEY_TRACKED_MAP)
-      if (watched.isNotEmpty() || tracked.isNotEmpty()) ensureSse()
-      // Drop idle tracked entries silently (nothing finished — no ping).
-      var changed = false
-      tracked.keys.toList().forEach { sid ->
-        if (!watch.isWorking(sid)) {
-          tracked.remove(sid)
-          watch.drop(sid)
-          changed = true
-        }
-      }
-      if (changed) {
-        writeMap(KEY_TRACKED_MAP, tracked)
-        renderNotificationLocked()
-      }
-      val anyWorking = watched.keys.any { watch.isWorking(it) } ||
-        tracked.keys.any { watch.isWorking(it) }
-      val bridgeActive =
-        System.currentTimeMillis() - lastBridgeCall < BRIDGE_GRACE_MS
-      // Never shut down while a chat is open (watched non-empty): an idle
-      // open chat keeps its engine — shutdown is only for the unwatched.
-      // A recent bridge call means an agent turn may be between tools after
-      // mobile_home; keep the bridge alive through that gap too.
-      if (!anyWorking && watched.isEmpty() && !bridgeActive) {
-        idleStrikes++
-        if (idleStrikes >= 2 && sessionReported && !stayAwake) shutdownQuietly()
-      } else {
-        idleStrikes = 0
-      }
-    }
-  }
-
-  // Session ids already counted as created; a frame seen twice (e.g. across
-  // a stream replacement) counts once. Bounded, oldest dropped first.
-  private val createdSeen = object : LinkedHashMap<String, Boolean>() {
-    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?): Boolean =
-      size > CREATED_SEEN_MAX
-  }
-
-  private fun countSessionCreated(sid: String?) {
-    if (sid != null) {
-      synchronized(createdSeen) {
-        if (createdSeen.put(sid, true) != null) return
-      }
-    }
-    TelemetryRecorder.sessionCreated()
-  }
-
-  private fun onEngineEvent(p: EngineEvent) {
-    if (p.sessionCreated) countSessionCreated(p.sessionId)
-    val sid = p.sessionId
-    if (sid == null) {
-      // Parser miss on a meaningful event = blind spot. Logged so a live
-      // capture can show which frame shape wasn't handled.
-      if (p.kind != EngineEvent.Kind.OTHER) Log.w(TAG, "event without session: $p")
-      return
-    }
-    // Not ours (the common case: the stream runs for counting too): no
-    // prefs parse per frame. Watched/tracked ones take the path below as
-    // before, which reads the maps again under the lock.
-    if (sid !in watchedIds && sid !in trackedIds) return
-    synchronized(watchLock) {
-      val watched = readMap(KEY_WATCHED_MAP)
-      val tracked = readMap(KEY_TRACKED_MAP)
-      if (!watched.containsKey(sid) && !tracked.containsKey(sid)) return // not ours
-      when (p.kind) {
-        EngineEvent.Kind.WORKING -> {
-          if (watch.apply(EngineEvent.Kind.WORKING, sid)) renderNotificationLocked()
-        }
-        EngineEvent.Kind.FINISHED, EngineEvent.Kind.FAILED -> {
-          val was = watch.apply(p.kind, sid)
-          if (sid in tracked && sid !in watched) {
-            // Finished while away: sounding one-shot ping, then forget it.
-            // Watched finishes stay silent (the user is looking).
-            postDone(sid, tracked[sid] ?: "Chat", p.kind == EngineEvent.Kind.FAILED)
-            tracked.remove(sid)
-            writeMap(KEY_TRACKED_MAP, tracked)
-            renderNotificationLocked()
-          } else if (was) {
-            renderNotificationLocked()
-          }
-        }
-        EngineEvent.Kind.GONE -> {
-          watch.drop(sid)
-          var changed = false
-          if (watched.remove(sid) != null) {
-            writeMap(KEY_WATCHED_MAP, watched)
-            changed = true
-          }
-          if (tracked.remove(sid) != null) {
-            writeMap(KEY_TRACKED_MAP, tracked)
-            changed = true
-          }
-          if (changed) renderNotificationLocked()
-        }
-        EngineEvent.Kind.OTHER -> {
-        }
-      }
-    }
-  }
-
-  private fun postDone(sid: String, title: String, failed: Boolean) {
-    val n = Notification.Builder(this, CHANNEL_DONE)
-      .setContentTitle(if (failed) "✕ Failed: $title" else "✓ Finished: $title")
-      .setContentText("Tap to view")
-      .setSmallIcon(android.R.drawable.ic_dialog_info)
-      .setContentIntent(launchPendingIntent())
-      .setAutoCancel(true)
-      .build()
-    notifyManager().notify(doneNotifId(sid), n)
-    postedPings.add(sid)
-  }
-
-  private fun renderNotification() {
-    synchronized(watchLock) {
-      renderNotificationLocked()
-    }
-  }
-
-  private fun renderNotificationLocked() {
-    val watched = readMap(KEY_WATCHED_MAP)
-    val tracked = readMap(KEY_TRACKED_MAP)
-    val pending = prefs().getString(KEY_PENDING, null)?.takeIf { it.isNotEmpty() }
-    data class Line(val text: String, val working: Boolean)
-    val lines = mutableListOf<Line>()
-    watched.forEach { (sid, t) -> lines += Line(t, watch.isWorking(sid)) }
-    tracked.forEach { (sid, t) -> if (watch.isWorking(sid)) lines += Line(t, true) }
-    if (pending != null && lines.isEmpty()) lines += Line(pending, false)
-    if (lines.isEmpty()) {
-      pushNeutral()
-      return
-    }
-    if (lines.size == 1) {
-      val l = lines[0]
-      pushNotification(l.text, if (l.working) WORKING_TEXT else IDLE_TEXT)
-      return
-    }
-    val working = lines.count { it.working }
-    val style = Notification.InboxStyle()
-    lines.take(5).forEach { style.addLine((if (it.working) "● " else "○ ") + it.text) }
-    style.setSummaryText("$working of ${lines.size} working")
-    val n = Notification.Builder(this, CHANNEL_ID)
-      .setContentTitle(if (working > 0) "$working chats working" else "PhoneCanDo chats")
-      .setContentText(lines.take(5).joinToString(" · ") { (if (it.working) "● " else "○ ") + it.text })
-      .setSmallIcon(android.R.drawable.ic_dialog_info)
-      .setContentIntent(launchPendingIntent())
-      .setOngoing(true)
-      .setStyle(style)
-      .build()
-    notifyManager().notify(NOTIFICATION_ID, n)
-  }
-
-  private fun shutdownQuietly() {
-    Log.i(TAG, "idle and unwatched, stopping")
-    stopSupervisor()
-    stopSse()
-    stopServeProcess()
-    stopSelf(lastStartId)
-  }
-
-  private fun prefs() = getSharedPreferences(PREFS, MODE_PRIVATE)
-
-  private fun savedPort(): String? =
-    prefs().getString(KEY_PORT, null)?.takeIf { it.isNotEmpty() }
-
-  private fun savePort(port: String) {
-    prefs().edit().putString(KEY_PORT, port).apply()
-  }
-
-  // Effective port: explicit request wins; otherwise the last-good port from
-  // prefs (covers a system restart arriving with a null intent); otherwise
-  // the default. If the chosen door is already bound (stale ghost socket),
-  // fall back to an OS-assigned free loopback port so start never fails on
-  // a squatted door.
-  private fun resolvePort(requested: String?): String {
-    val want = requested?.takeIf { it.isNotEmpty() } ?: savedPort() ?: DEFAULT_PORT
-    val num = want.toIntOrNull() ?: DEFAULT_PORT.toInt()
-    if (isPortFree(num)) return num.toString()
-    TelemetryRecorder.portSquat()
-    Log.w(TAG, "port $num occupied, picking a free one")
-    return pickFreePort().toString()
-  }
-
-  private fun isPortFree(port: Int): Boolean {
-    return try {
-      java.net.ServerSocket().use { s ->
-        s.reuseAddress = true
-        s.bind(java.net.InetSocketAddress("127.0.0.1", port))
-      }
-      true
-    } catch (_: Exception) {
-      false
-    }
-  }
-
-  private fun pickFreePort(): Int {
-    java.net.ServerSocket().use { s ->
-      s.bind(java.net.InetSocketAddress("127.0.0.1", 0))
-      return s.localPort
-    }
   }
 }

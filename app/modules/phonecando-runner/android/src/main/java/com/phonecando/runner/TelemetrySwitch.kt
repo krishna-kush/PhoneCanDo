@@ -6,7 +6,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 // The user's telemetry on/off choice (the module's setTelemetryEnabled),
 // kept in TelemetryStore's file as K_ENABLED (default on; no reset or
 // consume clears it) and cached once read. Counting goes on either way, all
-// of it local; what changes is the serve service, which opens the engine
+// of it local; what changes is the engine supervisor, which opens the engine
 // event stream just to count sessions only while this is on, and the engine
 // stderr tail: turning sharing off drops it, and none is kept while it is off
 // (TelemetryRecorder.engineDiedIn). Reads and writes hold the store's lock.

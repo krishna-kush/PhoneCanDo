@@ -1,9 +1,11 @@
 package com.phonecando.runner
 
 import com.phonecando.runner.agents.AgentKind
+import com.phonecando.runner.agents.AgentKinds
+import com.phonecando.runner.agents.AgentRecord
 
 // Redaction for everything telemetry keeps as text: crash messages and
-// frames, and the serve stderr tail. Pure JVM (no Android imports), so
+// frames, and the engine stderr tail. Pure JVM (no Android imports), so
 // src/test runs it on the JVM.
 //
 // Paths: a whole path becomes `<path>`, never just its prefix. A path starts
@@ -20,7 +22,7 @@ import com.phonecando.runner.agents.AgentKind
 // ` (Is a directory)`, ` (Read-only file system)`) ends later on the same
 // line runs up to it, spaces included; otherwise the unquoted rule applies.
 // Either way only a trailing `:line` or `:line:col` (a stack frame) stays.
-// This matches tce/core/redact.ts. Secrets: the given values (serve password, its Basic
+// This matches tce/core/redact.ts. Secrets: the given values (every agent's engine password, its Basic
 // credential, bridge token), Authorization / x-api-key header values,
 // Bearer/Basic credentials and common provider key shapes become `<secret>`.
 // The placeholders start with '<', itself a stop, so redacting twice changes
@@ -238,6 +240,18 @@ internal class PathRedactor private constructor(
       if (!password.isNullOrEmpty()) out += kind.passwordForms(password)
       if (!bridgeToken.isNullOrEmpty()) out += bridgeToken
       return out
+    }
+
+    // Every agent's secrets: one engine's log or a crash can carry another
+    // agent's password or token. An agent of a kind this build lacks still
+    // has its raw password and token redacted.
+    fun agentSecrets(agents: Collection<AgentRecord>): List<String> = agents.flatMap { a ->
+      val kind = AgentKinds.get(a.kind)
+      if (kind != null) {
+        engineSecrets(kind, a.password, a.bridgeToken)
+      } else {
+        listOf(a.password, a.bridgeToken).filter { it.isNotEmpty() }
+      }
     }
 
     fun isStop(c: Char): Boolean = c == ' ' || c in '\t'..'\r' || STOP_PUNCTUATION.indexOf(c) >= 0

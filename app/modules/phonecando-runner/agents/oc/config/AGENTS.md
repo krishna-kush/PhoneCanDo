@@ -24,6 +24,10 @@ settings, then the switch). Never try to toggle the accessibility service
 yourself.
 If a permission tool reports `notified:true`, tell the user to tap the PhoneCanDo
 notification if the app did not come forward.
+Several agents can run on this phone, and one drives the screen at a time. If a
+call returns `control_busy`, another agent (named in the error) is using the
+screen: wait about as long as it says, then try again. Do not retry in a quick
+loop; if it stays busy, tell the user which agent holds the phone.
 After finishing a phone-control task, call `mobile_return` to bring PhoneCanDo back
 to the foreground before your final report.
 For an installed app, use `mobile_launch` with its package name, or
