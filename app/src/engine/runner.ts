@@ -1,24 +1,45 @@
-// Engine seam: the ONLY importer of the phonecando-runner native module.
-// UI code must import serve lifecycle from here, never from modules/*.
-// Lazy require keeps this importable where native code is absent (Expo Go).
+// Engine seam: the ONLY importer of the phonecando-runner native module
+// (engines.ts reaches it through nativeRunner()). UI code imports from here
+// or engines.ts, never from modules/*. Lazy require keeps this importable
+// where native code is absent (Expo Go, web).
+import type {
+  NativeAgent,
+  NativeBridgePrompt,
+  NativeEngineAuth,
+  NativeEngineStatus,
+  NativeLaunchTarget,
+} from '../../modules/phonecando-runner/src/PhoneCanDoRunner.types';
 import type { NativeCrash, TelemetryNativeSnapshot } from '../../modules/phonecando-runner/src/telemetry.types';
+import type { AgentId } from './agents/records';
 
 export type { NativeCrash, TelemetryNativeSnapshot };
 
-export type ServeParams = { port?: string };
+type Sub = { remove(): void };
 
-type RunnerModule = {
+export type RunnerModule = {
   getPrefix(): string;
-  isServeRunning(): boolean;
-  startServeService(params: ServeParams): string;
-  stopServeService(): string;
-  setActiveSession(params: { sessionId?: string; title?: string }): string;
-  leaveSession(params: { sessionId?: string }): string;
-  updateSessionTitle(params: { sessionId?: string; title?: string }): string;
-  getServePort(): string;
   requestNotificationPermission(): string;
-  health(params: { port?: string }): string;
+  listAgents(): NativeAgent[];
+  createAgent(params: { kind: string; name: string; imageId: string }): NativeAgent;
+  renameAgent(id: string, name: string): NativeAgent;
+  deleteAgent(id: string): Promise<boolean>;
+  startEngine(agentId: string): Promise<{ port: string }>;
+  stopEngine(agentId: string): Promise<void>;
+  stopAllEngines(): Promise<void>;
+  isAnyEngineAlive(): boolean;
+  touchEngine(agentId: string): void;
+  dismissAgentAlert(agentId: string): void;
+  setOpenChat(agentId: string | null, sessionId: string | null, title: string | null): void;
+  engineStatus(agentId: string): NativeEngineStatus;
+  engineStatuses(): NativeEngineStatus[];
+  getEngineAuth(agentId: string): NativeEngineAuth;
+  engineHealth(agentId: string): string;
+  pendingPrompts(): NativeBridgePrompt[];
+  resolveUnlock(requestId: string, ok: boolean): boolean;
+  resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean;
+  consumeLaunchTarget(): NativeLaunchTarget | null;
 };
+
 function load(): RunnerModule {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mod = require('../../modules/phonecando-runner/src/PhoneCanDoRunnerModule');
@@ -27,6 +48,22 @@ function load(): RunnerModule {
     throw new Error('native runner module unavailable');
   }
   return impl;
+}
+
+/** The raw native module, for the engine seam's own files. Throws when absent. */
+export function nativeRunner(): RunnerModule {
+  return load();
+}
+
+/** A native event as a typed subscription; a no-op where the module is absent. */
+export function onRunnerEvent<T>(name: string, listener: (e: T) => void): Sub {
+  try {
+    const m = load() as unknown as { addListener?: (n: string, cb: (e: T) => void) => Sub };
+    if (typeof m.addListener !== 'function') return { remove() {} };
+    return m.addListener(name, listener);
+  } catch {
+    return { remove() {} };
+  }
 }
 
 export function isRunnerAvailable(): boolean {
@@ -40,24 +77,6 @@ export function isRunnerAvailable(): boolean {
 
 export function getPrefix(): string {
   return load().getPrefix();
-}
-
-// The engine's HOME: its config, database and the folders the TUI and the
-// folder picker show.
-export function engineHome(): string {
-  return `${getPrefix()}/phonecando-home`;
-}
-
-export function isServeRunning(): boolean {
-  return load().isServeRunning();
-}
-
-export function startServeService(params: ServeParams): string {
-  return load().startServeService(params);
-}
-
-export function stopServeService(): string {
-  return load().stopServeService();
 }
 
 // Build channel: full ships phone control; lite has no phone control but
@@ -95,95 +114,78 @@ export function isAutomationEnabled(): boolean {
   }
 }
 
-// One-shot tab requested by the bridge's /app route (agent return / unlock).
-export function consumeLaunchTab(): string {
+// Where the app should land: a footer tab and, when the reason is one agent
+// (a tap on its notification or alert, its return after phone control, its
+// prompt), that agent. Native binds it when the app opens, so each
+// notification opens its own agent.
+export type LaunchTarget = { tab: NativeLaunchTarget['tab']; agentId: AgentId | null };
+
+const LAUNCH_TABS: readonly string[] = ['home', 'env', 'settings'];
+
+function asLaunchTarget(raw: NativeLaunchTarget | null | undefined): LaunchTarget | null {
+  if (!raw || !LAUNCH_TABS.includes(raw.tab)) return null;
+  return { tab: raw.tab, agentId: raw.agentId || null };
+}
+
+// The target waiting for the app (a cold or resumed start), read and
+// cleared once; null when nothing waits.
+export function consumeLaunchTarget(): LaunchTarget | null {
   try {
-    const m = load() as unknown as { consumeLaunchTab?: () => string };
-    if (typeof m.consumeLaunchTab !== 'function') return '';
-    return m.consumeLaunchTab();
+    return asLaunchTarget(load().consumeLaunchTarget());
   } catch {
-    return '';
+    return null;
   }
 }
 
-// Native event for a tab switch while the app is already foreground (no
-// AppState transition fires in that case).
-export function onLaunchTab(listener: (tab: string) => void): { remove(): void } {
+// A target while JS runs (no AppState transition fires when the app is
+// already in front).
+export function onLaunchTarget(listener: (target: LaunchTarget) => void): Sub {
+  return onRunnerEvent<NativeLaunchTarget>('phonecandoLaunchTarget', (e) => {
+    const target = asLaunchTarget(e);
+    if (target) listener(target);
+  });
+}
+
+// A prompt an agent is waiting on: biometric unlock for phone control, or
+// accessibility setup. One per asking request, each with its own requestId.
+export type BridgePrompt = {
+  requestId: string;
+  kind: 'unlock' | 'accessibility';
+  agentId: AgentId;
+  agentName: string;
+  reason: string;
+};
+
+/** Every prompt still waiting (made while the app was closed, too). */
+export function pendingPrompts(): BridgePrompt[] {
   try {
-    const m = load() as unknown as {
-      addListener?: (name: string, cb: (e: { tab?: string }) => void) => { remove(): void };
-    };
-    if (typeof m.addListener !== 'function') return { remove() {} };
-    return m.addListener('phonecandoLaunchTab', (e) => listener(e?.tab ?? ''));
+    return load().pendingPrompts();
   } catch {
-    return { remove() {} };
+    return [];
   }
 }
 
-// One-shot biometric request from the bridge's /unlock route.
-export function consumeUnlockRequest(): string {
-  try {
-    const m = load() as unknown as { consumeUnlockRequest?: () => string };
-    if (typeof m.consumeUnlockRequest !== 'function') return '';
-    return m.consumeUnlockRequest();
-  } catch {
-    return '';
-  }
+/** A new prompt while the app runs; pendingPrompts covers the rest. */
+export function onBridgePrompt(listener: (prompt: BridgePrompt) => void): Sub {
+  return onRunnerEvent<BridgePrompt>('phonecandoBridgePrompt', listener);
 }
 
-export function onUnlockRequest(listener: (reason: string) => void): { remove(): void } {
+// The user's answer to one unlock prompt (biometrics passed, or "Not now").
+export function resolveUnlock(requestId: string, ok: boolean): boolean {
   try {
-    const m = load() as unknown as {
-      addListener?: (name: string, cb: (e: { reason?: string }) => void) => { remove(): void };
-    };
-    if (typeof m.addListener !== 'function') return { remove() {} };
-    return m.addListener('phonecandoUnlockRequest', (e) => listener(e?.reason ?? ''));
-  } catch {
-    return { remove() {} };
-  }
-}
-
-// Resolve the bridge's waiting /unlock request after biometrics/cancel.
-export function resolveUnlock(ok: boolean): boolean {
-  try {
-    const m = load() as unknown as { resolveUnlock?: (v: boolean) => boolean };
-    if (typeof m.resolveUnlock !== 'function') return false;
-    return m.resolveUnlock(ok);
+    return load().resolveUnlock(requestId, ok);
   } catch {
     return false;
   }
 }
 
-export function consumeAccessibilityRequest(): string {
+// Progress on one accessibility prompt: ok when the user opened a step's
+// screen, not ok for "Not now" (which ends that request's wait). `guided`:
+// the restricted-settings guide is running; the bridge keeps waiting for the
+// service and only reports `restricted: sideload` to the agent.
+export function resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean {
   try {
-    const m = load() as unknown as { consumeAccessibilityRequest?: () => string };
-    if (typeof m.consumeAccessibilityRequest !== 'function') return '';
-    return m.consumeAccessibilityRequest();
-  } catch {
-    return '';
-  }
-}
-
-export function onAccessibilityRequest(listener: (reason: string) => void): { remove(): void } {
-  try {
-    const m = load() as unknown as {
-      addListener?: (name: string, cb: (e: { reason?: string }) => void) => { remove(): void };
-    };
-    if (typeof m.addListener !== 'function') return { remove() {} };
-    return m.addListener('phonecandoAccessibilityRequest', (e) => listener(e?.reason ?? ''));
-  } catch {
-    return { remove() {} };
-  }
-}
-
-// Resolve the bridge's waiting /accessibility request after the user confirms
-// (or cancels) the in-chat prompt. `guided`: the restricted-settings guide is
-// running, so the bridge answers at once instead of waiting for the service.
-export function resolveAccessibility(ok: boolean, guided: boolean): boolean {
-  try {
-    const m = load() as unknown as { resolveAccessibility?: (v: boolean, g: boolean) => boolean };
-    if (typeof m.resolveAccessibility !== 'function') return false;
-    return m.resolveAccessibility(ok, guided);
+    return load().resolveAccessibility(requestId, ok, guided);
   } catch {
     return false;
   }
@@ -291,36 +293,10 @@ export function openAccessibilitySettings(): string {
   }
 }
 
-// Effective port the service settled on ("" when never started yet —
-// pre-rebuild installs lack this function, callers must tolerate that).
-export function getServePort(): string {
-  return load().getServePort();
-}
-
-// The engine's install-stable password ("" until the service first starts
-// the engine). How it rides on a request is the agent kind's business.
-export function getServePassword(): string {
-  try {
-    const m = load() as unknown as { getServePassword?: () => string };
-    if (typeof m.getServePassword !== 'function') return '';
-    return m.getServePassword();
-  } catch {
-    return '';
-  }
-}
-
 // System notification grant (Android 13+). Pre-rebuild installs lack it —
 // callers must tolerate the throw, same as the other post-rebuild fns.
 export function requestNotificationPermission(): string {
   return load().requestNotificationPermission();
-}
-
-export function serveHealth(port: string): string {
-  return load().health({ port });
-}
-
-export function engineBaseUrl(port: string): string {
-  return `http://127.0.0.1:${port}`;
 }
 
 // Telemetry counters (contract: modules/phonecando-runner/src/telemetry.types.ts).
@@ -368,7 +344,7 @@ export function consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null {
 }
 
 // Mirrors the user's usage-stats on/off choice into native prefs, so the
-// serve service skips telemetry-only work while off. Native defaults to on
+// engines skip telemetry-only work while off. Native defaults to on
 // and ignores a repeated value; a no-op on builds without the method.
 export function setTelemetryEnabled(enabled: boolean): void {
   try {

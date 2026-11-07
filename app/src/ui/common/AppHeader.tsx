@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { Button, Sheet, Text, XStack } from 'tamagui';
-import { activeAgentKind } from '../../engine/agents/registry';
-import { useAppStore } from '../../state/app';
+import { agentKind } from '../../engine/agents/registry';
+import { useActiveAgent, useAgentsStore } from '../../state/agents';
+import { useAppStore, type TerminalSession } from '../../state/app';
 import { webGoBack, webGoHome } from '../chat/webNavigation';
+import AgentSheet from './agent-switcher/AgentSheet';
+import EngineDot from './agent-switcher/EngineDot';
+import ArrowIcon from './ArrowIcon';
 import BackIcon from './BackIcon';
 import AppButton from './AppButton';
 import CardMenu, { type CardMenuItem } from './CardMenu';
@@ -12,38 +16,52 @@ import { HIT, useTheme } from './globals';
 
 // 60dp app bar with one shared row layout: left side always
 // `flex={1} minWidth={0}` so long titles truncate instead of pushing the ⋮
-// menu off-screen. Home IS the web UI (no app-side projects/chats anymore):
-// the ⋮ menu opens the terminal (via the folder picker), Settings, About.
+// menu off-screen. The title is the active agent's name; tapping it opens
+// the agent switcher. Home IS that agent's web UI (no app-side
+// projects/chats): the ⋮ menu opens its terminal UI (via the folder
+// picker), Settings, About. An open terminal shows what it is attached to.
 export default function AppHeader() {
   const t = useTheme();
-  const terminalDir = useAppStore((s) => s.terminalDir);
+  const terminal = useAppStore((s) => s.terminal);
   const closeTerminal = useAppStore((s) => s.closeTerminal);
   const setFolderPickerOpen = useAppStore((s) => s.setFolderPickerOpen);
   const footerTab = useAppStore((s) => s.footerTab);
   const setFooterTab = useAppStore((s) => s.setFooterTab);
   const webCanGoBack = useAppStore((s) => s.webCanGoBack);
+  const agent = useActiveAgent();
+  const agentState = useAgentsStore((s) => (agent ? s.statuses[agent.id]?.state : undefined));
+  const terminalAgentName = useAgentsStore(
+    (s) => s.agents.find((a) => a.id === terminal?.agentId)?.name ?? 'Agent',
+  );
   const [aboutOpen, setAboutOpen] = useState(false);
   const [licensesOpen, setLicensesOpen] = useState(false);
+  const [agentsOpen, setAgentsOpen] = useState(false);
 
-  const title = terminalDir
-    ? (terminalDir.split('/').filter(Boolean).pop() ?? 'Terminal')
-    : 'PhoneCanDo';
+  const title = terminal ? terminalTitle(terminal, terminalAgentName) : (agent?.name ?? 'PhoneCanDo');
+  const kind = agent ? agentKind(agent.kind) : null;
+  // Closing returns to the tab underneath: the web UI for the terminal UI,
+  // usually the Env tab for a Linux shell.
+  const closeLabel = terminal?.kind === 'linux' ? 'Close terminal' : 'Back to web UI';
 
-  const menuItems: CardMenuItem[] = terminalDir
+  const menuItems: CardMenuItem[] = terminal
     ? [
-        { label: 'Back to web UI', onSelect: () => closeTerminal() },
+        { label: closeLabel, onSelect: () => closeTerminal() },
         { label: 'Settings', onSelect: () => setFooterTab('settings') },
         { label: 'About', onSelect: () => setAboutOpen(true) },
       ]
     : [
-        {
-          label: `${activeAgentKind().label} home`,
-          onSelect: () => {
-            setFooterTab('home');
-            webGoHome();
-          },
-        },
-        { label: 'Open terminal UI', onSelect: () => setFolderPickerOpen(true) },
+        ...(kind
+          ? [
+              {
+                label: `${kind.label} home`,
+                onSelect: () => {
+                  setFooterTab('home');
+                  webGoHome();
+                },
+              },
+              { label: 'Open terminal UI', onSelect: () => setFolderPickerOpen(true) },
+            ]
+          : []),
         { label: 'Settings', onSelect: () => setFooterTab('settings') },
         { label: 'About', onSelect: () => setAboutOpen(true) },
       ];
@@ -60,9 +78,9 @@ export default function AppHeader() {
       backgroundColor={t.panel}
     >
       <XStack alignItems="center" gap="$2" flex={1} minWidth={0}>
-        {terminalDir ? (
+        {terminal ? (
           <>
-            <HeaderButton a11y="Back to web UI" onPress={closeTerminal} />
+            <HeaderButton a11y={closeLabel} onPress={closeTerminal} />
             <HeaderTitle text={title} />
           </>
         ) : (
@@ -70,9 +88,25 @@ export default function AppHeader() {
             {footerTab === 'home' && webCanGoBack ? (
               <HeaderButton a11y="Back in web UI" onPress={() => webGoBack()} />
             ) : null}
-            <XStack alignItems="center" gap={6} flex={1} minWidth={0}>
+            <XStack
+              alignItems="center"
+              gap={6}
+              flex={1}
+              minWidth={0}
+              minHeight={HIT.minTouch}
+              pressStyle={{ opacity: 0.7 }}
+              onPress={agent ? () => setAgentsOpen(true) : undefined}
+              accessibilityRole={agent ? 'button' : undefined}
+              accessibilityLabel={agent ? `Agent ${agent.name}, switch agent` : undefined}
+            >
               <LogoMark size={13} />
               <HeaderTitle text={title} />
+              {agent ? (
+                <>
+                  <EngineDot state={agentState} />
+                  <ArrowIcon dir="down" size={10} color={t.dim} />
+                </>
+              ) : null}
             </XStack>
           </>
         )}
@@ -102,8 +136,8 @@ export default function AppHeader() {
             </Text>
           </XStack>
           <Text fontSize={15} color="$color10">
-            On-device coding agents for Android. Home is the agent's web UI; the terminal tab
-            attaches a TUI to any folder in the container.
+            On-device coding agents for Android. Home is the active agent's web UI; the ⋮ menu
+            attaches its terminal UI to any folder in its Linux home.
           </Text>
           <AppButton
             variant="secondary"
@@ -119,8 +153,15 @@ export default function AppHeader() {
       </Sheet>
 
       <LicensesDialog open={licensesOpen} onClose={() => setLicensesOpen(false)} />
+      <AgentSheet open={agentsOpen} onClose={() => setAgentsOpen(false)} />
     </XStack>
   );
+}
+
+// The terminal UI shows its folder; a Linux shell shows whose image it is in.
+function terminalTitle(session: TerminalSession, agentName: string): string {
+  if (session.kind === 'linux') return `${agentName} · Linux`;
+  return session.dir.split('/').filter(Boolean).pop() ?? 'Terminal';
 }
 
 function HeaderButton({ a11y, onPress }: { a11y: string; onPress: () => void }) {
@@ -142,8 +183,8 @@ function HeaderButton({ a11y, onPress }: { a11y: string; onPress: () => void }) 
   );
 }
 
-// Mono brand title next to the logo mark. The terminal view swaps the brand
-// for the folder name, so the mark only shows on the app title.
+// Mono title next to the logo mark: the active agent's name. The terminal
+// view swaps it for what the terminal is attached to, without the mark.
 function HeaderTitle({ text }: { text: string }) {
   return (
     <Text

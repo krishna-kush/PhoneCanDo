@@ -6,6 +6,14 @@
 // id the server picks by directory.
 import type { PtyRecipe, TuiTarget } from '../types';
 
+// In a titled chat the TUI sets the terminal title to "OC | <title>", cut to
+// 37 characters plus "…" past 40; its home and an untitled chat show
+// "OpenCode" (packages/tui/src/app.tsx).
+export function tuiChatTitle(terminalTitle: string): string | null {
+  const m = /^OC \| (.+)$/.exec(terminalTitle);
+  return m ? m[1] : null;
+}
+
 export function tui(target: TuiTarget): PtyRecipe {
   const { libDir, homeDir, projectDir, serverUrl, password } = target;
   const cmd = [`${libDir}/liboc-engine.so`, '--server', serverUrl];

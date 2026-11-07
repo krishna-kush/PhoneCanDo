@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { Text } from 'tamagui';
-import * as LocalAuthentication from 'expo-local-authentication';
+import { confirmUser } from '../../engine/auth';
 import * as runner from '../../engine/runner';
 import { track } from '../../engine/telemetry';
 import { useAppStore } from '../../state/app';
@@ -57,11 +57,7 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
       return;
     }
     try {
-      const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock phone control',
-        cancelLabel: 'Cancel',
-      });
-      if (!res.success) {
+      if (!(await confirmUser('Unlock phone control'))) {
         setTrustMsg('Not unlocked.');
         return;
       }

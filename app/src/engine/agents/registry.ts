@@ -1,5 +1,6 @@
 // Every agent kind the app can run. Adding a kind is a folder next to oc/
-// plus one line here.
+// plus one line here. Screens look up the kind of the agent in question
+// (`agentKind(agent.kind)`); there is no app-wide kind.
 import { opencodeKind } from './oc/kind';
 import type { AgentKind, AgentKindId } from './types';
 
@@ -12,10 +13,4 @@ export const DEFAULT_AGENT_KIND: AgentKindId = 'opencode';
 
 export function agentKind(id: AgentKindId): AgentKind {
   return KINDS[id];
-}
-
-/** The kind of the engine the app talks to now (one engine, the default
-    kind, until several agents exist). */
-export function activeAgentKind(): AgentKind {
-  return agentKind(DEFAULT_AGENT_KIND);
 }

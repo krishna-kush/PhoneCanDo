@@ -11,7 +11,7 @@ export function useAndroidBack() {
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       const s = useAppStore.getState();
-      if (s.terminalDir) {
+      if (s.terminal) {
         s.closeTerminal();
         return true;
       }

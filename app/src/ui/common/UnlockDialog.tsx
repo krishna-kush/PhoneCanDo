@@ -1,76 +1,70 @@
 import { useEffect, useState } from 'react';
-import { AppState, Modal } from 'react-native';
+import { Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import * as LocalAuthentication from 'expo-local-authentication';
+import { confirmUser } from '../../engine/auth';
 import * as runner from '../../engine/runner';
 import { track } from '../../engine/telemetry';
 import AppButton from './AppButton';
 import { useTheme } from './globals';
+import { askerTitle, unlockCoversLine, waitingLine } from './promptQueue';
+import { markAnswered, pendingUnlockIds, useBridgePrompts } from './useBridgePrompts';
 
-// The agent asks the bridge for phone-control permission; this modal is the
+// An agent asks the bridge for phone-control permission; this modal is the
 // only UI that can flip the native gate. It sits over whatever tab is open
-// (the bridge switches to Home first), so the chat never disappears.
+// (the bridge switches to Home first), so the chat never disappears. It
+// shows when the oldest waiting prompt is an unlock; the gate is one switch
+// for the phone, so a successful unlock answers every waiting unlock.
 export default function UnlockDialog() {
   const t = useTheme();
-  const [open, setOpen] = useState(false);
+  const { current, queue } = useBridgePrompts();
+  const prompt = current?.kind === 'unlock' ? current : null;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const requestId = prompt?.requestId;
 
-  useEffect(() => {
-    const check = () => {
-      if (runner.consumeUnlockRequest()) setOpen(true);
-    };
-    const sub = runner.onUnlockRequest(() => {
-      runner.consumeUnlockRequest();
-      setOpen(true);
-    });
-    check();
-    const appState = AppState.addEventListener('change', (state) => {
-      if (state === 'active') check();
-    });
-    return () => {
-      sub.remove();
-      appState.remove();
-    };
-  }, []);
+  useEffect(() => setMsg(''), [requestId]);
+
+  const unlocks = queue.filter((p) => p.kind === 'unlock').length;
+  const note = unlockCoversLine(unlocks - 1) || waitingLine(queue.length - 1);
 
   async function unlock() {
+    if (!requestId) return;
     setBusy(true);
     setMsg('');
     try {
-      const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock phone control',
-        cancelLabel: 'Cancel',
-      });
-      if (!res.success) {
-        runner.resolveUnlock(false);
-        setOpen(false);
+      if (!(await confirmUser('Unlock phone control'))) {
+        answer([requestId], false);
         return;
       }
-      const ok = runner.setAutomationEnabled(true);
-      runner.resolveUnlock(ok);
-      if (!ok) {
-        setMsg('This install has no phone-control driver.');
+      if (!runner.setAutomationEnabled(true)) {
+        answer([requestId], false);
         return;
       }
       track('control.unlock');
-      setOpen(false);
+      // Read again: more agents may have asked while biometrics was up.
+      answer([requestId, ...pendingUnlockIds()], true);
     } catch (e) {
-      // Keep the bridge waiting so the user can retry; "Not now" resolves false.
+      // Keep the bridge waiting so the user can retry; "Not now" refuses.
       setMsg(`Biometric error: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
     }
   }
 
+  function answer(ids: string[], ok: boolean) {
+    const unique = [...new Set(ids)];
+    for (const id of unique) runner.resolveUnlock(id, ok);
+    markAnswered(unique);
+  }
+
+  // "Not now" refuses this agent only; the next waiting prompt shows.
   function close() {
-    if (busy) return;
-    runner.resolveUnlock(false);
-    setOpen(false);
+    if (busy || !requestId) return;
+    answer([requestId], false);
   }
 
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+    <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={close}>
       <YStack
         flex={1}
         backgroundColor="rgba(0,0,0,0.6)"
@@ -89,7 +83,7 @@ export default function UnlockDialog() {
           maxWidth={360}
         >
           <Text fontSize={19} fontWeight="700">
-            Permission required
+            {prompt ? askerTitle(prompt) : 'Permission required'}
           </Text>
           <Text fontSize={15} color="$color10">
             PhoneCanDo needs permission to perform automated actions on this device. Unlock with
@@ -98,6 +92,11 @@ export default function UnlockDialog() {
           <Text fontSize={13} color="$color10">
             The AI cannot unlock this; only you can.
           </Text>
+          {note ? (
+            <Text fontSize={13} color="$color10">
+              {note}
+            </Text>
+          ) : null}
           {msg ? (
             <Text fontSize={13} color="$color10">
               {msg}

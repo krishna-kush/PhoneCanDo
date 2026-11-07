@@ -1,58 +1,33 @@
 import { useEffect, useState } from 'react';
-import { AppState, Modal } from 'react-native';
+import { Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import * as runner from '../../engine/runner';
 import AppButton from '../common/AppButton';
 import { useTheme } from '../common/globals';
+import { askerTitle, waitingLine } from '../common/promptQueue';
+import { markAnswered, useBridgePrompts } from '../common/useBridgePrompts';
 import { COPY } from './guide';
 import StepLinks from './StepLinks';
 import StepList from './StepList';
 import { useAccessibilitySteps } from './useAccessibilitySteps';
 
-// The agent asks the bridge for accessibility; this dialog sits over the
+// An agent asks the bridge for accessibility; this dialog sits over the
 // chat while the bridge waits for PhoneCanDo's service to connect, so the
 // agent carries on by itself once the switch is on. Only the user can flip
-// the Android switch. During the guide the dialog stays open between trips;
-// it closes itself once the service connects, and "Not now" tells the bridge
-// to stop waiting.
+// the Android switch. It shows when the oldest waiting prompt is an
+// accessibility request and reports to that request alone. During the guide
+// it stays open between trips; it closes once the service connects (every
+// waiting request then returns and its prompt is gone), and "Not now" tells
+// this request's bridge call to stop waiting.
 export default function AccessibilityDialog() {
   const t = useTheme();
-  const [open, setOpen] = useState(false);
+  const { current, queue } = useBridgePrompts();
+  const prompt = current?.kind === 'accessibility' ? current : null;
+  const requestId = prompt?.requestId;
   const [msg, setMsg] = useState('');
   const steps = useAccessibilitySteps();
 
-  useEffect(() => {
-    const check = () => {
-      if (runner.consumeAccessibilityRequest()) {
-        setMsg('');
-        setOpen(true);
-      }
-      if (runner.isUiAutomationConnected()) setOpen(false);
-    };
-    const sub = runner.onAccessibilityRequest(() => {
-      runner.consumeAccessibilityRequest();
-      setMsg('');
-      setOpen(true);
-    });
-    check();
-    const appState = AppState.addEventListener('change', (state) => {
-      if (state === 'active') check();
-    });
-    return () => {
-      sub.remove();
-      appState.remove();
-    };
-  }, []);
-
-  // The service can bind a moment after the user is back in the app; close
-  // as soon as it does instead of waiting for the next resume.
-  useEffect(() => {
-    if (!open) return;
-    const timer = setInterval(() => {
-      if (runner.isUiAutomationConnected()) setOpen(false);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [open]);
+  useEffect(() => setMsg(''), [requestId]);
 
   // Tells the bridge the user is on it (it keeps waiting for the service).
   // The dialog stays open in both flows, so "Not now" is still there if the
@@ -68,25 +43,28 @@ export default function AccessibilityDialog() {
       );
       return;
     }
-    runner.resolveAccessibility(true, steps.guided);
+    if (requestId) runner.resolveAccessibility(requestId, true, steps.guided);
     setMsg('');
   }
 
   function runAlt() {
     steps.alt?.run();
-    runner.resolveAccessibility(true, true);
+    if (requestId) runner.resolveAccessibility(requestId, true, true);
     setMsg('');
   }
 
-  // "Not now": the bridge stops waiting and the agent hears it at once.
+  // "Not now": this request's bridge call stops waiting and its agent hears
+  // it at once; the next waiting prompt shows.
   function close() {
-    runner.resolveAccessibility(false, false);
-    setMsg('');
-    setOpen(false);
+    if (!requestId) return;
+    runner.resolveAccessibility(requestId, false, false);
+    markAnswered([requestId]);
   }
+
+  const waiting = waitingLine(queue.length - 1);
 
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+    <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={close}>
       <YStack
         flex={1}
         backgroundColor="rgba(0,0,0,0.6)"
@@ -109,6 +87,11 @@ export default function AccessibilityDialog() {
               ? `Unlock phone control · step ${steps.step} of ${steps.total}`
               : 'Accessibility permission'}
           </Text>
+          {prompt ? (
+            <Text fontSize={15} fontWeight="700">
+              {askerTitle(prompt)}
+            </Text>
+          ) : null}
           <Text fontSize={15} color="$color10">
             {COPY.dialogNeed}
             {steps.guided ? COPY.dialogGuided : COPY.dialogPlain}
@@ -117,6 +100,11 @@ export default function AccessibilityDialog() {
           <Text fontSize={13} color="$color10">
             {COPY.dialogOnlyYou}
           </Text>
+          {waiting ? (
+            <Text fontSize={13} color="$color10">
+              {waiting}
+            </Text>
+          ) : null}
           {msg ? (
             <Text fontSize={13} color="$color10">
               {msg}

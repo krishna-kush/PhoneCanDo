@@ -17,7 +17,13 @@ export type AgentSession = {
 };
 
 /** A process for our PTY: argv, environment and working directory. */
-export type PtyRecipe = { cmd: string[]; env: Record<string, string>; cwd: string };
+export type PtyRecipe = {
+  cmd: string[];
+  env: Record<string, string>;
+  cwd: string;
+  /** Raw tty (the default) for a TUI; false for a shell, whose line editor echoes only on a cooked tty. */
+  raw?: boolean;
+};
 
 /** Where a TUI attaches: the engine, its HOME and a project folder. */
 export type TuiTarget = {
@@ -55,6 +61,8 @@ export type AgentWebUi = {
   embedScript: string;
   /** URLs of the sign-in hand-off, which never count as the web UI's home. */
   isAuthUrl(url: string): boolean;
+  /** The chat (its session id) a web UI URL shows; null for any other page. */
+  sessionOf(url: string): string | null;
 };
 
 export type AgentKind = {
@@ -67,6 +75,8 @@ export type AgentKind = {
   isIdle(conn: EngineConn): Promise<boolean>;
   web: AgentWebUi;
   tui(target: TuiTarget): PtyRecipe;
+  /** The chat title the TUI's terminal title shows; null when it shows no chat. */
+  tuiChatTitle(terminalTitle: string): string | null;
   /** Deletes the agent's own database (sessions, projects) under its HOME.
       Returns how many files went. */
   wipeData(homeDir: string): Promise<number>;

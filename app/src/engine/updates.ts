@@ -8,13 +8,8 @@ import { applicationId, nativeApplicationVersion, nativeBuildVersion } from 'exp
 import { Directory, DownloadTask, File, Paths } from 'expo-file-system';
 import { getContentUriAsync } from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
-import {
-  canRequestPackageInstalls,
-  getBuildChannel,
-  isServeRunning,
-  markSelfUpdatePending,
-  stopServeService,
-} from './runner';
+import { isAnyEngineAlive, stopAllEngines } from './engines';
+import { canRequestPackageInstalls, getBuildChannel, markSelfUpdatePending } from './runner';
 
 const REPO = 'krishna-kush/PhoneCanDo';
 const MANIFEST_URL = `https://github.com/${REPO}/releases/latest/download/latest.json`;
@@ -137,15 +132,17 @@ export async function downloadUpdate(
   return downloaded;
 }
 
-// The engine is a child of this UID and outlives an APK replace; stop it
-// before the installer kills the app so the new build never pairs with the
-// old binary. isServeRunning covers the foreground service's engine too.
-async function stopEngine(): Promise<void> {
+// Engines are children of this UID and can outlive an APK replace; stop
+// every agent's engine, and everything they started, before the installer
+// kills the app, so the new build never pairs with an old binary.
+// stopAllEngines resolves once nothing tagged is left; the poll is a bound
+// for a native side that answers early.
+async function stopEngines(): Promise<void> {
   try {
-    if (!isServeRunning()) return;
-    stopServeService();
+    if (!isAnyEngineAlive()) return;
+    await stopAllEngines();
     const deadline = Date.now() + 4000;
-    while (isServeRunning() && Date.now() < deadline) {
+    while (isAnyEngineAlive() && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 100));
     }
   } catch {
@@ -162,7 +159,7 @@ async function stopEngine(): Promise<void> {
 // restricted-settings lock lite's own install already set
 // (research/restricted-settings.md).
 export async function installDownloaded(apk: File): Promise<void> {
-  await stopEngine();
+  await stopEngines();
   console.log(`[phonecando-update] install apk=${apk.name}`);
   const uri = await getContentUriAsync(apk.uri);
   // The update receiver in the new build acts only on this mark

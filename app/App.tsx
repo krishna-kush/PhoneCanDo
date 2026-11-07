@@ -13,17 +13,19 @@ import TerminalScreen from './src/ui/terminal/TerminalScreen';
 import FolderPicker from './src/ui/terminal/FolderPicker';
 import EnvScreen from './src/ui/env/EnvScreen';
 import SettingsScreen from './src/ui/settings/SettingsScreen';
+import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
+import { useAgentsStore } from './src/state/agents';
 import { useAppStore } from './src/state/app';
-import { ensureServeRunning } from './src/engine/ensureServe';
 import {
-  consumeLaunchTab,
+  consumeLaunchTarget,
   isRunnerAvailable,
-  onLaunchTab,
+  onLaunchTarget,
   requestNotificationPermission,
+  type LaunchTarget,
 } from './src/engine/runner';
 import { useScheme, useTheme } from './src/ui/common/globals';
 import tamaguiConfig from './tamagui.config';
@@ -40,8 +42,10 @@ export default function App() {
   const hydrate = useAppStore((s) => s.hydrate);
   const footerTab = useAppStore((s) => s.footerTab);
   const setFooterTab = useAppStore((s) => s.setFooterTab);
-  const terminalDir = useAppStore((s) => s.terminalDir);
+  const terminal = useAppStore((s) => s.terminal);
   const folderPickerOpen = useAppStore((s) => s.folderPickerOpen);
+  const agentsHydrated = useAgentsStore((s) => s.hydrated);
+  const hasAgents = useAgentsStore((s) => s.agents.length > 0);
   // Standard tabBarHideOnKeyboard behavior: the footer is dead space
   // behind the keyboard (it also lifts terminal content by its height),
   // so it unmounts while any keyboard is up and returns after.
@@ -51,20 +55,28 @@ export default function App() {
   useAndroidBack();
 
   useEffect(() => {
-    // The agent can ask the app to come back (mobile_return) or open the
-    // Phone control screen (mobile_request_unlock). The event covers the
-    // already-foreground case; the pref covers a cold/resumed start.
-    const applyLaunchTab = (tab: string) => {
-      if (tab === 'home' || tab === 'env' || tab === 'settings') {
-        Keyboard.dismiss();
-        setFooterTab(tab);
-      }
+    // Where to land when the app opens for a reason: a tap on an agent's
+    // notification (its alert, its own post, its prompt, its return notice)
+    // or an agent bringing the app back (mobile_return). The target names a
+    // tab and, when the reason is one agent, that agent, which becomes the
+    // active one. The event covers the app in front; the pref covers a cold
+    // or resumed start. Until the agents are read, a switch would be undone
+    // by the stored pick, so the target waits for hydration.
+    const applyLaunchTarget = (target: LaunchTarget | null) => {
+      if (!target) return;
+      Keyboard.dismiss();
+      const agents = useAgentsStore.getState();
+      if (target.agentId && target.agentId !== agents.activeAgentId) void agents.setActiveAgent(target.agentId);
+      setFooterTab(target.tab);
     };
-    const launchSub = onLaunchTab((tab) => {
-      consumeLaunchTab(); // clear the persisted hint once handled
-      applyLaunchTab(tab);
+    const takeLaunchTarget = () => {
+      if (useAgentsStore.getState().hydrated) applyLaunchTarget(consumeLaunchTarget());
+    };
+    const launchSub = onLaunchTarget((target) => {
+      if (!useAgentsStore.getState().hydrated) return; // the pref keeps it for hydration's end
+      consumeLaunchTarget(); // clear the persisted copy once handled
+      applyLaunchTarget(target);
     });
-    applyLaunchTab(consumeLaunchTab());
     // System notification grant (Android 13+ drops posts without it).
     // Asked once natively; afterwards it lives in Settings.
     try {
@@ -72,39 +84,31 @@ export default function App() {
     } catch {
       // no activity yet — Settings retry covers it
     }
-    // Engine autostart on launch (health-gated): a warm engine keeps chat
-    // opens instant. Deferred so the first frame paints before the blocking
-    // health probe. The service owns the port — adopt the effective one.
-    // Quiet shutdown on idle-close still applies (see usePtySession/store).
-    void hydrate().finally(() => {
+    // The active agent's engine starts on launch and on every return to the
+    // foreground (a warm engine keeps chat opens instant; the service starts
+    // nothing by itself after the system killed it). Fire-and-forget: the
+    // web UI and terminal start it again when they open. Other agents'
+    // engines start only when something uses them.
+    const startActiveAgent = () => {
+      const { activeAgentId, startAgent } = useAgentsStore.getState();
+      if (activeAgentId) void startAgent(activeAgentId);
+    };
+    void Promise.allSettled([hydrate(), useAgentsStore.getState().hydrateAgents()]).finally(() => {
+      takeLaunchTarget();
       // Usage stats: deferred and fire-and-forget, never on the boot path.
       void useAppStore.getState().startTelemetry();
-      setTimeout(() => {
-        try {
-          const requested = useAppStore.getState().enginePort;
-          const res = ensureServeRunning(requested);
-          if (res.port !== requested) void useAppStore.getState().setEnginePort(res.port);
-        } catch {
-          // engine down — terminal/web open re-ensures on demand
-        }
-      }, 500);
+      setTimeout(startActiveAgent, 500);
     });
     const sub = AppState.addEventListener('change', (state) => {
-      // Engine lifetime follows UI visibility: background stops it when idle
-      // (quietEngineIfIdle), foreground return restarts a stopped engine.
-      // All branches no-op when there is nothing to do.
+      // Engine lifetime follows UI visibility: background stops every idle
+      // engine (stopIdleAgents), foreground return restarts the active
+      // agent's. All branches no-op when there is nothing to do.
       if (state === 'background') {
-        void useAppStore.getState().quietEngineIfIdle();
+        void useAgentsStore.getState().stopIdleAgents();
       } else if (state === 'active') {
-        applyLaunchTab(consumeLaunchTab());
-        try {
-          const st = useAppStore.getState();
-          const requested = st.enginePort;
-          const res = ensureServeRunning(requested);
-          if (res.port !== requested) void st.setEnginePort(res.port);
-        } catch {
-          // engine down — next open re-ensures
-        }
+        takeLaunchTarget();
+        useAgentsStore.getState().refreshAgents();
+        startActiveAgent();
       }
     });
     const show = Keyboard.addListener('keyboardDidShow', () => setKbVisible(true));
@@ -117,9 +121,10 @@ export default function App() {
     };
   }, [hydrate, setFooterTab]);
 
-  // Keep the first frame blank rather than flash the system font. If loading
-  // fails, render anyway (the fallback is the old sans, not a dead app).
-  if (!fontsLoaded && !fontError) return null;
+  // Keep the first frame blank rather than flash the system font (if loading
+  // fails, render anyway: the fallback is the old sans, not a dead app) or
+  // the tabs before we know whether any agent exists.
+  if ((!fontsLoaded && !fontError) || !agentsHydrated) return null;
 
   return (
     <RootError>
@@ -131,22 +136,29 @@ export default function App() {
             style={{ flex: 1, backgroundColor: t.panel }}
             edges={['top', 'bottom', 'left', 'right']}
           >
-            <AppHeader />
-            {terminalDir ? (
-              <TerminalScreen key={terminalDir} />
-            ) : folderPickerOpen ? (
-              <FolderPicker />
+            {!hasAgents ? (
+              // No agent yet: setup creates the first one, then the tabs show.
+              <FirstLaunchScreen />
             ) : (
-              // Home IS the web UI (the agent's pair-loaded home — projects and
-              // sessions live there, no app-side project/chat creation).
-              // Terminal opens above via the header menu + folder picker.
-              <TabPager
-                pages={[<ChatWebScreen key="web" />, <EnvScreen key="env" />, <SettingsScreen key="settings" />]}
-                index={TAB_ORDER.indexOf(footerTab)}
-                onIndexChange={(i) => setFooterTab(TAB_ORDER[i])}
-              />
+              <>
+                <AppHeader />
+                {terminal ? (
+                  <TerminalScreen key={terminal.id} session={terminal} />
+                ) : folderPickerOpen ? (
+                  <FolderPicker />
+                ) : (
+                  // Home IS the active agent's web UI (its pair-loaded home —
+                  // projects and sessions live there, no app-side project/chat
+                  // creation). Terminals open above via the header menu.
+                  <TabPager
+                    pages={[<ChatWebScreen key="web" />, <EnvScreen key="env" />, <SettingsScreen key="settings" />]}
+                    index={TAB_ORDER.indexOf(footerTab)}
+                    onIndexChange={(i) => setFooterTab(TAB_ORDER[i])}
+                  />
+                )}
+                {!kbVisible && terminal == null && !folderPickerOpen && <FooterTabs />}
+              </>
             )}
-            {!kbVisible && terminalDir == null && !folderPickerOpen && <FooterTabs />}
           </SafeAreaView>
           <UnlockDialog />
           <AccessibilityDialog />

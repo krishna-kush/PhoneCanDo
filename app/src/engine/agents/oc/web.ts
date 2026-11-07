@@ -79,4 +79,9 @@ export const web: AgentWebUi = {
   themeScript,
   embedScript,
   isAuthUrl: (url) => url.includes('/auth/connect/'),
+  // Chat pages are /server/<dir>/session/<id> (device-checked on 2.0.26).
+  sessionOf: (url) => {
+    const m = /\/session\/([^/?#]+)/.exec(url);
+    return m ? decodeURIComponent(m[1]) : null;
+  },
 };
