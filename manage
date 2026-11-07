@@ -3,8 +3,10 @@
 
   ./manage release 0.1.2 --notes "What changed."   build full + lite, draft GitHub release
   ./manage release 0.1.2 --notes "..." --publish   same, then publish
-  ./manage release 0.1.2 --dry-run                 check env and edits, no build
+  ./manage release 0.1.2 --dry-run                 check env, edits, CI and Linux payloads, no build
   ./manage release 0.1.2 --upload-only [--publish] re-upload staged assets, no build
+  ./manage release 0.1.2 --allow-red-ci            release despite red CI (noted in the release notes)
+  ./manage release 0.1.2 --without-linux           full + lite with no proot/Default image staged
   ./manage build lite|full [--clean]               signed local APK -> dist/<channel>/
   ./manage prebuild [--clean]                      re-apply config plugins to app/android
   ./manage android lite|full|play                  dev build + install on the adb device
@@ -13,6 +15,9 @@
   ./manage xterm                                   re-inline the terminal page bundle
   ./manage web dev|build                           the website
   ./manage engine oc build|stage [args]            opencode payload (scripts/agents/oc)
+  ./manage image fetch|stage                       locked Default env image -> dist/images/ -> app assets
+  ./manage image build|stage --local               unlocked local image -> dist/images/local/ -> debug builds only
+  ./manage image lock <run-id>                     lock what a green lre-image run published
   ./manage apk info <file.apk>                     package, version, channel, signer, a11y
   ./manage device push <file.apk>                  copy to /sdcard/Download/phonecando/
   ./manage device log                              logcat for update / install / Play Protect
@@ -25,7 +30,8 @@ from the repo-root .env (release signing, TCE_READ_TOKEN; .env.example lists
 the keys), ANDROID_HOME from /opt/android-sdk.
 build and release run the limits check and print the data report first;
 neither ever blocks them.
-Never runs git.
+Never runs git itself; release-android.mjs runs read-only git (rev-parse,
+status) in its preflight.
 """
 import os
 import re
@@ -41,6 +47,9 @@ TCE = ROOT / "tce"
 CHANNELS = ("lite", "full", "play")
 # Agent kinds whose engine payload builds here (scripts/agents/<kind>/).
 ENGINE_KINDS = ("oc",)
+# The baked Default env image: its build and its lock (lock/<action>.sh).
+IMAGE = ROOT / "lre" / "images" / "default"
+IMAGE_LOCK = IMAGE / "lock"
 
 
 def sh(cmd, cwd=ROOT, env=None):
@@ -112,7 +121,8 @@ def limits_first():
 
 def cmd_release(args):
     if not args or args[0].startswith("--"):
-        die("usage: manage release <version> [--notes TEXT] [--publish] [--dry-run]")
+        die("usage: manage release <version> [--notes TEXT] [--publish] [--dry-run] "
+            "[--upload-only] [--allow-red-ci] [--without-linux]")
     limits_first()
     sh(["node", str(SCRIPTS / "release-android.mjs"), "--version", args[0], *args[1:]], env=release_env())
 
@@ -156,6 +166,21 @@ def cmd_engine(args):
     if len(args) < 2 or args[0] not in ENGINE_KINDS or args[1] not in ("build", "stage"):
         die(f"usage: manage engine {'|'.join(ENGINE_KINDS)} build|stage [args]")
     sh([str(SCRIPTS / "agents" / args[0] / f"{args[1]}.sh"), *args[2:]])
+
+
+def cmd_image(args):
+    # fetch/stage: the image lock.json names (sha256-checked); lock: write
+    # lock.json from a green run (read-only gh api; you commit the file).
+    # build: our own image (docker; on an x86_64 host arm64 runs under
+    # qemu-user, 15-20 min); stage --local puts it on debug builds only.
+    valid = args in (["fetch"], ["stage"], ["build"], ["stage", "--local"]) or (
+        len(args) == 2 and args[0] == "lock")
+    if not valid:
+        die("usage: manage image fetch|stage | build|stage --local | lock <run-id>")
+    if args[0] == "build":
+        sh([str(IMAGE / "build.sh"), str(ROOT / "dist" / "images" / "local")])
+    else:
+        sh([str(IMAGE_LOCK / f"{args[0]}.sh"), *args[1:]])
 
 
 def cmd_apk(args):
@@ -225,6 +250,7 @@ COMMANDS = {
     "xterm": cmd_xterm,
     "web": cmd_web,
     "engine": cmd_engine,
+    "image": cmd_image,
     "apk": cmd_apk,
     "device": cmd_device,
     "stats": cmd_stats,

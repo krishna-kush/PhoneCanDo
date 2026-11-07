@@ -95,6 +95,8 @@ probes = [("check", []), ("logos", []), ("xterm", []), ("prebuild", []), ("prebu
           ("web", ["dev"]), ("web", ["build"]), ("web", ["preview"]), ("engine", ["oc", "build"]), ("engine", ["oc", "stage"]),
           ("release", ["0.0.0", "--dry-run"]), ("build", ["lite"]), ("build", ["full"])]
 probes += [("android", [c]) for c in m.CHANNELS]
+probes += [("image", ["fetch"]), ("image", ["stage"]), ("image", ["lock", "1"]), ("image", ["build"]),
+           ("image", ["stage", "--local"])]
 for name, args in probes:
     if name in m.COMMANDS:
         m.COMMANDS[name](args)

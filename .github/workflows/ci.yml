@@ -6,7 +6,7 @@ name: CI
 # build and script wiring. Runs on every push to prod, every PR, nightly (to
 # catch upstream drift) and on demand. Branch protection: require `ci-ok`.
 # Native builds, the PCE, the engine and deep site checks have their own
-# workflows (android.yml, pce.yml, oc-payload.yml, web.yml).
+# workflows (android.yml, pce.yml, oc-payload.yml, lre.yml, proot.yml, web.yml).
 
 on:
   push:
@@ -248,8 +248,18 @@ jobs:
       # exits at --help, before any env, SDK or network access.
       - name: Release script loads (--help)
         run: node scripts/release-android.mjs --help
+      # The release preflight's decisions (clean tree, pushed commit, CI
+      # gates) on recorded check runs; fakes stand in for git and gh.
+      - name: Release preflight tests (node --test)
+        run: node --test "scripts/release/**/*.test.mjs"
       - name: Entry points resolve (manage, package.json, vectors, versions)
         run: node .github/ci/js/check-wiring.mjs
+      # THIRD_PARTY_NOTICES.md and the app's Licenses dialog list the same
+      # components under the same licenses, every shipped third-party item
+      # (proot, talloc, xz, kotlinx-serialization, the Debian image) has an
+      # entry, and each license's full text is in the dialog exactly once.
+      - name: Licence notices in sync (notices, dialog, shipped items)
+        run: node .github/ci/js/check-licenses.mjs
 
   ci-ok:
     # The one check to require in branch protection: green only when every

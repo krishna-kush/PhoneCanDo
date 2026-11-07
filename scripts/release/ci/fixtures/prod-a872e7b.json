@@ -1,0 +1,538 @@
+{
+  "source": "gh api (read-only GET), fetched 2026-11-07; only the fields the classifier reads",
+  "repo": "krishna-kush/PhoneCanDo",
+  "sha": "a872e7b186c5560d021286a5ee3133ba28db01a3",
+  "checkRuns": [
+    {
+      "id": 128241354410,
+      "name": "Analyze (java-kotlin)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936300,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354446,
+      "name": "repo hygiene",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354480,
+      "name": "Build",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354490,
+      "name": "website build",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354556,
+      "name": "Scorecard analysis",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936391,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354585,
+      "name": "capacity (free-plan limits)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936305,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354622,
+      "name": "astro check",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354683,
+      "name": "vectors (macos-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354770,
+      "name": "generated files in sync",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354782,
+      "name": "scripts and wiring",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354784,
+      "name": "typos (spelling, report only)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354792,
+      "name": "data files (JSON/YAML/TOML/XML)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354803,
+      "name": "Analyze (javascript-typescript)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936300,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354811,
+      "name": "Analyze (actions)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936300,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354828,
+      "name": "Analyze (c-cpp)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936300,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354842,
+      "name": "markdownlint (style, report only)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354845,
+      "name": "app (Node 22)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354871,
+      "name": "shellcheck (shell scripts)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354879,
+      "name": "app bundle (Android JS, no device)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354909,
+      "name": "theme spec",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354915,
+      "name": "check (types + dependency law)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936305,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354944,
+      "name": "ruff (Python errors)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354947,
+      "name": "markdown links (offline)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354951,
+      "name": "actionlint (workflows + shellcheck)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354961,
+      "name": "test (Node 22)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936305,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241354979,
+      "name": "worker bundle (wrangler dry run)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936305,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241355026,
+      "name": "python 3.x (compile + manage smoke)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241355029,
+      "name": "vectors (windows-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241355044,
+      "name": "python 3.10 (compile + manage smoke)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241355101,
+      "name": "app (Node 24)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241355144,
+      "name": "test (Node 24)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936305,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241356112,
+      "name": "cancel runs of the replaced commit",
+      "status": "completed",
+      "conclusion": "skipped",
+      "suite": 114664936316,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241356465,
+      "name": "markdown links (external, report only)",
+      "status": "completed",
+      "conclusion": "skipped",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241357639,
+      "name": "Workflow audit (zizmor)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664938519,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241358021,
+      "name": "pnpm audit (app)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664938519,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241358054,
+      "name": "Secret scan (gitleaks, full history)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664938519,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241358062,
+      "name": "pnpm audit (web)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664938519,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241358129,
+      "name": "OSV-Scanner (full report) / osv-scan",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664938519,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241359047,
+      "name": "OSV-Scanner (new vulns in PR)",
+      "status": "completed",
+      "conclusion": "skipped",
+      "suite": 114664938519,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241360000,
+      "name": "Dependency review",
+      "status": "completed",
+      "conclusion": "skipped",
+      "suite": 114664938519,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241440354,
+      "name": "lint-ok",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936254,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490651,
+      "name": "Page weight",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490661,
+      "name": "Release downloads",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490668,
+      "name": "html-validate",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490670,
+      "name": "Lighthouse (mobile)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490677,
+      "name": "Smoke (firefox)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490716,
+      "name": "Internal links",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490755,
+      "name": "Smoke (webkit)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490800,
+      "name": "Lighthouse (desktop)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241490818,
+      "name": "Smoke (chromium)",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241492314,
+      "name": "External links",
+      "status": "completed",
+      "conclusion": "skipped",
+      "suite": 114664936290,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241522939,
+      "name": "Score summary",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936391,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241580041,
+      "name": "Workers Builds: phonecando",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664931045,
+      "app": "cloudflare-workers-and-pages"
+    },
+    {
+      "id": 128241581286,
+      "name": "tce-ok",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936305,
+      "app": "github-actions"
+    },
+    {
+      "id": 128241609634,
+      "name": "ci-ok",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936280,
+      "app": "github-actions"
+    },
+    {
+      "id": 128242048228,
+      "name": "web-ok",
+      "status": "completed",
+      "conclusion": "success",
+      "suite": 114664936290,
+      "app": "github-actions"
+    }
+  ],
+  "workflowRuns": [
+    {
+      "id": 42319811920,
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "check_suite_id": 114664936280,
+      "created_at": "2026-11-07T00:42:06Z"
+    },
+    {
+      "id": 42319811921,
+      "name": "Web",
+      "path": ".github/workflows/web.yml",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "check_suite_id": 114664936290,
+      "created_at": "2026-11-07T00:42:06Z"
+    },
+    {
+      "id": 42319811928,
+      "name": "CodeQL",
+      "path": ".github/workflows/codeql.yml",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "check_suite_id": 114664936300,
+      "created_at": "2026-11-07T00:42:06Z"
+    },
+    {
+      "id": 42319811937,
+      "name": "Cancel Replaced",
+      "path": ".github/workflows/cancel-replaced.yml",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "skipped",
+      "check_suite_id": 114664936316,
+      "created_at": "2026-11-07T00:42:06Z"
+    },
+    {
+      "id": 42319811940,
+      "name": "Lint",
+      "path": ".github/workflows/lint.yml",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "check_suite_id": 114664936254,
+      "created_at": "2026-11-07T00:42:06Z"
+    },
+    {
+      "id": 42319811965,
+      "name": "TCE",
+      "path": ".github/workflows/tce.yml",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "check_suite_id": 114664936305,
+      "created_at": "2026-11-07T00:42:06Z"
+    },
+    {
+      "id": 42319811999,
+      "name": "Scorecard",
+      "path": ".github/workflows/scorecard.yml",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "check_suite_id": 114664936391,
+      "created_at": "2026-11-07T00:42:06Z"
+    },
+    {
+      "id": 42319812933,
+      "name": "Security",
+      "path": ".github/workflows/security.yml",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "check_suite_id": 114664938519,
+      "created_at": "2026-11-07T00:42:07Z"
+    }
+  ],
+  "statuses": []
+}
