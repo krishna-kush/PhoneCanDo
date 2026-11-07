@@ -1,0 +1,69 @@
+---
+// The site's one barcode, and a real one: Code 128 of `text` (lib/code128),
+// encoded at build time into one SVG path, so any phone scanner reads what
+// it says. Each bar is one rectangle; the 10-module margins either side are
+// the spec's quiet zone. Every character costs 11 modules, so keep `text`
+// short enough for its slot: it never shrinks, because a module is a whole
+// number of CSS px (--barcode-mod, 1px unless the caller sets more) and the
+// bars land on whole pixels. Height is --barcode-h.
+//
+// The bars are the current colour on no ground. Scanners want dark on
+// light, so a code on the page's own ground passes `paper`: the dark theme
+// then prints it on a white label, like the product artefacts.
+import { code128 } from '../lib/code128';
+
+interface Props {
+  /** What the bars hold: short, printable ASCII. */
+  text: string;
+  /** What the code is, for screen readers. */
+  label: string;
+  /** The line printed under the bars: `text` unless given, none if false. */
+  caption?: string | false;
+  /** On the dark theme, a white label under dark bars. */
+  paper?: boolean;
+  class?: string;
+}
+const { text, label, caption = text, paper = false, class: className } = Astro.props;
+
+const QUIET = 10;
+const code = code128(text);
+const modules = code.width + 2 * QUIET;
+const path = code.bars.map(({ x, w }) => `M${x + QUIET} 0h${w}v1h-${w}z`).join('');
+---
+
+<figure
+  class:list={['barcode', className, { 'barcode-paper': paper }]}
+  style={`--barcode-modules:${modules}`}
+>
+  <svg
+    viewBox={`0 0 ${modules} 1`}
+    preserveAspectRatio="none"
+    shape-rendering="crispEdges"
+    role="img"
+    aria-label={label}
+  >
+    <path d={path} />
+  </svg>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style is:global>
+  /* As wide as its bars, so the caption centres under them and a label
+     ends where the quiet zone does; the caller places it. */
+  .barcode { width: fit-content; margin: 0; }
+  .barcode svg {
+    display: block;
+    width: calc(var(--barcode-modules) * var(--barcode-mod, 1px));
+    height: var(--barcode-h, 34px);
+    fill: currentColor;
+  }
+  .barcode figcaption {
+    margin-top: 4px;
+    font: 500 7.5px/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-align: center;
+  }
+  /* Padded in both themes, so the layout does not move with the theme. */
+  .barcode-paper { padding: 6px 0 5px; }
+  :root:not([data-theme='light']) .barcode-paper { background: var(--art-fg); color: var(--art-bg); }
+</style>

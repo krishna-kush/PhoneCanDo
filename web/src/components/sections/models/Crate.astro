@@ -1,7 +1,10 @@
 ---
 // The crate between the two routes: a printed object, not a screen. Its
 // "this side up" is a button that turns it the wrong way up (the packing
-// list slides down to the new floor) and back again.
+// list slides down to the new floor) and back again. The packing list's
+// barcode is real and holds the stamp's promise; no caption, the stamp
+// already prints it.
+import Barcode from "../../Barcode.astro";
 ---
 
 <div class="crate-wrap">
@@ -20,7 +23,12 @@
                 <li>tokenizer.json</li>
                 <li>config.json</li>
             </ul>
-            <div class="crate-barcode"></div>
+            <Barcode
+                class="crate-barcode"
+                text="stays on device"
+                label="Barcode reading: stays on device"
+                caption={false}
+            />
         </div>
         <span class="crate-stamp" aria-hidden="true">Stays on device</span>
         <button class="crate-up" type="button" data-crate-flip aria-label="Turn the crate over">
@@ -114,22 +122,7 @@
       color: var(--red);
       font-size: 8px;
     }
-    .crate-barcode {
-      height: 22px;
-      margin-top: 9px;
-      background: repeating-linear-gradient(
-        90deg,
-        currentColor 0 2px,
-        transparent 2px 4px,
-        currentColor 4px 5px,
-        transparent 5px 9px,
-        currentColor 9px 12px,
-        transparent 12px 14px,
-        currentColor 14px 15px,
-        transparent 15px 19px
-      );
-      opacity: 0.65;
-    }
+    .crate-barcode { --barcode-h: 22px; margin: 9px auto 0; }
     .crate-stamp {
       position: absolute;
       right: 16px;

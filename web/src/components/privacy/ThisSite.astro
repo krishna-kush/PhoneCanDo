@@ -1,7 +1,11 @@
 ---
 // This website: the one count a page load sends, printed as a receipt; the
 // empty cookie jar; the daily totals as tally marks; and the route a
-// download button takes.
+// download button takes. The receipt's barcode is real and holds the
+// page's path, the one thing about the page the count records.
+import Barcode from "../Barcode.astro";
+
+const PATH = "/privacy/";
 ---
 
 <section class="pv-sec" id="site" aria-labelledby="pv-site-h">
@@ -17,7 +21,7 @@
         <p class="pv-rc-title">Page view</p>
         <p class="pv-rc-sub">One count per page load, to our own server</p>
         <dl class="pv-rc-rows">
-          <div><dt>The page's path</dt><dd>/privacy/</dd></div>
+          <div><dt>The page's path</dt><dd>{PATH}</dd></div>
           <div><dt>Site you came from</dt><dd>its name only</dd></div>
           <div><dt>Your country</dt><dd>yes</dd></div>
           <div><dt>Kind of browser</dt><dd>phone, computer or bot</dd></div>
@@ -32,7 +36,7 @@
           Skipped when your browser asks not to be tracked (Do Not Track or
           Global Privacy Control).
         </p>
-        <div class="barcode" aria-hidden="true"></div>
+        <Barcode class="pv-rc-code" text={PATH} label="Barcode of this page's path" paper />
       </div>
     </figure>
 
@@ -164,7 +168,8 @@
     color: var(--muted);
     text-align: center;
   }
-  .pv-receipt .barcode { height: 28px; margin-top: 14px; }
+  /* Two-pixel modules; one where the paper is narrower than the code. */
+  .pv-rc-code { --barcode-mod: 2px; --barcode-h: 28px; margin: 14px auto 0; }
 
   .pv-site-side { display: grid; gap: 22px; }
   .pv-jar-card,
@@ -313,6 +318,7 @@
     .pv-route { gap: 18px; }
     .pv-route li { padding: 8px 4px; font-size: 9.5px; }
     .pv-route li + li::before { right: calc(100% + 3px); }
+    .pv-rc-code { --barcode-mod: 1px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .pv-receipt { transition: none; }

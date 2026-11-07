@@ -1,5 +1,5 @@
 /* Labels the components share: kicker, figure labels, stamp, brand,
-   barcode, serial. */
+   serial. The barcode is a component (components/Barcode.astro). */
 
 .kicker {
   display: flex;
@@ -65,22 +65,6 @@
   letter-spacing: -0.02em;
 }
 
-.barcode {
-  height: 34px;
-  margin-top: 26px;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--fg) 0 2px,
-    transparent 2px 4px,
-    var(--fg) 4px 5px,
-    transparent 5px 9px,
-    var(--fg) 9px 12px,
-    transparent 12px 14px,
-    var(--fg) 14px 15px,
-    transparent 15px 19px
-  );
-  opacity: 0.75;
-}
 .serial {
   margin-top: 8px;
   font: 500 8px/1.4 var(--mono);
