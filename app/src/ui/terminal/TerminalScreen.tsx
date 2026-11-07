@@ -9,11 +9,13 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import ExtraKeysBar from './ExtraKeysBar';
 import { usePtySession } from './usePtySession';
 import { useMirrorInput } from './useMirrorInput';
+import { useInitialInput } from './useInitialInput';
+import { sessionRecipe } from './sessionRecipe';
+import { useOpenTuiChat } from './useOpenTuiChat';
 import { KB_BREATHE, spacerPad } from './sizing';
-import { useAppStore } from '../../state/app';
+import type { TerminalSession } from '../../state/app';
 import LogoLoader from '../common/LogoLoader';
 import { TUI } from '../common/globals';
-import { activeAgentKind } from '../../engine/agents/registry';
 import { isTerminalAvailable } from '../../engine/terminal';
 import { track } from '../../engine/telemetry';
 
@@ -22,32 +24,36 @@ type PageMsg =
   | { type: 'termsize'; cols: number; rows: number; pxW: number; pxH: number; why: string; cellW?: number; cellH?: number }
   | { type: 'tap' }
   | { type: 'scroll'; dir: number; steps?: number; t?: number }
-  | { type: 'input'; data: string };
+  | { type: 'input'; data: string }
+  | { type: 'title'; title: string };
 
 function logLiveKb(height: number, pad: number) {
   console.log(`[phonecando-kb] live height=${height} pad=${pad}`);
 }
 
-export default function TerminalScreen() {
-  const terminalDir = useAppStore((s) => s.terminalDir);
-  const enginePort = useAppStore((s) => s.enginePort);
+// One terminal session (App keys the screen by session id): the agent's TUI
+// or a shell in its Linux image. Only the recipe differs; input, sizing and
+// rendering are the same for both.
+export default function TerminalScreen({ session }: { session: TerminalSession }) {
   const [htmlUri, setHtmlUri] = useState<string | null>(null);
   const [assetError, setAssetError] = useState<string | null>(null);
   const webRef = useRef<WebView>(null);
 
   const available = useMemo(() => isTerminalAvailable(), []);
+  // What the program titles its terminal: an agent TUI names its chat there.
+  const [termTitle, setTermTitle] = useState('');
+  useOpenTuiChat(session, termTitle);
 
-  // One per terminal opened (the screen is keyed by folder).
+  // One per terminal opened (the screen is keyed by session).
   useEffect(() => {
     track('terminal.open');
   }, []);
 
-  const { termSize, error: ptyError, applySize, sendText, boostPump } = usePtySession({
+  const { termSize, error: ptyError, outputSettled, applySize, sendText, boostPump } = usePtySession({
     available,
     htmlUri,
-    enginePort,
     webRef,
-    dir: terminalDir ?? '',
+    prepare: () => sessionRecipe(session),
   });
   const {
     inputRef,
@@ -60,6 +66,12 @@ export default function TerminalScreen() {
     handleFieldChange,
     submitLine,
   } = useMirrorInput({ sendText });
+  useInitialInput({
+    text: session.kind === 'linux' ? session.initialInput : undefined,
+    ready: outputSettled,
+    mirror,
+    type: handleFieldChange,
+  });
   const error = assetError ?? ptyError;
 
   // Keyboard spacer: live native height (every frame incl. settle), not the
@@ -122,6 +134,8 @@ export default function TerminalScreen() {
           `[phonecando-size] termsize(${msg.why}) cols=${msg.cols} rows=${msg.rows} px=${msg.pxW}x${msg.pxH} true=${msg.cellW ?? '?'}x${msg.cellH ?? '?'}`,
         );
         applySize(msg.cols, msg.rows);
+      } else if (msg.type === 'title') {
+        setTermTitle(msg.title);
       } else if (msg.type === 'tap') {
         // WebView is render-only (disableStdin); taps must focus RN input.
         inputRef.current?.focus();
@@ -153,7 +167,7 @@ export default function TerminalScreen() {
     return (
       <YStack flex={1} backgroundColor={TUI.bg} padding="$3" gap="$2">
         <Text color="#0f0" fontFamily="$mono">
-          $ {activeAgentKind().id}
+          $ {session.kind === 'linux' ? 'sh' : 'tui'}
         </Text>
         <Text color={TUI.fg} fontFamily="$mono">
           Native PTY terminal needs a dev build (Expo Go can't load it).

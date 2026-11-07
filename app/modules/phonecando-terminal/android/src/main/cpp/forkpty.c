@@ -1,149 +1,134 @@
-// Own JNI forkpty implementation (ours). No Termux code: this avoids the
-// GPLv3 burden while giving opencode's TUI the real PTY it requires
-// (isatty, window size, raw mode). Rendering is done by xterm.js (MIT) in a
-// WebView; this file only moves bytes between master fd and Kotlin.
+// JNI glue for our own PTY (ours; no Termux code: this avoids the GPLv3
+// burden while giving opencode's TUI the real PTY it requires — isatty,
+// window size, raw mode). Rendering is done by xterm.js (MIT) in a WebView.
+// This file only converts between Java and C; the POSIX work, fork included,
+// lives in pty/ and is covered by the host test in src/test/c/.
 #include <jni.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <pty.h>
-#include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <termios.h>
 #include <unistd.h>
 
-// Last child pid from openPty (single live PTY at a time in the app).
-// Needed so setWinSize can send SIGWINCH after TIOCSWINSZ.
-static pid_t g_child_pid = -1;
+#include "pty.h"
 
-// Puts the slave side into raw mode so the TUI gets keystrokes uncooked.
-static void make_raw(int fd) {
-  struct termios t;
-  if (tcgetattr(fd, &t) != 0) return;
-  cfmakeraw(&t);
-  tcsetattr(fd, TCSANOW, &t);
+static void throw_io(JNIEnv *env, const char *what, const char *subject, int err) {
+  char msg[512];
+  snprintf(msg, sizeof msg, "pty %s%s%s: %s", what, subject ? " " : "", subject ? subject : "",
+           strerror(err));
+  jclass cls = (*env)->FindClass(env, "java/io/IOException");
+  if (cls) (*env)->ThrowNew(env, cls, msg);
 }
 
-JNIEXPORT jint JNICALL
-Java_com_phonecando_terminal_PhoneCanDoPty_openPty(JNIEnv *env, jclass clazz,
-                                         jobjectArray cmd, jobjectArray envPairs,
-                                         jstring cwd, jint rows, jint cols) {
-  (void)clazz;
-  int master = -1;
+// Strings arrive as UTF-8 byte arrays, not jstrings: JNI's own conversion is
+// "modified UTF-8", which mangles emoji and other non-BMP characters in paths.
+static char *copy_bytes(JNIEnv *env, jbyteArray bytes) {
+  jsize len = (*env)->GetArrayLength(env, bytes);
+  char *s = malloc((size_t)len + 1);
+  if (!s) return NULL;
+  (*env)->GetByteArrayRegion(env, bytes, 0, len, (jbyte *)s);
+  s[len] = '\0';
+  return s;
+}
 
-  jsize argc = (*env)->GetArrayLength(env, cmd);
-  char **argv = calloc((size_t)argc + 1, sizeof(char *));
-  if (!argv) return -1;
-  for (jsize i = 0; i < argc; i++) {
-    jstring s = (jstring)(*env)->GetObjectArrayElement(env, cmd, i);
-    const char *c = (*env)->GetStringUTFChars(env, s, NULL);
-    argv[i] = strdup(c ? c : "");
-    (*env)->ReleaseStringUTFChars(env, s, c);
-    (*env)->DeleteLocalRef(env, s);
-  }
+static void free_strings(char **v) {
+  if (!v) return;
+  for (size_t i = 0; v[i]; i++) free(v[i]);
+  free(v);
+}
 
-  struct winsize ws;
-  memset(&ws, 0, sizeof(ws));
-  ws.ws_row = (unsigned short)rows;
-  ws.ws_col = (unsigned short)cols;
-
-  pid_t pid = forkpty(&master, NULL, NULL, &ws);
-  if (pid < 0) {
-    for (jsize i = 0; i < argc; i++) free(argv[i]);
-    free(argv);
-    return -1;
-  }
-  if (pid == 0) {
-    // Child: apply environment, cwd, raw mode, then exec.
-    jsize envc = (*env)->GetArrayLength(env, envPairs);
-    for (jsize i = 0; i < envc; i++) {
-      jstring s = (jstring)(*env)->GetObjectArrayElement(env, envPairs, i);
-      const char *c = (*env)->GetStringUTFChars(env, s, NULL);
-      if (c) {
-        const char *eq = strchr(c, '=');
-        if (eq) {
-          char *name = strndup(c, (size_t)(eq - c));
-          setenv(name, eq + 1, 1);
-          free(name);
-        }
-      }
-      (*env)->ReleaseStringUTFChars(env, s, c);
-      (*env)->DeleteLocalRef(env, s);
+// byte[][] -> NULL-terminated char*[]; NULL when out of memory.
+static char **copy_strings(JNIEnv *env, jobjectArray arr) {
+  jsize n = (*env)->GetArrayLength(env, arr);
+  char **v = calloc((size_t)n + 1, sizeof(char *));
+  if (!v) return NULL;
+  for (jsize i = 0; i < n; i++) {
+    jbyteArray item = (jbyteArray)(*env)->GetObjectArrayElement(env, arr, i);
+    v[i] = copy_bytes(env, item);
+    (*env)->DeleteLocalRef(env, item);
+    if (!v[i]) {
+      free_strings(v);
+      return NULL;
     }
-    const char *dir = (*env)->GetStringUTFChars(env, cwd, NULL);
-    if (dir && dir[0]) chdir(dir);
-    if (dir) (*env)->ReleaseStringUTFChars(env, cwd, dir);
-    make_raw(STDIN_FILENO);
-    execvp(argv[0], argv);
-    _exit(127);
   }
-  for (jsize i = 0; i < argc; i++) free(argv[i]);
-  free(argv);
-  // Non-blocking master: read() must return immediately so the JS thread
-  // (Expo Function is sync JSI) never stalls waiting for TUI output.
-  // Missing this = soft keyboard up, onChangeText starved, typing dead.
-  {
-    int flags = fcntl(master, F_GETFL, 0);
-    if (flags >= 0) fcntl(master, F_SETFL, flags | O_NONBLOCK);
+  return v;
+}
+
+// Returns {masterFd, pid}, or throws IOException naming the failed step.
+JNIEXPORT jintArray JNICALL
+Java_com_phonecando_terminal_PhoneCanDoPty_openPty(JNIEnv *env, jclass clazz, jobjectArray cmd,
+                                                   jobjectArray envPairs, jbyteArray cwd,
+                                                   jint rows, jint cols, jboolean raw) {
+  (void)clazz;
+  char **argv = copy_strings(env, cmd);
+  char **envp = copy_strings(env, envPairs);
+  char *dir = copy_bytes(env, cwd);
+  jintArray result = NULL;
+  if (!argv || !envp || !dir) {
+    throw_io(env, "open", NULL, ENOMEM);
+    goto done;
   }
-  g_child_pid = pid;
-  return master;
+  pty_spec spec = {
+      .argv = argv,
+      .envp = envp,
+      .cwd = dir,
+      .rows = (unsigned short)rows,
+      .cols = (unsigned short)cols,
+      .cooked = raw ? 0 : 1,
+  };
+  pty_child child;
+  pty_stage stage;
+  int err = pty_spawn(&spec, &child, &stage);
+  if (err) {
+    const char *subject = stage == PTY_STAGE_CHDIR ? dir
+                          : stage == PTY_STAGE_LOOKUP || stage == PTY_STAGE_EXEC ? argv[0]
+                                                                                 : NULL;
+    throw_io(env, pty_stage_name(stage), subject, err);
+    goto done;
+  }
+  jint vals[2] = {child.master, child.pid};
+  result = (*env)->NewIntArray(env, 2);
+  if (result) (*env)->SetIntArrayRegion(env, result, 0, 2, vals);
+
+done:
+  free_strings(argv);
+  free_strings(envp);
+  free(dir);
+  return result;
 }
 
 JNIEXPORT jint JNICALL
 Java_com_phonecando_terminal_PhoneCanDoPty_readPty(JNIEnv *env, jclass clazz, jint fd,
-                                         jbyteArray buf, jint len) {
+                                                   jbyteArray buf, jint len) {
   (void)clazz;
+  jsize cap = (*env)->GetArrayLength(env, buf);
+  if (len > cap) len = cap;
   jbyte *bytes = (*env)->GetByteArrayElements(env, buf, NULL);
   if (!bytes) return -1;
-  ssize_t n = read((int)fd, bytes, (size_t)len);
-  if (n < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) n = 0;
-  }
+  ssize_t n = pty_read((int)fd, bytes, (size_t)len);
   (*env)->ReleaseByteArrayElements(env, buf, bytes, 0);
   return (jint)n;
 }
 
 JNIEXPORT jint JNICALL
 Java_com_phonecando_terminal_PhoneCanDoPty_writePty(JNIEnv *env, jclass clazz, jint fd,
-                                          jbyteArray buf, jint len) {
+                                                    jbyteArray buf, jint len) {
   (void)clazz;
+  jsize cap = (*env)->GetArrayLength(env, buf);
+  if (len > cap) len = cap;
   jbyte *bytes = (*env)->GetByteArrayElements(env, buf, NULL);
   if (!bytes) return -1;
-  ssize_t total = 0;
-  while (total < len) {
-    ssize_t n = write((int)fd, bytes + total, (size_t)(len - total));
-    if (n > 0) {
-      total += n;
-      continue;
-    }
-    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) {
-      struct pollfd pfd;
-      pfd.fd = (int)fd;
-      pfd.events = POLLOUT;
-      pfd.revents = 0;
-      poll(&pfd, 1, 100);
-      continue;
-    }
-    break;
-  }
+  size_t total = pty_write_all((int)fd, bytes, (size_t)len);
   (*env)->ReleaseByteArrayElements(env, buf, bytes, JNI_ABORT);
   return (jint)total;
 }
 
 JNIEXPORT void JNICALL
 Java_com_phonecando_terminal_PhoneCanDoPty_setWinSize(JNIEnv *env, jclass clazz, jint fd,
-                                            jint rows, jint cols) {
-  (void)env;
+                                                      jint rows, jint cols) {
   (void)clazz;
-  struct winsize ws;
-  memset(&ws, 0, sizeof(ws));
-  ws.ws_row = (unsigned short)rows;
-  ws.ws_col = (unsigned short)cols;
-  ioctl((int)fd, TIOCSWINSZ, &ws);
-  if (g_child_pid > 0) kill(g_child_pid, SIGWINCH);
+  int err = pty_resize((int)fd, (unsigned short)rows, (unsigned short)cols);
+  if (err) throw_io(env, "resize", NULL, err);
 }
 
 JNIEXPORT void JNICALL
@@ -151,4 +136,35 @@ Java_com_phonecando_terminal_PhoneCanDoPty_closePty(JNIEnv *env, jclass clazz, j
   (void)env;
   (void)clazz;
   close((int)fd);
+}
+
+JNIEXPORT void JNICALL
+Java_com_phonecando_terminal_PhoneCanDoPty_awaitExit(JNIEnv *env, jclass clazz, jint pid) {
+  (void)clazz;
+  int err = pty_await_exit((pid_t)pid);
+  if (err) throw_io(env, "wait", NULL, err);
+}
+
+// Returns {code, signal} as in pty_exit.
+JNIEXPORT jintArray JNICALL
+Java_com_phonecando_terminal_PhoneCanDoPty_reap(JNIEnv *env, jclass clazz, jint pid) {
+  (void)clazz;
+  pty_exit e;
+  int err = pty_reap((pid_t)pid, &e);
+  if (err) {
+    throw_io(env, "reap", NULL, err);
+    return NULL;
+  }
+  jint vals[2] = {e.code, e.signal};
+  jintArray result = (*env)->NewIntArray(env, 2);
+  if (result) (*env)->SetIntArrayRegion(env, result, 0, 2, vals);
+  return result;
+}
+
+JNIEXPORT void JNICALL
+Java_com_phonecando_terminal_PhoneCanDoPty_killGroup(JNIEnv *env, jclass clazz, jint pid,
+                                                     jint sig) {
+  (void)clazz;
+  int err = pty_kill((pid_t)pid, (int)sig);
+  if (err && err != ESRCH) throw_io(env, "kill", NULL, err);
 }

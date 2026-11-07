@@ -1,21 +1,25 @@
 import { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { Text, YStack } from 'tamagui';
-import { Directory } from 'expo-file-system';
+import { useActiveAgent } from '../../state/agents';
 import { useAppStore } from '../../state/app';
-import { engineHome, isRunnerAvailable } from '../../engine/runner';
+import { agentHome } from '../../engine/engines';
+import { listSubfolders } from '../../engine/files';
+import { isRunnerAvailable } from '../../engine/runner';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
 import Screen from '../common/Screen';
 import SectionTitle from '../common/SectionTitle';
 import { useTheme } from '../common/globals';
 
-// TUI entry point: pick which folder the terminal attaches to. Tree from the
-// accessible root (the app container — the only place serve sessions and the
-// PTY can both reach), folders only, newest picker state never persists.
-// No creation here: only existing folders (creation UI was removed).
+// TUI entry point: pick which folder the active agent's terminal UI attaches
+// to. Tree from the agent's HOME (its image's home, the place its engine and
+// the PTY can both reach), folders only, picker state never persists. A
+// switch of the active agent re-roots it. No creation here: only existing
+// folders.
 export default function FolderPicker() {
   const t = useTheme();
+  const agent = useActiveAgent();
   const openTerminalDir = useAppStore((s) => s.openTerminalDir);
   const setFolderPickerOpen = useAppStore((s) => s.setFolderPickerOpen);
   const [root, setRoot] = useState<string | null>(null);
@@ -26,37 +30,25 @@ export default function FolderPicker() {
   useEffect(() => {
     try {
       if (!isRunnerAvailable()) throw new Error('native module unavailable');
-      const home = engineHome();
+      if (!agent) throw new Error('no agent yet');
+      const home = agentHome(agent);
       setRoot(home);
       setCwd(home);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+    // Keyed by id and image, not the record: every refresh re-creates records.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent?.id, agent?.imageId]);
 
   useEffect(() => {
     if (cwd == null) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const dir = new Directory(`file://${cwd}`);
-        const items = dir.list();
-        const subdirs: string[] = [];
-        for (const item of items) {
-          if (item instanceof Directory) subdirs.push(item.name);
-        }
-        subdirs.sort((a, b) => a.localeCompare(b));
-        if (!cancelled) {
-          setEntries(subdirs);
-          setError(null);
-        }
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    try {
+      setEntries(listSubfolders(cwd));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }, [cwd]);
 
   const rel = cwd == null || root == null ? '' : cwd === root ? '~' : `~/${cwd.slice(root.length + 1)}`;

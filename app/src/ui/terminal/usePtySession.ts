@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WebView } from 'react-native-webview';
-import { getLibDir, openPty, ptyClose, ptyRead, ptyResize, ptyWrite } from '../../engine/terminal';
-import { activeAgentKind } from '../../engine/agents/registry';
-import { engineConn, waitForEngine } from '../../engine/connection';
-import { ensureServeRunning } from '../../engine/ensureServe';
-import { useAppStore } from '../../state/app';
-import { canonicalizeContainerPath, engineHome } from '../../engine/runner';
+import type { PtyRecipe } from '../../engine/agents/types';
+import { openPty, ptyClose, ptyRead, ptyResize, ptyWrite } from '../../engine/terminal';
 import { toB64 } from './keys';
 
 export type TermSize = { cols: number; rows: number };
@@ -13,23 +9,31 @@ export type TermSize = { cols: number; rows: number };
 type Opts = {
   available: boolean;
   htmlUri: string | null;
-  enginePort: string;
   webRef: RefObject<WebView | null>;
-  /** Folder the TUI attaches to (picked from the folder tree). The server
-      picks the session by directory (legacy attach-by-dir) — no chat rows,
-      no sync, no picker. */
-  dir: string;
+  /** Builds what the PTY runs (sessionRecipe.ts): the agent's TUI or a
+      Linux shell. Called once per mount; the screen is keyed per session. */
+  prepare: () => Promise<PtyRecipe>;
 };
 
-// Owns the PTY fd lifecycle: ensure the engine, open once at the boot
+// Output quiet this long after the program last printed: it waits for
+// input (a shell drew its prompt). A program that prints nothing counts as
+// waiting after SILENT_START_MS.
+const SETTLE_MS = 400;
+const SILENT_START_MS = 3000;
+
+// Owns the PTY fd lifecycle: build the recipe, open once at the boot
 // snapshot size, 60ms poll pump page-ward (16ms while scrolling — 60ms
 // quantizes scroll to ~16fps no matter how fine the steps), close on
 // unmount. All later sizes arrive via ptyResize — PTY size always follows
 // the page's own ResizeObserver measurements through applySize, never
-// event math.
-export function usePtySession({ available, htmlUri, enginePort, webRef, dir }: Opts) {
+// event math. `outputSettled` turns true once the program first waits for
+// input (see SETTLE_MS).
+export function usePtySession({ available, htmlUri, webRef, prepare }: Opts) {
   const [termSize, setTermSize] = useState<TermSize>({ cols: 80, rows: 24 });
   const [error, setError] = useState<string | null>(null);
+  const [outputSettled, setOutputSettled] = useState(false);
+  const prepareRef = useRef(prepare);
+  prepareRef.current = prepare;
   const fdRef = useRef<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const boostTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,41 +52,9 @@ export function usePtySession({ available, htmlUri, enginePort, webRef, dir }: O
     let stopped = false;
     (async () => {
       try {
-        const kind = activeAgentKind();
-        const homeDir = engineHome();
-        const projectDir = canonicalizeContainerPath(dir);
-        const libDir = getLibDir();
-        // Lazy engine start (quiet-when-idle: no autostart on launch).
-        // Health-gated; adopts the effective port for everything below. A
-        // fresh start needs a few seconds — waitForEngine bridges the gap so
-        // the first open attaches instead of erroring.
-        const requested = useAppStore.getState().enginePort;
-        let port = requested;
-        try {
-          const res = ensureServeRunning(requested);
-          if (res.port !== requested) {
-            port = res.port;
-            void useAppStore.getState().setEnginePort(res.port);
-          }
-          console.log(`[phonecando] engine ensure: ${res.status} port=${port}`);
-          if (res.status !== 'already-running' && res.status !== 'unavailable') {
-            await waitForEngine(kind, engineConn(port));
-          }
-        } catch (e) {
-          console.warn(`[phonecando] engine ensure failed err=${e instanceof Error ? e.message : String(e)}`);
-        }
-        const conn = engineConn(port);
-        let password = '';
-        try {
-          password = conn.password();
-        } catch {
-          // native bridge absent: the TUI shows the health error, nothing crashes
-        }
-        fd = openPty(
-          kind.tui({ libDir, homeDir, projectDir, serverUrl: conn.baseUrl, password }),
-          termSize.rows,
-          termSize.cols,
-        );
+        const recipe = await prepareRef.current();
+        if (stopped) return;
+        fd = openPty(recipe, termSize.rows, termSize.cols);
         if (stopped) {
           ptyClose(fd);
           return;
@@ -100,11 +72,25 @@ export function usePtySession({ available, htmlUri, enginePort, webRef, dir }: O
         // scroll feedback to ~16fps (several line-steps land between polls
         // and paint as one jump). boostPump() drops to 16ms for 1.5s after
         // scroll input; telemetry aggregates per window to logcat.
+        const openedAt = Date.now();
+        let lastOutputAt = 0;
+        let settled = false;
         const pumpOnce = () => {
           scrollStats.current.ticks++;
           try {
             const b64 = ptyRead(fd, 8192);
-            if (!b64) return; // idle poll: non-blocking read, nothing to render
+            if (!b64) {
+              // Idle poll: non-blocking read, nothing to render.
+              if (!settled) {
+                const quietFor = Date.now() - (lastOutputAt || openedAt);
+                if (quietFor >= (lastOutputAt ? SETTLE_MS : SILENT_START_MS)) {
+                  settled = true;
+                  setOutputSettled(true);
+                }
+              }
+              return;
+            }
+            lastOutputAt = Date.now();
             scrollStats.current.bytes += b64.length;
             webRef.current?.injectJavaScript(`window.__writeB64(${JSON.stringify(b64)});true;`);
           } catch {
@@ -157,7 +143,7 @@ export function usePtySession({ available, htmlUri, enginePort, webRef, dir }: O
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [available, htmlUri, dir]);
+  }, [available, htmlUri]);
 
   // Apply measured size to both xterm and the PTY.
   function applySize(cols: number, rows: number) {
@@ -191,5 +177,5 @@ export function usePtySession({ available, htmlUri, enginePort, webRef, dir }: O
     boostFn.current(steps, postedAt);
   }
 
-  return { termSize, error, applySize, sendText, boostPump };
+  return { termSize, error, outputSettled, applySize, sendText, boostPump };
 }

@@ -192,6 +192,12 @@
     term.resize(cols, rows);
   };
 
+  // The title the program sets (OSC 0/2). A TUI names what it shows there;
+  // RN reads it (opencode: the chat on screen).
+  term.onTitleChange(function (title) {
+    post({ type: 'title', title: String(title || '').slice(0, 200) });
+  });
+
   var __cell0 = trueCell();
   post({ type: 'ready', cols: size.cols, rows: size.rows, pxW: size.pxW, pxH: size.pxH, cellW: +__cell0.w.toFixed(2), cellH: +__cell0.h.toFixed(2) });
   lastSent = { cols: size.cols, rows: size.rows };

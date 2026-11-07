@@ -1,12 +1,7 @@
 import { NativeModule, requireNativeModule } from 'expo';
+import type { PtyExit, PtyOpenOpts, PtySignal } from './PhoneCanDoTerminal.types';
 
-export type PtyOpenOpts = {
-  cmd: string[];
-  env?: Record<string, string>;
-  cwd?: string;
-  rows?: number;
-  cols?: number;
-};
+export type { PtyExit, PtyOpenOpts, PtySignal } from './PhoneCanDoTerminal.types';
 
 declare class PhoneCanDoTerminalModule extends NativeModule {
   getLibDir(): string;
@@ -15,6 +10,8 @@ declare class PhoneCanDoTerminalModule extends NativeModule {
   write(params: { fd: number; data: string }): number;
   resize(params: { fd: number; rows: number; cols: number }): string;
   close(params: { fd: number }): string;
+  kill(params: { fd: number; signal: PtySignal }): boolean;
+  exitStatus(params: { fd: number }): PtyExit | null;
 }
 
 let mod: PhoneCanDoTerminalModule | null = null;
@@ -54,6 +51,16 @@ export function ptyResize(fd: number, rows: number, cols: number): void {
 
 export function ptyClose(fd: number): void {
   mod?.close({ fd });
+}
+
+export function ptyKill(fd: number, signal: PtySignal = 'SIGTERM'): boolean {
+  if (!mod) throw new Error('terminal module unavailable');
+  return mod.kill({ fd, signal });
+}
+
+export function ptyExitStatus(fd: number): PtyExit | null {
+  if (!mod) throw new Error('terminal module unavailable');
+  return mod.exitStatus({ fd });
 }
 
 export default mod;
