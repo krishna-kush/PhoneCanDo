@@ -13,7 +13,15 @@ internal class PtySessions {
    * own environment with [env] on top, as before; the native layer itself
    * passes on exactly the list it is given.
    */
-  fun open(cmd: List<String>, env: Map<String, String>, cwd: String, rows: Int, cols: Int, raw: Boolean): Int {
+  fun open(
+    cmd: List<String>,
+    env: Map<String, String>,
+    cwd: String,
+    rows: Int,
+    cols: Int,
+    raw: Boolean,
+    handOver: Boolean,
+  ): Int {
     require(cmd.isNotEmpty()) { "cmd required" }
     env.keys.forEach { require(it.isNotEmpty() && '=' !in it) { "bad env name: $it" } }
     val merged = System.getenv() + env
@@ -24,6 +32,7 @@ internal class PtySessions {
       rows,
       cols,
       raw,
+      handOver,
     )
     children[fd] = PtyChild(pid)
     return fd

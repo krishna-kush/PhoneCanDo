@@ -102,17 +102,21 @@ builds, tests, limits): `../../lre/docs/README.md`.
   offered for reinstall afterwards.
 - **How commands run.** The engine stays a bionic binary run from the
   native-library dir. `run/engine.env` gives it HOME and TMPDIR (host paths),
-  `SHELL` = `shims/bash`, a `PATH` with `shims/` first and
-  `PHONECANDO_IMAGE`. Each shim is a symlink to our launcher
+  `SHELL` = `shims/bash`, a `PATH` with `shims/` first,
+  `PHONECANDO_IMAGE` and `MAKEFLAGS=-j4` (Android kills an app's processes
+  past a device-wide limit; the OS note tells the agent so). Each shim is a
+  symlink to our launcher
   (`libphonecando_launch.so`, `lre/launcher/`), which reads
-  `run/launch.conf` (contract: `lre/launcher/src/conf.h`) and execs proot
-  (`libproot.so` with its unbundled `libproot-loader.so`) in place, running
-  the command in the guest as fake root. `home/` and `tmp/` are bound at
+  `run/launch.conf` (contract: `lre/launcher/src/conf.h`) and runs proot
+  (`libproot.so` with its unbundled `libproot-loader.so`), which runs the
+  command in the guest as fake root. `home/` and `tmp/` are bound at
   `/root` and `/tmp` and at their own host paths under every spelling of the
   data dir, so the engine's file tools and its commands see the same paths.
-  Secrets the engine holds are unset for guest commands. Background
-  processes a command starts keep running after it returns (no
-  `--kill-on-exit`); they carry `PHONECANDO_IMAGE`, and a reset or delete
+  Secrets the engine holds are unset for guest commands. As on a PC, a
+  command returns when it ends while its background jobs keep running, and
+  the terminal's shell has job control and hangup
+  (`lre/docs/overview/architecture.md` → Background processes). Background
+  processes carry `PHONECANDO_IMAGE`, and a reset or delete
   stops every process with the image's tag first (`ImageReaper`: SIGTERM,
   then SIGKILL after 3 s). Each start writes
   the image's OS note (`run/os-note.md`) into the agent's instructions.

@@ -10,6 +10,9 @@ if(PHONECANDO_LINUX)
   add_executable(phonecando_launch
     ${LAUNCHER_SRC}/conf.c
     ${LAUNCHER_SRC}/plan.c
+    ${LAUNCHER_SRC}/relay.c
+    ${LAUNCHER_SRC}/die.c
+    ${LAUNCHER_SRC}/standin.c
     ${LAUNCHER_SRC}/main.c)
   # An executable with a library's name: AGP packages only lib*.so files.
   set_target_properties(phonecando_launch PROPERTIES

@@ -58,7 +58,8 @@ static char **copy_strings(JNIEnv *env, jobjectArray arr) {
 JNIEXPORT jintArray JNICALL
 Java_com_phonecando_terminal_PhoneCanDoPty_openPty(JNIEnv *env, jclass clazz, jobjectArray cmd,
                                                    jobjectArray envPairs, jbyteArray cwd,
-                                                   jint rows, jint cols, jboolean raw) {
+                                                   jint rows, jint cols, jboolean raw,
+                                                   jboolean handOver) {
   (void)clazz;
   char **argv = copy_strings(env, cmd);
   char **envp = copy_strings(env, envPairs);
@@ -75,6 +76,7 @@ Java_com_phonecando_terminal_PhoneCanDoPty_openPty(JNIEnv *env, jclass clazz, jo
       .rows = (unsigned short)rows,
       .cols = (unsigned short)cols,
       .cooked = raw ? 0 : 1,
+      .hand_over = handOver ? 1 : 0,
   };
   pty_child child;
   pty_stage stage;

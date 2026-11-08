@@ -7,7 +7,9 @@
 # more than one data-dir spelling.
 #
 #   proot      -L --link2symlink --sysvipc -0 --kernel-release (no --kill-on-exit:
-#              background processes outlive their command, as on the phone)
+#              background processes outlive their command, as on the phone;
+#              the launcher adds --status-fd itself, so the command returns
+#              when it ends)
 #   binds      rootfs at /, host /dev /proc /sys, /dev/random and the fd
 #              links, run/shm at /dev/shm; home/ at /root and tmp/ at /tmp,
 #              each also at its own path; run/l2s at its own path

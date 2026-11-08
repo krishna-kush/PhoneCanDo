@@ -42,6 +42,9 @@ Files: `lre/proot/`.
 - `patches/0001-ashmem_memfd-include-string.h.patch` adds a missing
   `<string.h>` that a stock NDK clang treats as an error; its header says
   when to drop it.
+- `patches/0002-status-fd.patch` adds `--status-fd` and `--setsid`, so a
+  command returns when it ends while what it started keeps running
+  (below).
 
 ## Runtime contract
 
@@ -49,6 +52,19 @@ proot needs `PROOT_LOADER=<libDir>/libproot-loader.so` and
 `PROOT_TMP_DIR=<a writable app dir>`; `launch.conf` also sets
 `PROOT_L2S_DIR` for `--link2symlink`. All three come from `image`'s
 `LaunchConf.kt` (`run/proot-tmp/`, `run/l2s/`).
+
+Two options of ours (`patches/0002-status-fd.patch`), which our launcher
+passes itself (`launcher.md` → Standing in for the command):
+
+- `--status-fd=<fd>`: proot writes the command's pid after the fork, then
+  its waitpid status when it ends (each one native int; `<fd>` is
+  close-on-exec), and closes `<fd>`. It leaves the caller's session and
+  points its own stdin and stdout at `/dev/null` (stderr once the command
+  ends), while the command stays in the caller's process group. It keeps
+  tracing what the command left running; tracees get `PTRACE_O_EXITKILL`,
+  so they die with proot. Without the option proot behaves as upstream.
+- `--setsid`: the command starts a session of its own, and a terminal on
+  its stdin that no session controls becomes its controlling terminal.
 
 ## Build, verify, stage
 
@@ -73,11 +89,17 @@ bash lre/proot/stage.sh <out-dir>      # -> app/modules/phonecando-linux/android
 - `stage.sh` takes a dir with a matching `SHA256SUMS` (a verified build, or
   the unzipped `proot-android-arm64` artifact of a `proot.yml` run) and
   copies both libs (0755) and `SHA256SUMS` into the module's jniLibs dir,
-  which is gitignored. Full and lite package it; play does not.
+  which is gitignored. Full and lite package it; play does not. The
+  launcher passes `--status-fd` on every command, so a staged proot built
+  before `0002-status-fd.patch` fails every guest command ("unknown
+  option"): stage a fresh build after a patch change.
 
 The release preflight (`scripts/release/linux/proot.mjs`) checks the staged
 libs against that `SHA256SUMS` and `pins.env`'s version; a release refuses
-to ship full and lite without them unless told `--without-linux`.
+to ship full and lite without them unless told `--without-linux`. It then
+says, in red, how many changes termux/proot has after our pin and asks
+before building (`scripts/release/linux/drift.mjs`): falling behind is a
+question, not a refusal, and a bump is its own change.
 
 ## Host build
 
@@ -90,8 +112,11 @@ PROOT_LOADER=<out-dir>/libproot-loader.so PROOT_TMP_DIR=<dir> \
 CI boots the pinned Alpine aarch64 minirootfs under it on
 `ubuntu-24.04-arm` (`.github/ci/proot/smoke.sh`): version, fake root, the
 app's flags, no start without `PROOT_LOADER`, nothing executable left in
-`PROOT_TMP_DIR`. `lre-image.yml` and `lre-compat.yml` run their images
-under this build.
+`PROOT_TMP_DIR`. Then our launcher runs with it
+(`lre/launcher/test/proot-test.sh`, in the Alpine rootfs and in the
+runner's own root): background processes, exit statuses, the proot left
+behind and the terminal (`launcher.md` → Tests). `lre-image.yml` and
+`lre-compat.yml` run their images under this build.
 
 ## GPL source
 
@@ -117,6 +142,7 @@ LGPL-3.0-or-later; neither is stored here. See
 
 `proot.yml` (`proot-ok`): `build-android` (build, verify, upload
 `proot-android-arm64`, then a second build in another workdir must be
-bit-identical), `build-glibc` (build and smoke test), `source` (pack twice,
-same bytes). It runs on `lre/proot/**` changes, weekly and on demand, and
-never touches a release.
+bit-identical), `build-glibc` (build, smoke test, `proot-test.sh`),
+`source` (pack twice, same bytes). It runs on `lre/proot/**` and
+`lre/launcher/**` changes, weekly and on demand, and never touches a
+release.

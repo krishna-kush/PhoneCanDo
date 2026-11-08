@@ -7,7 +7,7 @@
 | `oci` | `lre-oci` | JVM | `api`, kotlinx-serialization-json | Registry client (linux/arm64, verified blobs, mirrors) and the Docker Hub catalog. | `../modules/oci.md` |
 | `image` | `lre-image` | JVM | `api`, `tar` | Setup, per-start refresh, reset, delete; every `run/` file. | `../modules/image.md` |
 | `cli` | not published | JVM app | `oci`, `image`, kotlinx-serialization-json | The phone's download and setup on a plain JVM, for CI. | `../modules/cli.md` |
-| `launcher/` | `libphonecando_launch.so` | C | — | Multi-call launcher: reads `launch.conf`, execs proot. | `../modules/launcher.md` |
+| `launcher/` | `libphonecando_launch.so` | C | — | Multi-call launcher: reads `launch.conf`, runs proot and stands in for the command. | `../modules/launcher.md` |
 | `proot/` | `libproot.so`, `libproot-loader.so` | shell build | pinned termux/proot, talloc | Reproducible proot build, ELF checks, staging, GPL source tarball. | `../modules/proot.md` |
 | `images/default/` | `phonecando-linux-default-<version>-arm64.tar.xz` | docker build | pinned `debian:trixie`, snapshot.debian.org | The Default env image and `lock.json`. | `../modules/default-image.md` |
 
@@ -35,10 +35,11 @@ repository. `launcher/` sources are compiled by the app's CMake
 - **cli** — `cli setup|refresh|run|env`: what `lre-compat.yml` runs, so CI
   tests distro images with the exact setup code the phone runs.
 - **launcher** — clean-room C; `lre/launcher/src/conf.h` is the
-  `launch.conf` contract;
-  pure parser and exec plan, never forks.
-- **proot** — termux/proot at a pinned commit with talloc static and the
-  loader unbundled, built for Android arm64 (and for glibc, for CI).
+  `launch.conf` contract; pure parser, exec plan and signal rules; forks
+  proot once and returns as the command ends.
+- **proot** — termux/proot at a pinned commit with talloc static, the
+  loader unbundled and our `--status-fd`/`--setsid` patch, built for
+  Android arm64 (and for glibc, for CI).
 - **images/default** — a Debian-based arm64 rootfs built reproducibly,
   published as `linux-image-<version>` and locked by `lock.json`.
 

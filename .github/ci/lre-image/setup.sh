@@ -43,7 +43,7 @@ chmod 1777 "$IMG/tmp" "$IMG/run/shm"
 
 install -m 0755 "$PROOT/libproot.so" "$PROOT/libproot-loader.so" "$LIB/"
 "${CC:-gcc}" -std=c11 -O2 -Wall -Wextra -Werror -o "$LIB/libphonecando_launch.so" \
-  "$REPO/lre/launcher/src/conf.c" "$REPO/lre/launcher/src/plan.c" "$REPO/lre/launcher/src/main.c"
+  "$REPO/lre/launcher/src/"{conf,plan,relay,die,standin,main}.c
 for name in bash git rg python3 pip sh; do
   ln -s "$LIB/libphonecando_launch.so" "$IMG/shims/$name"
 done
@@ -63,5 +63,6 @@ TMPDIR=$IMG/tmp
 SHELL=$IMG/shims/bash
 PATH=$IMG/shims:$PATH
 PHONECANDO_IMAGE=$IMG
+MAKEFLAGS=-j4
 EOF
 echo "set up $IMG (unpacked in ${unpack}s, $(du -sm "$IMG/rootfs" | cut -f1) MiB)"

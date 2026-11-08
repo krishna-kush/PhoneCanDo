@@ -47,6 +47,7 @@ typedef struct {
   int report;  // error pipe write end, close-on-exec
   int fd_limit;
   int use_close_range;
+  int hand_over;  // leave the slave no session's controlling terminal
 } child_plan;
 
 __attribute__((noreturn)) static void child_fail(int report, int stage, int err) {
@@ -78,8 +79,9 @@ __attribute__((noreturn)) static void run_child(const child_plan *p) {
   sigemptyset(&none);
   sigprocmask(SIG_SETMASK, &none, NULL);
 
-  // New session with the slave as controlling terminal and stdio.
-  if (setsid() < 0 || ioctl(p->slave, TIOCSCTTY, 0) < 0) {
+  // New session with the slave as stdio, and as controlling terminal unless
+  // the program hands it on.
+  if (setsid() < 0 || (!p->hand_over && ioctl(p->slave, TIOCSCTTY, 0) < 0)) {
     child_fail(p->report, PTY_STAGE_SESSION, errno);
   }
   for (int fd = 0; fd < 3; fd++) {
@@ -190,6 +192,7 @@ int pty_spawn(const pty_spec *spec, pty_child *out, pty_stage *stage) {
   plan.cwd = spec->cwd && spec->cwd[0] ? spec->cwd : NULL;
   plan.fd_limit = fd_limit();
   plan.use_close_range = close_range_usable();
+  plan.hand_over = spec->hand_over;
 
   *stage = PTY_STAGE_OPEN;
   int master = -1;

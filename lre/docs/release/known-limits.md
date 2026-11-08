@@ -27,6 +27,16 @@ These are not scheduled work unless they are also listed in
 - A background process outlives its command. Stopping the engine stops
   the agent's; a daemon started from the terminal carries only the image
   tag, so an engine stop leaves it running and a reset or delete stops it.
+- Each command has its own proot: commands see and signal each other's
+  processes (`ps`, `kill`), but SysV IPC and `strace -p`/`gdb -p` work
+  only within one command. Every proot left tracing background jobs
+  counts toward Android's phantom process limit.
+- A job stopped by Ctrl-Z (or SIGSTOP, SIGTTIN, SIGTTOU) keeps running:
+  the shell shows it Stopped and `fg`/`bg` work, but proot restarts the
+  stopped process (`../planning/todo.md`).
+- A signal sent to the launcher's whole process group reaches the command
+  twice, as under coreutils' `timeout`; SIGKILL to the launcher alone
+  leaves the command running until a reaper ends it.
 - Commands installed while the engine runs get a shim at the next refresh
   (the next engine start or terminal); through `$SHELL -c` they run at
   once from the guest PATH.
@@ -73,8 +83,6 @@ These are not scheduled work unless they are also listed in
 
 - `lock.json` locks no image yet, so no build ships the Default image
   unless it is staged locally for a debug build (`../planning/todo.md`).
-- The baked `/etc/hostname` and `/etc/hosts` say `localhost`; setup writes
-  `phonecando` over them (`../planning/todo.md`).
 - Only the baked packages are pinned: `apt-get update` in an image uses
   Debian's own sources (`deb.debian.org`), not the build's snapshot, so
   what the agent installs later is current, not reproducible.

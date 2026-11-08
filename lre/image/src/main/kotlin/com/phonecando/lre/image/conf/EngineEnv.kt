@@ -10,12 +10,16 @@ import java.io.File
  * lines, no quotes, no expansion. Pure.
  */
 internal object EngineEnv {
-    /** HOME, TMPDIR, SHELL (shims/bash), PATH (shims/ then Android's) and PHONECANDO_IMAGE. */
+    /** HOME, TMPDIR, SHELL (shims/bash), PATH (shims/ then Android's), PHONECANDO_IMAGE and MAKEFLAGS. */
     fun linux(layout: ImageLayout, host: HostEnv): String = render(
         base(layout) + listOf(
             "SHELL" to File(layout.shims, "bash").path,
             "PATH" to listOf(layout.shims.path, host.hostPath).filter { it.isNotEmpty() }.joinToString(":"),
             "PHONECANDO_IMAGE" to layout.root.path,
+            // A default cap on make's parallel jobs: Android kills an app's
+            // processes past a device-wide limit (OsNote.PHANTOM). Here, not in
+            // launch.conf, so a command that sets its own MAKEFLAGS keeps it.
+            "MAKEFLAGS" to "-j4",
         ),
     )
 

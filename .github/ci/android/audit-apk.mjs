@@ -220,7 +220,12 @@ check('linux runtime', () => {
   const proot = PROOT_LIBS.filter((lib) => entries.get(`lib/arm64-v8a/${lib}`)?.usize > 0);
   if (proot.length === 1) throw new Error(`only ${proot[0]} staged; proot needs ${PROOT_LIBS.join(' + ')}`);
   if (prootGate === 'required' && !proot.length) throw new Error(`proot was staged but ${PROOT_LIBS.join(' + ')} are not in lib/arm64-v8a`);
-  return `launcher on ${abis.join(', ')}; proot ${proot.length ? 'staged' : 'not staged, not gated'}`;
+  // The launcher runs proot with --status-fd (lre/proot/patches/0002); an
+  // older proot would fail every guest command.
+  if (proot.length && !readZipEntry(bytes, entries.get('lib/arm64-v8a/libproot.so')).includes('--status-fd')) {
+    throw new Error('libproot.so lacks --status-fd (lre/proot/patches/0002): stage a proot build that includes it');
+  }
+  return `launcher on ${abis.join(', ')}; proot ${proot.length ? 'staged, with --status-fd' : 'not staged, not gated'}`;
 });
 
 const abiRows = abis.map((abi) => {

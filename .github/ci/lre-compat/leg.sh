@@ -20,6 +20,9 @@
 #                read back by the git shim from the host side
 #   cwd          a cwd under home/ is the same path inside, also after `cd`;
 #                one outside is /root
+#   background   `sleep 600 &` returns at once, as on a PC, and a later
+#                command sees and ends it; exit 7 and a death by SIGTERM
+#                come back as 7 and 143
 #   proot tmp    nothing executable written to PROOT_TMP_DIR
 # With <family> none the tool checks are skipped (nothing installs them).
 #
@@ -126,6 +129,23 @@ if [ -n "$os" ]; then
   check 'cwd under home kept (pwd)' eq "$PROJ/sub" in_image "$PROJ/sub" 'pwd'
   check 'cd into the project (pwd)' eq "$PROJ/sub" in_image / "cd '$PROJ/sub' && pwd"
   check 'cwd outside home -> /root' eq '/root' in_image / 'pwd'
+
+  # --- background processes, as on a PC: the command returns, its job runs on ---
+  TIMEOUT=20 check 'background job: the command returns at once' re '^[0-9]+$' in_image "$PROJ" \
+    'sleep 600 >/dev/null 2>&1 & echo $!'
+  job="$OUT"
+  TIMEOUT=20 check 'background job: a later command sees and ends it' eq 'ended' in_image "$PROJ" \
+    "kill -0 '$job' && kill '$job' && echo ended"
+  for want in '7:exit 7' '143:kill -TERM $$'; do
+    start=$SECONDS
+    in_image "$PROJ" "${want#*:}" >/dev/null 2>&1
+    rc=$?
+    if [ "$rc" = "${want%%:*}" ]; then
+      pass "status of \`${want#*:}\`" $((SECONDS - start)) "\`$rc\`"
+    else
+      fail "status of \`${want#*:}\`" $((SECONDS - start)) "want ${want%%:*}, got $rc"
+    fi
+  done
 
   leftover="$(find "$IMG/run/proot-tmp" -type f -perm -u+x -print 2>/dev/null)"
   if [ -z "$leftover" ]; then

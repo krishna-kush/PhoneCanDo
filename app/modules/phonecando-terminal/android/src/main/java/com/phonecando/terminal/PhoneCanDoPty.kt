@@ -9,7 +9,11 @@ internal object PhoneCanDoPty {
     System.loadLibrary("phonecando_pty")
   }
 
-  /** Starts [cmd] on a new PTY with exactly [env]; returns [masterFd, pid]. */
+  /**
+   * Starts [cmd] on a new PTY with exactly [env]; returns [masterFd, pid].
+   * [handOver] leaves the PTY no session's controlling terminal, for a
+   * program that hands it on to a child of its own.
+   */
   external fun openPty(
     cmd: Array<ByteArray>,
     env: Array<ByteArray>,
@@ -17,6 +21,7 @@ internal object PhoneCanDoPty {
     rows: Int,
     cols: Int,
     raw: Boolean,
+    handOver: Boolean,
   ): IntArray
   /** Bytes read, 0 when nothing is waiting, -1 once the child side is gone. */
   external fun readPty(fd: Int, buf: ByteArray, len: Int): Int

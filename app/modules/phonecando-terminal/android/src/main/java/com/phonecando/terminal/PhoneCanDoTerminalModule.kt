@@ -33,7 +33,8 @@ class PhoneCanDoTerminalModule : Module() {
       val cols = (params["cols"] as? Double)?.toInt() ?: 80
       // Raw unless asked otherwise: the agent TUIs read every key themselves.
       val raw = params["raw"] as? Boolean ?: true
-      sessions.open(cmd, env, cwd, rows, cols, raw)
+      val handOver = params["handOver"] as? Boolean ?: false
+      sessions.open(cmd, env, cwd, rows, cols, raw, handOver)
     }
 
     Function("read") { params: Map<String, Any> ->

@@ -30,7 +30,9 @@ on `oci`.
 (`lre-tar`). The host wraps it to turn per-layer byte counts into one count
 over the whole base (`LayerProgressUnpacker`).
 `GuestRunner` runs one guest command for a reset's package query; the
-host's `GuestProcessRunner` goes through the image's shims.
+host's `GuestProcessRunner` goes through the image's shims and stops what
+the command left running once it returns (a package manager's gpg-agent),
+since nothing may run while the system is swapped.
 
 `SetupResult`: the detected `OsInfo` (null for Android), the agent tools
 the image lacks (`bash`, `git`, `rg`), one line that installs them (null
@@ -89,7 +91,8 @@ Pure builders, paths in and text out:
   write a line it would reject; `render` enforces 256 KiB and 4096 lines.
 - `conf/EngineEnv.kt` — `run/engine.env`.
 - `conf/OsNote.kt` — `run/os-note.md`: OS and version, package manager and
-  its install command, no systemd, commands run as root.
+  its install command, no systemd, background processes working as on a
+  PC, commands run as root, Android's phantom process limit.
 - `proc/FakeProc.kt` — `run/proc/{loadavg,stat,uptime,version,vmstat}`:
   static stand-ins for what Android's sepolicy hides, listing the host's
   online CPU ids (`proc/CpuIds.kt`); kernel release `6.1.0-phonecando`.

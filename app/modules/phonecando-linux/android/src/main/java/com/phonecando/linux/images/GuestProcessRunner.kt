@@ -12,14 +12,18 @@ import kotlin.concurrent.thread
 /**
  * Runs a guest command through the image's shims (our launcher, then
  * proot) and captures stdout. The cwd is run/, under no `same` path, so
- * the guest starts in /root. Killed after [timeoutMillis]. proot runs
- * without --kill-on-exit (background processes outlive their command), so
- * a timeout also stops whatever the command started, by the image tag
- * every guest process carries (ImageReaper).
+ * the guest starts in /root. Killed after [timeoutMillis].
+ *
+ * Only for an image the host has stopped (a reset). The launcher returns
+ * when the command ends while what it started runs on, as on a PC (a
+ * package manager's gpg-agent, say); nothing may run while a reset swaps
+ * the system, so once the command returns or times out, everything still
+ * carrying the image's tag is stopped too ([reap], ImageReaper by default).
  */
 class GuestProcessRunner(
   private val timeoutMillis: Long = 60_000,
   private val baseEnv: () -> Map<String, String> = System::getenv,
+  private val reap: (imageRoot: String) -> Unit = { ImageReaper().stopAll(it) },
 ) : GuestRunner {
   override fun run(layout: ImageLayout, argv: List<String>): GuestResult {
     val engineEnv = if (layout.engineEnv.isFile) layout.engineEnv.readText(Charsets.UTF_8) else ""
@@ -34,12 +38,14 @@ class GuestProcessRunner(
       drain(process.inputStream, stdout),
       drain(process.errorStream, null),
     )
-    if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) {
+    val ended = process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)
+    if (!ended) {
       process.destroyForcibly()
       process.waitFor(KILL_WAIT_MS, TimeUnit.MILLISECONDS)
-      ImageReaper().stopAll(layout.root.path)
-      throw IOException("guest command ${argv.first()} timed out after ${timeoutMillis / 1000} s")
     }
+    // Before draining: what the command left running may hold its pipes.
+    reap(layout.root.path)
+    if (!ended) throw IOException("guest command ${argv.first()} timed out after ${timeoutMillis / 1000} s")
     readers.forEach { it.join(KILL_WAIT_MS) }
     return GuestResult(process.exitValue(), synchronized(stdout) { stdout.toString(Charsets.UTF_8.name()) })
   }

@@ -13,11 +13,12 @@ import java.io.File
  * - `run/engine.env`: the engine's environment for this image, one
  *   `KEY=VALUE` per line, no quotes, no expansion. Always `HOME` and `TMPDIR`
  *   (host paths of home/ and tmp/). A Linux image adds `SHELL` (shims/bash),
- *   `PATH` (shims/ first, then Android's default) and `PHONECANDO_IMAGE`
- *   (root). The runner applies every line over its own environment when it
+ *   `PATH` (shims/ first, then Android's default), `PHONECANDO_IMAGE`
+ *   (root) and `MAKEFLAGS` (`-j4`, a default parallel-jobs cap). The runner applies every line over its own environment when it
  *   starts the engine, and tags the engine with the agent separately.
  * - `run/os-note.md`: a line or two for the agent's instructions (OS and
- *   version, package manager and its install command, no systemd). Absent
+ *   version, package manager and its install command, no systemd, what a
+ *   SIGKILL from Android's process limit means). Absent
  *   for an Android image.
  *
  * The runtime's own `run/` files (lre/image): `setup-state` (finished setup

@@ -47,9 +47,15 @@ class TerminalRecipeTest {
     assertFalse("PHONECANDO_IMAGE" in r.env)
   }
 
+  @Test fun onlyTheLauncherIsHandedTheTerminal() {
+    assertTrue(TerminalRecipe.linux(layout).handOver)
+    assertFalse(TerminalRecipe.android(layout).handOver)
+  }
+
   @Test fun theMapHasThePtyRecipeShape() {
     val map = TerminalRecipe.linux(layout).toMap()
-    assertEquals(setOf("cmd", "env", "cwd"), map.keys)
+    assertEquals(setOf("cmd", "env", "cwd", "handOver"), map.keys)
     assertTrue(map["cmd"] is List<*>)
+    assertEquals(true, map["handOver"])
   }
 }

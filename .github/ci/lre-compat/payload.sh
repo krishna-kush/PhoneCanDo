@@ -34,7 +34,7 @@ mkdir -p "$PAYLOAD/lib"
 
 bash "$REPO/lre/proot/build-glibc.sh" "$WORK/proot-work" "$PAYLOAD/lib" >&2
 "${CC:-gcc}" -std=c11 -O2 -Wall -Wextra -Werror -o "$PAYLOAD/lib/libphonecando_launch.so" \
-  "$REPO/lre/launcher/src/conf.c" "$REPO/lre/launcher/src/plan.c" "$REPO/lre/launcher/src/main.c"
+  "$REPO/lre/launcher/src/"{conf,plan,relay,die,standin,main}.c
 cp -R "$CLI_TREE" "$PAYLOAD/cli"
 tar -C "$PAYLOAD" -czf "$OUT" lib cli
 

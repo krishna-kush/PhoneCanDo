@@ -97,7 +97,10 @@ Who reads the `run/` files:
 
 `engine.env` always has `HOME` and `TMPDIR` (host paths of `home/` and
 `tmp/`). A Linux image adds `SHELL` (`shims/bash`), `PATH` (`shims/` first,
-then Android's) and `PHONECANDO_IMAGE` (the image root). The runner applies
+then Android's), `PHONECANDO_IMAGE` (the image root) and `MAKEFLAGS=-j4`
+(a default cap on parallel jobs: Android kills an app's processes past a
+device-wide limit, and `run/os-note.md` tells the agent what a SIGKILL from
+it means). The runner applies
 every line over its own environment and tags the engine with
 `PHONECANDO_AGENT` itself.
 
@@ -113,20 +116,22 @@ outside proot. Only its shell and its commands go through the shims:
 ```
 engine  (env: run/engine.env)
   $SHELL -c "git status"                        SHELL=<image>/shims/bash
-    shims/bash -> <libDir>/libphonecando_launch.so
+    shims/bash -> <libDir>/libphonecando_launch.so      stands in for the command
       reads $PHONECANDO_IMAGE/run/launch.conf
-      execve <libDir>/libproot.so <arg lines> --cwd=<cwd> bash -c "git status"
+      fork, execve <libDir>/libproot.so <arg lines> --status-fd=<fd> --cwd=<cwd> bash -c "git status"
         PROOT_LOADER=<libDir>/libproot-loader.so
         guest: bash as fake root, then git from the guest PATH
+      reads the command's pid and end from <fd>, exits as it did
 ```
 
 - The launcher is multi-call: it runs the command named by `argv[0]`'s
   basename; its own file name (`lib*.so`) means bash, so `SHELL` can point
   at it. `map` lines substitute the image's shell for a missing `bash` or
-  `sh`. It never forks; it execs proot in place.
+  `sh`. It forks proot once and stands in for the command (below).
 - proot flags (`LaunchConf.PROOT_FLAGS`): `-L`, `--link2symlink`,
   `--sysvipc`, `-0` (fake root) and `--kernel-release=6.1.0-phonecando`.
-  No `--kill-on-exit` (see below).
+  No `--kill-on-exit` (see below). The launcher adds `--status-fd` and, on
+  the terminal tab's PTY, `--setsid` (our patch, `../modules/proot.md`).
 - Binds: the host's `/dev`, `/proc`, `/sys`, `/dev/urandom` at
   `/dev/random`, the fd links (`/dev/fd`, `/dev/stdin`, `/dev/stdout`,
   `/dev/stderr`), `run/shm` at `/dev/shm`, each `run/proc/<name>` over
@@ -193,19 +198,40 @@ with progress events.
 
 ## Background processes
 
-What a command starts in the background (a dev server, a database) keeps
-running after the command returns, as on a PC: `launch.conf` passes no
-`--kill-on-exit`. Two tags stop them, both kept in the guest's environment:
+As on a PC, a command returns as soon as it ends, while what it starts in
+the background (`cmd &`, `nohup`, a daemon, a package manager's gpg-agent)
+keeps running. proot lives until its last tracee ends, so the caller never
+waits for proot: the launcher forks it with a status pipe (`--status-fd`,
+our patch) and exits as the command did (`../modules/launcher.md` →
+Standing in for the command).
+
+- proot leaves the caller's session and stdio right away; the command
+  stays in the caller's process group, so a timeout's group kill reaches it
+  and its jobs. A background job that writes to stdout keeps the caller's
+  pipe open, as on a PC.
+- proot keeps tracing what is left and exits with its last tracee, which
+  dies with it (`PTRACE_O_EXITKILL`). Every guest process is a real process
+  of the app: a later command sees it in `ps` and can `kill` it.
+- In the terminal tab the shell takes the PTY for its own session
+  (`--setsid`): job control and Ctrl-C work, and closing the tab hangs up
+  the shell, which hangs up its jobs. Limits (Ctrl-Z, SysV IPC across
+  commands): `../release/known-limits.md`.
+
+Two tags stop them, both kept in the guest's environment:
 
 - `PHONECANDO_AGENT` (set by the runner on the engine): stopping the engine
   reaps every process with the agent's tag.
 - `PHONECANDO_IMAGE` (from `engine.env`; the Linux terminal sets it too):
   before a reset or delete the host stops every process of the app's uid
   carrying the image's root (`ImageReaper`: SIGTERM, up to 3 s, then
-  SIGKILL), so nothing runs while the system is swapped or removed.
+  SIGKILL), so nothing runs while the system is swapped or removed. The
+  host's guest runner does the same after each of a reset's package
+  queries, whose package manager may leave a gpg-agent behind.
 
-The terminal never sets `PHONECANDO_AGENT`, and neither does the host's
-guest runner: an engine start reaps whatever carries it.
+The proot left behind carries the tags too, so a reaper that kills it also
+ends a tracee that dropped its environment (`env -i`). The terminal never
+sets `PHONECANDO_AGENT`, and neither does the host's guest runner: an
+engine start reaps whatever carries it.
 
 ## Dependency law
 

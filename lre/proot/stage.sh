@@ -34,6 +34,13 @@ done
   exit 1
 }
 
+# Our launcher runs proot with --status-fd (patches/0002): a proot without it
+# fails every guest command, so an older build must never be staged.
+if ! grep -aq -- '--status-fd' "$SRC/libproot.so"; then
+  echo "STAGE FAIL: $SRC/libproot.so lacks --status-fd (patches/0002); stage a build that includes it" >&2
+  exit 1
+fi
+
 mkdir -p "$DEST"
 for f in "${FILES[@]}"; do
   install -m 0755 "$SRC/$f" "$DEST/$f"

@@ -20,7 +20,8 @@
  *   home PATH       guest cwd when the current dir is under no `same` path
  *                   (default /)
  *
- * The launcher then runs, never forking:
+ * The launcher then starts proot as its child and stands in for the command
+ * (standin.h):
  *   environment  the inherited one, every `unset` applied first, then every
  *                `set` (set wins; for a KEY set twice the later line wins)
  *   command      basename(argv[0]); our own file name (lib*.so) means bash,
@@ -28,7 +29,11 @@
  *                later line wins)
  *   cwd          the current dir when it is at or under a `same` path, else
  *                `home` (the later line wins)
- *   execve       arg..., --cwd=<cwd>, command, argv[1..]
+ *   execve       arg..., --status-fd=<fd>, --cwd=<cwd>, command, argv[1..]
+ *                (--status-fd: our proot patch; proot reports the command's
+ *                pid and end there)
+ *   end          as the command ended (its exit code, or death by its
+ *                signal), while proot traces what it left running
  *
  * Any error (no PHONECANDO_IMAGE, unreadable or invalid conf, no `arg`, exec
  * failure) prints "phonecando-launch: <reason>" to stderr and exits 127.

@@ -19,8 +19,11 @@
 
 - `cd lre && ./gradlew build` — the pure-JVM modules (`api`, `tar`, `oci`,
   `image`, `cli`) and their tests.
-- `bash lre/launcher/test/run.sh` — the launcher's parser and exec plan, then
-  end to end through a fake proot.
+- `bash lre/launcher/test/run.sh` — the launcher's parser, exec plan and
+  signal rules, then end to end through a fake proot.
+- `bash lre/launcher/test/proot-test.sh <proot-dir> <rootfs>` — the launcher
+  with a host proot build (`lre/proot/build-glibc.sh`; `/` works as the
+  rootfs): background processes, exit statuses and the terminal as on a PC.
 - `lre/proot/verify.sh` checks a proot build at the ELF level;
   `lre/images/default/verify.py` checks a Default image build.
 - Device proof is still required for anything proot does on the phone
@@ -37,7 +40,7 @@ everything. The `*-ok` job is the one check to require for each.
 | `ci.yml` | `ci-ok` | typecheck and vectors, the Android JS bundle and config plugins, generated files, theme spec, website build, script wiring, the release preflight tests (`scripts/release/`) and the licence notices (notices, Licenses dialog and every shipped item in sync) |
 | `android.yml` | — | prebuild, debug APKs per channel with the runner and Linux JVM tests and an APK audit each, a release-shape lite + full build (stages proot from a `proot.yml` run id and the Default image named by the lock when there is one; audited per channel), the PTY host test, lint, emulator smoke |
 | `lre.yml` | `lre-ok` | the `lre/` Gradle build and tests, and the launcher built with gcc and run against its host tests |
-| `proot.yml` | `proot-ok` | the pinned proot build for arm64 Android (checked at the ELF level), the same sources built for glibc booting an Alpine rootfs, and the GPL source pack |
+| `proot.yml` | `proot-ok` | the pinned proot build for arm64 Android (checked at the ELF level), the same sources built for glibc booting an Alpine rootfs and running our launcher (background processes, statuses, the terminal), and the GPL source pack |
 | `lre-image.yml` | `lre-image-ok` | the Default image built twice to the same bytes, tier 1 (the image through our launcher and proot as opencode uses it), its Debian sources and `lock.json`; on prod, weekly or on demand, a green image is published as the prerelease `linux-image-<version>`, which `./manage image lock <run-id>` adopts |
 | `lre-compat.yml` | `lre-compat-ok` | tier 2: one registry image per package family set up with `lre/cli` and used as opencode uses it (blocking); tier 3: a weekly report-only rotation that opens or updates one issue |
 | `oc-payload.yml` | — | the opencode patches and pins against upstream, and the payload build |

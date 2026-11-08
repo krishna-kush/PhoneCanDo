@@ -23,6 +23,9 @@ export type PtyRecipe = {
   cwd: string;
   /** Raw tty (the default) for a TUI; false for a shell, whose line editor echoes only on a cooked tty. */
   raw?: boolean;
+  /** True when the program hands the terminal on (our Linux launcher, to the guest shell): the PTY
+      then opens as no session's controlling terminal. */
+  handOver?: boolean;
 };
 
 /** Where a TUI attaches: the engine, its HOME and a project folder. */

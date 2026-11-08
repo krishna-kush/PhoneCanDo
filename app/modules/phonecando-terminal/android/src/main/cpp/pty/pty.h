@@ -20,6 +20,12 @@ typedef struct {
   // TUI). 1: the tty's cooked defaults (echo, line editing), for a shell:
   // readline only echoes what you type when the tty it starts on echoes.
   int cooked;
+  // 0: the slave becomes the controlling terminal of the program's new
+  // session. 1: it stays no session's, for a program that hands it on to a
+  // child of its own (our Linux launcher: the guest shell takes it, so the
+  // hangup when the terminal closes reaches the shell, as on a PC). Android
+  // doesn't let an app give up a terminal it holds (TIOCNOTTY).
+  int hand_over;
 } pty_spec;
 
 typedef struct {

@@ -44,13 +44,13 @@ const char *lc_cwd(const struct lc_conf *conf, const char *cwd) {
   return conf->home;
 }
 
-size_t lc_argv(const struct lc_conf *conf, const char *cwd_arg, const char *command,
+size_t lc_argv(const struct lc_conf *conf, const char *const *own, size_t nown, const char *command,
                char *const *extra, size_t nextra, const char **out) {
   size_t n = 0;
   for (size_t i = 0; i < conf->count; i++) {
     if (conf->entries[i].kind == LC_ARG) out[n++] = conf->entries[i].value;
   }
-  out[n++] = cwd_arg;
+  for (size_t i = 0; i < nown; i++) out[n++] = own[i];
   out[n++] = command;
   for (size_t i = 0; i < nextra; i++) out[n++] = extra[i];
   out[n] = NULL;

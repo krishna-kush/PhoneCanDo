@@ -1,13 +1,17 @@
 /*
- * Unit tests of the pure parts (conf.c, plan.c): the edges the end-to-end
- * tests in run.sh cannot reach cheaply. Built and run by run.sh.
+ * Unit tests of the pure parts (conf.c, plan.c, relay.c): the edges the
+ * end-to-end tests in run.sh cannot reach cheaply. Built and run by run.sh.
  */
+#define _POSIX_C_SOURCE 200809L
+
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "conf.h"
 #include "plan.h"
+#include "relay.h"
 
 static int failures;
 static char buf[LC_MAX_BYTES + 64];
@@ -119,10 +123,53 @@ static void test_argv(void) {
   char *extra[] = {"status", "two words"};
   const char *out[16];
   CHECK(!parse("arg /p\narg -r\narg /img\nset A=1\narg -0\n", NULL));
-  size_t n = lc_argv(&conf, "--cwd=/w", "git", extra, 2, out);
-  const char *want[] = {"/p", "-r", "/img", "-0", "--cwd=/w", "git", "status", "two words"};
-  CHECK(n == 8 && out[8] == NULL);
-  for (size_t i = 0; i < 8 && i < n; i++) CHECK(!strcmp(out[i], want[i]));
+  const char *own[] = {"--status-fd=4", "--setsid", "--cwd=/w"};
+  size_t n = lc_argv(&conf, own, 3, "git", extra, 2, out);
+  const char *want[] = {"/p", "-r", "/img", "-0", "--status-fd=4", "--setsid", "--cwd=/w", "git", "status", "two words"};
+  CHECK(n == 10 && out[10] == NULL);
+  for (size_t i = 0; i < 10 && i < n; i++) CHECK(!strcmp(out[i], want[i]));
+  CHECK(lc_argv(&conf, own, 0, "sh", NULL, 0, out) == 5 && out[5] == NULL && !strcmp(out[4], "sh"));
+}
+
+#define KERNEL 0x80 /* SI_KERNEL */
+#define USER 0      /* SI_USER */
+
+static void test_relay(void) {
+  /* The terminal's keys reach the foreground group by themselves; its hangup goes to us alone. */
+  CHECK(!lc_relays(SIGINT, KERNEL, 0, 0, 7));
+  CHECK(!lc_relays(SIGQUIT, KERNEL, 0, 0, 7));
+  CHECK(lc_relays(SIGHUP, KERNEL, 0, 0, 7));
+  /* Our caller's signals always pass, even from the command's group (Java shares the app's). */
+  CHECK(lc_relays(SIGTERM, USER, 1, 7, 7));
+  CHECK(lc_relays(SIGINT, USER, 1, 3, 7));
+  /* From the command's own group: the command has it already. */
+  CHECK(!lc_relays(SIGTERM, USER, 0, 7, 7));
+  CHECK(!lc_relays(SIGUSR1, USER, 0, 7, 7));
+  /* From anyone else, or an unknown group. */
+  CHECK(lc_relays(SIGTERM, USER, 0, 3, 7));
+  CHECK(lc_relays(SIGUSR2, USER, 0, 0, 7));
+  CHECK(lc_relays(SIGHUP, USER, 0, 0, 0));
+  /* Only what we catch. */
+  CHECK(!lc_relays(SIGWINCH, USER, 1, 3, 7));
+  CHECK(!lc_relays(SIGKILL, USER, 1, 3, 7));
+  int n = 0;
+  for (const int *s = lc_caught; *s; s++) n++;
+  CHECK(n == 6);
+}
+
+static void test_end(void) {
+  struct lc_end e = lc_end_of(0);
+  CHECK(e.code == 0 && e.signal == 0);
+  e = lc_end_of(3 << 8); /* exit 3 */
+  CHECK(e.code == 3 && e.signal == 0);
+  e = lc_end_of(255 << 8);
+  CHECK(e.code == 255 && e.signal == 0);
+  e = lc_end_of(SIGTERM); /* killed by SIGTERM */
+  CHECK(e.code == 128 + SIGTERM && e.signal == SIGTERM);
+  e = lc_end_of(SIGSEGV | 0x80); /* killed by SIGSEGV, core dumped */
+  CHECK(e.code == 128 + SIGSEGV && e.signal == SIGSEGV);
+  e = lc_end_of((SIGSTOP << 8) | 0x7f); /* stopped: never reported */
+  CHECK(e.code == 127 && e.signal == 0);
 }
 
 int main(void) {
@@ -131,6 +178,8 @@ int main(void) {
   test_cwd();
   test_env();
   test_argv();
+  test_relay();
+  test_end();
   if (failures) {
     fprintf(stderr, "unit: %d failure(s)\n", failures);
     return 1;

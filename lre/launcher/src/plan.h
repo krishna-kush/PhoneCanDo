@@ -16,10 +16,11 @@ const char *lc_command(const struct lc_conf *conf, const char *argv0);
 const char *lc_cwd(const struct lc_conf *conf, const char *cwd);
 
 /*
- * proot's argv: every `arg`, cwd_arg (--cwd=...), command, extra[0..nextra),
- * then NULL. out holds conf->args + nextra + 3 slots. Returns the count.
+ * proot's argv: every `arg`, own[0..nown) (the options the launcher adds:
+ * --status-fd=..., --setsid, --cwd=...), command, extra[0..nextra), then
+ * NULL. out holds conf->args + nown + nextra + 2 slots. Returns the count.
  */
-size_t lc_argv(const struct lc_conf *conf, const char *cwd_arg, const char *command,
+size_t lc_argv(const struct lc_conf *conf, const char *const *own, size_t nown, const char *command,
                char *const *extra, size_t nextra, const char **out);
 
 /*

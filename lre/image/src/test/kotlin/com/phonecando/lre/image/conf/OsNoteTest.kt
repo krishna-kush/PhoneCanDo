@@ -11,7 +11,8 @@ class OsNoteTest {
         val os = OsInfo("alpine", "3.22.2", emptyList(), "Alpine Linux v3.22", PackageFamily.APK, "/bin/sh")
         assertEquals(
             "This machine: Alpine Linux v3.22 (apk). Install packages with `apk add <pkg>`. " +
-                "No systemd: start services by hand. Commands run as root, so no sudo is needed.\n",
+                "No systemd: start services by hand. " + OsNote.BACKGROUND +
+                " Commands run as root, so no sudo is needed. " + OsNote.PHANTOM + "\n",
             OsNote.text(os),
         )
     }
@@ -22,7 +23,8 @@ class OsNoteTest {
         assertEquals(
             "This machine: Debian GNU/Linux 12 (bookworm) (apt). " +
                 "Install packages with `apt-get update && apt-get install -y <pkg>`. " +
-                "No systemd: start services by hand. Commands run as root, so no sudo is needed.\n",
+                "No systemd: start services by hand. " + OsNote.BACKGROUND +
+                " Commands run as root, so no sudo is needed. " + OsNote.PHANTOM + "\n",
             OsNote.text(os),
         )
     }
@@ -31,7 +33,8 @@ class OsNoteTest {
     fun `unknown family and no pretty name`() {
         val os = OsInfo("linux", null, emptyList(), null, null, "/bin/sh")
         assertEquals(
-            "This machine: linux. No systemd: start services by hand. Commands run as root, so no sudo is needed.\n",
+            "This machine: linux. No systemd: start services by hand. " + OsNote.BACKGROUND +
+                " Commands run as root, so no sudo is needed. " + OsNote.PHANTOM + "\n",
             OsNote.text(os),
         )
     }

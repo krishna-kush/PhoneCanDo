@@ -117,6 +117,30 @@ static int test_cooked_tty(void) {
   return 0;
 }
 
+// The program's controlling terminal: the PTY, or none when it hands the
+// PTY on (tty_nr in /proc/self/stat is 0 without one). Not a shell: bash
+// leading a session takes the terminal on its stdin by itself.
+static int check_ctty(int hand_over, const char *want) {
+  char *argv[] = {"awk", "{ print ($7 == 0 ? \"free\" : \"held\") }", "/proc/self/stat", NULL};
+  pty_stage stage;
+  pty_spec spec = {.argv = argv, .envp = sys_path, .rows = 24, .cols = 80, .hand_over = hand_over};
+  pty_child c;
+  CHECK(pty_spawn(&spec, &c, &stage) == 0, "");
+  char out[BUF];
+  read_until(c.master, out, BUF, NULL, T);
+  CHECK(strcmp(out, want) == 0, "hand_over %d: got '%s'", hand_over, out);
+  close(c.master);
+  pty_exit ex;
+  CHECK(finish(c.pid, &ex) == 0 && ex.code == 0, "code %d", ex.code);
+  return 0;
+}
+
+static int test_hand_over(void) {
+  CHECK(check_ctty(0, "held\n") == 0, "");
+  CHECK(check_ctty(1, "free\n") == 0, "");
+  return 0;
+}
+
 static int test_env_is_exact(void) {
   setenv("PTY_TEST_LEAK", "parent-only", 1);
   char *envp[] = {"A=1", "B=two", NULL};
@@ -406,6 +430,7 @@ static const struct {
     {"exit status", test_exit_status},
     {"master flags, raw tty, size at open", test_master_and_tty_modes},
     {"cooked tty when asked, for a shell", test_cooked_tty},
+    {"controlling tty, or none when handed on", test_hand_over},
     {"env is exactly ours", test_env_is_exact},
     {"cwd applied", test_cwd},
     {"fds >= 3 closed", test_fds_closed},

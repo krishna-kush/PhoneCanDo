@@ -6,6 +6,8 @@ export type PtyOpenOpts = {
   cols?: number;
   /** Raw tty (default) for a full-screen program; false keeps cooked mode with echo, for a shell. */
   raw?: boolean;
+  /** True: the PTY stays no session's controlling terminal, for a program that hands it on to a child. */
+  handOver?: boolean;
 };
 
 /** Signals `kill` can send to a PTY program's process group. */

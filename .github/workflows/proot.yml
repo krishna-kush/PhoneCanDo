@@ -5,21 +5,25 @@ name: proot
 # linked statically. build-android cross-builds the arm64 jniLibs
 # (libproot.so + libproot-loader.so) with the pinned NDK and proves them at
 # the ELF level, since no runner can exec bionic; build-glibc builds the same
-# sources natively on ubuntu-24.04-arm and boots the pinned Alpine aarch64
-# minirootfs under them; source packs the GPL corresponding source. Nothing
-# here creates or touches a release. Runs on proot build changes, weekly
-# (upstream URLs and runner images drift), on demand.
+# sources natively on ubuntu-24.04-arm, boots the pinned Alpine aarch64
+# minirootfs under them and runs our launcher with them
+# (lre/launcher/test/proot-test.sh: background processes as on a PC);
+# source packs the GPL corresponding source. Nothing here creates or touches
+# a release. Runs on proot build and launcher changes, weekly (upstream URLs
+# and runner images drift), on demand.
 
 on:
   push:
     branches: [prod]
     paths:
       - 'lre/proot/**'
+      - 'lre/launcher/**'
       - '.github/workflows/proot.yml'
       - '.github/ci/proot/**'
   pull_request:
     paths:
       - 'lre/proot/**'
+      - 'lre/launcher/**'
       - '.github/workflows/proot.yml'
       - '.github/ci/proot/**'
   workflow_dispatch:
@@ -137,6 +141,24 @@ jobs:
           bash .github/ci/proot/smoke.sh "$RUNNER_TEMP/proot-glibc" \
             "$RUNNER_TEMP/rootfs/alpine-minirootfs.tar.gz" "$RUNNER_TEMP/smoke" \
             | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Commands that leave processes running return when they end, as on a
+      # PC (--status-fd, our patch), through our launcher: in the Alpine
+      # rootfs (busybox), then in this host's own root, whose bash, script(1)
+      # and python3 run the terminal checks (job control, hangup), on a
+      # terminal the launcher holds and on a free one as the app opens it.
+      - name: Background processes (lre/launcher/test/proot-test.sh)
+        env:
+          CC: gcc
+        run: |
+          fail=0
+          for root in "$RUNNER_TEMP/smoke/rootfs" /; do
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            bash lre/launcher/test/proot-test.sh "$RUNNER_TEMP/proot-glibc" "$root" "$RUNNER_TEMP/bg" \
+              | tee -a "$GITHUB_STEP_SUMMARY" || fail=1
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done
+          exit "$fail"
 
       - name: SHA256SUMS
         run: |

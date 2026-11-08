@@ -18,7 +18,8 @@ class EngineEnvTest {
                 "TMPDIR=$r/tmp\n" +
                 "SHELL=$r/shims/bash\n" +
                 "PATH=$r/shims:/product/bin:/apex/com.android.runtime/bin:/system/bin\n" +
-                "PHONECANDO_IMAGE=$r\n",
+                "PHONECANDO_IMAGE=$r\n" +
+                "MAKEFLAGS=-j4\n",
             EngineEnv.linux(Hosts.phoneLayout, Hosts.phone),
         )
     }

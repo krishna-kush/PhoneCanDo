@@ -13,7 +13,9 @@ Nothing is hand-edited in `app/android/` (CNG-generated, gitignored).
   no JNI). The parent builds argv, envp and cwd before `fork` (a bare
   `argv[0]` is looked up in the new env's absolute PATH entries); the child
   makes only async-signal-safe calls: default dispositions, empty signal
-  mask, new session with the slave as its controlling tty, every fd from 4 up
+  mask, new session with the slave as its controlling tty (none when the
+  open asks `handOver: true`, for our Linux launcher, which hands the
+  terminal to the guest shell), every fd from 4 up
   closed (`close_range` from API 34, else a bounded loop), `chdir`, `execve`.
   A failed chdir/exec comes back through a close-on-exec pipe as an error.
   The slave starts raw (a TUI reads every key itself) unless the open asks
@@ -99,7 +101,13 @@ the tab underneath.
   `terminalRecipe`): `shims/bash -l`, which our launcher runs in the guest
   through proot, with `HOME=/root` and `TMPDIR=/tmp` (where `home/` and
   `tmp/` are bound) and cwd `run/`, so the launcher starts the shell in
-  `/root`. An Android image gets `/system/bin/sh -l` in its `home/`. Both
+  `/root`. The PTY opens as no session's terminal (the recipe's
+  `handOver`) and the guest shell takes it
+  (`lre/docs/modules/launcher.md`): job control, Ctrl-C and resize work as
+  on a PC, and closing the tab hangs up the shell's jobs, except `nohup`'d
+  and `disown`ed ones. A job Ctrl-Z stops keeps running under proot
+  (`lre/docs/release/known-limits.md`). An Android
+  image gets `/system/bin/sh -l` in its `home/`. Both
   open on a cooked tty (`raw: false` in `sessionRecipe.ts`). The
   image gets its per-start preparation first (`prepareImageForStart`). The
   Env tab's agent page opens it, optionally with a suggested command

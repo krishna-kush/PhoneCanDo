@@ -3,9 +3,17 @@ package com.phonecando.linux.terminal
 import com.phonecando.lre.api.ImageLayout
 import java.io.File
 
-/** What the terminal tab runs on our PTY (PtyRecipe in the JS types): argv, env over the app's, cwd. */
-data class TerminalRecipe(val cmd: List<String>, val env: Map<String, String>, val cwd: String) {
-  fun toMap(): Map<String, Any> = mapOf("cmd" to cmd, "env" to env, "cwd" to cwd)
+/**
+ * What the terminal tab runs on our PTY (PtyRecipe in the JS types): argv,
+ * env over the app's, cwd, and whether the program hands the terminal on.
+ */
+data class TerminalRecipe(
+  val cmd: List<String>,
+  val env: Map<String, String>,
+  val cwd: String,
+  val handOver: Boolean,
+) {
+  fun toMap(): Map<String, Any> = mapOf("cmd" to cmd, "env" to env, "cwd" to cwd, "handOver" to handOver)
 
   companion object {
     /**
@@ -24,6 +32,13 @@ data class TerminalRecipe(val cmd: List<String>, val env: Map<String, String>, v
      * app's own environment on, whose TMPDIR is the app's cache dir, which
      * the guest cannot see.
      *
+     * The PTY opens as no session's terminal (handOver) and the launcher
+     * hands it to the shell (lre/launcher standin.c), so the shell is its
+     * controlling process as on a PC: job control works, and closing the
+     * terminal hangs the shell up, which hangs up its jobs; nohup'd and
+     * disowned ones run on. The launcher can't let go of a terminal it
+     * holds: Android denies apps TIOCNOTTY.
+     *
      * PHONECANDO_AGENT is never set: an engine start reaps every process
      * carrying that tag, and the terminal is not an engine.
      */
@@ -38,9 +53,14 @@ data class TerminalRecipe(val cmd: List<String>, val env: Map<String, String>, v
         "LANG" to "C.UTF-8",
       ),
       cwd = layout.run.path,
+      handOver = true,
     )
 
-    /** Android's shell in an image with no Linux: HOME and TMPDIR are the image's home/ and tmp/. */
+    /**
+     * Android's shell in an image with no Linux: HOME and TMPDIR are the
+     * image's home/ and tmp/. It keeps the terminal itself: mksh doesn't
+     * take one it is handed.
+     */
     fun android(layout: ImageLayout): TerminalRecipe = TerminalRecipe(
       cmd = listOf("/system/bin/sh", "-l"),
       env = mapOf(
@@ -50,6 +70,7 @@ data class TerminalRecipe(val cmd: List<String>, val env: Map<String, String>, v
         "COLORTERM" to COLORTERM,
       ),
       cwd = layout.home.path,
+      handOver = false,
     )
 
     private const val TERM = "xterm-256color"

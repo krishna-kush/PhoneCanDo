@@ -126,9 +126,15 @@ oci + image <- cli
 
 - The launcher is clean-room C. Never Termux code in our own code; nothing
   copied from projects without a verified licence.
-- `conf.c` and `plan.c` are pure: no IO, no allocation. `main.c` is the IO.
-  The launcher never forks: it execs proot in place. Every error prints
+- `conf.c`, `plan.c` and `relay.c` are pure: no IO, no allocation.
+  `main.c` and `standin.c` are the IO. The launcher forks proot once and
+  stands in for the command: it returns when the command ends, with its
+  status, while proot traces what the command left running
+  (`--status-fd`, our proot patch). Every error prints
   `phonecando-launch: <reason>` and exits 127.
+- The launcher and proot ship as a pair: a launcher change that needs a
+  new proot option lands with the patch, and the staged proot is rebuilt
+  (`lre/proot/stage.sh`) before an APK is built with that launcher.
 - Everything a phone executes ships from the APK's native-library dir as
   `lib*.so` (`api` `PayloadNames`). Every ELF we build is 16 KB page
   aligned.
@@ -174,9 +180,10 @@ oci + image <- cli
   fixtures are recorded responses and tiny synthetic trees, not real
   downloads.
 - `cd lre && ./gradlew build` is green before a change is done.
-- Launcher changes: `bash lre/launcher/test/run.sh`.
+- Launcher changes: `bash lre/launcher/test/run.sh`, and with a host proot
+  build `bash lre/launcher/test/proot-test.sh <proot-dir> <rootfs>`.
 - proot changes: `build-android.sh` + `verify.sh`, and the glibc build
-  booting a rootfs (`proot.yml`).
+  booting a rootfs and running `proot-test.sh` (`proot.yml`).
 - Default image changes: `verify.py` and Tier 1 (`lre-image.yml`).
 - Setup, detection, fixups and launch changes: Tier 2 (`lre-compat.yml`),
   one registry image per package family.

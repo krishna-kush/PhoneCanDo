@@ -7,10 +7,9 @@
 - **`image` never imports `oci`:** a host composes a download with a
   setup; the baked Default image and a registry image are then one kind of
   `BaseImage`.
-- **Shims are symlinks to one multi-call launcher that execs proot in
-  place:** no fork per command, one file (`launch.conf`) says how every
-  command of an image runs, and `SHELL` can point at the launcher itself
-  (its own name means bash).
+- **Shims are symlinks to one multi-call launcher:** one file
+  (`launch.conf`) says how every command of an image runs, and `SHELL` can
+  point at the launcher itself (its own name means bash).
 - **The engine stays a bionic binary outside proot:** the runner starts it
   with `run/engine.env` and never depends on `lre/`; only its shell and
   commands go through the shims (device-verified 2026-11-06).
@@ -34,9 +33,26 @@
 - **`home/` and `tmp/` at `/root` and `/tmp` and at their own host paths:**
   the engine's file tools see host paths and its commands must see the
   same ones.
-- **Background processes keep running** (no `--kill-on-exit`), as on a PC;
-  they are reaped by tag: `PHONECANDO_AGENT` when the engine stops,
-  `PHONECANDO_IMAGE` before a reset or delete.
+- **A command returns when it ends, and what it started runs on, as on a
+  PC** (2026-11-07). proot exits only after every tracee, so a command
+  with a background job never returned (`microdnf`'s gpg-agent hung CI),
+  and `--kill-on-exit` would kill the job instead. So the launcher forks
+  proot and stands in for the command: our patch
+  (`lre/proot/patches/0002-status-fd.patch`) has proot report the
+  command's end on a pipe and keep tracing the rest. Rejected: one
+  long-lived proot per machine fed commands over a socket (UserLAnd's
+  shape): the command would stop being its caller's child (fds, limits,
+  signals, process group), one tracer would serve every process, and the
+  daemon needs its own lifecycle. Ours costs SysV IPC and `strace -p`
+  across commands (`../release/known-limits.md`). Leftovers are still
+  reaped by tag: `PHONECANDO_AGENT` on engine stop, `PHONECANDO_IMAGE`
+  before a reset or delete.
+- **The terminal's shell leads its own session:** the terminal tab opens
+  its PTY as no session's terminal and the shell takes it (proot
+  `--setsid`), so closing the tab hangs up the shell itself, which hangs up
+  its jobs, as on a PC. Passing the hangup on from the launcher lost the
+  race with the shell's own end-of-file, and Android lets no app give up a
+  terminal it holds (`TIOCNOTTY`).
 - **Always fake root:** package managers work; an image config's user and
   working dir are recorded, not applied.
 - **Detect, don't tabulate:** OS, family and shell come from the image

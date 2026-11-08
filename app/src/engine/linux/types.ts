@@ -148,8 +148,9 @@ export type CatalogTag = {
 /** One page of tags; `next` is the page to ask for next, null on the last page. */
 export type TagPage = { tags: CatalogTag[]; next: number | null };
 
-/** A shell for our PTY (same shape as the agents' PtyRecipe): argv, env over the app's, cwd. */
-export type TerminalRecipe = { cmd: string[]; env: Record<string, string>; cwd: string };
+/** A shell for our PTY (same shape as the agents' PtyRecipe): argv, env over the app's, cwd, and
+    handOver for our launcher, which hands the terminal to the guest shell. */
+export type TerminalRecipe = { cmd: string[]; env: Record<string, string>; cwd: string; handOver: boolean };
 
 /** Packages installed by hand before a reset, and the one line that installs them again. */
 export type ReinstallList = { installCommand: string; packages: string[] };

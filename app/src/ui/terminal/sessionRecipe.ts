@@ -55,6 +55,7 @@ async function linuxRecipe(agent: Agent): Promise<PtyRecipe> {
   // Same preparation an engine start gets, so the shell finds the image ready.
   await prepareImageForStart(agent.imageId);
   // A login shell edits its own line: it must start on a cooked tty, or
-  // readline treats echo as off and what you type never shows.
+  // readline treats echo as off and what you type never shows. The recipe's
+  // handOver says whether the launcher hands the terminal to a guest shell.
   return { ...terminalRecipe(agent.imageId), raw: false };
 }

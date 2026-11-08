@@ -37,9 +37,11 @@ internal object LaunchConf {
         "(format: lre/launcher/src/conf.h). Edits are lost.\n"
 
     // No --kill-on-exit: like on a PC, what a command starts in the background
-    // (a dev server, a database) keeps running after it returns. Stopping the
-    // engine reaps the agent's processes by PHONECANDO_AGENT, and a reset or
-    // delete reaps the image's by PHONECANDO_IMAGE (both kept in the guest).
+    // (a dev server, a database) keeps running after it returns. The launcher
+    // adds --status-fd (and --setsid on a terminal) itself, so the command
+    // returns when it ends while proot traces the rest (launcher.md). Stopping
+    // the engine reaps the agent's processes by PHONECANDO_AGENT, and a reset
+    // or delete reaps the image's by PHONECANDO_IMAGE (both kept in the guest).
     private val PROOT_FLAGS = listOf(
         "-L", "--link2symlink", "--sysvipc", "-0",
         "--kernel-release=${FakeProc.KERNEL_RELEASE}",

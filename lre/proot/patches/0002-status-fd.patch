@@ -1,0 +1,315 @@
+Ours (PhoneCanDo), not from termux-packages. Adds --status-fd=<fd> and
+--setsid, so a command run under proot returns when it ends, as it would
+without proot, while what it started in the background keeps running and
+stays traced.
+
+Without it, proot (the tracer) exits only once every tracee has: a command
+that leaves anything behind (`sleep 30 &`, a daemon, the gpg-agent a
+package manager starts) does not return until that ends, and
+--kill-on-exit, the only way out, kills the background processes. proot's
+exit status is also the last tracee's, not the command's.
+
+--status-fd: proot writes the first tracee's pid, then its status as
+waitpid(2) reports it, each as one native int, on <fd>, which it keeps
+close-on-exec so no tracee inherits it. Our launcher
+(lre/launcher/src/standin.c) forks proot, reads both, passes signals on to
+the command and exits as the command did. Right after the fork proot leaves
+the caller's session (setsid(2)): the command stays in the caller's process
+group, so group signals (a timeout's kill) reach it and its background jobs
+but never proot. proot drops the caller's stdin and stdout at once and its
+stderr when the command ends, so the caller's pipes see end-of-file once
+the command and whatever still holds them close them; the SysV shm helper
+never takes the caller's stderr. Tracees get PTRACE_O_EXITKILL: if proot
+dies they die too instead of running untraced.
+
+--setsid: the first tracee starts a session of its own and takes the
+terminal on stdin as its controlling terminal, as a login shell does. The
+launcher hands its terminal over for this when it leads the terminal's
+session (our terminal tab), so the shell gets the hangup when the terminal
+closes, as on a PC, and hangs up its jobs.
+
+Without the options nothing changes. Specific to how we run proot; not
+meant for upstream. Drop it only if termux/proot gains an equivalent.
+
+--- a/src/cli/proot.c
++++ b/src/cli/proot.c
+@@ -24,11 +24,13 @@
+ #include <assert.h>    /* assert(3), */
+ #include <stdio.h>     /* printf(3), fflush(3), */
+ #include <unistd.h>    /* write(2), */
++#include <fcntl.h>     /* fcntl(2), FD_CLOEXEC, */
+ 
+ #include "cli/cli.h"
+ #include "cli/note.h"
+ #include "extension/extension.h"
+ #include "extension/sysvipc/sysvipc.h"
++#include "tracee/event.h"
+ #include "path/binding.h"
+ #include "attribute.h"
+ 
+@@ -198,6 +200,31 @@
+ 	return 0;
+ }
+ 
++static int handle_option_status_fd(Tracee *tracee, const Cli *cli UNUSED, const char *value)
++{
++	int fd;
++	int status;
++
++	status = parse_integer_option(tracee, &fd, value, "--status-fd");
++	if (status < 0)
++		return status;
++
++	/* Only PRoot keeps it: the first tracee loses it on execve(2).  */
++	if (fd <= STDERR_FILENO || fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
++		note(tracee, ERROR, USER, "option `--status-fd` expects an open file descriptor above 2.");
++		return -1;
++	}
++
++	status_fd = fd;
++	return 0;
++}
++
++static int handle_option_setsid(Tracee *tracee UNUSED, const Cli *cli UNUSED, const char *value UNUSED)
++{
++	command_session = true;
++	return 0;
++}
++
+ static int handle_option_v(Tracee *tracee, const Cli *cli UNUSED, const char *value)
+ {
+ 	int status;
+--- a/src/cli/proot.h
++++ b/src/cli/proot.h
+@@ -66,6 +66,8 @@
+ #endif /* defined(__ANDROID__) || defined(__BIONIC__) */
+ static int handle_option_sysvipc(Tracee *tracee, const Cli *cli, const char *value);
+ static int handle_option_kill_on_exit(Tracee *tracee, const Cli *cli, const char *value);
++static int handle_option_status_fd(Tracee *tracee, const Cli *cli, const char *value);
++static int handle_option_setsid(Tracee *tracee, const Cli *cli, const char *value);
+ static int handle_option_L(Tracee *tracee, const Cli *cli, const char *value);
+ static int handle_option_H(Tracee *tracee, const Cli *cli, const char *value);
+ static int handle_option_p(Tracee *tracee, const Cli *cli, const char *value);
+@@ -164,6 +166,32 @@
+ 	},
+ 	{ .class = "Regular options",
+ 	  .arguments = {
++		{ .name = "--status-fd", .separator = '=', .value = "fd" },
++		{ .name = NULL, .separator = '\0', .value = NULL } },
++	  .handler = handle_option_status_fd,
++	  .description = "Report the command's pid and end on *fd*, so a caller can return when it ends.",
++	  .detail = "\tWrite the pid of the command, then its status as waitpid(2) reports it\n\
++\twhen it ends, each as one native int, on the open file descriptor *fd*.\n\
++\tThe command stays in the caller's process group and session (unless\n\
++\t--setsid) while proot leaves them, drops the caller's stdin and stdout\n\
++\tright away and its stderr once the command ends, then keeps tracing\n\
++\twhatever the command left running; tracees are killed if proot dies.\n\
++\tA caller that waits for the status instead of proot returns when the\n\
++\tcommand does, like on a system without proot, while background\n\
++\tprocesses keep running.",
++	},
++	{ .class = "Regular options",
++	  .arguments = {
++		{ .name = "--setsid", .separator = '\0', .value = NULL },
++		{ .name = NULL, .separator = '\0', .value = NULL } },
++	  .handler = handle_option_setsid,
++	  .description = "Start the command in a new session.",
++	  .detail = "\tThe command leads a session of its own; when stdin is a terminal\n\
++\tthat no session controls, it becomes the command's controlling terminal,\n\
++\tso the command gets its hangup and job-control signals itself.",
++	},
++	{ .class = "Regular options",
++	  .arguments = {
+ 		{ .name = "-v", .separator = ' ', .value = "value" },
+ 		{ .name = "--verbose", .separator = '=', .value = "value" },
+ 		{ .name = NULL, .separator = '\0', .value = NULL } },
+--- a/src/extension/sysvipc/sysvipc_shm.c
++++ b/src/extension/sysvipc/sysvipc_shm.c
+@@ -4,6 +4,7 @@
+ #include "tracee/reg.h"
+ #include "tracee/mem.h"
+ #include "tracee/tracee.h"
++#include "tracee/event.h"
+ #include "extension/extension.h"
+ #include "path/temp.h"
+ #include "syscall/chain.h"
+@@ -150,6 +151,15 @@
+ 			fcntl(0, F_SETFL, 0);
+ 			fcntl(1, F_SETFL, 0);
+ 
++			/* Never hold the caller's stderr (--status-fd).  */
++			if (detached_from_caller()) {
++				int null = open("/dev/null", O_WRONLY | O_NOCTTY);
++				if (null >= 0) {
++					dup2(null, 2);
++					close(null);
++				}
++			}
++
+ 			/* Fork again to detach from proot waitpid() */
+ 			forked = fork();
+ 			if (forked == 0) {
+--- a/src/tracee/event.c
++++ b/src/tracee/event.c
+@@ -35,6 +35,8 @@
+ #include <stdlib.h>     /* atexit(3), getenv(3), */
+ #include <talloc.h>     /* talloc_*, */
+ #include <inttypes.h>   /* PRI*, */
++#include <fcntl.h>      /* open(2), O_*, */
++#include <sys/ioctl.h>  /* ioctl(2), TIOCSCTTY, */
+ 
+ #include "tracee/event.h"
+ #include "tracee/seccomp.h"
+@@ -62,6 +64,91 @@
+ static bool seccomp_after_ptrace_enter = false;
+ static bool seccomp_ptrace_event_supported = false;
+ 
++/* --status-fd: the caller's end of a pipe, -1 when not asked or once
++ * the first tracee has ended.  */
++int status_fd = -1;
++
++/* The first tracee once proot has let go of its caller, else 0.  */
++static pid_t main_pid = 0;
++
++bool command_session = false;
++
++#ifndef PTRACE_O_EXITKILL
++#define PTRACE_O_EXITKILL 0x00100000
++#endif
++
++/**
++ * Write @value (a native int) on status_fd.  Errors are ignored: the
++ * caller may be gone already.
++ */
++static void report(int value)
++{
++	ssize_t status;
++
++	do
++		status = write(status_fd, &value, sizeof(value));
++	while (status < 0 && errno == EINTR);
++}
++
++/**
++ * Point @fd at /dev/null.
++ */
++static void to_dev_null(int fd)
++{
++	int null = open("/dev/null", O_RDWR | O_NOCTTY | O_CLOEXEC);
++
++	if (null < 0)
++		return;
++	if (null != fd) {
++		(void) dup2(null, fd);
++		(void) close(null);
++	}
++}
++
++/**
++ * --status-fd, once the first tracee @pid is forked: report its pid,
++ * then leave the caller's session (so also its terminal and its
++ * process group, where the tracee stays unless --setsid: signals for
++ * the command never reach PRoot) and let go of the caller's stdin and
++ * stdout, so the caller sees end-of-file once the command and whatever
++ * it started close them.  Stderr stays for our messages until the
++ * tracee ends.  Tracees die with PRoot (PTRACE_O_EXITKILL): one that
++ * outlives its tracer would run untraced.
++ */
++static void detach_from_caller(pid_t pid)
++{
++	main_pid = pid;
++	signal(SIGPIPE, SIG_IGN);
++	report(pid);
++
++	if (setsid() < 0)
++		note(NULL, WARNING, SYSTEM, "setsid()");
++	to_dev_null(STDIN_FILENO);
++	to_dev_null(STDOUT_FILENO);
++}
++
++/**
++ * --status-fd, once the first tracee has ended with @tracee_status (as
++ * waitpid(2) reports it): report it, close status_fd and let go of the
++ * caller's stderr.  PRoot then traces what the command left running
++ * until it ends too.
++ */
++static void report_main_end(int tracee_status)
++{
++	report(tracee_status);
++	(void) close(status_fd);
++	status_fd = -1;
++	to_dev_null(STDERR_FILENO);
++}
++
++/**
++ * Whether PRoot has let go of its caller (--status-fd).
++ */
++bool detached_from_caller()
++{
++	return main_pid != 0;
++}
++
+ /* Whether the kernel lets PTRACE_GETEVENTMSG read the message of the
+  * last ptrace event, see handle_tracee_event().  */
+ static enum {
+@@ -125,6 +212,14 @@
+ 		 * system, like container runtimes do.  */
+ 		signal(SIGPIPE, SIG_DFL);
+ 
++		/* --setsid: lead a session of our own, with the
++		 * terminal on stdin (when there is one no session
++		 * controls) as its controlling terminal, as a login
++		 * shell does.  Its hangup then reaches us like it
++		 * would without PRoot.  */
++		if (command_session && setsid() >= 0 && isatty(STDIN_FILENO))
++			(void) ioctl(STDIN_FILENO, TIOCSCTTY, 0);
++
+ 		/* Declare myself as ptraceable before executing the
+ 		 * requested program. */
+ 		status = ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+@@ -155,6 +250,8 @@
+ 	default: /* parent */
+ 		/* We know the pid of the first tracee now.  */
+ 		tracee->pid = pid;
++		if (status_fd >= 0)
++			detach_from_caller(pid);
+ 		return 0;
+ 	}
+ 
+@@ -424,6 +521,12 @@
+ 			break;
+ 		}
+ 
++		/* Reported here, before anything can swallow the event
++		 * (an emulated ptracer for instance).  */
++		if (pid == main_pid && status_fd >= 0
++		    && (WIFEXITED(tracee_status) || WIFSIGNALED(tracee_status)))
++			report_main_end(tracee_status);
++
+ 		/* Get information about this tracee. */
+ 		tracee = get_tracee(NULL, pid, true);
+ 		assert(tracee != NULL);
+@@ -531,7 +634,8 @@
+ 				PTRACE_O_TRACEVFORKDONE	|
+ 				PTRACE_O_TRACEEXEC	|
+ 				PTRACE_O_TRACECLONE	|
+-				PTRACE_O_TRACEEXIT);
++				PTRACE_O_TRACEEXIT	|
++				(detached_from_caller() ? PTRACE_O_EXITKILL : 0));
+ 
+ 			/* Distinguish some events from others and
+ 			 * automatically trace each new process with
+--- a/src/tracee/event.h
++++ b/src/tracee/event.h
+@@ -34,4 +34,11 @@
+ extern bool seccomp_event_happens_after_enter_sigtrap();
+ extern bool seccomp_ptrace_event_is_supported();
+ 
++/* --status-fd: where to report the first tracee, -1 when not asked.  */
++extern int status_fd;
++extern bool detached_from_caller();
++
++/* --setsid: start the first tracee in a session of its own.  */
++extern bool command_session;
++
+ #endif /* TRACEE_EVENT_H */
