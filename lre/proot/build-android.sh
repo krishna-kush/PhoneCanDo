@@ -5,7 +5,9 @@
 # Usage: ANDROID_NDK_HOME=<ndk r28c> lre/proot/build-android.sh <workdir> <out-dir>
 #   <workdir>  downloads cache (<workdir>/downloads, sha256-verified, reused)
 #              and the build trees (<workdir>/android, rebuilt every run)
-#   <out-dir>  gets libproot.so and libproot-loader.so (stripped, 0755)
+#   <out-dir>  gets libproot.so and libproot-loader.so (stripped, 0755) and
+#              INPUTS, the digest of the inputs they were built from
+#              (steps/inputs.sh)
 #
 # Runtime contract (the app's launcher): proot needs
 #   PROOT_LOADER=<nativeLibDir>/libproot-loader.so
@@ -27,6 +29,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/steps/talloc.sh"
 # shellcheck source=steps/proot.sh
 . "$HERE/steps/proot.sh"
+# shellcheck source=steps/inputs.sh
+. "$HERE/steps/inputs.sh"
 pins_load
 
 # Same NDK, same bytes: a different clang is a different build.
@@ -73,6 +77,7 @@ patches_apply "$ROOT/proot"
 
 talloc_build "$ROOT/talloc-src" "$ROOT/talloc"
 proot_build "$ROOT/proot" "$ROOT/talloc" "$OUT"
+inputs_digest > "$OUT/INPUTS"
 
 echo "--- built (android arm64, api-$ANDROID_API, proot $PROOT_VERSION @ ${PROOT_COMMIT:0:12}, talloc $TALLOC_VERSION) ---"
 (cd "$OUT" && ls -l libproot.so libproot-loader.so && sha256sum libproot.so libproot-loader.so)

@@ -134,7 +134,9 @@ oci + image <- cli
   `phonecando-launch: <reason>` and exits 127.
 - The launcher and proot ship as a pair: a launcher change that needs a
   new proot option lands with the patch, and the staged proot is rebuilt
-  (`lre/proot/stage.sh`) before an APK is built with that launcher.
+  (`lre/proot/stage.sh`) before an APK is built with that launcher;
+  `./manage build|release` do it through `lre/proot/ensure.sh`, which
+  rebuilds whenever the staged `INPUTS` differ from the tree's.
 - Everything a phone executes ships from the APK's native-library dir as
   `lib*.so` (`api` `PayloadNames`). Every ELF we build is 16 KB page
   aligned.

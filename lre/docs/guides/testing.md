@@ -7,7 +7,7 @@
 | JVM unit tests | `cd lre && ./gradlew build` (or `:tar:test`, `:oci:test`, `:image:test`, `:cli:test`) | Every module's logic against recorded responses and synthetic trees and tars. |
 | Live registry | `cd lre && LRE_LIVE=1 ./gradlew :oci:test` | `alpine:latest` resolved and downloaded from Docker Hub, the catalog listed. Spends one anonymous pull. |
 | Launcher | `bash lre/launcher/test/run.sh` | The pure parser, plan and signal rules (`unit.c`), then end to end through `fake-proot.sh` and `fake-tracer.c`. |
-| Launcher + proot | `bash lre/launcher/test/proot-test.sh <proot-dir> <rootfs>` | A host proot build with our launcher: background processes as on a PC, exit statuses, the proot left behind, the terminal (one the launcher holds, and a free one as the app opens it). |
+| Launcher + proot | `bash lre/launcher/test/proot-test.sh <proot-dir> <rootfs>` | A host proot build with our launcher: background processes as on a PC, exit statuses, stopped jobs held until SIGCONT, the proot left behind, the terminal (one the launcher holds, and a free one as the app opens it) with Ctrl-C, Ctrl-Z, `fg` and `bg`. |
 | proot (Android) | `build-android.sh` + `verify.sh` | ELF-level proof of the arm64 build; no runner can exec bionic. |
 | proot (host) | `build-glibc.sh` + `.github/ci/proot/smoke.sh` | The same sources booting an Alpine rootfs the way the app runs proot. |
 | Default image | `python3 -I lre/images/default/verify.py <out-dir>` | A build against its manifest and our rules. |
@@ -52,8 +52,8 @@ test touches the network.
 
 ## CI workflows
 
-Each workflow runs only for the `paths:` it lists, plus weekly and on
-demand. The `*-ok` job is the one check to require.
+Each workflow runs only for the `paths:` it lists, plus on demand; all but
+`proot.yml` also run weekly. The `*-ok` job is the one check to require.
 
 | Workflow | Gate | Proves | Runs on changes to |
 |---|---|---|---|

@@ -27,10 +27,19 @@ Known limits that are not scheduled work are in `../release/known-limits.md`.
   instead of the hand-written `.github/ci/lre-image/launch-conf.sh`, so a
   `LaunchConf.kt` change is tested against the Default image too.
 
-## 5. Hold jobs stopped by Ctrl-Z
+## 5. Get proot-me/proot#60 solved upstream, or learn why it is not
 
-- [ ] Under proot a job Ctrl-Z stops keeps running while the shell shows
-  it Stopped (`../release/known-limits.md`). Fix: proot attaches with
-  `PTRACE_SEIZE` and parks a group-stopped tracee with `PTRACE_LISTEN`
-  until SIGCONT; its own patch in `lre/proot/patches/`, proven on the
-  phone.
+- [ ] Job control under proot has been broken upstream since 2014
+  (proot-me/proot#60, open, help-wanted; termux/proot has no issue or PR),
+  and 0003 is our fix. Either get it fixed upstream, so we can drop 0003:
+  offer it to termux/proot as a PR and link it on #60; or find out for
+  real why nobody fixed it: ask on #60 and termux/proot, read both trees'
+  history for an attempt, and check what `PTRACE_SEIZE` breaks for them
+  (old Android kernels termux still supports, their ptrace emulation, the
+  `--kill-on-exit` and detach paths). Write down what we learn in
+  `../modules/proot.md` → Job control.
+- [ ] Once the fix is in termux/proot: bump `lre/proot/pins.env` to a
+  commit that has it, delete `0003-ptrace-seize-job-control.patch` and its
+  lines in `../modules/proot.md`, `../planning/decisions.md` and
+  `THIRD_PARTY_NOTICES.md`, and keep the stop checks in `proot-test.sh`:
+  they must pass on upstream's fix as they do on ours.

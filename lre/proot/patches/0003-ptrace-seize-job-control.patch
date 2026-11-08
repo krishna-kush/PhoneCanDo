@@ -1,0 +1,229 @@
+Ours (PhoneCanDo), not from termux-packages. Makes job control work under
+proot: a job stopped by Ctrl-Z (SIGTSTP), SIGSTOP, SIGTTIN or SIGTTOU
+stays stopped until SIGCONT, as it does without proot.
+
+Without it, proot attaches with PTRACE_TRACEME. Such a tracee reports a
+group-stop (the job really stopping) exactly like a signal-delivery-stop
+(a stopping signal arriving), so proot restarts it like any signal stop
+and the kernel drops the signal: the shell is told the job stopped and
+shows it Stopped, but the job runs on. A background job reading the
+terminal spins, stopped by SIGTTIN and restarted again and again. Upstream
+knows it since 2014 (proot-me/proot#60, still open).
+
+proot now attaches with PTRACE_SEIZE (Linux 3.4): the first tracee stops
+itself before execve(2) as before, proot seizes it and wakes it with
+SIGCONT; its children are seized too. A seized tracee reports a
+group-stop as a PTRACE_EVENT_STOP carrying the stop signal, and proot
+parks it with PTRACE_LISTEN: it stays stopped until SIGCONT (or SIGKILL)
+brings another PTRACE_EVENT_STOP, a SIGTRAP one, after which it goes on
+the way it went before. A parked job shows as "t (tracing stop)" in
+/proc, not "T (stopped)"; its parent sees it stopped and continued as
+without proot.
+
+The rest of proot keeps its old view: the first stop of every tracee, now
+a PTRACE_EVENT_STOP, is handed on as the SIGSTOP it used to be (the
+start-up handshake, new children whose parent is not known yet); under
+proot's ptrace emulation (strace, gdb in the guest) a group-stop reaches
+the emulated ptracer as the bare stop signal and goes on when that
+ptracer restarts it, and the stop a SIGCONT brings is never shown to it;
+the POKEDATA workaround skips that stop too. PTRACE_LISTEN is never kept
+as the way a tracee goes on (last_restart_how).
+
+Applies on top of 0002-status-fd.patch (launch_process()). Worth offering
+to termux/proot; drop it once termux/proot attaches with PTRACE_SEIZE.
+
+--- a/src/ptrace/wait.c
++++ b/src/ptrace/wait.c
+@@ -241,6 +241,12 @@
+ 
+ 	assert(ptracer != NULL);
+ 
++	/* The PTRACE_EVENT_STOP a SIGCONT brings to a seized tracee
++	 * (see unseize_status()) doesn't exist for a ptracer which
++	 * attached the old way, the only one PRoot emulates.  */
++	if (WIFSTOPPED(event) && event >> 16 == PTRACE_EVENT_STOP)
++		return false;
++
+ 	/* Remember what the event initially was, this will be
+ 	 * required by PRoot to handle this event later.  */
+ 	PTRACEE.event4.proot.value   = event;
+--- a/src/tracee/event.c
++++ b/src/tracee/event.c
+@@ -175,6 +175,80 @@
+ 	return (major > 3) || (major == 3 && minor >= 5);
+ }
+ 
++#ifndef __W_STOPCODE
++#define __W_STOPCODE(sig) ((sig) << 8 | 0x7f)
++#endif
++
++/**
++ * Whether @signal stops a process (job control).
++ */
++static bool is_stop_signal(int signal)
++{
++	return signal == SIGSTOP || signal == SIGTSTP || signal == SIGTTIN || signal == SIGTTOU;
++}
++
++/**
++ * Attach to the first tracee, stopped by itself before execve(2) (see
++ * launch_process()), with PTRACE_SEIZE: unlike PTRACE_TRACEME, a seized
++ * tracee reports a group-stop apart from a signal and can be kept
++ * stopped until SIGCONT (PTRACE_LISTEN), so job control works under
++ * PRoot, see handle_tracee_event().  Its children are seized too.  The
++ * stop becomes its first event in the loop, then SIGCONT wakes it up.
++ * This function returns -errno if an error occurred, otherwise 0.
++ */
++static int seize_first_tracee(Tracee *tracee)
++{
++	int child_status;
++	int status;
++	pid_t pid;
++
++	do
++		pid = waitpid(tracee->pid, &child_status, WUNTRACED);
++	while (pid < 0 && errno == EINTR);
++
++	if (pid < 0 || !WIFSTOPPED(child_status)) {
++		note(tracee, ERROR, INTERNAL, "the first tracee didn't stop");
++		return -ECHILD;
++	}
++
++	status = ptrace(PTRACE_SEIZE, tracee->pid, NULL, 0);
++	if (status < 0) {
++		status = -errno;
++		note(tracee, ERROR, SYSTEM, "ptrace(SEIZE)");
++		(void) kill(tracee->pid, SIGKILL);
++		return status;
++	}
++
++	(void) kill(tracee->pid, SIGCONT);
++	return 0;
++}
++
++/**
++ * Make the PTRACE_EVENT_STOP of a seized @tracee (see
++ * seize_first_tracee()) look like what the rest of PRoot expects from
++ * a tracee attached the old way, where that differs: the first stop
++ * of a tracee stands for the SIGSTOP it used to start with, and a
++ * group-stop under an emulated ptracer is the bare stop signal that
++ * ptracer expects.  Other ones are left to handle_tracee_event().
++ * This function returns the status to handle in place of
++ * @tracee_status.
++ */
++static int unseize_status(Tracee *tracee, int tracee_status)
++{
++	if (!WIFSTOPPED(tracee_status) || tracee_status >> 16 != PTRACE_EVENT_STOP)
++		return tracee_status;
++
++	if (!tracee->first_stop_seen) {
++		tracee->first_stop_seen = true;
++		return __W_STOPCODE(SIGSTOP);
++	}
++
++	if (tracee->as_ptracee.ptracer != NULL && is_stop_signal(WSTOPSIG(tracee_status)))
++		return __W_STOPCODE(WSTOPSIG(tracee_status));
++
++	return tracee_status;
++}
++
+ /**
+  * Start @tracee->exe with the given @argv[].  This function
+  * returns -errno if an error occurred, otherwise 0.
+@@ -220,19 +294,12 @@
+ 		if (command_session && setsid() >= 0 && isatty(STDIN_FILENO))
+ 			(void) ioctl(STDIN_FILENO, TIOCSCTTY, 0);
+ 
+-		/* Declare myself as ptraceable before executing the
+-		 * requested program. */
+-		status = ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+-		if (status < 0) {
+-			note(tracee, ERROR, SYSTEM, "ptrace(TRACEME)");
+-			return -errno;
+-		}
+-
+ 		/* Synchronize with the tracer's event loop.  Without
+ 		 * this trick the tracer only sees the "return" from
+ 		 * the next execve(2) so PRoot wouldn't handle the
+ 		 * interpreter/runner.  I also verified that strace
+-		 * does the same thing. */
++		 * does the same thing.  The parent seizes this stopped
++		 * process, then wakes it up (seize_first_tracee()).  */
+ 		kill(getpid(), SIGSTOP);
+ 
+ 		/* Improve performance by using seccomp mode 2, unless
+@@ -250,6 +317,9 @@
+ 	default: /* parent */
+ 		/* We know the pid of the first tracee now.  */
+ 		tracee->pid = pid;
++		status = seize_first_tracee(tracee);
++		if (status < 0)
++			return status;
+ 		if (status_fd >= 0)
+ 			detach_from_caller(pid);
+ 		return 0;
+@@ -540,6 +610,8 @@
+ 
+ 		tracee->running = false;
+ 
++		tracee_status = unseize_status(tracee, tracee_status);
++
+ 		/* Fix up the registers of a new child at its first
+ 		 * stop (see attach_child()), before anything looks at
+ 		 * them, its ptracer included.  */
+@@ -618,6 +690,18 @@
+ 			tracee->vpid, WTERMSIG(tracee_status));
+ 		terminate_tracee(tracee);
+ 	}
++	else if (WIFSTOPPED(tracee_status) && tracee_status >> 16 == PTRACE_EVENT_STOP) {
++		/* A group-stop of a seized tracee, its job control:
++		 * keep it stopped until SIGCONT (or SIGKILL), as the
++		 * kernel does with a process nobody traces; restarted,
++		 * it would run on while its parent sees it stopped.
++		 * Any other PTRACE_EVENT_STOP -- the one a SIGCONT
++		 * brings -- lets it go on the way it went before.  */
++		if (is_stop_signal(WSTOPSIG(tracee_status)))
++			tracee->restart_how = PTRACE_LISTEN;
++		else if (tracee->last_restart_how != 0)
++			tracee->restart_how = tracee->last_restart_how;
++	}
+ 	else if (WIFSTOPPED(tracee_status)) {
+ 		/* Don't use WSTOPSIG() to extract the signal
+ 		 * since it clears the PTRACE_EVENT_* bits. */
+@@ -1058,7 +1142,9 @@
+ 	if (status < 0)
+ 		return false; /* The process likely died in a syscall.  */
+ 
+-	tracee->last_restart_how = tracee->restart_how;
++	/* PTRACE_LISTEN is not a way to go on, see above.  */
++	if (tracee->restart_how != PTRACE_LISTEN)
++		tracee->last_restart_how = tracee->restart_how;
+ 	tracee->restart_how = 0;
+ 	tracee->running = true;
+ 
+--- a/src/tracee/mem.c
++++ b/src/tracee/mem.c
+@@ -157,7 +157,9 @@
+ 				redeliver_sigstop = true;
+ 			}
+ 			// SIGSYS is silently skipped (In case of seccomp disallowing void syscall)
+-		} while (WIFSTOPPED(wstatus) && (WSTOPSIG(wstatus) == SIGSYS || WSTOPSIG(wstatus) == SIGSTOP));
++			// and so is the PTRACE_EVENT_STOP a SIGCONT brings (seized tracee)
++		} while (WIFSTOPPED(wstatus) && (WSTOPSIG(wstatus) == SIGSYS || WSTOPSIG(wstatus) == SIGSTOP
++						 || wstatus >> 16 == PTRACE_EVENT_STOP));
+ 
+ 		// Redeliver SIGSTOP if occured
+ 		if (redeliver_sigstop)
+--- a/src/tracee/tracee.h
++++ b/src/tracee/tracee.h
+@@ -238,6 +238,10 @@
+ 		SIGSTOP_PENDING,      /* Block SIGSTOP until the parent is unknown.  */
+ 	} sigstop;
+ 
++	/* Whether its first stop was seen: a seized tracee reports it
++	 * as a PTRACE_EVENT_STOP, see unseize_status().  */
++	bool first_stop_seen;
++
+ 	/* True if next SIGSYS caused by seccomp should be silently dropped
+ 	 * without affecting state of any registers.  */
+ 	bool skip_next_seccomp_signal;

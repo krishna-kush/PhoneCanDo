@@ -119,11 +119,26 @@ def limits_first():
             print(f"manage: {name} skipped ({e}); continuing", file=sys.stderr)
 
 
+def proot_first(args):
+    # Full and lite carry the proot staged in the app. lre/proot/ensure.sh
+    # checks it was built from this tree's lre/proot and, after asking,
+    # builds and stages one when it is missing or out of date. A dry run only
+    # reports; --without-linux ships none and --upload-only builds nothing.
+    if "--without-linux" in args or "--upload-only" in args:
+        return
+    ensure = ["bash", str(ROOT / "lre" / "proot" / "ensure.sh")]
+    if "--dry-run" in args:
+        subprocess.run([*ensure, "--check"], cwd=str(ROOT), env=release_env(), check=False)
+        return
+    sh(ensure, env=release_env())
+
+
 def cmd_release(args):
     if not args or args[0].startswith("--"):
         die("usage: manage release <version> [--notes TEXT] [--publish] [--dry-run] "
             "[--upload-only] [--allow-red-ci] [--without-linux]")
     limits_first()
+    proot_first(args[1:])
     sh(["node", str(SCRIPTS / "release-android.mjs"), "--version", args[0], *args[1:]], env=release_env())
 
 
@@ -132,6 +147,7 @@ def cmd_build(args):
     if ch == "play":
         die("play is a later feature; build lite or full")
     limits_first()
+    proot_first(args[1:])
     sh(["node", str(SCRIPTS / "build-android.mjs"), ch, *args[1:]], env=release_env())
 
 

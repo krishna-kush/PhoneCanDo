@@ -31,9 +31,9 @@ These are not scheduled work unless they are also listed in
   processes (`ps`, `kill`), but SysV IPC and `strace -p`/`gdb -p` work
   only within one command. Every proot left tracing background jobs
   counts toward Android's phantom process limit.
-- A job stopped by Ctrl-Z (or SIGSTOP, SIGTTIN, SIGTTOU) keeps running:
-  the shell shows it Stopped and `fg`/`bg` work, but proot restarts the
-  stopped process (`../planning/todo.md`).
+- A stopped job (Ctrl-Z, SIGSTOP, SIGTTIN, SIGTTOU) is held by its proot
+  (`PTRACE_LISTEN`, `../modules/proot.md` → Job control), so `ps` and
+  `/proc` show it as `t` (tracing stop), not `T` (stopped).
 - A signal sent to the launcher's whole process group reaches the command
   twice, as under coreutils' `timeout`; SIGKILL to the launcher alone
   leaves the command running until a reaper ends it.

@@ -47,6 +47,14 @@
   across commands (`../release/known-limits.md`). Leftovers are still
   reaped by tag: `PHONECANDO_AGENT` on engine stop, `PHONECANDO_IMAGE`
   before a reset or delete.
+- **Our proot changes stay patch files, not a fork** (2026-11-08, when
+  `0003-ptrace-seize-job-control.patch` became the first change to proot's
+  event loop): the pin stays a termux/proot commit, so the release's drift
+  warning and the GPL source tarball stay right as they are, and every
+  change stays in `lre/`. A fork's 3-way merges on a bump did not outweigh
+  a second repo to keep and the release scripts it would change. Revisit at
+  a fourth patch to proot's core, or when one refresh takes more than about
+  an hour (`../modules/proot.md` → How we carry our changes).
 - **The terminal's shell leads its own session:** the terminal tab opens
   its PTY as no session's terminal and the shell takes it (proot
   `--setsid`), so closing the tab hangs up the shell itself, which hangs up

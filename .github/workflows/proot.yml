@@ -9,8 +9,9 @@ name: proot
 # minirootfs under them and runs our launcher with them
 # (lre/launcher/test/proot-test.sh: background processes as on a PC);
 # source packs the GPL corresponding source. Nothing here creates or touches
-# a release. Runs on proot build and launcher changes, weekly (upstream URLs
-# and runner images drift), on demand.
+# a release. Runs on proot build and launcher changes and on demand; the
+# pins never move on their own, so a scheduled rebuild would prove nothing a
+# push does not.
 
 on:
   push:
@@ -27,15 +28,13 @@ on:
       - '.github/workflows/proot.yml'
       - '.github/ci/proot/**'
   workflow_dispatch:
-  schedule:
-    - cron: '47 5 * * 1'
 
 permissions:
   contents: read
 
 # Every push runs to completion (one group per commit); only a newer commit on
 # the same PR cancels the older PR run. A force-push's replaced commit is
-# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+# cancelled by cancel-replaced.yml. Manual runs get their own group.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -67,7 +66,7 @@ jobs:
         run: bash .github/ci/proot/host-tools.sh
 
       # Not cached: the zip comes from dl.google.com about as fast as a cache
-      # restore would (as in oc-payload.yml).
+      # restore would (as in agent-payload.yml).
       - name: Set up Android NDK
         id: ndk
         uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
@@ -93,6 +92,7 @@ jobs:
             ${{ runner.temp }}/proot-android/libproot.so
             ${{ runner.temp }}/proot-android/libproot-loader.so
             ${{ runner.temp }}/proot-android/SHA256SUMS
+            ${{ runner.temp }}/proot-android/INPUTS
           retention-days: 14
           if-no-files-found: error
 

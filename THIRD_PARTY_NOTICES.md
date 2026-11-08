@@ -81,10 +81,12 @@ PRoot was written at STMicroelectronics by Cédric Vincent and the others its
 `COPYING` file names; Termux's fork adds work by its contributors. One header,
 `src/extension/sysvipc/sysvipc_sys.h`, carries definitions from the GNU C
 Library: Copyright (C) 1995-2020 Free Software Foundation, Inc., GNU Lesser
-General Public License, version 2.1 or later. We build it with two patches of
-ours (`lre/proot/patches/`): a missing include, and `--status-fd` with
+General Public License, version 2.1 or later. We build it with three patches of
+ours (`lre/proot/patches/`): a missing include; `--status-fd` with
 `--setsid`, so a command returns when it ends while what it started in the
-background keeps running.
+background keeps running; and attaching with `PTRACE_SEIZE` instead of
+`PTRACE_TRACEME`, so a job stopped by Ctrl-Z stays stopped until it is
+continued.
 
 Corresponding source: the GitHub release of every app version that ships
 PRoot (tag `v<app version>` at <https://github.com/krishna-kush/PhoneCanDo/releases>)

@@ -130,11 +130,16 @@ bash lre/launcher/test/proot-test.sh <proot-dir> <rootfs> [<scratch>]   # / work
 &); echo hi` returns at once with status 0 and end-of-file while the sleep
 runs on; a background job that holds stdout keeps the pipe open, not the
 launcher; exit codes and deaths by SIGTERM and SIGKILL; a setsid daemon
-survives in its own session; a later command sees a job and kills it; the
-proot left behind holds only `/dev/null`, has left our session and takes
-its tracees with it when killed. With bash in the rootfs, a terminal,
-twice: one the launcher's session holds (`script(1)`) and a free one, as
-the app's terminal tab opens it (`python3`): the shell leads its session,
-Ctrl-C ends the foreground job only, and closing the terminal hangs up the
-shell's jobs while a `nohup`'d one survives. `proot.yml` runs it in the Alpine rootfs
+survives in its own session; a later command sees a job and kills it, and
+its `kill -STOP` holds the job until `kill -CONT`; the proot left behind
+holds only `/dev/null`, has left our session and takes its tracees with it
+when killed. With bash in the rootfs, a terminal, twice: one the
+launcher's session holds (`script(1)`) and a free one, as the app's
+terminal tab opens it (`python3`): the shell leads its session, Ctrl-C
+ends the foreground job only, Ctrl-Z stops a job for real, `fg` and `bg`
+resume it, a background job reading the terminal or writing it under
+`stty tostop` stops too, and closing the terminal hangs up the shell's
+jobs while a `nohup`'d one survives. "Stopped for real" is `/proc` state
+`T` or `t` with no context switch for half a second, so a job proot keeps
+stopping and restarting fails it. `proot.yml` runs it in the Alpine rootfs
 and in the runner's own root.

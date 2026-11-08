@@ -213,9 +213,10 @@ Standing in for the command).
   dies with it (`PTRACE_O_EXITKILL`). Every guest process is a real process
   of the app: a later command sees it in `ps` and can `kill` it.
 - In the terminal tab the shell takes the PTY for its own session
-  (`--setsid`): job control and Ctrl-C work, and closing the tab hangs up
-  the shell, which hangs up its jobs. Limits (Ctrl-Z, SysV IPC across
-  commands): `../release/known-limits.md`.
+  (`--setsid`): job control and Ctrl-C work, Ctrl-Z holds a job until `fg`
+  or `bg` (proot attaches with `PTRACE_SEIZE`, `../modules/proot.md` → Job
+  control), and closing the tab hangs up the shell, which hangs up its
+  jobs. Limits (SysV IPC across commands): `../release/known-limits.md`.
 
 Two tags stop them, both kept in the guest's environment:
 

@@ -13,18 +13,26 @@
 #   signal deaths         kill -TERM $$ -> 143, kill -KILL $$ -> 137
 #   daemon                setsid sleep in a double fork survives, own session
 #   later command         kill -0 sees the job's pid, kill ends it
+#   stopped job           kill -STOP from a later command stops the job
+#                         until kill -CONT (proot 0003: parked, /proc state
+#                         t, not running on)
 #   proot behind          the tracer left behind is out of our session,
 #                         holds /dev/null as stdio, and takes its tracees
 #                         with it when killed (PTRACE_O_EXITKILL)
-#   terminal (needs bash in the rootfs; script(1) and python3 on the host)
+#   terminal (needs bash, head, seq and stty in the rootfs; script(1) and
+#                         python3 on the host)
 #                         twice: on a terminal the launcher's session holds
 #                         (script(1)) and on a free one, as the app's
 #                         terminal tab opens it (python3). Each time the
 #                         shell leads the terminal's session; Ctrl-C
 #                         ends the foreground job, not the shell; Ctrl-Z
-#                         gives the prompt back and fg resumes the job;
-#                         closing the terminal hangs up the shell's jobs, a
-#                         nohup'd one survives
+#                         stops the job for real (bash says Stopped and
+#                         /proc says T or t), fg resumes it, Ctrl-Z and bg
+#                         resume it in the background; a background job
+#                         reading the terminal (SIGTTIN) or writing it
+#                         under stty tostop (SIGTTOU) stops too; closing
+#                         the terminal hangs up the shell's jobs, a nohup'd
+#                         one survives
 #
 # Usage: proot-test.sh <proot-dir> <rootfs> [<scratch>]
 #   <proot-dir>  libproot.so + libproot-loader.so for this host
@@ -112,11 +120,48 @@ guest() {
   ms=$(($(now_ms) - start))
 }
 
+# state_of PID: the letter of its State in /proc (empty when gone).
+state_of() { sed -n 's/^State:[[:space:]]*\(.\).*/\1/p' "/proc/$1/status" 2>/dev/null; }
+
 # alive PID: running (not gone, not a zombie).
 alive() {
   local state
-  state=$(sed -n 's/^State:[[:space:]]*\(.\).*/\1/p' "/proc/$1/status" 2>/dev/null)
+  state=$(state_of "$1")
   [ -n "$state" ] && [ "$state" != Z ] && [ "$state" != X ]
+}
+
+# switches_of PID: how often it was scheduled out so far.
+switches_of() { awk '/ctxt_switches/ { n += $2 } END { print n }' "/proc/$1/status" 2>/dev/null; }
+
+# held PID: stopped within 3 s, then not scheduled at all for 0.5 s: a job
+# that proot keeps stopping and restarting shows stopped now and then too.
+# proot parks a stopped job (PTRACE_LISTEN), which /proc shows as t
+# (tracing stop), not T.
+held() {
+  local before
+  for _ in $(seq 30); do
+    case $(state_of "$1") in
+      [Tt])
+        sleep 0.3
+        before=$(switches_of "$1")
+        sleep 0.5
+        case $(state_of "$1") in [Tt]) ;; *) return 1 ;; esac
+        [ -n "$before" ] && [ "$(switches_of "$1")" = "$before" ]
+        return
+        ;;
+    esac
+    sleep 0.1
+  done
+  return 1
+}
+
+# going PID: running again (R or S) within 3 s.
+going() {
+  for _ in $(seq 30); do
+    case $(state_of "$1") in [RS]) return 0 ;; esac
+    sleep 0.1
+  done
+  return 1
 }
 
 # gone PID: not alive within 3 s.
@@ -194,6 +239,20 @@ if [ "$out" = seen ]; then ok "a later command sees the job (pid $job)"; else ba
 guest "kill $job && echo sent"
 if [ "$out" = sent ] && gone "$job"; then ok "a later command kills it"; else bad "a later command kills it" "status $status: $out"; fi
 
+# --- a stopped job stays stopped until SIGCONT ---
+guest 'sleep 470 >/dev/null 2>&1 & echo $!'
+job=$out
+[ -n "$job" ] && leftovers+=("$job")
+guest "kill -STOP $job"
+if [ -n "$job" ] && held "$job"; then
+  ok "kill -STOP from a later command stops the job (state $(state_of "$job"))"
+else
+  bad "kill -STOP from a later command stops the job" "pid '${job}', state '$(state_of "$job")'"
+fi
+guest "kill -CONT $job"
+if [ -n "$job" ] && going "$job"; then ok "kill -CONT resumes it"; else bad "kill -CONT resumes it" "state '$(state_of "$job")'"; fi
+guest "kill $job"
+
 # --- the proot left behind ---
 tracer=$(tracer_of "$bg")
 if [ -n "$tracer" ] && [ "$tracer" != 0 ]; then
@@ -240,10 +299,20 @@ while True:
             os.write(master if fd == 0 else 1, data)
 '
 
+# shown FILE COUNT PATTERN: FILE has COUNT lines matching PATTERN within 3 s.
+shown() {
+  for _ in $(seq 30); do
+    [ "$(grep -c "$3" "$1")" -ge "$2" ] && return 0
+    sleep 0.1
+  done
+  return 1
+}
+
 # terminal_checks LABEL N OPENER...: an interactive bash through the shim on
-# the PTY OPENER owns; this run's sleeps are N to N+3.
+# the PTY OPENER owns; this run's sleeps are N to N+3, its head and seq N+4
+# and N+5.
 terminal_checks() {
-  local label=$1 n=$2 fifo out term fg hup nohup shell stop p
+  local label=$1 n=$2 fifo out term fg hup nohup shell stop job p
   shift 2
   fifo=$work/tty-in-$n
   out=$work/tty-out-$n
@@ -281,20 +350,55 @@ terminal_checks() {
   stop=""
   for _ in $(seq 50); do stop=$(pid_of sleep $((n + 3))) && break; sleep 0.1; done
   [ -n "$stop" ] && leftovers+=("$stop")
+  # Ctrl-Z: the shell says Stopped and the job really is, not running on.
   printf '\032' >&9
-  for _ in $(seq 30); do grep -q "Stopped.*sleep $((n + 3))" "$out" && break; sleep 0.1; done
-  if grep -q "Stopped.*sleep $((n + 3))" "$out"; then
-    printf 'fg\n' >&9
-    sleep 0.5
-    printf '\003' >&9
-  fi
-  # Only the shell's view: under proot a stopped job keeps running
-  # (lre/docs/release/known-limits.md).
-  if [ -n "$stop" ] && grep -q "Stopped.*sleep $((n + 3))" "$out" && gone "$stop"; then
-    ok "$label: Ctrl-Z gives the prompt back (job Stopped), fg and Ctrl-C end the job"
+  if [ -n "$stop" ] && shown "$out" 1 "Stopped.*sleep $((n + 3))" && held "$stop"; then
+    ok "$label: Ctrl-Z stops the job (bash: Stopped, state $(state_of "$stop"))"
   else
-    bad "$label: Ctrl-Z gives the prompt back (job Stopped), fg and Ctrl-C end the job" "$(tail -c 300 "$out" | tr -cd '[:print:]\n')"
+    bad "$label: Ctrl-Z stops the job" "state '$(state_of "$stop")': $(tail -c 300 "$out" | tr -cd '[:print:]\n')"
   fi
+  printf 'fg\n' >&9
+  if [ -n "$stop" ] && going "$stop"; then
+    ok "$label: fg resumes it"
+  else
+    bad "$label: fg resumes it" "state '$(state_of "$stop")': $(tail -c 300 "$out" | tr -cd '[:print:]\n')"
+  fi
+  printf '\032' >&9
+  if [ -n "$stop" ] && shown "$out" 2 "Stopped.*sleep $((n + 3))" && held "$stop" \
+    && printf 'bg\n' >&9 && going "$stop"; then
+    ok "$label: Ctrl-Z stops it again, bg resumes it in the background"
+  else
+    bad "$label: Ctrl-Z stops it again, bg resumes it in the background" "state '$(state_of "$stop")': $(tail -c 300 "$out" | tr -cd '[:print:]\n')"
+  fi
+  printf 'fg\n' >&9
+  sleep 0.5
+  printf '\003' >&9
+  if [ -n "$stop" ] && gone "$stop"; then
+    ok "$label: fg and Ctrl-C end it"
+  else
+    bad "$label: fg and Ctrl-C end it" "state '$(state_of "$stop")': $(tail -c 300 "$out" | tr -cd '[:print:]\n')"
+  fi
+  # A background job that reads the terminal stops (SIGTTIN), and so does
+  # one that writes it under stty tostop (SIGTTOU).
+  printf 'head -c %d &\n' $((n + 4)) >&9
+  job=""
+  for _ in $(seq 50); do job=$(pid_of head -c $((n + 4))) && break; sleep 0.1; done
+  [ -n "$job" ] && leftovers+=("$job")
+  if [ -n "$job" ] && held "$job"; then
+    ok "$label: a background job reading the terminal stops (state $(state_of "$job"))"
+  else
+    bad "$label: a background job reading the terminal stops" "pid '${job}', state '$(state_of "$job")'"
+  fi
+  printf 'kill -KILL $!; stty tostop; seq %d &\n' $((n + 5)) >&9
+  job=""
+  for _ in $(seq 50); do job=$(pid_of seq $((n + 5))) && break; sleep 0.1; done
+  [ -n "$job" ] && leftovers+=("$job")
+  if [ -n "$job" ] && held "$job"; then
+    ok "$label: a background job writing the terminal under tostop stops (state $(state_of "$job"))"
+  else
+    bad "$label: a background job writing the terminal under tostop stops" "pid '${job}', state '$(state_of "$job")'"
+  fi
+  printf 'kill -KILL $!; stty -tostop\n' >&9
   # As closing the terminal tab: the master goes away with its owner.
   kill -KILL "$term"
   exec 9>&-

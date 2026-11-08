@@ -56,8 +56,10 @@ Prerequisites:
 - Full and lite ship Linux, so both payloads are staged: proot with
   `lre/proot/stage.sh <dir>` (a local build after `lre/proot/verify.sh`, or
   the unzipped `proot-android-arm64` CI artifact) and the locked Default image
-  with `./manage image fetch && ./manage image stage`. A release without them
-  needs `--without-linux` (step 1).
+  with `./manage image fetch && ./manage image stage`. `./manage release`
+  handles proot itself first (`lre/proot/ensure.sh`): it uses a staged build
+  of the current `lre/proot` or, after asking, builds and stages one with the
+  pinned NDK. A release without them needs `--without-linux` (step 1).
 
 Preview, then release as a draft:
 

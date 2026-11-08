@@ -9,12 +9,13 @@ Files: `lre/proot/`.
 | File | Role |
 |---|---|
 | `pins.env` | Every pinned input: termux/proot commit, version and archive sha256; talloc version, URL, mirror and sha256; Android API (29) and NDK (r28c); the Alpine minirootfs for CI smoke tests. Plain `KEY=value`, no expansion; CI reads it too. |
-| `build-android.sh` | Android arm64 build (bionic, NDK clang): `libproot.so` and `libproot-loader.so`, stripped. |
+| `build-android.sh` | Android arm64 build (bionic, NDK clang): `libproot.so` and `libproot-loader.so`, stripped, and `INPUTS`, the digest of what they were built from. |
 | `build-glibc.sh` | The same sources and layout for the Linux host (any arch proot supports), so CI can run images on plain Linux. |
 | `verify.sh` | ELF checks of the Android build, then `SHA256SUMS` (written only when every check passes). |
 | `stage.sh` | Copies a verified build into the app module's jniLibs. |
+| `ensure.sh` | Run by `./manage build` and `./manage release`: uses the staged build when it is current, else builds, verifies and stages one, asking first. |
 | `source-tarball.sh` | The GPL corresponding source, one deterministic `.tar.gz`. |
-| `steps/` | Sourced pieces: `sources.sh` (pins, fetch, unpack, patches), `talloc.sh`, `proot.sh`. |
+| `steps/` | Sourced pieces: `sources.sh` (pins, fetch, unpack, patches), `talloc.sh`, `proot.sh`, `inputs.sh` (the `INPUTS` digest). |
 | `talloc/` | Our talloc `config.h` and `memset_explicit.c`. |
 | `patches/` | Our patches to proot, applied in name order with `patch -p1`. |
 
@@ -45,6 +46,9 @@ Files: `lre/proot/`.
 - `patches/0002-status-fd.patch` adds `--status-fd` and `--setsid`, so a
   command returns when it ends while what it started keeps running
   (below).
+- `patches/0003-ptrace-seize-job-control.patch` attaches with
+  `PTRACE_SEIZE` instead of `PTRACE_TRACEME`, so a stopped job stays
+  stopped until SIGCONT (below, Job control).
 
 ## Runtime contract
 
@@ -66,6 +70,47 @@ passes itself (`launcher.md` → Standing in for the command):
 - `--setsid`: the command starts a session of its own, and a terminal on
   its stdin that no session controls becomes its controlling terminal.
 
+### Job control
+
+`patches/0003-ptrace-seize-job-control.patch`, always on. Upstream proot
+has the command call `PTRACE_TRACEME`; such a tracee reports a group-stop
+(the job really stopping) exactly like a stopping signal arriving, so
+proot restarted it like any signal stop and the job ran on while its shell
+showed it Stopped (proot-me/proot#60, open since 2014). With the patch the
+command stops itself before `execve`, proot seizes it (`PTRACE_SEIZE`,
+Linux 3.4; its children are seized too) and wakes it with SIGCONT. A
+group-stop (Ctrl-Z, SIGSTOP, SIGTTIN, SIGTTOU) then arrives as a
+`PTRACE_EVENT_STOP`, and proot holds the job with `PTRACE_LISTEN` until
+SIGCONT or SIGKILL. A held job shows as `t` (tracing stop) in `/proc`; its
+shell sees it stopped and continued as without proot. The rest of proot
+keeps its old view of stops: every tracee's first stop is handed on as the
+SIGSTOP it used to be, and proot's ptrace emulation (strace, gdb in the
+guest) sees a group-stop as the bare stop signal.
+
+## How we carry our changes
+
+Our changes to proot are patch files in `patches/`, applied in name order
+on the pinned termux/proot commit, each with a header that says why and
+when to drop it. We chose this over a fork of termux/proot on 2026-11-08,
+when 0003 became the first change to proot's event loop:
+
+- The pin stays an upstream commit, so the release's drift warning
+  (`scripts/release/linux/drift.mjs`) counts real termux/proot changes, and
+  the GPL tarball holds upstream's archive plus each patch, readable on its
+  own.
+- The build scripts, CI (`proot.yml` builds twice and compares) and the
+  licence check need nothing new, and every change stays in `lre/`.
+- The cost: a pin bump that touches patched lines makes `patch --forward`
+  fail, and the patch is refreshed by hand. Upstream changes
+  `src/tracee/event.c` and `tracee.h` often (about 15 commits each in the
+  year to 2026-11), so expect 0002 and 0003 to need it.
+
+To refresh a patch after a bump, unpack the new archive twice, apply the
+patches before it to both trees, port the patch to one tree by hand, then
+write it again as `diff -u --label a/<file> --label b/<file>` per file
+under its old header. Revisit a fork when a fourth patch changes proot's
+core, or when one refresh takes more than about an hour.
+
 ## Build, verify, stage
 
 From the repo root:
@@ -86,13 +131,33 @@ bash lre/proot/stage.sh <out-dir>      # -> app/modules/phonecando-linux/android
   marker; `libproot-loader.so` a static EXEC with no INTERP and no NEEDED,
   by design (`../../../app/docs/context.md` → the proot loader has no
   INTERP).
-- `stage.sh` takes a dir with a matching `SHA256SUMS` (a verified build, or
-  the unzipped `proot-android-arm64` artifact of a `proot.yml` run) and
-  copies both libs (0755) and `SHA256SUMS` into the module's jniLibs dir,
-  which is gitignored. Full and lite package it; play does not. The
-  launcher passes `--status-fd` on every command, so a staged proot built
-  before `0002-status-fd.patch` fails every guest command ("unknown
-  option"): stage a fresh build after a patch change.
+- `stage.sh` takes a dir with a matching `SHA256SUMS` and an `INPUTS` (a
+  verified build, or the unzipped `proot-android-arm64` artifact of a
+  `proot.yml` run) and copies both libs (0755), `SHA256SUMS` and `INPUTS`
+  into the module's jniLibs dir, which is gitignored. Full and lite package
+  the libs; play does not. The launcher passes `--status-fd` on every
+  command, so a staged proot built before `0002-status-fd.patch` fails
+  every guest command ("unknown option"); one built before 0003 runs, but
+  lets stopped jobs run on. Stage a fresh build after a patch change, which
+  `ensure.sh` does.
+
+`INPUTS` (`steps/inputs.sh`) is one sha256 over `pins.env` (the NDK and
+every download), `patches/`, `steps/`, `talloc/` and `build-android.sh`:
+what decides the bytes. A staged build is current when its libs match
+`SHA256SUMS` and its `INPUTS` equals the tree's.
+
+`./manage build lite|full` and `./manage release` run `ensure.sh` first:
+
+- current: says so and asks "Use it, or rebuild it? [U/r]";
+- missing or out of date (a patch, pin or build script changed since, no
+  `INPUTS`, or libs that no longer match `SHA256SUMS`): says why, in
+  yellow, and asks "Build it now with NDK r28c? [Y/n]"; it then builds in
+  `dist/proot/` with the pinned NDK (`ANDROID_NDK_HOME` when it is that one,
+  else the matching one under `$ANDROID_HOME/ndk/`), verifies and stages.
+  No stops the build;
+- without a terminal: a current build is used, anything else stops;
+  `--yes` builds without asking and `--check` only reports (a release
+  `--dry-run`). `--without-linux` and `--upload-only` skip it.
 
 The release preflight (`scripts/release/linux/proot.mjs`) checks the staged
 libs against that `SHA256SUMS` and `pins.env`'s version; a release refuses
@@ -114,8 +179,8 @@ CI boots the pinned Alpine aarch64 minirootfs under it on
 app's flags, no start without `PROOT_LOADER`, nothing executable left in
 `PROOT_TMP_DIR`. Then our launcher runs with it
 (`lre/launcher/test/proot-test.sh`, in the Alpine rootfs and in the
-runner's own root): background processes, exit statuses, the proot left
-behind and the terminal (`launcher.md` → Tests). `lre-image.yml` and
+runner's own root): background processes, exit statuses, stopped jobs, the
+proot left behind and the terminal (`launcher.md` → Tests). `lre-image.yml` and
 `lre-compat.yml` run their images under this build.
 
 ## GPL source
@@ -144,5 +209,6 @@ LGPL-3.0-or-later; neither is stored here. See
 `proot-android-arm64`, then a second build in another workdir must be
 bit-identical), `build-glibc` (build, smoke test, `proot-test.sh`),
 `source` (pack twice, same bytes). It runs on `lre/proot/**` and
-`lre/launcher/**` changes, weekly and on demand, and never touches a
-release.
+`lre/launcher/**` changes and on demand (no scheduled run: the pins never
+move on their own), and never touches a release. Its `proot-android-arm64`
+download is kept 14 days; rerun the workflow by hand for an older commit.
