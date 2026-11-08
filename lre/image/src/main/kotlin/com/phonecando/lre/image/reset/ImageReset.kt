@@ -11,6 +11,8 @@ import com.phonecando.lre.image.ImageSetup
 import com.phonecando.lre.image.delete.TreeDeleter
 import com.phonecando.lre.image.detect.Detector
 import com.phonecando.lre.image.family.Families
+import com.phonecando.lre.image.family.FamilyTraits
+import com.phonecando.lre.image.family.InstallLine
 import com.phonecando.lre.image.family.ManualQuery
 import com.phonecando.lre.image.family.PackageLists
 import com.phonecando.lre.image.files.TextFiles
@@ -75,7 +77,8 @@ class ImageReset(
 
         sink.report(Progress("swap", 0, null))
         val family = detection.os.family?.let(Families::of)
-        val listed = family?.takeIf { packages.isNotEmpty() }?.let { ReinstallList(it.installLine(packages), packages) }
+        val installLine = { traits: FamilyTraits, pkgs: List<String> -> InstallLine.of(traits, detection.os, pkgs) }
+        val listed = family?.takeIf { packages.isNotEmpty() }?.let { ReinstallList(installLine(it, packages), packages) }
         // Written with the swap, so a kill after it still leaves an offer.
         swap.swap(layout, listed)
         RecordStore.save(layout, ImageRecord.Linux(detection))
@@ -84,7 +87,7 @@ class ImageReset(
         Seeder.linuxFiles(layout, host, detection)
 
         val reinstall = if (listed != null && family != null) {
-            userOnly(layout, family.manualQuery, listed, family::installLine)
+            userOnly(layout, family.manualQuery, listed) { installLine(family, it) }
         } else {
             listed
         }

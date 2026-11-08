@@ -112,9 +112,14 @@ jobs:
             exit 1
           fi
           for src in "${sources[@]}"; do
+            # Every folder under the module's cpp/ root is an include dir, as
+            # in its CMakeLists (forkpty.c includes "pty.h" from cpp/pty/);
+            # without them gcc would pick up the system <pty.h>.
+            root="${src%%/src/main/cpp/*}/src/main/cpp"
+            mapfile -t incs < <(find "$root" -type d | sort | sed 's/^/-I/')
             echo "gcc -c $src"
             gcc -std=gnu17 -Wall -Wextra -fPIC -c \
-              -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" \
+              -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" "${incs[@]}" \
               "$src" -o "$out/$(basename "$src" .c).o"
           done
 

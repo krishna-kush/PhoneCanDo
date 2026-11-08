@@ -1,7 +1,8 @@
 package com.phonecando.lre.image.tools
 
-import com.phonecando.lre.api.PackageFamily
+import com.phonecando.lre.api.OsInfo
 import com.phonecando.lre.image.family.Families
+import com.phonecando.lre.image.family.InstallLine
 import com.phonecando.lre.image.guest.GuestFs
 import com.phonecando.lre.image.guest.GuestPath
 import java.io.File
@@ -14,12 +15,12 @@ internal object ToolsCheck {
     /** Commands, not packages: `rg` is ripgrep's binary. */
     val TOOLS = listOf("bash", "git", "rg")
 
-    fun check(rootfs: File, guestPath: String, family: PackageFamily?): MissingTools {
+    fun check(rootfs: File, guestPath: String, os: OsInfo): MissingTools {
         val fs = GuestFs(rootfs)
         val dirs = GuestPath.dirs(guestPath)
         val missing = TOOLS.filter { fs.findCommand(it, dirs) == null }
-        val install = family?.takeIf { missing.isNotEmpty() }?.let(Families::of)
-            ?.let { traits -> traits.installLine(missing.map(traits::packageFor)) }
+        val install = os.family?.takeIf { missing.isNotEmpty() }?.let(Families::of)
+            ?.let { traits -> InstallLine.of(traits, os, missing.map(traits::packageFor)) }
         return MissingTools(missing, install)
     }
 }

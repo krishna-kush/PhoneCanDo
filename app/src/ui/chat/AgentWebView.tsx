@@ -38,7 +38,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   const restoreRef = useRef(lastPage(agent.id));
   // The chat the page shows, if any: the service notification leaves it out.
   const [chatId, setChatId] = useState<string | null>(null);
-  const web = useRef<WebView>(null);
+  const web = useRef<WebView<object>>(null);
   const canGoBackRef = useRef(false);
   const currentUrlRef = useRef('');
   const homeUrlRef = useRef<string | null>(null);
@@ -161,7 +161,10 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
       style={{ flex: 1, backgroundColor: t.bg }}
     >
       <View style={{ flex: 1, backgroundColor: t.bg }}>
-        <WebView
+        {/* WebView<object>: react-native-webview 13.16.2 defaults its extra-props
+            type to `undefined`, which leaves no prop valid; object types the same
+            on every version. */}
+        <WebView<object>
           ref={web}
           source={{ uri: url }}
           style={{ flex: 1, backgroundColor: t.bg }}

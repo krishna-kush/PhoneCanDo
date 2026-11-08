@@ -22,6 +22,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 API = "https://snapshot.debian.org/mr/package/{}/{}/srcfiles?fileinfo=1"
 ARCHIVES = ("debian", "debian-security")  # preferred archive_name, in order
@@ -94,6 +95,8 @@ def main(argv):
     missing = [f"{s} {v}" for s, v, files in results if files is None]
     sources = [{"source": s, "version": v, "files": files} for s, v, files in results if files is not None]
     total = sum(f["size"] for src in sources for f in src["files"])
+    # The output's folder may not exist yet (a fresh CI temp dir).
+    Path(argv[2]).parent.mkdir(parents=True, exist_ok=True)
     with open(argv[2], "w", encoding="utf-8") as out:
         json.dump({"sources": sources, "total_bytes": total}, out, indent=1, sort_keys=True)
         out.write("\n")

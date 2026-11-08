@@ -126,7 +126,7 @@ class ImageSetup internal constructor(
         fun isReady(layout: ImageLayout): Boolean = SetupState.isReady(layout)
 
         internal fun linuxResult(layout: ImageLayout, host: HostEnv, detection: Detection): SetupResult {
-            val tools = ToolsCheck.check(layout.rootfs, detection.guestPath, detection.os.family)
+            val tools = ToolsCheck.check(layout.rootfs, detection.guestPath, detection.os)
             return SetupResult(detection.os, tools.commands, tools.installCommand, SocketBudget.isTight(layout, host))
         }
     }

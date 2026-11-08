@@ -9,7 +9,7 @@ export type TermSize = { cols: number; rows: number };
 type Opts = {
   available: boolean;
   htmlUri: string | null;
-  webRef: RefObject<WebView | null>;
+  webRef: RefObject<WebView<object> | null>;
   /** Builds what the PTY runs (sessionRecipe.ts): the agent's TUI or a
       Linux shell. Called once per mount; the screen is keyed per session. */
   prepare: () => Promise<PtyRecipe>;

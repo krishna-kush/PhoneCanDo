@@ -37,7 +37,7 @@ function logLiveKb(height: number, pad: number) {
 export default function TerminalScreen({ session }: { session: TerminalSession }) {
   const [htmlUri, setHtmlUri] = useState<string | null>(null);
   const [assetError, setAssetError] = useState<string | null>(null);
-  const webRef = useRef<WebView>(null);
+  const webRef = useRef<WebView<object>>(null);
 
   const available = useMemo(() => isTerminalAvailable(), []);
   // What the program titles its terminal: an agent TUI names its chat there.
@@ -210,7 +210,10 @@ export default function TerminalScreen({ session }: { session: TerminalSession }
           (swipes become 'scroll'), so focusing on raw touch-down would summon
           the keyboard while the user is just trying to read back. */}
       <YStack flex={1} backgroundColor={TUI.bg}>
-        <WebView
+        {/* WebView<object>: react-native-webview 13.16.2 defaults its extra-props
+            type to `undefined`, which leaves no prop valid; object types the same
+            on every version. */}
+        <WebView<object>
           ref={webRef}
           source={{ uri: htmlUri }}
           style={{ flex: 1, backgroundColor: TUI.bg }}
