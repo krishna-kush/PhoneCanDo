@@ -27,11 +27,13 @@ import { fileURLToPath } from 'node:url';
 import { auditApk } from './apk-audit.mjs';
 import { releaseAssets } from './release/assets.mjs';
 import { makeApkReader } from './release/io/apk.mjs';
+import { askYes, red } from './release/io/ask.mjs';
 import { makeGh } from './release/io/gh.mjs';
 import { makeGit } from './release/io/git.mjs';
 import { digest, makeLinux } from './release/io/linux.mjs';
 import { makeProotSource } from './release/io/proot-source.mjs';
 import { expectedLinuxEntries, linuxEntryProblems } from './release/linux/apk.mjs';
+import { prootDrift } from './release/linux/drift.mjs';
 import { sourceDecision } from './release/linux/source.mjs';
 import { runPreflight } from './release/preflight.mjs';
 import { preflightReport } from './release/report.mjs';
@@ -148,6 +150,8 @@ function main() {
   console.log(preflightReport(preflight).join('\n'));
   console.log('');
   if (!preflight.proceed && !args.dryRun) fail(`preflight refused the release: ${preflight.refusals.join('; ')}`);
+  // --upload-only already answered this when it built.
+  if (preflight.proot && !args.uploadOnly) checkProotDrift({ ask: !args.dryRun });
   // GitHub release notes only: latest.json's notes are the in-app update dialog.
   const releaseNotes = (base) => [base, ...preflight.notes].join('\n\n');
   const assets = releaseAssets({ dir: stage, version, proot: preflight.proot });
@@ -682,6 +686,29 @@ function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, { stdio: 'inherit', ...options });
   if (result.error) fail(`${command}: ${result.error.message}`);
   if (result.status !== 0) fail(`${command} exited ${result.status}`);
+}
+
+// proot behind termux/proot: said in red, and asked about before a build
+// (a dry run only says it). A GitHub that can't be read is only noted.
+function checkProotDrift({ ask }) {
+  const pins = linux.pins();
+  let drift;
+  try {
+    drift = prootDrift(pins, makeGh().upstreamLag(pins.PROOT_REPO, pins.PROOT_COMMIT));
+  } catch (error) {
+    console.log(`proot: could not check ${pins.PROOT_REPO} for newer changes (${error.message}); going on`);
+    return;
+  }
+  if (!drift) {
+    console.log(`proot: ${pins.PROOT_VERSION} is the newest on ${pins.PROOT_REPO}`);
+    return;
+  }
+  for (const line of drift.lines) console.log(red(line));
+  if (!ask) return;
+  const yes = askYes(red('Release with this proot anyway? [y/N] '));
+  if (yes === null) fail('proot is behind upstream and there is no terminal to ask; run the release in a terminal');
+  if (!yes) fail('stopped: update proot first (lre/proot/pins.env), or answer y to release with it');
+  console.log('');
 }
 
 function shellQuote(value) {

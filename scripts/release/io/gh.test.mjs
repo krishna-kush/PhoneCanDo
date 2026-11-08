@@ -72,6 +72,28 @@ test('releaseState: the published release by tag, or missing on 404', () => {
   assert.throws(() => makeGh(down).releaseState(REPO, 'linux-image-x'), /Bad Gateway/);
 });
 
+const UP = 'termux/proot';
+const PIN = '52d65a4dc140ca554d241a1438ddd4f6b00c9813';
+
+test('upstreamLag: the default branch, then the compare counts from our pin to it', () => {
+  const fake = fakeRun({
+    [`repos/${UP}`]: ok('{"branch":"master"}\n'),
+    [`repos/${UP}/compare/`]: ok('{"newer":7,"offBranch":0}\n'),
+  });
+  assert.deepEqual(makeGh(fake).upstreamLag(UP, PIN), { branch: 'master', newer: 7, offBranch: 0 });
+  assert.equal(fake.calls[1].find((arg) => arg.startsWith('repos/')), `repos/${UP}/compare/${PIN}...master`);
+  assert.ok(!fake.calls[1].includes('--paginate'), 'the counts come whole on one page');
+});
+
+test('upstreamLag: a GitHub that cannot be read throws', () => {
+  const down = fakeRun({
+    [`repos/${UP}`]: ok('{"branch":"master"}\n'),
+    [`repos/${UP}/compare/`]: httpError(502, 'Bad Gateway'),
+  });
+  assert.throws(() => makeGh(down).upstreamLag(UP, PIN), /Bad Gateway/);
+  assert.throws(() => makeGh(fakeRun({})).upstreamLag(UP, PIN));
+});
+
 test('only ever reads: plain `gh api` GETs, no method, field or input flags', () => {
   const fake = fakeRun({
     [`repos/${REPO}/commits/`]: ok(`${SHA}\n`),
@@ -80,13 +102,16 @@ test('only ever reads: plain `gh api` GETs, no method, field or input flags', ()
     [`repos/${REPO}/actions/runs`]: ok(''),
     [`repos/${REPO}/actions/runs/42`]: ok('{}'),
     [`repos/${REPO}/releases/tags/`]: ok('{}'),
+    [`repos/${UP}`]: ok('{"branch":"master"}'),
+    [`repos/${UP}/compare/`]: ok('{"newer":0,"offBranch":0}'),
   });
   const gh = makeGh(fake);
   gh.commitState(REPO, SHA);
   gh.ciState(REPO, SHA);
   gh.runState(REPO, 42);
   gh.releaseState(REPO, 'linux-image-x');
-  assert.equal(fake.calls.length, 6);
+  gh.upstreamLag(UP, PIN);
+  assert.equal(fake.calls.length, 8);
   for (const args of fake.calls) {
     assert.equal(args[0], 'api');
     for (const flag of ['-X', '--method', '-f', '-F', '--field', '--raw-field', '--input']) {

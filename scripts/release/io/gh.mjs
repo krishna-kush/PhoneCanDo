@@ -59,5 +59,18 @@ export function makeGh({ run = spawnRunner('gh') } = {}) {
     releaseState(repo, tag) {
       return one(`repos/${repo}/releases/tags/${tag}`, RELEASE);
     },
+    /**
+     * How `commit` stands against the default branch of `repo` (an upstream
+     * we build from): { branch, newer: commits on the branch after it,
+     * offBranch: commits of it the branch lacks }. Throws when GitHub can't
+     * be read. Unpaginated: the counts are whole on the first page.
+     */
+    upstreamLag(repo, commit) {
+      const { branch } = one(`repos/${repo}`, '{branch: .default_branch}');
+      const path = `repos/${repo}/compare/${commit}...${branch}`;
+      const result = run(['api', path, '--jq', '{newer: .ahead_by, offBranch: .behind_by}']);
+      if (result.error || result.status !== 0) throw new Error(`gh api ${path}: ${failure(result)}`);
+      return { branch, ...JSON.parse(result.stdout) };
+    },
   };
 }

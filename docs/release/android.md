@@ -128,6 +128,14 @@ The script:
    tarball, and says whether its pinned downloads are cached or a real run
    downloads them first. The rules live in `scripts/release/ci/policy.mjs`
    (a new gated workflow gets its line there) and `scripts/release/linux/`.
+
+   When proot ships, it then asks GitHub how many changes `termux/proot`'s
+   default branch has after our pin (`lre/proot/pins.env`). If any, it says
+   so in red with a link to them and asks `Release with this proot anyway?
+   [y/N]`; anything but y stops the release, and so does a run without a
+   terminal to ask. `--dry-run` only prints the warning; `--upload-only`
+   skips it (the first run answered). A GitHub that can't be read is only
+   noted. Bumping the pin is its own change (`lre/docs/modules/proot.md`).
 2. Checks the GitHub release: `gh release view v<version>`. A version whose
    release is already published is refused; an existing draft is fine.
    `--dry-run` skips this.
