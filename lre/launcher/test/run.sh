@@ -100,8 +100,7 @@ finish() {
 
 # await FILE: up to 5 s for FILE to appear.
 await() {
-  local i
-  for i in $(seq 50); do
+  for _ in $(seq 50); do
     [[ -e $1 ]] && return 0
     sleep 0.1
   done

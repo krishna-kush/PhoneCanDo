@@ -121,8 +121,7 @@ alive() {
 
 # gone PID: not alive within 3 s.
 gone() {
-  local i
-  for i in $(seq 30); do
+  for _ in $(seq 30); do
     alive "$1" || return 0
     sleep 0.1
   done
@@ -244,7 +243,7 @@ while True:
 # terminal_checks LABEL N OPENER...: an interactive bash through the shim on
 # the PTY OPENER owns; this run's sleeps are N to N+3.
 terminal_checks() {
-  local label=$1 n=$2 fifo out term fg hup nohup shell stop
+  local label=$1 n=$2 fifo out term fg hup nohup shell stop p
   shift 2
   fifo=$work/tty-in-$n
   out=$work/tty-out-$n
@@ -261,7 +260,7 @@ terminal_checks() {
   for _ in $(seq 50); do fg=$(pid_of sleep $((n + 2))) && break; sleep 0.1; done
   hup=$(pid_of sleep "$n")
   nohup=$(pid_of sleep $((n + 1)))
-  leftovers+=($fg $hup $nohup)
+  for p in "$fg" "$hup" "$nohup"; do [ -n "$p" ] && leftovers+=("$p"); done
   shell=$(parent_of "$hup")
   if [ -n "$shell" ] && [ "$(session_of "$shell")" = "$shell" ]; then
     ok "$label: the shell leads the terminal's session (pid $shell)"
@@ -281,7 +280,7 @@ terminal_checks() {
   printf 'sleep %d\n' $((n + 3)) >&9
   stop=""
   for _ in $(seq 50); do stop=$(pid_of sleep $((n + 3))) && break; sleep 0.1; done
-  leftovers+=($stop)
+  [ -n "$stop" ] && leftovers+=("$stop")
   printf '\032' >&9
   for _ in $(seq 30); do grep -q "Stopped.*sleep $((n + 3))" "$out" && break; sleep 0.1; done
   if grep -q "Stopped.*sleep $((n + 3))" "$out"; then
@@ -306,8 +305,10 @@ terminal_checks() {
 
 if [ -x "$ROOTFS/bin/bash" ] || [ -x "$ROOTFS/usr/bin/bash" ]; then
   # The launcher leads the session that holds the terminal and lets it go.
+  # script(1) runs the command through /bin/sh -c; exec makes the launcher
+  # that session's leader even where sh stays as a parent (dash, on CI).
   if command -v script >/dev/null; then
-    terminal_checks "held terminal" 474 script -qfec "$work/shims/bash --norc --noprofile -i" /dev/null
+    terminal_checks "held terminal" 474 script -qfec "exec $work/shims/bash --norc --noprofile -i" /dev/null
   else
     echo "skip held-terminal checks: no script(1) on this host"
   fi
