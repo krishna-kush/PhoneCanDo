@@ -6,8 +6,9 @@
 #
 #   1. same tag already published: same sha256 -> done; else fail
 #      (a stale draft from a failed attempt is deleted)
-#   2. scheduled runs only: same base digest, recipe and package versions as
-#      the newest published image -> nothing new, done
+#   2. fresh inputs only: same base digest, recipe and package versions as
+#      the newest published image -> nothing new, done (only the snapshot
+#      date in the version would differ)
 #   3. upload everything to a draft prerelease, check every asset arrived
 #      at its size, then publish it (prerelease, --latest=false) and check
 #      that releases/latest did not move
@@ -17,14 +18,14 @@
 #   <sources-dir>  the lre-image-sources artifact (gpl/pack.py's parts,
 #                  index and parts.jsonl)
 # Env: GH_TOKEN (contents: write), REPO, RUN_ID, RUN_ATTEMPT, SHA, SERVER_URL,
-#      EVENT. Markdown on stdout.
+#      FRESH (true when built from fresh inputs). Markdown on stdout.
 set -euo pipefail
 export LC_ALL=C
 
 IMAGE="$(cd "${1:?usage: publish.sh <image-dir> <sources-dir>}" && pwd)"
 SOURCES="$(cd "${2:?usage: publish.sh <image-dir> <sources-dir>}" && pwd)"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-: "${GH_TOKEN:?}" "${REPO:?}" "${RUN_ID:?}" "${RUN_ATTEMPT:?}" "${SHA:?}" "${SERVER_URL:?}" "${EVENT:?}"
+: "${GH_TOKEN:?}" "${REPO:?}" "${RUN_ID:?}" "${RUN_ATTEMPT:?}" "${SHA:?}" "${SERVER_URL:?}" "${FRESH:?}"
 
 mapfile -t found < <(find "$IMAGE" -maxdepth 1 -name 'phonecando-linux-default-*.json')
 [ "${#found[@]}" = 1 ] || { echo "::error::want one manifest in $IMAGE, found ${#found[@]}"; exit 1; }
@@ -55,8 +56,8 @@ if state="$(gh release view "$tag" -R "$REPO" --json isDraft --jq .isDraft 2> /d
   fi
 fi
 
-# 2. Weekly: anything new since the newest published image?
-if [ "$EVENT" = schedule ]; then
+# 2. Fresh inputs: anything new since the newest published image?
+if [ "$FRESH" = true ]; then
   newest="$(gh release list -R "$REPO" --limit 100 --json tagName,isDraft,createdAt \
     --jq '[.[] | select(.isDraft | not) | select(.tagName | startswith("linux-image-"))] | sort_by(.createdAt) | last | .tagName // ""')"
   if [ -n "$newest" ]; then
@@ -67,7 +68,7 @@ if [ "$EVENT" = schedule ]; then
     if [ "$(jq -r .debian.digest "$nm")" = "$(jq -r .debian.digest "$manifest")" ] &&
        [ "$(jq -r .recipe_sha256 "$nm")" = "$(jq -r .recipe_sha256 "$manifest")" ] &&
        cmp -s "$work/newest/phonecando-linux-default-$nv-packages.tsv" "$IMAGE/packages.tsv"; then
-      echo "Same base image, recipe and package versions as \`$newest\`: no new image this week."
+      echo "Same base image, recipe and package versions as \`$newest\`: nothing new, so no new image. Keep the image you have locked, or lock \`$newest\`'s run."
       exit 0
     fi
   fi

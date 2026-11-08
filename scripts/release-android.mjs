@@ -27,13 +27,14 @@ import { fileURLToPath } from 'node:url';
 import { auditApk } from './apk-audit.mjs';
 import { releaseAssets } from './release/assets.mjs';
 import { makeApkReader } from './release/io/apk.mjs';
-import { askYes, red } from './release/io/ask.mjs';
+import { askYes, red, yellow } from './release/io/ask.mjs';
 import { makeGh } from './release/io/gh.mjs';
 import { makeGit } from './release/io/git.mjs';
 import { digest, makeLinux } from './release/io/linux.mjs';
 import { makeProotSource } from './release/io/proot-source.mjs';
 import { expectedLinuxEntries, linuxEntryProblems } from './release/linux/apk.mjs';
 import { prootDrift } from './release/linux/drift.mjs';
+import { imageAge } from './release/linux/image-age.mjs';
 import { sourceDecision } from './release/linux/source.mjs';
 import { runPreflight } from './release/preflight.mjs';
 import { preflightReport } from './release/report.mjs';
@@ -152,6 +153,7 @@ function main() {
   if (!preflight.proceed && !args.dryRun) fail(`preflight refused the release: ${preflight.refusals.join('; ')}`);
   // --upload-only already answered this when it built.
   if (preflight.proot && !args.uploadOnly) checkProotDrift({ ask: !args.dryRun });
+  if (preflight.image && !args.uploadOnly) checkImageAge(preflight.image.version, { ask: !args.dryRun });
   // GitHub release notes only: latest.json's notes are the in-app update dialog.
   const releaseNotes = (base) => [base, ...preflight.notes].join('\n\n');
   const assets = releaseAssets({ dir: stage, version, proot: preflight.proot });
@@ -708,6 +710,22 @@ function checkProotDrift({ ask }) {
   const yes = askYes(red('Release with this proot anyway? [y/N] '));
   if (yes === null) fail('proot is behind upstream and there is no terminal to ask; run the release in a terminal');
   if (!yes) fail('stopped: update proot first (lre/proot/pins.env), or answer y to release with it');
+  console.log('');
+}
+
+// The Default image's age, with the run that publishes a fresher one: a
+// warning, then a question before a build (a dry run only says it).
+function checkImageAge(version, { ask }) {
+  const age = imageAge(version, new Date());
+  if (!age) {
+    console.log(`Default image ${version}: its age is unknown (no date in the version)`);
+  } else {
+    for (const line of age.lines) console.log(yellow(line));
+  }
+  if (!ask) return;
+  const yes = askYes(yellow('Release with this Default image? [y/N] '));
+  if (yes === null) fail('no terminal to confirm the Default image; run the release in a terminal');
+  if (!yes) fail('stopped: publish a fresh Default image first (see above), or answer y to release with this one');
   console.log('');
 }
 

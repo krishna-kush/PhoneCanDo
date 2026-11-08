@@ -17,6 +17,10 @@ export const IMAGE_WORKFLOW = '.github/workflows/lre-image.yml';
 export const LOCK_CHECK = 'lre/images/default/lock/check.sh --locked --remote';
 const LOCK = 'lre/images/default/lock.json';
 const STAGE_HINT = './manage image fetch && ./manage image stage';
+// Nothing locked means nothing published yet (a push never publishes).
+const PUBLISH_FIRST =
+  'publish the Default Debian image first: gh workflow run lre-image.yml --ref prod -f publish=true; ' +
+  `once that run is green, ./manage image lock <run-id>, commit ${LOCK}, then ${STAGE_HINT}`;
 
 const short = (sha) => String(sha ?? '?').slice(0, 12);
 
@@ -58,10 +62,8 @@ export function imageVerdict({ staged, lock, check, run, release }, { withoutLin
     if (withoutLinux) {
       return { ok: true, summary: 'not staged; --without-linux: full and lite ship no Default image', detail: devNote, staged: null };
     }
-    const how = lock.locked
-      ? `${STAGE_HINT}, or pass --without-linux`
-      : `${LOCK} locks nothing yet: ./manage image lock <run-id>, then ${STAGE_HINT}; or pass --without-linux`;
-    return refuse([`no Default image staged: full and lite must ship Linux (${how})`], devNote);
+    if (!lock.locked) return refuse([`no Default image is published and locked: ${PUBLISH_FIRST}; or pass --without-linux`], devNote);
+    return refuse([`no Default image staged: full and lite must ship Linux (${STAGE_HINT}, or pass --without-linux)`], devNote);
   }
 
   const problems = [];
@@ -81,7 +83,7 @@ export function imageVerdict({ staged, lock, check, run, release }, { withoutLin
   }
 
   if (!lock.locked || check?.status === 3) {
-    problems.push(`${LOCK} locks no image, so the staged one is unlocked: ./manage image lock <run-id>, then ${STAGE_HINT}`);
+    problems.push(`${LOCK} locks no image, so the staged one is unlocked: ${PUBLISH_FIRST}`);
     return refuse(problems, devNote);
   }
   if (check?.status !== 0) {

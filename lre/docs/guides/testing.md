@@ -59,7 +59,7 @@ demand. The `*-ok` job is the one check to require.
 |---|---|---|---|
 | `lre.yml` | `lre-ok` | `./gradlew build` (every module and test); the launcher with gcc and its host tests | the Gradle modules and build files, `lre/launcher/**` |
 | `proot.yml` | `proot-ok` | the Android build verified and bit-identical twice; the glibc build booting Alpine and running our launcher (`proot-test.sh`); the GPL source tarball packed twice with the same bytes | `lre/proot/**`, `lre/launcher/**` |
-| `lre-image.yml` | `lre-image-ok` | the Default image built twice to the same bytes and verified; Tier 1; its Debian sources; `lock.json` against GitHub; on prod, weekly or on demand, publishing `linux-image-<version>` | `lre/images/default/**`, `lre/launcher/**`, `lre/proot/**` |
+| `lre-image.yml` | `lre-image-ok` | the Default image built twice to the same bytes and verified; Tier 1; its Debian sources; `lock.json` against GitHub; on prod and on demand only, publishing `linux-image-<version>` | `lre/images/default/**`, `lre/launcher/**`, `lre/proot/**` |
 | `lre-compat.yml` | `lre-compat-ok` | `:cli:test`; Tier 2 legs; Tier 3 report | the Gradle modules, `lre/launcher/**`, `lre/proot/**` |
 | `android.yml` | — | the app module that builds the launcher with the NDK and compiles the runtime; the host's JVM tests per channel; a release-shape build that stages proot from a `proot.yml` run id and the locked Default image when there is one | the Gradle modules, `lre/launcher/**`, `lre/proot/stage.sh`, `lre/images/default/lock.json`, `lre/images/default/lock/**` |
 

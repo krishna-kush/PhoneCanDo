@@ -52,12 +52,14 @@ test('the locked image, green run, sources released: ok, and what ships is recor
   assert.deepEqual(verdict.staged, { version: VERSION, sha256: IMAGE_SHA, release: RELEASE, info: 'e'.repeat(64) });
 });
 
-test('not staged: refused; the hint says how to stage, or to lock first', () => {
+test('not staged: refused; the hint says how to stage, or to publish and lock first', () => {
   const locked = imageVerdict(ok({ staged: NOT_STAGED }));
   assert.equal(locked.ok, false);
   assert.match(locked.summary, /^no Default image staged: full and lite must ship Linux \(\.\/manage image fetch && \.\/manage image stage, or pass --without-linux\)$/);
   const unlocked = imageVerdict(ok({ staged: NOT_STAGED, lock: parseLock(NULL_LOCK) }));
-  assert.match(unlocked.summary, /lock\.json locks nothing yet: \.\/manage image lock <run-id>/);
+  assert.equal(unlocked.ok, false);
+  assert.match(unlocked.summary, /^no Default image is published and locked: publish the Default Debian image first: gh workflow run lre-image\.yml --ref prod -f publish=true; once that run is green, \.\/manage image lock <run-id>/);
+  assert.match(unlocked.summary, /; or pass --without-linux$/);
 });
 
 test('not staged with --without-linux: ok, nothing ships, locked or not', () => {
@@ -72,7 +74,7 @@ test('staged while lock.json locks nothing: refused, also with --without-linux',
   for (const withoutLinux of [false, true]) {
     const verdict = imageVerdict({ staged: okImage(), lock: parseLock(NULL_LOCK) }, { withoutLinux });
     assert.equal(verdict.ok, false);
-    assert.match(verdict.summary, /^lre\/images\/default\/lock\.json locks no image, so the staged one is unlocked/);
+    assert.match(verdict.summary, /^lre\/images\/default\/lock\.json locks no image, so the staged one is unlocked: publish the Default Debian image first/);
   }
 });
 

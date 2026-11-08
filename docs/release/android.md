@@ -136,6 +136,14 @@ The script:
    terminal to ask. `--dry-run` only prints the warning; `--upload-only`
    skips it (the first run answered). A GitHub that can't be read is only
    noted. Bumping the pin is its own change (`lre/docs/modules/proot.md`).
+
+   The Default image works the same way. With none locked, the preflight
+   refuses full and lite and says to publish one first (`gh workflow run
+   lre-image.yml --ref prod -f publish=true`, then `./manage image lock
+   <run-id>`). With one locked, it prints in yellow how old its Debian
+   packages are and the run that publishes a fresh one (`-f fresh=true`),
+   and asks `Release with this Default image? [y/N]`, with the same rules
+   for y, no terminal, `--dry-run` and `--upload-only`.
 2. Checks the GitHub release: `gh release view v<version>`. A version whose
    release is already published is refused; an existing draft is fine.
    `--dry-run` skips this.

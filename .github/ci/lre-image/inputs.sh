@@ -5,7 +5,8 @@
 #
 #   fresh    schedule, or workflow_dispatch with fresh=true: the newest
 #            debian:trixie arm64 digest and today's snapshot; else pins.env
-#   publish  only on prod: schedule, or workflow_dispatch with publish=true
+#   publish  only on prod, only workflow_dispatch with publish=true (the
+#            weekly run tests fresh inputs and never publishes)
 #
 # Usage: bash .github/ci/lre-image/inputs.sh
 # Env: EVENT, REF (github.event_name, github.ref), IN_PUBLISH, IN_FRESH
@@ -18,7 +19,7 @@ cd "$(dirname "$0")/../../.."
 
 fresh=false publish=false
 case "${EVENT:?}" in
-  schedule) fresh=true publish=true ;;
+  schedule) fresh=true ;;
   workflow_dispatch)
     [ "${IN_FRESH:-false}" = true ] && fresh=true
     [ "${IN_PUBLISH:-false}" = true ] && publish=true

@@ -66,8 +66,16 @@ the first staging, rerun it from `app/android`:
 
 ## Publish
 
-Only `lre-image.yml` publishes, and only on prod: the weekly run (fresh
-inputs) or a manual run with `publish` (and optionally `fresh`). Every
+Only `lre-image.yml` publishes, only on prod and only when started by hand
+with `publish`; `fresh` builds from the newest Debian and today's snapshot
+instead of `pins.env`:
+
+```bash
+gh workflow run lre-image.yml --ref prod -f publish=true               # pins.env
+gh workflow run lre-image.yml --ref prod -f publish=true -f fresh=true # newer packages
+```
+
+Every
 check must be green first: both builds the same bytes, `verify.py`,
 Tier 1 and the GPL sources. The `publish` job then creates the prerelease
 `linux-image-<version>`, never marked latest (the app updater reads
@@ -80,9 +88,13 @@ Tier 1 and the GPL sources. The `publish` job then creates the prerelease
 - the GPL source bundle: `phonecando-linux-default-<version>-sources-NN.tar`
   parts (each under 2 GiB) and `-sources-index.tsv`
 
-A scheduled run whose base digest, recipe and package versions equal the
-newest published image publishes nothing; the same tag published again
-must have the same sha256. A red weekly run just means no new image.
+The same tag published again must have the same sha256. A fresh publish
+whose base digest, recipe and package versions equal the newest published
+image's publishes nothing: only the date in its version would differ. The
+weekly run
+builds and tests fresh inputs but never publishes: a red one says a fresh
+publish would fail. `./manage release` refuses full and lite until an image
+is locked, and then shows how old it is and asks before it builds.
 
 ## Lock
 
