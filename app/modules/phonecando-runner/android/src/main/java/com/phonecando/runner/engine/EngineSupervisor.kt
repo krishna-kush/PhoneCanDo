@@ -230,9 +230,14 @@ internal class EngineSupervisor(
     afterEngineGone()
   }
 
+  // Lock-free (slots is concurrent, state volatile): bridge threads ask on
+  // every request.
+  private fun bridgeLive(agentId: String): Boolean =
+    slots[agentId]?.state.let { it == EngineState.STARTING || it == EngineState.READY }
+
   private fun ensureBridge(): BridgeHandle? = lock.withLock {
     bridge ?: try {
-      Bridge.open(context, store, ::touch)
+      Bridge.open(context, LiveAgents(store, ::bridgeLive), ::touch)
     } catch (e: Exception) {
       Log.w(TAG, "agent bridge failed to open", e)
       null

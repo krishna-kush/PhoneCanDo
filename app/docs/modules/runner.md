@@ -34,7 +34,9 @@ autolinked; `app/android/` is generated.
   (`OpencodeKind`, its launch recipe, auth and event parser). The
   supervisor, health checks, event streams and redaction go through a kind,
   never an agent name. `AgentStore` keeps the agents (`AgentRecord`) and is
-  the `AgentDirectory` the bridge and redaction read.
+  the `AgentDirectory` redaction reads. The bridge reads
+  `engine/LiveAgents.kt`, the agents whose engine is starting or ready: a
+  stopped agent's token gets 401, and the screen it held is free at once.
 - `engine/`: the engine supervisor and what it uses (below);
   `engine/image/` reads the image files an engine needs, `engine/proc/`
   finds and ends an agent's processes.
@@ -104,8 +106,8 @@ agent, several at once:
   loopback port, and reserves it until the engine is gone, so two starts
   never share one. Ports are plumbing, never shown.
 - **Environment** (`EngineEnv`): our own process env, then the image's
-  `engine.env` (HOME, TMPDIR and, for a Linux image, SHELL, PATH and
-  `PHONECANDO_IMAGE`), then the kind's launch env, then ours on top:
+  `engine.env` (HOME, TMPDIR and, for a Linux image, SHELL, PATH,
+  `PHONECANDO_IMAGE` and `MAKEFLAGS`), then the kind's launch env, then ours on top:
   `PHONECANDO_BRIDGE_URL` and this agent's `PHONECANDO_BRIDGE_TOKEN` (only
   while the bridge is up), `PHONECANDO_CHANNEL` and, last,
   `PHONECANDO_AGENT=<agentId>`. The engine runs from the native-library dir
