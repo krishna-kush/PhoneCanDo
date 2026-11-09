@@ -232,7 +232,7 @@ static int check_signal_state(void) {
 static int test_signals_reset(void) {
   // Dirty our own signal state the way an app might, then check none of it
   // reaches the child.
-  struct sigaction ign, catcher, old_int, old_pipe, old_usr2;
+  struct sigaction ign, catcher, old_int, old_pipe, old_usr2, old_segv;
   memset(&ign, 0, sizeof ign);
   ign.sa_handler = SIG_IGN;
   memset(&catcher, 0, sizeof catcher);
@@ -240,6 +240,8 @@ static int test_signals_reset(void) {
   sigaction(SIGINT, &ign, &old_int);
   sigaction(SIGPIPE, &ign, &old_pipe);
   sigaction(SIGUSR2, &catcher, &old_usr2);
+  // SIGSEGV is reset only when ignored (libsigchain on Android): this is that case.
+  sigaction(SIGSEGV, &ign, &old_segv);
   sigset_t block, old_mask;
   sigemptyset(&block);
   sigaddset(&block, SIGUSR1);
@@ -252,6 +254,7 @@ static int test_signals_reset(void) {
   sigaction(SIGINT, &old_int, NULL);
   sigaction(SIGPIPE, &old_pipe, NULL);
   sigaction(SIGUSR2, &old_usr2, NULL);
+  sigaction(SIGSEGV, &old_segv, NULL);
   return r;
 }
 
@@ -421,6 +424,37 @@ static int test_two_ptys_resize(void) {
   return 0;
 }
 
+// The hosted reader's wait: it sleeps until output or the hangup, and a
+// timeout really waits.
+static int test_wait_readable(void) {
+  char *argv[] = {"/bin/sh", "-c", "read x; printf ok; read y", NULL};
+  pty_child c;
+  CHECK(spawn_ok(argv, sys_path, 24, 80, &c) == 0, "");
+  // Raw tty, no echo: nothing to read until the child prints.
+  long start = now_ms();
+  CHECK(pty_wait_readable(c.master, 150) == 0, "readable before any output");
+  CHECK(now_ms() - start >= 140, "timed out after %ld ms", now_ms() - start);
+
+  CHECK(pty_write_all(c.master, "\n", 1) == 1, "");
+  CHECK(pty_wait_readable(c.master, T) == 1, "");
+  char out[BUF];
+  CHECK(read_until(c.master, out, BUF, "ok", T) == 2 && strcmp(out, "ok") == 0, "got '%s'", out);
+
+  // Once the child is gone the wait returns at once and the read says so.
+  CHECK(pty_write_all(c.master, "\n", 1) == 1, "");
+  CHECK(pty_wait_readable(c.master, T) == 1, "no wake on hangup");
+  char b[16];
+  errno = 0;
+  CHECK(pty_read(c.master, b, sizeof b) == -1 && errno == EIO, "errno %d", errno);
+  pty_exit ex;
+  CHECK(finish(c.pid, &ex) == 0 && ex.code == 0, "code %d", ex.code);
+
+  // A closed fd is an error, not a wait.
+  close(c.master);
+  CHECK(pty_wait_readable(c.master, T) == -1 && errno == EBADF, "errno %d", errno);
+  return 0;
+}
+
 static const struct {
   const char *name;
   int (*fn)(void);
@@ -440,6 +474,7 @@ static const struct {
     {"PATH lookup for a bare name", test_path_lookup},
     {"exec failure reported, no zombie", test_exec_failure},
     {"two PTYs, independent resize", test_two_ptys_resize},
+    {"wait for output, hangup or timeout", test_wait_readable},
 };
 
 int main(void) {

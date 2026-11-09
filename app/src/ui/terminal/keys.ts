@@ -1,5 +1,6 @@
 // Pure key/byte mapping for the terminal input path. No RN imports.
-// Covered by scripts/vectors/test_modifiers.js — keep the two in sync.
+// Covered by scripts/vectors/test_modifiers.js (keep the two in sync) and
+// test_scroll_keys.js (imports this file).
 export function toB64(text: string): string {
   const bytes = new TextEncoder().encode(text);
   let bin = '';
@@ -45,4 +46,21 @@ export function modifiedSeq(seq: string, mods: ModState): string {
   }
   if (seq === '\t' && mods.shiftOn && !mods.ctrlOn) return '\x1b[Z';
   return seq;
+}
+
+// A swipe's steps as bytes for the program (the page decides which, from
+// the program's terminal modes; dir < 0 is up, toward older lines).
+// Wheel reports, SGR, at the centre cell: for a program that asked for
+// mouse reports. Its own wheel path (velocity, scroll speed) moves it,
+// never its input line.
+export function wheelSeq(dir: number, steps: number, cols: number, rows: number): string {
+  const cx = Math.max(1, Math.floor(cols / 2));
+  const cy = Math.max(1, Math.floor(rows / 2));
+  return `\x1b[<${dir < 0 ? 64 : 65};${cx};${cy}M`.repeat(steps);
+}
+
+// Arrow keys, in the program's cursor-key mode: for an alternate screen
+// without mouse reports (less, man), as xterm's alternate scroll sends.
+export function arrowSeq(dir: number, steps: number, appCursor: boolean): string {
+  return `${appCursor ? '\x1bO' : '\x1b['}${dir < 0 ? 'A' : 'B'}`.repeat(steps);
 }

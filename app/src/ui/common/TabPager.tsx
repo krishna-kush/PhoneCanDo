@@ -40,6 +40,12 @@ export default function TabPager({ pages, index, onIndexChange }: Props) {
       showsHorizontalScrollIndicator={false}
       onMomentumScrollEnd={onMomentum}
       scrollEventThrottle={16}
+      // The pager never takes a tap from its pages. RN's default ('never')
+      // spends the first tap while the keyboard is up on closing it: a TUI
+      // home lost every extra key, and a tap on its terminal closed the
+      // keyboard just before the terminal opened it again. Each page's own
+      // ScrollView keeps its own keyboard policy.
+      keyboardShouldPersistTaps="always"
       style={{ flex: 1 }}
     >
       {pages.map((page, i) => (

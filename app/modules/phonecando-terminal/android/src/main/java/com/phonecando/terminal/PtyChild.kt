@@ -1,6 +1,8 @@
 package com.phonecando.terminal
 
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /** How a PTY's program ended. Both null: it is gone but its status was not ours to read. */
@@ -10,9 +12,10 @@ internal data class PtyExit(val code: Int?, val signal: Int?)
 // then reaps exactly this pid (never waitpid(-1): that could steal exit
 // statuses from Java's own process reaper). Reaping and kill share a lock,
 // so a signal can never reach a pid the kernel has already recycled.
-internal class PtyChild(private val pid: Int) {
+internal class PtyChild(val pid: Int) {
   private val lock = Any()
   private var reaped = false
+  private val reapedLatch = CountDownLatch(1)
 
   /** Null while the program runs (or for the moment between its exit and our reap). */
   @Volatile
@@ -35,6 +38,7 @@ internal class PtyChild(private val pid: Int) {
         }
         reaped = true
       }
+      reapedLatch.countDown()
     }
   }
 
@@ -43,5 +47,17 @@ internal class PtyChild(private val pid: Int) {
     if (reaped) return false
     PhoneCanDoPty.killGroup(pid, signal)
     true
+  }
+
+  /** Waits up to [timeoutMs] for the reap: the exit, or null while it still runs. */
+  fun await(timeoutMs: Long): PtyExit? {
+    reapedLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
+    return exit
+  }
+
+  /** Waits for the reap, however long it takes. */
+  fun await(): PtyExit {
+    reapedLatch.await()
+    return checkNotNull(exit)
   }
 }

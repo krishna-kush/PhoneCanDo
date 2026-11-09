@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
+import { chatTitleOf } from '../../engine/agents/chatTitle';
+import type { AgentId } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { agentById, setOpenChat } from '../../engine/engines';
-import type { TerminalSession } from '../../state/app';
 
 // The TUI's counterpart of useOpenChat (ui/chat): an agent TUI in front
 // tells the runner which chat it shows, so the service notification leaves
 // it out. The TUI never says which session it is on, only the title it
 // gives the terminal, so the chat goes by title (the runner matches it to
-// that agent's chats). A Linux shell, a title naming no chat or the app in
+// that agent's chats). `agentId` is the agent whose TUI is in front: its
+// TUI client in a terminal, or a TUI engine on the Home tab; null for a
+// Linux shell or a TUI off screen. A title naming no chat or the app in
 // the background reports none.
-export function useOpenTuiChat(session: TerminalSession, terminalTitle: string) {
+export function useOpenTuiChat(agentId: AgentId | null, terminalTitle: string) {
   const [active, setActive] = useState(AppState.currentState === 'active');
 
   useEffect(() => {
@@ -18,14 +21,14 @@ export function useOpenTuiChat(session: TerminalSession, terminalTitle: string) 
     return () => sub.remove();
   }, []);
 
-  const agent = session.kind === 'tui' ? agentById(session.agentId) : undefined;
-  const title = agent && active ? agentKind(agent.kind).tuiChatTitle(terminalTitle) : null;
-  const agentId = agent?.id ?? null;
+  const agent = agentId ? agentById(agentId) : undefined;
+  const title = agent && active ? chatTitleOf(agentKind(agent.kind).chatTitle, terminalTitle) : null;
+  const shownId = agent?.id ?? null;
   useEffect(() => {
-    if (!agentId || !title) return;
-    report(agentId, title);
+    if (!shownId || !title) return;
+    report(shownId, title);
     return () => report(null, null);
-  }, [agentId, title]);
+  }, [shownId, title]);
 }
 
 function report(agentId: string | null, title: string | null) {

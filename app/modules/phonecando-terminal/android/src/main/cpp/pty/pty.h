@@ -66,6 +66,11 @@ int pty_kill(pid_t pid, int sig);
 // Returns bytes read, 0 when nothing is waiting, or -1 (errno set) once the
 // child side is gone (EIO) or on error.
 ssize_t pty_read(int master, void *buf, size_t len);
+// Waits up to timeout_ms (-1: no limit) until a read won't block: bytes are
+// waiting, or the child side is gone and the read reports that. Returns 1
+// then, 0 on timeout or a signal, or -1 (errno set) on error, EBADF for an fd
+// that isn't open.
+int pty_wait_readable(int master, int timeout_ms);
 // Writes as much as the child takes; gives up after about a second without
 // progress so a stuck child can't freeze the caller. Returns bytes written.
 size_t pty_write_all(int master, const void *buf, size_t len);

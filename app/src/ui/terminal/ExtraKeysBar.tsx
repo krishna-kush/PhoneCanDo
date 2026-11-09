@@ -4,7 +4,7 @@ import { TUI } from '../common/globals';
 
 // The above-keyboard accessory bar: terminal спецkeys plus sticky Ctrl/Shift
 // toggles. Presentational only — all PTY wiring (press/modifiers) lives in
-// TerminalScreen, which passes callbacks + latch state down.
+// TerminalView, which passes callbacks + latch state down.
 export type ExtraKey = { label: string; seq: string; icon?: ArrowDir };
 
 export const EXTRA_KEYS: ExtraKey[] = [

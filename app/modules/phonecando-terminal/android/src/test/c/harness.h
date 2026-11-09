@@ -17,6 +17,9 @@
 
 void check_failed(const char *file, int line, const char *expr, const char *fmt, ...);
 
+// Monotonic clock, in milliseconds.
+long now_ms(void);
+
 // Reads into buf (always NUL-terminated) until `needle` shows up, the child
 // side closes, or timeout_ms passes. A NULL needle reads to close/timeout.
 size_t read_until(int master, char *buf, size_t cap, const char *needle, int timeout_ms);

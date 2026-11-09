@@ -3,7 +3,6 @@
 
 #include <errno.h>
 #include <limits.h>
-#include <poll.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +22,7 @@ void check_failed(const char *file, int line, const char *expr, const char *fmt,
   fputc('\n', stderr);
 }
 
-static long now_ms(void) {
+long now_ms(void) {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
@@ -36,10 +35,9 @@ size_t read_until(int master, char *buf, size_t cap, const char *needle, int tim
   while (len + 1 < cap && !(needle && strstr(buf, needle))) {
     long left = deadline - now_ms();
     if (left <= 0) break;
-    struct pollfd pfd = {.fd = master, .events = POLLIN, .revents = 0};
-    int r = poll(&pfd, 1, (int)left);
-    if (r < 0 && errno == EINTR) continue;
-    if (r <= 0) break;
+    int r = pty_wait_readable(master, (int)left);
+    if (r < 0) break;
+    if (r == 0) continue;  // timeout (the loop ends) or a signal
     ssize_t n = pty_read(master, buf + len, cap - 1 - len);
     if (n < 0) break;  // EIO: the child side is closed
     len += (size_t)n;

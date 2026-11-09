@@ -112,6 +112,15 @@ Java_com_phonecando_terminal_PhoneCanDoPty_readPty(JNIEnv *env, jclass clazz, ji
   return (jint)n;
 }
 
+// 1 once a read won't block, 0 on timeout, -1 on error (as pty_wait_readable).
+JNIEXPORT jint JNICALL
+Java_com_phonecando_terminal_PhoneCanDoPty_waitReadable(JNIEnv *env, jclass clazz, jint fd,
+                                                        jint timeoutMs) {
+  (void)env;
+  (void)clazz;
+  return (jint)pty_wait_readable((int)fd, (int)timeoutMs);
+}
+
 JNIEXPORT jint JNICALL
 Java_com_phonecando_terminal_PhoneCanDoPty_writePty(JNIEnv *env, jclass clazz, jint fd,
                                                     jbyteArray buf, jint len) {

@@ -68,12 +68,19 @@ __attribute__((noreturn)) static void run_child(const child_plan *p) {
   // stay ignored and the mask stays as it is. We forked with everything
   // blocked, so reset dispositions first (no app handler can run in here),
   // then unblock. Signals libc reserves for itself refuse the reset; execve
-  // drops their handlers anyway.
+  // drops their handlers anyway. SIGSEGV is reset only when ignored: ART's
+  // libsigchain owns its handler and logs a stack trace as an error for
+  // every reset to SIG_DFL, and execve drops a caught handler by itself.
   struct sigaction dfl;
   memset(&dfl, 0, sizeof dfl);
   dfl.sa_handler = SIG_DFL;
   for (int sig = 1; sig < NSIG; sig++) {
-    if (sig != SIGKILL && sig != SIGSTOP) sigaction(sig, &dfl, NULL);
+    if (sig == SIGKILL || sig == SIGSTOP) continue;
+    if (sig == SIGSEGV) {
+      struct sigaction cur;
+      if (sigaction(sig, NULL, &cur) == 0 && cur.sa_handler != SIG_IGN) continue;
+    }
+    sigaction(sig, &dfl, NULL);
   }
   sigset_t none;
   sigemptyset(&none);

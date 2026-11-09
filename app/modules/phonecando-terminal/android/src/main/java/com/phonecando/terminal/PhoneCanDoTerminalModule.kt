@@ -2,6 +2,7 @@ package com.phonecando.terminal
 
 import android.system.OsConstants
 import android.util.Base64
+import com.phonecando.terminal.view.DirectionLockView
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -16,6 +17,10 @@ class PhoneCanDoTerminalModule : Module() {
     OnDestroy {
       sessions.closeAll()
     }
+
+    // What a terminal is hosted in: vertical gestures stay with it,
+    // sideways ones go to its parents (view/DirectionLockView.kt).
+    View(DirectionLockView::class) {}
 
     Function("getLibDir") {
       appContext.reactContext?.applicationInfo?.nativeLibraryDir

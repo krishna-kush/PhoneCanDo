@@ -3,14 +3,12 @@
 // Linux image. Both go through the same generic PTY (engine/terminal.ts),
 // so the IME and sizing path is the same.
 import type { Agent } from '../../engine/agents/records';
-import { agentKind } from '../../engine/agents/registry';
-import type { PtyRecipe } from '../../engine/agents/types';
-import { engineConn, waitForEngine } from '../../engine/connection';
-import { agentById, agentHome } from '../../engine/engines';
-import { prepareImageForStart, terminalRecipe } from '../../engine/linux/native';
+import type { PtyRecipe } from '../../../../agents/kit/ts/contract/pty.ts';
+import { waitForEngine } from '../../engine/connection';
+import { agentById, clientRecipe } from '../../engine/engines';
+import { terminalRecipe } from '../../engine/linux/native';
 import { canonicalizeContainerPath } from '../../engine/runner';
-import { getLibDir } from '../../engine/terminal';
-import { useAgentsStore } from '../../state/agents';
+import { prepareAgentImage, useAgentsStore } from '../../state/agents';
 import type { TerminalSession } from '../../state/app';
 
 export async function sessionRecipe(session: TerminalSession): Promise<PtyRecipe> {
@@ -35,25 +33,15 @@ async function tuiRecipe(agent: Agent, dir: string): Promise<PtyRecipe> {
   } else if (res.port == null) {
     console.warn(`[phonecando] engine ensure failed err=${res.error ?? res.status}`);
   }
-  const conn = engineConn(agent.id);
-  let password = '';
-  try {
-    password = conn.password();
-  } catch {
-    // native bridge absent: the TUI shows the health error, nothing crashes
-  }
-  return agentKind(agent.kind).tui({
-    libDir: getLibDir(),
-    homeDir: agentHome(agent),
-    projectDir: canonicalizeContainerPath(dir),
-    serverUrl: conn.baseUrl,
-    password,
-  });
+  // Rendered natively from the kind's manifest (its terminal client): the
+  // agent's HOME, its engine's address and password, and the folder.
+  return clientRecipe(agent.id, canonicalizeContainerPath(dir));
 }
 
 async function linuxRecipe(agent: Agent): Promise<PtyRecipe> {
-  // Same preparation an engine start gets, so the shell finds the image ready.
-  await prepareImageForStart(agent.imageId);
+  // Same preparation an engine start gets (the same guest env list too), so
+  // the shell finds the image ready and launch.conf stays as the engine's.
+  await prepareAgentImage(agent);
   // A login shell edits its own line: it must start on a cooked tty, or
   // readline treats echo as off and what you type never shows. The recipe's
   // handOver says whether the launcher hands the terminal to a guest shell.

@@ -1,4 +1,6 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import type { ComponentType } from 'react';
+import type { ViewProps } from 'react-native';
+import { NativeModule, requireNativeModule, requireNativeView } from 'expo';
 import type { PtyExit, PtyOpenOpts, PtySignal } from './PhoneCanDoTerminal.types';
 
 export type { PtyExit, PtyOpenOpts, PtySignal } from './PhoneCanDoTerminal.types';
@@ -20,6 +22,12 @@ try {
 } catch {
   mod = null;
 }
+
+// What a terminal is hosted in: vertical gestures stay with it, sideways
+// ones go to its parents (android/.../view/DirectionLockView.kt). Null
+// without the native module (Expo Go, web).
+export const DirectionLockView: ComponentType<ViewProps> | null =
+  mod == null ? null : requireNativeView<ViewProps>('PhoneCanDoTerminal');
 
 export function isTerminalAvailable(): boolean {
   return mod != null;

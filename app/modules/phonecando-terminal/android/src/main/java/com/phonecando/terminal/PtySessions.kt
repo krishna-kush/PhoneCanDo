@@ -25,17 +25,9 @@ internal class PtySessions {
     require(cmd.isNotEmpty()) { "cmd required" }
     env.keys.forEach { require(it.isNotEmpty() && '=' !in it) { "bad env name: $it" } }
     val merged = System.getenv() + env
-    val (fd, pid) = PhoneCanDoPty.openPty(
-      cmd.map { it.cBytes() }.toTypedArray(),
-      merged.map { (k, v) -> "$k=$v".cBytes() }.toTypedArray(),
-      cwd.cBytes(),
-      rows,
-      cols,
-      raw,
-      handOver,
-    )
-    children[fd] = PtyChild(pid)
-    return fd
+    val pty = spawnPty(cmd, merged.map { (k, v) -> "$k=$v" }, cwd, rows, cols, raw, handOver)
+    children[pty.fd] = pty.child
+    return pty.fd
   }
 
   /** The child on [fd]; throws for an fd we never opened or already closed. */
@@ -49,10 +41,4 @@ internal class PtySessions {
   fun closeAll() {
     children.keys.toList().forEach(::close)
   }
-}
-
-// C strings end at the first NUL, so one inside would silently cut the value.
-private fun String.cBytes(): ByteArray {
-  require('\u0000' !in this) { "NUL in pty argument" }
-  return toByteArray(Charsets.UTF_8)
 }

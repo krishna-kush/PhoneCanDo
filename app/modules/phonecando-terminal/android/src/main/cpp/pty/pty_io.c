@@ -20,6 +20,20 @@ ssize_t pty_read(int master, void *buf, size_t len) {
   return n;
 }
 
+int pty_wait_readable(int master, int timeout_ms) {
+  struct pollfd pfd = {.fd = master, .events = POLLIN, .revents = 0};
+  int r = poll(&pfd, 1, timeout_ms);
+  if (r < 0) return errno == EINTR ? 0 : -1;
+  if (r == 0) return 0;
+  if (pfd.revents & POLLNVAL) {
+    errno = EBADF;
+    return -1;
+  }
+  // POLLIN, or POLLHUP/POLLERR once the child side has closed: the read
+  // that follows returns what is left, then EIO.
+  return 1;
+}
+
 size_t pty_write_all(int master, const void *buf, size_t len) {
   const char *p = buf;
   size_t total = 0;

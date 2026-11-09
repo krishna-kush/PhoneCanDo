@@ -25,6 +25,11 @@ internal object PhoneCanDoPty {
   ): IntArray
   /** Bytes read, 0 when nothing is waiting, -1 once the child side is gone. */
   external fun readPty(fd: Int, buf: ByteArray, len: Int): Int
+  /**
+   * Waits up to [timeoutMs] until a read of [fd] won't block (bytes waiting,
+   * or the child side gone): 1 then, 0 on timeout, -1 on error.
+   */
+  external fun waitReadable(fd: Int, timeoutMs: Int): Int
   external fun writePty(fd: Int, buf: ByteArray, len: Int): Int
   external fun setWinSize(fd: Int, rows: Int, cols: Int)
   external fun closePty(fd: Int)

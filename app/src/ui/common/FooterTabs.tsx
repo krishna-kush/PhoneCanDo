@@ -1,5 +1,6 @@
 import { Button, XStack } from 'tamagui';
 import { useAppStore, type FooterTab } from '../../state/app';
+import { useKeyboardStore } from '../../state/keyboard';
 import { webGoHome } from '../chat/webNavigation';
 import { HIT, useTheme } from './globals';
 
@@ -11,12 +12,15 @@ const TABS: { id: FooterTab; label: string }[] = [
 
 // Thin mono tab strip: the site's nav links, not three filled buttons. The
 // active tab is marked by colour + a 2px red underline (not colour alone);
-// 56dp still clears the 48dp touch minimum.
+// 56dp still clears the 48dp touch minimum. It stays put while the
+// keyboard opens over it; a terminal above it leaves the keyboard room less
+// the footer's height, which it reports as laid out (state/keyboard.ts).
 export default function FooterTabs() {
   const t = useTheme();
   const footerTab = useAppStore((s) => s.footerTab);
   const setFooterTab = useAppStore((s) => s.setFooterTab);
   const goHome = useAppStore((s) => s.goHome);
+  const setFooterRoom = useKeyboardStore((s) => s.setFooterRoom);
 
   function press(tab: FooterTab) {
     if (tab === 'home') {
@@ -34,6 +38,7 @@ export default function FooterTabs() {
 
   return (
     <XStack
+      onLayout={(e) => setFooterRoom(Math.round(e.nativeEvent.layout.height))}
       borderTopWidth={1}
       borderColor={t.line}
       backgroundColor={t.panel}
