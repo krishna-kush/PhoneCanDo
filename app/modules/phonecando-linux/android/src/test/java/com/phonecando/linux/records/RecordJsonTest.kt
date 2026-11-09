@@ -20,7 +20,6 @@ class RecordJsonTest {
     assertNull(image.failedStep)
     assertNull(image.error)
     assertNull(image.os)
-    assertEquals(emptyList<String>(), image.missingTools)
   }
 
   @Test fun anUnreadableRecordIsDroppedNotTheFile() {

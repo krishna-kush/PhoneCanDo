@@ -18,10 +18,10 @@ internal object StartRefresh {
      * image again (the user or the agent may have installed bash or another
      * package manager since; cheap file checks, fixups redone only on a
      * change), then rewrite what depends on the phone: DNS, shims and
-     * launch.conf (the APK's lib dir moves on every update), engine.env, fake
-     * /proc.
+     * launch.conf (the APK's lib dir moves on every update; it unsets
+     * [guestUnset] too), engine.env, fake /proc.
      */
-    fun beforeStart(layout: ImageLayout, host: HostEnv) {
+    fun beforeStart(layout: ImageLayout, host: HostEnv, guestUnset: List<String>) {
         if (RootfsSwap().recover(layout)) redetect(layout, host)
         if (!SetupState.isReady(layout)) throw LreException.NotFound("a finished image at ${layout.root}")
         when (val record = RecordStore.load(layout) ?: throw LreException.Corrupt("run/image.properties")) {
@@ -38,7 +38,7 @@ internal object StartRefresh {
                 Fixups().writeResolvConf(layout.rootfs, host)
                 Seeder.linuxDirs(layout)
                 Shims().refresh(layout, host, detection.guestPath)
-                Seeder.linuxFiles(layout, host, detection)
+                Seeder.linuxFiles(layout, host, detection, guestUnset)
             }
         }
     }

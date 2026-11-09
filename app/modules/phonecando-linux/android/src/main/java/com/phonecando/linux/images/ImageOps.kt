@@ -22,6 +22,7 @@ import com.phonecando.lre.image.conf.SocketBudget
 import com.phonecando.lre.image.delete.ImageDelete
 import com.phonecando.lre.image.reset.ImageReset
 import com.phonecando.lre.image.reset.ReinstallList
+import com.phonecando.lre.image.tools.MissingTools
 
 /**
  * Images: made from an env (create, resumable), reset to a fresh copy of
@@ -45,7 +46,7 @@ class ImageOps(private val host: LinuxHost) {
       val taken = images.map { it.id }.toSet() + dirNames()
       val id = ShortIds.next(taken) { !SocketBudget.isTight(paths.image(it), hostEnv) }
       val job = begin(JobTarget.image(id))
-      val image = ImageRecord(id, envId, ImageState.CREATING, null, null, null, null, emptyList(), null, 0, now())
+      val image = ImageRecord(id, envId, ImageState.CREATING, null, null, null, null, 0, now())
       putImage(image)
       job to image
     }
@@ -93,7 +94,7 @@ class ImageOps(private val host: LinuxHost) {
         val base = host.bases.of(env)
         val result = ImageReset(GuestProcessRunner(), LayerProgressUnpacker(base))
           .reset(layout, base, hostEnv, host.android.freeBytes(), sink, job.cancel)
-        finish(imageId, env.id, Outcome(result.os, result.missingTools, result.installCommand), sink)
+        finish(imageId, env.id, result.os, sink)
       }
     }
     return job
@@ -127,15 +128,31 @@ class ImageOps(private val host: LinuxHost) {
    * Before every engine start and terminal: rewrites what depends on the
    * phone (DNS, shims, launch.conf, engine.env, fake /proc) and finishes a
    * reset a kill cut short. Cheap when nothing changed, but it scans the
-   * guest's bin dirs, so it runs on our executor. A start that races a job
-   * on the image waits for the lock, then sees the job's state.
+   * guest's bin dirs, so it runs on our executor. A start that races a
+   * create or reset waits for the lock, then sees the job's state; a guest
+   * script running on the image does not hold it up.
+   *
+   * [guestUnset]: the variables (a trailing `*` for a prefix) the image's
+   * agent holds as secrets; launch.conf unsets them and `LD_*` for every
+   * guest command until the next prepare.
    */
-  fun prepareForStart(imageId: String) {
+  fun prepareForStart(imageId: String, guestUnset: List<String>) {
     startable(imageId)
     host.imageLocks.with(imageId) {
       startable(imageId)
-      ImageSetup.refreshForStart(paths.image(imageId), host.android.hostEnv())
+      ImageSetup.refreshForStart(paths.image(imageId), host.android.hostEnv(), guestUnset)
     }
+  }
+
+  /**
+   * Which of [commands] (an agent's tools) the image's guest PATH lacks, and
+   * the line that installs them; nothing for an image with no Linux. Cheap
+   * file checks, no lock: a job may be installing meanwhile.
+   */
+  fun checkTools(imageId: String, commands: List<String>): MissingTools {
+    val image = image(imageId)
+    if (image.state != ImageState.READY) throw busy(image)
+    return ImageSetup.checkTools(paths.image(imageId), commands)
   }
 
   /** A login shell in the image for our PTY. Cheap: the caller ran [prepareForStart] first. */
@@ -163,16 +180,16 @@ class ImageOps(private val host: LinuxHost) {
         } else {
           ImageSetup.android(layout, hostEnv)
         }
-        finish(imageId, env.id, Outcome(result.os, result.missingTools, result.installCommand), sink)
+        finish(imageId, env.id, result.os, sink)
       }
     }
   }
 
-  /** What a finished create or reset found. */
-  private data class Outcome(val os: OsInfo?, val missingTools: List<String>, val installCommand: String?)
-
-  /** Measures the image and records it ready; the env learns its OS from its first image. */
-  private fun finish(imageId: String, envId: String, result: Outcome, sink: ProgressSink) {
+  /**
+   * Measures the image and records it ready with the [os] the create or
+   * reset found; the env learns its OS from its first image.
+   */
+  private fun finish(imageId: String, envId: String, os: OsInfo?, sink: ProgressSink) {
     sink.report(Progress(STEP_MEASURE, 0, null))
     val bytes = DirSize.of(paths.image(imageId).root)
     records.transact {
@@ -182,13 +199,10 @@ class ImageOps(private val host: LinuxHost) {
           failedStep = null,
           error = null,
           errorCode = null,
-          os = result.os,
-          missingTools = result.missingTools,
-          installCommand = result.installCommand,
+          os = os,
           sizeBytes = bytes,
         )
       }
-      val os = result.os
       if (os != null) updateEnv(envId) { if (it.os == null) it.copy(os = os) else it }
     }
   }
@@ -230,25 +244,27 @@ class ImageOps(private val host: LinuxHost) {
     }
   }
 
-  private fun image(imageId: String): ImageRecord = records.image(imageId) ?: throw LreException.NotFound("image $imageId")
+  internal fun image(imageId: String): ImageRecord = records.image(imageId) ?: throw LreException.NotFound("image $imageId")
 
   /**
-   * Whether an engine or a terminal can start on the image: ready, no job
-   * on it, and Linux allowed on this build when it has Linux. True for a
+   * Whether an engine, a terminal or a guest command can start on the
+   * image: ready, no create or reset on it (a guest script leaves it
+   * usable), and Linux allowed on this build when it has Linux. True for a
    * Linux image, false for an Android one.
    */
-  private fun startable(imageId: String): Boolean {
+  internal fun startable(imageId: String): Boolean {
     val image = image(imageId)
     if (image.state == ImageState.FAILED) {
       throw LinuxError(LinuxErrorCode.NOT_FOUND, "image $imageId is not set up; retry it")
     }
-    if (image.state != ImageState.READY || host.jobs.isLive(JobTarget.image(imageId))) throw busy(image)
+    val job = host.jobs.live(JobTarget.image(imageId))
+    if (image.state != ImageState.READY || (job != null && !job.guestScript)) throw busy(image)
     val linux = isLinux(image)
     if (linux) LinuxGate.requireLinux(host.android.status())
     return linux
   }
 
-  private fun busy(image: ImageRecord) = LinuxError(LinuxErrorCode.BUSY, "image ${image.id} is ${image.state.id}")
+  internal fun busy(image: ImageRecord) = LinuxError(LinuxErrorCode.BUSY, "image ${image.id} is ${image.state.id}")
 
   // Linux unless its env is Android; with the env gone, whether it has a system.
   private fun isLinux(image: ImageRecord): Boolean =

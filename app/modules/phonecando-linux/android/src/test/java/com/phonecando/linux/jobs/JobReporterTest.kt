@@ -49,4 +49,57 @@ class JobReporterTest {
     assertEquals("job-7", map["jobId"])
     assertNull(map["total"])
   }
+
+  @Test fun aScriptJobCarriesItsPhaseTailAndExitCodeToTheEnd() {
+    reporter.reportScript(ScriptDetail("runtime:node", listOf("a"), null), Progress("script", 1, null))
+    reporter.reportScript(ScriptDetail("runtime:node", listOf("a", "b"), null), Progress("script", 1, null))
+    reporter.reportScript(ScriptDetail("packages", listOf("a", "b", "c"), null), Progress("script", 2, null))
+    // The same phase within the interval is throttled; a new phase passes at once.
+    assertEquals(listOf("runtime:node", "packages"), events.map { it.script?.phase })
+    reporter.reportScript(ScriptDetail("packages", listOf("c", "E: no"), 100), Progress("script", 2, null))
+    reporter.finish("command_failed: install exited with 100", "command_failed")
+    assertEquals(
+      setOf("phase", "tail", "exitCode", "retry", "elapsedSec", "downloadedBytes", "rateBytesPerSec", "online"),
+      events.first().toMap().keys - events.first().copy(script = null).toMap().keys,
+    )
+    val last = events.last().toMap()
+    assertEquals(false, last["ok"])
+    assertEquals(100, last["exitCode"])
+    assertEquals(listOf("c", "E: no"), last["tail"])
+    assertEquals("packages", last["phase"])
+  }
+
+  @Test fun aNewRetryPassesAtOnce() {
+    reporter.reportScript(ScriptDetail("install", listOf("a"), null), Progress("script", 1, null))
+    reporter.reportScript(ScriptDetail("install", listOf("a"), null, ScriptRetry(2, 3)), Progress("script", 1, null))
+    reporter.reportScript(ScriptDetail("install", listOf("a"), null, ScriptRetry(2, 3)), Progress("script", 1, null))
+    reporter.reportScript(ScriptDetail("install", listOf("a"), null, ScriptRetry(3, 3)), Progress("script", 1, null))
+    assertEquals(listOf(null, 2, 3), events.map { it.script?.retry?.attempt })
+  }
+
+  @Test fun aScriptEventCarriesRetryAndActivity() {
+    val detail = ScriptDetail("install", emptyList(), null, ScriptRetry(2, 3), ScriptActivity(130, 120_000_000, 1_200_000, false))
+    reporter.reportScript(detail, Progress("script", 1, null))
+    val map = events.single().toMap()
+    assertEquals(mapOf("attempt" to 2, "max" to 3), map["retry"])
+    assertEquals(130L, map["elapsedSec"])
+    assertEquals(120_000_000L, map["downloadedBytes"])
+    assertEquals(1_200_000L, map["rateBytesPerSec"])
+    assertEquals(false, map["online"])
+  }
+
+  @Test fun aScriptEventWithoutCountsSaysNull() {
+    reporter.reportScript(ScriptDetail(null, emptyList(), null, null, ScriptActivity(4, null, null)), Progress("script", 0, null))
+    val map = events.single().toMap()
+    assertNull(map["retry"])
+    assertNull(map["downloadedBytes"])
+    assertNull(map["rateBytesPerSec"])
+    assertNull(map["online"])
+    assertEquals(4L, map["elapsedSec"])
+  }
+
+  @Test fun aFinishedJobWithoutErrorIsOk() {
+    reporter.finish(null, null)
+    assertEquals(true, events.last().toMap()["ok"])
+  }
 }

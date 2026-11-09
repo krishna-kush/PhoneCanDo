@@ -74,9 +74,30 @@ internal fun ModuleDefinitionBuilder.linuxFunctions(host: () -> LinuxHost) {
     runAsync(h, promise) { h.images.size(imageId) }
   }
 
-  AsyncFunction("prepareImageForStart") { imageId: String, promise: Promise ->
+  // guestUnset: the agent's secret variables, unset for every guest command.
+  // A JS bundle from before it leaves it out: then only LD_* is unset.
+  AsyncFunction("prepareImageForStart") { imageId: String, guestUnset: List<String>?, promise: Promise ->
     val h = host()
-    runAsync(h, promise) { h.images.prepareForStart(imageId).let { null } }
+    runAsync(h, promise) { h.images.prepareForStart(imageId, guestUnset.orEmpty()).let { null } }
+  }
+
+  AsyncFunction("checkTools") { imageId: String, commands: List<String>, promise: Promise ->
+    val h = host()
+    runAsync(h, promise) { h.images.checkTools(imageId, commands).toMap() }
+  }
+
+  // Guest programs: a script as a job (its events carry phase and tail), a command as one call.
+  AsyncFunction("runGuestScript") { imageId: String, script: String, opts: Map<String, Any>, promise: Promise ->
+    val h = host()
+    runAsync(h, promise) {
+      val timeoutSec = (opts["timeoutSec"] as? Number)?.toLong() ?: 0L
+      mapOf("jobId" to h.guest.runScript(imageId, script, timeoutSec, opts["label"] as? String ?: "").id)
+    }
+  }
+
+  AsyncFunction("runGuestCommand") { imageId: String, argv: List<String>, timeoutSec: Double, promise: Promise ->
+    val h = host()
+    runAsync(h, promise) { h.guest.runCommand(imageId, argv, timeoutSec.toLong()).toMap() }
   }
 
   Function("reinstallList") { imageId: String -> coded { host().images.reinstallList(imageId)?.toMap() } }

@@ -25,6 +25,19 @@ class GuestCommandTest {
   @Test fun theEngineTagNeverReachesTheGuest() {
     val c = GuestCommand.build(layout, listOf("rpm", "-qa"), engineEnv, mapOf("PHONECANDO_AGENT" to "a1"))
     assertFalse("PHONECANDO_AGENT" in c.env)
+    val overridden = GuestCommand.build(layout, listOf("sh"), "", emptyMap(), mapOf("PHONECANDO_AGENT" to "a1"))
+    assertFalse("PHONECANDO_AGENT" in overridden.env)
+  }
+
+  @Test fun overridesWinOverEngineEnvButNotTheImageTag() {
+    val overrides = GuestCommand.GUEST_DIRS + mapOf("PHONECANDO_RUN" to "r1", "PHONECANDO_IMAGE" to "/elsewhere")
+    val c = GuestCommand.build(layout, listOf("sh", "-s"), engineEnv, emptyMap(), overrides)
+    assertEquals(listOf("/files/images/a1b2c3/shims/sh", "-s"), c.argv)
+    assertEquals("/root", c.env["HOME"])
+    assertEquals("/tmp", c.env["TMPDIR"])
+    assertEquals("r1", c.env["PHONECANDO_RUN"])
+    assertEquals("/files/images/a1b2c3/shims:/system/bin", c.env["PATH"])
+    assertEquals("/files/images/a1b2c3", c.env["PHONECANDO_IMAGE"])
   }
 
   @Test fun argv0IsACommandNameNotAPath() {

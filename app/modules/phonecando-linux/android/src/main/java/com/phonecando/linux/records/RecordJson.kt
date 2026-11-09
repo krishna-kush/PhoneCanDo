@@ -43,8 +43,6 @@ object RecordJson {
     .put("error", i.error ?: JSONObject.NULL)
     .put("errorCode", i.errorCode ?: JSONObject.NULL)
     .put("os", i.os?.let(::os) ?: JSONObject.NULL)
-    .put("missingTools", JSONArray(i.missingTools))
-    .put("installCommand", i.installCommand ?: JSONObject.NULL)
     .put("sizeBytes", i.sizeBytes)
     .put("createdAt", i.createdAt)
 
@@ -90,8 +88,6 @@ object RecordJson {
       error = o.str("error"),
       errorCode = o.str("errorCode"),
       os = o.optJSONObject("os")?.let(::osOf),
-      missingTools = strings(o.optJSONArray("missingTools")),
-      installCommand = o.str("installCommand"),
       sizeBytes = o.optLong("sizeBytes", 0L),
       createdAt = o.optLong("createdAt", 0L),
     )

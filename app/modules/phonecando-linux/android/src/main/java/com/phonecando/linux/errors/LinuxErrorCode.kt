@@ -32,6 +32,12 @@ enum class LinuxErrorCode(val code: String) {
 
   /** A job already runs for that env or image, or it is not in a state for this. */
   BUSY("busy"),
+
+  /** A guest script (runGuestScript) exited non-zero. */
+  COMMAND_FAILED("command_failed"),
+
+  /** A guest script or command ran past its time limit and was stopped. */
+  TIMED_OUT("timed_out"),
   INTERNAL("internal"),
   ;
 

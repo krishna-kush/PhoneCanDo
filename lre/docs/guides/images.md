@@ -10,7 +10,7 @@ gitignored: the image is staged, never committed. Play carries none.
 ./manage image build            -> dist/images/local/          (docker, unlocked)
 ./manage image stage --local    -> src/linux/dev-assets/       (debug builds only)
 
-lre-image.yml on prod           -> release linux-image-<version> (prerelease, never latest)
+lre-image.yml, publish=true     -> release linux-image-<version> (prod, by hand; prerelease)
 ./manage image lock <run-id>    -> lre/images/default/lock.json (you commit it)
 ./manage image fetch            -> dist/images/<asset>          (sha256 + size checked)
 ./manage image stage            -> src/linux/assets/            (every full and lite build)
@@ -136,7 +136,9 @@ nothing is locked. `android.yml`'s release-shape build does the same when
 (`scripts/release/linux/image.mjs`), and that proot is staged and verified
 (`../modules/proot.md`). Without both, full and lite do not ship unless
 you pass `--without-linux`. A local image is refused for a release like any
-image the lock does not name.
+image the lock does not name. With nothing locked it says to publish first;
+with an image locked it shows how old its Debian packages are and asks
+before building (`scripts/release/linux/image-age.mjs`).
 
 GPL sources: each `linux-image-<version>` release carries the image's
 exact Debian source packages; every app release that ships `libproot.so`

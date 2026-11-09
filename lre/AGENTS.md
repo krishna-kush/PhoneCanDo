@@ -115,7 +115,9 @@ oci + image <- cli
 - Commands always run as proot's fake root. Values from an image config
   pass `ImageEnv`'s filter; `LD_*`, `PROOT_*`, `PHONECANDO_*` and the
   session variables we set are never taken from an image.
-- Secrets the engine holds never reach a guest: `LaunchConf.UNSET`.
+- Secrets the engine holds never reach a guest: `launch.conf` unsets
+  `LD_*` and every name the host passes to `refreshForStart`
+  (`guestUnset`). `image` never names an engine's variables itself.
 - The per-start refresh stays cheap: write a file only when its content
   changes, re-detect by file checks, redo fixups only on a change.
 - Pure parts stay pure (`conf/`, `family/`, `detect/` parsing, record

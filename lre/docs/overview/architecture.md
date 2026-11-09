@@ -139,11 +139,11 @@ engine  (env: run/engine.env)
   again at their own host path under every data-dir spelling, and `run/l2s`
   at its own path (link2symlink writes absolute host paths into the links
   it makes).
-- Environment: the inherited one, minus `LD_*`, `OPENCODE_SERVER_PASSWORD`,
-  `PHONECANDO_BRIDGE_TOKEN` and `PHONECANDO_BRIDGE_URL`
-  (`LaunchConf.UNSET`); then `PROOT_LOADER`, `PROOT_TMP_DIR`,
-  `PROOT_L2S_DIR`, the guest's `PATH` and `SHELL`, `USER` and `LOGNAME`
-  `root`, `LANG=C.UTF-8` unless the image sets it, and the image config's
+- Environment: the inherited one, minus `LD_*` and the names the host
+  passes before a start (`guestUnset`: the secrets its engine holds, e.g.
+  opencode's password and the bridge token); then `PROOT_LOADER`,
+  `PROOT_TMP_DIR`, `PROOT_L2S_DIR`, the guest's `PATH` and `SHELL`, `USER`
+  and `LOGNAME` `root`, `LANG=C.UTF-8` unless the image sets it, and the image config's
   other variables (`ImageEnv`). `HOME` and `TMPDIR` stay the host paths,
   which are bound in the guest. `TERM` is never set.
 - cwd: a current dir at or under a `same` path stays the guest cwd;
@@ -172,8 +172,9 @@ with progress events.
   failed; an interrupted unpack starts again from an empty `rootfs/`.
   Detect reads the OS, its package-manager family and its shell; fixups
   write DNS, hosts, hostname and the package manager's proot fix; seed
-  writes the dirs and every `run/` file. The result lists the agent tools
-  the image lacks (`bash`, `git`, `rg`) with one line that installs them.
+  writes the dirs and every `run/` file. Which tools an agent needs the
+  host asks afterwards (`ImageSetup.checkTools`): the commands the guest
+  PATH lacks, with one line that installs them.
 - **Refresh before start** (`ImageSetup.refreshForStart`): before every
   engine start and terminal the host runs it (`prepareForStart`). It
   finishes a reset a kill cut short, re-detects (redoing fixups only on a
@@ -236,20 +237,7 @@ engine start reaps whatever carries it.
 
 ## Dependency law
 
-```
-api <- tar
-api <- oci
-api + tar <- image
-oci + image <- cli
-```
-
-- Every module is pure JVM: no `android.*`, no `org.json`, no app types.
-- `image` never imports `oci`; a host composes a download with a setup.
-- `cli` is a leaf for CI; nothing depends on it.
-- No reverse edges, no cycles; each module's `build.gradle.kts` is the
-  law.
-
-Beside the Gradle build: `launcher/` (C, built by the app's CMake and by
+The module law is in `../../AGENTS.md` §2. Beside the Gradle build: `launcher/` (C, built by the app's CMake and by
 the tests with gcc), `proot/` (shell build scripts) and `images/default/`
 (a docker build). None of them depends on the JVM modules; the
 `launch.conf` contract ties `launcher/` to `image`.

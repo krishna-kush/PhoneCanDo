@@ -4,23 +4,34 @@ import com.phonecando.lre.api.ImageLayout
 import java.io.File
 
 /**
- * How we run one guest command for the runtime (a reset's package query):
- * the image's shim for argv[0] (a link to our launcher), with the app's
- * environment, then every engine.env line, then PHONECANDO_IMAGE. Never the
- * engine tag PHONECANDO_AGENT: an engine start reaps whatever carries it.
- * Pure.
+ * How we run one guest command for the runtime (a reset's package query, an
+ * agent's install script or version check): the image's shim for argv[0]
+ * (a link to our launcher), with the app's environment, then every
+ * engine.env line, then [build]'s overrides, then PHONECANDO_IMAGE. Never
+ * the engine tag PHONECANDO_AGENT: an engine start reaps whatever carries
+ * it. Pure.
  */
 data class GuestCommand(val argv: List<String>, val env: Map<String, String>) {
   companion object {
     private val NAME = Regex("[A-Za-z_][A-Za-z0-9_]*")
     const val AGENT_TAG = "PHONECANDO_AGENT"
 
-    fun build(layout: ImageLayout, argv: List<String>, engineEnv: String, base: Map<String, String>): GuestCommand {
+    /** HOME and TMPDIR as the guest names them (home/ and tmp/ are bound there), as in the terminal. */
+    val GUEST_DIRS = mapOf("HOME" to "/root", "TMPDIR" to "/tmp")
+
+    fun build(
+      layout: ImageLayout,
+      argv: List<String>,
+      engineEnv: String,
+      base: Map<String, String>,
+      overrides: Map<String, String> = emptyMap(),
+    ): GuestCommand {
       val command = argv.firstOrNull() ?: throw IllegalArgumentException("empty argv")
       require(command.isNotEmpty() && '/' !in command && !command.startsWith(".")) { "not a command name: $command" }
       val env = LinkedHashMap(base)
-      env.remove(AGENT_TAG)
       env.putAll(parseEnv(engineEnv))
+      env.putAll(overrides)
+      env.remove(AGENT_TAG)
       env["PHONECANDO_IMAGE"] = layout.root.path
       return GuestCommand(listOf(File(layout.shims, command).path) + argv.drop(1), env)
     }

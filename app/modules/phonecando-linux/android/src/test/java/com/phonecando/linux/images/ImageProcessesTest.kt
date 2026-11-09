@@ -34,6 +34,12 @@ class ImageProcessesTest {
     assertNull(ImageProcesses.tagOf(ByteArray(0)))
   }
 
+  @Test fun readsARunTagByName() {
+    val environ = "PHONECANDO_IMAGE=$root\u0000PHONECANDO_RUN=r-1\u0000".toByteArray()
+    assertEquals("r-1", ImageProcesses.tagOf(environ, ImageProcesses.RUN_TAG))
+    assertEquals(listOf(7), ImageProcesses.select(listOf(entry(7, "r-1"), entry(8, "r-2")), "r-1", me, uid))
+  }
+
   @Test fun parsesUidAndZombieFromStatus() {
     assertEquals(10416 to false, ImageProcesses.parseStatus("Name:\tsleep\nState:\tS (sleeping)\nUid:\t10416\t10416\t10416\t10416\n"))
     assertEquals(10416 to true, ImageProcesses.parseStatus("State:\tZ (zombie)\nUid:\t10416\t10416\t10416\t10416\n"))

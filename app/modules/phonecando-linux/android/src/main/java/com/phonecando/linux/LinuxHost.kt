@@ -5,6 +5,7 @@ import com.phonecando.linux.catalog.CatalogOps
 import com.phonecando.linux.defaultimage.DefaultImageAsset
 import com.phonecando.linux.envs.EnvOps
 import com.phonecando.linux.errors.LinuxErrorCode
+import com.phonecando.linux.guest.GuestOps
 import com.phonecando.linux.host.AndroidHost
 import com.phonecando.linux.host.LinuxPaths
 import com.phonecando.linux.images.ImageBases
@@ -61,6 +62,7 @@ class LinuxHost private constructor(context: Context) {
 
   val envs = EnvOps(this)
   val images = ImageOps(this)
+  val guest = GuestOps(this)
   val catalog = CatalogOps(this, HubCatalog(transport))
 
   fun addListener(listener: Listener) = listeners.add(listener)

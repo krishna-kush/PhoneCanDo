@@ -19,6 +19,9 @@ class LaunchConfTest {
     private val alt = "/data/data/com.phonecando.app/files/images/d1"
     private val lib = Hosts.LIB
 
+    // What a host passes for an engine holding a password and the bridge token.
+    private val secrets = listOf("OPENCODE_SERVER_PASSWORD", "PHONECANDO_BRIDGE_TOKEN", "PHONECANDO_BRIDGE_URL")
+
     private fun debian(config: ImageConfig? = null) = Detection(
         os = OsInfo("debian", "12", emptyList(), "Debian GNU/Linux 12 (bookworm)", PackageFamily.APT, "/bin/bash"),
         config = config, hasBash = true, hasSh = true, busyboxSh = null,
@@ -80,7 +83,18 @@ class LaunchConfTest {
             home /root
 
         """.trimIndent()
-        assertEquals(expected, LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian()))
+        assertEquals(expected, LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), secrets))
+    }
+
+    @Test
+    fun `only the LD_ prefix is unset unless the host names more, each name once`() {
+        fun unsets(guestUnset: List<String>) = LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), guestUnset)
+            .lines().filter { it.startsWith("unset ") }
+        assertEquals(listOf("unset LD_*"), unsets(emptyList()))
+        assertEquals(listOf("unset LD_*", "unset A", "unset B_*"), unsets(listOf("A", "LD_*", "B_*", "A")))
+        listOf("A=B", "A*B", "1A", "", "A B").forEach { bad ->
+            assertFailsWith<LreException.UnsafeEntry>(bad) { unsets(listOf(bad)) }
+        }
     }
 
     @Test
@@ -117,7 +131,7 @@ class LaunchConfTest {
 
     @Test
     fun `parsed by the launcher rules, the plan keeps host paths and drops secrets`() {
-        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian()))
+        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), secrets))
         assertEquals("$lib/libproot.so", conf.args.first())
         assertEquals("$alt/home/projects/app", conf.cwd("$alt/home/projects/app"))
         assertEquals("$r/tmp", conf.cwd("$r/tmp"))

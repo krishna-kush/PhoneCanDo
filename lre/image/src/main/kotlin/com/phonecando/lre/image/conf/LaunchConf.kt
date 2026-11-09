@@ -24,14 +24,17 @@ import java.io.File
  *   unless the image sets it; the image config's other variables pass on.
  * - TERM is never set: launch.conf cannot say "only when absent", and the
  *   terminal's PTY sets its own while engine commands have no terminal.
- * - Secrets the engine holds (and any LD_* the app process has) are unset.
+ * - Any LD_* the app process has is unset, and so is every name the host
+ *   passes as `guestUnset`: the secrets its engine holds, which no guest
+ *   command may inherit.
  */
 internal object LaunchConf {
     const val MAX_BYTES = 256 * 1024
     const val MAX_LINES = 4096
     const val GUEST_HOME = "/root"
 
-    val UNSET = listOf("LD_*", "OPENCODE_SERVER_PASSWORD", "PHONECANDO_BRIDGE_TOKEN", "PHONECANDO_BRIDGE_URL")
+    /** Unset on every image: Android's loader variables would break the guest's own loader. */
+    val ALWAYS_UNSET = listOf("LD_*")
 
     private const val HEADER = "# Written by PhoneCanDo image setup before every engine start " +
         "(format: lre/launcher/src/conf.h). Edits are lost.\n"
@@ -56,10 +59,20 @@ internal object LaunchConf {
         "/proc/self/fd/2:/dev/stderr",
     )
 
-    fun build(layout: ImageLayout, host: HostEnv, detection: Detection): String =
-        render(directives(layout, host, detection))
+    /** [guestUnset]: variable names (a trailing `*` for a prefix) unset on top of [ALWAYS_UNSET]. */
+    fun build(
+        layout: ImageLayout,
+        host: HostEnv,
+        detection: Detection,
+        guestUnset: List<String> = emptyList(),
+    ): String = render(directives(layout, host, detection, guestUnset))
 
-    fun directives(layout: ImageLayout, host: HostEnv, detection: Detection): List<Directive> {
+    fun directives(
+        layout: ImageLayout,
+        host: HostEnv,
+        detection: Detection,
+        guestUnset: List<String> = emptyList(),
+    ): List<Directive> {
         val lib = host.libDir.trimEnd('/')
         val home = layout.home.path
         val tmp = layout.tmp.path
@@ -93,7 +106,7 @@ internal object LaunchConf {
         }
         return buildList {
             args.forEach { add(Directive.Arg(it)) }
-            UNSET.forEach { add(Directive.Unset(it)) }
+            (ALWAYS_UNSET + guestUnset).distinct().forEach { add(Directive.Unset(it)) }
             env.forEach { (key, value) -> add(Directive.SetEnv(key, value)) }
             if (!detection.hasBash) add(Directive.MapCommand("bash", detection.shell))
             if (!detection.hasSh) add(Directive.MapCommand("sh", detection.shell))

@@ -17,9 +17,9 @@ lre/cli/build/install/cli/bin/cli help
 
 | Command | What it does |
 |---|---|
-| `cli setup (--ref <ref> \| --tarball <rootfs.tar[.gz\|.xz]>) --image-dir <dir> --lib-dir <dir> [--data-dir <path>]... [--blobs <dir>] [--free-bytes <n>]` | Pulls the linux/arm64 image (or takes the tarball as its one layer, the Default image's way) and runs `ImageSetup.create`, resuming a setup cut short. Prints one JSON line: `os`, `missingTools`, `installCommand`, `socketPathTight`, `source`, `timingsMs`. |
+| `cli setup (--ref <ref> \| --tarball <rootfs.tar[.gz\|.xz]>) --image-dir <dir> --lib-dir <dir> [--data-dir <path>]... [--blobs <dir>] [--free-bytes <n>] [--tool <command>]...` | Pulls the linux/arm64 image (or takes the tarball as its one layer, the Default image's way) and runs `ImageSetup.create`, resuming a setup cut short, then `ImageSetup.checkTools` for the `--tool` commands. Prints one JSON line: `os`, `missingTools`, `installCommand`, `socketPathTight`, `source`, `timingsMs`. |
 | `cli refresh --image-dir <dir> --lib-dir <dir> [--data-dir <path>]...` | `ImageSetup.refreshForStart`, as the app runs it before every engine start. |
-| `cli run --image-dir <dir> [--cwd <dir>] [--timeout <seconds>] -- <command>...` | `$SHELL -c "<command>"` with `run/engine.env` over our environment, as opencode runs a command. |
+| `cli run --image-dir <dir> [--cwd <dir>] [--timeout <seconds>] -- <command>...` | `$SHELL -c "<command>"` with `run/engine.env` over our environment, as a native engine runs a command. |
 | `cli env --image-dir <dir>` | `run/engine.env` as shell `export` lines, for `eval` in a script. |
 
 - `--lib-dir` holds `libproot.so`, `libproot-loader.so` and

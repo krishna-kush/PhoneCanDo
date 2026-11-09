@@ -16,6 +16,7 @@ import com.phonecando.lre.image.support.Tree
 import com.phonecando.lre.image.support.TreeLayer
 import com.phonecando.lre.image.support.TreeUnpacker
 import com.phonecando.lre.image.support.treeBase
+import com.phonecando.lre.image.tools.MissingTools
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.io.IOException
@@ -35,6 +36,7 @@ class ImageSetupTest {
     private val layout get() = ImageLayout(File(dir, "files/images/d1"))
     private val host get() = Hosts.local(dir)
     private val big = Long.MAX_VALUE
+    private val tools = listOf("bash", "git", "rg")
 
     @Test
     fun `create turns a debian base into a ready image`() {
@@ -43,8 +45,10 @@ class ImageSetupTest {
 
         assertEquals("debian", result.os?.id)
         assertEquals(PackageFamily.APT, result.os?.family)
-        assertEquals(listOf("rg"), result.missingTools)
-        assertEquals("apt-get update && apt-get install -y ripgrep", result.installCommand)
+        assertEquals(
+            MissingTools(listOf("rg"), "apt-get update && apt-get install -y ripgrep"),
+            ImageSetup.checkTools(layout, tools),
+        )
         assertFalse(result.socketPathTight)
         assertTrue(ImageSetup.isReady(layout))
         assertEquals(SetupStep.entries, SetupState.done(layout))
@@ -72,9 +76,8 @@ class ImageSetupTest {
 
     @Test
     fun `alpine lacks every agent tool and maps bash`() {
-        val result = ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.alpine(it) }, host, big)
-        assertEquals(listOf("bash", "git", "rg"), result.missingTools)
-        assertEquals("apk add bash git ripgrep", result.installCommand)
+        ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.alpine(it) }, host, big)
+        assertEquals(MissingTools(tools, "apk add bash git ripgrep"), ImageSetup.checkTools(layout, tools))
         assertEquals(listOf("bash" to "/bin/sh"), ConfParser.parse(layout.launchConf.readText()).maps)
     }
 
@@ -91,10 +94,41 @@ class ImageSetupTest {
     @Test
     fun `an image without a package manager reports tools but no command`() {
         val result = ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.bare(it) }, host, big)
-        assertEquals(listOf("bash", "git", "rg"), result.missingTools)
-        assertNull(result.installCommand)
+        assertEquals(MissingTools(tools, null), ImageSetup.checkTools(layout, tools))
         assertNull(result.os?.family)
     }
+
+    @Test
+    fun `the tools check asks only about the commands it is given`() {
+        ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.alpine(it) }, host, big)
+        assertEquals(MissingTools.NONE, ImageSetup.checkTools(layout, emptyList()))
+        assertEquals(MissingTools(listOf("rg"), "apk add ripgrep"), ImageSetup.checkTools(layout, listOf("sh", "rg", "rg")))
+        Tree(layout.rootfs).exe("usr/bin/rg")
+        assertEquals(MissingTools.NONE, ImageSetup.checkTools(layout, listOf("rg")))
+        listOf("../bin/sh", "/bin/sh", "rg; reboot", "", "-x").forEach { bad ->
+            assertFailsWith<LreException.UnsafeEntry>(bad) { ImageSetup.checkTools(layout, listOf(bad)) }
+        }
+    }
+
+    @Test
+    fun `the tools check needs a finished image and finds nothing missing without Linux`() {
+        assertFailsWith<LreException.NotFound> { ImageSetup.checkTools(layout, tools) }
+        ImageSetup.android(layout, host)
+        assertEquals(MissingTools.NONE, ImageSetup.checkTools(layout, tools))
+    }
+
+    @Test
+    fun `refresh for start unsets the host's names after the LD_ prefix`() {
+        ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.debian(it) }, host, big)
+        assertEquals(listOf("LD_*"), unsets())
+        ImageSetup.refreshForStart(layout, host, listOf("ENGINE_PASSWORD", "BRIDGE_*", "LD_*"))
+        assertEquals(listOf("LD_*", "ENGINE_PASSWORD", "BRIDGE_*"), unsets())
+        ImageSetup.refreshForStart(layout, host)
+        assertEquals(listOf("LD_*"), unsets())
+        assertFailsWith<LreException.UnsafeEntry> { ImageSetup.refreshForStart(layout, host, listOf("A=B")) }
+    }
+
+    private fun unsets() = layout.launchConf.readLines().filter { it.startsWith("unset ") }.map { it.removePrefix("unset ") }
 
     @Test
     fun `create on a ready image does nothing again`() {

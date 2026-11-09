@@ -7,10 +7,11 @@ object Usage {
         |
         |  cli setup (--ref <image ref> | --tarball <rootfs.tar[.gz|.xz]>)
         |            --image-dir <dir> --lib-dir <dir>
-        |            [--data-dir <path>]... [--blobs <dir>] [--free-bytes <n>]
+        |            [--data-dir <path>]... [--blobs <dir>] [--free-bytes <n>] [--tool <command>]...
         |      Pulls the linux/arm64 image (or takes the tarball as its one layer) and runs
         |      ImageSetup.create, resuming a setup cut short. Prints one JSON line:
-        |      os, missingTools, installCommand, socketPathTight, source, timingsMs.
+        |      os, missingTools (the --tool commands the guest PATH lacks), installCommand,
+        |      socketPathTight, source, timingsMs.
         |  cli refresh --image-dir <dir> --lib-dir <dir> [--data-dir <path>]...
         |      ImageSetup.refreshForStart, as the app runs it before every engine start.
         |  cli run --image-dir <dir> [--cwd <dir>] [--timeout <seconds>] -- <command>...

@@ -9,7 +9,6 @@ import com.phonecando.lre.api.Progress
 import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.image.conf.SocketBudget
 import com.phonecando.lre.image.delete.TreeDeleter
-import com.phonecando.lre.image.detect.Detection
 import com.phonecando.lre.image.detect.Detector
 import com.phonecando.lre.image.fixup.Fixups
 import com.phonecando.lre.image.record.ImageRecord
@@ -23,6 +22,7 @@ import com.phonecando.lre.image.setup.TarUnpacker
 import com.phonecando.lre.image.setup.Unpacker
 import com.phonecando.lre.image.setup.unpackAll
 import com.phonecando.lre.image.shim.Shims
+import com.phonecando.lre.image.tools.MissingTools
 import com.phonecando.lre.image.tools.ToolsCheck
 import java.io.IOException
 import java.nio.file.Files
@@ -66,7 +66,7 @@ class ImageSetup internal constructor(
             run(step, layout, base, host, freeBytes, sink, cancel)
             SetupState.markDone(layout, step)
         }
-        return linuxResult(layout, host, StartRefresh.recorded(layout))
+        return SetupResult(StartRefresh.recorded(layout).os, SocketBudget.isTight(layout, host))
     }
 
     private fun run(
@@ -110,7 +110,7 @@ class ImageSetup internal constructor(
             Seeder.androidFiles(layout)
             RecordStore.save(layout, ImageRecord.Android)
             SetupState.markAndroid(layout)
-            return SetupResult(null, emptyList(), null, SocketBudget.isTight(layout, host))
+            return SetupResult(null, SocketBudget.isTight(layout, host))
         }
 
         /**
@@ -118,16 +118,27 @@ class ImageSetup internal constructor(
          * rewrites what depends on the phone (DNS, shims, launch.conf,
          * engine.env, fake /proc). Cheap when nothing changed.
          *
+         * [guestUnset] names the variables (a trailing `*` for a prefix) no
+         * guest command may inherit, on top of `LD_*`: the secrets the host's
+         * engine holds. launch.conf keeps the list of the last refresh.
+         *
          * @throws LreException.NotFound when setup never finished.
+         * @throws LreException.UnsafeEntry for a name that is not a variable name or prefix.
          */
-        fun refreshForStart(layout: ImageLayout, host: HostEnv) = StartRefresh.beforeStart(layout, host)
+        fun refreshForStart(layout: ImageLayout, host: HostEnv, guestUnset: List<String> = emptyList()) =
+            StartRefresh.beforeStart(layout, host, guestUnset)
+
+        /**
+         * Which of [commands] the guest PATH of the image at [layout] lacks,
+         * and one line that installs them with its package manager. Cheap
+         * file checks. An image with no Linux lacks nothing we could install.
+         *
+         * @throws LreException.NotFound when setup never finished.
+         * @throws LreException.UnsafeEntry for a command that is not a plain name.
+         */
+        fun checkTools(layout: ImageLayout, commands: List<String>): MissingTools = ToolsCheck.ofImage(layout, commands)
 
         /** True when [create] or [android] finished for [layout]. */
         fun isReady(layout: ImageLayout): Boolean = SetupState.isReady(layout)
-
-        internal fun linuxResult(layout: ImageLayout, host: HostEnv, detection: Detection): SetupResult {
-            val tools = ToolsCheck.check(layout.rootfs, detection.guestPath, detection.os)
-            return SetupResult(detection.os, tools.commands, tools.installCommand, SocketBudget.isTight(layout, host))
-        }
     }
 }

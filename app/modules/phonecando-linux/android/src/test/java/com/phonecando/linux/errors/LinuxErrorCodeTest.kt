@@ -34,7 +34,13 @@ class LinuxErrorCodeTest {
   }
 
   @Test fun ourOwnFailuresKeepTheirCode() {
-    listOf(LinuxErrorCode.LINUX_UNAVAILABLE, LinuxErrorCode.ENV_IN_USE, LinuxErrorCode.BUSY).forEach {
+    listOf(
+      LinuxErrorCode.LINUX_UNAVAILABLE,
+      LinuxErrorCode.ENV_IN_USE,
+      LinuxErrorCode.BUSY,
+      LinuxErrorCode.COMMAND_FAILED,
+      LinuxErrorCode.TIMED_OUT,
+    ).forEach {
       assertEquals(it, LinuxErrorCode.of(LinuxError(it, "why")))
     }
   }

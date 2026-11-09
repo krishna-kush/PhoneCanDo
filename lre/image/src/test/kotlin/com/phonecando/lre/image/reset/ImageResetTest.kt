@@ -67,7 +67,7 @@ class ImageResetTest {
         assertEquals(expected, result.reinstall)
         assertEquals(expected, ReinstallList.read(layout))
         assertEquals("debian", result.os.id)
-        assertEquals(listOf("rg"), result.missingTools)
+        assertEquals(listOf("rg"), ImageSetup.checkTools(layout, listOf("bash", "git", "rg")).commands)
         assertTrue(ImageSetup.isReady(layout))
     }
 

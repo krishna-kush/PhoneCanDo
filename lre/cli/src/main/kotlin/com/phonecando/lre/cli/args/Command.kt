@@ -28,6 +28,8 @@ sealed interface Command {
         val blobs: String?,
         /** Free space to check against; null means the image dir's usable space. */
         val freeBytes: Long?,
+        /** Commands to look for on the guest PATH afterwards (ImageSetup.checkTools). */
+        val tools: List<String>,
     ) : Command
 
     data class Refresh(val host: HostArgs) : Command

@@ -4,6 +4,7 @@ import com.phonecando.lre.api.OsInfo
 import com.phonecando.lre.api.PackageFamily
 import com.phonecando.lre.cli.base.SourceInfo
 import com.phonecando.lre.image.SetupResult
+import com.phonecando.lre.image.tools.MissingTools
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
@@ -23,7 +24,8 @@ class SetupJsonTest {
     @Test
     fun `a registry setup with missing tools`() {
         val json = SetupJson.render(
-            SetupResult(debian, listOf("git", "rg"), "apt-get update && apt-get install -y git ripgrep", false),
+            SetupResult(debian, false),
+            MissingTools(listOf("git", "rg"), "apt-get update && apt-get install -y git ripgrep"),
             SourceInfo.Registry("docker.io/library/debian:stable", "sha256:ab", 1, 50_000_000, "registry-1.docker.io"),
             SetupTimings(download = 1200, setup = 3400),
         )
@@ -44,7 +46,8 @@ class SetupJsonTest {
         val busybox = OsInfo("busybox", null, listOf("a b"), null, null, "/bin/sh")
         val json = Json.parseToJsonElement(
             SetupJson.render(
-                SetupResult(busybox, listOf("bash", "git", "rg"), null, true),
+                SetupResult(busybox, true),
+                MissingTools(listOf("bash", "git", "rg"), null),
                 SourceInfo.Tarball("/w/rootfs \"x\".tar", 42),
                 SetupTimings(0, 9),
             ),
@@ -64,7 +67,8 @@ class SetupJsonTest {
     @Test
     fun `an Android image has null os`() {
         val json = SetupJson.render(
-            SetupResult(null, emptyList(), null, false),
+            SetupResult(null, false),
+            MissingTools.NONE,
             SourceInfo.Tarball("/t", 1),
             SetupTimings(0, 1),
         )

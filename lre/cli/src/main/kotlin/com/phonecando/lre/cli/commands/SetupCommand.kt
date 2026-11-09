@@ -17,8 +17,9 @@ import java.io.PrintStream
 
 /**
  * `setup`: pull (or open) the base, then ImageSetup.create, which resumes a
- * setup cut short and returns at once for a finished one. Progress goes to
- * stderr, the result JSON to stdout.
+ * setup cut short and returns at once for a finished one, then
+ * ImageSetup.checkTools for the `--tool` commands. Progress goes to stderr,
+ * the result JSON to stdout.
  */
 class SetupCommand(private val registry: () -> RegistryBase = { RegistryBase() }) {
     fun run(command: Command.Setup, out: PrintStream, err: PrintStream): Int {
@@ -33,12 +34,14 @@ class SetupCommand(private val registry: () -> RegistryBase = { RegistryBase() }
         }
         val fetchedAt = System.nanoTime()
         val free = command.freeBytes ?: imageDir.usableSpace
-        val result = ImageSetup().create(ImageLayout(imageDir), fetched.base, host, free, sink)
+        val layout = ImageLayout(imageDir)
+        val result = ImageSetup().create(layout, fetched.base, host, free, sink)
         val doneAt = System.nanoTime()
         sink.finish()
+        val tools = ImageSetup.checkTools(layout, command.tools)
 
         val download = if (command.source is BaseSource.Registry) millis(fetchedAt - started) else 0L
-        out.println(SetupJson.render(result, fetched.info, SetupTimings(download, millis(doneAt - fetchedAt))))
+        out.println(SetupJson.render(result, tools, fetched.info, SetupTimings(download, millis(doneAt - fetchedAt))))
         return ExitCode.OK
     }
 

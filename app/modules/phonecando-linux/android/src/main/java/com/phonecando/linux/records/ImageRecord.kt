@@ -12,8 +12,6 @@ data class ImageRecord(
   val error: String?,
   val errorCode: String?,
   val os: OsInfo?,
-  val missingTools: List<String>,
-  val installCommand: String?,
   /** System + home, as last measured. */
   val sizeBytes: Long,
   val createdAt: Long,

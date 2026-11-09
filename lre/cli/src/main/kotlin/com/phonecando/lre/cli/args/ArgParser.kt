@@ -7,10 +7,11 @@ object ArgParser {
     private const val IMAGE_DIR = "image-dir"
     private const val LIB_DIR = "lib-dir"
     private const val DATA_DIR = "data-dir"
+    private const val TOOL = "tool"
 
     private val SETUP = OptionSpec(
         single = setOf("ref", "tarball", IMAGE_DIR, LIB_DIR, "blobs", "free-bytes"),
-        multi = setOf(DATA_DIR),
+        multi = setOf(DATA_DIR, TOOL),
     )
     private val REFRESH = OptionSpec(single = setOf(IMAGE_DIR, LIB_DIR), multi = setOf(DATA_DIR))
     private val RUN = OptionSpec(single = setOf(IMAGE_DIR, "cwd", "timeout"), takesRest = true)
@@ -41,7 +42,7 @@ object ArgParser {
         val freeBytes = options.single["free-bytes"]?.let { text ->
             text.toLongOrNull()?.takeIf { it >= 0 } ?: throw UsageError("--free-bytes must be a whole number of bytes")
         }
-        return Command.Setup(source, host(options), options.single["blobs"], freeBytes)
+        return Command.Setup(source, host(options), options.single["blobs"], freeBytes, options.all(TOOL))
     }
 
     private fun run(options: ParsedOptions): Command.Run {

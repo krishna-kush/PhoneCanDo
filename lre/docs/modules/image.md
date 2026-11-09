@@ -18,7 +18,8 @@ on `oci`.
 |---|---|
 | `ImageSetup(unpacker).create(layout, base, host, freeBytes, sink, cancel)` | Runs or resumes the setup steps for a Linux image; returns `SetupResult`. |
 | `ImageSetup.android(layout, host)` | An image with no Linux: `home/`, `tmp/`, `logs/`, `run/`, an `engine.env` with HOME and TMPDIR. A rootfs already there is left alone. |
-| `ImageSetup.refreshForStart(layout, host)` | Before every engine start or terminal: finish a cut-short reset, re-detect, rewrite what depends on the phone. `NotFound` when setup never finished. |
+| `ImageSetup.refreshForStart(layout, host, guestUnset)` | Before every engine start or terminal: finish a cut-short reset, re-detect, rewrite what depends on the phone. `launch.conf` unsets `LD_*` and the `guestUnset` names (the secrets the host's engine holds). `NotFound` when setup never finished. |
+| `ImageSetup.checkTools(layout, commands)` | Which of `commands` the guest PATH lacks, and one line that installs them (`MissingTools`); nothing for an image with no Linux. A command that is not a plain name is `UnsafeEntry`. |
 | `ImageSetup.isReady(layout)` | `create` or `android` finished. |
 | `ImageReset(runner, unpacker).reset(layout, base, host, freeBytes, sink, cancel)` | Fresh system from the base, `home/` kept; returns `ResetResult`. |
 | `ReinstallList.read/clear(layout)` | The packages a reset offers to reinstall (`run/reinstall.txt`). |
@@ -34,9 +35,9 @@ host's `GuestProcessRunner` goes through the image's shims and stops what
 the command left running once it returns (a package manager's gpg-agent),
 since nothing may run while the system is swapped.
 
-`SetupResult`: the detected `OsInfo` (null for Android), the agent tools
-the image lacks (`bash`, `git`, `rg`), one line that installs them (null
-when none are missing or the family is unknown) and `socketPathTight`.
+`SetupResult`: the detected `OsInfo` (null for Android) and
+`socketPathTight`. `ResetResult`: the fresh `OsInfo` and the reinstall
+offer. Which tools an agent needs is the host's to ask (`checkTools`).
 
 ## Setup steps
 
@@ -83,7 +84,8 @@ reset, and the proot fix. Detection order matters (dnf before yum).
 Pure builders, paths in and text out:
 
 - `conf/LaunchConf.kt` — `run/launch.conf` (format: `lre/launcher/src/conf.h`;
-  `launcher.md`). proot flags, binds, the unset secrets, the
+  `launcher.md`). proot flags, binds, the unset list (`LD_*` plus the
+  host's `guestUnset`), the
   guest environment, `map` lines for a missing `bash` or `sh`, `same` lines
   for `home/` and `tmp/` under every data-dir spelling
   (`conf/PathSpellings.kt`), `home /root`. `conf/Directive.kt` checks each

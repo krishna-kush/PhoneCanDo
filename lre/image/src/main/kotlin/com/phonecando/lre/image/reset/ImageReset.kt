@@ -91,8 +91,7 @@ class ImageReset(
         } else {
             listed
         }
-        val result = ImageSetup.linuxResult(layout, host, detection)
-        return ResetResult(detection.os, result.missingTools, result.installCommand, reinstall)
+        return ResetResult(detection.os, reinstall)
     }
 
     /**

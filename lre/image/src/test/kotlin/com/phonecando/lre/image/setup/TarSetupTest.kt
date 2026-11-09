@@ -47,7 +47,7 @@ class TarSetupTest {
 
         assertEquals("debian", result.os?.id)
         assertEquals(PackageFamily.APT, result.os?.family)
-        assertEquals(listOf("rg"), result.missingTools)
+        assertEquals(listOf("rg"), ImageSetup.checkTools(layout, listOf("bash", "git", "rg")).commands)
         assertTrue(File(layout.shims, "git").let { Files.isSymbolicLink(it.toPath()) })
         assertFalse(Files.isSymbolicLink(File(layout.rootfs, "etc/resolv.conf").toPath()))
         val conf = ConfParser.parse(layout.launchConf.readText())

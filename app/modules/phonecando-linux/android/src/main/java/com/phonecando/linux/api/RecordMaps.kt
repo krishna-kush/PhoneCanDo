@@ -5,10 +5,11 @@ import com.phonecando.linux.records.EnvSource
 import com.phonecando.linux.records.ImageRecord
 import com.phonecando.lre.api.OsInfo
 import com.phonecando.lre.image.reset.ReinstallList
+import com.phonecando.lre.image.tools.MissingTools
 
 // Records as the JS types in app/src/engine/linux/types.ts see them (Env,
-// Image, OsInfo, ReinstallList): the same field names, null for absent.
-// Pure.
+// Image, OsInfo, ReinstallList, MissingTools): the same field names, null
+// for absent. Pure.
 
 fun EnvRecord.toMap(): Map<String, Any?> = mapOf(
   "id" to id,
@@ -36,8 +37,6 @@ fun ImageRecord.toMap(): Map<String, Any?> = mapOf(
   "error" to error,
   "errorCode" to errorCode,
   "os" to os?.toMap(),
-  "missingTools" to missingTools,
-  "installCommand" to installCommand,
   "sizeBytes" to sizeBytes,
   "createdAt" to createdAt,
 )
@@ -52,3 +51,5 @@ fun OsInfo.toMap(): Map<String, Any?> = mapOf(
 )
 
 fun ReinstallList.toMap(): Map<String, Any?> = mapOf("installCommand" to installCommand, "packages" to packages)
+
+fun MissingTools.toMap(): Map<String, Any?> = mapOf("missingTools" to commands, "installCommand" to installCommand)

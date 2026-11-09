@@ -7,25 +7,28 @@ package com.phonecando.linux.images
 // left running, a daemon started from the terminal, or a proot still tracing
 // them. The runner's engine reaper does the same by PHONECANDO_AGENT; this
 // one is for reset and delete, which must not pull the system out from
-// under a running guest. Pure: ImageReaper feeds it /proc.
+// under a running guest. A guest script or command of ours also carries a
+// run tag of its own (RUN_TAG), so what it leaves behind is found without
+// touching the image's engine or terminals. Pure: ImageReaper feeds it /proc.
 internal object ImageProcesses {
   const val TAG = "PHONECANDO_IMAGE"
+  const val RUN_TAG = "PHONECANDO_RUN"
 
-  /** One /proc entry: [image] is its PHONECANDO_IMAGE value, null when absent or unreadable. */
-  data class Entry(val pid: Int, val uid: Int, val zombie: Boolean, val image: String?)
+  /** One /proc entry: [tag] is the value of the tag looked for, null when absent or unreadable. */
+  data class Entry(val pid: Int, val uid: Int, val zombie: Boolean, val tag: String?)
 
-  /** The pids to signal: ours, alive, tagged with exactly [imageRoot]; never [myPid]. */
-  fun select(entries: List<Entry>, imageRoot: String, myPid: Int, myUid: Int): List<Int> =
-    entries.filter { e -> e.pid != myPid && e.uid == myUid && !e.zombie && e.image == imageRoot }.map { it.pid }
+  /** The pids to signal: ours, alive, tagged with exactly [value]; never [myPid]. */
+  fun select(entries: List<Entry>, value: String, myPid: Int, myUid: Int): List<Int> =
+    entries.filter { e -> e.pid != myPid && e.uid == myUid && !e.zombie && e.tag == value }.map { it.pid }
 
-  /** The tag in /proc/<pid>/environ (NUL-separated KEY=VALUE); the first one wins, as getenv() reads it. */
-  fun tagOf(environ: ByteArray): String? {
+  /** Variable [name] in /proc/<pid>/environ (NUL-separated KEY=VALUE); the first one wins, as getenv() reads it. */
+  fun tagOf(environ: ByteArray, name: String = TAG): String? {
     var start = 0
     for (i in 0..environ.size) {
       if (i < environ.size && environ[i] != 0.toByte()) continue
       if (i > start) {
         val entry = String(environ, start, i - start, Charsets.UTF_8)
-        if (entry.startsWith("$TAG=")) return entry.substring(TAG.length + 1)
+        if (entry.startsWith("$name=")) return entry.substring(name.length + 1)
       }
       start = i + 1
     }

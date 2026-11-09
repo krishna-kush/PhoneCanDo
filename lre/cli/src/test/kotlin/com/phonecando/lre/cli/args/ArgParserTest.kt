@@ -14,6 +14,7 @@ class ArgParserTest {
         val command = parse(
             "setup", "--ref", "debian:stable", "--image-dir", "/w/images/c1", "--lib-dir=/w/lib",
             "--data-dir", "/w", "--data-dir=/alias/w", "--blobs", "/w/blobs", "--free-bytes", "1000",
+            "--tool", "bash", "--tool=rg",
         )
         assertEquals(
             Command.Setup(
@@ -21,6 +22,7 @@ class ArgParserTest {
                 HostArgs("/w/images/c1", "/w/lib", listOf("/w", "/alias/w")),
                 blobs = "/w/blobs",
                 freeBytes = 1000,
+                tools = listOf("bash", "rg"),
             ),
             command,
         )
@@ -29,7 +31,7 @@ class ArgParserTest {
     @Test
     fun `setup from a tarball with defaults`() {
         assertEquals(
-            Command.Setup(BaseSource.Tarball("rootfs.tar.xz"), HostArgs("img", "lib", emptyList()), null, null),
+            Command.Setup(BaseSource.Tarball("rootfs.tar.xz"), HostArgs("img", "lib", emptyList()), null, null, emptyList()),
             parse("setup", "--tarball", "rootfs.tar.xz", "--image-dir", "img", "--lib-dir", "lib"),
         )
     }

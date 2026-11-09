@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ELF checks on the Android proot build (build-android.sh's out-dir), then
 # <dir>/SHA256SUMS. The files are bionic arm64, so no CI runner can exec
-# them: the proof is ELF-level, as in .github/ci/oc-payload/verify-payload.sh.
+# them: the proof is ELF-level, as in agents/kit/native/verify-elf.sh.
 #
 #   libproot.so         ELF64 AArch64 PIE, INTERP /system/bin/linker64,
 #                       NEEDED system libs only (libc libm libdl liblog),

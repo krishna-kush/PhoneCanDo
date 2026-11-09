@@ -23,7 +23,7 @@ class RecordMapsTest {
   @Test fun imageHasTheImageShape() {
     val map = Samples.images[1].toMap()
     assertEquals(
-      setOf("id", "envId", "state", "failedStep", "error", "errorCode", "os", "missingTools", "installCommand", "sizeBytes", "createdAt"),
+      setOf("id", "envId", "state", "failedStep", "error", "errorCode", "os", "sizeBytes", "createdAt"),
       map.keys,
     )
     assertEquals("unpack", map["failedStep"])

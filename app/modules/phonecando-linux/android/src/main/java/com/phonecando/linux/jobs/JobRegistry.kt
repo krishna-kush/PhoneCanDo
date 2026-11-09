@@ -18,8 +18,12 @@ data class JobTarget(val kind: Kind, val id: String) {
   }
 }
 
-/** One running job: its id for JS, its target, and the cancel flag lre polls. */
-class Job(val id: String, val target: JobTarget) {
+/**
+ * One running job: its id for JS, its target, and the cancel flag lre polls.
+ * [guestScript]: a script running in a ready image (runGuestScript), which
+ * leaves the image usable meanwhile, unlike a create or reset.
+ */
+class Job(val id: String, val target: JobTarget, val guestScript: Boolean = false) {
   private val cancelled = AtomicBoolean(false)
   private val done = CountDownLatch(1)
 
@@ -46,12 +50,12 @@ class JobRegistry {
   private var counter = 0L
 
   /** Registers a new job for [target]. @throws LinuxError busy when one already runs for it. */
-  fun begin(target: JobTarget): Job = synchronized(lock) {
+  fun begin(target: JobTarget, guestScript: Boolean = false): Job = synchronized(lock) {
     if (byTarget.containsKey(target)) {
       throw LinuxError(LinuxErrorCode.BUSY, "a job already runs for ${target.kind.id} ${target.id}")
     }
     counter++
-    Job("job-$counter", target).also { byTarget[target] = it }
+    Job("job-$counter", target, guestScript).also { byTarget[target] = it }
   }
 
   /** Unregisters [job] (the target is free again) and wakes whoever awaits it. */

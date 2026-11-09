@@ -3,6 +3,7 @@ package com.phonecando.lre.cli.report
 import com.phonecando.lre.api.OsInfo
 import com.phonecando.lre.cli.base.SourceInfo
 import com.phonecando.lre.image.SetupResult
+import com.phonecando.lre.image.tools.MissingTools
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -15,7 +16,8 @@ import kotlinx.serialization.json.put
 data class SetupTimings(val download: Long, val setup: Long)
 
 /**
- * The one JSON line `setup` prints. Pure. Shape (null where SetupResult has null):
+ * The one JSON line `setup` prints: the SetupResult and the `--tool`
+ * commands the image lacks (MissingTools). Pure. Shape (null where they have null):
  *
  * `{"os":{"id","versionId","idLike":[],"prettyName","family","shell"}|null,
  *   "missingTools":[],"installCommand","socketPathTight",
@@ -27,10 +29,15 @@ data class SetupTimings(val download: Long, val setup: Long)
  * package manager was found.
  */
 object SetupJson {
-    fun render(result: SetupResult, source: SourceInfo, timings: SetupTimings): String = buildJsonObject {
+    fun render(
+        result: SetupResult,
+        tools: MissingTools,
+        source: SourceInfo,
+        timings: SetupTimings,
+    ): String = buildJsonObject {
         put("os", result.os?.let(::os) ?: JsonNull)
-        put("missingTools", strings(result.missingTools))
-        put("installCommand", result.installCommand)
+        put("missingTools", strings(tools.commands))
+        put("installCommand", tools.installCommand)
         put("socketPathTight", result.socketPathTight)
         put("source", source(source))
         put(

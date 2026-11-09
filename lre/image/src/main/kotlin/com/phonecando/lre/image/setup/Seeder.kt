@@ -24,11 +24,17 @@ internal object Seeder {
         listOf(layout.home, layout.tmp, layout.logs, layout.run).forEach { Files.createDirectories(it.toPath()) }
     }
 
-    /** Fake /proc, engine.env, launch.conf and os-note.md for a Linux image. */
-    fun linuxFiles(layout: ImageLayout, host: HostEnv, detection: Detection, cpuIds: List<Int> = CpuIds.host()) {
+    /** Fake /proc, engine.env, launch.conf (unsetting [guestUnset] too) and os-note.md for a Linux image. */
+    fun linuxFiles(
+        layout: ImageLayout,
+        host: HostEnv,
+        detection: Detection,
+        guestUnset: List<String> = emptyList(),
+        cpuIds: List<Int> = CpuIds.host(),
+    ) {
         FakeProc.files(cpuIds).forEach { (name, text) -> TextFiles.write(File(layout.fakeProc, name), text) }
         TextFiles.write(layout.engineEnv, EngineEnv.linux(layout, host))
-        TextFiles.write(layout.launchConf, LaunchConf.build(layout, host, detection))
+        TextFiles.write(layout.launchConf, LaunchConf.build(layout, host, detection, guestUnset))
         TextFiles.write(layout.osNote, OsNote.text(detection.os))
     }
 

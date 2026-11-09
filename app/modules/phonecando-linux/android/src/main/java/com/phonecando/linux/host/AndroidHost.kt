@@ -3,6 +3,7 @@ package com.phonecando.linux.host
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Process
 import android.os.StatFs
 import com.phonecando.linux.LinuxStatus
@@ -35,6 +36,22 @@ class AndroidHost(private val context: Context) {
     dnsServers = dnsServers(),
     hostPath = System.getenv("PATH") ?: DEFAULT_PATH,
   )
+
+  /**
+   * Whether the phone has a network that offers the internet (airplane mode
+   * or no signal: false); null when Android won't say. Read fresh each time.
+   */
+  fun online(): Boolean? = try {
+    val cm = context.getSystemService(ConnectivityManager::class.java)
+    if (cm == null) {
+      null
+    } else {
+      val caps = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+      caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    }
+  } catch (_: Exception) {
+    null
+  }
 
   /** Free bytes where images and envs live. */
   fun freeBytes(): Long = StatFs(filesDir.path).availableBytes

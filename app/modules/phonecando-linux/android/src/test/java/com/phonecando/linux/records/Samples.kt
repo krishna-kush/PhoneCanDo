@@ -22,10 +22,10 @@ object Samples {
   )
 
   fun image(id: String, envId: String = "default", state: ImageState = ImageState.READY) =
-    ImageRecord(id, envId, state, null, null, null, null, emptyList(), null, 0, 1_700_000_000_000L)
+    ImageRecord(id, envId, state, null, null, null, null, 0, 1_700_000_000_000L)
 
   val images = listOf(
-    ImageRecord("a1b2c3", "default", ImageState.READY, null, null, null, debian, listOf("rg"), "apt-get install -y ripgrep", 987_654_321L, 4L),
-    ImageRecord("zz9", "k3x9qa", ImageState.FAILED, "unpack", "no_space: needs 10 bytes, 1 free", "no_space", null, emptyList(), null, 0, 5L),
+    ImageRecord("a1b2c3", "default", ImageState.READY, null, null, null, debian, 987_654_321L, 4L),
+    ImageRecord("zz9", "k3x9qa", ImageState.FAILED, "unpack", "no_space: needs 10 bytes, 1 free", "no_space", null, 0, 5L),
   )
 }
