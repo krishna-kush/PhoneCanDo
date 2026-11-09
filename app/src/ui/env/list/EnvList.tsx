@@ -1,20 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { getBuildChannel } from '../../../engine/runner';
 import { useAgentsStore } from '../../../state/agents';
-import { createAndroidAgent } from '../../../state/flows/createAgentFromEnv';
 import { useLinuxStore } from '../../../state/linux';
 import AppButton from '../../common/AppButton';
 import Screen from '../../common/Screen';
 import SectionTitle from '../../common/SectionTitle';
-import { linuxFailureText } from '../logic/errorText';
 import { buildEnvSections } from '../logic/sections';
+import { useNewAgent } from '../new-agent/useNewAgent';
 import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
 import EnvSection from './EnvSection';
 
 // The Env tab's home: every env with the agents whose machines come from it.
 // New env only where Linux runs (never on play); elsewhere New agent makes
-// one with Android's own shell.
+// one with Android's own shell (after Choose agent when there is a choice).
 export default function EnvList() {
   const envs = useLinuxStore((s) => s.envs);
   const images = useLinuxStore((s) => s.images);
@@ -23,20 +22,9 @@ export default function EnvList() {
   const open = useEnvNav((s) => s.open);
   const sections = useMemo(() => buildEnvSections(envs, images, agents), [envs, images, agents]);
   const play = getBuildChannel() === 'play';
-  const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const newAgent = useNewAgent();
 
   const openAgent = (agentId: string) => open({ name: 'agent', agentId });
-
-  const newAndroidAgent = () => {
-    if (adding) return;
-    setAdding(true);
-    setError(null);
-    createAndroidAgent()
-      .then((agent) => openAgent(agent.id))
-      .catch((e: unknown) => setError(linuxFailureText(e)))
-      .finally(() => setAdding(false));
-  };
 
   return (
     <Screen>
@@ -61,10 +49,10 @@ export default function EnvList() {
       ) : (
         <>
           {!play ? <Note>Linux isn't available in this build, so agents use Android's own shell.</Note> : null}
-          <AppButton loading={adding} onPress={newAndroidAgent}>
+          <AppButton loading={newAgent.busy} onPress={() => newAgent.start({ kind: 'android' })}>
             New agent
           </AppButton>
-          {error ? <Note tone="error">{error}</Note> : null}
+          {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
         </>
       )}
     </Screen>

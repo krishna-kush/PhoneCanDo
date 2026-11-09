@@ -7,6 +7,17 @@ import type { EnvId } from '../../../engine/linux/types';
 /** A tag the user picked, with what the picker knew about it. */
 export type PickedTag = { name: string; sizeArm64: number | null; lastUpdated: string | number | null };
 
+/** What a new agent's machine is made from: the Choose agent step's subject. */
+export type NewAgentTarget =
+  /** New agent here: an env that is already there. */
+  | { kind: 'env'; envId: EnvId }
+  /** New env → Default: the baked env, made once. */
+  | { kind: 'default' }
+  /** No Linux in this build: Android's own shell. */
+  | { kind: 'android' }
+  /** New env → Own: the download starts once the agent is picked. */
+  | { kind: 'own'; repo: string; tag: PickedTag; typed: boolean };
+
 export type EnvRoute =
   | { name: 'list' }
   | { name: 'agent'; agentId: AgentId }
@@ -19,7 +30,9 @@ export type EnvRoute =
   /** Own: last look before the download; `typed` when the tag came with the typed name. */
   | { name: 'new-env-confirm'; repo: string; tag: PickedTag; typed: boolean }
   /** Own: the download running. */
-  | { name: 'new-env-pull'; repo: string; tag: string; envId: EnvId };
+  | { name: 'new-env-pull'; repo: string; tag: string; envId: EnvId }
+  /** Choose agent: which kind the new agent is (only when there is a choice). */
+  | { name: 'new-agent'; target: NewAgentTarget };
 
 /** Where Back goes; null on the list (the app's own Back takes over). */
 export function parentRoute(route: EnvRoute): EnvRoute | null {
@@ -36,5 +49,19 @@ export function parentRoute(route: EnvRoute): EnvRoute | null {
       return { name: 'new-env-os' };
     case 'new-env-confirm':
       return route.typed ? { name: 'new-env-os' } : { name: 'new-env-tags', repo: route.repo };
+    case 'new-agent':
+      return parentOfTarget(route.target);
+  }
+}
+
+function parentOfTarget(target: NewAgentTarget): EnvRoute {
+  switch (target.kind) {
+    case 'default':
+      return { name: 'new-env' };
+    case 'own':
+      return { name: 'new-env-confirm', repo: target.repo, tag: target.tag, typed: target.typed };
+    case 'env':
+    case 'android':
+      return { name: 'list' };
   }
 }

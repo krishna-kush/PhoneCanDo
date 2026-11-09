@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { Keyboard } from 'react-native';
 import { Sheet, YStack } from 'tamagui';
 import { agentKind } from '../../../engine/agents/registry';
 import { useAgentsStore } from '../../../state/agents';
@@ -20,6 +22,12 @@ export default function AgentSheet({ open, onClose }: { open: boolean; onClose: 
   const setActiveAgent = useAgentsStore((s) => s.setActiveAgent);
   const setFooterTab = useAppStore((s) => s.setFooterTab);
   const setFolderPickerOpen = useAppStore((s) => s.setFolderPickerOpen);
+
+  // A TUI home keeps the keyboard up for its hidden input; the sheet rises
+  // from the bottom, so the keyboard would cover it.
+  useEffect(() => {
+    if (open) Keyboard.dismiss();
+  }, [open]);
 
   return (
     <Sheet

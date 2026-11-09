@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { freeDiskBytes } from '../../../engine/files';
 import { catalogTags } from '../../../engine/linux/native';
-import { createOwnEnv } from '../../../state/flows/createOwnEnv';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
 import Screen from '../../common/Screen';
-import { linuxFailureText } from '../logic/errorText';
 import { formatAgo, formatBytes } from '../logic/format';
 import { isHubRepo } from '../logic/imageRef';
-import type { PickedTag } from '../logic/routes';
+import type { NewAgentTarget, PickedTag } from '../logic/routes';
+import { useNewAgent } from '../new-agent/useNewAgent';
 import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
 import PageHeader from '../parts/PageHeader';
@@ -20,13 +19,13 @@ const ROOM_FACTOR = 3;
 // Own env, last look before the download: what, how big (looked up when the
 // tag was typed), how much room the phone has. Download starts the env and
 // moves to its progress page; once it is done the first agent is made on it.
+// When there is a choice of agent, Choose agent comes first and starts it.
 export default function ConfirmPull({ repo, tag, typed }: { repo: string; tag: PickedTag; typed: boolean }) {
-  const open = useEnvNav((s) => s.open);
   const back = useEnvNav((s) => s.back);
   const [size, setSize] = useState<number | null>(tag.sizeArm64);
-  const [starting, setStarting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const newAgent = useNewAgent();
   const [free] = useState(freeDiskBytes);
+  const target: NewAgentTarget = { kind: 'own', repo, tag, typed };
 
   // A typed tag comes without its size; Docker Hub can tell us (other registries cannot).
   useEffect(() => {
@@ -44,24 +43,6 @@ export default function ConfirmPull({ repo, tag, typed }: { repo: string; tag: P
       alive = false;
     };
   }, [repo, tag.name, tag.sizeArm64]);
-
-  const download = () => {
-    if (starting) return;
-    setStarting(true);
-    setError(null);
-    let started = false;
-    createOwnEnv({ image: repo, tag: tag.name }, ({ envId }) => {
-      started = true;
-      open({ name: 'new-env-pull', repo, tag: tag.name, envId });
-    })
-      .catch((e: unknown) => {
-        // Once started, the download page follows the run and says what failed.
-        if (!started) setError(linuxFailureText(e));
-      })
-      .finally(() => {
-        if (!started) setStarting(false);
-      });
-  };
 
   const needed = size != null ? size * ROOM_FACTOR : null;
   const tight = needed != null && free != null && free < needed;
@@ -86,9 +67,9 @@ export default function ConfirmPull({ repo, tag, typed }: { repo: string; tag: P
       ) : null}
       {typed ? <Note>We check the name with the registry when the download starts.</Note> : null}
       <Note>You can leave the download page any time; the download keeps going.</Note>
-      {error ? <Note tone="error">{error}</Note> : null}
-      <AppButton loading={starting} onPress={download}>
-        Download
+      {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
+      <AppButton loading={newAgent.busy} onPress={() => newAgent.start(target)}>
+        {newAgent.asks(target) ? 'Choose agent' : 'Download'}
       </AppButton>
     </Screen>
   );

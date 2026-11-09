@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Text, XStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
+import { agentKind } from '../../../engine/agents/registry';
 import type { Image } from '../../../engine/linux/types';
 import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
@@ -14,8 +15,11 @@ import Note from '../parts/Note';
 
 type Props = { agent: Agent; image: Image | undefined; linux: boolean };
 
-// The agent's engine (state, Start/Stop) and the ways into it: chat, the
-// terminal UI, and a shell in its machine. All need the machine ready.
+// The agent's engine (state, Start/Stop) and the ways into it: chat and the
+// terminal UI (a web-home kind), or its own TUI on the Home tab (a tui-home
+// kind, which has no client to attach), and a shell in its machine. All need
+// the machine ready; all but the shell need the agent installed in it (a
+// kind with an install, see InstallSection).
 export default function EngineSection({ agent, image, linux }: Props) {
   const t = useTheme();
   const status = useAgentsStore((s) => s.statuses[agent.id]);
@@ -29,7 +33,9 @@ export default function EngineSection({ agent, image, linux }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const up = engineIsUp(status?.state);
-  const ready = image?.state === 'ready';
+  const machineReady = image?.state === 'ready';
+  const ready = machineReady && !agent.needsInstall;
+  const kind = agentKind(agent.kind);
 
   const start = () => {
     setBusy('start');
@@ -74,7 +80,8 @@ export default function EngineSection({ agent, image, linux }: Props) {
           {status.error}
         </Text>
       ) : null}
-      {!ready ? <Note>It can start once its machine is ready.</Note> : null}
+      {!machineReady ? <Note>It can start once its machine is ready.</Note> : null}
+      {machineReady && !ready ? <Note>It can start once it's installed.</Note> : null}
       {up ? (
         <AppButton variant="secondary" loading={busy === 'stop'} onPress={stop}>
           Stop
@@ -84,20 +91,26 @@ export default function EngineSection({ agent, image, linux }: Props) {
           Start
         </AppButton>
       )}
-      <XStack gap="$2">
-        <AppButton flex={1} variant="secondary" disabled={!ready} onPress={() => follow(() => setFooterTab('home'))}>
-          Open chat
+      {kind.home === 'tui' ? (
+        <AppButton variant="secondary" disabled={!ready} onPress={() => follow(() => setFooterTab('home'))}>
+          {`Open ${kind.label} home`}
         </AppButton>
-        <AppButton
-          flex={1}
-          variant="secondary"
-          disabled={!ready}
-          onPress={() => follow(() => setFolderPickerOpen(true))}
-        >
-          Open TUI
-        </AppButton>
-      </XStack>
-      <AppButton variant="secondary" disabled={!ready} onPress={() => openLinuxTerminal(agent.id)}>
+      ) : (
+        <XStack gap="$2">
+          <AppButton flex={1} variant="secondary" disabled={!ready} onPress={() => follow(() => setFooterTab('home'))}>
+            Open chat
+          </AppButton>
+          <AppButton
+            flex={1}
+            variant="secondary"
+            disabled={!ready}
+            onPress={() => follow(() => setFolderPickerOpen(true))}
+          >
+            Open TUI
+          </AppButton>
+        </XStack>
+      )}
+      <AppButton variant="secondary" disabled={!machineReady} onPress={() => openLinuxTerminal(agent.id)}>
         {linux ? 'Open terminal in the machine' : 'Open terminal'}
       </AppButton>
     </>

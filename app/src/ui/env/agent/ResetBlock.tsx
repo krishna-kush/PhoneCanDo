@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Agent } from '../../../engine/agents/records';
 import type { Env, Image, ReinstallList } from '../../../engine/linux/types';
+import { useAgentReinstallOffered } from '../../../state/flows/installRuns';
 import { pendingReinstall, resetAgentImage } from '../../../state/flows/resetAgentImage';
 import AppButton from '../../common/AppButton';
 import ConfirmDialog from '../../common/ConfirmDialog';
@@ -12,13 +13,15 @@ import ReinstallOffer from './ReinstallOffer';
 type Props = { agent: Agent; image: Image; env: Env };
 
 // Reset: system files back to the env's base, home kept, the engine stopped
-// first. Afterwards (or when an earlier reset left one) the reinstall offer.
+// first. Afterwards (or when an earlier reset left one) the reinstall offer:
+// the agent itself (a kind with an install) and what was installed by hand.
 export default function ResetBlock({ agent, image, env }: Props) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offer, setOffer] = useState<ReinstallList | null>(null);
+  const agentReinstall = useAgentReinstallOffered(agent.id);
 
   const ready = image.state === 'ready';
   // An offer a reset left while this page was closed.
@@ -50,8 +53,16 @@ export default function ResetBlock({ agent, image, env }: Props) {
       </AppButton>
       {error ? <Note tone="error">{`The reset didn't finish. ${error}`}</Note> : null}
       {lastFailure ? <Note tone="error">{`The last reset didn't finish. ${lastFailure}`}</Note> : null}
-      {done && !offer ? <Note>Reset done. Your projects, chats and keys are still there.</Note> : null}
-      {offer ? <ReinstallOffer agentId={agent.id} imageId={image.id} offer={offer} onDone={() => setOffer(null)} /> : null}
+      {done && !offer && !agentReinstall ? <Note>Reset done. Your projects, chats and keys are still there.</Note> : null}
+      {offer || agentReinstall ? (
+        <ReinstallOffer
+          agent={agent}
+          imageId={image.id}
+          offer={offer}
+          agentReinstall={agentReinstall}
+          onDone={() => setOffer(null)}
+        />
+      ) : null}
       <ConfirmDialog
         open={confirm}
         onClose={() => setConfirm(false)}

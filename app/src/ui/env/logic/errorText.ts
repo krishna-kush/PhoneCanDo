@@ -9,6 +9,7 @@ import {
   type JobFailure,
   type LinuxErrorCode,
 } from '../../../state/flows/logic/errors.ts';
+import type { InstallErrorCode, InstallFailure } from '../../../state/flows/logic/installErrors.ts';
 
 const LINUX_TEXT: Record<LinuxErrorCode, string> = {
   unsafe_entry: 'This image has a file that points outside it, so we stopped unpacking it.',
@@ -28,6 +29,8 @@ const LINUX_TEXT: Record<LinuxErrorCode, string> = {
   linux_unavailable: "Linux isn't available in this build.",
   env_in_use: 'Agents still use this env. Delete them first.',
   busy: 'Something else is still running on it. Wait a moment and try again.',
+  command_failed: 'A command failed. Its last lines are below.',
+  timed_out: 'It took too long, so we stopped it. Check your connection and try again.',
   internal: 'Something went wrong on our side.',
 };
 
@@ -53,12 +56,24 @@ export function recordErrorText(record: { error: string | null; errorCode?: stri
   return failure ? failureText(failure) : null;
 }
 
+const INSTALL_TEXT: Record<Exclude<InstallErrorCode, LinuxErrorCode>, string> = {
+  no_recipe: "We don't know how to install this agent on this machine's system.",
+  verify_failed: "It installed, but we couldn't read its version, so it may not run.",
+};
+
+/** An install's failure as a sentence: the runner's own codes, else the Linux ones. */
+export function installErrorText(failure: InstallFailure): string {
+  const code = failure.code;
+  return code === 'no_recipe' || code === 'verify_failed' ? INSTALL_TEXT[code] : failureText({ code, message: failure.message });
+}
+
 const START_TEXT: Record<EngineStartError, string> = {
   too_many_running: 'Three agents are already running. Stop one first.',
   image_not_ready: "This agent's machine isn't ready yet. Wait for its setup to finish.",
   engine_missing: "This build doesn't include the agent's program.",
   port_unavailable: "We couldn't find a free port to start on. Try again.",
   start_failed: "The agent didn't start. Try again.",
+  agent_not_installed: "This agent isn't installed in its machine yet. Install it on its page in the Env tab.",
 };
 
 export function startErrorText(code: EngineStartError): string {

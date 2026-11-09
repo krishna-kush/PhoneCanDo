@@ -9,15 +9,18 @@ import { missingToolsLine } from '../logic/hints';
 import { envTitle, osLine } from '../logic/titles';
 import ImageStatus from '../parts/ImageStatus';
 import Note from '../parts/Note';
+import { useMissingTools } from './useMissingTools';
 
 type Props = { agent: Agent; image: Image | undefined; env: Env | undefined; linux: boolean };
 
 // The agent's machine: which env it comes from, the detected OS, its size,
-// its setup state, tools the agent needs but the machine lacks (with the
-// install command typed into a terminal, not run), and the plain truths:
+// its setup state, commands the agent's kind needs but the machine lacks
+// (checked when the page shows it, with the install command typed into a
+// terminal, not run), and the plain truths:
 // not a sandbox, no systemd.
 export default function MachineSection({ agent, image, env, linux }: Props) {
   const openLinuxTerminal = useAppStore((s) => s.openLinuxTerminal);
+  const tools = useMissingTools(agent, image, linux);
 
   if (!image) {
     return (
@@ -30,8 +33,8 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
 
   const os = linux ? osLine(image.os ?? env?.os ?? null) : "Android's own shell";
   const size = image.sizeBytes > 0 ? formatBytes(image.sizeBytes) : null;
-  const missing = image.state === 'ready' ? image.missingTools : [];
-  const install = image.installCommand;
+  const missing = tools?.missingTools ?? [];
+  const install = tools?.installCommand ?? null;
 
   return (
     <>

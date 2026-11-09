@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Button, Sheet, Text, XStack } from 'tamagui';
+import type { KindView } from '../../../../agents/kit/ts/contract/view.ts';
+import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent, useAgentsStore } from '../../state/agents';
 import { useAppStore, type TerminalSession } from '../../state/app';
@@ -17,14 +19,16 @@ import { HIT, useTheme } from './globals';
 // 60dp app bar with one shared row layout: left side always
 // `flex={1} minWidth={0}` so long titles truncate instead of pushing the ⋮
 // menu off-screen. The title is the active agent's name; tapping it opens
-// the agent switcher. Home IS that agent's web UI (no app-side
-// projects/chats): the ⋮ menu opens its terminal UI (via the folder
-// picker), Settings, About. An open terminal shows what it is attached to.
+// the agent switcher. Home IS that agent's own UI (no app-side
+// projects/chats): the ⋮ menu leads into it by what its home shows (see
+// agentItems), then Settings, About. An open terminal shows what it is
+// attached to.
 export default function AppHeader() {
   const t = useTheme();
   const terminal = useAppStore((s) => s.terminal);
   const closeTerminal = useAppStore((s) => s.closeTerminal);
   const setFolderPickerOpen = useAppStore((s) => s.setFolderPickerOpen);
+  const openLinuxTerminal = useAppStore((s) => s.openLinuxTerminal);
   const footerTab = useAppStore((s) => s.footerTab);
   const setFooterTab = useAppStore((s) => s.setFooterTab);
   const webCanGoBack = useAppStore((s) => s.webCanGoBack);
@@ -50,17 +54,12 @@ export default function AppHeader() {
         { label: 'About', onSelect: () => setAboutOpen(true) },
       ]
     : [
-        ...(kind
-          ? [
-              {
-                label: `${kind.label} home`,
-                onSelect: () => {
-                  setFooterTab('home');
-                  webGoHome();
-                },
-              },
-              { label: 'Open terminal UI', onSelect: () => setFolderPickerOpen(true) },
-            ]
+        ...(agent && kind
+          ? agentItems(agent, kind, {
+              goHome: () => setFooterTab('home'),
+              openFolderPicker: () => setFolderPickerOpen(true),
+              openLinuxTerminal,
+            })
           : []),
         { label: 'Settings', onSelect: () => setFooterTab('settings') },
         { label: 'About', onSelect: () => setAboutOpen(true) },
@@ -136,8 +135,9 @@ export default function AppHeader() {
             </Text>
           </XStack>
           <Text fontSize={15} color="$color10">
-            On-device coding agents for Android. Home is the active agent's web UI; the ⋮ menu
-            attaches its terminal UI to any folder in its Linux home.
+            On-device coding agents for Android. Home is the active agent's own UI, its web UI or
+            its terminal UI; the ⋮ menu opens its terminal UI in any folder of its Linux home, or a
+            shell in its machine.
           </Text>
           <AppButton
             variant="secondary"
@@ -156,6 +156,31 @@ export default function AppHeader() {
       <AgentSheet open={agentsOpen} onClose={() => setAgentsOpen(false)} />
     </XStack>
   );
+}
+
+type MenuActions = {
+  goHome: () => void;
+  openFolderPicker: () => void;
+  openLinuxTerminal: (agentId: Agent['id']) => void;
+};
+
+// Ways into the active agent, by what its Home shows. A web home gets its
+// home page and the kind's terminal UI (a client of the same engine, in a
+// folder the picker chooses). A TUI home IS the engine's terminal, which
+// takes one viewer, so nothing here opens it a second time: a shell in the
+// agent's machine instead.
+function agentItems(agent: Agent, kind: KindView, act: MenuActions): CardMenuItem[] {
+  const home: CardMenuItem = {
+    label: `${kind.label} home`,
+    onSelect: () => {
+      act.goHome();
+      if (kind.home === 'web') webGoHome();
+    },
+  };
+  if (kind.home === 'tui') {
+    return [home, { label: 'Open Linux shell', onSelect: () => act.openLinuxTerminal(agent.id) }];
+  }
+  return [home, { label: 'Open terminal UI', onSelect: act.openFolderPicker }];
 }
 
 // The terminal UI shows its folder; a Linux shell shows whose image it is in.

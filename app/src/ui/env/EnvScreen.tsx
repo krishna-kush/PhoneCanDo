@@ -5,6 +5,7 @@ import { useLinuxStore } from '../../state/linux';
 import AgentPage from './agent/AgentPage';
 import EnvList from './list/EnvList';
 import ChooseKind from './new-env/ChooseKind';
+import ChooseAgent from './new-agent/ChooseAgent';
 import ConfirmPull from './new-env/ConfirmPull';
 import OsPicker from './new-env/OsPicker';
 import PullProgress from './new-env/PullProgress';
@@ -46,6 +47,8 @@ export default function EnvScreen() {
       );
     case 'new-env-pull':
       return <PullProgress repo={route.repo} tag={route.tag} envId={route.envId} />;
+    case 'new-agent':
+      return <ChooseAgent target={route.target} />;
     case 'list':
       return <EnvList />;
   }

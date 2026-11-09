@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { AppState, Keyboard, StatusBar } from 'react-native';
 import { useFonts } from 'expo-font';
 import { TamaguiProvider } from 'tamagui';
@@ -8,7 +8,7 @@ import AppHeader from './src/ui/common/AppHeader';
 import FooterTabs from './src/ui/common/FooterTabs';
 import TabPager, { TAB_ORDER } from './src/ui/common/TabPager';
 import { useAndroidBack } from './src/ui/common/useAndroidBack';
-import ChatWebScreen from './src/ui/chat/ChatWebScreen';
+import HomeScreen from './src/ui/chat/HomeScreen';
 import TerminalScreen from './src/ui/terminal/TerminalScreen';
 import FolderPicker from './src/ui/terminal/FolderPicker';
 import EnvScreen from './src/ui/env/EnvScreen';
@@ -16,8 +16,10 @@ import SettingsScreen from './src/ui/settings/SettingsScreen';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
+import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
+import KeyboardTracker from './src/ui/common/keyboard/KeyboardTracker';
 import { useAgentsStore } from './src/state/agents';
 import { useAppStore } from './src/state/app';
 import {
@@ -46,10 +48,6 @@ export default function App() {
   const folderPickerOpen = useAppStore((s) => s.folderPickerOpen);
   const agentsHydrated = useAgentsStore((s) => s.hydrated);
   const hasAgents = useAgentsStore((s) => s.agents.length > 0);
-  // Standard tabBarHideOnKeyboard behavior: the footer is dead space
-  // behind the keyboard (it also lifts terminal content by its height),
-  // so it unmounts while any keyboard is up and returns after.
-  const [kbVisible, setKbVisible] = useState(false);
 
   // Android system back walks chat -> project -> home tab before exiting.
   useAndroidBack();
@@ -111,13 +109,9 @@ export default function App() {
         startActiveAgent();
       }
     });
-    const show = Keyboard.addListener('keyboardDidShow', () => setKbVisible(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKbVisible(false));
     return () => {
       launchSub.remove();
       sub.remove();
-      show.remove();
-      hide.remove();
     };
   }, [hydrate, setFooterTab]);
 
@@ -132,6 +126,7 @@ export default function App() {
         <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
         <KeyboardProvider>
         <SafeAreaProvider>
+          <KeyboardTracker />
           <SafeAreaView
             style={{ flex: 1, backgroundColor: t.panel }}
             edges={['top', 'bottom', 'left', 'right']}
@@ -147,21 +142,26 @@ export default function App() {
                 ) : folderPickerOpen ? (
                   <FolderPicker />
                 ) : (
-                  // Home IS the active agent's web UI (its pair-loaded home —
-                  // projects and sessions live there, no app-side project/chat
-                  // creation). Terminals open above via the header menu.
+                  // Home IS the active agent's own UI: its pair-loaded web UI
+                  // (projects and sessions live there, no app-side project/chat
+                  // creation) or the TUI its engine runs. Terminals open above
+                  // via the header menu.
                   <TabPager
-                    pages={[<ChatWebScreen key="web" />, <EnvScreen key="env" />, <SettingsScreen key="settings" />]}
+                    pages={[<HomeScreen key="home" />, <EnvScreen key="env" />, <SettingsScreen key="settings" />]}
                     index={TAB_ORDER.indexOf(footerTab)}
                     onIndexChange={(i) => setFooterTab(TAB_ORDER[i])}
                   />
                 )}
-                {!kbVisible && terminal == null && !folderPickerOpen && <FooterTabs />}
+                {/* It stays put while the keyboard opens over it (the keyboard
+                    draws over the app); a terminal above it leaves the
+                    keyboard's room less the footer's (terminal/sizing.ts). */}
+                {terminal == null && !folderPickerOpen && <FooterTabs />}
               </>
             )}
           </SafeAreaView>
           <UnlockDialog />
           <AccessibilityDialog />
+          <OpenUrlDialog />
           <UpdateDialog />
         </SafeAreaProvider>
         </KeyboardProvider>

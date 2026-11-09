@@ -1,5 +1,6 @@
-// The bridge prompts (unlock, accessibility setup) as the UI queues them,
-// and the lines that say who is asking. Pure (no React Native imports).
+// The bridge prompts (unlock, accessibility setup, a link to open) as the UI
+// queues them, and the lines that say who is asking. Pure (no React Native
+// imports).
 import type { BridgePrompt } from '../../engine/runner';
 
 // What to show: the native list (oldest first) minus the prompts this UI
@@ -25,6 +26,26 @@ export function samePrompts(a: readonly BridgePrompt[], b: readonly BridgePrompt
 /** The dialog's heading for any prompt: which agent is asking. */
 export function askerTitle(p: BridgePrompt): string {
   return `${p.agentName || 'An agent'} wants to control the phone`;
+}
+
+/** The host a link goes to, as the user should judge it: no user info before
+    an `@`, lowercased, its port kept (a sign-in may call back to localhost). */
+export function urlHost(url: string): string {
+  const m = /^https?:\/\/([^/?#]*)/i.exec(url.trim());
+  if (!m) return url.trim();
+  const authority = m[1];
+  return authority.slice(authority.lastIndexOf('@') + 1).toLowerCase();
+}
+
+/** Only web links open from a prompt (native checks the same before it asks). */
+export function isWebLink(url: string | null | undefined): boolean {
+  return typeof url === 'string' && /^https?:\/\/[^\s]+$/i.test(url.trim());
+}
+
+/** The open_url dialog's heading: "gemini wants to open accounts.google.com". */
+export function openUrlTitle(p: Pick<BridgePrompt, 'agentName' | 'url'>): string {
+  const host = p.url ? urlHost(p.url) : '';
+  return `${p.agentName || 'An agent'} wants to open ${host || 'a link'}`;
 }
 
 // One unlock opens the gate for the whole phone, so it answers every

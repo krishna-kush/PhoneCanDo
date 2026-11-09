@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -10,7 +10,9 @@ import { useOpenChat } from './useOpenChat';
 import { setWebBackHandler, setWebHomeHandler } from './webNavigation';
 import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
-import { engineConn, waitForEngine } from '../../engine/connection';
+import { webUiFor } from '../../engine/agents/webAdapter';
+import { waitForEngine } from '../../engine/connection';
+import { pairWebUi } from '../../engine/engines';
 import { isRunnerAvailable } from '../../engine/runner';
 import { track } from '../../engine/telemetry';
 import AppButton from '../common/AppButton';
@@ -18,13 +20,14 @@ import LogoLoader from '../common/LogoLoader';
 import { useTheme } from '../common/globals';
 
 // One agent's web UI in a WebView, signed in with a fresh one-time pairing
-// URL per mount (the agent kind's pairUrl). ChatWebScreen mounts one per
-// active agent, so a switch pairs again, lands on the web home (projects and
-// sessions live there; no app-side chats) and then returns to the page that
-// agent was last on (lastPage.ts). App chrome adds a web-history back arrow
-// and a Home action so a session never strands the user; the TUI
-// (`TerminalScreen`) is untouched — the header menu switches views. Theme
-// and embed scripts come from the kind's web adapter.
+// URL per mount (the runner pairs as the kind's manifest says). HomeScreen mounts one per
+// active agent of a web-home kind, so a switch pairs again, lands on the web
+// home (projects and sessions live there; no app-side chats) and then
+// returns to the page that agent was last on (lastPage.ts). App chrome adds
+// a web-history back arrow and a Home action so a session never strands the
+// user; the TUI (`TerminalScreen`) is untouched — the header menu switches
+// views. Theme and embed scripts come from the kind's web adapter
+// (webAdapter.ts).
 export default function AgentWebView({ agent }: { agent: Agent }) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,8 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   const themeMode = useAppStore((s) => s.themeMode);
   const t = useTheme();
   const kind = agentKind(agent.kind);
+  // Null for a kind without a web UI: pairing then fails with a message.
+  const webUi = useMemo(() => (kind.web ? webUiFor(kind.web.adapter) : null), [kind]);
   useOpenChat(agent.id, chatId);
 
   // The web UI owns its history and its project-list home. Chrome calls these
@@ -73,24 +78,25 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
     return () => {
       // Remembered on the way out, so a switch back reopens this page.
       const last = currentUrlRef.current;
-      if (last && !kind.web.isAuthUrl(last)) rememberPage(agent.id, last);
+      if (last && webUi && !webUi.isAuthUrl(last)) rememberPage(agent.id, last);
       setWebBackHandler(null);
       setWebHomeHandler(null);
       setWebCanGoBack(false);
     };
-  }, [setWebCanGoBack, agent.id, kind]);
+  }, [setWebCanGoBack, agent.id, webUi]);
 
   // The web app stays mounted across app theme changes; re-assert the scheme
   // in place so the session/scroll state survives the switch.
   useEffect(() => {
-    web.current?.injectJavaScript(kind.web.themeScript(themeMode, t));
-  }, [themeMode, t, kind]);
+    if (webUi) web.current?.injectJavaScript(webUi.themeScript(themeMode, t));
+  }, [themeMode, t, webUi]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         if (!isRunnerAvailable()) throw new Error('native module unavailable');
+        if (!webUi) throw new Error(`${kind.label} has no web UI`);
         const agentId = agent.id;
         const res = await useAgentsStore.getState().startAgent(agentId);
         if (res.status === 'unavailable') throw new Error('engine unavailable');
@@ -98,11 +104,10 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
         if (res.status !== 'already-running') {
           await waitForEngine(agentId);
         }
-        const conn = engineConn(agentId);
-        const pairUrl = await kind.pairUrl(conn);
+        const pairUrl = await pairWebUi(agentId);
         if (!cancelled) {
-          // Log the base (never the single-use URL) for diagnostics.
-          console.log(`[phonecando] web pair ok base=${conn.baseUrl}`);
+          // Log the port (never the single-use URL) for diagnostics.
+          console.log(`[phonecando] web pair ok port=${res.port}`);
           setUrl(pairUrl);
           track('chat.open');
         }
@@ -136,7 +141,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
     );
   }
 
-  if (url == null) {
+  if (url == null || webUi == null) {
     return (
       <YStack
         flex={1}
@@ -173,11 +178,11 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
           domStorageEnabled
           sharedCookiesEnabled
           thirdPartyCookiesEnabled
-          injectedJavaScriptBeforeContentLoaded={kind.web.themeScript(themeMode, t)}
+          injectedJavaScriptBeforeContentLoaded={webUi.themeScript(themeMode, t)}
           onLoadEnd={(e) => {
-            web.current?.injectJavaScript(kind.web.themeScript(themeMode, t));
+            web.current?.injectJavaScript(webUi.themeScript(themeMode, t));
             const loaded = e.nativeEvent.url;
-            if (!kind.web.isAuthUrl(loaded)) {
+            if (!webUi.isAuthUrl(loaded)) {
               const target = restoreUrl(loaded, restoreRef.current);
               restoreRef.current = null;
               if (target) {
@@ -190,14 +195,14 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
           }}
           onNavigationStateChange={(nav) => {
             currentUrlRef.current = nav.url;
-            setChatId(kind.web.isAuthUrl(nav.url) ? null : kind.web.sessionOf(nav.url));
-            if (!homeUrlRef.current && nav.url && !kind.web.isAuthUrl(nav.url)) {
+            setChatId(webUi.isAuthUrl(nav.url) ? null : webUi.sessionOf(nav.url));
+            if (!homeUrlRef.current && nav.url && !webUi.isAuthUrl(nav.url)) {
               homeUrlRef.current = nav.url;
             }
             canGoBackRef.current = nav.canGoBack;
             setWebCanGoBack(homeUrlRef.current != null && homeUrlRef.current !== nav.url);
           }}
-          injectedJavaScript={kind.web.embedScript}
+          injectedJavaScript={webUi.embedScript}
           onHttpError={(e) => {
             const code = e.nativeEvent.statusCode;
             if (code === 401 || code === 403) {

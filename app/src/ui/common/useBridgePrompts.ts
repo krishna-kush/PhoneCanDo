@@ -1,5 +1,5 @@
-// One queue for both prompt dialogs (unlock, accessibility setup), so only
-// one shows at a time: the oldest waiting prompt. Native is the source of
+// One queue for every prompt dialog (unlock, accessibility setup, a link to
+// open), so only one shows at a time: the oldest waiting prompt. Native is the source of
 // truth (each agent request registers its own prompt and removes it when it
 // returns), so we read it on mount, on resume, on every prompt event and once
 // a second while anything is queued. That also drops prompts whose request

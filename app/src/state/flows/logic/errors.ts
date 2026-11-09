@@ -28,6 +28,8 @@ const KNOWN: Record<LinuxErrorCode, true> = {
   linux_unavailable: true,
   env_in_use: true,
   busy: true,
+  command_failed: true,
+  timed_out: true,
   internal: true,
 };
 

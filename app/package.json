@@ -49,7 +49,7 @@
     "prebuild:clean": "EXPO_NO_GIT_STATUS=1 expo prebuild -p android --clean",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "check:vectors": "node scripts/vectors/test_shadow.js && node scripts/vectors/test_modifiers.js && node scripts/vectors/test_env_flows.js && node scripts/vectors/test_chat_pages.js"
+    "check:vectors": "node scripts/vectors/test_shadow.js && node scripts/vectors/test_modifiers.js && node scripts/vectors/test_env_flows.js && node scripts/vectors/test_chat_pages.js && node scripts/vectors/test_web_adapter.js && node scripts/vectors/test_agent_offers.js && node scripts/vectors/test_agent_install.js && node scripts/vectors/test_install_activity.js && node scripts/vectors/test_scroll_keys.js && node scripts/vectors/test_keyboard_room.js"
   },
   "private": true
 }

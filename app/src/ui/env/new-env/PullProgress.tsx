@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cancelJob } from '../../../engine/linux/native';
 import { useAgentsStore } from '../../../state/agents';
-import { createAgentFromEnv } from '../../../state/flows/createAgentFromEnv';
 import { retryOwnEnv } from '../../../state/flows/createOwnEnv';
 import { useOwnEnvRun } from '../../../state/flows/ownEnvRuns';
 import { removeEnv } from '../../../state/flows/rowActions';
@@ -11,6 +10,7 @@ import AppCard from '../../common/AppCard';
 import Screen from '../../common/Screen';
 import { failureText, linuxFailureText, recordErrorText } from '../logic/errorText';
 import { progressLine, stepFraction } from '../logic/steps';
+import { useNewAgent } from '../new-agent/useNewAgent';
 import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
 import PageHeader from '../parts/PageHeader';
@@ -19,7 +19,8 @@ import ProgressBar from '../parts/ProgressBar';
 // Own env, the download. Leaving keeps it going (the list shows it too).
 // The run started on the confirm page makes the first agent once the
 // download is done; this page then opens that agent. A failed download
-// offers Retry or deleting the env; a failed agent, New agent here.
+// offers Retry or deleting the env; a failed agent (or none made: a Retry
+// after a restart with a choice of agent), New agent here.
 export default function PullProgress({ repo, tag, envId }: { repo: string; tag: string; envId: string }) {
   const open = useEnvNav((s) => s.open);
   const back = useEnvNav((s) => s.back);
@@ -27,7 +28,8 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
   const hasMachine = useLinuxStore((s) => s.images.some((i) => i.envId === envId));
   const progress = useTargetProgress({ kind: 'env', id: envId });
   const run = useOwnEnvRun(envId);
-  const [busy, setBusy] = useState<'retry' | 'delete' | 'new' | null>(null);
+  const [busy, setBusy] = useState<'retry' | 'delete' | null>(null);
+  const newAgentHere = useNewAgent();
   const [error, setError] = useState<string | null>(null);
 
   // The run made the agent: show it.
@@ -37,7 +39,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
     if (madeAgentId && madeAgentExists) open({ name: 'agent', agentId: madeAgentId });
   }, [madeAgentId, madeAgentExists, open]);
 
-  const act = (what: 'retry' | 'delete' | 'new', job: () => Promise<unknown>) => {
+  const act = (what: 'retry' | 'delete', job: () => Promise<unknown>) => {
     if (busy) return;
     setBusy(what);
     setError(null);
@@ -50,8 +52,6 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
   const retry = () =>
     act('retry', () => new Promise<void>((resolve, reject) => void retryOwnEnv(envId, resolve).catch(reject)));
   const remove = () => act('delete', () => removeEnv(envId).then(() => open({ name: 'list' })));
-  const newAgent = () =>
-    act('new', () => createAgentFromEnv(envId).then((agent) => open({ name: 'agent', agentId: agent.id })));
 
   // The run moves on a moment after the record reads ready.
   const making = env?.state === 'ready' && (run?.phase === 'downloading' || run?.phase === 'making-agent');
@@ -89,7 +89,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
           <Note tone={agentFailure ? 'error' : 'muted'}>
             {agentFailure ? `Downloaded, but the agent wasn't made. ${agentFailure}` : 'Downloaded.'}
           </Note>
-          <AppButton loading={busy === 'new'} onPress={newAgent}>
+          <AppButton loading={newAgentHere.busy} onPress={() => newAgentHere.start({ kind: 'env', envId })}>
             New agent here
           </AppButton>
         </>
@@ -110,6 +110,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
       ) : null}
 
       {error ? <Note tone="error">{error}</Note> : null}
+      {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
       <AppButton variant="ghost" onPress={() => open({ name: 'list' })}>
         Back to the list
       </AppButton>

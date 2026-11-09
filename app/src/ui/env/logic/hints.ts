@@ -20,3 +20,8 @@ export function reinstallLine(packages: readonly string[]): string {
   }
   return `The reset removed what you installed: ${list(packages)}. You can install ${packages.length === 1 ? 'it' : 'them'} again in one go.`;
 }
+
+/** After a reset of an installed agent's machine: why "Reinstall <agent>" is offered. */
+export function agentReinstallLine(agentName: string): string {
+  return `The reset removed the system packages ${agentName} needs. Reinstall it to bring them back; your projects and chats stay.`;
+}

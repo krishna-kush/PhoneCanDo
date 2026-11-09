@@ -2,13 +2,18 @@
 // home (projects, chats, keys) stays. The engine stops first, since it runs
 // from the files being replaced. A reset notes the packages the user had
 // installed on top of the base; the agent page offers the one line that
-// installs them again until it is used or dismissed.
+// installs them again until it is used or dismissed. An installed agent of a
+// kind with an install keeps itself and its runtimes (both live in home) but
+// loses the system packages its install added, so the page also offers
+// "Reinstall <agent>" (installAgent.ts).
 import type { AgentId } from '../../engine/agents/records';
+import { agentKind } from '../../engine/agents/registry';
 import { agentById } from '../../engine/engines';
 import { clearReinstallList, reinstallList, resetImage } from '../../engine/linux/native';
 import type { ImageId, ReinstallList } from '../../engine/linux/types';
 import { useAgentsStore } from '../agents';
 import { useLinuxStore } from '../linux';
+import { offerAgentReinstall } from './installRuns';
 import { waitForTarget } from './waitForTarget';
 
 /** Resolves with the reinstall offer (null when nothing was installed by hand). */
@@ -19,6 +24,7 @@ export async function resetAgentImage(agentId: AgentId): Promise<ReinstallList |
   const since = useLinuxStore.getState().seq;
   const { jobId } = await resetImage(agent.imageId);
   await waitForTarget({ kind: 'image', id: agent.imageId }, jobId, since);
+  if (agentKind(agent.kind).hasInstall && agent.installedVersion) offerAgentReinstall(agentId);
   return pendingReinstall(agent.imageId);
 }
 

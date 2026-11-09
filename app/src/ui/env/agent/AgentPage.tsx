@@ -10,10 +10,11 @@ import Note from '../parts/Note';
 import PageHeader from '../parts/PageHeader';
 import DangerSection from './DangerSection';
 import EngineSection from './EngineSection';
+import InstallSection from './InstallSection';
 import MachineSection from './MachineSection';
 
-// One agent and its machine: name (Rename), engine, the ways in, the machine
-// itself, then Reset and Delete.
+// One agent and its machine: name (Rename), engine, the ways in, its install
+// (a kind with one), the machine itself, then Reset and Delete.
 export default function AgentPage({ agentId }: { agentId: string }) {
   const back = useEnvNav((s) => s.back);
   const agent = useAgentsStore((s) => s.agents.find((a) => a.id === agentId));
@@ -64,6 +65,7 @@ export default function AgentPage({ agentId }: { agentId: string }) {
       />
       {renameError ? <Note tone="error">{`Couldn't rename it: ${renameError}`}</Note> : null}
       <EngineSection agent={agent} image={image} linux={linux} />
+      <InstallSection agent={agent} image={image} />
       <MachineSection agent={agent} image={image} env={env} linux={linux} />
       <DangerSection agent={agent} image={image} env={env} linux={linux} />
       <PromptDialog

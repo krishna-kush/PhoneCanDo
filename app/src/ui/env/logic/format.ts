@@ -1,4 +1,4 @@
-// Sizes, counts and ages as people read them. Pure (zero RN imports).
+// Sizes, rates, durations, counts and ages as people read them. Pure (zero RN imports).
 
 const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
 
@@ -13,6 +13,23 @@ export function formatBytes(bytes: number | null | undefined): string {
   }
   const digits = unit === 0 || value >= 100 ? 0 : 1;
   return `${value.toFixed(digits).replace(/\.0$/, '')} ${BYTE_UNITS[unit]}`;
+}
+
+/** 1234567 → "1.2 MB/s". */
+export function formatRate(bytesPerSec: number | null | undefined): string {
+  return `${formatBytes(bytesPerSec)}/s`;
+}
+
+/** Seconds → "45 s", "2 min 10 s", "2 min", "1 h 5 min" (seconds dropped past an hour). */
+export function formatDuration(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec) || sec < 0) return '—';
+  const total = Math.floor(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return m > 0 ? `${h} h ${m} min` : `${h} h`;
+  if (m > 0) return s > 0 ? `${m} min ${s} s` : `${m} min`;
+  return `${s} s`;
 }
 
 /** 1234567 → "1.2M" (pull counts). */

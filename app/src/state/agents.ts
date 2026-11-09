@@ -5,13 +5,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
+import { guestUnset } from '../engine/agents/guestEnv';
 import type { Agent, AgentId, EngineStatus } from '../engine/agents/records';
-import { agentKind } from '../engine/agents/registry';
-import { engineConn } from '../engine/connection';
 import {
   agentById,
   engineStatus,
   engineStatuses,
+  isEngineIdle,
   listAgents,
   onEngineState,
   stopEngine,
@@ -88,10 +88,14 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
     if (!isRunnerAvailable()) return ensureEngine(id);
     const agent = get().agents.find((a) => a.id === id) ?? agentById(id);
     if (!agent) return { status: 'unavailable', port: null, error: `no agent ${id}` };
+    // Its install may be running in the image right now; native refuses too.
+    if (agent.needsInstall) {
+      return { status: 'start-failed:agent_not_installed', port: null, error: `${agent.name} is not installed yet` };
+    }
     // A ready engine proves its image is prepared; only a start needs it.
     if (engineStatus(id).state !== 'ready') {
       try {
-        await prepareImageForStart(agent.imageId);
+        await prepareAgentImage(agent);
       } catch (e) {
         return { status: 'start-failed:image_not_ready', port: null, error: errorText(e) };
       }
@@ -158,8 +162,8 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
     },
 
     // Quiet-when-idle stop: runs ONLY when the app UI goes away. Each running
-    // engine whose agent kind says it is idle (opencode: nothing touched in
-    // the last minute) stops; an unreachable one stops too.
+    // engine the runner calls idle (no event or touch for its kind's
+    // idle.quietSec: opencode, a minute) stops; one it cannot judge stops too.
     stopIdleAgents: async () => {
       // Phone control unlocked means an agent may be driving another app
       // while PhoneCanDo is backgrounded (mobile_home/launch); stopping its
@@ -174,13 +178,13 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
         running.map(async (agent) => {
           let idle: boolean;
           try {
-            idle = await agentKind(agent.kind).isIdle(engineConn(agent.id));
+            idle = isEngineIdle(agent.id);
           } catch {
             idle = true;
           }
-          // The check is async: if the user came back meanwhile, the
-          // foreground has already re-ensured the active engine, so leave
-          // them (a stop now races the service's foreground start:
+          // If the user is back by now, the foreground has already
+          // re-ensured the active engine, so leave them (a stop now races
+          // the service's foreground start:
           // ForegroundServiceDidNotStartInTimeException).
           if (!idle || AppState.currentState === 'active') return;
           await get().stopAgent(agent.id);
@@ -189,6 +193,15 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
     },
   };
 });
+
+/**
+ * Await before anything runs in the agent's image: its engine, a shell, an
+ * install. Always with its kind's guest env list, so the image's launch.conf
+ * never flips between callers. Rejects as prepareImageForStart does.
+ */
+export async function prepareAgentImage(agent: Agent): Promise<void> {
+  await prepareImageForStart(agent.imageId, guestUnset(agent.id));
+}
 
 /** The active agent's record, outside React. */
 export function activeAgent(): Agent | null {

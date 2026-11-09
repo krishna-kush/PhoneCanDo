@@ -3,7 +3,6 @@ import { YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { cancelJob } from '../../../engine/linux/native';
 import type { Env, Image } from '../../../engine/linux/types';
-import { createAgentFromEnv } from '../../../state/flows/createAgentFromEnv';
 import { retryOwnEnv } from '../../../state/flows/createOwnEnv';
 import { useOwnEnvRun } from '../../../state/flows/ownEnvRuns';
 import { removeEnv } from '../../../state/flows/rowActions';
@@ -16,6 +15,7 @@ import { formatBytes } from '../logic/format';
 import type { EnvRow } from '../logic/sections';
 import { progressLine, stepFraction } from '../logic/steps';
 import { envTitle, osLine } from '../logic/titles';
+import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
 import MachineRow from './MachineRow';
@@ -53,11 +53,12 @@ function deleteMessage(env: Env): string {
 // its machines. Delete env is offered only once no machine comes from it.
 export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent }: Props) {
   const progress = useTargetProgress(env ? { kind: 'env', id: env.id } : null);
-  const [busy, setBusy] = useState<'new' | 'retry' | 'delete' | null>(null);
+  const [busy, setBusy] = useState<'retry' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const newAgentHere = useNewAgent();
 
-  const run = (what: 'new' | 'retry' | 'delete', job: () => Promise<unknown>) => {
+  const run = (what: 'retry' | 'delete', job: () => Promise<unknown>) => {
     if (busy) return;
     setBusy(what);
     setError(null);
@@ -72,7 +73,8 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent }: P
   const machines = rows.filter((r) => r.image != null).length;
   const canAddAgent = env != null && env.state === 'ready' && (env.source.kind === 'android' || linuxAvailable);
   const canRetry = env?.state === 'failed' && env.source.kind === 'registry' && linuxAvailable;
-  const newAgent = () => env && run('new', () => createAgentFromEnv(env.id).then((a) => onOpenAgent(a.id)));
+  // Opens the agent's page itself, or Choose agent when there is a choice.
+  const newAgent = () => env && newAgentHere.start({ kind: 'env', envId: env.id });
   // A failed download has no machines yet: once it is done, the first agent is made like New env does.
   const retry = () =>
     env && run('retry', () => new Promise<void>((resolve, reject) => void retryOwnEnv(env.id, resolve).catch(reject)));
@@ -125,6 +127,7 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent }: P
       ) : null}
 
       {error ? <Note tone="error">{error}</Note> : null}
+      {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
 
       {rows.map((r) => (
         <MachineRow key={r.key} image={r.image} agent={r.agent} onOpen={onOpenAgent} />
@@ -135,7 +138,7 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent }: P
       {canAddAgent && rows.length === 0 && !makingFirst ? (
         <YStack gap="$2">
           <Note>No agents here yet.</Note>
-          <AppButton variant="secondary" loading={busy === 'new'} onPress={newAgent}>
+          <AppButton variant="secondary" loading={newAgentHere.busy} onPress={newAgent}>
             New agent here
           </AppButton>
         </YStack>
