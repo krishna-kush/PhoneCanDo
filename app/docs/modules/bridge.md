@@ -23,7 +23,10 @@ loopback-only, runs in the app process beside the engines
   `control_busy`, full builds only), then the handler. A refused request
   never takes the lease. `Routes.kt` lists every route with its guards.
 - Endpoints: `ping/battery/notify/share/open/clipboard/app/unlock/accessibility`
-  plus the automation `/pce/*` routes. Bodies over 256 KB return 413.
+  plus the automation `/pce/*` routes, and `/mcp`, the same tools over MCP
+  (below). Bodies over 256 KB return 413. `BridgeServer.kt` only frames
+  HTTP; `BridgeEntry.kt` checks the token (before the body is even read),
+  then hands `/mcp` to the MCP endpoint and every other path to the router.
 - Envelope: `{ok:true,data}` or `{ok:false,code,message}`. Refusals by the
   bridge itself use the HTTP status above; app-level failures (no app to
   share to, a PCE error) return 200 + `ok:false`.
@@ -105,7 +108,7 @@ take no lease.
 
 ## Agent-side tools
 
-The tools are kind-neutral: `phonecando-runner/agents/shared/phone-tools/`
+The tools are kind-neutral: `agents/shared/phone-tools/`
 holds their names, descriptions, schemas and the bridge client
 (`client.ts`), and is packaged inside each kind's config. opencode registers
 them through thin plugin adapters: `plugins/mobile/index.ts` registers the
@@ -124,6 +127,55 @@ long wait ends in the bridge's own result rather than a client timeout:
 
 The full tool surface is in `../../../docs/api/tools.md`; wrapper parity and device proof
 are in `../modules/automation.md`.
+
+## MCP
+
+`POST /mcp` serves the phone tools to any agent that speaks MCP
+(Streamable HTTP), with the same bearer token as the HTTP routes
+(`runner/bridge/mcp/`). It is stateless: each POST carries one JSON-RPC
+message and gets one JSON answer, with no SSE stream and no session id, so
+GET and DELETE answer 405.
+
+- Methods: `initialize`, `ping`, `tools/list` and `tools/call`.
+  `initialize` echoes the client's `protocolVersion` when we know it
+  (`2025-11-25`, `2025-06-18`, `2025-03-26`; a stateless tools-only server
+  behaves the same under each) and otherwise answers our latest, with
+  `capabilities.tools` and `serverInfo` `phonecando` at the app version.
+  Any other method is JSON-RPC `-32601` in a 200, so a client's probe
+  (Claude Code first sends `server/discover` for a newer protocol) falls
+  back instead of failing. Notifications (`notifications/initialized`
+  among them) and client responses get 202 with no body. A body that is
+  not one JSON-RPC message (bad JSON, a batch, no `jsonrpc: "2.0"`, a null
+  id) is 400 with an id-less error.
+- Headers: an `Origin`, when sent, must be loopback (403 otherwise; a page
+  in a browser must not reach the bridge). `MCP-Protocol-Version` is not
+  checked, since every version is answered alike.
+- `tools/call` runs the tool's one route through `BridgeRouter`, the router
+  every HTTP call goes through, so the channel, the switch, the service,
+  the screen lease and the prompts apply exactly as they do there, and the
+  call counts in telemetry under its route. The route's body is the tool's
+  fixed fields plus each argument its schema names (a null argument counts
+  as absent). The reply becomes one text item worded as `client.ts` words
+  it: the data as JSON, or `error <code>: <message>` with `isError: true`,
+  the bridge's refusals included (`automation_off`, `control_busy` with the
+  wait, `automation_unavailable`): the model acts on them as it does in the
+  agent's own plugin. An unknown tool, a full-only one on lite/play among
+  them, is JSON-RPC `-32602`.
+- The tool table is `agents/shared/phone-tools/tools.json`, generated from
+  the TS tools by `node agents/shared/phone-tools/gen-tools-json.mjs`
+  (`--check` fails when it is stale; `pnpm -C agents check` runs it). The
+  generator traces each tool's `run` against a stub bridge and keeps a tool
+  only when it is one pass-through call to one route. The composed
+  wrappers (`mobile_launch/screen/info/click/tap/text/scroll/swipe/back/home/wait`,
+  `control/composed.ts`) chain `/pce/observe` and `/pce/act` or build on a
+  snapshot in TypeScript, so they are left out, each listed under `omitted`
+  with its reason; over MCP an agent uses `mobile_observe` and `mobile_act`.
+  agents.gradle packages the table as the asset of the same path; the
+  bridge serves its `channel: "full"` tools only in full builds, and a
+  build without the table serves MCP with no tools.
+- Long waits: `mobile_open_accessibility` holds the call up to 240 s and
+  `mobile_request_unlock` up to 45 s. An MCP client with a shorter request
+  timeout gives up first; the prompt itself stays up in the app.
 
 ## Trust gate
 

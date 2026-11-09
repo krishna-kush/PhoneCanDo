@@ -46,13 +46,12 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 - `app/docs/README.md` — app docs index.
 - `app/docs/guides/quickstart.md` — install, build and first boot.
 - `app/docs/guides/development.md` — dev loop, stale-JS rule and verification.
-- `app/docs/modules/runner.md` — `phonecando-runner`: agents, several engines
-  at once, the foreground service, opencode payload, config seeding and
+- `app/docs/modules/runner.md` — `phonecando-runner`: agents, engines (server
+  and TUI), the foreground service, agent installs, config seeding and
   telemetry counters.
-- `app/docs/modules/terminal.md` — `phonecando-terminal`: JNI PTY, xterm
-  renderer, input/sizing contract and terminal sessions.
-- `app/docs/modules/chat.md` — the active agent's pair-loaded web UI in the
-  app shell.
+- `app/docs/modules/terminal.md` — `phonecando-terminal`: JNI PTY, hosted
+  PTYs, xterm renderer, input/sizing contract and terminal sessions.
+- `app/docs/modules/chat.md` — Home: the active agent's web UI or TUI.
 - `app/docs/modules/bridge.md` — loopback bridge, per-agent tokens, prompts,
   screen lease, `mobile_*` tools, trust gate and full/lite/play channels.
 - `app/docs/modules/automation.md` — PCE host integration, routes, pack
@@ -93,8 +92,8 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 
 - `pce/docs/README.md` — the PCE product and API docs.
 - `tce/README.md`, `tce/AGENTS.md` — the telemetry backend and its rules.
-- `docs/bootstrap/README.md`, `docs/bootstrap/oc-build.md`,
-  `scripts/agents/oc/` — native payload build.
+- `agents/AGENTS.md`, `agents/README.md` — agent kinds, the kit and runtime
+  plugins; `agents/native/opencode/docs/` — opencode's payload build.
 - `lre/README.md`, `lre/AGENTS.md`, `lre/docs/README.md` — the Linux
   runtime engine: Gradle modules, the launcher (`lre/launcher/src/conf.h`
   is the launch.conf contract), the proot build and the Default image

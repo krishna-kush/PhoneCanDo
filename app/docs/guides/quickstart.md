@@ -5,9 +5,9 @@
 - Node + pnpm (`packageManager` is `pnpm@11.11.0`).
 - Android SDK and an adb device.
 - The staged opencode payload in
-  `app/modules/phonecando-runner/android/src/main/libs/arm64-v8a/`
+  `app/modules/phonecando-runner/android/src/agents/opencode/libs/arm64-v8a/`
   (`liboc-engine.so`, `liboc-opentui.so`). It is gitignored; build it via
-  `../../../docs/bootstrap/README.md`.
+  `../../../agents/native/opencode/docs/README.md`.
 - For Linux images (full and lite): proot staged into
   `app/modules/phonecando-linux/android/src/linux/libs/arm64-v8a/`
   (`lre/proot/stage.sh`) and a Default image (`./manage image fetch` +
@@ -47,11 +47,14 @@ from Metro; native module, manifest or dependency changes need another
 - First launch makes the first agent and its machine: with Linux, an image
   of the Default env (offline, about half a minute); without (play, or no
   proot or Default image staged), an Android image. A failure says why, with
-  Retry and, on the Linux path, Continue without Linux.
-- Home pairs the active agent's web UI with a fresh code per mount; projects
-  and sessions live there. The header title switches agents.
-- The terminal opens from the header menu + folder picker and attaches to
-  the active agent's engine.
+  Retry and, on the Linux path, Continue without Linux. When more than one
+  agent kind can be made, Choose agent comes first (the default kind
+  preselected); every other creation path in the Env tab asks the same way.
+- Home is the active agent's own UI: opencode's web UI (paired with a fresh
+  code per mount), or the TUI of a kind like Claude Code or Gemini CLI,
+  after its install finishes. The header title switches agents.
+- The header menu opens a terminal: opencode's TUI in a folder you pick, or
+  a Linux shell in the agent's machine.
 - The Env tab lists envs and their machines (one image + its agent each) and
   adds new ones. An agent's page holds its engine (state, Start/Stop), the
   ways in (chat, terminal UI, Linux shell), its machine, Reset and Delete.

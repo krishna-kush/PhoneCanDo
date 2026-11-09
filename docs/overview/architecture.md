@@ -1,41 +1,38 @@
 # Architecture
 
-PhoneCanDo runs coding agents on an Android phone; opencode is the first
-agent kind. Each agent has its own local engine (`opencode serve` today) and
-lives in its own image: a VM-like Linux machine through proot, or, without
-Linux, an Android one. The RN shell talks to the engines over loopback; the
-home tab is the active agent's pair-loaded web UI, and the terminal tab is
-its full TUI, or a shell in its image, over an own JNI PTY rendered by
-xterm.js in a WebView.
+PhoneCanDo runs coding agents on an Android phone. Each agent is one
+instance of an agent kind (opencode, Claude Code, Gemini CLI, …), has its
+own engine, and lives in its own image: a VM-like Linux machine through
+proot, or, without Linux, an Android one. Home is the active agent's own
+UI: its web UI (opencode) or its TUI (Claude Code, Gemini CLI). Terminals
+run over our JNI PTY, rendered by xterm.js in a WebView.
 
 ## Product shape
 
 ```
 RN shell (Expo / Tamagui / Zustand)
-  ├─ Home tab ── WebView ── pair code ── active agent's engine
-  ├─ Terminal ── xterm.js WebView ── JNI PTY ── agent TUI | image shell
+  ├─ Home tab ── web UI (pair code) | TUI (engine's PTY) ── active agent
+  ├─ Terminal ── xterm.js WebView ── JNI PTY ── agent TUI client | image shell
   ├─ Env tab (envs, machines, agents) / Settings (app-wide)
   └─ engine seam (app/src/engine)
         │
         ├─ phonecando-runner ── foreground service ── engines (≤ 3, one per agent)
-        │       └─ loopback bridge ── mobile_* tools (one token per agent)
+        │       └─ loopback bridge ── mobile_* tools, MCP (one token per agent)
         ├─ phonecando-linux ── lre/ ── images in files/images/<id>/
         │       └─ shims ── launcher ── proot ── guest commands
-        └─ phonecando-terminal ── libphonecando_pty.so
+        └─ phonecando-terminal ── libphonecando_pty.so, hosted PTYs
 ```
 
 - Several agents, one engine each. The runner's foreground service anchors
   every engine; at most three start or run at once, and a further start
   stops the least recently used engine that has been idle for a minute (or
-  is refused). Each engine has its own loopback port, password and bridge
-  token. The header switches the active agent; chat and the terminal follow
-  it.
-- The web UI owns projects and sessions end to end. There is no app-side chat
-  or project creation.
-- The terminal is a separate view of the agent's engine, not a second
-  server. The recipe is `liboc-engine.so --server <url> [--session <id>] <dir>`,
-  so the terminal and web UI stay on one live session. The agent page also
-  opens a login shell in the agent's image.
+  is refused). The header switches the active agent; Home and the terminal
+  follow it.
+- The agent's own UI owns projects and sessions end to end. There is no
+  app-side chat or project creation.
+- For a web-home kind the terminal is a TUI client of the same engine
+  (`surfaces.terminal.client`), so both stay on one live session; for a
+  TUI-home kind it is a Linux shell in the agent's image.
 - Full builds add the PCE automation stack; play builds strip the
   accessibility host and PCE, and ship no Linux. See
   `../../app/docs/modules/bridge.md` and
@@ -47,30 +44,39 @@ RN shell (Expo / Tamagui / Zustand)
   with its own name, image, engine, port, password and bridge token.
   opencode is the first kind; nothing in the app or docs may assume it is
   the only one.
-- **Engine** — the local process that hosts one agent. Today that is
-  `opencode serve`, one per agent, supervised in the runner's foreground
-  service. In docs, "engine" never means opencode; write "opencode engine"
-  or "opencode payload" when you mean that specific one.
+- **Engine** — the local process that hosts one agent, supervised in the
+  runner's foreground service. Two styles: a `server` engine (opencode:
+  `opencode serve` on loopback, with its own web UI as Home) and a `tui`
+  engine (the kind's own TUI in a PTY the service owns, through
+  `phonecando-terminal`'s `PtyHost`; it keeps running when you leave the
+  app, and Home reattaches with its screen replayed). In docs, "engine"
+  never means opencode; write "opencode engine" when you mean that one.
 - **Env** and **image** — see Linux runtime below. One agent per image; they
   are made and deleted together.
-- **`oc-`** — prefix for opencode-specific things we own where they sit
-  next to generic ones: the `oc-v2` build workdir, the `oc-config` assets
-  folder, the `liboc-*.so` payload, `oc-payload.yml`. Each agent kind has
-  one folder per side named for it (`agents/oc/` in `app/src/engine/`,
-  `phonecando-runner` and its Kotlin package, `scripts/agents/oc/`); files
-  inside an `oc` folder need no prefix. Generic seams (`app/src/engine/`,
-  `phonecando-runner`) stay unprefixed; kind-neutral agent code (the phone
-  tools) lives in `phonecando-runner/agents/shared/`.
+- **`oc-`** — opencode's manifest `prefix`, used only where its files sit
+  in a flat namespace next to other kinds': the `liboc-*.so` payload, the
+  `oc-payload-arm64` CI artifact, the `oc-v2` build workdir. Everything
+  else of a kind lives in its one folder, `agents/<type>/<id>/`
+  (opencode: `agents/native/opencode/`), whose files need no prefix.
+  Generic seams (`app/src/engine/`, `phonecando-runner`) never name a kind;
+  kind-neutral agent code (the phone tools) lives in
+  `agents/shared/phone-tools/`.
 - **Upstream names are frozen** — `opencode.json`, `OPENCODE_*` env vars,
   `~/.config/opencode/`, `~/.local/share/opencode/`, the web UI and plugin API
   come from upstream opencode; do not rename them.
 
-Agent-specific code (serve command, auth, sessions REST, payload, web UI,
-TUI recipe) stays behind the agent-kind seams: `app/src/engine/agents/`
-(`types.ts`, `registry.ts`, one folder per kind) and the runner's Kotlin
-`agents/` package (`AgentKind`, `AgentKinds`, one folder per kind). Screens
-and state look up the kind of the agent in question; adding a kind means a
-folder per side plus one registry line, not conditionals in screens.
+Everything agent-specific (launch, auth, readiness, events, chat titles,
+web UI pairing and theme, TUI recipe, install, config, payload) is data in
+that kind's `agent.json`, plus code hooks only where data can't say it
+(opencode: its SSE event parser). `agents/native/<id>/` is built by us and
+runs from the APK lib dir outside proot; `agents/image/<id>/` is installed
+into the agent's machine and runs in proot; `agents/runtimes/<id>/` (Node,
+…) is installed only for a kind that asks for it. The runner's
+`KindCatalog` turns each packaged manifest into a generic `ManifestKind`
+and never imports a kind. JS sees only a `KindView` (no templates, no
+secrets) through `app/src/engine/agents/registry.ts`, and pairing, idle
+and the TUI recipe are native calls. Adding a kind means a folder in
+`agents/`, not conditionals in screens. Rules: `../../agents/AGENTS.md`.
 
 ## Linux runtime
 
@@ -96,12 +102,16 @@ builds, tests, limits): `../../lre/docs/README.md`.
   seed`, each step idempotent and recorded, so a killed setup resumes at the
   step that failed. Detect reads the OS, its package-manager family and
   shell; fixups set DNS, hosts, hostname and the package manager's proot
-  fix; agent tools the image lacks (bash, git, rg) are listed with the line
-  that installs them. Reset unpacks a fresh base next to the old one and
+  fix. Which of an agent's tools the image lacks is asked when needed
+  (`checkTools`, with the kind's commands), with the line that installs
+  them. Reset unpacks a fresh base next to the old one and
   swaps it in by rename, keeping `home/`; packages installed by hand are
-  offered for reinstall afterwards.
-- **How commands run.** The engine stays a bionic binary run from the
-  native-library dir. `run/engine.env` gives it HOME and TMPDIR (host paths),
+  offered for reinstall afterwards, and an installed agent of a kind with an
+  install is offered "Reinstall <agent>" (its runtimes and itself live in
+  `home/`; the system packages it needs do not).
+- **How commands run.** A native kind's engine stays a bionic binary run
+  from the native-library dir (an image kind's runs in the guest through
+  `shims/sh`, with guest paths). `run/engine.env` gives it HOME and TMPDIR (host paths),
   `SHELL` = `shims/bash`, a `PATH` with `shims/` first,
   `PHONECANDO_IMAGE` and `MAKEFLAGS=-j4` (Android kills an app's processes
   past a device-wide limit; the OS note tells the agent so). Each shim is a
@@ -112,7 +122,9 @@ builds, tests, limits): `../../lre/docs/README.md`.
   command in the guest as fake root. `home/` and `tmp/` are bound at
   `/root` and `/tmp` and at their own host paths under every spelling of the
   data dir, so the engine's file tools and its commands see the same paths.
-  Secrets the engine holds are unset for guest commands. As on a PC, a
+  Secrets the engine holds are unset for guest commands: JS passes their
+  names with every `prepareImageForStart`, and `launch.conf` drops them
+  and `LD_*`. As on a PC, a
   command returns when it ends while its background jobs keep running, and
   the terminal's shell has job control and hangup
   (`lre/docs/overview/architecture.md` → Background processes). Background
@@ -123,14 +135,15 @@ builds, tests, limits): `../../lre/docs/README.md`.
 - **Code.** `lre/` is a pure-JVM Gradle build: `api` (shared types, the
   image layout), `tar` (unpacking), `oci` (registry client, Docker Hub
   catalog), `image` (setup, reset, delete) and `cli` (the same download and
-  setup on a plain JVM, for CI), with the law api ← tar, api ← oci,
-  api + tar ← image, oci + image ← cli (no `android.*`, no `org.json`).
+  setup on a plain JVM, for CI); dependency law in `../../lre/AGENTS.md`.
   Beside it: `lre/launcher/` (C), `lre/proot/` (a pinned termux/proot build;
   MIT build scripts) and `lre/images/default/` (the Default image build; its
   `lock.json` names the image the APK ships). `app/modules/phonecando-linux/`
   is the Android host: env and image records (`files/state/envs.json`,
   `images.json`), long jobs with progress events, setup, reset, delete, the
-  per-start refresh, terminal recipes and the catalog; it builds the launcher
+  per-start refresh, guest scripts and commands (an agent's install as a
+  job that logs to `logs/install.log`, its version check), terminal
+  recipes and the catalog; it builds the launcher
   (CMake) and packages the staged proot libs and Default image in full and
   lite. JS reaches it only through `app/src/engine/linux/`;
   `app/src/state/linux.ts` mirrors its records, `app/src/state/flows/`
@@ -178,7 +191,8 @@ builds, tests, limits): `../../lre/docs/README.md`.
 | Engine seam | `app/src/engine/` | `../../app/docs/modules/runner.md` |
 | Native modules | `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux}/` | `../../app/docs/modules/terminal.md`, `../../app/docs/modules/runner.md`, this page |
 | Terminal page | `app/assets/xterm/` | `../../app/docs/modules/terminal.md` |
-| opencode build | `docs/bootstrap/`, `scripts/agents/oc/` | `../bootstrap/oc-build.md` |
+| Agent kinds (kit, native, image) | `agents/` | `../../agents/AGENTS.md` |
+| opencode payload build | `agents/native/opencode/build/` | `../../agents/native/opencode/docs/build.md` |
 | Linux runtime (LRE) | `lre/` | `../../lre/docs/README.md`, this page |
 | PCE | `pce/` | `../../pce/docs/README.md` |
 | Marketing site | `web/` | `../../web/README.md` |

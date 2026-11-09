@@ -64,13 +64,7 @@ deferred. Keep the `pce-shizuku` artifact local-only while it is WIP.
 
 - [ ] Below-API-30 screenshot request returns `UNSUPPORTED_ACTION`; the branch
   is implemented but not device-tested.
-- [ ] Explicit `Action.Screenshot` artifact (same item as #1 above).
-- [x] Device-verified 2026-10-31: `activityName` returns the real activity,
-  `eventSeq` increments across app switches, and the bridge grace is in the
-  build. The staged `mobile_wait` eventSeq comparison still needs the next APK
-  because the generated asset was stale; the poll fallback remains functional.
-- [x] Observation screenshot device-verified on 2026-10-30 in PhoneCanDo and in
-  Android Settings: 1080x2400 JPEG, path readable through `run-as`.
+- [ ] Explicit `Action.Screenshot` artifact (item 1).
 
 ## Next recommended
 

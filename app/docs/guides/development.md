@@ -22,8 +22,8 @@ UI. Fast Refresh dies silently.
 ## Verification
 
 - `pnpm typecheck` (`tsc --noEmit`) for types.
-- `pnpm check:vectors` for the pure terminal vectors (`keys.ts`,
-  `reconcile.ts`).
+- `pnpm check:vectors` for the pure-logic vectors (`scripts/vectors/`).
+- `cd agents && ./gradlew build` and `pnpm -C agents check` for agent kinds.
 - Host C tests: `sh app/modules/phonecando-terminal/android/src/test/c/run.sh`
   (PTY core) and `bash lre/launcher/test/run.sh` (Linux launcher).
 - `cd lre && ./gradlew build` for the Linux runtime modules and their tests.
@@ -36,9 +36,10 @@ UI. Fast Refresh dies silently.
 The opencode payload, proot and the Default image are built outside the JS
 loop and the app build, then staged (all gitignored):
 
-- opencode: `../../../docs/bootstrap/README.md` and
-  `../../../docs/bootstrap/oc-build.md` (`./manage engine oc build|stage`),
-  into the runner module's `jniLibs`.
+- opencode: `../../../agents/native/opencode/docs/README.md` and
+  `../../../agents/native/opencode/docs/build.md`
+  (`./manage agent opencode build|stage`), into the runner module's
+  `src/agents/opencode/libs/`, which each channel in its manifest picks up.
 - proot and its loader: `lre/proot/` (`build-android.sh`, `verify.sh`,
   `stage.sh`), into `phonecando-linux`'s `src/linux/libs/`.
 - The Default image: `./manage image fetch|stage` (the locked one, every

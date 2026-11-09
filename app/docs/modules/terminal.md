@@ -1,11 +1,8 @@
 # phonecando-terminal (PTY + xterm)
 
 `phonecando-terminal` (`com.phonecando.terminal`) is the Expo module that
-provides the JNI PTY and the WebView bridge for the terminal tab. It is own
-code, clean-room; no Termux GPL code.
-
-All native code lives in Expo modules under `app/modules/` (autolinked).
-Nothing is hand-edited in `app/android/` (CNG-generated, gitignored).
+provides the JNI PTY, the hosted PTYs of TUI engines and the terminal's one
+native view. It is our own clean-room code; no Termux GPL code.
 
 ## Native API
 
@@ -34,19 +31,59 @@ Nothing is hand-edited in `app/android/` (CNG-generated, gitignored).
   shim exposes `getLibDir/open/read/write/resize/kill/exitStatus/close`
   (bytes as base64).
 - `CMakeLists.txt` builds `libphonecando_pty.so`, linked for 16 KB pages.
-- The page posts the title a program sets (`{type:'title'}`, OSC 0/2);
-  an agent TUI names its chat there, and `useOpenTuiChat.ts` reports that
-  chat as open so the service notification leaves it out (`runner.md` →
-  Notifications).
+- `view/DirectionLockView.kt`: the one native view (see Input and sizing).
+
+## PtyHost (hosted PTYs)
+
+`com.phonecando.terminal.host` lets other native code run a program on a
+PTY whose lifetime it owns: the runner's TUI engines, which keep running
+when you leave the tab or the app. `PtyHost` is a process-wide object, not
+part of the Expo module, so a JS reload (which hangs up the module's own
+sessions) leaves its PTYs running. JS never sees their fds.
+
+- `PtyHost.spawn(PtySpawnSpec, PtySink): HostedPty` starts the program
+  through the same path as the module's sessions (`PtySpawn.kt`, then
+  `PtyChild` reaps exactly its pid). The spec's env is the program's whole
+  environment as `KEY=VALUE` entries; nothing of ours is merged in. A
+  failed spawn throws `IOException` naming the step.
+- One reader thread per PTY waits in `pty_wait_readable` (`poll(2)`,
+  `pty_io.c`) for at most 200 ms, reads up to 16 KiB and hands it to
+  `PtySink.onOutput` (the array is reused). It stops on EIO (the child side
+  is gone), on `close()`, or once the program has been reaped and a wait
+  passes with nothing more to read.
+- That thread alone closes the master, so a recycled fd number is never
+  touched; `write` and `resize` check it under a lock and do nothing after
+  the hang-up. `write` gives up after ~1 s without progress, and a
+  same-size `resize` still sends SIGWINCH, as for the module's sessions.
+- After the loop: the master is closed (the kernel hangs up the session).
+  The program gets 3 s to exit by itself, unless `close()` asked for the
+  hang-up. Then SIGHUP goes to its group, and SIGKILL 3 s later (the
+  runner's `ProcessReaper` grace). `onExit` comes once, after the last
+  output: the exit code, 128 + the signal, or -1 when the status was not
+  ours to read.
+- The host C test covers the wait: a timeout really waits, output and the
+  hangup wake it, and a closed fd is `EBADF`.
 
 ## Renderer
 
 Rendering is **not** native: xterm.js 6 in a WebView (`assets/xterm/`),
-render-only (`disableStdin`). The page never owns the IME. Scroll bridge:
-the alt-screen TUI has no xterm scrollback, so page swipes post finger-
-following `scroll` step bursts (RN sends SGR wheel events into the TUI's
-accelerated wheel path) and only true taps post `tap`. `tui.json` sets
-`scroll_speed` 1 + `scroll_acceleration` for 1-line-precise slow swipes.
+render-only (`disableStdin`). The page never owns the IME. A swipe goes
+where a desktop terminal sends a wheel, chosen from the modes the program
+set (`term.modes`), never from the agent kind:
+
+- mouse reports on (opencode's alt-screen TUI, which keeps no xterm
+  scrollback): `scroll` step bursts that RN turns into SGR wheel events
+  (`keys.ts` `wheelSeq`);
+- an alternate screen without mouse reports (less, man): arrow keys
+  (`arrowSeq`);
+- anything else (a shell, an inline TUI such as Gemini CLI or Claude Code):
+  the page's own scrollback, 1:1 with the finger plus a fling; typing
+  brings it back to the bottom (`scrolled`, `__toBottom`).
+
+Only true taps post `tap`. The page also posts the title a program sets
+(`{type:'title'}`, OSC 0/2): an agent TUI names its chat there, and
+`useOpenTuiChat.ts` reports that chat as open so the service notification
+leaves it out (`runner.md` → Notifications).
 
 `app/scripts/inline-xterm.js` bundles `xterm.js` (base64) + `xterm.css` +
 `terminal.js` into `terminal.bundle.html`. Re-run after page changes.
@@ -59,44 +96,85 @@ The IME contract is load-bearing:
   current line as a real document. Every change is reconciled to DELs +
   inserts (`src/ui/terminal/reconcile.ts`). PTY bytes are irreversible, hence
   the shadow, hence never WebView stdin.
-- The xterm page measures its own pixels (`ResizeObserver`, true cell from
-  `_renderService.dimensions` — same source as addon-fit, no per-device
-  numbers) and posts `{ready,termsize}`. RN applies to xterm **and** PTY
-  (`TIOCSWINSZ`, which signals SIGWINCH). Bun re-reads `columns/rows` on
-  SIGWINCH.
-  Remaining blanks use the TUI bg (`#0a0a0a`), never `#000`.
-- The keyboard spacer uses `react-native-keyboard-controller` per-frame
-  `e.height` (`src/ui/terminal/sizing.ts`), so the accessory bar rides the
-  keyboard on any device/IME. `keyboardDidShow` understates settled Gboard.
-- The invisible input is an absolute 1x1 overlay: Android enforces a min-height
-  on multiline fields, so an in-flow field eats a layout row. Text-inserting
-  extra keys (`|`, `~`) are folded into the shadow so Gboard backspace diffs
-  from a true base.
-- Fold every text-inserting path into the shadow or backspace breaks. Never use
-  `visible-password` (it kills mic/glide/predictions).
+- The xterm page measures its own pixels (`ResizeObserver`, the true cell
+  from `_renderService.dimensions`, as addon-fit does; no per-device
+  numbers). The grid follows the box every frame (`fitLocal`; a lagging
+  grid sat centred in a box of another size and snapped), but the page
+  posts `{ready,termsize}` only once the layout has been still for 120 ms
+  (a passing size made an inline TUI draw itself off screen). RN applies
+  that size to the PTY (`TIOCSWINSZ`, which signals SIGWINCH).
+- Every resize after the first goes through `resizeKeeping`, one at a
+  time (a burst collapses to the latest size). xterm sizes the screen
+  around the cursor: shrinking drops every row below it, growing pulls
+  scrollback back only when nothing is below it. An inline TUI keeps its
+  cursor on its input line above its footer and redraws nothing on a
+  height-only change, so it would lose its footer. So on the normal screen
+  a height-only resize parks the cursor (xterm's buffer row, set directly)
+  on the last row with text, or on the last row when text ends within two
+  rows of it (Gemini CLI leaves a blank line under its frame), then puts
+  it back: the content stays anchored at the bottom. Text that ends higher
+  up (a prompt with blank rows below) stays where it is. Blanks use the TUI
+  bg (`#0a0a0a`), never `#000`.
+- The keyboard: one tracker (`src/ui/common/keyboard/KeyboardTracker.tsx`,
+  inside the KeyboardProvider and SafeAreaProvider) reads
+  `react-native-keyboard-controller`'s live `e.height` every frame
+  (`keyboardDidShow` understates a settled Gboard) and turns it into the
+  room the keyboard takes (`sizing.ts` `spacerPad`: above the bottom
+  inset, plus air), a Reanimated value on the UI thread
+  (`keyboard/room.ts`; through React state each step came ~65 ms late).
+  JS only hears open/closed (`src/state/keyboard.ts`). A terminal's spacer
+  is an `Animated.View` that follows the room every frame. The footer
+  stays and the keyboard draws over it, so a terminal above the footer
+  leaves the room less the footer's measured height (`terminalPad`); one
+  in the overlay (no footer) leaves the whole room. Hiding the footer
+  instead made a TUI resize twice. Vectors:
+  `scripts/vectors/test_keyboard_room.js`.
+- The invisible input is an absolute 1x1 overlay: Android enforces a
+  min-height on multiline fields, so an in-flow field eats a layout row.
+- Fold every text-inserting path (extra keys such as `|` and `~`, a
+  suggested command) into the shadow, or Gboard's backspace diffs from a
+  wrong base. Never use `visible-password` (it kills mic/glide/predictions).
 
-The implementation and rejected alternatives are documented above. Pure logic
-stays pure:
-`keys.ts`, `reconcile.ts`, `sizing.ts`; hooks are `usePtySession.ts`,
-`useMirrorInput.ts` and `useInitialInput.ts`; `sessionRecipe.ts` builds what
-runs; the row is `ExtraKeysBar.tsx`.
+Pure logic stays pure: `keys.ts`, `reconcile.ts`, `sizing.ts`; hooks are
+`usePtySession.ts`, `useMirrorInput.ts` and `useInitialInput.ts`;
+`sessionRecipe.ts` builds what runs; the row is `ExtraKeysBar.tsx`.
+`TerminalView.tsx` holds all of it (page, hidden input, spacer, row) for
+every terminal, over a transport (`transport/`): `local.ts`, a PTY of its
+own, or `engine.ts`, a TUI engine's hosted PTY (see Engine terminal). Its
+`active` prop gates autofocus, tap-to-focus and the output pump, because
+`TabPager` keeps every page mounted.
+
+- `TabPager` never takes a tap from its pages
+  (`keyboardShouldPersistTaps="always"`): with RN's default the first tap
+  while the keyboard is up only closed it.
+- The WebView sits in `DirectionLockView` (`TerminalGestureHost` from
+  `src/engine/terminal.ts`): on touch-down it asks every parent not to
+  intercept; past the touch slop it keeps that for a mostly vertical move
+  and gives it back for a sideways one. So a vertical swipe scrolls the
+  terminal all the way, and a sideways swipe still changes tabs (the page
+  reads the takeover as `touchcancel`).
 
 ## Sessions
 
 A terminal session (`TerminalSession` in `src/state/app/navigation.ts`) is
-one of two kinds. Only the recipe differs: input, sizing and rendering are
-the same, through the same generic PTY seam (`src/engine/terminal.ts`). App
-keys the screen by session id, so every open remounts it; closing returns to
-the tab underneath.
+one of two kinds. Only the recipe differs: `TerminalScreen.tsx` hands it to
+a `TerminalView` on the local transport, through the same generic PTY seam
+(`src/engine/terminal.ts`), and the PTY closes with the screen. App keys the
+screen by session id, so every open remounts it; closing returns to the tab
+underneath.
 
 - `tui`: the agent kind's terminal UI attached to that agent's engine, in a
   folder of the agent's HOME (its image's `home/`). The header ⋮ menu opens
   it through `FolderPicker.tsx`, rooted at the active agent's HOME and
   listed through `src/engine/files.ts`. The engine is started first
   (`startAgent`) and a fresh one waited for, so the first open attaches.
-  opencode's recipe is `liboc-engine.so --server <url> [--session <id>]
-  <dir>` with the agent's password, so the terminal and the web UI stay on
-  one live engine.
+  The runner renders the recipe from the kind's manifest
+  (`surfaces.terminal.client`, `clientRecipe`); opencode's is
+  `liboc-engine.so --server <url> [--session <id>] <dir>` with the agent's
+  password, so the terminal and the web UI stay on one live engine. The
+  recipe goes straight to the PTY; JS keeps no copy. The chat the TUI shows
+  comes from its terminal title through the kind's `chatTitle` regex
+  (`src/engine/agents/chatTitle.ts`).
 - `linux`: a login shell in the agent's image (`phonecando-linux`
   `terminalRecipe`): `shims/bash -l`, which our launcher runs in the guest
   through proot, with `HOME=/root` and `TMPDIR=/tmp` (where `home/` and
@@ -109,7 +187,9 @@ the tab underneath.
   (`lre/docs/release/known-limits.md`). An Android
   image gets `/system/bin/sh -l` in its `home/`. Both
   open on a cooked tty (`raw: false` in `sessionRecipe.ts`). The
-  image gets its per-start preparation first (`prepareImageForStart`). The
+  image gets its per-start preparation first (`prepareAgentImage`:
+  `prepareImageForStart` with the agent's guest env list, as for its engine,
+  so the image's `launch.conf` never changes between the two). The
   Env tab's agent page opens it, optionally with a suggested command
   (`initialInput`: the line that installs missing tools, or the packages to
   reinstall after a reset).
@@ -122,10 +202,38 @@ from `usePtySession.ts`), without Enter: it goes through the mirror's own
 change path, so the shadow holds it and backspace, glide and the mic edit it
 like typed text. It is skipped once the user has typed.
 
+## Engine terminal (TUI home)
+
+A kind with `engine.style: "tui"` runs its program in a PTY the runner's
+foreground service owns (`runner.md`), and its Home tab shows it
+(`../../src/ui/chat/tui/AgentTuiHome.tsx`, a `TerminalView` on the engine
+transport). The program keeps running when the tab, a terminal over it or
+the app goes away.
+
+- The view attaches as the PTY's one viewer
+  (`src/engine/engineTerminal.ts`: `engineTerminalAttach`, `…Read`,
+  `…Write`, `…Resize`, `…Detach`); a new attach detaches the old one.
+  Unmounting only detaches.
+- Attach reports the PTY's size. Once the page has measured itself, xterm
+  takes that size, the replay (the terminal modes and the screen so far) is
+  drained in big reads, and the measured size follows through the page's
+  `__resizeAfterWrites` (xterm parses writes later, while `resize` applies at
+  once) and to the PTY. That resize signals even at the same size, so the
+  program repaints at the result.
+- A read that says `ended` (the program stopped or died) shows "top
+  stopped" (the kind's label) with Restart, which starts the engine again
+  and attaches a fresh view; a new start from elsewhere (the app's
+  foreground start, the Env tab's Start) does the same by itself.
+  `detached` (another viewer took over) only stops the pump.
+- The title the program sets reaches `useOpenTuiChat.ts` as for a TUI
+  client, through the kind's `chatTitle`.
+- Nothing else opens this PTY: for a TUI-home kind the header ⋮ menu offers
+  the kind's home and a Linux shell in its machine, never its terminal UI.
+
 ## Verification
 
-- `pnpm check:vectors` covers `keys.ts` and `reconcile.ts`; keep vectors in
-  sync or delete them.
+- `pnpm check:vectors` covers `keys.ts`, `reconcile.ts`, scroll keys and
+  the keyboard room; keep vectors in sync or delete them.
 - `sh app/modules/phonecando-terminal/android/src/test/c/run.sh` runs the PTY
   core on the host (spawn, env, fds, signals, reaping, kill, resize), with
   `close_range` and with the fallback loop; CI runs it in `android.yml`.
@@ -135,7 +243,8 @@ like typed text. It is skipped once the user has typed.
 
 ## Related
 
-- Terminal screen layout: `../../src/ui/terminal/TerminalScreen.tsx`
+- One terminal (page, input, sizing, keys): `../../src/ui/terminal/TerminalView.tsx`
+- A session around it: `../../src/ui/terminal/TerminalScreen.tsx`
 - What a session runs: `../../src/ui/terminal/sessionRecipe.ts`
 - Dev loop and bundle command: `../guides/development.md`
-- Chat web UI (the other home view): `chat.md`
+- Home tab (web UI or TUI home): `chat.md`

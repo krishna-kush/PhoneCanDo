@@ -17,14 +17,16 @@
 
 ---
 
-PhoneCanDo runs [opencode](https://github.com/anomalyco/opencode) on the phone.
-No remote server, no relay. The engine, sessions, keys and terminal live on the
-device. The home tab is the pair-loaded opencode web UI; the terminal tab is a
-full TUI over an own JNI PTY.
+PhoneCanDo runs coding agents on the phone:
+[opencode](https://github.com/anomalyco/opencode) built in, and Claude Code or
+Gemini CLI installed into a Linux machine on the phone. No remote server, no
+relay. The agents, sessions, keys and terminal live on the device. Home is the
+agent's own UI (opencode's web UI, or the agent's TUI); terminals run over our
+own JNI PTY.
 
 PhoneCanDo is an independent project. It is not affiliated with or endorsed by
-opencode or anomalyco; opencode is MIT-licensed and is used as the on-device
-engine.
+anomalyco, Anthropic or Google. opencode is MIT-licensed and built into the
+app; other agents are installed from their vendors under their own terms.
 
 Model calls go to the provider you configure. Your sessions, files and keys
 stay local; the app's network calls are listed in
@@ -34,8 +36,8 @@ stay local; the app's network calls are listed in
 
 | | |
 |---|---|
-| **Chat** | The opencode web UI, paired with the local engine. |
-| **Several agents** | Up to three agents run at once, each with its own engine, port and password; switch between them from the header. |
+| **Chat** | The agent's own UI: opencode's web UI paired with the local engine, or the agent's TUI. |
+| **Several agents** | Pick the agent when you make a machine. Up to three run at once, each with its own engine; switch between them from the header. |
 | **Linux machines** | Each agent works in its own Linux image (proot): the Debian-based default ships in the APK, or pick any arm64 image from Docker Hub. Packages you or the agent install stay in that image. It keeps your work apart; it is not a security sandbox. |
 | **Terminal** | A real PTY and TUI, rendered by xterm.js; or a Linux shell inside an agent's image. |
 | **Phone control** | Accessibility-driven observe/act, gated by an in-app switch. |
@@ -47,11 +49,11 @@ stay local; the app's network calls are listed in
 ```text
 ┌────────────────────────────── Android ──────────────────────────────┐
 │  React Native + Tamagui                                             │
-│    ├─ Chat      WebView ── opencode web UI (pair-loaded)            │
-│    ├─ Terminal  xterm.js ── JNI PTY ── TUI                          │
+│    ├─ Home      web UI (opencode) | agent TUI                       │
+│    ├─ Terminal  xterm.js ── JNI PTY ── TUI | Linux shell            │
 │    └─ Settings / Env                                                │
 │                                                                     │
-│  foreground service ── opencode serve (Bionic, Bun)                 │
+│  foreground service ── agent engines (≤ 3) ── proot Linux machines  │
 │  PCE ── accessibility service ── observe / act                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -68,14 +70,15 @@ once with the bootstrap scripts:
 pnpm -C app install
 
 # Payload: Bun 1.4.2, NDK r28c, Zig 0.16. The workdir needs oc-v2/
-# (pinned upstream clone) and the env vars; full steps: docs/bootstrap/README.md
-./scripts/agents/oc/build.sh /path/to/workdir
-./scripts/agents/oc/stage.sh /path/to/workdir/out
+# (pinned upstream clone) and the env vars; full steps:
+# agents/native/opencode/docs/README.md
+./manage agent opencode build /path/to/workdir
+./manage agent opencode stage /path/to/workdir/out
 
 pnpm -C app android:full
 ```
 
-See [`docs/bootstrap/oc-build.md`](docs/bootstrap/oc-build.md) for the exact
+See [`agents/native/opencode/docs/build.md`](agents/native/opencode/docs/build.md) for the exact
 toolchain, patches and verification.
 
 ## Channels
@@ -122,7 +125,7 @@ both and drafts the GitHub release; add `--publish` to publish.
 |---|---|
 | Architecture | [`docs/overview/architecture.md`](docs/overview/architecture.md) |
 | App + engine | [`app/docs/README.md`](app/docs/README.md) |
-| opencode build | [`docs/bootstrap/oc-build.md`](docs/bootstrap/oc-build.md) |
+| opencode build | [`agents/native/opencode/docs/build.md`](agents/native/opencode/docs/build.md) |
 | Phone control | [`pce/README.md`](pce/README.md) |
 | Telemetry (schema, privacy) | [`docs/telemetry.md`](docs/telemetry.md), [`tce/README.md`](tce/README.md) |
 | Research | [`research/README.md`](research/README.md) |

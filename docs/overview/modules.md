@@ -12,7 +12,7 @@ separate Gradle products.
 | PTY + xterm bridge | `app/modules/phonecando-terminal/` | `../../app/docs/modules/terminal.md` |
 | Linux host: envs, images, jobs, terminal recipes | `app/modules/phonecando-linux/` | `architecture.md` → Linux runtime |
 | Engine seam | `app/src/engine/` (`engines.ts`, `ensureEngine.ts`, `connection.ts`, `agents/`, `linux/`, `terminal.ts`, `files.ts`, `auth.ts`) | `../../app/docs/modules/runner.md` |
-| Loopback bridge + tools | runner `bridge/`, `agents/shared/phone-tools/`, `agents/oc/config/plugins/` | `../../app/docs/modules/bridge.md` |
+| Loopback bridge + tools | runner `bridge/`, `agents/shared/phone-tools/`, `agents/native/opencode/config/plugins/` | `../../app/docs/modules/bridge.md` |
 | PCE host integration | runner `src/uiauto`, `PceAutomationImpl` | `../../app/docs/modules/automation.md` |
 | Linux runtime | `lre/` (`api`, `tar`, `oci`, `image`, `cli`, `launcher/`, `proot/`, `images/default/`) | `architecture.md` → Linux runtime |
 
@@ -26,13 +26,14 @@ separate Gradle products.
 | First launch | `app/src/ui/setup/` | `../../app/docs/guides/quickstart.md` |
 | Settings (app-wide options) | `app/src/ui/settings/` | screens are self-contained |
 | Shared UI, bridge prompt queue | `app/src/ui/common/` | theme/tokens, common components, `../../app/docs/modules/bridge.md` |
-| State | `app/src/state/` | Zustand stores: `app.ts` (navigation, prefs, telemetry slices), `agents.ts`, `linux.ts`; multi-step flows in `flows/` |
+| State | `app/src/state/` | Zustand stores: `app.ts` (navigation, prefs, telemetry slices), `agents.ts`, `linux.ts`, `keyboard.ts`; multi-step flows in `flows/` |
 
 ## Supporting trees
 
 | Area | Path | Doc |
 |---|---|---|
-| Native payload build | `docs/bootstrap/`, `scripts/agents/oc/` | `../bootstrap/README.md` |
+| Agent kinds, kit and runtimes | `agents/` | `../../agents/AGENTS.md` |
+| Native payload build | `agents/native/<id>/build/`, `agents/kit/native/` | `../../agents/native/opencode/docs/README.md` |
 | proot and the Default image | `lre/proot/`, `lre/images/default/` | `architecture.md`, `../guides/testing.md` (CI) |
 | Site | `web/` | `../../web/README.md` |
 | PCE | `pce/` | `../../pce/docs/README.md` |
@@ -46,6 +47,5 @@ screens, state -> app/src/engine -> app/modules/* -> native
 ```
 
 Screens do not import native modules. `app/src/engine/` is the only seam.
-Within the PCE, the dependency law is documented in
-`pce/docs/overview/architecture.md`; within `lre/` it is api ← tar,
-api ← oci, api + tar ← image, oci + image ← cli (`lre/build.gradle.kts`).
+The dependency laws inside the separate builds: `pce/AGENTS.md`,
+`lre/AGENTS.md`, `agents/AGENTS.md`.

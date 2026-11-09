@@ -14,5 +14,8 @@
   removal.
 - P6 local release: Maven-local artifacts, published-coordinate consumer
   samples, API/module docs, changelog, semver and migration notes.
+- Device checks: observation screenshot in PhoneCanDo and Android Settings
+  (2026-10-30, 1080x2400 JPEG readable through `run-as`); `activityName`,
+  `eventSeq` across app switches and the bridge grace (2026-10-31).
 
 See the phase files in `phases/` for scope, acceptance and device evidence.

@@ -3,7 +3,10 @@
 ## App checks
 
 - `pnpm typecheck` (`tsc --noEmit`) — TypeScript.
-- `pnpm check:vectors` — terminal `keys` / `reconcile` vectors.
+- `pnpm check:vectors` — the pure-logic vectors (terminal keys and
+  reconcile, scroll keys, keyboard room, agent offers and installs, the web
+  adapter, chat pages).
+- Agent kinds: `cd agents && ./gradlew build`, `pnpm -C agents check`.
 - On-device: logcat `[phonecando-kb]` / `[phonecando-size]`, plus
   `adb exec-out screencap` for any layout claim.
 - Device evidence is required for Android behavior, IME, sizing and
@@ -42,8 +45,9 @@ everything. The `*-ok` job is the one check to require for each.
 | `lre.yml` | `lre-ok` | the `lre/` Gradle build and tests, and the launcher built with gcc and run against its host tests |
 | `proot.yml` | `proot-ok` | the pinned proot build for arm64 Android (checked at the ELF level), the same sources built for glibc booting an Alpine rootfs and running our launcher (background processes, statuses, the terminal), and the GPL source pack |
 | `lre-image.yml` | `lre-image-ok` | the Default image built twice to the same bytes, tier 1 (the image through our launcher and proot as opencode uses it), its Debian sources and `lock.json`; on prod and on demand only, a green image is published as the prerelease `linux-image-<version>`, which `./manage image lock <run-id>` adopts |
-| `lre-compat.yml` | `lre-compat-ok` | tier 2: one registry image per package family set up with `lre/cli` and used as opencode uses it (blocking); tier 3: a weekly report-only rotation that opens or updates one issue |
-| `oc-payload.yml` | — | the opencode patches and pins against upstream, and the payload build |
+| `lre-compat.yml` | `lre-compat-ok` | tier 2: one registry image per package family set up with `lre/cli` and used as a native engine uses it, plus an agents leg per runtime plugin and family (installed as the phone's install job does, twice) (blocking); tier 3: a weekly report-only rotation that opens or updates one issue |
+| `agents.yml` | `agents-ok` | the `agents/` Gradle build, TS checks, dependency law and manifests |
+| `agent-payload.yml` | — | per native kind: patches and pins against upstream, and the payload build |
 | `pce.yml`, `tce.yml`, `web.yml` | `pce-ok`, `tce-ok`, `web-ok` | their own trees |
 
 ## Automation test layers
@@ -86,4 +90,4 @@ commands.
 ## Evidence rule
 
 No sizing, layout or device claim is accepted without logs or pixels. Keep
-vectors in sync with `keys.ts` / `reconcile.ts` or delete them.
+vectors in sync with the code they test or delete them.

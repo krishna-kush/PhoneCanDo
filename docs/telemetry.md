@@ -349,12 +349,13 @@ numbers.
 | `GET https://models.opencode.ai/api.json` (opencode's models.dev catalog) | by each running engine (opencode v2.0.26; up to three run at once, one per agent) when it starts, then again every 5 minutes while it runs: the whole catalog (over 2 MB) each time; `OPENCODE_DISABLE_MODELS_FETCH` is not set | a `User-Agent: opencode/<channel>/<version>/<name>` header |
 | `https://hub.docker.com` (Docker Hub's catalog: the official OS list and an image's tags) | full and lite, only while you pick an Own env (Env → New env → Own) | the repository name and the version filter you type; a `User-Agent: phonecando-lre` header |
 | The container registry of an Own env (Docker Hub's `registry-1.docker.io` and its token service, or the registry the image name gives), the storage it redirects downloads to and, for Docker Hub official images when Docker Hub refuses or fails, `public.ecr.aws` and `mirror.gcr.io` | full and lite, only when you add an Own env or retry its download | the image name and tag you picked; a `User-Agent: phonecando-lre` header |
-| The model providers you configure | whenever the agent runs | your prompts and that provider's key, straight from the phone to the provider; PhoneCanDo's server is never in that path |
+| An agent's install or update in its Linux machine: the image's package mirrors, Node.js from `nodejs.org` (or Alpine's mirrors) for a kind that needs it, and the vendor's own source (Claude Code: `claude.ai/install.sh` and what it downloads; Gemini CLI: the npm registry) | full and lite, when an agent of such a kind is made, and on Install, Retry or Update agent | nothing beyond normal requests |
+| The model providers you configure, and an installed agent's own vendor | whenever the agent runs | your prompts and that provider's key, straight from the phone to the provider, plus whatever that agent sends under its vendor's terms; PhoneCanDo's server is never in that path |
 | Whatever you or the agent start | the agent's web fetch and web search tools, a `curl` or a package install in the terminal or an agent's image | what that command sends |
 
 The engine's own auto-update and language-server downloads are off
 (`OPENCODE_DISABLE_AUTOUPDATE`, `OPENCODE_DISABLE_LSP_DOWNLOAD`, set for every
-engine in `app/modules/phonecando-runner/android/src/main/java/com/phonecando/runner/agents/oc/Launch.kt`).
+engine by `engine.launch` in `agents/native/opencode/agent.json`).
 The chat tab's web UI and the phone-control bridge talk to the engines over
 `127.0.0.1` only. The Default env's image ships inside the APK, so a Default
 machine is made without any network call.

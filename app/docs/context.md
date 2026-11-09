@@ -37,9 +37,11 @@ Match native processes by the engine library name (`liboc-engine.so`), never
 the bare `opencode`. A dead engine can leave an ownerless LISTEN socket (only
 reboot clears). Never `adb reverse` an engine port; forward only. The
 supervisor owns the ports (each agent's last-good one, else a free one) and
-JS reads an engine's address with `getEngineAuth`. A 401 from an engine's own
-port means another engine answers there with another password, so ours never
-bound it: the supervisor relaunches on a fresh port. Everything an engine
+makes every request to an engine; JS never asks for an engine's address or
+password (only the TUI's start recipe carries them, straight to the PTY). A
+401 from an engine's own port means another engine answers there with
+another password, so ours never bound it: the supervisor relaunches on a
+fresh port. Everything an engine
 starts inherits `PHONECANDO_AGENT=<agentId>`, and a start or stop ends every
 process of our uid carrying that agent's tag (`/proc/<pid>/environ`), so a
 leftover from an earlier app process cannot squat or pile up.
