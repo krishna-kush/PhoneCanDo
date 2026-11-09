@@ -1,13 +1,25 @@
 ---
 // The headline's verb is a slot reel: press it and it rattles through the
 // things the agent does to a phone, then lands on the next one. The page
-// ships with the first and spins once on load to land on it; every verb here
-// has to be true of the app.
+// ships with the first, shows another at random on load and spins once to
+// land on the first; every verb here has to be true of the app.
 const verbs = ['use', 'read', 'drive', 'tap', 'silence', 'run'];
 ---
 
 <em><button class="reel" type="button" data-reel data-verbs={JSON.stringify(verbs)} aria-describedby="reel-hint">{verbs[0]}</button></em>
 <span id="reel-hint" hidden>Spins the verb</span>
+
+<script is:inline>
+  // Runs before the first paint, so the load spin starts from a random verb
+  // without a flash of the first. Without JS or with reduced motion there is
+  // no spin, and the first stays.
+  (() => {
+    const reel = document.querySelector('[data-reel]');
+    if (!reel || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const rest = JSON.parse(reel.dataset.verbs).slice(1);
+    reel.textContent = rest[Math.floor(Math.random() * rest.length)];
+  })();
+</script>
 
 <script>
   import { cueMascot } from '../../../lib/mascotCue';
@@ -66,6 +78,8 @@ const verbs = ['use', 'read', 'drive', 'tap', 'silence', 'run'];
       pressed = true;
       if (spinning) return;
       at = (at + 1) % verbs.length;
+      // A press before the load spin can be on the random start; land past it.
+      if (verbs[at] === reel.textContent) at = (at + 1) % verbs.length;
       if (still.matches) return land(true);
       spin(true);
     });
