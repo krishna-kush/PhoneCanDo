@@ -1,0 +1,7 @@
+# Gradle outputs. Anchored: native/<id>/build/ is a payload's build recipe.
+/build/
+**/kotlin/build/
+**/kotlin/*/build/
+.gradle/
+.kotlin/
+node_modules/

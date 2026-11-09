@@ -2,26 +2,28 @@
 // CI audit for one channel APK built by .github/workflows/android.yml:
 //   node .github/ci/android/audit-apk.mjs --apk <file> --channel lite|full|play
 //     --build debug|release --abis arm64-v8a[,x86_64]
-//     [--cert-sha256 <hex>] [--engine required|optional]
+//     [--cert-sha256 <hex>] [--payloads '{"<agent id>":"required"|"optional"}']
 //     [--proot required|optional] [--image required|optional] [--json <out.json>]
 // Reuses the release gate (scripts/apk-audit.mjs) where it applies to a CI
 // build: the channel audit always; the signer check against the run's
-// throwaway key (the real release key never reaches CI); the engine check
-// only when the payload was staged (it is not in git). On top of that it
-// checks what the config plugins and Gradle wiring promise in the built
-// artifact: package id, version, ABI list, JS bundle, per-channel agent
-// config and manifest attributes. Every check runs; a markdown report goes to
-// $GITHUB_STEP_SUMMARY (stdout when unset) and the exit code is 1 if any failed.
+// throwaway key (the real release key never reaches CI); a native agent's
+// payload check only when its payload was staged (it is not in git; --payloads
+// marks it required). On top of that it checks what the config plugins and
+// Gradle wiring promise in the built artifact: package id, version, ABI list,
+// JS bundle, per-channel agent assets and manifest attributes. The agent
+// kinds come from their manifests (agents/kit/cli/manifests.mjs). Every check
+// runs; a markdown report goes to $GITHUB_STEP_SUMMARY (stdout when unset) and
+// the exit code is 1 if any failed.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
-import { auditChannel, checkEngine, checkSigner, ENGINE_LIBS } from '../../../scripts/apk-audit.mjs';
+import { loadManifests } from '../../../agents/kit/cli/manifests.mjs';
+import { auditChannel, checkSigner, payloadLibs, payloadProblems } from '../../../scripts/apk-audit.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const RUNNER = join(ROOT, 'app/modules/phonecando-runner');
 const CHANNELS = ['full', 'lite', 'play'];
 const PTY_LIB = 'libphonecando_pty.so';
 // The Linux runtime (app/modules/phonecando-linux): our launcher is built on
@@ -29,20 +31,13 @@ const PTY_LIB = 'libphonecando_pty.so';
 const LINUX_LAUNCHER = 'libphonecando_launch.so';
 const PROOT_LIBS = ['libproot.so', 'libproot-loader.so'];
 const BUNDLE = 'assets/index.android.bundle';
-// Every agent kind's config as phonecando-runner's syncAgentConfig packages
-// it: only full ships the full-only part; the other channels swap in the
-// lite overlay's AGENTS.md.
-const AGENT_CONFIGS = [
-  {
-    assets: 'assets/oc-config',
-    full: 'agents/oc/config',
-    lite: 'agents/oc/config-lite',
-    required: 'opencode.json',
-    // Phone-control code: the automation plugin and the generic tools'
-    // control/ part (agents/shared/phone-tools, packaged as phone-tools/).
-    fullOnly: ['plugins/automation/', 'phone-tools/control/'],
-  },
-];
+// Every agent kind as phonecando-runner's agents.gradle packages it, from its
+// manifest: assets/agents/<id>/agent.json and, with a config, the config folder
+// at assets/agents/<id>/config/. Only full ships the full-only part (the
+// folders config.fullOnly and its shared parts' fullOnly name); the other
+// channels swap in the overlay's files, e.g. its AGENTS.md.
+const KINDS = manifests();
+const AGENT_ASSETS = KINDS.map(agentAssets);
 
 const args = parseArgs(process.argv.slice(2));
 const apk = resolve(args.apk ?? usage('--apk is required'));
@@ -51,8 +46,7 @@ const build = args.build;
 if (!CHANNELS.includes(channel)) usage(`--channel must be one of ${CHANNELS.join('|')}`);
 if (!['debug', 'release'].includes(build)) usage('--build must be debug|release');
 const abis = (args.abis ?? usage('--abis is required')).split(',').map((a) => a.trim()).filter(Boolean);
-const engine = args.engine ?? 'optional';
-if (!['required', 'optional'].includes(engine)) usage('--engine must be required|optional');
+const payloadGates = parsePayloads(args.payloads);
 const prootGate = args.proot ?? 'optional';
 if (!['required', 'optional'].includes(prootGate)) usage('--proot must be required|optional');
 const imageGate = args.image ?? 'optional';
@@ -139,22 +133,39 @@ check('JS bundle', () => {
   return build === 'release' ? `embedded, ${mib(size)}` : 'not embedded (Metro)';
 });
 check('agent config', () => {
+  const names = [...entries.keys()];
   const notes = [];
-  for (const cfg of AGENT_CONFIGS) {
-    if (!entries.has(`${cfg.assets}/${cfg.required}`)) throw new Error(`${cfg.assets}/${cfg.required} missing`);
-    const names = [...entries.keys()];
+  for (const kind of AGENT_ASSETS) {
+    if (!kind.channels.includes(channel)) {
+      const stray = names.filter((n) => n.startsWith(`${kind.root}/`));
+      if (stray.length) throw new Error(`${channel} ships ${kind.root}/, but ${kind.id} does not list ${channel}`);
+      notes.push(`${kind.id}: not in ${channel}`);
+      continue;
+    }
+    sameBytes(kind.manifest.asset, kind.manifest.source);
+    const cfg = kind.config;
+    if (!cfg) {
+      notes.push(`${kind.id}: agent.json`);
+      continue;
+    }
+    for (const file of cfg.required) {
+      if (!entries.has(`${cfg.assets}/${file}`)) throw new Error(`${cfg.assets}/${file} missing`);
+    }
     const shipped = cfg.fullOnly.filter((dir) => names.some((n) => n.startsWith(`${cfg.assets}/${dir}`)));
     const lacking = cfg.fullOnly.filter((dir) => !shipped.includes(dir));
     if (channel === 'full' && lacking.length) throw new Error(`full lacks ${lacking.map((d) => `${cfg.assets}/${d}`).join(', ')}`);
     if (channel !== 'full' && shipped.length) throw new Error(`${channel} ships ${shipped.map((d) => `${cfg.assets}/${d}`).join(', ')}`);
     const fullOnly = shipped.length > 0;
-    const agents = entries.get(`${cfg.assets}/AGENTS.md`);
-    if (!agents) throw new Error(`${cfg.assets}/AGENTS.md missing`);
-    const source = join(RUNNER, channel === 'full' ? cfg.full : cfg.lite, 'AGENTS.md');
-    if (!readZipEntry(bytes, agents).equals(readFileSync(source))) {
-      throw new Error(`${cfg.assets}/AGENTS.md differs from ${source.slice(ROOT.length + 1)}`);
+    // The instructions file (AGENTS.md) comes from the overlay on the
+    // channels other than full when the overlay has one.
+    const file = cfg.instructions;
+    let from = '';
+    if (file) {
+      const lite = channel !== 'full' && cfg.overlay && existsSync(join(cfg.overlay, file));
+      sameBytes(`${cfg.assets}/${file}`, join(lite ? cfg.overlay : cfg.full, file));
+      from = ` ${lite ? 'lite' : 'full'} ${file}`;
     }
-    notes.push(`${basename(cfg.assets)}: ${channel === 'full' ? 'full' : 'lite'} AGENTS.md${fullOnly ? ` + ${shipped.join(' + ')}` : ''}`);
+    notes.push(`${kind.id}:${from}${fullOnly ? ` + ${shipped.join(' + ')}` : ''}`);
   }
   return notes.join('; ');
 });
@@ -171,14 +182,25 @@ check('signer', () => {
   checkSigner(apk, tools, cert);
   return `release signing config, CI key ${cert.slice(0, 12)}...`;
 });
-check('engine payload', () => {
-  if (engine === 'required') {
-    checkEngine(apk);
-    return 'staged, non-empty';
-  }
-  const present = ENGINE_LIBS.filter((lib) => entries.has(lib));
-  if (!present.length) return 'not staged (not in git); gate skipped';
-  return `${present.length === ENGINE_LIBS.length ? 'present' : `partly present (${present.join(', ')})`}, not gated`;
+check('agent payloads', () => {
+  const natives = KINDS.filter((k) => k.type === 'native');
+  if (!natives.length) return 'no native agent kinds';
+  const sizes = new Map([...entries].map(([name, e]) => [name, e.usize]));
+  // A kind the channel does not list never ships its libs; a listed one is
+  // gated only when --payloads requires it (staged payloads are not in git).
+  const gated = natives.filter((k) => !k.manifest.channels.includes(channel) || payloadGates[k.id] === 'required');
+  const problems = payloadProblems(sizes, channel, gated);
+  if (problems.length) throw new Error(problems.join('; '));
+  return natives
+    .map((kind) => {
+      if (!kind.manifest.channels.includes(channel)) return `${kind.id}: not in ${channel}`;
+      if (payloadGates[kind.id] === 'required') return `${kind.id}: staged, non-empty`;
+      const libs = payloadLibs(kind);
+      const present = libs.filter((lib) => entries.has(lib));
+      if (!present.length) return `${kind.id}: not staged (not in git); gate skipped`;
+      return `${kind.id}: ${present.length === libs.length ? 'present' : `partly present (${present.join(', ')})`}, not gated`;
+    })
+    .join('; ');
 });
 // The baked Default env image (lre/images/default): assets/default-image/
 // in full and lite, exactly the locked one in a release, stored (xz is
@@ -267,6 +289,66 @@ console.log(`${report.apk}: ${results.length - failed.length}/${results.length} 
 process.exit(failed.length ? 1 : 0);
 
 // ---------------------------------------------------------------------------
+
+function manifests() {
+  try {
+    return loadManifests({ root: ROOT });
+  } catch (error) {
+    console.error(`audit-apk: ${error.message}`);
+    process.exit(2);
+  }
+}
+
+// The packaged form of one manifest entry (agents/kit/cli/manifests.mjs).
+function agentAssets(kind) {
+  const root = `assets/agents/${kind.id}`;
+  const c = kind.manifest.config;
+  // Full-only folders as packaged paths: "plugins/automation/**" ->
+  // "plugins/automation/", a shared part's under the folder it lands in.
+  const folders = (globs, under = '') => globs.filter((g) => g.endsWith('/**')).map((g) => `${under}${g.slice(0, -2)}`);
+  return {
+    id: kind.id,
+    channels: kind.manifest.channels,
+    root,
+    manifest: { asset: `${root}/agent.json`, source: join(kind.dir, 'agent.json') },
+    config: c?.dir && {
+      assets: `${root}/config`,
+      full: join(kind.dir, c.dir),
+      overlay: c.overlay ? join(kind.dir, c.overlay) : null,
+      required: c.required ?? [],
+      instructions: c.instructions ?? null,
+      fullOnly: [...folders(c.fullOnly ?? []), ...kind.parts.flatMap((p) => folders(p.fullOnly, `${p.into}/`))],
+    },
+  };
+}
+
+// A packaged file is byte-identical to its source in the repository.
+function sameBytes(asset, source) {
+  const entry = entries.get(asset);
+  if (!entry) throw new Error(`${asset} missing`);
+  if (!readZipEntry(bytes, entry).equals(readFileSync(source))) {
+    throw new Error(`${asset} differs from ${source.slice(ROOT.length + 1)}`);
+  }
+}
+
+// --payloads '{"opencode":"required"}': which native kinds' staged payloads
+// the audit requires; any kind left out is optional.
+function parsePayloads(text) {
+  if (text === undefined) return {};
+  let gates;
+  try {
+    gates = JSON.parse(text);
+  } catch {
+    usage(`--payloads is not JSON: ${text}`);
+  }
+  if (typeof gates !== 'object' || gates === null || Array.isArray(gates)) usage('--payloads must be a JSON object');
+  const natives = KINDS.filter((k) => k.type === 'native').map((k) => k.id);
+  for (const [id, gate] of Object.entries(gates)) {
+    if (!natives.includes(id)) usage(`--payloads names ${id}, which is not a native agent kind (${natives.join(', ')})`);
+    if (!['required', 'optional'].includes(gate)) usage(`--payloads ${id} must be required|optional`);
+  }
+  return gates;
+}
 
 function check(name, fn) {
   try {
@@ -397,7 +479,8 @@ function usage(message) {
   console.error(`audit-apk: ${message}`);
   console.error(
     'usage: audit-apk.mjs --apk <file> --channel lite|full|play --build debug|release --abis <a,b> ' +
-      '[--cert-sha256 <hex>] [--engine required|optional] [--json <file>]',
+      "[--cert-sha256 <hex>] [--payloads '{\"<id>\":\"required|optional\"}'] " +
+      '[--proot required|optional] [--image required|optional] [--json <file>]',
   );
   process.exit(2);
 }

@@ -14,7 +14,11 @@
   ./manage logos                                   regenerate brand assets from theme/
   ./manage xterm                                   re-inline the terminal page bundle
   ./manage web dev|build                           the website
-  ./manage engine oc build|stage [args]            opencode payload (scripts/agents/oc)
+  ./manage agent list|check                        agent kinds (agents/): list, or validate manifests + folders
+  ./manage agent new <id> --native|--image         scaffold agents/<type>/<id>/ from agents/kit/cli/templates/
+  ./manage agent <id> build [workdir]              native payload build (agents/native/<id>/build/build.sh)
+  ./manage agent <id> stage <build-out> [dest]     copy a built payload into the app (agents/kit/native/stage.mjs)
+  ./manage agent <id> test                         the kind's Kotlin tests, then the agents/ TS tests
   ./manage image fetch|stage                       locked Default env image -> dist/images/ -> app assets
   ./manage image build|stage --local               unlocked local image -> dist/images/local/ -> debug builds only
   ./manage image lock <run-id>                     lock what a green lre-image run published
@@ -45,8 +49,10 @@ WEB = ROOT / "web"
 SCRIPTS = ROOT / "scripts"
 TCE = ROOT / "tce"
 CHANNELS = ("lite", "full", "play")
-# Agent kinds whose engine payload builds here (scripts/agents/<kind>/).
-ENGINE_KINDS = ("oc",)
+# Agent kinds: agents/<native|image>/<id>/agent.json, the kit's CLI in
+# agents/kit/cli/ and the payload staging in agents/kit/native/.
+AGENTS = ROOT / "agents"
+AGENT_KIT = AGENTS / "kit"
 # The baked Default env image: its build and its lock (lock/<action>.sh).
 IMAGE = ROOT / "lre" / "images" / "default"
 IMAGE_LOCK = IMAGE / "lock"
@@ -178,10 +184,48 @@ def cmd_web(args):
     sh(["pnpm", args[0]], cwd=WEB)
 
 
-def cmd_engine(args):
-    if len(args) < 2 or args[0] not in ENGINE_KINDS or args[1] not in ("build", "stage"):
-        die(f"usage: manage engine {'|'.join(ENGINE_KINDS)} build|stage [args]")
-    sh([str(SCRIPTS / "agents" / args[0] / f"{args[1]}.sh"), *args[2:]])
+def agent_kinds():
+    # id -> its folder, for every agents/<native|image>/<id>/agent.json.
+    return {p.parent.name: p.parent for p in sorted(AGENTS.glob("*/*/agent.json"))
+            if p.parent.parent.name in ("native", "image")}
+
+
+AGENT_USAGE = ("usage: manage agent list|check | new <id> --native|--image "
+               "| <id> build|stage|test [args]")
+
+
+def cmd_agent(args):
+    # list/check/new go to the kit's CLI (agents/kit/cli/); <id> build|stage|test
+    # act on one kind. The ids new/list/check/kit are reserved, so they never
+    # shadow a kind.
+    if not args:
+        die(AGENT_USAGE)
+    if args[0] in ("list", "check"):
+        sh(["node", str(AGENT_KIT / "cli" / f"{args[0]}.mjs"), *args[1:]])
+        return
+    if args[0] == "new":
+        if len(args) < 3 or "--native" not in args and "--image" not in args:
+            die("usage: manage agent new <id> --native|--image [--prefix <p>]")
+        sh(["node", str(AGENT_KIT / "cli" / "new.mjs"), *args[1:]])
+        return
+    kinds = agent_kinds()
+    if args[0] not in kinds or len(args) < 2 or args[1] not in ("build", "stage", "test"):
+        die(f"{AGENT_USAGE}; kinds: {', '.join(kinds) or 'none'}")
+    kind_id, action, rest = args[0], args[1], args[2:]
+    folder = kinds[kind_id]
+    native = folder.parent.name == "native"
+    if action in ("build", "stage") and not native:
+        die(f"{kind_id} is an image kind: it installs into the Linux image, nothing to {action}")
+    if action == "build":
+        sh([str(folder / "build" / "build.sh"), *rest])
+    elif action == "stage":
+        if not rest:
+            die(f"usage: manage agent {kind_id} stage <build-out> [dest]")
+        sh(["node", str(AGENT_KIT / "native" / "stage.mjs"), kind_id, *rest])
+    else:
+        if (folder / "kotlin" / "build.gradle.kts").exists():
+            sh([str(AGENTS / "gradlew"), f":{kind_id}:test"], cwd=AGENTS)
+        sh(["pnpm", "test"], cwd=AGENTS)
 
 
 def cmd_image(args):
@@ -265,7 +309,7 @@ COMMANDS = {
     "logos": cmd_logos,
     "xterm": cmd_xterm,
     "web": cmd_web,
-    "engine": cmd_engine,
+    "agent": cmd_agent,
     "image": cmd_image,
     "apk": cmd_apk,
     "device": cmd_device,

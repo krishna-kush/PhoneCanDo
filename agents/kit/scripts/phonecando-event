@@ -1,0 +1,71 @@
+#!/bin/sh
+# phonecando-event <name> [message...]
+#
+# Tells PhoneCanDo that an agent raised an event, e.g. from a hook. Appends
+# one line to the events file the runner tails:
+#
+#   <name> TAB <session> TAB <message>
+#
+# The runner maps <name> through the kind's `events[].hook.map` (Stop,
+# Notification, ...) to working, waiting, finished or failed. <session> is
+# $PHONECANDO_SESSION, else the `session_id` of the JSON a hook gets on
+# stdin, else empty. The file is $PHONECANDO_EVENTS, else
+# $HOME/.phonecando/events.
+#
+# <name> is 1 to 64 of A-Z a-z 0-9 . _ : - (a leading @ is the runner's own).
+# Tabs and line breaks in the fields become spaces, and the line is cut to
+# 4 KiB. We never block: stdin is read for at most a second, and only when
+# no session is set and stdin is no terminal.
+#
+# Exit 0 when written, 64 for a bad call, 1 when the file can't be written.
+# Never 2, which some hook runners take as "block".
+
+# Bytes, not characters, for every length and pattern below.
+export LC_ALL=C
+
+usage() {
+  echo "usage: phonecando-event <name> [message...]" >&2
+  exit 64
+}
+
+[ $# -ge 1 ] || usage
+name="$1"
+shift
+case "$name" in
+  '' | *[!A-Za-z0-9._:-]*) usage ;;
+esac
+[ ${#name} -le 64 ] || usage
+message="$*"
+
+# Up to 64 KiB of stdin, waiting at most a second: a hook's JSON comes on a
+# pipe that closes at once, but a caller may also leave stdin open.
+read_stdin() {
+  exec 3<&0
+  head -c 65536 <&3 &
+  reader=$!
+  { sleep 1 && kill "$reader"; } >/dev/null 2>&1 &
+  timer=$!
+  wait "$reader" 2>/dev/null
+  kill "$timer" 2>/dev/null
+}
+
+session="${PHONECANDO_SESSION-}"
+if [ -z "$session" ] && [ ! -t 0 ]; then
+  session="$(read_stdin | tr -d '\r\n' |
+    sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"\\]*\)".*/\1/p')"
+fi
+
+# One record per line: no tabs or line breaks inside a field.
+flat() { printf '%s' "$1" | tr '\t\r\n' '   '; }
+
+line="$(printf '%s\t%s\t%s' "$name" "$(flat "$session")" "$(flat "$message")" | head -c 4095)"
+
+events="${PHONECANDO_EVENTS:-${HOME:+$HOME/.phonecando/events}}"
+if [ -z "$events" ]; then
+  echo "phonecando-event: neither PHONECANDO_EVENTS nor HOME is set" >&2
+  exit 1
+fi
+mkdir -p "$(dirname "$events")" 2>/dev/null
+# The whole line in one printf to an O_APPEND file, so lines from hooks that
+# run at once stay whole.
+printf '%s\n' "$line" >>"$events" || exit 1

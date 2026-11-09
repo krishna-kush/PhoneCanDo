@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "id": "opencode",
+  "label": "opencode",
+  "version": "2.0.26-android-phonecando.1",
+  "type": "native",
+  "prefix": "oc",
+  "channels": [
+    "full",
+    "lite",
+    "play"
+  ],
+  "stability": "stable",
+  "licence": {
+    "spdx": "MIT",
+    "redistributed": true,
+    "notice": "NOTICE.md",
+    "source": "https://github.com/anomalyco/opencode"
+  },
+  "payload": {
+    "libs": [
+      {
+        "name": "liboc-engine.so",
+        "from": "opencode2.bin",
+        "role": "engine",
+        "linkage": "system-only"
+      },
+      {
+        "name": "liboc-opentui.so",
+        "from": "libopentui.so",
+        "role": "opentui",
+        "linkage": "system-only"
+      }
+    ]
+  },
+  "build": {
+    "toolchains": [
+      "bun",
+      "zig",
+      "ndk"
+    ]
+  },
+  "config": {
+    "overlay": "config-lite",
+    "fullOnly": [
+      "AGENTS.md",
+      "plugins/automation/**"
+    ],
+    "shared": [
+      "phone-tools"
+    ],
+    "into": ".config/opencode",
+    "keep": [
+      "opencode.json"
+    ],
+    "required": [
+      "opencode.json"
+    ],
+    "instructions": "AGENTS.md"
+  }
+}

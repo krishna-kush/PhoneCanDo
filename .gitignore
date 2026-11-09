@@ -29,8 +29,9 @@ release.env
 # Expo CNG generated projects (regenerate via `expo prebuild`)
 app/android/
 app/ios/
-# Staged engine payloads (built by scripts/agents/<kind>; not committed)
-app/modules/phonecando-runner/android/src/main/libs/
+# Staged native agent payloads (agents/native/<id>, staged by
+# agents/kit/native/stage.mjs; not committed)
+app/modules/phonecando-runner/android/src/agents/*/libs/
 # Staged proot + loader for Linux images (built from lre/proot; not committed)
 app/modules/phonecando-linux/android/src/linux/libs/
 # Staged Default env image (lre/images/default/lock.json; ./manage image stage)

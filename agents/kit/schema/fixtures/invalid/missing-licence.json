@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "id": "codex",
+  "label": "Codex",
+  "version": "0.0.0-fixture",
+  "type": "native",
+  "prefix": "cx",
+  "channels": [
+    "full"
+  ],
+  "stability": "preview",
+  "payload": {
+    "libs": [
+      {
+        "name": "libcx-engine.so",
+        "from": "codex",
+        "role": "engine",
+        "linkage": "system-only"
+      }
+    ]
+  },
+  "build": {
+    "toolchains": [
+      "rust",
+      "ndk"
+    ]
+  }
+}

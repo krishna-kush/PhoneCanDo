@@ -146,6 +146,31 @@ updates:
       - dependency-name: '@types/node'
         update-types: [version-update:semver-major]
 
+  # agents/: the same dev-only toolchain as tce/ (TypeScript, Node types);
+  # the code the app bundles from agents/ has no npm deps by design.
+  - package-ecosystem: npm
+    directory: /agents
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: '05:00'
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    groups:
+      agents-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Stay on the TypeScript line the app uses; TS 7 (native) is a separate decision.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # Node types track the CI floor (Node 22).
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+
   # pce/ only: pce/consumer-sample is a separate build that resolves the
   # unpublished com.phonecando.pce artifacts, so Dependabot cannot update it.
   - package-ecosystem: gradle
@@ -173,4 +198,24 @@ updates:
         patterns:
           - dev.rikka.shizuku:*
       pce-minor-patch:
+        update-types: [minor, patch]
+
+  # agents/: the pure-JVM kit and kinds the runner depends on.
+  - package-ecosystem: gradle
+    directory: /agents
+    schedule:
+      interval: weekly
+      day: thursday
+      time: '05:00'
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      kotlin:
+        patterns:
+          - org.jetbrains.kotlin.*
+          - org.jetbrains.kotlin:*
+      agents-minor-patch:
         update-types: [minor, patch]

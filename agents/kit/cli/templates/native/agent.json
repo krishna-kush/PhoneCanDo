@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": "__ID__",
+  "label": "__ID__",
+  "version": "0.0.0",
+  "type": "native",
+  "prefix": "__PREFIX__",
+  "channels": ["full"],
+  "stability": "preview",
+  "licence": {
+    "spdx": "MIT",
+    "redistributed": true,
+    "notice": "NOTICE.md",
+    "source": "https://github.com/TODO/__ID__"
+  },
+  "payload": {
+    "libs": [
+      { "name": "lib__PREFIX__-engine.so", "from": "__ID__.bin", "role": "engine", "linkage": "system-only" }
+    ]
+  },
+  "build": { "toolchains": ["ndk"] }
+}

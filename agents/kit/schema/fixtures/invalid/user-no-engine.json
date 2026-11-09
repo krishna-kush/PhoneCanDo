@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "id": "user.top",
+  "label": "top",
+  "version": "1",
+  "type": "image",
+  "channels": [
+    "full",
+    "lite"
+  ],
+  "stability": "preview",
+  "licence": {
+    "spdx": null,
+    "redistributed": false,
+    "source": "https://gitlab.com/procps-ng/procps"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": [
+      "top"
+    ]
+  },
+  "surfaces": {
+    "home": "tui",
+    "terminal": {
+      "shell": true
+    }
+  }
+}

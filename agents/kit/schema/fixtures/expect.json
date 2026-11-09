@@ -1,0 +1,423 @@
+{
+  "$comment": "Files named user-*.json are validated with origin user, the rest with origin bundled. Each invalid fixture lists problems ([JSON pointer, code]) that must be among those validate() reports.",
+  "invalid": {
+    "not-an-object.json": [
+      {
+        "path": "",
+        "code": "type"
+      }
+    ],
+    "schema-2.json": [
+      {
+        "path": "/schema",
+        "code": "const"
+      }
+    ],
+    "unknown-field.json": [
+      {
+        "path": "/colour",
+        "code": "unknown"
+      }
+    ],
+    "missing-licence.json": [
+      {
+        "path": "/licence",
+        "code": "required"
+      }
+    ],
+    "source-not-https.json": [
+      {
+        "path": "/licence/source",
+        "code": "pattern"
+      }
+    ],
+    "native-no-prefix.json": [
+      {
+        "path": "/prefix",
+        "code": "required"
+      }
+    ],
+    "native-not-redistributed.json": [
+      {
+        "path": "/licence/redistributed",
+        "code": "const"
+      }
+    ],
+    "native-no-notice.json": [
+      {
+        "path": "/licence/notice",
+        "code": "required"
+      }
+    ],
+    "native-with-install.json": [
+      {
+        "path": "/install",
+        "code": "forbidden"
+      }
+    ],
+    "image-with-payload.json": [
+      {
+        "path": "/prefix",
+        "code": "forbidden"
+      },
+      {
+        "path": "/payload",
+        "code": "forbidden"
+      }
+    ],
+    "id-reserved.json": [
+      {
+        "path": "/id",
+        "code": "reserved"
+      }
+    ],
+    "id-pattern.json": [
+      {
+        "path": "/id",
+        "code": "pattern"
+      }
+    ],
+    "bundled-user-id.json": [
+      {
+        "path": "/id",
+        "code": "reserved"
+      }
+    ],
+    "prefix-reserved.json": [
+      {
+        "path": "/prefix",
+        "code": "reserved"
+      }
+    ],
+    "lib-name-mismatch.json": [
+      {
+        "path": "/payload/libs/0/name",
+        "code": "mismatch"
+      }
+    ],
+    "no-engine-lib.json": [
+      {
+        "path": "/payload/libs",
+        "code": "required"
+      }
+    ],
+    "duplicate-lib.json": [
+      {
+        "path": "/payload/libs/1/name",
+        "code": "unique"
+      },
+      {
+        "path": "/payload/libs/1/role",
+        "code": "unique"
+      }
+    ],
+    "lib-linkage.json": [
+      {
+        "path": "/payload/libs/0/linkage",
+        "code": "enum"
+      }
+    ],
+    "channel-unknown.json": [
+      {
+        "path": "/channels/1",
+        "code": "enum"
+      }
+    ],
+    "channels-duplicate.json": [
+      {
+        "path": "/channels",
+        "code": "unique"
+      }
+    ],
+    "channels-empty.json": [
+      {
+        "path": "/channels",
+        "code": "length"
+      }
+    ],
+    "toolchain-unknown.json": [
+      {
+        "path": "/build/toolchains/0",
+        "code": "enum"
+      }
+    ],
+    "config-path-escape.json": [
+      {
+        "path": "/config/dir",
+        "code": "pattern"
+      }
+    ],
+    "config-absolute-into.json": [
+      {
+        "path": "/config/into",
+        "code": "pattern"
+      }
+    ],
+    "config-overlay-without-dir.json": [
+      {
+        "path": "/config/dir",
+        "code": "required"
+      }
+    ],
+    "engine-acp.json": [
+      {
+        "path": "/engine/style",
+        "code": "reserved"
+      }
+    ],
+    "phone-tools-unknown.json": [
+      {
+        "path": "/phoneTools",
+        "code": "enum"
+      }
+    ],
+    "user-native.json": [
+      {
+        "path": "/type",
+        "code": "forbidden"
+      },
+      {
+        "path": "/payload",
+        "code": "forbidden"
+      }
+    ],
+    "user-id-without-prefix.json": [
+      {
+        "path": "/id",
+        "code": "pattern"
+      }
+    ],
+    "user-hooks.json": [
+      {
+        "path": "/hooks",
+        "code": "forbidden"
+      }
+    ],
+    "user-config-dir.json": [
+      {
+        "path": "/config/dir",
+        "code": "forbidden"
+      }
+    ],
+    "user-web.json": [
+      {
+        "path": "/engine/style",
+        "code": "forbidden"
+      },
+      {
+        "path": "/surfaces/web",
+        "code": "forbidden"
+      },
+      {
+        "path": "/surfaces/home",
+        "code": "forbidden"
+      }
+    ],
+    "placeholder-unknown.json": [
+      {
+        "path": "/engine/launch/argv/0",
+        "code": "unknown"
+      }
+    ],
+    "password-in-argv.json": [
+      {
+        "path": "/engine/launch/argv/7",
+        "code": "forbidden"
+      }
+    ],
+    "when-unknown.json": [
+      {
+        "path": "/surfaces/terminal/client/argv/3/when",
+        "code": "enum"
+      }
+    ],
+    "server-no-readiness.json": [
+      {
+        "path": "/engine/readiness",
+        "code": "required"
+      }
+    ],
+    "web-home-no-adapter.json": [
+      {
+        "path": "/surfaces/web/adapter",
+        "code": "required"
+      }
+    ],
+    "sse-parser-not-hooked.json": [
+      {
+        "path": "/events/0/sse/parser",
+        "code": "mismatch"
+      }
+    ],
+    "tui-with-server-blocks.json": [
+      {
+        "path": "/events/0/sse",
+        "code": "forbidden"
+      },
+      {
+        "path": "/chats",
+        "code": "forbidden"
+      },
+      {
+        "path": "/surfaces/web",
+        "code": "forbidden"
+      },
+      {
+        "path": "/surfaces/terminal/client",
+        "code": "forbidden"
+      }
+    ],
+    "tui-readiness-http.json": [
+      {
+        "path": "/engine/readiness/http",
+        "code": "forbidden"
+      },
+      {
+        "path": "/engine/auth",
+        "code": "forbidden"
+      }
+    ],
+    "pty-rule-unknown.json": [
+      {
+        "path": "/events/0/pty/rules/0/on",
+        "code": "enum"
+      },
+      {
+        "path": "/events/0/pty/rules/1/event",
+        "code": "enum"
+      }
+    ],
+    "pty-events-on-server.json": [
+      {
+        "path": "/events/1/pty",
+        "code": "forbidden"
+      },
+      {
+        "path": "/idle/from/1",
+        "code": "mismatch"
+      }
+    ],
+    "image-linux-optional.json": [
+      {
+        "path": "/requires/linux",
+        "code": "const"
+      }
+    ],
+    "image-argv-host-path.json": [
+      {
+        "path": "/engine/launch/argv/0",
+        "code": "pattern"
+      }
+    ],
+    "user-no-engine.json": [
+      {
+        "path": "/engine",
+        "code": "required"
+      }
+    ],
+    "spdx-null-redistributed.json": [
+      {
+        "path": "/licence/spdx",
+        "code": "type"
+      }
+    ],
+    "terminal-client-and-shell.json": [
+      {
+        "path": "/surfaces/terminal/shell",
+        "code": "forbidden"
+      }
+    ],
+    "install-no-version-check.json": [
+      {
+        "path": "/versionCheck",
+        "code": "required"
+      }
+    ],
+    "install-placeholders.json": [
+      {
+        "path": "/install/steps/0",
+        "code": "unknown"
+      },
+      {
+        "path": "/install/steps/1",
+        "code": "unknown"
+      }
+    ],
+    "install-retries-range.json": [
+      {
+        "path": "/install/retries",
+        "code": "range"
+      }
+    ],
+    "install-family-unknown.json": [
+      {
+        "path": "/install/families/0",
+        "code": "enum"
+      },
+      {
+        "path": "/install/packages/nix",
+        "code": "enum"
+      }
+    ],
+    "install-packages-outside-families.json": [
+      {
+        "path": "/install/packages/apk",
+        "code": "mismatch"
+      },
+      {
+        "path": "/install/packages/apt/0",
+        "code": "pattern"
+      }
+    ],
+    "runtimes-without-install.json": [
+      {
+        "path": "/requires/runtimes/0",
+        "code": "pattern"
+      },
+      {
+        "path": "/requires/runtimes/2",
+        "code": "unique"
+      },
+      {
+        "path": "/install",
+        "code": "required"
+      }
+    ],
+    "version-check-relative.json": [
+      {
+        "path": "/versionCheck/argv/0",
+        "code": "pattern"
+      },
+      {
+        "path": "/versionCheck/pattern",
+        "code": "pattern"
+      }
+    ],
+    "update-without-install.json": [
+      {
+        "path": "/update/steps",
+        "code": "length"
+      },
+      {
+        "path": "/install",
+        "code": "required"
+      }
+    ],
+    "hook-events-on-server.json": [
+      {
+        "path": "/events/1/hook",
+        "code": "forbidden"
+      }
+    ],
+    "hook-event-unknown.json": [
+      {
+        "path": "/events/0/hook/map/Stop",
+        "code": "enum"
+      },
+      {
+        "path": "/events/0/hook/map/bad name",
+        "code": "pattern"
+      }
+    ]
+  }
+}

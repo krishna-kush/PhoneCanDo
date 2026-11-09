@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "id": "gemini-cli",
+  "label": "Gemini CLI",
+  "version": "1",
+  "type": "image",
+  "channels": ["full", "lite"],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "terms": "https://geminicli.com/docs/resources/tos-privacy/",
+    "source": "https://github.com/google-gemini/gemini-cli"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": ["bash", "git", "rg"],
+    "runtimes": ["node>=20"]
+  },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/gemini",
+    "required": ["settings.json"]
+  },
+  "install": {
+    "families": ["apt", "apk", "dnf", "pacman", "zypper"],
+    "packages": {
+      "apt": ["bash", "ca-certificates", "git", "ripgrep"],
+      "apk": ["bash", "ca-certificates", "git", "ripgrep"],
+      "dnf": ["bash", "ca-certificates", "git", "ripgrep"],
+      "pacman": ["bash", "ca-certificates", "git", "ripgrep"],
+      "zypper": ["bash", "ca-certificates", "git", "ripgrep"]
+    },
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" @google/gemini-cli@latest"
+    ],
+    "timeoutSec": 1800
+  },
+  "update": {
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" @google/gemini-cli@latest"
+    ]
+  },
+  "versionCheck": {
+    "argv": ["/root/.local/bin/gemini", "--version"],
+    "pattern": "(?:^|\\n)(\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": ["/root/.local/bin/gemini"],
+      "env": {
+        "GEMINI_CLI_SYSTEM_SETTINGS_PATH": "/root/.phonecando/gemini/settings.json"
+      },
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": { "output": { "settleMs": 500, "timeoutSec": 180 } },
+    "resume": { "args": ["--resume", "latest"], "at": 1 }
+  },
+  "events": [
+    {
+      "hook": {
+        "map": {
+          "BeforeAgent": "working",
+          "Notification": "waiting",
+          "AfterAgent": "finished"
+        }
+      }
+    }
+  ],
+  "idle": { "from": ["output", "events"], "quietSec": 120 },
+  "surfaces": {
+    "home": "tui",
+    "terminal": { "shell": true }
+  },
+  "phoneTools": "mcp:config",
+  "signIn": [
+    { "method": "api-key", "note": "On first start pick \"Use Gemini API key\" and paste a key from aistudio.google.com/app/apikey, or put GEMINI_API_KEY=<key> in ~/.gemini/.env in this machine." },
+    { "method": "paste-code", "note": "\"Sign in with Google\" prints a link (the machine has no display, so no browser opens): open it, sign in, then paste the code the page shows at \"Enter the authorization code\"." }
+  ]
+}

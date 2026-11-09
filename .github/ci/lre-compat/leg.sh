@@ -12,7 +12,8 @@
 #   shell        $SHELL -c 'echo ok; id -u' prints ok, then 0 (fake root)
 #   prep         <prep command>, when given: what the agent must run first
 #                on this distro (EPEL for ripgrep on RHEL-likes)
-#   install      SetupResult's installCommand, as the faked root
+#   install      the installCommand setup prints for the tools opencode
+#                leans on (--tool bash git rg), as the faked root
 #   refresh      cli refresh, as before every engine start: shims for the
 #                commands the install added
 #   git, rg      --version through their shims, as opencode runs them
@@ -61,11 +62,13 @@ echo
 echo "| Check | | Time | Output |"
 echo "|---|---|---|---|"
 
-# --- setup: download and ImageSetup.create, the SetupResult as JSON ---
+# --- setup: download, ImageSetup.create and checkTools, the result as JSON ---
 source_args=(--ref "$REF")
 [[ "$REF" == /* ]] && source_args=(--tarball "$REF")
+tool_args=(--tool bash --tool git --tool rg)
 start=$SECONDS
-"$CLI" setup "${source_args[@]}" --image-dir "$IMG" --lib-dir "$LIB" >"$SCRATCH/setup.json" 2>"$SCRATCH/setup.log"
+"$CLI" setup "${source_args[@]}" "${tool_args[@]}" --image-dir "$IMG" --lib-dir "$LIB" \
+  >"$SCRATCH/setup.json" 2>"$SCRATCH/setup.log"
 rc=$?
 secs=$((SECONDS - start))
 setup="$(tail -n 1 "$SCRATCH/setup.json")"

@@ -1,0 +1,185 @@
+{
+  "schema": 1,
+  "id": "claude-code",
+  "label": "Claude Code",
+  "version": "0.0.0-fixture",
+  "type": "image",
+  "channels": [
+    "full",
+    "lite"
+  ],
+  "stability": "preview",
+  "licence": {
+    "spdx": null,
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "terms": "https://code.claude.com/docs/en/legal-and-compliance",
+    "source": "https://github.com/anthropics/claude-code"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": [
+      "bash",
+      "git",
+      "rg"
+    ]
+  },
+  "install": {
+    "families": [
+      "apt",
+      "apk",
+      "dnf",
+      "pacman",
+      "zypper"
+    ],
+    "packages": {
+      "apt": [
+        "bash",
+        "ca-certificates",
+        "curl",
+        "git",
+        "ripgrep"
+      ],
+      "apk": [
+        "bash",
+        "ca-certificates",
+        "curl",
+        "git",
+        "libgcc",
+        "libstdc++",
+        "ripgrep"
+      ],
+      "dnf": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ],
+      "pacman": [
+        "bash",
+        "ca-certificates",
+        "curl",
+        "git",
+        "ripgrep"
+      ],
+      "zypper": [
+        "bash",
+        "ca-certificates",
+        "curl",
+        "git",
+        "ripgrep"
+      ]
+    },
+    "steps": [
+      "curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh",
+      "bash /tmp/claude-install.sh",
+      "rm -f /tmp/claude-install.sh"
+    ],
+    "timeoutSec": 1200
+  },
+  "update": {
+    "steps": [
+      "curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh",
+      "bash /tmp/claude-install.sh",
+      "rm -f /tmp/claude-install.sh"
+    ]
+  },
+  "versionCheck": {
+    "argv": [
+      "/root/.local/bin/claude",
+      "--version"
+    ],
+    "pattern": "^(\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": [
+        "/root/.local/bin/claude",
+        "--settings",
+        "{\"hooks\":{\"UserPromptSubmit\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event UserPromptSubmit\",\"timeout\":10}]}],\"Notification\":[{\"matcher\":\"permission_prompt|elicitation_dialog|elicitation_url_dialog\",\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event Notification\",\"timeout\":10}]}],\"Stop\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event Stop\",\"timeout\":10}]}],\"StopFailure\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event StopFailure\",\"timeout\":10}]}],\"SessionEnd\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event SessionEnd\"}]}]}}",
+        "--mcp-config",
+        "{\"mcpServers\":{\"phonecando\":{\"type\":\"http\",\"url\":\"${PHONECANDO_BRIDGE_URL}/mcp\",\"headers\":{\"Authorization\":\"Bearer ${PHONECANDO_BRIDGE_TOKEN}\"}}}}"
+      ],
+      "env": {
+        "BROWSER": "/root/.phonecando/bin/phonecando-open",
+        "DISABLE_AUTOUPDATER": "1",
+        "USE_BUILTIN_RIPGREP": "0"
+      },
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": {
+      "output": {
+        "settleMs": 500,
+        "timeoutSec": 120
+      }
+    },
+    "resume": {
+      "args": [
+        "--continue"
+      ],
+      "at": 1
+    }
+  },
+  "events": [
+    {
+      "pty": {
+        "rules": [
+          {
+            "on": "bel",
+            "event": "waiting"
+          },
+          {
+            "on": "osc9",
+            "match": "^Approval requested",
+            "event": "waiting"
+          },
+          {
+            "on": "osc777",
+            "event": "finished"
+          }
+        ]
+      }
+    },
+    {
+      "hook": {
+        "map": {
+          "UserPromptSubmit": "working",
+          "Notification": "waiting",
+          "Stop": "finished",
+          "StopFailure": "failed",
+          "SessionEnd": "finished"
+        }
+      }
+    }
+  ],
+  "idle": {
+    "from": [
+      "output",
+      "events"
+    ],
+    "quietSec": 120
+  },
+  "surfaces": {
+    "home": "tui",
+    "terminal": {
+      "shell": true
+    },
+    "chatTitle": "^\\S (?!Claude Code$)(.+)$"
+  },
+  "phoneTools": "mcp:argv",
+  "signIn": [
+    {
+      "method": "browser",
+      "note": "Pick a sign-in method in Claude Code (it asks on first start, or run /login); the phone offers to open the sign-in page."
+    },
+    {
+      "method": "paste-code",
+      "note": "If the page shows a code instead of returning, paste it at Claude Code's \"Paste code here\" prompt."
+    },
+    {
+      "method": "api-key",
+      "note": "An Anthropic API key also works: set ANTHROPIC_API_KEY in the env block of ~/.claude/settings.json in this machine."
+    }
+  ]
+}

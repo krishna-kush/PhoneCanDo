@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "id": "codex",
+  "label": "Codex",
+  "version": "0.0.0-fixture",
+  "type": "native",
+  "prefix": "cx",
+  "channels": [
+    "full"
+  ],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": true,
+    "notice": "NOTICE.md",
+    "source": "https://github.com/openai/codex"
+  },
+  "payload": {
+    "libs": [
+      {
+        "name": "libcx-engine.so",
+        "from": "codex",
+        "role": "engine",
+        "linkage": "system-only"
+      }
+    ]
+  },
+  "build": {
+    "toolchains": [
+      "rust",
+      "ndk"
+    ]
+  },
+  "colour": "red"
+}

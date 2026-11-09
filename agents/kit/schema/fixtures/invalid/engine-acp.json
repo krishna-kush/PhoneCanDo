@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "claude-code",
+  "label": "Claude Code",
+  "version": "0.0.0-fixture",
+  "type": "image",
+  "channels": [
+    "full",
+    "lite"
+  ],
+  "stability": "preview",
+  "licence": {
+    "spdx": "LicenseRef-proprietary",
+    "redistributed": false,
+    "terms": "https://github.com/anthropics/claude-code",
+    "source": "https://github.com/anthropics/claude-code"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": [
+      "curl"
+    ],
+    "runtimes": []
+  },
+  "install": "install.sh",
+  "versionCheck": {
+    "argv": [
+      "claude",
+      "--version"
+    ]
+  },
+  "engine": {
+    "style": "acp"
+  },
+  "surfaces": {
+    "home": "tui"
+  },
+  "phoneTools": "mcp:config",
+  "models": {
+    "anthropic": {
+      "env": {}
+    }
+  }
+}

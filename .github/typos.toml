@@ -17,7 +17,7 @@ extend-exclude = [
   "pce/gradlew.bat",
   "pce/gradle/wrapper/",
   # Upstream diffs (opencode/opentui) keep upstream spelling.
-  "scripts/agents/oc/patches/",
+  "agents/native/*/build/patches/",
   # Binary assets and font licence text.
   "*.png",
   "*.jpg",
@@ -44,7 +44,7 @@ extend-ignore-re = [
   # The deliberate misspelling exercised by the IME autocorrect vectors
   # (app/scripts/vectors/test_shadow.js: diffToEdit('teh', 'the')).
   "'teh'",
-  # Short shell variable named after opentui in oc-payload.yml (ot="$WORK/...").
+  # Short shell variable named after opentui in agents/native/opencode/ci/sources.sh (ot="$work/...").
   "\\bot=",
   "\\$ot\\b",
   # Inline opt-out for a single line: `typos: ignore-line`.

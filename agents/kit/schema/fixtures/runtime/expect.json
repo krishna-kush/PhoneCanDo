@@ -1,0 +1,53 @@
+{
+  "$comment": "Runtime plugin manifests (runtime.json), validated by validateRuntime(). Each invalid fixture lists problems ([JSON pointer, code]) that must be among those it reports.",
+  "invalid": {
+    "family-without-script.json": [
+      {
+        "path": "/install",
+        "code": "required"
+      }
+    ],
+    "check-not-ere.json": [
+      {
+        "path": "/check/pattern",
+        "code": "pattern"
+      }
+    ],
+    "path-relative.json": [
+      {
+        "path": "/paths/0",
+        "code": "pattern"
+      },
+      {
+        "path": "/paths/1",
+        "code": "pattern"
+      }
+    ],
+    "script-escapes.json": [
+      {
+        "path": "/install/*",
+        "code": "pattern"
+      },
+      {
+        "path": "/install/nix",
+        "code": "enum"
+      }
+    ],
+    "needs-another-runtime.json": [
+      {
+        "path": "/needs",
+        "code": "unknown"
+      }
+    ],
+    "provides-zero.json": [
+      {
+        "path": "/provides",
+        "code": "range"
+      },
+      {
+        "path": "/schema",
+        "code": "const"
+      }
+    ]
+  }
+}

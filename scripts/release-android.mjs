@@ -554,7 +554,7 @@ function findBuildTools(sdk) {
   return { apksigner, aapt };
 }
 
-// Release signer, channel contents and engine (apk-audit.mjs), then the
+// Release signer, channel contents and agent payloads (apk-audit.mjs), then the
 // package, version and versionCode.
 function verifyApk(apk, tools, pkg, version, versionCode, channel) {
   console.log(auditApk(apk, channel, tools));

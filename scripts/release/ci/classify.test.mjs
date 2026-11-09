@@ -6,8 +6,10 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { classifyChecks } from './classify.mjs';
 
-// a872e7b: CI, Lint, Web, TCE ran (no Android, PCE, LRE, proot, payload).
-// 2e1fc17: CI, Lint, TCE, Android and the opencode payload ran (no Web).
+// a872e7b: CI, Lint, Web, TCE ran (no Android, PCE, LRE, proot, agents, payload).
+// 2e1fc17: CI, Lint, TCE, Android and the opencode payload ran (no Web). Its
+// payload run is renamed to what agent-payload.yml (once oc-payload.yml) runs:
+// plan, check/drift/build/contract (opencode).
 const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'));
 const web = () => load('prod-a872e7b');
 const android = () => load('prod-2e1fc17');
@@ -26,7 +28,7 @@ const names = (rows) => rows.map((r) => r.name).sort();
 test('real prod commit, all green: nothing blocks; workflows that did not run only warn', () => {
   const result = classifyChecks(web());
   assert.deepEqual(result.blocks, []);
-  assert.deepEqual(names(result.warns), ['(all jobs)', 'lre-compat-ok', 'lre-image-ok', 'lre-ok', 'pce-ok', 'proot-ok']);
+  assert.deepEqual(names(result.warns), ['(all jobs)', 'agents-ok', 'lre-compat-ok', 'lre-image-ok', 'lre-ok', 'pce-ok', 'proot-ok']);
   for (const gate of ['ci-ok', 'lint-ok', 'web-ok', 'tce-ok']) assert.equal(row(result, gate).decision, 'ok', gate);
   assert.equal(row(result, 'ci-ok').role, 'required gate');
   assert.equal(row(result, 'pce-ok').state, 'not run');
@@ -36,14 +38,15 @@ test('real prod commit, all green: nothing blocks; workflows that did not run on
 test('real prod commit with Android: its jobs gate, the experimental legs and lint do not', () => {
   const result = classifyChecks(android());
   assert.deepEqual(result.blocks, []);
-  assert.deepEqual(names(result.warns), ['lre-compat-ok', 'lre-image-ok', 'lre-ok', 'pce-ok', 'proot-ok', 'web-ok']);
+  assert.deepEqual(names(result.warns), ['agents-ok', 'lre-compat-ok', 'lre-image-ok', 'lre-ok', 'pce-ok', 'proot-ok', 'web-ok']);
   assert.equal(row(result, 'Emulator smoke (lite, API 36)').role, 'blocking job');
   assert.equal(row(result, 'Release shape (lite + full, throwaway key)').role, 'blocking job');
   assert.equal(row(result, 'Debug APK (play)').role, 'blocking job');
   assert.equal(row(result, 'Emulator smoke (full, API 36)').role, 'experimental');
   assert.equal(row(result, 'Emulator smoke (lite, API 29)').role, 'experimental');
   assert.equal(row(result, 'Android lint').role, 'report-only');
-  assert.equal(row(result, 'upstream-drift').role, 'expected red');
+  assert.equal(row(result, 'drift (opencode)').role, 'report-only');
+  assert.equal(row(result, 'build (opencode)').role, 'other');
 });
 
 test('ci-ok failed: blocks', () => {
@@ -89,11 +92,10 @@ test('cancelled or skipped gates block; a skipped blocking job only warns', () =
   assert.equal(row(skipped, 'Debug APK (play)').decision, 'warn');
 });
 
-test('upstream-drift red: warns, nothing blocks', () => {
-  const result = classifyChecks(patch(android(), 'upstream-drift', red));
+test('a payload drift leg red: warns, nothing blocks', () => {
+  const result = classifyChecks(patch(android(), 'drift (opencode)', red));
   assert.deepEqual(result.blocks, []);
-  assert.equal(row(result, 'upstream-drift').decision, 'warn');
-  assert.match(row(result, 'upstream-drift').note, /opencode pin/);
+  assert.equal(row(result, 'drift (opencode)').decision, 'warn');
 });
 
 test('release-links red (and web-ok red only through it): warns, nothing blocks', () => {

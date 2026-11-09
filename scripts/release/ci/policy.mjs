@@ -34,14 +34,14 @@ export const WORKFLOWS = {
   // Tier 2 (prep, tier2 legs) blocks; the Tier 3 rotation only reports.
   'lre-compat.yml': { gate: 'lre-compat-ok', reportOnly: [/^tier3/] },
   'proot.yml': { gate: 'proot-ok' },
+  'agents.yml': { gate: 'agents-ok' },
   'android.yml': {
     jobsBlock: true,
     reportOnly: ['Android lint'],
     experimental: ['Emulator smoke (full, API 36)', 'Emulator smoke (lite, API 29)'],
   },
-  'oc-payload.yml': {
-    expectedRed: { 'upstream-drift': 'red until the opencode pin moves' },
-  },
+  // drift (<id>) tries each kind's newest upstream tag: continue-on-error.
+  'agent-payload.yml': { reportOnly: [/^drift /] },
   'scorecard.yml': { reportOnly: ['Score summary'] },
 };
 

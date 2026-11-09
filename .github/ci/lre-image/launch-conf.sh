@@ -18,7 +18,8 @@
 #              cannot commit)
 #   env        PROOT_LOADER (unbundled loader), PROOT_TMP_DIR, PROOT_L2S_DIR
 #              (run/), guest PATH, SHELL, USER, LOGNAME, LANG; host LD_* and
-#              the engine's secrets dropped; HOME and TMPDIR stay host paths
+#              the engine's secrets dropped (the names the app passes for
+#              opencode); HOME and TMPDIR stay host paths
 #   same/home  a cwd under home/ or tmp/ stays the guest cwd, anything else
 #              is /root
 #

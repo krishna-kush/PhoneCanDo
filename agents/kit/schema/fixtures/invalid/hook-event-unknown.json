@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "id": "demo",
+  "label": "Demo",
+  "version": "0.0.0-fixture",
+  "type": "image",
+  "channels": [
+    "full",
+    "lite"
+  ],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": false,
+    "source": "https://github.com/example/demo"
+  },
+  "requires": {
+    "linux": "required"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": [
+        "demo"
+      ]
+    }
+  },
+  "surfaces": {
+    "home": "tui"
+  },
+  "events": [
+    {
+      "hook": {
+        "map": {
+          "Stop": "done",
+          "bad name": "finished"
+        }
+      }
+    }
+  ]
+}

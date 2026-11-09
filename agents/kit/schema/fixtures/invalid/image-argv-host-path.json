@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "id": "claude-code",
+  "label": "Claude Code",
+  "version": "0.0.0-fixture",
+  "type": "image",
+  "channels": [
+    "full",
+    "lite"
+  ],
+  "stability": "preview",
+  "licence": {
+    "spdx": "LicenseRef-proprietary",
+    "redistributed": false,
+    "terms": "https://github.com/anthropics/claude-code",
+    "source": "https://github.com/anthropics/claude-code"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": [
+      "curl"
+    ],
+    "runtimes": []
+  },
+  "install": "install.sh",
+  "versionCheck": {
+    "argv": [
+      "claude",
+      "--version"
+    ]
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": [
+        "{{libDir}}/libcc-engine.so"
+      ],
+      "env": {},
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": {
+      "output": {
+        "settleMs": 400,
+        "timeoutSec": 60
+      }
+    },
+    "resume": {
+      "args": [
+        "--continue"
+      ]
+    }
+  },
+  "events": [
+    {
+      "pty": {
+        "rules": [
+          {
+            "on": "bel",
+            "event": "waiting"
+          },
+          {
+            "on": "osc9",
+            "match": "^Approval requested",
+            "event": "waiting"
+          },
+          {
+            "on": "osc777",
+            "event": "finished"
+          }
+        ]
+      }
+    }
+  ],
+  "idle": {
+    "from": [
+      "output"
+    ],
+    "quietSec": 120
+  },
+  "surfaces": {
+    "home": "tui",
+    "terminal": {
+      "shell": true
+    },
+    "chatTitle": "^(.+)$"
+  },
+  "phoneTools": "mcp:config",
+  "models": {
+    "anthropic": {
+      "env": {}
+    }
+  }
+}

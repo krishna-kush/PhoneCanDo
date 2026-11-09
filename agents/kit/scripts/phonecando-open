@@ -1,0 +1,42 @@
+#!/bin/sh
+# phonecando-open <url>
+#
+# Asks PhoneCanDo to open a link on the phone, e.g. a sign-in page; set it as
+# BROWSER for tools that open one. Appends one line to the events file the
+# runner tails:
+#
+#   @open TAB <url>
+#
+# The runner asks you before it opens anything. <url> is http(s), at most
+# 2 KiB, with no spaces or control characters. The file is
+# $PHONECANDO_EVENTS, else $HOME/.phonecando/events. We never block.
+#
+# Exit 0 when written, 64 for a bad call, 1 when the file can't be written.
+
+# Bytes, not characters, for every length and pattern below.
+export LC_ALL=C
+
+usage() {
+  echo "usage: phonecando-open <http(s) url of at most 2 KiB>" >&2
+  exit 64
+}
+
+[ $# -eq 1 ] || usage
+url="$1"
+case "$url" in
+  http://?* | https://?*) ;;
+  *) usage ;;
+esac
+[ ${#url} -le 2048 ] || usage
+# Spaces, tabs, line breaks and other control characters.
+case "$url" in
+  *[[:space:][:cntrl:]]*) usage ;;
+esac
+
+events="${PHONECANDO_EVENTS:-${HOME:+$HOME/.phonecando/events}}"
+if [ -z "$events" ]; then
+  echo "phonecando-open: neither PHONECANDO_EVENTS nor HOME is set" >&2
+  exit 1
+fi
+mkdir -p "$(dirname "$events")" 2>/dev/null
+printf '@open\t%s\n' "$url" >>"$events" || exit 1

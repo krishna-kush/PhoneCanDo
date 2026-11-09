@@ -187,9 +187,10 @@ jobs:
           expect_usage_error build play
           expect_usage_error android desktop
           expect_usage_error web
-          expect_usage_error engine
-          expect_usage_error engine oc
-          expect_usage_error engine nope build
+          expect_usage_error agent
+          expect_usage_error agent opencode
+          expect_usage_error agent nope build
+          expect_usage_error agent new x
           expect_usage_error apk info /nonexistent.apk
           expect_usage_error device push
 

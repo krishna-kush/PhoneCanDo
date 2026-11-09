@@ -5,30 +5,34 @@
 // missing tool or an unreadable APK never passes.
 import { spawnSync } from 'node:child_process';
 import { basename } from 'node:path';
+import { nativeManifests } from '../agents/kit/cli/manifests.mjs';
 
 // SHA-256 of the release signing certificate: a public digest, not a secret.
 // Set PHONECANDO_RELEASE_CERT_SHA256 to the new digest after a key rotation.
 export const RELEASE_CERT_SHA256 =
   'f334c3893832ab660dc15b808c16440d70d52b68ddd7ebd9bf5571598ffd75a0';
 
-// Every bundled agent kind's engine libraries. They are built outside git
-// (opencode: docs/bootstrap/); a fresh clone has none.
-const AGENT_ENGINE_LIBS = {
-  oc: ['lib/arm64-v8a/liboc-engine.so', 'lib/arm64-v8a/liboc-opentui.so'],
-};
-export const ENGINE_LIBS = Object.values(AGENT_ENGINE_LIBS).flat();
+// Native agent kinds' libs (agents/native/<id>/agent.json, payload.libs),
+// arm64 only. They are built outside git (./manage agent <id> build|stage); a
+// fresh clone has none.
+export const PAYLOAD_ABI = 'arm64-v8a';
+
+/** The APK paths of a native kind's libs (an entry of agents/kit/cli/manifests.mjs). */
+export function payloadLibs(kind) {
+  return kind.manifest.payload.libs.map((lib) => `lib/${PAYLOAD_ABI}/${lib.name}`);
+}
 
 // Full-only code: the accessibility driver (uiauto), packs and the PCE.
 const SERVICE_CLASS = 'Lcom/phonecando/runner/uiauto/PhoneCanDoAccessibilityService;';
 const PCE_CLASSES = 'Lcom/phonecando/pce/';
 const FULL_ONLY = [PCE_CLASSES, 'Lcom/phonecando/runner/uiauto/', 'Lcom/phonecando/runner/packs/'];
 
-// Signer, channel and engine checks in one call; returns apksigner's report.
+// Signer, channel and payload checks in one call; returns apksigner's report.
 export function auditApk(apk, channel, tools) {
   const certs = checkSigner(apk, tools);
   auditChannel(apk, channel, tools);
-  checkEngine(apk);
-  console.log(`${basename(apk)}: ${channel} audit OK (release signer, channel, engine)`);
+  checkPayloads(apk, channel);
+  console.log(`${basename(apk)}: ${channel} audit OK (release signer, channel, agent payloads)`);
   return certs;
 }
 
@@ -88,20 +92,39 @@ export function auditChannel(apk, channel, tools) {
   }
 }
 
-// Every engine library is packaged and non-empty.
-export function checkEngine(apk) {
+// Every native agent kind the channel lists has its libs packaged and
+// non-empty; a kind the channel does not list has none in it.
+export function checkPayloads(apk, channel) {
   const sizes = new Map();
   for (const line of tool('unzip', ['-l', apk]).split('\n')) {
     const row = line.match(/^\s*(\d+)\s+\S+\s+\S+\s+(.+?)\s*$/);
     if (row) sizes.set(row[2], Number(row[1]));
   }
-  for (const lib of ENGINE_LIBS) {
-    if (!(sizes.get(lib) > 0)) {
-      throw new Error(
-        `${basename(apk)}: ${lib} is ${sizes.has(lib) ? 'empty' : 'missing'}; stage the engine first (docs/bootstrap/README.md)`,
-      );
+  const problems = payloadProblems(sizes, channel, nativeManifests());
+  if (problems.length) {
+    throw new Error(`${basename(apk)}: ${problems.join('; ')}; stage the payloads first (./manage agent <id> stage)`);
+  }
+}
+
+/**
+ * What checkPayloads finds wrong, from the APK's entry sizes (path -> bytes):
+ * a listed kind's lib missing or empty, or an unlisted kind's lib on any ABI.
+ */
+export function payloadProblems(sizes, channel, kinds) {
+  const problems = [];
+  for (const kind of kinds) {
+    const listed = kind.manifest.channels.includes(channel);
+    for (const lib of payloadLibs(kind)) {
+      if (listed && !(sizes.get(lib) > 0)) {
+        problems.push(`${lib} (${kind.id}) is ${sizes.has(lib) ? 'empty' : 'missing'}`);
+      }
+      if (!listed) {
+        const stray = [...sizes.keys()].filter((n) => n.startsWith('lib/') && basename(n) === basename(lib));
+        if (stray.length) problems.push(`${stray.join(', ')} ships, but ${kind.id} does not list ${channel}`);
+      }
     }
   }
+  return problems;
 }
 
 function tool(cmd, args, { binary = false } = {}) {

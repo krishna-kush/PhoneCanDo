@@ -1,0 +1,168 @@
+name: Agents
+
+# Agent kinds (agents/, its own Gradle build and pnpm package): the pure-JVM
+# kit and kinds the runner depends on (./gradlew build: compile + JVM tests),
+# the kit's TS (typecheck, the agents/AGENTS.md dependency law, which
+# also scans what app/, web/, tce/, scripts/ and .github/ci/ import, and the
+# node:test suites), and every agent.json against the schema and the folder
+# rules. The payload builds of native kinds are agent-payload.yml's. Runs on
+# agent changes and the code that may import them, nightly, on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - agents/**
+      # check-deps scans these for imports of agents/ (like tce.yml's app/src).
+      - app/src/**
+      - app/*
+      - web/src/**
+      - tce/**
+      - scripts/**
+      - .github/ci/**
+      # The runner builds against the kit-api and builtin coordinates.
+      - app/modules/phonecando-runner/android/src/**
+      # The package-family names must equal lre-api's (families tests).
+      - lre/api/src/main/kotlin/com/phonecando/lre/api/OsInfo.kt
+      - .github/workflows/agents.yml
+  pull_request:
+    paths:
+      - agents/**
+      # check-deps scans these for imports of agents/ (like tce.yml's app/src).
+      - app/src/**
+      - app/*
+      - web/src/**
+      - tce/**
+      - scripts/**
+      - .github/ci/**
+      # The runner builds against the kit-api and builtin coordinates.
+      - app/modules/phonecando-runner/android/src/**
+      # The package-family names must equal lre-api's (families tests).
+      - lre/api/src/main/kotlin/com/phonecando/lre/api/OsInfo.kt
+      - .github/workflows/agents.yml
+  workflow_dispatch:
+  schedule:
+    - cron: '57 2 * * *'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  kotlin:
+    name: Kotlin (./gradlew build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: agents
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      # Validates the gradle-wrapper.jar checksum, then caches Gradle state.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Build and test every project
+        run: ./gradlew build --console=plain
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Agent kinds, Kotlin (agents/)'
+            echo
+            find . -path '*/build/test-results/test/*.xml' -not -path './.gradle/*' | sort | while read -r f; do
+              grep -o 'testsuite name="[^"]*" tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' "$f"
+            done | sed 's/^/- /'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  ts:
+    name: TS (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 is the floor (agents/package.json engines: type stripping
+        # unflagged from 22.18); 24 is the current LTS devs run.
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # pnpm version comes from the root package.json packageManager field.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+          cache-dependency-path: agents/pnpm-lock.yaml
+      - name: Install agents deps (frozen lockfile)
+        run: pnpm -C agents install --frozen-lockfile
+      # The kit scripts' tests (agents/kit/scripts) run each script with every
+      # POSIX shell on the runner: /bin/sh is dash here, and busybox sh is
+      # what an Alpine image runs them with.
+      - name: busybox (a second POSIX shell for the kit-script tests)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends busybox
+      # tsc (bundled sources against the RN globals, tests against Node's),
+      # kit/cli/check-deps.mjs, then node --test over every *.test.mjs and
+      # *.test.ts under agents/.
+      - name: pnpm -C agents check
+        run: pnpm -C agents check
+
+  manifests:
+    name: manifests (agent.json + folder rules)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Validate every manifest (agents/kit/cli/check.mjs)
+        run: node agents/kit/cli/check.mjs
+
+  agents-ok:
+    # The one agents check to require in branch protection: green only when
+    # every job above succeeded (a skipped or cancelled job counts as a
+    # failure).
+    name: agents-ok
+    if: always()
+    needs: [kotlin, ts, manifests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All gates passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Agents gates"
+            echo
+            echo "| Job | Result |"
+            echo "|---|---|"
+            jq -r 'to_entries[] | "| \(.key) | \(.value.result) |"' <<< "$NEEDS"
+          } >> "$GITHUB_STEP_SUMMARY"
+          bad=$(jq -r '[to_entries[] | select(.value.result != "success") | "\(.key)=\(.value.result)"] | join(", ")' <<< "$NEEDS")
+          if [ -n "$bad" ]; then
+            echo "::error::gates not successful: $bad"
+            exit 1
+          fi
+          echo "all gates succeeded"

@@ -21,7 +21,7 @@
     },
     {
       "id": 127939263617,
-      "name": "changes",
+      "name": "plan",
       "status": "completed",
       "conclusion": "success",
       "suite": 114428451916,
@@ -69,7 +69,7 @@
     },
     {
       "id": 127939263906,
-      "name": "patch-check",
+      "name": "check (opencode)",
       "status": "completed",
       "conclusion": "success",
       "suite": 114428451916,
@@ -309,7 +309,7 @@
     },
     {
       "id": 127939265547,
-      "name": "upstream-drift",
+      "name": "drift (opencode)",
       "status": "completed",
       "conclusion": "skipped",
       "suite": 114428451916,
@@ -381,7 +381,7 @@
     },
     {
       "id": 127939371275,
-      "name": "build-payload",
+      "name": "build (opencode)",
       "status": "completed",
       "conclusion": "success",
       "suite": 114428451916,
@@ -429,7 +429,7 @@
     },
     {
       "id": 127943391485,
-      "name": "payload-contract",
+      "name": "contract (opencode)",
       "status": "completed",
       "conclusion": "success",
       "suite": 114428451916,
@@ -533,8 +533,8 @@
     },
     {
       "id": 42231797424,
-      "name": "opencode payload",
-      "path": ".github/workflows/oc-payload.yml",
+      "name": "Agent payloads",
+      "path": ".github/workflows/agent-payload.yml",
       "event": "push",
       "status": "completed",
       "conclusion": "success",

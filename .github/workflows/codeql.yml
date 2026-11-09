@@ -1,9 +1,9 @@
 name: CodeQL
 
 # CodeQL code scanning (advanced setup) for every language in the repo:
-# JS/TS (app, web, scripts), the workflows themselves, the PCE Kotlin build
-# (pce/, really compiled) and the JNI PTY in C (forkpty.c, compiled with the
-# host gcc). Runs on prod pushes, every PR and weekly to pick up new queries.
+# JS/TS (app, web, scripts), the workflows themselves, the PCE and agent
+# kinds' Kotlin builds (pce/ and agents/, really compiled) and the JNI PTY in
+# C (forkpty.c, compiled with the host gcc). Runs on prod pushes, every PR and weekly to pick up new queries.
 # Repo setting: code scanning "default setup" must be OFF for this to upload.
 
 on:
@@ -42,7 +42,7 @@ jobs:
           - language: javascript-typescript
             build-mode: none
           # Kotlin has no build-mode none (Kotlin files are skipped without a
-          # build), so the PCE is compiled under the CodeQL tracer. The app's
+          # build), so the PCE and agents/ are compiled under the CodeQL tracer. The app's
           # own Kotlin (app/modules/*/android) needs a full Expo prebuild plus
           # the RN Gradle build and is not traced here; android.yml builds it.
           - language: java-kotlin
@@ -57,8 +57,9 @@ jobs:
         with:
           persist-credentials: false
 
-      # JDK 17 is the PCE toolchain (jvmToolchain(17)); 21 runs Gradle and is
-      # left on JAVA_HOME. The C build also takes <jni.h> from JAVA_HOME.
+      # JDK 17 is the PCE and agents/ toolchain (jvmToolchain(17)); 21 runs
+      # Gradle and is left on JAVA_HOME. The C build also takes <jni.h> from
+      # JAVA_HOME.
       - name: Set up JDK 17 + 21
         if: matrix.build-mode == 'manual'
         uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -94,6 +95,16 @@ jobs:
       - name: Build PCE (traced)
         if: matrix.language == 'java-kotlin'
         working-directory: pce
+        run: >-
+          ./gradlew --no-daemon --no-build-cache --stacktrace
+          -Pkotlin.compiler.execution.strategy=in-process
+          -Porg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64,JAVA_HOME_21_X64
+          assemble
+
+      # The agent kinds' pure-JVM build (kit, kinds, builtin), the same way.
+      - name: Build agents (traced)
+        if: matrix.language == 'java-kotlin'
+        working-directory: agents
         run: >-
           ./gradlew --no-daemon --no-build-cache --stacktrace
           -Pkotlin.compiler.execution.strategy=in-process

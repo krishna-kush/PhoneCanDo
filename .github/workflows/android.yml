@@ -38,10 +38,34 @@ on:
       - 'theme/**'
       - '.github/workflows/android.yml'
       - '.github/ci/android/**'
+      # Agent kinds: the Kotlin the runner builds against (included by
+      # app/plugins/withAgentsCompositeBuild.js), the kit TS the app
+      # bundles, and the manifest loader and payload staging the audit and
+      # the release job run.
+      - 'agents/kit/kotlin/**'
+      - 'agents/builtin/**'
+      - 'agents/*/*/kotlin/**'
+      - 'agents/*.kts'
+      - 'agents/gradle.properties'
+      - 'agents/gradle/**'
+      - 'agents/kit/ts/**'
+      - 'agents/kit/cli/manifests.mjs'
+      - 'agents/kit/native/**'
+      - '.github/ci/agent-payload/stage-artifacts.mjs'
       - '!**/*.md'
       - '!app/docs/**'
-      # Packaged into the APK and audited byte for byte.
-      - 'app/modules/phonecando-runner/agents/**'
+      # Packaged into the APK and audited byte for byte: each kind's
+      # manifest and config, and the shared parts the configs pull in.
+      - 'agents/*/*/agent.json'
+      - 'agents/*/*/config/**'
+      - 'agents/*/*/config-lite/**'
+      - 'agents/shared/**'
+      # Also packaged (agents.gradle): the runtime plugins and the kit
+      # scripts an engine start seeds into an agent's home.
+      - 'agents/runtimes/*/runtime.json'
+      - 'agents/runtimes/*/install/**'
+      - 'agents/kit/scripts/phonecando-event'
+      - 'agents/kit/scripts/phonecando-open'
   pull_request:
     # Only what goes into the APK; the nightly run builds everything anyway.
     # Order matters: the .md exclusion comes after the includes, and the
@@ -73,19 +97,44 @@ on:
       - 'theme/**'
       - '.github/workflows/android.yml'
       - '.github/ci/android/**'
+      # Agent kinds: the Kotlin the runner builds against (included by
+      # app/plugins/withAgentsCompositeBuild.js), the kit TS the app
+      # bundles, and the manifest loader and payload staging the audit and
+      # the release job run.
+      - 'agents/kit/kotlin/**'
+      - 'agents/builtin/**'
+      - 'agents/*/*/kotlin/**'
+      - 'agents/*.kts'
+      - 'agents/gradle.properties'
+      - 'agents/gradle/**'
+      - 'agents/kit/ts/**'
+      - 'agents/kit/cli/manifests.mjs'
+      - 'agents/kit/native/**'
+      - '.github/ci/agent-payload/stage-artifacts.mjs'
       - '!**/*.md'
       - '!app/docs/**'
-      # Packaged into the APK and audited byte for byte.
-      - 'app/modules/phonecando-runner/agents/**'
+      # Packaged into the APK and audited byte for byte: each kind's
+      # manifest and config, and the shared parts the configs pull in.
+      - 'agents/*/*/agent.json'
+      - 'agents/*/*/config/**'
+      - 'agents/*/*/config-lite/**'
+      - 'agents/shared/**'
+      # Also packaged (agents.gradle): the runtime plugins and the kit
+      # scripts an engine start seeds into an agent's home.
+      - 'agents/runtimes/*/runtime.json'
+      - 'agents/runtimes/*/install/**'
+      - 'agents/kit/scripts/phonecando-event'
+      - 'agents/kit/scripts/phonecando-open'
   schedule:
     - cron: '37 2 * * *'
   workflow_dispatch:
     inputs:
-      oc_payload_run_id:
+      agent_payload_run_id:
         description: >-
-          Optional run id of an oc-payload.yml run: its oc-payload-arm64
-          artifact is packaged into the release-shape build and the audit's
-          engine gate is enforced.
+          Optional run id of an agent-payload.yml run: its
+          <prefix>-payload-arm64 artifacts (oc-payload-arm64 for opencode)
+          are packaged into the release-shape build and the audit's payload
+          gate is enforced for each one staged.
         required: false
         default: ''
         type: string
@@ -241,7 +290,7 @@ jobs:
     timeout-minutes: 150
     permissions:
       contents: read
-      # Only for the optional engine payload from another run (workflow_dispatch).
+      # Only for the optional agent payloads from another run (workflow_dispatch).
       actions: read
     env:
       # Releases are arm64 only; x86_64 is added so the emulator job can run
@@ -270,38 +319,23 @@ jobs:
         run: bash .github/ci/android/prebuild.sh
       - name: NDK, CMake and Gradle sizing
         run: bash .github/ci/android/toolchain.sh
-      - name: Fetch opencode payload (optional)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.oc_payload_run_id != '' }}
+      - name: Fetch agent payloads (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.agent_payload_run_id != '' }}
         continue-on-error: true
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: oc-payload-arm64
-          run-id: ${{ inputs.oc_payload_run_id }}
+          pattern: '*-payload-arm64'
+          run-id: ${{ inputs.agent_payload_run_id }}
           github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/oc-payload
-      - name: Stage opencode payload
-        id: engine
+          path: ${{ runner.temp }}/agent-payloads
+      - name: Stage agent payloads
+        id: payloads
         env:
-          PAYLOAD: ${{ runner.temp }}/oc-payload
-        run: |
-          set -euo pipefail
-          # Not in the repository (docs/bootstrap/); without it the build is
-          # complete except for the engine, and the audit skips that gate.
-          mode=optional
-          if [ -d "$PAYLOAD" ]; then
-            a=$(find "$PAYLOAD" -name liboc-engine.so -size +0 | head -n 1)
-            b=$(find "$PAYLOAD" -name liboc-opentui.so -size +0 | head -n 1)
-            if [ -n "$a" ] && [ -n "$b" ]; then
-              libs=app/modules/phonecando-runner/android/src/main/libs/arm64-v8a
-              mkdir -p "$libs"
-              cp "$a" "$b" "$libs/"
-              mode=required
-            else
-              echo "::warning title=opencode payload::artifact has no non-empty liboc-engine.so + liboc-opentui.so; building without the engine"
-            fi
-          fi
-          echo "mode=$mode" >>"$GITHUB_OUTPUT"
-          echo "Engine payload: **$([ "$mode" = required ] && echo staged || echo 'not staged (not in the repository)')**" >>"$GITHUB_STEP_SUMMARY"
+          PAYLOADS_DIR: ${{ runner.temp }}/agent-payloads
+        # Not in the repository (agents/native/<id>/build/ builds them);
+        # without one the build is complete except for that kind's engine,
+        # and the audit skips its gate. Writes payloads={channel: {id: mode}}.
+        run: node .github/ci/agent-payload/stage-artifacts.mjs "$PAYLOADS_DIR" lite full
       - name: Fetch proot (optional)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.proot_run_id != '' }}
         continue-on-error: true
@@ -383,7 +417,7 @@ jobs:
       - name: Audit both APKs (release gate + CI checks)
         env:
           CERT_SHA256: ${{ steps.key.outputs.cert_sha256 }}
-          ENGINE: ${{ steps.engine.outputs.mode }}
+          PAYLOADS: ${{ steps.payloads.outputs.payloads }}
           PROOT: ${{ steps.proot.outputs.mode }}
           IMAGE: ${{ steps.image.outputs.mode }}
         run: |
@@ -393,7 +427,8 @@ jobs:
             node .github/ci/android/audit-apk.mjs \
               --apk "app/android/app/build/outputs/apk/$ch/release/app-$ch-release.apk" \
               --channel "$ch" --build release --abis "$ABIS" \
-              --cert-sha256 "$CERT_SHA256" --engine "$ENGINE" --proot "$PROOT" --image "$IMAGE" \
+              --cert-sha256 "$CERT_SHA256" --payloads "$(jq -c --arg ch "$ch" '.[$ch] // {}' <<<"$PAYLOADS")" \
+              --proot "$PROOT" --image "$IMAGE" \
               --json "$RUNNER_TEMP/out/$ch/audit.json" || status=1
           done
           exit "$status"
@@ -416,7 +451,7 @@ jobs:
               "signed with a throwaway key generated inside that CI job and discarded." \
               "Android refuses it as an update to the published app (different signer)." \
               "ABIs: $ABIS (published releases are arm64-v8a only)." \
-              "The opencode engine is included only if audit.json says it was staged." \
+              "Each native agent's engine (opencode's included) is in it only if audit.json says it was staged." \
               >"$dir/NOT-A-RELEASE.txt"
             (cd "$dir" && sha256sum ./*.apk >SHA256SUMS)
           done

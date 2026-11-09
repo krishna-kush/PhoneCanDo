@@ -1,0 +1,55 @@
+{
+  "general": {
+    "enableAutoUpdate": false,
+    "enableAutoUpdateNotification": false
+  },
+  "ui": {
+    "showHomeDirectoryWarning": false
+  },
+  "mcpServers": {
+    "phonecando": {
+      "httpUrl": "${PHONECANDO_BRIDGE_URL}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${PHONECANDO_BRIDGE_TOKEN}"
+      }
+    }
+  },
+  "hooks": {
+    "BeforeAgent": [
+      {
+        "hooks": [
+          {
+            "name": "phonecando-working",
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event BeforeAgent",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "name": "phonecando-waiting",
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event Notification",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "name": "phonecando-finished",
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event AfterAgent",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  }
+}

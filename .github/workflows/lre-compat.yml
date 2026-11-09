@@ -10,7 +10,11 @@ name: Linux image compatibility
 # result's install command, git and rg through their shims, a commit in
 # home/, and the cwd contract.
 #
-# Tier 2 (blocking, lre-compat-ok): one image per package family we know.
+# Tier 2 (blocking, lre-compat-ok): one image per package family we know,
+# from .github/ci/lre-compat/tier2.txt. Agents (blocking): every runtime
+# plugin (agents/runtimes/<id>/) on each Tier 2 image whose family it claims,
+# installed for a test kind that needs only it, the way the phone installs an
+# agent (.github/ci/lre-compat/agent-leg.sh, with kit-cli's render-install).
 # Tier 3 (report-only, weekly and on demand): a few more images per ISO week
 # from .github/ci/lre-compat/tier3.txt; failures open or update one issue,
 # "Linux image compatibility report". Tier 1 (the baked Default image) is
@@ -34,6 +38,17 @@ on:
       - '.github/workflows/lre-compat.yml'
       - '.github/ci/lre-compat/**'
       - '.github/ci/proot/host-tools.sh'
+      # The agents legs: the runtime plugins, and kit-cli with the kit-render
+      # code it runs (the agents/ Gradle build).
+      - 'agents/runtimes/**'
+      - 'agents/kit/kotlin/api/**'
+      - 'agents/kit/kotlin/manifest/**'
+      - 'agents/kit/kotlin/render/**'
+      - 'agents/kit/kotlin/cli/**'
+      - 'agents/*.kts'
+      - 'agents/gradle.properties'
+      - 'agents/gradle/**'
+      - 'agents/gradlew'
   pull_request:
     paths:
       - 'lre/api/**'
@@ -50,6 +65,17 @@ on:
       - '.github/workflows/lre-compat.yml'
       - '.github/ci/lre-compat/**'
       - '.github/ci/proot/host-tools.sh'
+      # The agents legs: the runtime plugins, and kit-cli with the kit-render
+      # code it runs (the agents/ Gradle build).
+      - 'agents/runtimes/**'
+      - 'agents/kit/kotlin/api/**'
+      - 'agents/kit/kotlin/manifest/**'
+      - 'agents/kit/kotlin/render/**'
+      - 'agents/kit/kotlin/cli/**'
+      - 'agents/*.kts'
+      - 'agents/gradle.properties'
+      - 'agents/gradle/**'
+      - 'agents/gradlew'
   workflow_dispatch:
     inputs:
       tier3:
@@ -118,42 +144,75 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tier2: ${{ steps.plan.outputs.tier2 }}
+      agents: ${{ steps.plan.outputs.agents }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/ci/lre-compat
+            agents/runtimes
+
+      - name: Tier 2 images and agent legs (.github/ci/lre-compat/agent-plan.sh)
+        id: plan
+        run: |
+          bash .github/ci/lre-compat/agent-plan.sh .github/ci/lre-compat/tier2.txt agents/runtimes \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # kit-cli (agents/kit/kotlin/cli): kit-render's InstallRenderer on a plain
+  # JVM, as the runner renders an agent's install. Pure JVM, so any runner.
+  kit-cli:
+    name: kit-cli
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: agents
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: kit-cli (test, installDist)
+        working-directory: agents
+        run: ./gradlew :kit-cli:test :kit-cli:installDist --console=plain
+
+      # Every agents leg takes it by this exact name; a tarball keeps the exec bits.
+      - name: Pack kit-cli
+        run: tar -C agents/kit/kotlin/cli/build/install -czf "$RUNNER_TEMP/kit-cli.tar.gz" kit-cli
+
+      - name: Upload kit-cli
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kit-cli
+          path: ${{ runner.temp }}/kit-cli.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
   tier2:
     name: tier2 (${{ matrix.name }})
-    needs: prep
+    needs: [prep, plan]
     runs-on: ubuntu-24.04-arm
     # A prep and an install may each take up to leg.sh's 30-minute cap under
     # ptrace (EPEL's dependencies on a RHEL-like are dozens of packages).
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      # One image per package family lre/image knows. No pacman: Arch has no
-      # official arm64 image (archlinux is amd64 only). yum and xbps have no
-      # current official arm64 image either.
+      # One image per package family lre/image knows (tier2.txt).
       matrix:
-        include:
-          - name: debian-stable
-            ref: debian:stable
-            family: apt
-          - name: ubuntu-24.04
-            ref: ubuntu:24.04
-            family: apt
-          - name: alpine
-            ref: alpine:latest
-            family: apk
-          - name: fedora
-            ref: fedora:latest
-            family: dnf
-          # The microdnf family. Docker Hub's library rockylinux stopped at
-          # 9.3 (2024); AlmaLinux's minimal image is current and, being an
-          # official image, has lre/oci's mirrors when Docker Hub refuses.
-          - name: almalinux-9-minimal
-            ref: almalinux:9-minimal
-            family: microdnf
-            prep: microdnf install -y epel-release
-          - name: opensuse-leap
-            ref: opensuse/leap:latest
-            family: zypper
+        include: ${{ fromJSON(needs.plan.outputs.tier2) }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -194,6 +253,60 @@ jobs:
           path: ${{ runner.temp }}/leg/result.json
           retention-days: 14
           if-no-files-found: warn
+
+  agents:
+    name: agents (${{ matrix.name }})
+    needs: [prep, plan, kit-cli]
+    runs-on: ubuntu-24.04-arm
+    # The runtime's download and unpack, and the packages it needs first, may
+    # take up to agent-leg.sh's 30-minute cap under ptrace, twice.
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      # Every runtime x the Tier 2 images of the families it claims.
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.agents) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/ci/lre-compat
+            agents/runtimes
+
+      # lre-cli's and kit-cli's start scripts need a JVM.
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download lre-compat-payload
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lre-compat-payload
+          path: ${{ runner.temp }}/dl
+
+      - name: Download kit-cli
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kit-cli
+          path: ${{ runner.temp }}/dl
+
+      - name: Unpack the payload and kit-cli
+        run: |
+          mkdir -p "$RUNNER_TEMP/payload" "$RUNNER_TEMP/kit"
+          tar -xzf "$RUNNER_TEMP/dl/lre-compat-payload.tar.gz" -C "$RUNNER_TEMP/payload"
+          tar -xzf "$RUNNER_TEMP/dl/kit-cli.tar.gz" -C "$RUNNER_TEMP/kit"
+
+      - name: Leg (.github/ci/lre-compat/agent-leg.sh)
+        env:
+          RUNTIME: ${{ matrix.runtime }}
+          REF: ${{ matrix.ref }}
+          FAMILY: ${{ matrix.family }}
+        run: |
+          bash .github/ci/lre-compat/agent-leg.sh "$RUNTIME" "$REF" "$FAMILY" "$RUNNER_TEMP/payload" \
+            "$RUNNER_TEMP/kit/kit-cli" "$RUNNER_TEMP/leg" | tee -a "$GITHUB_STEP_SUMMARY"
 
   tier3-plan:
     name: tier3-plan
@@ -324,11 +437,11 @@ jobs:
 
   lre-compat-ok:
     # The one image-compatibility check to require in branch protection:
-    # green only when prep and every Tier 2 leg succeeded (a skipped or
-    # cancelled job counts as a failure). Tier 3 never counts.
+    # green only when prep, every Tier 2 leg and every agents leg succeeded
+    # (a skipped or cancelled job counts as a failure). Tier 3 never counts.
     name: lre-compat-ok
     if: always()
-    needs: [prep, tier2]
+    needs: [prep, plan, kit-cli, tier2, agents]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

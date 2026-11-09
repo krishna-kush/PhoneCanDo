@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // The kit's TS, which the app bundles by relative path (contract types,
+  // the manifest validator): plain ES2022, no DOM, no Node, no React Native
+  // globals, so it runs anywhere. Tests and tooling type-check against Node
+  // instead (tsconfig.test.json).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["kit/ts/**/*.ts"],
+  "exclude": ["node_modules", "**/*.test.ts"]
+}

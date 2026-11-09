@@ -92,8 +92,12 @@ def record(cmd, cwd=m.ROOT, env=None):
 m.sh = record
 m.capture = lambda cmd: ""
 probes = [("check", []), ("logos", []), ("xterm", []), ("prebuild", []), ("prebuild", ["--clean"]),
-          ("web", ["dev"]), ("web", ["build"]), ("web", ["preview"]), ("engine", ["oc", "build"]), ("engine", ["oc", "stage"]),
+          ("web", ["dev"]), ("web", ["build"]), ("web", ["preview"]),
           ("release", ["0.0.0", "--dry-run"]), ("build", ["lite"]), ("build", ["full"])]
+probes += [("agent", ["list"]), ("agent", ["check"]), ("agent", ["new", "x", "--native"])]
+probes += [("agent", [k, a] + (["out"] if a == "stage" else []))
+           for k, d in m.agent_kinds().items() for a in ("build", "stage", "test")
+           if d.parent.name == "native" or a == "test"]
 probes += [("android", [c]) for c in m.CHANNELS]
 probes += [("image", ["fetch"]), ("image", ["stage"]), ("image", ["lock", "1"]), ("image", ["build"]),
            ("image", ["stage", "--local"])]

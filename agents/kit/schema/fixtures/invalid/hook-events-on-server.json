@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "id": "opencode",
+  "label": "opencode",
+  "version": "2.0.26-android-phonecando.1",
+  "type": "native",
+  "prefix": "oc",
+  "channels": [
+    "full",
+    "lite",
+    "play"
+  ],
+  "stability": "stable",
+  "licence": {
+    "spdx": "MIT",
+    "redistributed": true,
+    "notice": "NOTICE.md",
+    "source": "https://github.com/anomalyco/opencode"
+  },
+  "payload": {
+    "libs": [
+      {
+        "name": "liboc-engine.so",
+        "from": "opencode2.bin",
+        "role": "engine",
+        "linkage": "system-only"
+      },
+      {
+        "name": "liboc-opentui.so",
+        "from": "libopentui.so",
+        "role": "opentui",
+        "linkage": "system-only"
+      }
+    ]
+  },
+  "build": {
+    "toolchains": [
+      "bun",
+      "zig",
+      "ndk"
+    ]
+  },
+  "config": {
+    "dir": "config",
+    "overlay": "config-lite",
+    "fullOnly": [
+      "AGENTS.md",
+      "plugins/automation/**"
+    ],
+    "shared": [
+      "phone-tools"
+    ],
+    "into": ".config/opencode",
+    "keep": [
+      "opencode.json"
+    ],
+    "required": [
+      "opencode.json"
+    ],
+    "instructions": "AGENTS.md"
+  },
+  "engine": {
+    "style": "server",
+    "launch": {
+      "argv": [
+        "{{libDir}}/liboc-engine.so",
+        "serve",
+        "--port",
+        "{{port}}",
+        "--hostname",
+        "127.0.0.1"
+      ],
+      "env": {
+        "OPENCODE_DISABLE_AUTOUPDATE": "1",
+        "OPENCODE_DISABLE_LSP_DOWNLOAD": "1",
+        "OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER": "true",
+        "OPENCODE_SERVER_PASSWORD": "{{password}}",
+        "OPENTUI_LIB_PATH": "{{libDir}}/liboc-opentui.so"
+      }
+    },
+    "auth": {
+      "basic": {
+        "user": "opencode"
+      }
+    },
+    "readiness": {
+      "http": {
+        "path": "/api/session"
+      }
+    }
+  },
+  "events": [
+    {
+      "sse": {
+        "path": "/api/event",
+        "parser": "opencode.events"
+      }
+    },
+    {
+      "hook": {
+        "map": {
+          "Stop": "finished"
+        }
+      }
+    }
+  ],
+  "chats": {
+    "title": {
+      "http": {
+        "path": "/api/session/{{sessionId}}",
+        "json": "/data/title"
+      }
+    }
+  },
+  "idle": {
+    "from": [
+      "events"
+    ],
+    "quietSec": 60
+  },
+  "surfaces": {
+    "home": "web",
+    "web": {
+      "pair": {
+        "method": "POST",
+        "path": "/api/pair",
+        "code": [
+          "/data/code",
+          "/code"
+        ],
+        "url": "/auth/connect/{{code}}"
+      },
+      "adapter": {
+        "colorSchemeKey": "opencode-color-scheme",
+        "cssVars": {
+          "--v2-background-bg-base": "bg",
+          "--v2-background-bg-deep": "bg",
+          "--v2-background-bg-layer-01": "panel",
+          "--v2-background-bg-layer-02": "panel2",
+          "--v2-background-bg-layer-03": "panel2",
+          "--v2-background-bg-layer-04": "panel2",
+          "--v2-text-text-base": "fg",
+          "--v2-text-text-muted": "muted",
+          "--v2-text-text-faint": "dim",
+          "--v2-icon-icon-base": "muted",
+          "--v2-icon-icon-muted": "dim",
+          "--v2-icon-icon-faint": "faint",
+          "--v2-border-border-base": "line",
+          "--v2-border-border-strong": "lineStrong",
+          "--v2-border-border-muted": "line",
+          "--v2-background-bg-accent": "primary",
+          "--v2-text-text-accent": "primary",
+          "--v2-text-text-accent-hover": "primaryHi",
+          "--v2-icon-icon-accent": "primary",
+          "--v2-icon-icon-accent-hover": "primaryHi",
+          "--v2-border-border-focus": "primary"
+        },
+        "hide": [
+          "[data-slot=\"titlebar-v2\"]"
+        ],
+        "authUrl": "/auth/connect/",
+        "sessionUrl": "/session/([^/?#]+)"
+      }
+    },
+    "terminal": {
+      "client": {
+        "argv": [
+          "{{libDir}}/liboc-engine.so",
+          "--server",
+          "{{serverUrl}}",
+          {
+            "when": "sessionId",
+            "args": [
+              "--session",
+              "{{sessionId}}"
+            ]
+          },
+          "{{projectDir}}"
+        ],
+        "env": {
+          "OPENCODE_DISABLE_AUTOUPDATE": "1",
+          "OPENTUI_LIB_PATH": "{{libDir}}/liboc-opentui.so",
+          "OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER": "true",
+          "OPENCODE_SERVER_PASSWORD": "{{password}}"
+        },
+        "cwd": "{{projectDir}}"
+      },
+      "chatTitle": "^OC \\| (.+)$"
+    }
+  },
+  "phoneTools": "plugin",
+  "hooks": [
+    "opencode.events"
+  ],
+  "signIn": [
+    {
+      "method": "in-ui",
+      "note": "Connect a provider in the web UI settings."
+    }
+  ]
+}

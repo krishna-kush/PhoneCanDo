@@ -2,7 +2,7 @@ const { withProjectBuildGradle } = require('@expo/config-plugins');
 const { block, insertBeforeLine, strip } = require('./gradleBlock');
 
 // The engine payload is built for API 29 (ANDROID_API in
-// scripts/agents/oc/build.sh), so below Android 10 the app
+// agents/native/opencode/build/pins.env), so below Android 10 the app
 // cannot run its engine, and its native code calls API 26+ APIs unguarded.
 // Expo's root plugin sets ext.minSdkVersion only when the root project has
 // none (ExpoRootProjectPlugin setIfNotExist), so defining it before

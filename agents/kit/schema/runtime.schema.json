@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PhoneCanDo runtime plugin manifest (runtime.json), v1",
+  "description": "One language runtime an image kind can need (requires.runtimes): agents/runtimes/<id>/runtime.json, with its install scripts beside it. It is installed only into the machine of an agent that needs it, and depends on no agent and no other runtime. The rules JSON Schema cannot say (each family it claims has an install script, a check pattern the guest's grep -E and sed -E can run) live in agents/kit/ts/manifest/runtime-plugin.ts, which implements this whole schema too; agents/kit/cli/check.mjs adds the folder rules (folder = id, the scripts exist).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "label", "provides", "families", "install", "check", "licence"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": {
+      "description": "The folder name; kinds name it in requires.runtimes.",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "label": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "provides": {
+      "description": "The major version our install scripts put in place.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9999
+    },
+    "families": {
+      "description": "The package families it installs on: lre-api's PackageFamily ids.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["apt", "apk", "dnf", "yum", "microdnf", "pacman", "zypper", "xbps"] }
+    },
+    "install": {
+      "description": "The install script per family, a file in the plugin folder; * is the fallback. Each runs in the guest with sh, HOME the image home, and is safe to run again.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "enum": ["apt", "apk", "dnf", "yum", "microdnf", "pacman", "zypper", "xbps", "*"] },
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 256,
+        "pattern": "^(?!/)(?!.*//)(?!.*/$)(?!(?:.*/)?\\.\\.?(?:/|$))[^\\\\\\u0000]+$"
+      }
+    },
+    "paths": {
+      "description": "Guest folders put first on PATH for the install steps and the agent's engine: absolute, or under {{home}}.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "maxLength": 256, "pattern": "^(?:\\{\\{home\\}\\})?(?:/[A-Za-z0-9._+-]+)+$" }
+    },
+    "check": {
+      "description": "Run before an install: group 1 of pattern in its output is the major version found, which must be at least what the agent needs.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "pattern"],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "prefixItems": [
+            {
+              "type": "string",
+              "maxLength": 1024,
+              "pattern": "^(?:(?:\\{\\{home\\}\\})?/[^{}\\s]*|[^/{}\\s]+)$"
+            }
+          ],
+          "items": {
+            "type": "string",
+            "maxLength": 1024,
+            "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:home)\\}\\})*$"
+          }
+        },
+        "pattern": {
+          "description": "A regular expression with a capture group, kept to what translates into a POSIX ERE.",
+          "type": "string",
+          "maxLength": 256,
+          "format": "regex"
+        }
+      }
+    },
+    "licence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spdx", "source"],
+      "properties": {
+        "spdx": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*(?: (?:AND|OR|WITH) [A-Za-z0-9][A-Za-z0-9.+-]*)*$"
+        },
+        "source": { "type": "string", "maxLength": 512, "pattern": "^https://[^\\s]+$" }
+      }
+    }
+  }
+}

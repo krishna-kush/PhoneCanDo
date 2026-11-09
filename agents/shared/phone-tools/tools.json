@@ -1,0 +1,364 @@
+{
+  "generated": "node agents/shared/phone-tools/gen-tools-json.mjs; do not edit",
+  "schema": 1,
+  "tools": [
+    {
+      "name": "mobile_ping",
+      "description": "Check the PhoneCanDo phone bridge. Returns {channel, sdk, model, automation, unlocked, ui, pce}: channel is full|lite|play, unlocked is the phone-control gate, ui is the accessibility/PCE availability (compatibility alias), and pce is the PCE backend. Ungated and safe to call first or after any failure; only full builds register the phone-control tools.",
+      "channel": "all",
+      "method": "GET",
+      "route": "/ping",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_battery",
+      "description": "Read the phone's battery. Ungated; returns {percent, charging} as reported by Android.",
+      "channel": "all",
+      "method": "GET",
+      "route": "/battery",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_notify",
+      "description": "Post an Android notification on the phone, labelled with your agent's name in PhoneCanDo; tapping it opens your chat. text is required; title defaults to your agent's name. A new notification with the same title replaces your previous one. Requires phone-control unlock in full builds and is ungated in lite/play. Use only when the user asked for a notification or status update.",
+      "channel": "all",
+      "method": "POST",
+      "route": "/notify",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Notification title (default: your agent's name)"
+          },
+          "text": {
+            "type": "string",
+            "description": "Notification body"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_share",
+      "description": "Open the Android share sheet with text. title is an optional subject. Requires phone-control unlock in full builds; the user picks the target app. Returns an error if no app can handle the share.",
+      "channel": "all",
+      "method": "POST",
+      "route": "/share",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to share"
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional subject/title"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_open",
+      "description": "Open a URL with the phone's default app. This is NOT an app launcher: only http, https, mailto, tel, geo and market URLs are accepted, and app schemes such as whatsapp:// are rejected with bad_scheme. To launch an installed app use mobile_launch with its package name (full builds only). Requires phone-control unlock in full builds; works while PhoneCanDo is in the foreground.",
+      "channel": "all",
+      "method": "POST",
+      "route": "/open",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Absolute URL including scheme; scheme must be http, https, mailto, tel, geo or market"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_clipboard",
+      "description": "Read or write the phone clipboard. action=get|set; text is required for set. Reading needs PhoneCanDo in the foreground on Android 10+ because the OS hides clipboard contents from background apps. Requires phone-control unlock in full builds.",
+      "channel": "all",
+      "method": "POST",
+      "route": "/clipboard",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "get",
+              "set"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "Text to copy when action=set"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_describe",
+      "description": "Describe the PCE automation without observing the screen. Returns contract, PCE version, backend, capabilities (observe/tap/long_press/set_text/key/scroll/swipe/launch), sdk, model, unlocked and installed packs. Requires phone-control unlock and the accessibility service; use mobile_ping for a cheap health check.",
+      "channel": "full",
+      "method": "GET",
+      "route": "/pce/describe",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_observe",
+      "description": "Observe the current screen and return a compact snapshot: snapshotId, package, activity, eventSeq, device/display, focused node id, windows, and nodes. Each node uses i as its node id plus cls, text, desc, id, bounds [l,t,r,b], parent and boolean flags. Pass the snapshotId to mobile_act; the snapshot becomes stale after the screen changes, so observe again. windows defaults true, includeInvisible defaults false, maxNodes defaults 500 and is clamped to 1..2000. screenshot=true requests an observation artifact on Android 11+; the returned screenshot.path is readable by the agent, so use it for visual verification instead of the reserved screenshot action.",
+      "channel": "full",
+      "method": "POST",
+      "route": "/pce/observe",
+      "body": {
+        "screenshot": false,
+        "includeInvisible": false,
+        "windows": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean",
+            "description": "Capture a screenshot artifact (Android 11+)"
+          },
+          "includeInvisible": {
+            "type": "boolean",
+            "description": "Include nodes marked invisible"
+          },
+          "windows": {
+            "type": "boolean",
+            "description": "Include window metadata (default true)"
+          },
+          "maxNodes": {
+            "type": "number",
+            "description": "Node cap (default 500, max 2000)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_act",
+      "description": "Run one typed PCE action against a snapshotId from mobile_observe. action is PCE JSON. Targets: {\"type\":\"node\",\"nodeId\":N} (preferred), {\"type\":\"selector\",\"selector\":{...}}, or {\"type\":\"coordinates\",\"point\":{\"x\":N,\"y\":N}}. Actions: tap; long_press (durationMs); type_text (text, target?, clear); key (ENTER|BACK|HOME|RECENTS|TAB|ESCAPE|UP|DOWN|LEFT|RIGHT|DELETE); scroll (UP|DOWN|LEFT|RIGHT, target?, amount); swipe (from,to,durationMs); wait (selector,timeoutMs); assert (selector); launch (packageName,activityName?). For launching an installed app prefer mobile_launch. screenshot is reserved and returns UNSUPPORTED_ACTION; use mobile_observe screenshot=true. Optional expect selector is a post-action wait. timeoutMs (default 30000, clamped to 1000..120000) caps a wait action, which ends at the smaller of its own timeoutMs and this one; expectTimeoutMs (default 5000, clamped to 500..30000) caps the expect wait. The call waits for both plus 10 s, so a slow wait returns its own TIMEOUT error.",
+      "channel": "full",
+      "method": "POST",
+      "route": "/pce/act",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "snapshotId": {
+            "type": "number",
+            "description": "snapshotId from mobile_observe"
+          },
+          "action": {
+            "type": "object",
+            "description": "PCE action JSON",
+            "additionalProperties": true
+          },
+          "expect": {
+            "type": "object",
+            "description": "Selector to wait for after the action",
+            "additionalProperties": true
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Action timeout (default 30000, max 120000)"
+          },
+          "expectTimeoutMs": {
+            "type": "number",
+            "description": "Postcondition wait (default 5000, max 30000)"
+          }
+        },
+        "required": [
+          "snapshotId",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_pack",
+      "description": "List, refresh, roll back or run signed app packs. action=list returns each active pack's version, flows and parameters. action=refresh fetches manifestUrl (manifest.json; manifest.json.sig is fetched next to it), verifies every pack's sha256 and Ed25519 signature, then installs versions atomically; refresh is idempotent. action=rollback switches to the previous installed version and requires id. action=run requires id and flow, accepts string-only params, and returns each step's action and expect result. Requires phone-control unlock and the accessibility service; manifestUrl must be HTTPS, or loopback HTTP for local testing.",
+      "channel": "full",
+      "method": "POST",
+      "route": "/pce/pack",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "refresh",
+              "rollback",
+              "run"
+            ]
+          },
+          "manifestUrl": {
+            "type": "string",
+            "description": "HTTPS URL to manifest.json (loopback HTTP allowed for local testing); manifest.json.sig is fetched next to it"
+          },
+          "id": {
+            "type": "string",
+            "description": "Pack id for rollback or run"
+          },
+          "flow": {
+            "type": "string",
+            "description": "Flow id for run"
+          },
+          "params": {
+            "type": "object",
+            "description": "String flow parameters for run",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_return",
+      "description": "Bring PhoneCanDo back to the foreground after finishing a phone-control task, with you as the active agent. tab=home|env|settings (default home, your chat). When PhoneCanDo is backgrounded it also posts a tap-to-return notification and reports notified:true; tell the user to tap it if the app did not come forward. Call this before your final report. Ungated; registered in full builds.",
+      "channel": "full",
+      "method": "POST",
+      "route": "/app",
+      "body": {
+        "tab": "home",
+        "notify": true,
+        "reason": "return"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tab": {
+            "type": "string",
+            "enum": [
+              "home",
+              "env",
+              "settings"
+            ],
+            "description": "Tab to show after returning (default home)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_request_unlock",
+      "description": "Phone control is locked (automation_off). Show the biometric/PIN prompt over the chat and wait up to 45s for the user. This never unlocks by itself. If the result has unlocked:true, continue the task; if unlocked:false, stop and ask the user to unlock. Never retry the locked action or try to bypass the gate.",
+      "channel": "full",
+      "method": "POST",
+      "route": "/unlock",
+      "body": {
+        "waitMs": 45000
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_open_accessibility",
+      "description": "UI automation is unavailable because Android's accessibility service is off (automation_unavailable). Shows PhoneCanDo's setup dialog over the chat and waits up to 4 minutes while the user follows it, returning as soon as the service connects. This never enables anything; only the user can flip the switch. Returns {opened, enabled, cancelled, restricted}. If enabled:true, continue the task right away. If cancelled:true, the user tapped 'Not now': stop and ask whether to continue. Otherwise (enabled:false after the wait), tell the user to finish the steps shown in PhoneCanDo and say when done; when they do, call mobile_ping and continue only when it reports ui:true. Do not call this again in a loop. restricted is 'sideload' when the user went through PhoneCanDo's restricted-settings guide (Android locks the switch for apps installed from a file: Android's 'Restricted setting' note, then App info → Allow restricted settings, then the switch). Never toggle accessibility yourself.",
+      "channel": "full",
+      "method": "POST",
+      "route": "/accessibility",
+      "body": {
+        "waitMs": 240000
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  ],
+  "omitted": [
+    {
+      "name": "mobile_launch",
+      "why": "its run chains /pce/observe → /pce/act in TypeScript"
+    },
+    {
+      "name": "mobile_screen",
+      "why": "its run builds on what /pce/observe returns in TypeScript"
+    },
+    {
+      "name": "mobile_info",
+      "why": "its run builds on what /pce/observe returns in TypeScript"
+    },
+    {
+      "name": "mobile_click",
+      "why": "its run builds on what /pce/observe returns in TypeScript"
+    },
+    {
+      "name": "mobile_tap",
+      "why": "its run chains /pce/observe → /pce/act in TypeScript"
+    },
+    {
+      "name": "mobile_text",
+      "why": "its run builds on what /pce/observe returns in TypeScript"
+    },
+    {
+      "name": "mobile_scroll",
+      "why": "its run builds on what /pce/observe returns in TypeScript"
+    },
+    {
+      "name": "mobile_swipe",
+      "why": "its run chains /pce/observe → /pce/act in TypeScript"
+    },
+    {
+      "name": "mobile_back",
+      "why": "its run chains /pce/observe → /pce/act in TypeScript"
+    },
+    {
+      "name": "mobile_home",
+      "why": "its run chains /pce/observe → /pce/act in TypeScript"
+    },
+    {
+      "name": "mobile_wait",
+      "why": "its run chains /pce/observe → /pce/observe in TypeScript"
+    }
+  ]
+}

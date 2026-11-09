@@ -6,7 +6,8 @@ name: CI
 # build and script wiring. Runs on every push to prod, every PR, nightly (to
 # catch upstream drift) and on demand. Branch protection: require `ci-ok`.
 # Native builds, the PCE, the engine and deep site checks have their own
-# workflows (android.yml, pce.yml, oc-payload.yml, lre.yml, proot.yml, web.yml).
+# workflows (android.yml, pce.yml, agents.yml, agent-payload.yml, lre.yml,
+# proot.yml, web.yml).
 
 on:
   push:

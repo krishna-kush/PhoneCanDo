@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "id": "gemini-cli",
+  "label": "Gemini CLI",
+  "version": "0.0.0-fixture",
+  "type": "image",
+  "channels": [
+    "full",
+    "lite"
+  ],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": false,
+    "source": "https://github.com/google-gemini/gemini-cli"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": [
+      "bash",
+      "git",
+      "rg"
+    ],
+    "runtimes": [
+      "node>=22"
+    ]
+  },
+  "install": {
+    "families": [
+      "apt",
+      "apk",
+      "dnf",
+      "pacman",
+      "zypper"
+    ],
+    "packages": {
+      "apt": [
+        "git",
+        "ripgrep"
+      ],
+      "apk": [
+        "git",
+        "ripgrep"
+      ],
+      "*": [
+        "git"
+      ]
+    },
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" @google/gemini-cli@latest"
+    ],
+    "timeoutSec": 1200,
+    "retries": 3
+  },
+  "update": {
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" @google/gemini-cli@latest"
+    ]
+  },
+  "versionCheck": {
+    "argv": [
+      "{{home}}/.local/bin/gemini",
+      "--version"
+    ],
+    "pattern": "(\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": [
+        "gemini"
+      ],
+      "cwd": "{{projectDir}}"
+    }
+  },
+  "events": [
+    {
+      "hook": {
+        "map": {
+          "AfterAgent": "finished",
+          "Notification": "waiting",
+          "BeforeAgent": "working"
+        }
+      }
+    }
+  ],
+  "idle": {
+    "from": [
+      "output"
+    ],
+    "quietSec": 120
+  },
+  "surfaces": {
+    "home": "tui",
+    "terminal": {
+      "shell": true
+    }
+  },
+  "phoneTools": "mcp:config"
+}

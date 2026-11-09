@@ -1,0 +1,390 @@
+name: Agent payloads
+
+# The native agent kinds' on-device payloads (agents/native/<id>/, not in
+# git; opencode's is liboc-engine.so + liboc-opentui.so, ~200 MB). One matrix
+# leg per kind, from agents/kit/cli/list.mjs:
+#   check     the kind's ci/check.sh: our patches and pins still fit the
+#             pinned upstream (opencode: ci/pins.sh + ci/upstream.sh);
+#   drift     the kind's ci/drift.sh, if any: the newest upstream tag (early
+#             warning, never a gate);
+#   build     cross-builds with the kind's build/build.sh (toolchains from
+#             agent.json, versions from build/pins.env), stages the payload
+#             with agents/kit/native/stage.mjs, checks it with verify-elf.sh
+#             and uploads `<prefix>-payload-arm64` (opencode: `oc-payload-arm64`);
+#   contract  the artifact round trip a consumer (android.yml) relies on.
+# Optional per-kind helpers the build leg runs when present: ci/sources.sh
+# <workdir> (upstream clones), ci/check-toolchain.sh <ndk-root>, ci/verify.env
+# (verify-elf.sh settings). On a push, plan keeps the kinds whose folder
+# changed. Runs on payload-build changes, weekly, on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - agents/native/**
+      - agents/kit/native/**
+      - agents/kit/cli/**
+      - agents/kit/ts/manifest/**
+      - .github/workflows/agent-payload.yml
+      - .github/ci/agent-payload/**
+  pull_request:
+    paths:
+      - agents/native/**
+      - agents/kit/native/**
+      - agents/kit/cli/**
+      - agents/kit/ts/manifest/**
+      - .github/workflows/agent-payload.yml
+      - .github/ci/agent-payload/**
+  schedule:
+    - cron: '17 5 * * 0'
+  workflow_dispatch:
+    inputs:
+      build-payload:
+        description: Also build the payloads (~30-60 min each). Off = check and drift only.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Explicit bash runs steps with -eo pipefail (the unset default is plain
+# `bash -e`), so a `check.sh | tee -a "$GITHUB_STEP_SUMMARY"` step fails when
+# the check does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      check: ${{ steps.plan.outputs.check }}
+      build: ${{ steps.plan.outputs.build }}
+      check-any: ${{ steps.plan.outputs.check-any }}
+      build-any: ${{ steps.plan.outputs.build-any }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The manifest loader imports the kit's TS validator (type stripping).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Kinds to check and build
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # A push builds only the kinds whose build inputs it touched (docs
+          # or the web adapter alone only need the check); anything that
+          # cannot be diffed plans every kind.
+          changed=()
+          if [ "$EVENT" != push ]; then
+            echo "$EVENT: every kind."
+          elif [[ "$BEFORE" =~ ^0+$ ]]; then
+            echo "New branch, nothing to diff against: every kind."
+          elif files="$(gh api "repos/$REPO/compare/$BEFORE...$AFTER" --jq '.files[]?.filename')"; then
+            n="$(grep -c . <<<"$files" || true)"
+            # The compare API lists at most 300 files; past that, assume a hit.
+            if [ "$n" -lt 300 ]; then
+              printf '%s\n' "$files" > "$RUNNER_TEMP/changed.txt"
+              changed=(--changed "$RUNNER_TEMP/changed.txt")
+            fi
+          else
+            echo "::warning::compare $BEFORE...$AFTER failed; building every kind to be safe"
+          fi
+          node .github/ci/agent-payload/plan.mjs "${changed[@]}"
+
+  check:
+    name: check (${{ matrix.id }})
+    needs: plan
+    if: needs.plan.outputs.check-any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.check) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pins, patches and upstream contract (ci/check.sh)
+        env:
+          ID: ${{ matrix.id }}
+        run: bash "agents/native/$ID/ci/check.sh" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  drift:
+    name: drift (${{ matrix.id }})
+    needs: plan
+    if: needs.plan.outputs.check-any == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    # Early warning, not a gate: the newest upstream tag breaking our patches
+    # is news for the next bump; the pinned build is unaffected.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.check) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Upstream contract at the newest tag (ci/drift.sh, report)
+        env:
+          ID: ${{ matrix.id }}
+        run: |
+          set -euo pipefail
+          drift="agents/native/$ID/ci/drift.sh"
+          if [ ! -f "$drift" ]; then
+            echo "$ID has no $drift; nothing to report."
+            exit 0
+          fi
+          bash "$drift" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: build (${{ matrix.id }})
+    needs: [plan, check]
+    if: >-
+      ${{ !cancelled() && needs.check.result == 'success' && needs.plan.outputs.build-any == 'true' && (
+        github.event_name == 'schedule' ||
+        (github.event_name == 'workflow_dispatch' && inputs.build-payload) ||
+        github.event_name == 'push'
+      ) }}
+    # linux-x86_64 host: opencode's build.sh and its opentui build.zig patch
+    # both hardcode the NDK's prebuilt/linux-x86_64 toolchain.
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.build) }}
+    env:
+      ID: ${{ matrix.id }}
+      KIND: agents/native/${{ matrix.id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # build/pins.env is the one source of the versions: build.sh reads it
+      # too, so CI builds exactly these.
+      - name: Pins (build/pins.env into the job env)
+        run: |
+          set -euo pipefail
+          grep -E '^[A-Z][A-Z0-9_]*=' "$KIND/build/pins.env" | tee -a "$GITHUB_ENV"
+
+      # stage.mjs reads the manifest through the kit's TS validator.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Free disk, pick workdir
+        id: runner
+        run: bash .github/ci/agent-payload/prepare-runner.sh 20 | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Not cached: the ~700 MB zip comes from dl.google.com about as fast as a
+      # cache restore would, and would crowd the repo's shared 10 GB cache.
+      - name: Set up Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
+        with:
+          ndk-version: ${{ env.NDK_VERSION }}
+          add-to-path: false
+
+      # Its global-cache save also covers the zig builds inside build.sh
+      # (opencode's renderer); keyed on the kind's pins.
+      - name: Set up Zig
+        if: contains(matrix.toolchains, 'zig')
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+          cache-key: ${{ matrix.id }}-${{ hashFiles(format('agents/native/{0}/build/pins.env', matrix.id)) }}
+          cache-size-limit: 1024
+
+      - name: Set up Bun
+        if: contains(matrix.toolchains, 'bun')
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      # rustup ships on the hosted runner image.
+      - name: Set up Rust
+        if: contains(matrix.toolchains, 'rust')
+        run: |
+          set -euo pipefail
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target aarch64-linux-android
+          rustup default "$RUST_VERSION"
+
+      - name: Check toolchain (ci/check-toolchain.sh)
+        env:
+          NDK_ROOT: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          set -euo pipefail
+          check="$KIND/ci/check-toolchain.sh"
+          if [ -f "$check" ]; then bash "$check" "$NDK_ROOT" | tee -a "$GITHUB_STEP_SUMMARY"
+          else echo "$ID has no $check"; fi
+
+      - name: Preflight Bun cross-compile runtime
+        if: contains(matrix.toolchains, 'bun')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Upstream build.ts lists bun-v$BUN_VERSION's assets through the
+          # GitHub API WITHOUT a token, then downloads this zip. Fail now if the
+          # release lacks it; warn if this runner's anonymous API quota is low
+          # (a 403 there would only surface late in the build).
+          asset=bun-linux-aarch64-android.zip
+          names="$(gh api "repos/oven-sh/bun/releases/tags/bun-v$BUN_VERSION" --jq '.assets[].name')"
+          if ! grep -qxF "$asset" <<<"$names"; then
+            echo "::error::bun-v$BUN_VERSION has no $asset; build.ts cannot cross-compile for android"
+            exit 1
+          fi
+          left="$(curl -fsS https://api.github.com/rate_limit | jq -r '.resources.core.remaining' || echo '?')"
+          echo "bun-v$BUN_VERSION ships $asset; anonymous GitHub API calls left here: $left"
+          if [[ "$left" =~ ^[0-9]+$ ]] && [ "$left" -lt 5 ]; then
+            echo "::warning::only $left anonymous GitHub API calls left; build.ts's Bun release lookup may get a 403"
+          fi
+
+      - name: Clone upstream at the pinned tags (ci/sources.sh)
+        env:
+          WORK: ${{ steps.runner.outputs.dir }}
+        run: |
+          set -euo pipefail
+          sources="$KIND/ci/sources.sh"
+          if [ -f "$sources" ]; then bash "$sources" "$WORK" >> "$GITHUB_STEP_SUMMARY"
+          else echo "$ID has no $sources; build.sh fetches its own sources"; fi
+
+      - name: Build (build/build.sh)
+        id: build
+        env:
+          WORK: ${{ steps.runner.outputs.dir }}
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+          HUSKY: '0'  # upstream's root `prepare` runs husky on install; nothing to hook here
+        run: |
+          set -euo pipefail
+          if command -v zig >/dev/null; then
+            ZIG_BIN="$(command -v zig)"
+            export ZIG_BIN
+          fi
+          # Bun's install cache on the workdir's disk, as on a dev box: bun then
+          # hardlinks node_modules from it (the layout opencode's in-place
+          # @opentui/core edit, build.sh step 3.5, is proven with) and the disk
+          # is not spent twice. Deliberately not cached across runs: that
+          # in-place edit lands in the hardlinked cache copy too.
+          export BUN_INSTALL_CACHE_DIR="$WORK/bun-install-cache"
+          start=$SECONDS
+          bash "$KIND/build/build.sh" "$WORK"
+          echo "minutes=$(( (SECONDS - start + 59) / 60 ))" >> "$GITHUB_OUTPUT"
+
+      - name: Stage (agents/kit/native/stage.mjs, linkage guard)
+        env:
+          WORK: ${{ steps.runner.outputs.dir }}
+        run: node agents/kit/native/stage.mjs "$ID" "$WORK/out" "$RUNNER_TEMP/payload"
+
+      - name: ELF identity and SHA256SUMS
+        run: bash agents/kit/native/verify-elf.sh sums "$RUNNER_TEMP/payload" "$KIND/agent.json" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Consumers (android.yml) fetch it by this exact name. The zip drops the
+      # exec bit; AGP packages jniLibs regardless.
+      - name: Upload ${{ matrix.prefix }}-payload-arm64
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.prefix }}-payload-arm64
+          path: ${{ runner.temp }}/payload/
+          retention-days: 14
+          if-no-files-found: error
+
+      # After the upload on purpose: a payload that fails here is still there
+      # to download and inspect. The job (and run) still fails.
+      - name: Static checks (INTERP, NEEDED, markers, symbol scan)
+        env:
+          NDK_ROOT: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          bash agents/kit/native/verify-elf.sh deep "$RUNNER_TEMP/payload" "$KIND/agent.json" \
+            "$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/sysroot" "$ANDROID_API" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Build stats
+        if: ${{ !cancelled() && steps.runner.outputs.dir != '' }}
+        env:
+          WORK: ${{ steps.runner.outputs.dir }}
+          MINUTES: ${{ steps.build.outputs.minutes }}
+        run: |
+          df -h / "$WORK"
+          free -h
+          {
+            echo "### Build stats"
+            echo
+            echo "- Driver run: ${MINUTES:-n/a} min"
+            echo "- Free on the workdir disk after: $(df -h --output=avail "$WORK" | tail -n1 | tr -d ' ')"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  contract:
+    name: contract (${{ matrix.id }})
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.build) }}
+    env:
+      ID: ${{ matrix.id }}
+      ARTIFACT: ${{ matrix.prefix }}-payload-arm64
+    steps:
+      - name: Checkout the manifest
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: agents/native/${{ matrix.id }}/agent.json
+          sparse-checkout-cone-mode: false
+
+      - name: Download ${{ matrix.prefix }}-payload-arm64
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ matrix.prefix }}-payload-arm64
+          path: ${{ runner.temp }}/payload
+
+      - name: Layout and checksums a consumer relies on
+        run: |
+          set -euo pipefail
+          # Exactly the manifest's payload.libs plus SHA256SUMS.
+          want="$( { jq -r '.payload.libs[].name' "agents/native/$ID/agent.json"; echo SHA256SUMS; } | LC_ALL=C sort)"
+          cd "$RUNNER_TEMP/payload"
+          ls -la
+          got="$(find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort)"
+          if [ "$got" != "$want" ]; then
+            echo "::error::artifact layout changed; consumers expect exactly: ${want//$'\n'/, }"
+            exit 1
+          fi
+          result="$(sha256sum -c SHA256SUMS)"
+          {
+            echo "### $ARTIFACT round trip"
+            echo
+            echo '```'
+            echo "$result"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"

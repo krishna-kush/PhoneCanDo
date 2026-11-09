@@ -15,11 +15,13 @@ const PRUNE_DIRS = new Set([
 ]);
 // Paths ignored by the repo .gitignore files (root, app/, pce/, web/).
 const PRUNE_PATHS = new Set([
-  'app/android', 'app/ios', 'app/modules/phonecando-runner/android/src/main/libs',
+  'app/android', 'app/ios',
   'app/modules/phonecando-linux/android/src/linux/libs',
   'app/modules/phonecando-linux/android/src/linux/assets',
   'app/modules/phonecando-linux/android/src/linux/dev-assets',
 ]);
+// The same, for ignored paths with a wildcard (staged native agent payloads).
+const PRUNE_PATTERNS = [/^app\/modules\/phonecando-runner\/android\/src\/agents\/[^/]+\/libs$/];
 const IGNORED_FILES = [
   /\.log$/, /(^|\/)\.DS_Store$/, /(^|\/)local\.properties$/, /\.iml$/, /\.tsbuildinfo$/,
   /(^|\/)expo-env\.d\.ts$/, /\.(jks|keystore|p8|p12|key|pem|mobileprovision)$/,
@@ -33,7 +35,7 @@ function walk(root) {
       const abs = join(dir, ent.name);
       const rel = relative(root, abs).split(sep).join('/');
       if (ent.isDirectory()) {
-        if (PRUNE_DIRS.has(ent.name) || PRUNE_PATHS.has(rel)) continue;
+        if (PRUNE_DIRS.has(ent.name) || PRUNE_PATHS.has(rel) || PRUNE_PATTERNS.some((re) => re.test(rel))) continue;
         visit(abs);
       } else if (!IGNORED_FILES.some((re) => re.test(rel))) {
         const st = lstatSync(abs);

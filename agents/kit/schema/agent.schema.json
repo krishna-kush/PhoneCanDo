@@ -1,0 +1,656 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PhoneCanDo agent kind manifest (agent.json), v1",
+  "description": "One agent kind: agents/native/<id>/agent.json (built for Android, in the APK) or agents/image/<id>/agent.json (installed into the machine's Linux image). The rules JSON Schema cannot say (lib name = lib<prefix>-<role>.so, unique lib names and roles, reserved ids and prefixes, hook names and SSE parsers, regexes with a capture group, a bell with no match, a runtime named once, package families install.families names, user-origin limits) live in agents/kit/ts/manifest/validate.ts, which implements this whole schema too; agents/kit/cli/check.mjs adds the folder rules (the runtimes named exist in agents/runtimes/ and agree on families). Templates hold {{placeholder}}s; {{password}} goes only in env values, and what runs in the guest (install steps, version checks) holds {{home}} only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "label", "version", "type", "channels", "stability", "licence"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": {
+      "description": "Folder name for bundled kinds; user-added kinds are user.<slug>.",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(?:user\\.)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "label": { "$ref": "#/$defs/text" },
+    "version": { "$ref": "#/$defs/text" },
+    "type": { "enum": ["native", "image"] },
+    "prefix": {
+      "description": "Native only: names the kind where it meets generic siblings (lib<prefix>-<role>.so, the <prefix>-payload-arm64 CI artifact).",
+      "type": "string",
+      "maxLength": 16,
+      "pattern": "^[a-z][a-z0-9]*$"
+    },
+    "channels": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["full", "lite", "play"] }
+    },
+    "stability": { "enum": ["stable", "preview"] },
+    "licence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spdx", "redistributed", "source"],
+      "if": { "properties": { "redistributed": { "const": false } }, "required": ["redistributed"] },
+      "else": { "properties": { "spdx": { "type": "string" } } },
+      "properties": {
+        "spdx": {
+          "description": "Null when unknown, only for a kind we do not redistribute.",
+          "type": ["string", "null"],
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*(?: (?:AND|OR|WITH) [A-Za-z0-9][A-Za-z0-9.+-]*)*$"
+        },
+        "redistributed": { "type": "boolean" },
+        "notice": { "$ref": "#/$defs/relPath" },
+        "terms": { "$ref": "#/$defs/url" },
+        "source": { "$ref": "#/$defs/url" }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["libs"],
+      "properties": {
+        "libs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/lib" },
+          "contains": { "type": "object", "properties": { "role": { "const": "engine" } }, "required": ["role"] }
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["toolchains"],
+      "properties": {
+        "toolchains": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["bun", "ndk", "rust", "zig"] }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["into"],
+      "properties": {
+        "dir": { "$ref": "#/$defs/relPath" },
+        "overlay": { "$ref": "#/$defs/relPath" },
+        "fullOnly": { "$ref": "#/$defs/relPaths" },
+        "shared": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/name" }
+        },
+        "into": { "$ref": "#/$defs/relPath" },
+        "keep": { "$ref": "#/$defs/relPaths" },
+        "required": { "$ref": "#/$defs/relPaths" },
+        "instructions": { "$ref": "#/$defs/relPath" },
+        "files": { "type": "array" }
+      },
+      "dependentRequired": {
+        "overlay": ["dir"],
+        "fullOnly": ["dir"],
+        "shared": ["dir"]
+      }
+    },
+    "requires": {
+      "description": "What the kind needs from its machine. An image kind needs Linux.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "linux": { "enum": ["required", "optional", "none"] },
+        "commands": {
+          "description": "Commands that must be on the guest PATH.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 64, "pattern": "^[A-Za-z0-9_][A-Za-z0-9._+-]*$" }
+        },
+        "runtimes": {
+          "description": "Runtime plugins (agents/runtimes/<id>/) installed into the machine first: <id>, or <id>>=<major> for at least that major version.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 64, "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:>=[1-9][0-9]{0,3})?$" }
+        }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "not": { "required": ["acp"] },
+      "required": ["style", "launch"],
+      "properties": {
+        "style": { "enum": ["server", "tui"] },
+        "launch": {
+          "description": "The engine's process; for an image kind argv[0] is a guest command or an absolute guest path.",
+          "$ref": "#/$defs/commandIn"
+        },
+        "auth": {
+          "description": "HTTP Basic on every engine request: this user and the agent's password.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["basic"],
+          "properties": {
+            "basic": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["user"],
+              "properties": { "user": { "type": "string", "maxLength": 64, "pattern": "^[^:\\s]+$" } }
+            }
+          }
+        },
+        "readiness": {
+          "description": "One rule: http (server: ready once it answers), output (tui: first output, then settleMs of quiet) or alive (tui: alive for ms).",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 1,
+          "properties": {
+            "http": { "$ref": "#/$defs/http" },
+            "output": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "settleMs": { "type": "integer", "minimum": 0, "maximum": 60000 },
+                "timeoutSec": { "type": "integer", "minimum": 1, "maximum": 3600 }
+              }
+            },
+            "alive": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": { "ms": { "type": "integer", "minimum": 0, "maximum": 60000 } }
+            }
+          }
+        },
+        "resume": {
+          "description": "Args added when the engine relaunches an agent that ran before; appended unless at (an argv index) says where.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["args"],
+          "properties": {
+            "args": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/template" } },
+            "at": { "type": "integer", "minimum": 1, "maximum": 256 }
+          }
+        }
+      },
+      "if": { "properties": { "style": { "const": "server" } }, "required": ["style"] },
+      "then": { "required": ["readiness"], "properties": { "readiness": { "required": ["http"] } } },
+      "else": { "properties": { "auth": false, "readiness": { "properties": { "http": false } } } }
+    },
+    "events": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "description": "One source: sse (server), pty (tui) or hook (tui).",
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "maxProperties": 1,
+        "properties": {
+          "pty": {
+            "description": "Rules over the tui engine's PTY output: a signal (and, for OSC text, an optional regex) raises an engine event.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rules"],
+            "properties": {
+              "rules": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/ptyRule" } }
+            }
+          },
+          "hook": {
+            "description": "Lines the kind's own hooks write with `phonecando-event <name>` (tui): map names the engine event each name raises.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["map"],
+            "properties": {
+              "map": {
+                "type": "object",
+                "minProperties": 1,
+                "propertyNames": { "maxLength": 64, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+                "additionalProperties": { "enum": ["working", "waiting", "finished", "failed"] }
+              }
+            }
+          },
+          "sse": {
+            "description": "A server-sent event stream, parsed by the code hook `parser` (listed in hooks).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "parser"],
+            "properties": {
+              "path": { "$ref": "#/$defs/httpPath" },
+              "parser": { "$ref": "#/$defs/hookId" }
+            }
+          }
+        }
+      }
+    },
+    "chats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {
+        "title": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["http"],
+          "properties": {
+            "http": {
+              "description": "A chat's title: GET path, then the string at the JSON pointer json.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "json"],
+              "properties": {
+                "path": { "$ref": "#/$defs/httpPath" },
+                "json": { "$ref": "#/$defs/jsonPointer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "idle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "quietSec"],
+      "properties": {
+        "from": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["events", "output"] } },
+        "quietSec": { "type": "integer", "minimum": 1, "maximum": 86400 }
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["home"],
+      "properties": {
+        "home": { "enum": ["web", "tui"] },
+        "web": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pair", "adapter"],
+          "properties": {
+            "pair": { "$ref": "#/$defs/webPair" },
+            "adapter": { "$ref": "#/$defs/webAdapter" }
+          }
+        },
+        "terminal": {
+          "description": "The terminal tab: the kind's TUI as a client of its server, or a shell in the agent's image; never both.",
+          "type": "object",
+          "additionalProperties": false,
+          "not": { "required": ["client", "shell"] },
+          "dependentRequired": { "chatTitle": ["client"] },
+          "properties": {
+            "client": {
+              "description": "The kind's TUI attached to its server. The host sets HOME, TMPDIR, TERM and COLORTERM before env.",
+              "$ref": "#/$defs/commandIn"
+            },
+            "shell": { "type": "boolean" },
+            "chatTitle": {
+              "description": "Group 1 is the chat title the client puts in the terminal title.",
+              "$ref": "#/$defs/regex"
+            }
+          }
+        },
+        "chatTitle": {
+          "description": "tui: group 1 is the chat title in the engine's OSC 0/2 window title.",
+          "$ref": "#/$defs/regex"
+        }
+      },
+      "if": { "properties": { "home": { "const": "web" } }, "required": ["home"] },
+      "then": { "required": ["web"] }
+    },
+    "phoneTools": { "enum": ["plugin", "mcp:config", "mcp:argv", "none"] },
+    "hooks": {
+      "description": "Code hooks (bundled kinds only), named <id>.<name> and registered in agents/builtin.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/hookId" }
+    },
+    "signIn": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["method"],
+        "properties": {
+          "method": { "enum": ["device-code", "paste-code", "browser", "api-key", "in-tui", "in-ui"] },
+          "note": { "type": "string", "minLength": 1, "maxLength": 200 }
+        }
+      }
+    },
+    "install": {
+      "description": "How an image kind is installed into its machine: its runtimes (requires.runtimes), then the packages for the image's family, then the steps (POSIX sh; HOME is the image home and every runtime's paths are first on PATH). Its versionCheck ends it. A kind without install is not installed.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "families": {
+          "description": "The families it supports; absent: those every runtime it names supports, or any.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/family" }
+        },
+        "packages": {
+          "description": "Packages per family, installed with its own package manager; * is the fallback.",
+          "type": "object",
+          "propertyNames": { "enum": ["apt", "apk", "dnf", "yum", "microdnf", "pacman", "zypper", "xbps", "*"] },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._+:=@/~-]*$" }
+          }
+        },
+        "steps": {
+          "description": "POSIX sh lines, each run in its own subshell (set -e) and run again when it fails (retries), so each must be a complete command and safe to run more than once.",
+          "$ref": "#/$defs/guestSteps"
+        },
+        "timeoutSec": {
+          "description": "How long the whole install may run, every attempt included.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7200
+        },
+        "retries": {
+          "description": "How many more times a failed runtime install script, package install or step (install and update) runs, 5 s times the failed attempt apart, each retry announced by an @retry <phase> <n>/<max> line (n the attempt about to start). The version check runs once.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "default": 2
+        }
+      }
+    },
+    "update": {
+      "description": "Steps that update an installed kind, after its runtimes are ensured again.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps"],
+      "properties": { "steps": { "allOf": [{ "$ref": "#/$defs/guestSteps" }, { "minItems": 1 }] } }
+    },
+    "versionCheck": {
+      "description": "Run after an install: group 1 of pattern in its output is the installed version.",
+      "$ref": "#/$defs/versionCheck"
+    },
+    "models": { "type": "object" }
+  },
+  "dependentRequired": {
+    "install": ["versionCheck"],
+    "update": ["install"],
+    "versionCheck": ["install"]
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "native" } }, "required": ["type"] },
+      "then": {
+        "required": ["prefix", "payload", "build"],
+        "properties": {
+          "licence": { "required": ["notice"], "properties": { "redistributed": { "const": true } } },
+          "install": false,
+          "update": false,
+          "versionCheck": false
+        }
+      },
+      "else": {
+        "properties": { "prefix": false, "payload": false, "build": false }
+      }
+    },
+    {
+      "$comment": "An image kind runs in Linux, its program a guest command or an absolute guest path.",
+      "if": { "properties": { "type": { "const": "image" } }, "required": ["type"] },
+      "then": {
+        "required": ["requires"],
+        "properties": {
+          "requires": { "required": ["linux"], "properties": { "linux": { "const": "required" } } },
+          "engine": {
+            "properties": { "launch": { "properties": { "argv": { "prefixItems": [{ "$ref": "#/$defs/guestProgram" }] } } } }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "Runtimes are installed with the kind, so a kind that names any is installed.",
+      "if": {
+        "required": ["requires"],
+        "properties": { "requires": { "required": ["runtimes"], "properties": { "runtimes": { "minItems": 1 } } } }
+      },
+      "then": { "required": ["install"] }
+    },
+    {
+      "$comment": "Blocks that talk to the engine over HTTP need a server engine.",
+      "if": {
+        "not": {
+          "required": ["engine"],
+          "properties": { "engine": { "required": ["style"], "properties": { "style": { "const": "server" } } } }
+        }
+      },
+      "then": {
+        "properties": {
+          "events": { "items": { "properties": { "sse": false } } },
+          "chats": false,
+          "surfaces": { "properties": { "web": false, "terminal": { "properties": { "client": false } } } }
+        }
+      }
+    },
+    {
+      "$comment": "What reads the PTY or the events file (PTY rules, hook events, idle from output, the window title) needs a tui engine.",
+      "if": {
+        "not": {
+          "required": ["engine"],
+          "properties": { "engine": { "required": ["style"], "properties": { "style": { "const": "tui" } } } }
+        }
+      },
+      "then": {
+        "properties": {
+          "events": { "items": { "properties": { "pty": false, "hook": false } } },
+          "idle": { "properties": { "from": { "items": { "const": "events" } } } },
+          "surfaces": { "properties": { "chatTitle": false } }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "name": { "type": "string", "maxLength": 64, "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "url": { "type": "string", "maxLength": 512, "pattern": "^https://[^\\s]+$" },
+    "relPath": {
+      "description": "A relative path inside the kind's folder (or HOME, for config.into): no leading or trailing slash, no empty, . or .. segment, no backslash.",
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*//)(?!.*/$)(?!(?:.*/)?\\.\\.?(?:/|$))[^\\\\\\u0000]+$"
+    },
+    "relPaths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/relPath" }
+    },
+    "lib": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "from", "role", "linkage"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^lib[a-z][a-z0-9]*-[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.so$" },
+        "from": {
+          "description": "The file's name in the kind's build output, before staging renames it.",
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[^/\\\\\\u0000]+$"
+        },
+        "role": { "$ref": "#/$defs/name" },
+        "linkage": { "enum": ["system-only"] }
+      }
+    },
+    "template": {
+      "description": "A string with {{placeholder}}s (libDir, home, tmp, port, serverUrl, projectDir, sessionId, code); ${...} passes through untouched. Never {{password}}.",
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:libDir|home|tmp|port|serverUrl|projectDir|sessionId|code)\\}\\})*$"
+    },
+    "envTemplate": {
+      "description": "An env value: a template that may also hold {{password}}.",
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:libDir|home|tmp|port|serverUrl|password|projectDir|sessionId|code)\\}\\})*$"
+    },
+    "family": {
+      "description": "An image OS's package family: lre-api's PackageFamily ids.",
+      "enum": ["apt", "apk", "dnf", "yum", "microdnf", "pacman", "zypper", "xbps"]
+    },
+    "guestTemplate": {
+      "description": "What runs in the guest (install steps, version checks, runtime paths): {{home}} is its one placeholder.",
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:home)\\}\\})*$"
+    },
+    "guestSteps": { "type": "array", "items": { "$ref": "#/$defs/guestTemplate" } },
+    "versionCheck": {
+      "description": "argv: a guest command, an absolute guest path or one under {{home}}, then its args; group 1 of pattern in its output is the version.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "pattern"],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "prefixItems": [{ "allOf": [{ "$ref": "#/$defs/guestTemplate" }, { "pattern": "^(?:(?:\\{\\{home\\}\\})?/[^{}\\s]*|[^/{}\\s]+)$" }] }],
+          "items": { "$ref": "#/$defs/guestTemplate" }
+        },
+        "pattern": { "$ref": "#/$defs/regex" }
+      }
+    },
+    "httpPath": {
+      "description": "A path on the engine's loopback base URL; placeholders allowed.",
+      "allOf": [{ "$ref": "#/$defs/template" }, { "pattern": "^/\\S*$" }]
+    },
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": { "path": { "$ref": "#/$defs/httpPath" } }
+    },
+    "jsonPointer": { "type": "string", "maxLength": 256, "pattern": "^(?:/(?:[^~/]|~[01])*)+$" },
+    "hookId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "regex": {
+      "description": "A regular expression with a capture group; group 1 is read.",
+      "type": "string",
+      "maxLength": 256,
+      "format": "regex"
+    },
+    "argv": {
+      "description": "The program first, then templates or { when, args }: args included only when that placeholder has a non-empty value.",
+      "type": "array",
+      "minItems": 1,
+      "prefixItems": [{ "$ref": "#/$defs/template" }],
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/template" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["when", "args"],
+            "properties": {
+              "when": {
+                "enum": ["libDir", "home", "tmp", "port", "serverUrl", "password", "projectDir", "sessionId", "code"]
+              },
+              "args": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/template" } }
+            }
+          }
+        ]
+      }
+    },
+    "env": {
+      "description": "Added after the host's own env, in order. PHONECANDO_*, LD_*, HOME and TMPDIR are the host's.",
+      "type": "object",
+      "propertyNames": {
+        "maxLength": 128,
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+        "not": { "pattern": "^(?:PHONECANDO_.*|LD_.*|HOME|TMPDIR)$" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/envTemplate" }
+    },
+    "commandIn": {
+      "description": "A process with its working directory: argv (the program first), env, cwd (a template).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv"],
+      "properties": {
+        "argv": { "$ref": "#/$defs/argv" },
+        "env": { "$ref": "#/$defs/env" },
+        "cwd": { "$ref": "#/$defs/template" }
+      }
+    },
+    "guestProgram": {
+      "description": "A guest command name or an absolute guest path, no placeholders.",
+      "type": "string",
+      "pattern": "^(?:/[^{}\\s]*|[^/{}\\s]+)$"
+    },
+    "ptyRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["on", "event"],
+      "properties": {
+        "on": { "enum": ["bel", "osc9", "osc777", "progress"] },
+        "match": { "description": "A regex over the OSC text; a bell has none.", "type": "string", "maxLength": 256, "format": "regex" },
+        "event": { "enum": ["working", "waiting", "finished", "failed"] }
+      }
+    },
+    "webPair": {
+      "description": "POST path with auth; the code is the first JSON pointer in code that yields a non-empty string; the WebView lands on url with {{code}} URL-encoded.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "path", "code", "url"],
+      "properties": {
+        "method": { "enum": ["POST"] },
+        "path": { "$ref": "#/$defs/httpPath" },
+        "code": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/jsonPointer" } },
+        "url": { "allOf": [{ "$ref": "#/$defs/httpPath" }, { "pattern": "\\{\\{code\\}\\}" }] }
+      }
+    },
+    "webAdapter": {
+      "description": "How our WebView fits the web UI into the app; the app builds its scripts from it (app/src/engine/agents/webAdapter.ts).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cssVars", "authUrl"],
+      "properties": {
+        "colorSchemeKey": {
+          "description": "The localStorage key the web UI reads its color scheme from.",
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        },
+        "cssVars": {
+          "description": "CSS variable -> the app palette role it takes, written in this order.",
+          "type": "object",
+          "propertyNames": { "maxLength": 128, "pattern": "^--[A-Za-z0-9_-]+$" },
+          "additionalProperties": {
+            "enum": ["bg", "panel", "panel2", "fg", "muted", "dim", "faint", "line", "lineStrong", "primary", "primaryHi"]
+          }
+        },
+        "hide": {
+          "description": "Selectors of the web UI's own chrome that duplicates our header.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 256, "pattern": "^[^'\\\\{}\\u0000-\\u001f]+$" }
+        },
+        "authUrl": {
+          "description": "URLs containing this are the sign-in hand-off, never the web UI's home.",
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^/\\S*$"
+        },
+        "sessionUrl": {
+          "description": "Group 1 is the chat (session id) a web UI URL shows.",
+          "$ref": "#/$defs/regex"
+        }
+      }
+    }
+  }
+}

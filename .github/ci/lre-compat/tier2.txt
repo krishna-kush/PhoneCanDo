@@ -1,0 +1,20 @@
+# Tier 2 of lre-compat.yml (blocking): one image per package family lre/image
+# knows. agent-plan.sh turns it into the tier2 legs and, for every runtime
+# plugin (agents/runtimes/<id>/) that claims an image's family, an agents
+# leg (agent-leg.sh).
+#
+# No pacman: Arch has no official arm64 image (archlinux is amd64 only). yum
+# and xbps have no current official arm64 image either. The microdnf family
+# is AlmaLinux's minimal image: Docker Hub's library rockylinux stopped at
+# 9.3 (2024); AlmaLinux's is current and, being an official image, has
+# lre/oci's mirrors when Docker Hub refuses.
+#
+# One image per line: <ref> <family> [<prep command>], as in tier3.txt
+#   prep  what the agent must run before the install command on this distro,
+#         the rest of the line (ripgrep is in EPEL on RHEL-likes)
+debian:stable apt
+ubuntu:24.04 apt
+alpine:latest apk
+fedora:latest dnf
+almalinux:9-minimal microdnf microdnf install -y epel-release
+opensuse/leap:latest zypper

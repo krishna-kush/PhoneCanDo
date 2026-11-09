@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Tests (node:test) and everything they import, against Node's globals.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["kit/ts/**/*.ts"],
+  "exclude": ["node_modules"]
+}
