@@ -1,7 +1,7 @@
 package com.phonecando.runner.notify
 
-import com.phonecando.runner.agents.AgentKind
-import com.phonecando.runner.agents.EngineEvent
+import com.phonecando.agents.kit.AgentKind
+import com.phonecando.agents.kit.EngineEvent
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 

@@ -1,8 +1,8 @@
 package com.phonecando.runner
 
-import com.phonecando.runner.agents.AgentKind
-import com.phonecando.runner.agents.AgentKinds
+import com.phonecando.agents.kit.AgentKind
 import com.phonecando.runner.agents.AgentRecord
+import com.phonecando.runner.agents.KindCatalog
 
 // Redaction for everything telemetry keeps as text: crash messages and
 // frames, and the engine stderr tail. Pure JVM (no Android imports), so
@@ -245,8 +245,8 @@ internal class PathRedactor private constructor(
     // Every agent's secrets: one engine's log or a crash can carry another
     // agent's password or token. An agent of a kind this build lacks still
     // has its raw password and token redacted.
-    fun agentSecrets(agents: Collection<AgentRecord>): List<String> = agents.flatMap { a ->
-      val kind = AgentKinds.get(a.kind)
+    fun agentSecrets(agents: Collection<AgentRecord>, kinds: KindCatalog): List<String> = agents.flatMap { a ->
+      val kind = kinds.get(a.kind)
       if (kind != null) {
         engineSecrets(kind, a.password, a.bridgeToken)
       } else {

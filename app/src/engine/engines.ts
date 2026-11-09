@@ -1,11 +1,13 @@
 // Agents and their engines (contract: agents/records.ts). Several engines
 // run at once, one per agent, in the runner's foreground service: at most
 // three, the least recently used idle one stopped to make room. Each engine
-// has its own port and password; JS reads them with getEngineAuth when it
-// talks to the engine (connection.ts) and never stores them. Reads answer
-// empty where the native module is absent; changes throw.
+// has its own port and password, which stay native: pairing the web UI, the
+// TUI's start recipe and the idle check are made there from the kind's
+// manifest. Reads answer empty where the native module is absent; changes
+// throw.
+import type { PtyRecipe } from '../../../agents/kit/ts/contract/pty.ts';
 import type { Agent, AgentId, EngineStartError, EngineStatus } from './agents/records';
-import type { AgentKindId } from './agents/types';
+import type { AgentKindId } from './agents/registry';
 import type { ImageId } from './linux/types';
 import { getPrefix, isRunnerAvailable, nativeRunner, onRunnerEvent } from './runner';
 
@@ -54,6 +56,7 @@ const START_ERRORS: EngineStartError[] = [
   'engine_missing',
   'port_unavailable',
   'start_failed',
+  'agent_not_installed',
 ];
 
 /** Any start rejection as an EngineStartFailure (native puts the code first in the message). */
@@ -71,7 +74,7 @@ export function asStartFailure(e: unknown): EngineStartFailure {
  * runs and its port is known (it may still be booting: waitForEngine).
  * Rejects with an EngineStartFailure.
  */
-export async function startEngine(agentId: AgentId): Promise<{ port: string }> {
+export async function startEngine(agentId: AgentId): Promise<{ port: string | null }> {
   try {
     return await nativeRunner().startEngine(agentId);
   } catch (e) {
@@ -128,9 +131,23 @@ export function onEngineState(listener: (status: EngineStatus) => void): { remov
   return onRunnerEvent<EngineStatus>('phonecandoEngineState', listener);
 }
 
-/** Where the agent's engine listens and its password; baseUrl is '' before its first start. */
-export function getEngineAuth(agentId: AgentId): { baseUrl: string; password: string } {
-  return nativeRunner().getEngineAuth(agentId);
+/** A fresh one-time URL that signs a WebView in to the agent's web UI. Rejects when the engine is down. */
+export function pairWebUi(agentId: AgentId): Promise<string> {
+  return nativeRunner().pairWebUi(agentId);
+}
+
+/**
+ * The kind's TUI attached to the agent's running engine, in `projectDir`
+ * (null `sessionId`: the engine picks the chat by folder). It carries the
+ * engine password in its env, so pass it straight to the PTY; never keep it.
+ */
+export function clientRecipe(agentId: AgentId, projectDir: string, sessionId: string | null = null): PtyRecipe {
+  return nativeRunner().clientRecipe(agentId, projectDir, sessionId);
+}
+
+/** No activity on the agent's engine for its kind's quiet time (an engine with none since its start is idle). */
+export function isEngineIdle(agentId: AgentId): boolean {
+  return nativeRunner().isEngineIdle(agentId);
 }
 
 /** 'ok' | 'starting' | 'http-N' | 'error:…', one probe with the agent's password. Blocks briefly. */

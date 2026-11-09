@@ -1,7 +1,9 @@
 // Engine seam: the ONLY importer of the phonecando-terminal native module.
-// Generic PTY plumbing; what runs in it comes from an agent kind's recipe.
+// Generic PTY plumbing; what runs in it comes from a recipe (ui/terminal/sessionRecipe.ts).
+import { View, type ViewProps } from 'react-native';
+import type { ComponentType } from 'react';
 import {
-  getLibDir as nativeGetLibDir,
+  DirectionLockView,
   isTerminalAvailable as nativeAvailable,
   ptyClose as nativeClose,
   ptyExitStatus as nativeExitStatus,
@@ -13,19 +15,22 @@ import {
   type PtyExit,
   type PtySignal,
 } from '../../modules/phonecando-terminal/src/PhoneCanDoTerminalModule';
-import type { PtyRecipe } from './agents/types';
+import type { PtyRecipe } from '../../../agents/kit/ts/contract/pty.ts';
 
 export type { PtyExit, PtySignal };
+
+/**
+ * What a terminal is hosted in: a gesture that starts on it stays with it
+ * while it moves up or down, and goes to its parents (the tab pager) when it
+ * moves sideways first. A plain View without the native module.
+ */
+export const TerminalGestureHost: ComponentType<ViewProps> = DirectionLockView ?? View;
 
 export function isTerminalAvailable(): boolean {
   return nativeAvailable();
 }
 
-export function getLibDir(): string {
-  return nativeGetLibDir();
-}
-
-/** Starts a PTY running `recipe` (built by an agent kind, e.g. its TUI). */
+/** Starts a PTY running `recipe` (an agent kind's TUI, or a shell in an image). */
 export function openPty(recipe: PtyRecipe, rows = 24, cols = 80): number {
   return nativeOpen({ ...recipe, rows, cols });
 }

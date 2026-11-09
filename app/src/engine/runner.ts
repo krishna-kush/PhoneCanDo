@@ -5,9 +5,13 @@
 import type {
   NativeAgent,
   NativeBridgePrompt,
-  NativeEngineAuth,
+  NativeClientRecipe,
   NativeEngineStatus,
+  NativeInstallPlan,
   NativeLaunchTarget,
+  NativeOpenUrlAction,
+  NativeTerminalAttach,
+  NativeVersionCheck,
 } from '../../modules/phonecando-runner/src/PhoneCanDoRunner.types';
 import type { NativeCrash, TelemetryNativeSnapshot } from '../../modules/phonecando-runner/src/telemetry.types';
 import type { AgentId } from './agents/records';
@@ -23,7 +27,7 @@ export type RunnerModule = {
   createAgent(params: { kind: string; name: string; imageId: string }): NativeAgent;
   renameAgent(id: string, name: string): NativeAgent;
   deleteAgent(id: string): Promise<boolean>;
-  startEngine(agentId: string): Promise<{ port: string }>;
+  startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;
   isAnyEngineAlive(): boolean;
@@ -32,12 +36,26 @@ export type RunnerModule = {
   setOpenChat(agentId: string | null, sessionId: string | null, title: string | null): void;
   engineStatus(agentId: string): NativeEngineStatus;
   engineStatuses(): NativeEngineStatus[];
-  getEngineAuth(agentId: string): NativeEngineAuth;
   engineHealth(agentId: string): string;
+  listKinds(): string;
+  pairWebUi(agentId: string): Promise<string>;
+  clientRecipe(agentId: string, projectDir: string, sessionId: string | null): NativeClientRecipe;
+  isEngineIdle(agentId: string): boolean;
+  engineTerminalAttach(agentId: string): NativeTerminalAttach;
+  engineTerminalRead(viewerId: string, max: number): string | null;
+  engineTerminalWrite(viewerId: string, b64: string): void;
+  engineTerminalResize(viewerId: string, rows: number, cols: number): void;
+  engineTerminalDetach(viewerId: string): void;
   pendingPrompts(): NativeBridgePrompt[];
   resolveUnlock(requestId: string, ok: boolean): boolean;
   resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean;
+  resolveOpenUrl(requestId: string, action: NativeOpenUrlAction): boolean;
   consumeLaunchTarget(): NativeLaunchTarget | null;
+  guestUnset(agentId: string): string[];
+  installPlan(agentId: string, family: string): NativeInstallPlan | null;
+  updatePlan(agentId: string, family: string): NativeInstallPlan | null;
+  versionCheck(agentId: string): NativeVersionCheck | null;
+  recordInstall(agentId: string, versionOutput: string): { version: string };
 };
 
 function load(): RunnerModule {
@@ -77,6 +95,11 @@ export function isRunnerAvailable(): boolean {
 
 export function getPrefix(): string {
   return load().getPrefix();
+}
+
+/** Every agent kind this build ships, as a JSON array of KindView (engine/agents/registry.ts parses it). */
+export function listKinds(): string {
+  return load().listKinds();
 }
 
 // Build channel: full ships phone control; lite has no phone control but
@@ -146,15 +169,22 @@ export function onLaunchTarget(listener: (target: LaunchTarget) => void): Sub {
   });
 }
 
-// A prompt an agent is waiting on: biometric unlock for phone control, or
-// accessibility setup. One per asking request, each with its own requestId.
+// A prompt for the user from an agent: biometric unlock for phone control or
+// accessibility setup (its request waits for the answer), or a link it wants
+// opened (a sign-in, through the kit's phonecando-open). One per request,
+// each with its own requestId.
 export type BridgePrompt = {
   requestId: string;
-  kind: 'unlock' | 'accessibility';
+  kind: 'unlock' | 'accessibility' | 'open_url';
   agentId: AgentId;
   agentName: string;
   reason: string;
+  /** The http(s) link of an open_url prompt; absent for the others. */
+  url?: string | null;
 };
+
+/** What the user did with an open_url prompt: opened it (we already did), copied it (native puts it on the clipboard), or Not now. */
+export type OpenUrlAction = NativeOpenUrlAction;
 
 /** Every prompt still waiting (made while the app was closed, too). */
 export function pendingPrompts(): BridgePrompt[] {
@@ -186,6 +216,16 @@ export function resolveUnlock(requestId: string, ok: boolean): boolean {
 export function resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean {
   try {
     return load().resolveAccessibility(requestId, ok, guided);
+  } catch {
+    return false;
+  }
+}
+
+// The user's answer to one open_url prompt; ends it. False when it is
+// already gone (or, for `copy`, nothing reached the clipboard).
+export function resolveOpenUrl(requestId: string, action: OpenUrlAction): boolean {
+  try {
+    return load().resolveOpenUrl(requestId, action);
   } catch {
     return false;
   }

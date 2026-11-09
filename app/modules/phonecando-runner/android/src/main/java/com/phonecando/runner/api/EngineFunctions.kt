@@ -3,9 +3,10 @@ package com.phonecando.runner.api
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
+import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.runner.PhoneCanDoServeService
-import com.phonecando.runner.agents.AgentKinds
 import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.engine.EngineRequests
 import com.phonecando.runner.engine.EngineStartError
 import com.phonecando.runner.engine.EngineStartException
@@ -19,21 +20,21 @@ import kotlin.concurrent.thread
 // calls take a Promise and run on their own thread: Expo's default async
 // queue is one thread shared by every module, and a stop can take 3 s.
 internal fun ModuleDefinitionBuilder.engineFunctions(context: () -> Context) {
-  // Resolves { port } once the service launched the process and its port is
-  // known (EngineSupervisor.start); an engine already starting or ready
-  // resolves at once. Rejects with the EngineStartError code as the error
-  // code and at the start of the message.
+  // Resolves { port } once the service launched the process and a server
+  // engine's port is known (EngineSupervisor.start); a TUI engine has no
+  // port (null). An engine already starting or ready, of either style,
+  // resolves at once and is only marked used. Rejects with the
+  // EngineStartError code as the error code and at the start of the message.
   AsyncFunction("startEngine") { agentId: String, promise: Promise ->
     val ctx = context()
     val engines = Engines.get(ctx)
-    val running = engines.livePort(agentId)
-    if (running != null) {
+    if (engines.isLive(agentId)) {
       engines.touch(agentId)
-      promise.resolve(mapOf("port" to running.toString()))
+      promise.resolve(mapOf("port" to engines.livePort(agentId)?.toString()))
     } else {
       val requestId = EngineRequests.register { result ->
         result.fold(
-          onSuccess = { promise.resolve(mapOf("port" to it.toString())) },
+          onSuccess = { promise.resolve(mapOf("port" to it?.toString())) },
           onFailure = { rejectStart(promise, it) },
         )
       }
@@ -95,26 +96,33 @@ internal fun ModuleDefinitionBuilder.engineFunctions(context: () -> Context) {
     Engines.get(context()).statuses().map { it.toMap() }
   }
 
-  // { baseUrl, password } of the agent's engine. baseUrl is "" before its
-  // first start; the agent kind decides how the password rides on a request.
-  Function("getEngineAuth") { agentId: String ->
+  // Whether the agent's engine may stop, by its kind's idle rule: no activity
+  // event for idle.quietSec, none since its start counting as idle. An
+  // unknown agent or kind is idle too. JS asks only while it would stop one
+  // (the app went to the background with phone control off).
+  Function("isEngineIdle") { agentId: String ->
     val ctx = context()
-    val record = AgentStores.get(ctx).get(agentId) ?: throw IllegalArgumentException("unknown agent")
-    val port = Engines.get(ctx).livePort(agentId)?.toString() ?: record.port
-    mapOf(
-      "baseUrl" to (port?.let { "http://127.0.0.1:$it" } ?: ""),
-      "password" to record.password,
-    )
+    val record = AgentStores.get(ctx).get(agentId) ?: return@Function true
+    val kind = KindCatalogs.get(ctx).get(record.kind) ?: return@Function true
+    Engines.get(ctx).isIdle(agentId, kind)
   }
 
   // "ok" | "starting" | "http-N" | "error:…": one probe with the kind's
   // health request and this agent's password. Synchronous (short timeouts).
+  // A TUI engine has no probe: its state answers.
   Function("engineHealth") { agentId: String ->
     val ctx = context()
     val record = AgentStores.get(ctx).get(agentId) ?: return@Function "error:unknown agent"
-    val kind = AgentKinds.get(record.kind) ?: return@Function "error:unknown agent kind"
+    val kind = KindCatalogs.get(ctx).get(record.kind) ?: return@Function "error:unknown agent kind"
     val status = Engines.get(ctx).status(agentId)
     val starting = status.state == EngineState.STARTING
+    if (kind.style == EngineStyle.TUI) {
+      return@Function when (status.state) {
+        EngineState.READY -> "ok"
+        EngineState.STARTING -> "starting"
+        else -> "error:${status.state.wire}"
+      }
+    }
     val port = status.port ?: return@Function if (starting) "starting" else "error:${status.state.wire}"
     try {
       val code = kind.healthProbe(port, record.password).status(HEALTH_CONNECT_MS, HEALTH_READ_MS)

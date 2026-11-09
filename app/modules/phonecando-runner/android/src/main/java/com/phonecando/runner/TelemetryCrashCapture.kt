@@ -2,6 +2,8 @@ package com.phonecando.runner
 
 import android.content.Context
 import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.agents.KindCatalog
+import com.phonecando.runner.agents.KindCatalogs
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -60,11 +62,18 @@ internal object TelemetryCrashCapture {
   }
 
   // Every agent's engine secrets from the agent store, for a crash
-  // message; empty when they cannot be read.
+  // message; empty when they cannot be read. Kinds that cannot be read
+  // here still leave each agent's raw password and token redacted.
   private fun storedEngineSecrets(): List<String> {
     val context = app ?: return emptyList()
     return try {
-      PathRedactor.agentSecrets(AgentStores.get(context).all())
+      val agents = AgentStores.get(context).all()
+      val kinds = try {
+        KindCatalogs.get(context)
+      } catch (_: Throwable) {
+        KindCatalog(emptyList(), "")
+      }
+      PathRedactor.agentSecrets(agents, kinds)
     } catch (_: Throwable) {
       emptyList()
     }

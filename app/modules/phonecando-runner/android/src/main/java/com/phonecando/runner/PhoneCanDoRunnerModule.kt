@@ -5,10 +5,14 @@ import android.content.Intent
 import android.os.Build
 import com.phonecando.runner.api.agentFunctions
 import com.phonecando.runner.api.engineFunctions
+import com.phonecando.runner.api.engineTerminalFunctions
+import com.phonecando.runner.api.installFunctions
+import com.phonecando.runner.api.kindFunctions
 import com.phonecando.runner.api.notifyFunctions
 import com.phonecando.runner.bridge.BridgePrompts
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.prompts.OpenUrlPrompts
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
@@ -25,9 +29,10 @@ class PhoneCanDoRunnerModule : Module() {
       instance?.sendEvent("phonecandoLaunchTarget", target)
     }
 
-    // Bridge -> JS: a prompt an agent is waiting on (BridgePrompts shape:
-    // requestId, kind, agentId, agentName, reason). pendingPrompts covers
-    // the moments JS was not attached.
+    // Bridge -> JS: a prompt for the user from an agent (BridgePrompts
+    // shape: requestId, kind, agentId, agentName, reason; an open_url
+    // prompt, prompts/OpenUrlPrompts, adds url). pendingPrompts covers the
+    // moments JS was not attached.
     fun emitBridgePrompt(prompt: Map<String, Any?>) {
       instance?.sendEvent("phonecandoBridgePrompt", prompt)
     }
@@ -79,6 +84,9 @@ class PhoneCanDoRunnerModule : Module() {
 
     agentFunctions { context() }
     engineFunctions { context() }
+    engineTerminalFunctions { context() }
+    installFunctions { context() }
+    kindFunctions { context() }
     notifyFunctions { context() }
 
     Function("getPrefix") {
@@ -142,14 +150,16 @@ class PhoneCanDoRunnerModule : Module() {
       AutomationHosts.current?.enabled == true
     }
 
-    // Prompts agents are waiting on (biometric unlock, accessibility setup),
-    // one per asking request. The app is the only caller; no agent process
-    // can reach these. resolveAccessibility's `guided`: the screen the user
-    // opened is a restricted-settings guide step. The bridge keeps waiting
-    // for the service either way; `guided` only makes its answer say
+    // Prompts for the user from agents: the ones a bridge request waits on
+    // (biometric unlock, accessibility setup), one per asking request, then
+    // the links agents asked the phone to open (open_url, nothing waits on
+    // those). The app is the only caller; no agent process can reach these.
+    // resolveAccessibility's `guided`: the screen the user opened is a
+    // restricted-settings guide step. The bridge keeps waiting for the
+    // service either way; `guided` only makes its answer say
     // `restricted: sideload`.
     Function("pendingPrompts") {
-      BridgePrompts.pending()
+      BridgePrompts.pending() + OpenUrlPrompts.pending()
     }
 
     Function("resolveUnlock") { requestId: String, ok: Boolean ->
@@ -160,6 +170,13 @@ class PhoneCanDoRunnerModule : Module() {
     Function("resolveAccessibility") { requestId: String, ok: Boolean, guided: Boolean ->
       BridgePrompts.resolveAccessibility(requestId, ok, guided)
       ok
+    }
+
+    // Ends one open_url prompt: action open (the app opened it), copy (the
+    // link goes on the clipboard) or dismiss. False when it is gone or the
+    // copy failed.
+    Function("resolveOpenUrl") { requestId: String, action: String ->
+      OpenUrlPrompts.resolve(context(), requestId, action)
     }
 
     // True while the user has PhoneCanDo enabled in Android accessibility settings

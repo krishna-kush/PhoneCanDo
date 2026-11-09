@@ -5,8 +5,9 @@ import org.json.JSONObject
 // One bridge response: an HTTP status and the envelope
 // {"ok":true,"data":...} / {"ok":false,"code":...,"message":...}. App-level
 // failures (no app to share to, a PCE error) are 200 + ok:false; the status
-// is for the bridge's own refusals. Pure.
-data class Reply(val status: Int, val body: String) {
+// is for the bridge's own refusals. /mcp answers JSON-RPC instead (an empty
+// body for 202, `Allow` on 405). Pure.
+data class Reply(val status: Int, val body: String, val headers: Map<String, String> = emptyMap()) {
   companion object {
     fun ok(data: JSONObject) = Reply(200, JSONObject().put("ok", true).put("data", data).toString())
 

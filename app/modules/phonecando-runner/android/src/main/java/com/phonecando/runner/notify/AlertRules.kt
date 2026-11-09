@@ -1,7 +1,7 @@
 package com.phonecando.runner.notify
 
-import com.phonecando.runner.agents.EngineEvent
-import com.phonecando.runner.agents.EngineEvent.Kind
+import com.phonecando.agents.kit.EngineEvent
+import com.phonecando.agents.kit.EngineEvent.Kind
 
 // Which engine events become an agent alert (AgentAlerts posts them). Pure;
 // per agent it keeps only its subagents' child sessions and the last alert.

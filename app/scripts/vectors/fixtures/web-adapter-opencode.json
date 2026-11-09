@@ -1,0 +1,168 @@
+{
+  "$comment": "Generated once from agents/native/opencode/ts/web.ts (before it moved into agent.json) with the palettes the app passes (theme/tokens.json as of then). webAdapter.ts must reproduce every value byte for byte.",
+  "palettes": {
+    "dark": {
+      "bg": "#0c0b09",
+      "panel": "#12100c",
+      "panel2": "#17140f",
+      "line": "rgba(242, 236, 223, 0.11)",
+      "lineStrong": "rgba(242, 236, 223, 0.23)",
+      "fg": "#f2ecdf",
+      "muted": "#aaa091",
+      "dim": "#968d80",
+      "faint": "#897e6f",
+      "primary": "#f02038",
+      "primaryHi": "#ff4d5e",
+      "primarySoft": "rgba(240, 32, 56, 0.1)",
+      "onPrimary": "#ffffff",
+      "secondary": "#f59e0b",
+      "secondaryInk": "#f59e0b",
+      "secondarySoft": "rgba(245, 158, 11, 0.12)",
+      "secondaryLine": "rgba(245, 158, 11, 0.42)"
+    },
+    "light": {
+      "bg": "#f2ecdf",
+      "panel": "#ebe3d4",
+      "panel2": "#e6ddcc",
+      "line": "rgba(23, 19, 13, 0.15)",
+      "lineStrong": "rgba(23, 19, 13, 0.28)",
+      "fg": "#17130d",
+      "muted": "#514a40",
+      "dim": "#5c5449",
+      "faint": "#685f54",
+      "primary": "#e1192f",
+      "primaryHi": "#c41527",
+      "primarySoft": "rgba(225, 25, 47, 0.06)",
+      "onPrimary": "#ffffff",
+      "secondary": "#fdc50d",
+      "secondaryInk": "#7a4f00",
+      "secondarySoft": "rgba(253, 197, 13, 0.12)",
+      "secondaryLine": "rgba(253, 197, 13, 0.6)"
+    }
+  },
+  "themeScript": {
+    "system/dark": "(function () {\n    try {\n      localStorage.setItem('opencode-color-scheme', \"system\");\n      window.dispatchEvent(new StorageEvent('storage', {\n        key: 'opencode-color-scheme',\n        newValue: \"system\",\n        storageArea: localStorage,\n      }));\n      var style = document.getElementById('phonecando-theme');\n      if (!style) {\n        style = document.createElement('style');\n        style.id = 'phonecando-theme';\n        (document.head || document.documentElement).appendChild(style);\n      }\n      style.textContent = \"html:root{background-color:#0c0b09!important;--v2-background-bg-base:#0c0b09;--v2-background-bg-deep:#0c0b09;--v2-background-bg-layer-01:#12100c;--v2-background-bg-layer-02:#17140f;--v2-background-bg-layer-03:#17140f;--v2-background-bg-layer-04:#17140f;--v2-text-text-base:#f2ecdf;--v2-text-text-muted:#aaa091;--v2-text-text-faint:#968d80;--v2-icon-icon-base:#aaa091;--v2-icon-icon-muted:#968d80;--v2-icon-icon-faint:#897e6f;--v2-border-border-base:rgba(242, 236, 223, 0.11);--v2-border-border-strong:rgba(242, 236, 223, 0.23);--v2-border-border-muted:rgba(242, 236, 223, 0.11);--v2-background-bg-accent:#f02038;--v2-text-text-accent:#f02038;--v2-text-text-accent-hover:#ff4d5e;--v2-icon-icon-accent:#f02038;--v2-icon-icon-accent-hover:#ff4d5e;--v2-border-border-focus:#f02038;}\";\n    } catch (e) {}\n  })();\n  true;",
+    "light/dark": "(function () {\n    try {\n      localStorage.setItem('opencode-color-scheme', \"light\");\n      window.dispatchEvent(new StorageEvent('storage', {\n        key: 'opencode-color-scheme',\n        newValue: \"light\",\n        storageArea: localStorage,\n      }));\n      var style = document.getElementById('phonecando-theme');\n      if (!style) {\n        style = document.createElement('style');\n        style.id = 'phonecando-theme';\n        (document.head || document.documentElement).appendChild(style);\n      }\n      style.textContent = \"html:root{background-color:#0c0b09!important;--v2-background-bg-base:#0c0b09;--v2-background-bg-deep:#0c0b09;--v2-background-bg-layer-01:#12100c;--v2-background-bg-layer-02:#17140f;--v2-background-bg-layer-03:#17140f;--v2-background-bg-layer-04:#17140f;--v2-text-text-base:#f2ecdf;--v2-text-text-muted:#aaa091;--v2-text-text-faint:#968d80;--v2-icon-icon-base:#aaa091;--v2-icon-icon-muted:#968d80;--v2-icon-icon-faint:#897e6f;--v2-border-border-base:rgba(242, 236, 223, 0.11);--v2-border-border-strong:rgba(242, 236, 223, 0.23);--v2-border-border-muted:rgba(242, 236, 223, 0.11);--v2-background-bg-accent:#f02038;--v2-text-text-accent:#f02038;--v2-text-text-accent-hover:#ff4d5e;--v2-icon-icon-accent:#f02038;--v2-icon-icon-accent-hover:#ff4d5e;--v2-border-border-focus:#f02038;}\";\n    } catch (e) {}\n  })();\n  true;",
+    "dark/dark": "(function () {\n    try {\n      localStorage.setItem('opencode-color-scheme', \"dark\");\n      window.dispatchEvent(new StorageEvent('storage', {\n        key: 'opencode-color-scheme',\n        newValue: \"dark\",\n        storageArea: localStorage,\n      }));\n      var style = document.getElementById('phonecando-theme');\n      if (!style) {\n        style = document.createElement('style');\n        style.id = 'phonecando-theme';\n        (document.head || document.documentElement).appendChild(style);\n      }\n      style.textContent = \"html:root{background-color:#0c0b09!important;--v2-background-bg-base:#0c0b09;--v2-background-bg-deep:#0c0b09;--v2-background-bg-layer-01:#12100c;--v2-background-bg-layer-02:#17140f;--v2-background-bg-layer-03:#17140f;--v2-background-bg-layer-04:#17140f;--v2-text-text-base:#f2ecdf;--v2-text-text-muted:#aaa091;--v2-text-text-faint:#968d80;--v2-icon-icon-base:#aaa091;--v2-icon-icon-muted:#968d80;--v2-icon-icon-faint:#897e6f;--v2-border-border-base:rgba(242, 236, 223, 0.11);--v2-border-border-strong:rgba(242, 236, 223, 0.23);--v2-border-border-muted:rgba(242, 236, 223, 0.11);--v2-background-bg-accent:#f02038;--v2-text-text-accent:#f02038;--v2-text-text-accent-hover:#ff4d5e;--v2-icon-icon-accent:#f02038;--v2-icon-icon-accent-hover:#ff4d5e;--v2-border-border-focus:#f02038;}\";\n    } catch (e) {}\n  })();\n  true;",
+    "system/light": "(function () {\n    try {\n      localStorage.setItem('opencode-color-scheme', \"system\");\n      window.dispatchEvent(new StorageEvent('storage', {\n        key: 'opencode-color-scheme',\n        newValue: \"system\",\n        storageArea: localStorage,\n      }));\n      var style = document.getElementById('phonecando-theme');\n      if (!style) {\n        style = document.createElement('style');\n        style.id = 'phonecando-theme';\n        (document.head || document.documentElement).appendChild(style);\n      }\n      style.textContent = \"html:root{background-color:#f2ecdf!important;--v2-background-bg-base:#f2ecdf;--v2-background-bg-deep:#f2ecdf;--v2-background-bg-layer-01:#ebe3d4;--v2-background-bg-layer-02:#e6ddcc;--v2-background-bg-layer-03:#e6ddcc;--v2-background-bg-layer-04:#e6ddcc;--v2-text-text-base:#17130d;--v2-text-text-muted:#514a40;--v2-text-text-faint:#5c5449;--v2-icon-icon-base:#514a40;--v2-icon-icon-muted:#5c5449;--v2-icon-icon-faint:#685f54;--v2-border-border-base:rgba(23, 19, 13, 0.15);--v2-border-border-strong:rgba(23, 19, 13, 0.28);--v2-border-border-muted:rgba(23, 19, 13, 0.15);--v2-background-bg-accent:#e1192f;--v2-text-text-accent:#e1192f;--v2-text-text-accent-hover:#c41527;--v2-icon-icon-accent:#e1192f;--v2-icon-icon-accent-hover:#c41527;--v2-border-border-focus:#e1192f;}\";\n    } catch (e) {}\n  })();\n  true;",
+    "light/light": "(function () {\n    try {\n      localStorage.setItem('opencode-color-scheme', \"light\");\n      window.dispatchEvent(new StorageEvent('storage', {\n        key: 'opencode-color-scheme',\n        newValue: \"light\",\n        storageArea: localStorage,\n      }));\n      var style = document.getElementById('phonecando-theme');\n      if (!style) {\n        style = document.createElement('style');\n        style.id = 'phonecando-theme';\n        (document.head || document.documentElement).appendChild(style);\n      }\n      style.textContent = \"html:root{background-color:#f2ecdf!important;--v2-background-bg-base:#f2ecdf;--v2-background-bg-deep:#f2ecdf;--v2-background-bg-layer-01:#ebe3d4;--v2-background-bg-layer-02:#e6ddcc;--v2-background-bg-layer-03:#e6ddcc;--v2-background-bg-layer-04:#e6ddcc;--v2-text-text-base:#17130d;--v2-text-text-muted:#514a40;--v2-text-text-faint:#5c5449;--v2-icon-icon-base:#514a40;--v2-icon-icon-muted:#5c5449;--v2-icon-icon-faint:#685f54;--v2-border-border-base:rgba(23, 19, 13, 0.15);--v2-border-border-strong:rgba(23, 19, 13, 0.28);--v2-border-border-muted:rgba(23, 19, 13, 0.15);--v2-background-bg-accent:#e1192f;--v2-text-text-accent:#e1192f;--v2-text-text-accent-hover:#c41527;--v2-icon-icon-accent:#e1192f;--v2-icon-icon-accent-hover:#c41527;--v2-border-border-focus:#e1192f;}\";\n    } catch (e) {}\n  })();\n  true;",
+    "dark/light": "(function () {\n    try {\n      localStorage.setItem('opencode-color-scheme', \"dark\");\n      window.dispatchEvent(new StorageEvent('storage', {\n        key: 'opencode-color-scheme',\n        newValue: \"dark\",\n        storageArea: localStorage,\n      }));\n      var style = document.getElementById('phonecando-theme');\n      if (!style) {\n        style = document.createElement('style');\n        style.id = 'phonecando-theme';\n        (document.head || document.documentElement).appendChild(style);\n      }\n      style.textContent = \"html:root{background-color:#f2ecdf!important;--v2-background-bg-base:#f2ecdf;--v2-background-bg-deep:#f2ecdf;--v2-background-bg-layer-01:#ebe3d4;--v2-background-bg-layer-02:#e6ddcc;--v2-background-bg-layer-03:#e6ddcc;--v2-background-bg-layer-04:#e6ddcc;--v2-text-text-base:#17130d;--v2-text-text-muted:#514a40;--v2-text-text-faint:#5c5449;--v2-icon-icon-base:#514a40;--v2-icon-icon-muted:#5c5449;--v2-icon-icon-faint:#685f54;--v2-border-border-base:rgba(23, 19, 13, 0.15);--v2-border-border-strong:rgba(23, 19, 13, 0.28);--v2-border-border-muted:rgba(23, 19, 13, 0.15);--v2-background-bg-accent:#e1192f;--v2-text-text-accent:#e1192f;--v2-text-text-accent-hover:#c41527;--v2-icon-icon-accent:#e1192f;--v2-icon-icon-accent-hover:#c41527;--v2-border-border-focus:#e1192f;}\";\n    } catch (e) {}\n  })();\n  true;"
+  },
+  "embedScript": "\n  (function () {\n    var style = document.getElementById('phonecando-embed');\n    if (!style) {\n      style = document.createElement('style');\n      style.id = 'phonecando-embed';\n      style.textContent = '[data-slot=\"titlebar-v2\"]{display:none !important}';\n      document.documentElement.appendChild(style);\n    }\n  })();\n  true;\n",
+  "isAuthUrl": [
+    [
+      "http://127.0.0.1:35961/auth/connect/abc123",
+      true
+    ],
+    [
+      "http://127.0.0.1:35961/auth/connect/",
+      true
+    ],
+    [
+      "http://127.0.0.1:35961/auth/connect",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/ses_e4aeb2efc",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/ses_e4aeb2efc?x=1#m",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/ses_e4aeb2efc/",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/ses%20a%2Fb",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/abc#frag",
+      false
+    ],
+    [
+      "http://127.0.0.1:35961/session/x/session/y",
+      false
+    ],
+    [
+      "about:blank",
+      false
+    ],
+    [
+      "",
+      false
+    ]
+  ],
+  "sessionOf": [
+    [
+      "http://127.0.0.1:35961/auth/connect/abc123",
+      null
+    ],
+    [
+      "http://127.0.0.1:35961/auth/connect/",
+      null
+    ],
+    [
+      "http://127.0.0.1:35961/auth/connect",
+      null
+    ],
+    [
+      "http://127.0.0.1:35961/",
+      null
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU",
+      null
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/ses_e4aeb2efc",
+      "ses_e4aeb2efc"
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/ses_e4aeb2efc?x=1#m",
+      "ses_e4aeb2efc"
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/ses_e4aeb2efc/",
+      "ses_e4aeb2efc"
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/ses%20a%2Fb",
+      "ses a/b"
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/",
+      null
+    ],
+    [
+      "http://127.0.0.1:35961/server/L2hvbWU/session/abc#frag",
+      "abc"
+    ],
+    [
+      "http://127.0.0.1:35961/session/x/session/y",
+      "x"
+    ],
+    [
+      "about:blank",
+      null
+    ],
+    [
+      "",
+      null
+    ]
+  ]
+}

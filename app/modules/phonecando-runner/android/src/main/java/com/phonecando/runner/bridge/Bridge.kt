@@ -6,6 +6,7 @@ import android.util.Log
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.AutomationHosts
 import com.phonecando.runner.agents.AgentDirectory
+import com.phonecando.runner.bridge.mcp.McpToolAssets
 
 /** A running loopback bridge: engines get [url] at launch, each with its own token. */
 interface BridgeHandle {
@@ -18,7 +19,8 @@ interface BridgeHandle {
 // running agents (callers are told apart by their token, AgentDirectory) and
 // stops it when the last engine stops. `onCall` gets the calling agent's id
 // on every authenticated request (keeps that engine from being idle-stopped).
-// The port it bound is kept for the next open (BridgePorts).
+// The port it bound is kept for the next open (BridgePorts). The same
+// routes are also MCP tools at /mcp, from the packaged tool table.
 object Bridge {
   private const val TAG = "PhoneCanDoBridge"
   private const val PREFS = "phonecando_bridge"
@@ -49,7 +51,8 @@ object Bridge {
     )
     val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val ports = BridgePorts.candidates(prefs.getInt(KEY_PORT, 0))
-    val server = BridgeServer.start(ports, agents, router, onCall) ?: return null
+    val tools = McpToolAssets.load(app, full = channel == "full")
+    val server = BridgeServer.start(ports, agents, router, tools, appVersion(app), onCall) ?: return null
     prefs.edit().putInt(KEY_PORT, server.listeningPort).apply()
     return object : BridgeHandle {
       override val url = "http://127.0.0.1:${server.listeningPort}"
@@ -60,6 +63,13 @@ object Bridge {
         BridgePrompts.registry.cancelAll()
       }
     }
+  }
+
+  // MCP's serverInfo.version.
+  private fun appVersion(context: Context): String = try {
+    context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0"
+  } catch (_: Exception) {
+    "0"
   }
 
   private fun buildChannel(context: Context): String = try {

@@ -1,5 +1,6 @@
 package com.phonecando.runner.agents
 
+import com.phonecando.agents.kit.AgentConfig
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

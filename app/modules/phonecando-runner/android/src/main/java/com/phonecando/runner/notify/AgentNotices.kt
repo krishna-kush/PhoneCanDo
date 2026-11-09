@@ -11,8 +11,9 @@ import android.content.Context
 // notification never replaces another's whatever the ids, and its tap opens
 // PhoneCanDo on that agent (LaunchTargets: the target rides in the tap).
 // Ids within an agent: SLOT, /notify 4600-8695 (one per title), prompts
-// 9000-9255. The engine service (4101) and the update notice (4202) are
-// untagged, so they never meet these.
+// 9000-9255, links to open (prompts/OpenUrlPrompts) 9300-9363. The engine
+// service (4101) and the update notice (4202) are untagged, so they never
+// meet these.
 internal class AgentNotices(private val context: Context) {
   data class Notice(
     val agentId: String,
@@ -67,10 +68,14 @@ internal class AgentNotices(private val context: Context) {
     private const val NOTIFY_BASE = 4600
     private const val PROMPT_BASE = 9000
     private const val PROMPT_SLOTS = 256
+    private const val OPEN_URL_BASE = 9300
+    private const val OPEN_URL_SLOTS = 64
 
     /** /notify: one per agent and title, so a new status replaces the last. */
     fun notifyId(title: String) = NOTIFY_BASE + (title.hashCode() and 0xfff)
 
     fun promptId(seq: Int) = PROMPT_BASE + seq % PROMPT_SLOTS
+
+    fun openUrlId(seq: Int) = OPEN_URL_BASE + seq % OPEN_URL_SLOTS
   }
 }

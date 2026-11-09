@@ -1,8 +1,8 @@
 package com.phonecando.runner.notify
 
 import android.content.Context
+import com.phonecando.agents.kit.EngineEvent
 import com.phonecando.runner.agents.AgentDirectory
-import com.phonecando.runner.agents.EngineEvent
 
 // An agent's alert from its engine's event stream (EngineStreams): finished,
 // failed or waiting for your answer, as AlertRules decides, posted only

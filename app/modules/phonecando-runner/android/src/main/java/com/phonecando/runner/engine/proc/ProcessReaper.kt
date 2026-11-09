@@ -1,9 +1,10 @@
 package com.phonecando.runner.engine.proc
 
-// Ends engines and everything they started: SIGTERM to each engine process
-// we hold and to every tagged process (TaggedProcesses), a wait of up to
-// GRACE_MS while new tagged processes get SIGTERM too, then SIGKILL to what
-// is left. One wait covers every target, so stopping all agents takes as
+// Ends engines and everything they started: each engine process we hold is
+// asked to end (EngineProcess.terminate: SIGTERM, or a TUI's terminal hung
+// up), every tagged process (TaggedProcesses) gets SIGTERM, a wait of up to
+// GRACE_MS follows while new tagged processes get SIGTERM too, then SIGKILL
+// to what is left. One wait covers every target, so stopping all agents takes as
 // long as stopping one. Blocks: callers run it off the main thread. Pure
 // apart from what is passed in (ProcScanner and Os.kill on the phone).
 class ProcessReaper(
@@ -21,8 +22,8 @@ class ProcessReaper(
   }
 
   /** [agentIds] null: processes of any agent. Returns the pids that needed SIGKILL. */
-  fun stop(engines: List<Process>, agentIds: Set<String>?, graceMs: Long = GRACE_MS): List<Int> {
-    for (p in engines) runQuietly { p.destroy() }
+  fun stop(engines: List<EngineProcess>, agentIds: Set<String>?, graceMs: Long = GRACE_MS): List<Int> {
+    for (p in engines) runQuietly { p.terminate() }
     val termed = HashSet<Int>()
     var left = tagged(agentIds)
     for (pid in left) if (termed.add(pid)) signals.term(pid)
@@ -34,7 +35,7 @@ class ProcessReaper(
       for (pid in left) if (termed.add(pid)) signals.term(pid)
     }
     for (pid in left) signals.kill(pid)
-    for (p in engines) if (p.isAlive) runQuietly { p.destroyForcibly() }
+    for (p in engines) if (p.isAlive) runQuietly { p.kill() }
     return left
   }
 

@@ -29,7 +29,8 @@ export function ensureEngine(agentId: AgentId): Promise<EnsureResult> {
 async function ensure(agentId: AgentId): Promise<EnsureResult> {
   if (!isRunnerAvailable()) return { status: 'unavailable', port: null };
   const now = engineStatus(agentId);
-  if (now.state === 'ready' && now.port) {
+  // A TUI engine has no port: ready alone means it runs.
+  if (now.state === 'ready') {
     touchEngine(agentId);
     return { status: 'already-running', port: now.port };
   }

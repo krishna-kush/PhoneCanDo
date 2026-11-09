@@ -1,7 +1,7 @@
 package com.phonecando.runner.notify
 
-import com.phonecando.runner.agents.EngineEvent
-import com.phonecando.runner.agents.EngineEvent.Kind
+import com.phonecando.agents.kit.EngineEvent
+import com.phonecando.agents.kit.EngineEvent.Kind
 
 // The chats the running engines are busy with, for the service notification
 // (ServiceNotification): each chat an event stream has seen move, with its

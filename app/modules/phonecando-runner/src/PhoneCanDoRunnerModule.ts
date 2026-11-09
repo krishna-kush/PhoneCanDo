@@ -3,9 +3,13 @@ import { NativeModule, requireNativeModule } from 'expo';
 import type {
   NativeAgent,
   NativeBridgePrompt,
-  NativeEngineAuth,
+  NativeClientRecipe,
   NativeEngineStatus,
+  NativeInstallPlan,
   NativeLaunchTarget,
+  NativeOpenUrlAction,
+  NativeTerminalAttach,
+  NativeVersionCheck,
 } from './PhoneCanDoRunner.types';
 import type { TelemetryNativeSnapshot } from './telemetry.types';
 
@@ -13,9 +17,13 @@ export type { EngineHealth, NativeCrash, TelemetryNativeSnapshot } from './telem
 export type {
   NativeAgent,
   NativeBridgePrompt,
-  NativeEngineAuth,
+  NativeClientRecipe,
   NativeEngineStatus,
+  NativeInstallPlan,
   NativeLaunchTarget,
+  NativeOpenUrlAction,
+  NativeTerminalAttach,
+  NativeVersionCheck,
 } from './PhoneCanDoRunner.types';
 
 type RunnerEvents = {
@@ -35,6 +43,7 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   pendingPrompts(): NativeBridgePrompt[];
   resolveUnlock(requestId: string, ok: boolean): boolean;
   resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean;
+  resolveOpenUrl(requestId: string, action: NativeOpenUrlAction): boolean;
   isUiAutomationConnected(): boolean;
   openAccessibilitySettings(): string;
   isAccessibilityServiceEnabled(): boolean;
@@ -49,15 +58,28 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   createAgent(params: { kind: string; name: string; imageId: string }): NativeAgent;
   renameAgent(id: string, name: string): NativeAgent;
   deleteAgent(id: string): Promise<boolean>;
-  startEngine(agentId: string): Promise<{ port: string }>;
+  startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;
   isAnyEngineAlive(): boolean;
   touchEngine(agentId: string): void;
   engineStatus(agentId: string): NativeEngineStatus;
   engineStatuses(): NativeEngineStatus[];
-  getEngineAuth(agentId: string): NativeEngineAuth;
   engineHealth(agentId: string): string;
+  listKinds(): string;
+  pairWebUi(agentId: string): Promise<string>;
+  clientRecipe(agentId: string, projectDir: string, sessionId: string | null): NativeClientRecipe;
+  isEngineIdle(agentId: string): boolean;
+  guestUnset(agentId: string): string[];
+  installPlan(agentId: string, family: string): NativeInstallPlan | null;
+  updatePlan(agentId: string, family: string): NativeInstallPlan | null;
+  versionCheck(agentId: string): NativeVersionCheck | null;
+  recordInstall(agentId: string, versionOutput: string): { version: string };
+  engineTerminalAttach(agentId: string): NativeTerminalAttach;
+  engineTerminalRead(viewerId: string, max: number): string | null;
+  engineTerminalWrite(viewerId: string, b64: string): void;
+  engineTerminalResize(viewerId: string, rows: number, cols: number): void;
+  engineTerminalDetach(viewerId: string): void;
   getTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   setTelemetryEnabled(enabled: boolean): void;

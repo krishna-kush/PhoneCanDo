@@ -15,7 +15,9 @@ package com.phonecando.runner.bridge
 // screen routes: /ping, /battery, /notify, /clipboard, /pce/describe, and the
 // prompts /unlock and /accessibility: they only matter while the gate is off
 // or the service is down, when nobody can drive the screen anyway, and the
-// app queues their dialogs. Pure.
+// app queues their dialogs. /mcp is not a route: BridgeEntry hands it to the
+// MCP endpoint (mcp/), whose tools call these routes through the router.
+// Pure.
 enum class Route(
   val method: String,
   val path: String,

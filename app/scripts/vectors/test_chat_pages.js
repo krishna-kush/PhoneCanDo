@@ -1,9 +1,12 @@
 // Web UI page memory (src/ui/chat/lastPage.ts): splitting an engine URL,
-// remembering an agent's last page and where a fresh view restores to.
-// Imports the real pure module (Node 22.18+ strips its types), so these
-// cannot drift.
+// remembering an agent's last page and where a fresh view restores to. Then
+// the chat a TUI names in its terminal title (src/engine/agents/chatTitle.ts)
+// with opencode's chatTitle from its manifest. The web adapter's chat ids
+// are in test_web_adapter.js. Imports the real pure modules (Node 22.18+
+// strips their types), so these cannot drift.
 // Run: node test_chat_pages.js (or pnpm check:vectors)
 'use strict';
+const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const q = (s) => JSON.stringify(s);
@@ -43,18 +46,16 @@ const mod = pathToFileURL(path.join(__dirname, '../../src/ui/chat/lastPage.ts'))
   t('only the hash differs, stay', restoreUrl(`${base}/x#a`, '/x#b'), null);
   t('unparsable loaded URL, stay', restoreUrl('about:blank', '/x'), null);
 
-  // opencode's web adapter: which chat a page shows (src/engine/agents/oc/web.ts).
-  const { web } = await import(pathToFileURL(path.join(__dirname, '../../src/engine/agents/oc/web.ts')).href);
-  t('chat page', web.sessionOf(`${base}/server/L2hvbWU/session/ses_e4aeb2efc?x=1#m`), 'ses_e4aeb2efc');
-  t('chat home is no chat', web.sessionOf(`${base}/server/L2hvbWU`), null);
-  t('web home is no chat', web.sessionOf(`${base}/`), null);
-
-  // opencode's TUI names its chat in the terminal title (src/engine/agents/oc/tui.ts).
-  const { tuiChatTitle } = await import(pathToFileURL(path.join(__dirname, '../../src/engine/agents/oc/tui.ts')).href);
+  // opencode's TUI names its chat in the terminal title (its manifest's
+  // surfaces.terminal.chatTitle, as the KindView passes it on).
+  const { chatTitleOf } = await import(pathToFileURL(path.join(__dirname, '../../src/engine/agents/chatTitle.ts')).href);
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../agents/native/opencode/agent.json'), 'utf8'));
+  const tuiChatTitle = (title) => chatTitleOf(manifest.surfaces.terminal.chatTitle, title);
   t('TUI chat title', tuiChatTitle('OC | Fix login'), 'Fix login');
   t('TUI cut title kept as shown', tuiChatTitle('OC | Refactor the payment service retries …'), 'Refactor the payment service retries …');
   t('TUI home names no chat', tuiChatTitle('OpenCode'), null);
   t('a shell title names no chat', tuiChatTitle('root@localhost: ~'), null);
+  t('a kind without a pattern names no chat', chatTitleOf(null, 'OC | Fix login'), null);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

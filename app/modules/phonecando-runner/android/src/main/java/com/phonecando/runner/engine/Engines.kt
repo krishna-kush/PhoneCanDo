@@ -62,19 +62,19 @@ internal object Engines {
 
 // Start requests in flight between the module (a JS promise) and the
 // service (which runs the start): the module registers a callback and puts
-// its id in the start intent; the service completes it with the port or the
-// failure. An unknown or repeated id is ignored.
+// its id in the start intent; the service completes it with the port (null
+// for a TUI engine) or the failure. An unknown or repeated id is ignored.
 internal object EngineRequests {
-  private val pending = ConcurrentHashMap<String, (Result<Int>) -> Unit>()
+  private val pending = ConcurrentHashMap<String, (Result<Int?>) -> Unit>()
   private val next = AtomicLong()
 
-  fun register(callback: (Result<Int>) -> Unit): String {
+  fun register(callback: (Result<Int?>) -> Unit): String {
     val id = "start-${next.incrementAndGet()}"
     pending[id] = callback
     return id
   }
 
-  fun complete(id: String?, result: Result<Int>) {
+  fun complete(id: String?, result: Result<Int?>) {
     val callback = id?.let(pending::remove) ?: return
     try {
       callback(result)

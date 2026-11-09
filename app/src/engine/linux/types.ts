@@ -67,10 +67,6 @@ export type Image = {
   /** Why the last create or reset failed, one line with the code first (`no_space: ...`). */
   error: string | null;
   os: OsInfo | null;
-  /** Agent tools the image lacks (bash, git, rg); empty when complete. */
-  missingTools: string[];
-  /** The command that installs `missingTools` with this image's package manager. */
-  installCommand: string | null;
   /** System + home, in bytes, as last measured. */
   sizeBytes: number;
   createdAt: number;
@@ -79,12 +75,12 @@ export type Image = {
   errorCode?: LinuxErrorCode | null;
 };
 
-/** Progress of a long native job (download, image setup, reset). */
+/** Progress of a long native job (download, image setup, reset, guest script). */
 export type LinuxProgress = {
   jobId: string;
   target: { kind: 'env'; id: EnvId } | { kind: 'image'; id: ImageId };
   /** `start` first; a download `resolve`, `download`; setup the ImageStep ids; a reset
-      `packages`, `unpack`, `swap`; setup and reset end with `measure`. */
+      `packages`, `unpack`, `swap`; setup and reset end with `measure`; a guest script `script`. */
   step: string;
   /** Progress within the step: bytes for `download` and `unpack`, else 0. */
   done: number;
@@ -95,6 +91,29 @@ export type LinuxProgress = {
   /** The stable code of `error`, on the same event. */
   errorCode?: LinuxErrorCode | null;
   finished: boolean;
+  /** On the last event only: true when the job succeeded. */
+  ok?: boolean;
+  /** A guest script job only: the name of its last `@phase <name>` line, null before the first. */
+  phase?: string | null;
+  /** A guest script job only: its last 20 output lines, redacted. */
+  tail?: string[];
+  /** A guest script job only: its exit code once it ended by itself (on the last event); null
+      while it runs, and when it was stopped (timed out, cancelled). */
+  exitCode?: number | null;
+  /** A guest script job only: its last `@retry <phase> <n>/<max>` line since the phase began (a
+      step failed and runs again: try `attempt` of `max`); null when none came. */
+  retry?: { attempt: number; max: number } | null;
+  /** A guest script job only: whole seconds since it started. Its events come about once a second
+      even while it prints nothing. */
+  elapsedSec?: number;
+  /** A guest script job only: bytes the app received since it started (the whole app's count, so
+      an engine's traffic counts too); null where Android cannot count them. */
+  downloadedBytes?: number | null;
+  /** A guest script job only: that count's rate over the last ~3 s, in bytes per second. */
+  rateBytesPerSec?: number | null;
+  /** A guest script job only: the phone has a network that offers the internet, as of the last
+      reading (false in airplane mode or with no signal); null when Android won't say. */
+  online?: boolean | null;
 };
 
 /** Stable codes of a native failure: a thrown LinuxError's `code`, a record's `errorCode`. */
@@ -119,6 +138,10 @@ export type LinuxErrorCode =
   | 'env_in_use'
   /** A job already runs for that env or image, or it is not in a state for this. */
   | 'busy'
+  /** A guest script (runGuestScript) exited non-zero; the final event's `exitCode` says how. */
+  | 'command_failed'
+  /** A guest script or command ran past its time limit and was stopped. */
+  | 'timed_out'
   | 'internal';
 
 /** What a long native call resolves with at once; progress follows as LinuxProgress events. */
@@ -154,3 +177,13 @@ export type TerminalRecipe = { cmd: string[]; env: Record<string, string>; cwd: 
 
 /** Packages installed by hand before a reset, and the one line that installs them again. */
 export type ReinstallList = { installCommand: string; packages: string[] };
+
+/** The commands (an agent's tools) an image lacks, and the line that installs them with its
+    package manager: null when none are missing or the package manager is unknown. */
+export type MissingTools = { missingTools: string[]; installCommand: string | null };
+
+/** runGuestScript's options: the time limit, and a short name for the log and the error line. */
+export type GuestScriptOptions = { timeoutSec: number; label: string };
+
+/** How a guest command ended: its exit code and the first 64 KiB of its stdout. */
+export type GuestCommandResult = { exitCode: number; stdout: string };

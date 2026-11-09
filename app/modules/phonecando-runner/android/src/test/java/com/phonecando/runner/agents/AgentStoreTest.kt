@@ -1,5 +1,6 @@
 package com.phonecando.runner.agents
 
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -70,6 +71,30 @@ class AgentStoreTest {
     assertTrue(s.delete(a.id))
     assertFalse(s.delete(a.id))
     assertEquals(emptyList<AgentRecord>(), store().all())
+  }
+
+  @Test fun aFirstRunIsKept() {
+    val s = store()
+    val a = s.create("user.top", "top", "i1")
+    assertFalse(a.ranBefore)
+    s.markRan(a.id)
+    s.markRan(a.id)
+    s.markRan("nope")
+    assertTrue(store().get(a.id)!!.ranBefore)
+  }
+
+  @Test fun anInstalledVersionIsKept() {
+    val s = store()
+    val a = s.create("user.gemini", "Gemini", "i1")
+    assertNull(a.installedVersion)
+    assertEquals("0.9.1", s.setInstalledVersion(a.id, "0.9.1").installedVersion)
+    assertEquals("0.10.0", s.setInstalledVersion(a.id, "0.10.0").installedVersion)
+    assertEquals("0.10.0", store().get(a.id)!!.installedVersion)
+    // A record without the field reads as nothing installed.
+    val old = JSONObject(file.readText())
+    old.getJSONArray("agents").getJSONObject(0).remove("installedVersion")
+    file.writeText(old.toString())
+    assertNull(store().get(a.id)!!.installedVersion)
   }
 
   @Test fun rejectsBadInput() {

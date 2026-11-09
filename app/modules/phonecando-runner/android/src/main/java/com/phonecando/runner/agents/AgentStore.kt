@@ -73,6 +73,18 @@ class AgentStore(
     }
   }
 
+  /** The agent's engine was ready once; a no-op after the first time. */
+  fun markRan(id: String) {
+    synchronized(lock) {
+      val current = loaded().firstOrNull { it.id == id } ?: return
+      if (current.ranBefore) return
+      update(id) { it.copy(ranBefore = true) }
+    }
+  }
+
+  /** What the kind's install put in the agent's image, read back by its version check. */
+  fun setInstalledVersion(id: String, version: String): AgentRecord = update(id) { it.copy(installedVersion = version) }
+
   private fun update(id: String, change: (AgentRecord) -> AgentRecord): AgentRecord = synchronized(lock) {
     val list = loaded()
     val index = list.indexOfFirst { it.id == id }
@@ -165,6 +177,8 @@ class AgentStore(
           password = password,
           bridgeToken = token,
           createdAt = o.optLong("createdAt", 0L),
+          ranBefore = o.optBoolean("ranBefore", false),
+          installedVersion = if (o.isNull("installedVersion")) null else o.optString("installedVersion", "").ifEmpty { null },
         )
       }
       return out
@@ -182,7 +196,9 @@ class AgentStore(
             .put("port", a.port ?: JSONObject.NULL)
             .put("password", a.password)
             .put("bridgeToken", a.bridgeToken)
-            .put("createdAt", a.createdAt),
+            .put("createdAt", a.createdAt)
+            .put("ranBefore", a.ranBefore)
+            .put("installedVersion", a.installedVersion ?: JSONObject.NULL),
         )
       }
       return JSONObject().put("agents", array).toString(2)

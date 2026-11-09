@@ -1,7 +1,7 @@
 package com.phonecando.runner.notify
 
-import com.phonecando.runner.agents.EngineEvent
-import com.phonecando.runner.agents.EngineEvent.Kind
+import com.phonecando.agents.kit.EngineEvent
+import com.phonecando.agents.kit.EngineEvent.Kind
 import com.phonecando.runner.notify.ChatBoard.State
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

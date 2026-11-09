@@ -27,6 +27,14 @@ class EngineEnvTest {
     assertEquals("a1", env["PHONECANDO_AGENT"])
   }
 
+  @Test fun onlyATuiEngineGetsItsEventsFile() {
+    val stale = base + ("PHONECANDO_EVENTS" to "/elsewhere")
+    val tui = EngineEnv.build(stale, emptyMap(), mapOf("PHONECANDO_EVENTS" to "/kind"), null, "tok", "full", "a1", "/img/home/.phonecando/events")
+    assertEquals("/img/home/.phonecando/events", tui["PHONECANDO_EVENTS"])
+    val server = EngineEnv.build(stale, emptyMap(), emptyMap(), null, "tok", "full", "a1")
+    assertFalse(server.containsKey("PHONECANDO_EVENTS"))
+  }
+
   @Test fun noBridgeMeansNoBridgeValues() {
     val env = EngineEnv.build(base, emptyMap(), emptyMap(), null, "tok", "full", "a1")
     assertFalse(env.containsKey("PHONECANDO_BRIDGE_URL"))

@@ -1,14 +1,8 @@
-// Reaching an agent's running engine: its loopback address and password,
-// and a wait for a fresh start to answer. Kind-neutral: what a request
-// looks like is the agent kind's business (agents/).
+// Waiting for an agent's engine to answer after a start. Kind-neutral:
+// what a request looks like is the agent kind's manifest, and the runner
+// makes the requests.
 import type { AgentId } from './agents/records';
-import type { EngineConn } from './agents/types';
-import { engineStatus, getEngineAuth } from './engines';
-
-/** Read at call time: an engine relaunched on a fresh port gets a new address. */
-export function engineConn(agentId: AgentId): EngineConn {
-  return { baseUrl: getEngineAuth(agentId).baseUrl, password: () => getEngineAuth(agentId).password };
-}
+import { engineStatus } from './engines';
 
 // Blocks until the engine answers its health probe (native marks it ready;
 // a fresh start takes a few seconds) so a first open succeeds instead of

@@ -1,0 +1,180 @@
+// Packages the agent kinds from their manifests, agents/{native,image}/<id>/
+// agent.json (validated by the kit: node agents/kit/cli/check.mjs). Only the
+// packaging fields are read here. Per variant, every kind whose `channels`
+// include the flavor lands in generated assets:
+//   agents/<id>/agent.json
+//   agents/<id>/config/   config.dir, the folder the service seeds into HOME
+//                         (AgentKind.config.assetDir); the other channels than
+//                         full drop config.fullOnly and take config.overlay's
+//                         files instead. Each config.shared part comes from
+//                         agents/shared/<name>/ (kind-neutral code, e.g. the
+//                         phone tools) and lands inside the config where its
+//                         part.json says, so the kind's plugins import it by
+//                         a relative path that stays within the seeded tree;
+//                         its full-only parts are dropped the same way.
+// Beside the kinds, also from agents/:
+//   agents/runtimes/<id>/{runtime.json,install/}
+//                         the runtime plugins image kinds name, on the
+//                         channels that ship Linux (RuntimeCatalog)
+//   agents/kit/scripts/{phonecando-event,phonecando-open}
+//                         seeded into an agent's {{home}}/.phonecando/bin/ on
+//                         every engine start, on every channel
+//   agents/shared/phone-tools/tools.json
+//                         the MCP tool table the bridge serves, on every
+//                         channel (each tool names its own channel)
+// A native kind's libs (bionic executables named lib*.so) are staged, not
+// committed, at src/agents/<id>/libs/<abi>/ and packaged as jniLibs of each
+// flavor it lists: executed from nativeLibraryDir, the only place SELinux
+// permits exec.
+
+def agentsRoot = file("../../../../agents")
+def sharedPartFile = "part.json"
+
+def readAgentJson = { File f ->
+  try {
+    new groovy.json.JsonSlurper().parse(f)
+  } catch (Exception e) {
+    throw new GradleException("Cannot read ${f}: ${e.message}")
+  }
+}
+
+def agentKinds = ["native", "image"].collectMany { type ->
+  def kindDirs = new File(agentsRoot, type).listFiles()?.findAll { new File(it, "agent.json").isFile() } ?: []
+  kindDirs.sort { it.name }.collect { dir ->
+    def manifestFile = new File(dir, "agent.json")
+    def m = readAgentJson(manifestFile)
+    def config = null
+    if (m.config?.dir) {
+      config = [
+        source: new File(dir, m.config.dir),
+        overlay: m.config.overlay ? new File(dir, m.config.overlay) : null,
+        fullOnly: m.config.fullOnly ?: [],
+        shared: (m.config.shared ?: []).collect { name ->
+          def partDir = new File(agentsRoot, "shared/${name}")
+          def partFile = new File(partDir, sharedPartFile)
+          def part = partFile.isFile() ? readAgentJson(partFile) : [:]
+          [source: partDir, into: part.into, fullOnly: part.fullOnly ?: []]
+        },
+      ]
+    }
+    [id: m.id, type: m.type, manifest: manifestFile, channels: m.channels ?: [], config: config]
+  }
+}
+
+// play refuses every Linux path (phonecando-linux), so it gets no runtimes.
+def linuxChannels = ["full", "lite"]
+def runtimes = (new File(agentsRoot, "runtimes").listFiles()?.findAll { new File(it, "runtime.json").isFile() } ?: [])
+  .sort { it.name }
+  .collect { dir -> [id: readAgentJson(new File(dir, "runtime.json")).id, dir: dir] }
+def kitScriptsDir = new File(agentsRoot, "kit/scripts")
+def kitScripts = ["phonecando-event", "phonecando-open"]
+def phoneToolsTable = new File(agentsRoot, "shared/phone-tools/tools.json")
+
+linuxChannels.each { channel ->
+  if (android.productFlavors.findByName(channel) == null) {
+    throw new GradleException("agents.gradle ships runtimes on channel ${channel}, which is no flavor here")
+  }
+}
+
+agentKinds.findAll { it.type == "native" }.each { kind ->
+  kind.channels.each { channel ->
+    if (android.productFlavors.findByName(channel) == null) {
+      throw new GradleException("agents/native/${kind.id}/agent.json lists channel ${channel}, which is no flavor here")
+    }
+    android.sourceSets.maybeCreate(channel).jniLibs.srcDir("src/agents/${kind.id}/libs")
+  }
+}
+
+// The Android plugin owns the output folder (addGeneratedSourceDirectory
+// below), so it knows this task produces those assets and runs it before
+// every task that reads them: asset merging, lint, and any reader a later
+// plugin version adds. Registering the folder as a plain asset srcDir instead
+// hides the producer, and Gradle 9 fails the build on each reader it was not
+// linked to.
+abstract class AgentConfigSync extends Sync {
+  @OutputDirectory
+  abstract DirectoryProperty getOutputDir()
+}
+
+androidComponents {
+  onVariants(selector().all()) { variant ->
+    def channel = variant.flavorName
+    def kinds = agentKinds.findAll { channel in it.channels }
+    def sync = tasks.register("syncAgentConfig${variant.name.capitalize()}", AgentConfigSync) {
+      into(outputDir)
+      kinds.each { kind ->
+        def assetDir = "agents/${kind.id}"
+        from(kind.manifest) {
+          into assetDir
+        }
+        def cfg = kind.config
+        if (cfg == null) return
+        from(cfg.source) {
+          into "${assetDir}/config"
+          exclude "**/node_modules/**"
+          if (channel != "full") exclude cfg.fullOnly
+        }
+        if (channel != "full" && cfg.overlay != null) {
+          from(cfg.overlay) {
+            into "${assetDir}/config"
+          }
+        }
+        cfg.shared.each { part ->
+          from(part.source) {
+            into "${assetDir}/config/${part.into}"
+            // The tool table and its generator are build inputs, not agent config.
+            exclude "**/node_modules/**", sharedPartFile, "*.mjs", "tools.json"
+            if (channel != "full") exclude part.fullOnly
+          }
+        }
+      }
+      if (channel in linuxChannels) {
+        runtimes.each { rt ->
+          from(new File(rt.dir, "runtime.json")) {
+            into "agents/runtimes/${rt.id}"
+          }
+          from(new File(rt.dir, "install")) {
+            into "agents/runtimes/${rt.id}/install"
+          }
+        }
+      }
+      from(kitScriptsDir) {
+        include kitScripts
+        into "agents/kit/scripts"
+      }
+      from(phoneToolsTable) {
+        into "agents/shared/phone-tools"
+      }
+      doFirst {
+        if (channel in linuxChannels) {
+          runtimes.each { rt ->
+            if (!new File(rt.dir, "install").isDirectory()) {
+              throw new GradleException("Missing agents/runtimes/${rt.dir.name}/install for channel ${channel}")
+            }
+          }
+        }
+        kitScripts.each { name ->
+          if (!new File(kitScriptsDir, name).isFile()) {
+            throw new GradleException("Missing kit script agents/kit/scripts/${name}")
+          }
+        }
+        if (!phoneToolsTable.isFile()) {
+          throw new GradleException("Missing ${phoneToolsTable}: run node agents/shared/phone-tools/gen-tools-json.mjs")
+        }
+        kinds.each { kind ->
+          def cfg = kind.config
+          if (cfg == null) return
+          if (!cfg.source.isDirectory() || (channel != "full" && cfg.overlay != null && !cfg.overlay.isDirectory())) {
+            throw new GradleException("Missing agent config agents/${kind.id}/config for channel ${channel}")
+          }
+          cfg.shared.each { part ->
+            if (!part.source.isDirectory() || !part.into) {
+              throw new GradleException("Missing shared agent code ${part.source} (or its ${sharedPartFile}) for ${kind.id}")
+            }
+          }
+        }
+      }
+    }
+    variant.sources.assets?.addGeneratedSourceDirectory(sync) { it.outputDir }
+  }
+}

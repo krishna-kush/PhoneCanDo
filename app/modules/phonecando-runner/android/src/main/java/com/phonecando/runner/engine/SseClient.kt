@@ -1,8 +1,8 @@
 package com.phonecando.runner.engine
 
 import android.util.Log
-import com.phonecando.runner.agents.EngineEvent
-import com.phonecando.runner.agents.HttpProbe
+import com.phonecando.agents.kit.EngineEvent
+import com.phonecando.agents.kit.HttpProbe
 import java.net.HttpURLConnection
 
 // Minimal SSE client: one daemon thread holding the engine's event stream
@@ -17,7 +17,7 @@ internal class SseClient(
   private val threadName: String,
   private val parse: (String) -> EngineEvent?,
   private val onEvent: (EngineEvent) -> Unit,
-) {
+) : EventSource {
   @Volatile private var running = false
   private var thread: Thread? = null
 
@@ -32,7 +32,7 @@ internal class SseClient(
   }
 
   @Synchronized
-  fun stop() {
+  override fun stop() {
     running = false
     thread?.interrupt()
     thread = null

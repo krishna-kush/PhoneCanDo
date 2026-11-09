@@ -13,30 +13,6 @@ expoModule {
   canBePublished false
 }
 
-// Agent config, one entry per agent kind: the source under agents/<kind>/
-// (module root, so an iOS implementation can consume the same files) and the
-// assets folder the service seeds from (AgentKind.config.assetDir). Android
-// packages a generated copy per variant; non-full channels drop the
-// full-only files and take the overlay's instead. `shared` folders come from
-// agents/shared/ (kind-neutral code, e.g. the phone tools) and land inside
-// the kind's config, so its plugins import them by a relative path that
-// stays within the seeded tree; their full-only parts are dropped the same
-// way.
-def phoneTools = [
-  source: file("../agents/shared/phone-tools"),
-  into: "phone-tools",
-  fullOnly: ["control/**"],
-]
-def agentConfigs = [
-  [
-    assetDir: "oc-config",
-    source: file("../agents/oc/config"),
-    fullOnly: ["AGENTS.md", "plugins/automation/**"],
-    overlay: file("../agents/oc/config-lite"),
-    shared: [phoneTools],
-  ],
-]
-
 android {
   namespace "com.phonecando.runner"
   defaultConfig {
@@ -58,12 +34,6 @@ android {
     play { dimension "channel" }
   }
   sourceSets {
-    main {
-      // Ship the agent engines (bionic executables named lib*.so) as native
-      // libs (CNG-safe: module-owned dir). Executed from nativeLibraryDir,
-      // the only place SELinux permits exec.
-      jniLibs.srcDirs += ['src/main/libs']
-    }
     // The a11y driver, PCE host and pack keys exist only in full.
     full {
       java.srcDirs += 'src/uiauto/java'
@@ -74,64 +44,41 @@ android {
   lintOptions {
     abortOnError false
   }
-}
-
-// Copies the agent configs one variant ships. The Android plugin owns the
-// output folder (addGeneratedSourceDirectory below), so it knows this task
-// produces those assets and runs it before every task that reads them: asset
-// merging, lint, and any reader a later plugin version adds. Registering the
-// folder as a plain asset srcDir instead hides the producer, and Gradle 9
-// fails the build on each reader it was not linked to.
-abstract class AgentConfigSync extends Sync {
-  @OutputDirectory
-  abstract DirectoryProperty getOutputDir()
-}
-
-androidComponents {
-  onVariants(selector().all()) { variant ->
-    def channel = variant.flavorName
-    def sync = tasks.register("syncAgentConfig${variant.name.capitalize()}", AgentConfigSync) {
-      into(outputDir)
-      agentConfigs.each { cfg ->
-        from(cfg.source) {
-          into cfg.assetDir
-          exclude "**/node_modules/**"
-          if (channel != "full") exclude cfg.fullOnly
-        }
-        if (channel != "full") {
-          from(cfg.overlay) {
-            into cfg.assetDir
-          }
-        }
-        cfg.shared.each { part ->
-          from(part.source) {
-            into "${cfg.assetDir}/${part.into}"
-            exclude "**/node_modules/**"
-            if (channel != "full") exclude part.fullOnly
-          }
-        }
-      }
-      doFirst {
-        agentConfigs.each { cfg ->
-          if (!cfg.source.isDirectory() || (channel != "full" && !cfg.overlay.isDirectory())) {
-            throw new GradleException("Missing agent config ${cfg.assetDir} for channel ${channel}")
-          }
-          cfg.shared.each { part ->
-            if (!part.source.isDirectory()) {
-              throw new GradleException("Missing shared agent code ${part.source} for ${cfg.assetDir}")
-            }
-          }
-        }
-      }
+  testOptions {
+    unitTests.all {
+      // The kinds' manifests, the runtime plugins and the phone tools'
+      // table, which the JVM tests load as the APK would
+      // (src/test/.../agents/TestKinds.kt, bridge/mcp/).
+      def agentsDir = file('../../../../agents')
+      inputs.files(fileTree(agentsDir) { include '*/*/agent.json', 'runtimes/**', 'shared/phone-tools/tools.json' })
+      systemProperty 'phonecando.agentsDir', agentsDir.absolutePath
     }
-    variant.sources.assets?.addGeneratedSourceDirectory(sync) { it.outputDir }
   }
 }
+
+// The agent kinds' config assets and native libs, per channel, from their
+// manifests (agents/{native,image}/<id>/agent.json). After `android {}`: it
+// adds jniLibs to the flavors declared there.
+apply from: 'agents.gradle'
 
 dependencies {
   // Loopback agent bridge HTTP framing (MIT). Hand-rolling it was 100 lines of
   // parser nobody asked for.
   implementation 'org.nanohttpd:nanohttpd:2.3.1'
+
+  // Agent kinds (pure JVM, every flavor): the kit (the AgentKind seam, the
+  // manifest model and what renders it) and the bundled kinds' code hooks.
+  // The app's settings plugin substitutes these coordinates with the
+  // included `agents/` build.
+  implementation 'com.phonecando.agents:agents-kit-api:0.1.0-dev'
+  implementation 'com.phonecando.agents:agents-kit-manifest:0.1.0-dev'
+  implementation 'com.phonecando.agents:agents-kit-render:0.1.0-dev'
+  implementation 'com.phonecando.agents:agents-kit-term:0.1.0-dev'
+  implementation 'com.phonecando.agents:agents-builtin:0.1.0-dev'
+
+  // TUI engines run on PTYs of the terminal module's PtyHost
+  // (com.phonecando.terminal.host), which outlive the JS that shows them.
+  implementation project(':phonecando-terminal')
 
   // The app's settings plugin substitutes these coordinates with the included
   // `pce/` build; lite/play never resolve them.
@@ -143,8 +90,10 @@ dependencies {
 
   // JVM tests of the pure telemetry redaction (src/test, PathRedactor.kt),
   // of what a consume keeps (TelemetryStore and TelemetryRecorder over an
-  // in-memory store) and of the bridge's auth, routes, screen lease and
-  // prompts (src/test/.../bridge): ./gradlew :phonecando-runner:testLiteDebugUnitTest
+  // in-memory store), of the bridge's auth, routes, screen lease and
+  // prompts (src/test/.../bridge), of the kind catalog and of the TUI
+  // engine's terminal (src/test/.../engine/tui):
+  // ./gradlew :phonecando-runner:testLiteDebugUnitTest
   testImplementation 'junit:junit:4.13.2'
   // android.jar's org.json is a stub on the JVM; the telemetry store parses
   // its file with it.

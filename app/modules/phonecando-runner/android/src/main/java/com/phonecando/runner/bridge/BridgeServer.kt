@@ -3,6 +3,7 @@ package com.phonecando.runner.bridge
 import android.util.Log
 import com.phonecando.runner.TelemetryRecorder
 import com.phonecando.runner.agents.AgentDirectory
+import com.phonecando.runner.bridge.mcp.McpTool
 import fi.iki.elonen.NanoHTTPD
 import java.io.IOException
 
@@ -10,47 +11,47 @@ import java.io.IOException
 // process, so a local socket is the only shared channel. NanoHTTPD (MIT) does
 // the HTTP framing, bound to 127.0.0.1 only (nothing on the network/LAN can
 // reach it). Every request needs the bearer token its engine got at launch;
-// the token names the calling agent (CallerAuth), and BridgeRouter decides
-// the rest.
+// the token names the calling agent, and BridgeEntry decides the rest (the
+// HTTP routes through BridgeRouter, MCP at /mcp).
 class BridgeServer private constructor(
   port: Int,
-  private val agents: AgentDirectory,
-  private val router: BridgeRouter,
-  private val onCall: (agentId: String) -> Unit,
+  agents: AgentDirectory,
+  router: BridgeRouter,
+  tools: List<McpTool>,
+  serverVersion: String,
+  onCall: (agentId: String) -> Unit,
 ) : NanoHTTPD("127.0.0.1", port) {
+  private val entry = BridgeEntry(agents, router, tools, serverVersion, onCall, ::countToolCall)
 
   override fun serve(session: IHTTPSession): Response {
-    val agent = CallerAuth.caller(session.headers["authorization"], agents)
-      ?: return respond(Reply.error(401, "unauthorized", "bad bearer token"))
-    onCall(agent.id)
     val method = session.method.name
-    val body = if (method == "POST") {
-      val declared = session.headers["content-length"]?.toLongOrNull() ?: 0L
-      if (declared > MAX_BODY) return respond(Reply.error(413, "too_large", "body over $MAX_BODY bytes"))
-      try {
-        val files = HashMap<String, String>()
-        session.parseBody(files)
-        files["postData"] ?: "{}"
-      } catch (e: Exception) {
-        return respond(Reply.badRequest("bad_json", e.message ?: "cannot read body"))
-      }
-    } else {
-      "{}"
-    }
+    val request = BridgeRequest(method, session.uri, session.headers) { readBody(session, method) }
     val reply = try {
-      router.handle(agent, method, session.uri, body)
+      entry.handle(request)
     } catch (e: Exception) {
       Log.w(TAG, "$method ${session.uri} failed", e)
       Reply.error(500, "internal", e.message ?: "bridge failure")
     }
-    countToolCall(session.uri, reply.status)
     return respond(reply)
+  }
+
+  private fun readBody(session: IHTTPSession, method: String): String {
+    if (method != "POST") return "{}"
+    val declared = session.headers["content-length"]?.toLongOrNull() ?: 0L
+    if (declared > MAX_BODY) throw BodyRefused(Reply.error(413, "too_large", "body over $MAX_BODY bytes"))
+    return try {
+      val files = HashMap<String, String>()
+      session.parseBody(files)
+      files["postData"] ?: "{}"
+    } catch (e: Exception) {
+      throw BodyRefused(Reply.badRequest("bad_json", e.message ?: "cannot read body"))
+    }
   }
 
   // Telemetry: one call per authorized request to a known route, whatever
   // its outcome (locked, busy, unavailable and failed calls are still
-  // calls). A 404 means the route does not exist in this build or for this
-  // method, so it is not a tool call.
+  // calls), over HTTP or MCP alike. A 404 means the route does not exist in
+  // this build or for this method, so it is not a tool call.
   private fun countToolCall(path: String, status: Int) {
     if (status == 404) return
     val name = Route.telemetryKey(path) ?: return
@@ -60,8 +61,13 @@ class BridgeServer private constructor(
     }
   }
 
-  private fun respond(reply: Reply): Response =
-    newFixedLengthResponse(HttpStatus(reply.status), "application/json; charset=utf-8", reply.body)
+  // An empty body (202, 405) goes out with no content type.
+  private fun respond(reply: Reply): Response {
+    val mime = if (reply.body.isEmpty()) null else "application/json; charset=utf-8"
+    val response = newFixedLengthResponse(HttpStatus(reply.status), mime, reply.body)
+    reply.headers.forEach { (name, value) -> response.addHeader(name, value) }
+    return response
+  }
 
   // Any code, not only the ones NanoHTTPD 2.3.1 names (it has no 413).
   private class HttpStatus(private val code: Int) : Response.IStatus {
@@ -75,8 +81,8 @@ class BridgeServer private constructor(
     private const val TIMEOUT_MS = 10_000
     private const val MAX_BODY = 256L * 1024
     private val REASONS = mapOf(
-      200 to "OK", 400 to "Bad Request", 401 to "Unauthorized", 403 to "Forbidden",
-      404 to "Not Found", 409 to "Conflict", 413 to "Payload Too Large",
+      200 to "OK", 202 to "Accepted", 400 to "Bad Request", 401 to "Unauthorized", 403 to "Forbidden",
+      404 to "Not Found", 405 to "Method Not Allowed", 409 to "Conflict", 413 to "Payload Too Large",
       500 to "Internal Server Error", 503 to "Service Unavailable",
     )
 
@@ -86,10 +92,12 @@ class BridgeServer private constructor(
       ports: List<Int>,
       agents: AgentDirectory,
       router: BridgeRouter,
+      tools: List<McpTool>,
+      serverVersion: String,
       onCall: (agentId: String) -> Unit,
     ): BridgeServer? {
       for (port in ports) {
-        val server = BridgeServer(port, agents, router, onCall)
+        val server = BridgeServer(port, agents, router, tools, serverVersion, onCall)
         try {
           server.start(TIMEOUT_MS, false)
           Log.i(TAG, "bridge on 127.0.0.1:${server.listeningPort}")

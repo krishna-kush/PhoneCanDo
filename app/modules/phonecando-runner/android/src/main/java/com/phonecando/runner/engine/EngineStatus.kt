@@ -44,6 +44,9 @@ enum class EngineStartError(val code: String) {
   ENGINE_MISSING("engine_missing"),
   PORT_UNAVAILABLE("port_unavailable"),
   START_FAILED("start_failed"),
+
+  /** The kind installs into the agent's image, and no install of it is recorded yet. */
+  AGENT_NOT_INSTALLED("agent_not_installed"),
 }
 
 /** A refused start: the message starts with the code, so JS can read it from either. */

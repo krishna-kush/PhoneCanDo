@@ -2,36 +2,53 @@ package com.phonecando.runner.engine
 
 import android.content.Context
 import android.util.Log
+import com.phonecando.agents.kit.manifest.EngineStyle
+import com.phonecando.agents.kit.render.ManifestKind
 import com.phonecando.runner.PathRedactor
 import com.phonecando.runner.TelemetryRecorder
-import com.phonecando.runner.agents.AgentKinds
 import com.phonecando.runner.agents.AgentStore
+import com.phonecando.runner.agents.install.InstallGate
+import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.bridge.Bridge
 import com.phonecando.runner.bridge.BridgeHandle
+import com.phonecando.runner.engine.events.KitFiles
+import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.proc.OsSignals
 import com.phonecando.runner.engine.proc.ProcessReaper
+import com.phonecando.runner.engine.ready.HttpReady
+import com.phonecando.runner.engine.ready.TuiReady
+import com.phonecando.runner.engine.spawn.TuiProcess
+import com.phonecando.runner.engine.tui.TerminalViewException
+import com.phonecando.runner.engine.tui.TerminalViewers
 import com.phonecando.runner.notify.AgentAlerts
 import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.ChatTracker
+import com.phonecando.runner.prompts.OpenUrlPrompts
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 // Runs the engines of several agents at once, keyed by agent id (one per
-// process, Engines.get). Start: take a seat (EnginePolicy: at most three,
-// else stop the least recently used idle one, else too_many_running), clear
-// out processes an earlier life of this agent left behind, read the image
-// and seed its HOME (EngineLauncher.plan), open the shared bridge, take a
-// port (PortAllocator) and spawn; the call returns once the process runs
-// and its port is known. EngineWatch then reports ready, a 401 (relaunch on
-// a fresh port), a boot timeout or a death; a dead engine is marked died
-// and its handle dropped, so the next start launches it again (nothing
-// restarts it by itself). Stop: SIGTERM the engine and every process tagged
-// with its agent id, wait up to 3 s, SIGKILL the rest (ProcessReaper);
-// stopping all does every agent within that one wait. The lock guards slot
-// state only: seeding, spawning and waiting run outside it, and `gen`
-// settles the races that leaves open. Blocking calls run off the main thread.
+// process, Engines.get). Start: refuse an agent whose kind installs into
+// its image while that install is not recorded (InstallGate), take a seat
+// (EnginePolicy: at most three, else stop the least recently used idle
+// one, else too_many_running), clear out processes an earlier life of this
+// agent left behind, read the image and seed its HOME
+// (EngineLauncher.plan), open the shared bridge, take a
+// port (PortAllocator; a server engine only) and spawn by the kind's engine
+// style; the call returns once the process runs (and a server's port is
+// known). EngineWatch then reports ready (the kind's ReadyProbe), a 401
+// (relaunch on a fresh port), a boot timeout or an exit; an engine that
+// dies is marked died and its handle dropped, so the next start launches it
+// again (nothing restarts it by itself); a TUI that exits 0 just stopped.
+// A TUI engine's terminal stays with its slot while it runs; viewers attach
+// to it through `terminals`. Stop: ask the engine to end (SIGTERM, or a
+// TUI's hang-up) and SIGTERM every process tagged with its agent id, wait
+// up to 3 s, SIGKILL the rest (ProcessReaper); stopping all does every
+// agent within that one wait. The lock guards slot state only: seeding,
+// spawning and waiting run outside it, and `gen` settles the races that
+// leaves open. Blocking calls run off the main thread.
 internal class EngineSupervisor(
   private val context: Context,
   private val store: AgentStore,
@@ -45,7 +62,16 @@ internal class EngineSupervisor(
   private val slots = ConcurrentHashMap<String, EngineSlot>()
   private var bridge: BridgeHandle? = null
   private val chats = ChatTracker { listener.onChats() }
-  private val streams = EngineStreams(::touch, AgentAlerts(context, store), chats)
+  private val streams = EngineStreams(
+    onActivity = ::onActivity,
+    alerts = AgentAlerts(context, store),
+    chats = chats,
+    openUrl = { agentId, url -> OpenUrlPrompts.raise(context, store, agentId, url) },
+    dropUrls = { agentId -> OpenUrlPrompts.end(context, agentId) },
+  )
+
+  /** The viewers of the TUI engines' terminals (the engineTerminal* functions). */
+  val terminals = TerminalViewers()
 
   // ---- reads (any thread) ------------------------------------------------
 
@@ -64,12 +90,16 @@ internal class EngineSupervisor(
   /** The chat on screen (by id, or a TUI's by title), left out of the notification; nulls for none. */
   fun setOpenChat(agentId: String?, sessionId: String?, title: String?) = chats.setOpen(agentId, sessionId, title)
 
-  /** The port of a starting or ready engine whose process runs; null otherwise. */
+  /** The port of a starting or ready server engine whose process runs; null otherwise. */
   fun livePort(agentId: String): Int? = lock.withLock {
-    val slot = slots[agentId] ?: return null
-    val running = slot.state == EngineState.STARTING || slot.state == EngineState.READY
-    if (running && slot.process?.isAlive == true) slot.port else null
+    slots[agentId]?.takeIf(::running)?.port
   }
+
+  /** Whether the agent's engine is starting or ready and its process runs, whatever its style. */
+  fun isLive(agentId: String): Boolean = lock.withLock { slots[agentId]?.let(::running) == true }
+
+  private fun running(slot: EngineSlot): Boolean =
+    (slot.state == EngineState.STARTING || slot.state == EngineState.READY) && slot.process?.isAlive == true
 
   fun anyLive(): Boolean = slots.values.any { it.state.live }
 
@@ -80,13 +110,36 @@ internal class EngineSupervisor(
     slots[agentId]?.lastUsedAt = System.currentTimeMillis()
   }
 
+  /** Whether the agent's engine may stop, by its kind's idle rule (ManifestKind.isIdle). */
+  fun isIdle(agentId: String, kind: ManifestKind): Boolean {
+    val slot = slots[agentId]
+    return kind.isIdle(slot?.lastEventAt, slot?.terminal?.lastOutputAt, System.currentTimeMillis())
+  }
+
+  /** A new viewer of the agent's TUI engine's terminal; throws not_running when it has none. */
+  fun attachTerminal(agentId: String): TerminalViewers.Attached {
+    val terminal = lock.withLock {
+      slots[agentId]?.takeIf { it.state == EngineState.STARTING || it.state == EngineState.READY }?.terminal
+    } ?: throw TerminalViewException(TerminalViewException.NOT_RUNNING, "the agent's engine is not a running TUI")
+    return terminals.attach(terminal)
+  }
+
+  // An engine event that is activity: the engine is used, and not idle.
+  private fun onActivity(agentId: String) {
+    val slot = slots[agentId] ?: return
+    val now = System.currentTimeMillis()
+    slot.lastUsedAt = now
+    slot.lastEventAt = now
+  }
+
   // ---- start -------------------------------------------------------------
 
-  /** The engine's port; throws EngineStartException. Blocks (seeding, a possible eviction). */
-  fun start(agentId: String, requestedAt: Long): Int {
+  /** A server engine's port, null for a TUI's; throws EngineStartException. Blocks (seeding, a possible eviction). */
+  fun start(agentId: String, requestedAt: Long): Int? {
     val record = store.get(agentId) ?: throw EngineStartException(EngineStartError.START_FAILED, "unknown agent")
-    val kind = AgentKinds.get(record.kind)
+    val kind = KindCatalogs.get(context).get(record.kind)
       ?: throw EngineStartException(EngineStartError.START_FAILED, "unknown agent kind ${record.kind}")
+    InstallGate.check(kind, record)
     val gen = when (val seat = takeSeat(agentId)) {
       is Seat.Running -> return seat.port
       is Seat.Taken -> seat.gen
@@ -98,21 +151,24 @@ internal class EngineSupervisor(
       reaper.stop(emptyList(), setOf(agentId))
       val plan = launcher.plan(record, kind, requestedAt)
       val bridgeUrl = ensureBridge()?.url
-      val alloc = ports.allocate(record.port?.toIntOrNull())
-      port = alloc.port
-      if (alloc.squatted) {
-        TelemetryRecorder.portSquat()
-        Log.w(TAG, "port ${record.port} taken, $agentId moves to ${alloc.port}")
+      if (kind.style == EngineStyle.SERVER) {
+        val alloc = ports.allocate(record.port?.toIntOrNull())
+        port = alloc.port
+        if (alloc.squatted) {
+          TelemetryRecorder.portSquat()
+          Log.w(TAG, "port ${record.port} taken, $agentId moves to ${alloc.port}")
+        }
       }
-      val proc = launcher.spawn(plan, alloc.port, bridgeUrl)
-      if (!adopt(agentId, gen, plan, proc, alloc.port)) {
+      val proc = launcher.spawn(plan, port, bridgeUrl)
+      if (!adopt(agentId, gen, plan, proc, port)) {
         reaper.stop(listOf(proc), setOf(agentId))
         throw EngineStartException(EngineStartError.START_FAILED, "stopped while starting")
       }
+      val started = port
       port = null // the slot owns it now
-      savePort(agentId, alloc.port)
-      Log.i(TAG, "engine $agentId started on ${alloc.port}")
-      return alloc.port
+      started?.let { savePort(agentId, it) }
+      Log.i(TAG, "engine $agentId started" + (started?.let { " on $it" } ?: ""))
+      return started
     } catch (e: Exception) {
       port?.let(ports::release)
       val failure = e as? EngineStartException
@@ -123,7 +179,7 @@ internal class EngineSupervisor(
   }
 
   private sealed class Seat {
-    data class Running(val port: Int) : Seat()
+    data class Running(val port: Int?) : Seat()
 
     data class Taken(val gen: Int) : Seat()
   }
@@ -137,14 +193,13 @@ internal class EngineSupervisor(
       lock.withLock {
         val slot = slots.getOrPut(agentId) { EngineSlot(agentId) }
         awaitSettled(slot)
-        val port = slot.port
-        if ((slot.state == EngineState.STARTING || slot.state == EngineState.READY) && port != null) {
+        if ((slot.state == EngineState.STARTING || slot.state == EngineState.READY) && slot.process != null) {
           slot.lastUsedAt = System.currentTimeMillis()
-          return Seat.Running(port)
+          return Seat.Running(slot.port)
         }
         val seats = slots.values
           .filter { it !== slot && (it.state == EngineState.STARTING || it.state == EngineState.READY) }
-          .map { EnginePolicy.Seat(it.agentId, it.lastUsedAt ?: 0L, it.state == EngineState.READY) }
+          .map { EnginePolicy.Seat(it.agentId, it.usedAt() ?: 0L, it.state == EngineState.READY) }
         when (val decision = EnginePolicy.admit(seats, System.currentTimeMillis())) {
           EnginePolicy.Admission.Admit -> {
             slot.state = EngineState.STARTING
@@ -152,8 +207,10 @@ internal class EngineSupervisor(
             slot.port = null
             slot.error = null
             slot.process = null
+            slot.terminal = null
             slot.squatRelaunches = 0
             slot.lastUsedAt = System.currentTimeMillis()
+            slot.lastEventAt = null
             started = slot.gen to slot.status()
           }
           is EnginePolicy.Admission.Evict -> evict = decision.agentId
@@ -175,10 +232,10 @@ internal class EngineSupervisor(
   }
 
   // Waits (lock held, released while waiting) while another call is
-  // stopping the engine or relaunching it on a fresh port.
+  // stopping the engine, launching it or relaunching it on a fresh port.
   private fun awaitSettled(slot: EngineSlot) {
     val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(SETTLE_WAIT_MS)
-    while (slot.state == EngineState.STOPPING || (slot.state == EngineState.STARTING && slot.port == null)) {
+    while (slot.state == EngineState.STOPPING || (slot.state == EngineState.STARTING && slot.process == null)) {
       val left = deadline - System.nanoTime()
       if (left <= 0) throw EngineStartException(EngineStartError.START_FAILED, "the engine is busy stopping")
       settled.awaitNanos(left)
@@ -186,13 +243,14 @@ internal class EngineSupervisor(
   }
 
   // The launched process becomes the slot's, unless a stop came in between.
-  private fun adopt(agentId: String, gen: Int, plan: LaunchPlan, proc: Process, port: Int): Boolean {
+  private fun adopt(agentId: String, gen: Int, plan: LaunchPlan, proc: EngineProcess, port: Int?): Boolean {
     val status = lock.withLock {
       val slot = slots[agentId] ?: return false
       if (slot.gen != gen || slot.state != EngineState.STARTING) return false
       slot.process = proc
       slot.port = port
       slot.plan = plan
+      slot.terminal = (proc as? TuiProcess)?.terminal
       slot.watch = watch(slot, proc, plan, port).also { it.start() }
       settled.signalAll()
       slot.status()
@@ -201,18 +259,30 @@ internal class EngineSupervisor(
     return true
   }
 
-  private fun watch(slot: EngineSlot, proc: Process, plan: LaunchPlan, port: Int) = EngineWatch(
-    agentId = slot.agentId,
-    process = proc,
-    healthProbe = plan.kind.healthProbe(port.toString(), plan.record.password),
-    logFile = plan.logFile,
-    requestedAt = plan.requestedAt,
-    secrets = { PathRedactor.agentSecrets(store.all()) },
-    onHealthy = { onHealthy(slot.agentId, proc) },
-    onSquatted = { onSquatted(slot.agentId, proc) },
-    onBootTimeout = { onBootTimeout(slot.agentId, proc) },
-    onUnexpectedExit = { code -> onDied(slot.agentId, proc, code) },
-  )
+  // A server is ready when its health probe answers; a TUI by its kind's
+  // readiness, and only an exit other than 0 is its death.
+  private fun watch(slot: EngineSlot, proc: EngineProcess, plan: LaunchPlan, port: Int?): EngineWatch {
+    val terminal = (proc as? TuiProcess)?.terminal
+    val dies = { status: Int -> terminal == null || status != 0 }
+    val ready = if (terminal != null) {
+      TuiReady.of(checkNotNull(plan.kind.tuiReadiness), { terminal.lastOutputAt }, System.currentTimeMillis())
+    } else {
+      HttpReady(plan.kind.healthProbe(checkNotNull(port).toString(), plan.record.password))
+    }
+    return EngineWatch(
+      agentId = slot.agentId,
+      process = proc,
+      ready = ready,
+      requestedAt = plan.requestedAt,
+      secrets = { PathRedactor.agentSecrets(store.all(), KindCatalogs.get(context)) },
+      isDeath = dies,
+      onReady = { onHealthy(slot.agentId, proc) },
+      onSquatted = { onSquatted(slot.agentId, proc) },
+      onBootTimeout = { timeoutMs -> onBootTimeout(slot.agentId, proc, timeoutMs) },
+      onBootExit = { status -> ResumeFallback.applies(plan, status) && relaunchWithoutResume(slot.agentId, proc, status) },
+      onUnexpectedExit = { status -> onExited(slot.agentId, proc, status, died = dies(status)) },
+    )
+  }
 
   private fun fail(agentId: String, gen: Int, e: EngineStartException) {
     val status = lock.withLock {
@@ -222,6 +292,7 @@ internal class EngineSupervisor(
       slot.error = e.message
       slot.port = null
       slot.process = null
+      slot.terminal = null
       settled.signalAll()
       slot.status()
     }
@@ -252,9 +323,18 @@ internal class EngineSupervisor(
     }
   }
 
+  // Its next launch resumes (the kind's engine.resume).
+  private fun markRan(agentId: String) {
+    try {
+      store.markRan(agentId)
+    } catch (e: Exception) {
+      Log.w(TAG, "first run not saved for $agentId", e)
+    }
+  }
+
   // ---- watch callbacks (watch threads) ----------------------------------
 
-  private fun onHealthy(agentId: String, proc: Process) {
+  private fun onHealthy(agentId: String, proc: EngineProcess) {
     val status = lock.withLock {
       val slot = slots[agentId] ?: return
       if (slot.process !== proc || slot.state != EngineState.STARTING) return
@@ -262,13 +342,14 @@ internal class EngineSupervisor(
       openStream(slot)
       slot.status()
     }
+    markRan(agentId)
     emit(status)
   }
 
   // Another engine answered on our port, so ours never bound it: relaunch
   // on an OS-assigned port, a couple of times at most. While the port is
   // unknown the slot stays starting with no port, so a start waits for it.
-  private fun onSquatted(agentId: String, proc: Process) {
+  private fun onSquatted(agentId: String, proc: EngineProcess) {
     val plan: LaunchPlan
     val oldPort: Int
     val gen: Int
@@ -311,24 +392,52 @@ internal class EngineSupervisor(
     }
   }
 
-  private fun onBootTimeout(agentId: String, proc: Process) {
-    if (lock.withLock { slots[agentId]?.process !== proc }) return
-    terminate(setOf(agentId), EngineState.FAILED, "not ready after ${EngineWatch.BOOT_TIMEOUT_MS / 1000} s")
+  // Its resume args may have found nothing to resume (ResumeFallback): the
+  // same start, once more without them. False when the start is no longer
+  // this one (stopped meanwhile), so the exit counts as it would have.
+  private fun relaunchWithoutResume(agentId: String, proc: EngineProcess, status: Int): Boolean {
+    val plan: LaunchPlan
+    val gen: Int
+    lock.withLock {
+      val slot = slots[agentId] ?: return false
+      if (slot.process !== proc || slot.state != EngineState.STARTING) return false
+      plan = ResumeFallback.without(slot.plan ?: return false)
+      gen = slot.gen
+      slot.process = null
+      slot.watch = null
+      slot.terminal = null
+    }
+    Log.w(TAG, "engine $agentId exited with $status before it was ready, resuming; launching it again without its resume args")
+    reaper.stop(listOf(proc), setOf(agentId))
+    try {
+      val next = launcher.spawn(plan, null, ensureBridge()?.url, counted = false)
+      if (!adopt(agentId, gen, plan, next, null)) reaper.stop(listOf(next), setOf(agentId))
+    } catch (e: Exception) {
+      fail(agentId, gen, e as? EngineStartException ?: EngineStartException(EngineStartError.START_FAILED, e.message ?: "relaunch failed"))
+    }
+    return true
   }
 
-  private fun onDied(agentId: String, proc: Process, code: Int) {
+  private fun onBootTimeout(agentId: String, proc: EngineProcess, timeoutMs: Long) {
+    if (lock.withLock { slots[agentId]?.process !== proc }) return
+    terminate(setOf(agentId), EngineState.FAILED, "not ready after ${timeoutMs / 1000} s")
+  }
+
+  // An exit nobody asked for: died, or (a TUI that exited 0) stopped.
+  private fun onExited(agentId: String, proc: EngineProcess, code: Int, died: Boolean) {
     val status = lock.withLock {
       val slot = slots[agentId] ?: return
       // A stop that is under way settles the slot itself.
       if (slot.process !== proc || slot.state == EngineState.STOPPING) return
       slot.watch = null
-      slot.sse?.stop()
-      slot.sse = null
+      slot.events?.stop()
+      slot.events = null
       slot.process = null
+      slot.terminal = null
       slot.port?.let(ports::release)
       slot.port = null
-      slot.state = EngineState.DIED
-      slot.error = "exited with code $code"
+      slot.state = if (died) EngineState.DIED else EngineState.STOPPED
+      slot.error = if (died) "exited with code $code" else null
       settled.signalAll()
       slot.status()
     }
@@ -363,7 +472,7 @@ internal class EngineSupervisor(
 
   // agentIds null: all agents, and processes tagged with any agent id.
   private fun terminate(agentIds: Set<String>?, final: EngineState, error: String?) {
-    val engines = ArrayList<Process>()
+    val engines = ArrayList<EngineProcess>()
     val ending = ArrayList<Pair<EngineSlot, Int>>()
     val others = ArrayList<EngineSlot>()
     val stopping = ArrayList<EngineStatus>()
@@ -378,8 +487,8 @@ internal class EngineSupervisor(
             // Before the signals: the exit that follows was asked for.
             slot.watch?.markStopping()
             slot.watch = null
-            slot.sse?.stop()
-            slot.sse = null
+            slot.events?.stop()
+            slot.events = null
             slot.process?.let(engines::add)
             ending += slot to slot.gen
             stopping += slot.status()
@@ -396,6 +505,7 @@ internal class EngineSupervisor(
       for ((slot, gen) in ending) {
         if (slot.gen != gen || slot.state != EngineState.STOPPING) continue
         slot.process = null
+        slot.terminal = null
         slot.port?.let(ports::release)
         slot.port = null
         slot.state = final
@@ -437,11 +547,15 @@ internal class EngineSupervisor(
   // ---- event streams ---------------------------------------------------------
 
   private fun openStream(slot: EngineSlot) {
-    if (slot.sse != null) return
+    if (slot.events != null) return
     val plan = slot.plan ?: return
-    val port = slot.port ?: return
-    slot.sse = try {
-      streams.open(slot.agentId, plan.kind, port, plan.record.password)
+    val terminal = slot.terminal
+    slot.events = try {
+      if (terminal != null) {
+        streams.openTui(slot.agentId, plan.kind, terminal, KitFiles.events(plan.home))
+      } else {
+        streams.open(slot.agentId, plan.kind, slot.port ?: return, plan.record.password)
+      }
     } catch (e: Exception) {
       Log.w(TAG, "event stream start failed", e)
       null

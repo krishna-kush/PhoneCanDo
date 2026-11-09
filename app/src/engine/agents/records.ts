@@ -1,10 +1,10 @@
 // Agent instances and their engines (contract for several agents at once).
 // An agent is one running instance of a kind with its own name, image, port,
-// password and bridge token. Port, password and token stay native; JS gets
-// an engine's address and password only through the engine seam when it
-// needs to talk to it.
+// password and bridge token. Port, password and token stay native: the
+// runner makes every request to an engine, and the TUI's start recipe
+// carries the password through JS to the PTY without JS keeping it.
 import type { ImageId } from '../linux/types';
-import type { AgentKindId } from './types';
+import type { AgentKindId } from './registry';
 
 export type AgentId = string;
 
@@ -15,6 +15,10 @@ export type Agent = {
   /** The image this agent is attached to; created and deleted with it. */
   imageId: ImageId;
   createdAt: number;
+  /** The version its last install or update recorded; null before one finished. */
+  installedVersion: string | null;
+  /** Its kind has an install and none finished yet: its engine refuses to start (agent_not_installed). */
+  needsInstall: boolean;
 };
 
 export type EngineState = 'stopped' | 'starting' | 'ready' | 'stopping' | 'died' | 'failed';
@@ -36,4 +40,6 @@ export type EngineStartError =
   | 'image_not_ready'
   | 'engine_missing'
   | 'port_unavailable'
-  | 'start_failed';
+  | 'start_failed'
+  /** Its kind has an install and none finished yet (installAgent). */
+  | 'agent_not_installed';

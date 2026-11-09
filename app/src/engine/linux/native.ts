@@ -10,6 +10,11 @@
 // re-read listEnvs() / listImages(). On a job's end the records are written
 // first, then the changed event, then the final progress event.
 //
+// A guest script (runGuestScript) is such a job on its image: its events
+// also carry `phase`, `retry`, `tail` and its activity (`elapsedSec`,
+// `downloadedBytes`, `rateBytesPerSec`), about once a second even while it
+// prints nothing; its last one `ok` and `exitCode`.
+//
 // A rejection is a LinuxError: `code` is the stable code, `message` the
 // native line. A failed record's or final event's `error` is one line with
 // the code first (`no_space: needs 812 MB, 90 MB free`), next to `errorCode`.
@@ -18,11 +23,14 @@ import type {
   CatalogImage,
   Env,
   EnvId,
+  GuestCommandResult,
+  GuestScriptOptions,
   Image,
   ImageId,
   LinuxErrorCode,
   LinuxJob,
   LinuxProgress,
+  MissingTools,
   ReinstallList,
   TagPage,
   TerminalRecipe,
@@ -46,7 +54,10 @@ type LinuxModule = {
   resetImage(imageId: ImageId): Promise<LinuxJob>;
   deleteImage(imageId: ImageId): Promise<null>;
   imageSize(imageId: ImageId): Promise<number>;
-  prepareImageForStart(imageId: ImageId): Promise<null>;
+  prepareImageForStart(imageId: ImageId, guestUnset: string[]): Promise<null>;
+  checkTools(imageId: ImageId, commands: string[]): Promise<MissingTools>;
+  runGuestScript(imageId: ImageId, script: string, opts: GuestScriptOptions): Promise<LinuxJob>;
+  runGuestCommand(imageId: ImageId, argv: string[], timeoutSec: number): Promise<GuestCommandResult>;
   reinstallList(imageId: ImageId): ReinstallList | null;
   clearReinstallList(imageId: ImageId): void;
   terminalRecipe(imageId: ImageId): TerminalRecipe;
@@ -74,6 +85,8 @@ const CODES: ReadonlySet<string> = new Set<LinuxErrorCode>([
   'linux_unavailable',
   'env_in_use',
   'busy',
+  'command_failed',
+  'timed_out',
   'internal',
 ]);
 
@@ -229,12 +242,51 @@ export function imageSize(imageId: ImageId): Promise<number> {
   return load() ? callAsync((m) => m.imageSize(imageId)) : Promise.resolve(0);
 }
 
-/** Await before EVERY engine start and terminal on this image (then the runner's startEngine,
-    or terminalRecipe): rewrites what depends on the phone and the APK's lib dir, finishes a
-    cut-short reset. Cheap when nothing changed; runs off the JS thread. Rejects `busy` while a
-    job runs on the image, `not_found` when its setup failed, `linux_unavailable` on play. */
-export async function prepareImageForStart(imageId: ImageId): Promise<void> {
-  await callAsync((m) => m.prepareImageForStart(imageId));
+/** Await before EVERY engine start, terminal and guest program on this image (then the runner's
+    startEngine, terminalRecipe, runGuestScript or runGuestCommand): rewrites what depends on the
+    phone and the APK's lib dir, finishes a cut-short reset. `guestUnset` names the variables (a
+    trailing `*` for a prefix) the image's agent holds as secrets: no guest command inherits them,
+    nor any `LD_*`, until the next prepare. Cheap when nothing changed; runs off the JS thread.
+    Rejects `busy` while a create or reset runs on the image (a guest script does not block it),
+    `not_found` when its setup failed, `unsafe_entry` for a name that is not a variable name,
+    `linux_unavailable` on play. */
+export async function prepareImageForStart(imageId: ImageId, guestUnset: readonly string[]): Promise<void> {
+  await callAsync((m) => m.prepareImageForStart(imageId, [...guestUnset]));
+}
+
+/** Which of `commands` (an agent's tools, e.g. `rg`) the image's guest PATH lacks, and the line
+    that installs them; nothing for an image with no Linux. Cheap file checks. Rejects `busy`
+    unless the image is ready, `unsafe_entry` for a command that is not a plain name. */
+export function checkTools(imageId: ImageId, commands: readonly string[]): Promise<MissingTools> {
+  return callAsync((m) => m.checkTools(imageId, [...commands]));
+}
+
+/** Starts a POSIX sh script in the image (`sh -s`, the script on stdin, HOME=/root) as a job on
+    it; await prepareImageForStart first. Its LinuxProgress events (step `script`) carry the
+    phase its `@phase <name>` lines name, the retry its `@retry <phase> <n>/<max>` lines announce
+    (until the next phase), its last 20 other lines, redacted, and its time and bytes received so
+    far, about once a second even while it prints nothing; it logs to the image's
+    logs/install.log. The last event has `ok` and `exitCode`: it fails `command_failed` on a
+    non-zero exit, `timed_out` past `timeoutSec`, `cancelled` on cancelJob. What it leaves
+    running is stopped when it ends. Meanwhile a reset, a retry or a second script is refused
+    (`busy`) and a delete cancels it; an engine start, a terminal and a guest command still go
+    ahead. Rejects at once `busy` while a create, reset or script runs on the image, `not_found`
+    for an image with no Linux. */
+export function runGuestScript(imageId: ImageId, script: string, opts: GuestScriptOptions): Promise<LinuxJob> {
+  return callAsync((m) => m.runGuestScript(imageId, script, { timeoutSec: opts.timeoutSec, label: opts.label }));
+}
+
+/** Runs one program in the image (`argv[0]` a guest command, looked up on the guest PATH, or a
+    path) with HOME=/root, and resolves with its exit code (non-zero too) and the first 64 KiB
+    of its stdout (stderr is dropped); await prepareImageForStart first. What it leaves running is
+    stopped when it ends. Rejects `timed_out` past `timeoutSec`, `busy` while a create or reset
+    runs on the image, `not_found` for an image with no Linux. */
+export function runGuestCommand(
+  imageId: ImageId,
+  argv: readonly string[],
+  timeoutSec: number,
+): Promise<GuestCommandResult> {
+  return callAsync((m) => m.runGuestCommand(imageId, [...argv], timeoutSec));
 }
 
 /** The packages a reset found installed by hand, to offer reinstalling; null when none. */
