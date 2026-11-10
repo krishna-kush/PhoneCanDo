@@ -59,13 +59,28 @@ class SignalScannerTest {
     assertEquals(listOf(Signal.Bell), scan("\u001b]0;" + "x".repeat(5000) + "\u0007\u0007"))
   }
 
+  @Test fun programStatusReportsAndTheQuery() {
+    assertEquals(listOf(Signal.Status("state=blocked:kind=auth")), scan("\u001b]7501;kind=auth:state=blocked\u001b\\"))
+    assertEquals(listOf(Signal.Status("state=idle")), scan("\u001b]7501;state=idle\u0007"))
+    assertEquals(listOf(Signal.StatusQuery(bel = false)), scan("\u001b]7501;?\u001b\\"))
+    assertEquals(listOf(Signal.StatusQuery(bel = true)), scan("\u001b]7501;?\u0007"))
+    // Reports the spec drops say nothing; so does a query with more in it.
+    assertEquals(emptyList(), scan("\u001b]7501;state=paused\u0007\u001b]7501;app=x\u0007\u001b]7501;?x\u0007\u001b]7501\u0007"))
+    // The whole sequence, ESC ] through ST, is at most 4096 bytes.
+    val fits = "state=done:x=" + "a".repeat(4096 - 9 - 13)
+    assertEquals(listOf(Signal.Status("state=done")), scan("\u001b]7501;$fits\u001b\\"))
+    assertEquals(emptyList(), scan("\u001b]7501;${fits}a\u001b\\"))
+    assertEquals(listOf(Signal.Status("state=done")), scan("\u001b]7501;${fits}a\u0007"))
+  }
+
   @Test fun anEscEndsAnOscAndStartsTheNextSequence() {
     assertEquals(listOf(Signal.Title("t"), Signal.Reset), scan("\u001b]0;t\u001bc"))
   }
 
   @Test fun sequencesSplitAnywhere() {
     assertSplitSafe(
-      "é\u001b]0;Tîtle\u001b\\x\u0007\u001b[?1049h\u001b]9;4;3\u0007\u001b[2J\u001b]777;notify;a;b\u0007",
+      "é\u001b]0;Tîtle\u001b\\x\u0007\u001b[?1049h\u001b]9;4;3\u0007\u001b[2J\u001b]777;notify;a;b\u0007" +
+        "\u001b]7501;?\u001b\\\u001b]7501;state=working\u0007",
       listOf(
         Signal.Title("Tîtle"),
         Signal.Bell,
@@ -74,6 +89,8 @@ class SignalScannerTest {
         Signal.Progress("3"),
         Signal.FullClear,
         Signal.Osc777("a;b"),
+        Signal.StatusQuery(bel = false),
+        Signal.Status("state=working"),
       ),
     )
   }

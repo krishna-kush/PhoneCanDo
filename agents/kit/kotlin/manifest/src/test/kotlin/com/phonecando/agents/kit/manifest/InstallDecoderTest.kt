@@ -70,7 +70,7 @@ class InstallDecoderTest {
     assertEquals("/update/steps: is required", problem(""""update":{}"""))
     assertEquals("/versionCheck/pattern: is required", problem(""""versionCheck":{"argv":["x"]}"""))
     assertEquals(
-      "/events/0/hook/map/Stop: must be one of working, waiting, finished, failed, not done",
+      "/events/0/hook/map/Stop: must be one of working, waiting, finished, failed, stopped, not done",
       problem(""""events":[{"hook":{"map":{"Stop":"done"}}}]"""),
     )
     assertEquals("/events/0/hook/map: is required", problem(""""events":[{"hook":{}}]"""))

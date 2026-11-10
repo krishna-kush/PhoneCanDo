@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "id": "python",
+  "label": "Python (uv)",
+  "provides": 3,
+  "families": ["apt", "dnf", "microdnf", "yum", "pacman", "zypper", "apk", "xbps"],
+  "install": { "*": "install/uv.sh" },
+  "paths": ["{{home}}/.local/opt/python/bin"],
+  "check": { "argv": ["uv", "python", "find", "3.12"], "pattern": "python(\\d+)\\.\\d+" },
+  "licence": { "spdx": "MIT OR Apache-2.0", "source": "https://github.com/astral-sh/uv" }
+}

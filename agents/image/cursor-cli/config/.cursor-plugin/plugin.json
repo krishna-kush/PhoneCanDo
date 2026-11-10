@@ -1,0 +1,6 @@
+{
+  "name": "phonecando",
+  "description": "PhoneCanDo: the phone's tools over MCP, and run alerts through hooks",
+  "version": "1.0.0",
+  "author": { "name": "PhoneCanDo" }
+}

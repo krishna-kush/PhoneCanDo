@@ -17,12 +17,15 @@
 //   - every runtime a kind needs exists and provides the major version it
 //     needs; the families the kind names are ones each of its runtimes
 //     installs on, at least one family is left that they all do, and its
-//     packages are keyed by those (or `*`).
+//     packages are keyed by those (or `*`);
+//   - a kind has a one-shot.json (one-shot.ts) exactly when it has a models
+//     block.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseRuntimeNeed } from '../ts/manifest/install.ts';
 import { ANY_FAMILY, FAMILIES, PATTERNS } from '../ts/manifest/rules.ts';
+import { ONE_SHOT_FILE, validateOneShot } from '../ts/manifest/one-shot.ts';
 import { validateRuntime } from '../ts/manifest/runtime-plugin.ts';
 import { validate } from '../ts/manifest/validate.ts';
 
@@ -114,6 +117,8 @@ function loadOne(root, folder, name, dir, problems) {
 
   if (manifest.id !== name) add('/id', 'folder-name', `id ${manifest.id} sits in folder ${name}`);
   if (manifest.type !== folder) add('/type', 'folder-type', `a ${manifest.type} kind sits under agents/${folder}/`);
+  // A missing phoneTools means no bridge (BridgeAccess); a kind we ship says so.
+  if (!('phoneTools' in manifest)) add('/phoneTools', 'missing', 'a kind we ship names phoneTools (none for no bridge)');
   const has = (path, rel, kind) => {
     const target = join(dir, rel);
     const ok = existsSync(target) && (kind === 'dir' ? statSync(target).isDirectory() : statSync(target).isFile());
@@ -137,7 +142,30 @@ function loadOne(root, folder, name, dir, problems) {
       if (loaded) parts.push(loaded);
     }
   }
+  checkOneShot(manifest, folder, name, dir, problems);
   return { id: manifest.id, type: manifest.type, dir, manifest, parts };
+}
+
+// A models block is offered on the phone only once CI's local-model check
+// runs the kind's one-shot mode with it, so the two come together.
+function checkOneShot(manifest, folder, name, dir, problems) {
+  const file = `agents/${folder}/${name}/${ONE_SHOT_FILE}`;
+  const add = (path, code, detail) => problems.push({ file, path, code, detail });
+  if (!existsSync(join(dir, ONE_SHOT_FILE))) {
+    if (manifest.models) {
+      problems.push({
+        file: `agents/${folder}/${name}/agent.json`,
+        path: '/models',
+        code: 'missing',
+        detail: `a kind with a models block needs ${ONE_SHOT_FILE}: the local-model check runs it`,
+      });
+    }
+    return;
+  }
+  if (!manifest.models) add('', 'unused', `${ONE_SHOT_FILE} is for the local-model check, and the kind has no models block`);
+  const json = readJson(join(dir, ONE_SHOT_FILE), file, add);
+  if (json === undefined) return;
+  for (const p of validateOneShot(json, manifest).problems) add(p.path, p.code, p.detail);
 }
 
 function loadPart(root, name, add) {

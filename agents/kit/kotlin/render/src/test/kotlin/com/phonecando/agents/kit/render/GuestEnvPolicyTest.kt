@@ -14,8 +14,11 @@ class GuestEnvPolicyTest {
 
   @Test fun aNativeKindsImageLosesTheBridgeAndItsSecrets() {
     val opencode = ManifestDecoder.decode(File(fixtures, "valid/opencode.json").readText())
-    // What lre's LaunchConf unset by hand before (besides LD_*).
-    assertEquals(listOf("PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "OPENCODE_SERVER_PASSWORD"), GuestEnvPolicy.unset(opencode))
+    // The bridge, the engine password and a local model's key (besides LD_*).
+    assertEquals(
+      listOf("PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "OPENCODE_SERVER_PASSWORD", "LOCAL_MODEL_KEY"),
+      GuestEnvPolicy.unset(opencode),
+    )
   }
 
   @Test fun anImageKindKeepsEverything() {

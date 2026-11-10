@@ -2,10 +2,11 @@
 // origin. A native kind is ours, in the APK, outside proot. An image kind
 // runs in the agent's Linux image, so it needs Linux, and its program is a
 // guest command. A user-added kind is an image kind with a TUI the user
-// describes: no code hooks, nothing packaged in the APK, no web UI.
+// describes: no code hooks, nothing packaged in the APK, no web UI, no PATH
+// of its own, and install and update steps of at most 32 KiB each.
 import { checkRuntimeNeeds } from './install.ts';
-import { fields, isObject, list, oneOf, string, type Add, type Json } from './primitives.ts';
-import { CONFIG_NEEDS_DIR, LINUX_NEEDS, MAX, PATTERNS } from './rules.ts';
+import { fields, isObject, list, oneOf, string, utf8Length, type Add, type Json } from './primitives.ts';
+import { CONFIG_NEEDS_DIR, LINUX_NEEDS, MAX, MAX_USER_SCRIPT_BYTES, PATTERNS, USER_RESERVED_ENV } from './rules.ts';
 
 const NATIVE_ONLY = ['prefix', 'payload', 'build'];
 const IMAGE_ONLY = ['install', 'update', 'versionCheck'];
@@ -76,5 +77,18 @@ export function checkUser(add: Add, m: Json) {
   if (isObject(m.surfaces)) {
     if ('web' in m.surfaces) add('/surfaces/web', 'forbidden', 'a user-added kind has no web surface');
     if (m.surfaces.home === 'web') add('/surfaces/home', 'forbidden', 'a user-added kind has no web home');
+  }
+  const launch = isObject(m.engine) && isObject(m.engine.launch) ? m.engine.launch : null;
+  if (launch && isObject(launch.env)) {
+    for (const name of Object.keys(launch.env)) {
+      if (USER_RESERVED_ENV.includes(name)) add(`/engine/launch/env/${name}`, 'reserved', `${name} is the host's to set`);
+    }
+  }
+  for (const block of ['install', 'update']) {
+    const steps = isObject(m[block]) ? (m[block] as Json).steps : undefined;
+    if (!Array.isArray(steps) || !steps.every((s) => typeof s === 'string')) continue;
+    if (utf8Length(steps.join('\n')) > MAX_USER_SCRIPT_BYTES) {
+      add(`/${block}/steps`, 'too-large', `a user-added kind's ${block} steps are at most ${MAX_USER_SCRIPT_BYTES / 1024} KiB`);
+    }
   }
 }

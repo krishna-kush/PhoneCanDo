@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "phonecando": {
+      "url": "${env:PHONECANDO_BRIDGE_URL}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:PHONECANDO_BRIDGE_TOKEN}"
+      }
+    }
+  }
+}

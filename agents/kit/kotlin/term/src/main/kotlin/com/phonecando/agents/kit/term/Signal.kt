@@ -17,6 +17,12 @@ sealed interface Signal {
   /** OSC 777;notify: [text] follows `777;notify;` (title;body). */
   data class Osc777(val text: String) : Signal
 
+  /** OSC 7501, a Program Status Protocol report the spec keeps: [text] is the report as ProgramStatus.parse words it. */
+  data class Status(val text: String) : Signal
+
+  /** OSC 7501 ; ? : the program asks whether the terminal speaks that protocol; [bel] when the query ended with BEL. */
+  data class StatusQuery(val bel: Boolean) : Signal
+
   /** CSI 2 J: the whole screen erased. */
   data object FullClear : Signal
 

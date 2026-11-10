@@ -10,8 +10,8 @@ When you add a Gemini CLI agent, the app installs the unmodified
 `@google/gemini-cli` package from the npm registry
 (`npm install -g --prefix "$HOME/.local" @google/gemini-cli@latest`)
 inside that agent's Linux machine, at your request, after installing
-Node.js from nodejs.org (or the image's own packages; see
-`agents/runtimes/node/`). We never patch, wrap or repackage it. The one
+Node.js (see `agents/runtimes/node/`). We never patch, wrap or repackage
+it. The one
 file of ours it reads is `config/settings.json`, which we seed beside it
 as its system settings (`GEMINI_CLI_SYSTEM_SETTINGS_PATH`): our phone
 tools as an MCP server, our event hooks and auto-update off.

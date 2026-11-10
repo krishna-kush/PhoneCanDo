@@ -2,6 +2,7 @@ package com.phonecando.agents.kit.render
 
 import com.phonecando.agents.kit.LaunchContext
 import com.phonecando.agents.kit.LaunchSpec
+import com.phonecando.agents.kit.ProjectDir
 import com.phonecando.agents.kit.manifest.Command
 import com.phonecando.agents.kit.manifest.Resume
 
@@ -24,9 +25,11 @@ data class ClientRecipe(val cmd: List<String>, val env: Map<String, String>, val
 
 // A manifest command rendered for one launch. The engine gets only the
 // kind's argv, env and cwd here; the host layers that env over the image's.
-// A server engine runs in HOME whatever its `cwd`; a TUI engine in its `cwd`,
-// where {{projectDir}} is HOME. An engine with no port (a TUI) has no
-// {{port}} or {{serverUrl}}. When the agent ran before, the resume args go in
+// An engine runs in its `cwd`, HOME when it names none; {{projectDir}} is
+// the work folder in HOME (ProjectDir), which the host makes before a
+// launch. An engine with no port (a TUI) has no
+// {{port}} or {{serverUrl}}; {{bridgeUrl}} is empty for a kind with no
+// bridge, so a `when` item drops its args. When the agent ran before, the resume args go in
 // at their index, or at the end. The TUI client's env starts with what any
 // terminal program needs from us, then the kind's: HOME and TMPDIR are the
 // image HOME (as the client always had), TERM and COLORTERM say what our
@@ -37,8 +40,9 @@ object LaunchRenderer {
       put("libDir", ctx.libDir)
       put("home", ctx.home.path)
       put("tmp", ctx.tmp.path)
-      put("projectDir", ctx.home.path)
+      put("projectDir", ProjectDir.of(ctx.home).path)
       put("password", ctx.password)
+      put("bridgeUrl", ctx.bridgeUrl)
       if (ctx.port.isNotEmpty()) {
         put("port", ctx.port)
         put("serverUrl", EngineUrl.base(ctx.port))

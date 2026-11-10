@@ -11,7 +11,11 @@ import com.phonecando.agents.kit.manifest.ArgvItem
 // placeholder's value is non-empty.
 object Templates {
   /** Every placeholder a manifest may use. */
-  val KNOWN = setOf("libDir", "home", "tmp", "port", "serverUrl", "password", "projectDir", "sessionId", "code")
+  val KNOWN = setOf(
+    "libDir", "home", "tmp", "port", "serverUrl", "bridgeUrl", "password", "projectDir", "sessionId", "code",
+    // A local model's (ModelSeam), in a kind's `models` block only.
+    "baseUrl", "model", "contextWindow", "modelKey",
+  )
 
   private val PLACEHOLDER = Regex("""\{\{([^{}]*)\}\}""")
 

@@ -6,7 +6,7 @@ the kit for writing one.
 | Type | Where it runs | How it gets there | Today |
 |---|---|---|---|
 | `native/<id>/` | outside proot, from the APK's lib dir (fast) | built by us for Android (bionic) from pinned sources, shipped in the APK | opencode |
-| `image/<id>/` | inside the machine's Linux image (proot) | installed from the vendor's official source when the machine is made | claude-code, gemini-cli |
+| `image/<id>/` | inside the machine's Linux image (proot) | installed from the vendor's official source when the machine is made | aider, claude-code, cline, codex, copilot-cli, crush, cursor-cli, gemini-cli, goose, kimi-code, mistral-vibe, pi, qwen-code |
 
 ## Add a kind
 

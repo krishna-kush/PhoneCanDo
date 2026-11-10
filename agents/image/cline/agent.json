@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "id": "cline",
+  "label": "Cline",
+  "version": "1",
+  "type": "image",
+  "channels": ["full", "lite"],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "terms": "https://cline.bot/tos",
+    "source": "https://github.com/cline/cline"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": ["bash", "git", "rg"],
+    "runtimes": ["node>=22"]
+  },
+  "install": {
+    "families": ["apt", "dnf", "pacman", "zypper"],
+    "packages": {
+      "apt": ["bash", "ca-certificates", "git", "ripgrep"],
+      "dnf": ["bash", "ca-certificates", "git", "ripgrep"],
+      "pacman": ["bash", "ca-certificates", "git", "ripgrep"],
+      "zypper": ["bash", "ca-certificates", "git", "ripgrep"]
+    },
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" cline@latest"
+    ],
+    "timeoutSec": 1800
+  },
+  "update": {
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" cline@latest"
+    ]
+  },
+  "versionCheck": {
+    "argv": ["/root/.local/bin/cline", "--version"],
+    "pattern": "(\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": ["/root/.local/bin/cline"],
+      "env": {
+        "CLINE_NO_AUTO_UPDATE": "1"
+      },
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } }
+  },
+  "idle": { "from": ["output"], "quietSec": 120 },
+  "surfaces": {
+    "home": "tui",
+    "terminal": { "shell": true },
+    "chatTitle": "^(?!Cline$)(?:> )?(.+)$"
+  },
+  "phoneTools": "none",
+  "signIn": [
+    { "method": "device-code", "note": "Pick \"Sign in with Cline\" on first start: it shows a code and authkit.cline.bot/device; open that page and enter the code." },
+    { "method": "api-key", "note": "Or pick \"Bring your own provider\" and paste an API key (or run cline auth in this machine's terminal)." }
+  ]
+}

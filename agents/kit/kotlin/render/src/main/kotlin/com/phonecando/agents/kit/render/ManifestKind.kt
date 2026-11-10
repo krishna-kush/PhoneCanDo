@@ -78,12 +78,12 @@ class ManifestKind private constructor(
   private val auth = manifest.engine?.auth
 
   override fun launch(ctx: LaunchContext): LaunchSpec {
-    if (manifest.type != TYPE_IMAGE) return LaunchRenderer.engine(launchCommand, ctx, manifest.engine?.resume)
+    if (manifest.type != TYPE_IMAGE) return withModel(LaunchRenderer.engine(launchCommand, ctx, manifest.engine?.resume), ctx)
     // Everything the program sees is the guest's: {{home}}, {{tmp}} and
     // {{projectDir}}, its runtimes' paths, HOME, TMPDIR and its cwd, which
     // the image's sh enters (ImageLaunch); the process starts in HOME.
     val guest = ctx.copy(home = File(ImageLaunch.GUEST_HOME), tmp = File(ImageLaunch.GUEST_TMP))
-    val spec = LaunchRenderer.engine(launchCommand, guest, manifest.engine?.resume)
+    val spec = withModel(LaunchRenderer.engine(launchCommand, guest, manifest.engine?.resume), ctx)
     val image = ctx.image ?: throw KindException("$id: an image kind runs in its image, and none was given")
     val paths = RuntimeBinding.paths(runtimes, ImageLaunch.GUEST_HOME)
     return LaunchSpec(
@@ -91,6 +91,18 @@ class ManifestKind private constructor(
       env = spec.env + ImageLaunch.GUEST_DIRS,
       cwd = null,
     )
+  }
+
+  /** The API this kind would use a model server serving [served] with; null: it can use none. */
+  fun modelApi(served: List<String>): String? = ModelSeam.pick(manifest.models, served)?.api
+
+  // The agent's local model, wired as the kind's `models` says; the host
+  // checks modelApi first, so a kind that cannot take it never gets here.
+  private fun withModel(spec: LaunchSpec, ctx: LaunchContext): LaunchSpec {
+    val model = ctx.model ?: return spec
+    val wiring = ModelSeam.pick(manifest.models, model.apis)
+      ?: throw KindException("$id takes no model over ${model.apis.joinToString()}")
+    return ModelSeam.apply(spec, wiring, model)
   }
 
   /**

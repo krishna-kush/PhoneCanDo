@@ -1,0 +1,1 @@
+{ "argv": ["/root/.local/bin/codex", "exec", "--skip-git-repo-check", "{{prompt}}"] }

@@ -3,12 +3,13 @@ package com.phonecando.agents.kit.term
 import java.io.ByteArrayOutputStream
 
 // A terminal program's output, byte by byte, to the Signals in it: bells,
-// window titles, OSC 9 / 9;4 / 777 notices, full clears, resets and DEC
-// private modes (the alternate screen among them). It parses the escape
-// sequences xterm.js does (ESC, CSI, OSC, DCS/APC/PM/SOS strings) far
-// enough to know where each one ends, so a sequence split across reads is
-// still one sequence and a BEL that ends an OSC is no bell. 8-bit C1 codes
-// are text: in UTF-8 they are continuation bytes. Pure; one per stream.
+// window titles, OSC 9 / 9;4 / 777 notices, OSC 7501 status reports and
+// queries (ProgramStatus), full clears, resets and DEC private modes (the
+// alternate screen among them). It parses the escape sequences xterm.js
+// does (ESC, CSI, OSC, DCS/APC/PM/SOS strings) far enough to know where
+// each one ends, so a sequence split across reads is still one sequence
+// and a BEL that ends an OSC is no bell. 8-bit C1 codes are text: in UTF-8
+// they are continuation bytes. Pure; one per stream.
 class SignalScanner {
   private enum class State { GROUND, ESC, ESC_INTER, CSI, OSC, STRING }
 
@@ -53,10 +54,10 @@ class SignalScanner {
       }
       State.CSI -> csi(b, out)
       State.OSC -> when (b) {
-        BEL -> endOsc(out, next = State.GROUND)
+        BEL -> endOsc(out, next = State.GROUND, bel = true)
         ESC -> {
           // ESC ends the string (ST is ESC \); what follows is a new escape.
-          endOsc(out, next = State.ESC)
+          endOsc(out, next = State.ESC, bel = false)
           sequenceStart = position - 1
         }
         CAN, SUB -> state = State.GROUND
@@ -166,7 +167,8 @@ class SignalScanner {
     if (osc.size() < MAX_OSC_BYTES) osc.write(b) else oscOverflow = true
   }
 
-  private fun endOsc(out: (Signal) -> Unit, next: State) {
+  // [bel]: the OSC ended with BEL, not ESC (ST is ESC \).
+  private fun endOsc(out: (Signal) -> Unit, next: State, bel: Boolean) {
     state = next
     if (oscOverflow) return
     val text = osc.toString(Charsets.UTF_8)
@@ -177,6 +179,12 @@ class SignalScanner {
       "0", "2" -> Signal.Title(body)
       "9" -> if (body.startsWith("4;")) Signal.Progress(body.substring(2)) else Signal.Osc9(body)
       "777" -> body.takeIf { it.startsWith(NOTIFY) }?.let { Signal.Osc777(it.substring(NOTIFY.length)) }
+      ProgramStatus.COMMAND -> if (body == ProgramStatus.QUERY) {
+        Signal.StatusQuery(bel)
+      } else {
+        // The whole sequence: ESC ], the payload, then BEL or ESC \.
+        ProgramStatus.parse(body, 2 + osc.size() + if (bel) 1 else 2)?.let(Signal::Status)
+      }
       else -> null
     }
     signal?.let(out)

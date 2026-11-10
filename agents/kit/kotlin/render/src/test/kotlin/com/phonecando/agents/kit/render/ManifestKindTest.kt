@@ -186,10 +186,10 @@ class ManifestKindTest {
         """"web":{"adapter":{"cssVars":{"--z":"bg","--a":"fg"},"authUrl":"/in/","x":[1]}},""" +
         """"chatTitle":"^T (.+)$",""" +
         """"signIn":[{"method":"in-ui","note":"n"}],"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,""" +
-        """"payloadPresent":true},""" +
+        """"payloadPresent":true,"models":[]},""" +
         """{"id":"demo","label":"Demo","version":"1","type":"native","channels":["full"],"stability":"preview",""" +
         """"origin":"bundled","isDefault":true,"home":"tui","web":null,"chatTitle":null,"signIn":[],""" +
-        """"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,"payloadPresent":true}]""",
+        """"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,"payloadPresent":true,"models":[]}]""",
       KindView.list(listOf(web, tui), "demo", libs::contains),
     )
     assertEquals("false", KindView.of(tui, false, libs::contains)["isDefault"].toString())
@@ -254,7 +254,7 @@ class ManifestKindTest {
     val ctx = LaunchContext("/lib", File("/h"), File("/t"), "", "pw")
     val first = k.launch(ctx)
     assertEquals(listOf("/h/bin/demo", "--tmp", "/t"), first.argv)
-    assertEquals("/h/work", first.cwd)
+    assertEquals("/h/projects/work", first.cwd)
     assertEquals(listOf("/h/bin/demo", "--tmp", "/t", "--continue"), k.launch(ctx.copy(resume = true)).argv)
     val at = tui("""{"engine":{"style":"tui","launch":{"argv":["a","b"]},"resume":{"args":["resume","--last"],"at":1}}}""")
     assertEquals(listOf("a", "resume", "--last", "b"), at.launch(ctx.copy(resume = true)).argv)
@@ -264,8 +264,28 @@ class ManifestKindTest {
     assertEquals("{{port}} has no value here", assertFailsWith<KindException> { port.launch(ctx) }.message)
     assertEquals("demo: a tui engine has no health probe", assertFailsWith<KindException> { k.healthProbe("", "pw") }.message)
     assertNull(k.eventStream("", "pw"))
-    // A server engine's cwd is HOME, whatever the manifest says.
+    // A server engine that names no cwd runs in HOME.
     assertNull(kind().launch(ctx.copy(port = "1")).cwd)
+  }
+
+  @Test fun projectDirIsTheWorkFolderInHome() {
+    val launch = """{"engine":{"style":"tui","launch":{"argv":["a","{{projectDir}}"],"env":{"P":"{{projectDir}}"},"cwd":"{{projectDir}}"}}}"""
+    val native = tui(launch).launch(LaunchContext("/lib", File("/h"), File("/t"), "", "pw"))
+    assertEquals(listOf("a", "/h/projects"), native.argv)
+    assertEquals("/h/projects", native.env["P"])
+    assertEquals("/h/projects", native.cwd)
+    // An image kind's is the guest's: /root/projects, where its image binds home/projects.
+    val image = tui(launch.replace("{\"engine\"", "{\"type\":\"image\",\"requires\":{\"linux\":\"required\"},\"engine\""))
+      .launch(LaunchContext("/lib", File("/i/home"), File("/i/tmp"), "", "pw", image = File("/i")))
+    assertEquals(listOf("/i/shims/sh", "-c", "cd '/root/projects' || exit; exec \"\$0\" \"\$@\"", "a", "/root/projects"), image.argv)
+    assertEquals("/root/projects", image.env["P"])
+  }
+
+  @Test fun bridgeArgsOnlyWhenTheKindGetsTheBridge() {
+    val k = tui("""{"engine":{"style":"tui","launch":{"argv":["a",{"when":"bridgeUrl","args":["--mcp","{{bridgeUrl}}/mcp"]}]}}}""")
+    val ctx = LaunchContext("/lib", File("/h"), File("/t"), "", "pw")
+    assertEquals(listOf("a"), k.launch(ctx).argv)
+    assertEquals(listOf("a", "--mcp", "http://127.0.0.1:9/mcp"), k.launch(ctx.copy(bridgeUrl = "http://127.0.0.1:9")).argv)
   }
 
   @Test fun anImageKindRunsThroughItsImageShell() {
@@ -284,7 +304,7 @@ class ManifestKindTest {
     val placed = tui(
       """{"type":"image","requires":{"linux":"required"},"engine":{"style":"tui","launch":{"argv":["demo","{{home}}/x","{{tmp}}"],"env":{"CFG":"{{home}}/.demo"},"cwd":"{{projectDir}}/work"}}}""",
     ).launch(ctx)
-    assertEquals(listOf("/i/shims/sh", "-c", "cd '/root/work' || exit; exec \"\$0\" \"\$@\"", "demo", "/root/x", "/tmp"), placed.argv)
+    assertEquals(listOf("/i/shims/sh", "-c", "cd '/root/projects/work' || exit; exec \"\$0\" \"\$@\"", "demo", "/root/x", "/tmp"), placed.argv)
     assertEquals(mapOf("CFG" to "/root/.demo", "HOME" to "/root", "TMPDIR" to "/tmp"), placed.env)
     assertEquals(
       "demo: an image kind needs Linux (requires.linux required)",

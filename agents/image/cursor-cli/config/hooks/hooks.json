@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      { "command": "sh /root/.phonecando/bin/phonecando-event beforeSubmitPrompt" }
+    ],
+    "stop": [
+      { "command": "sh /root/.phonecando/bin/phonecando-event stop" }
+    ]
+  }
+}

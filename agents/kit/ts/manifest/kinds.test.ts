@@ -65,4 +65,32 @@ describe('user-added kinds', () => {
     fails(top((m) => (m.id = 'top')), '/id pattern');
     fails(problems('user-top.json', 'bundled', () => {}), '/id reserved');
   });
+
+  it('may leave out the licence', () => {
+    assert.deepEqual(top((m) => delete (m as Partial<Loose>).licence), []);
+    fails(problems('codex.json', 'bundled', (m) => delete (m as Partial<Loose>).licence), '/licence required');
+  });
+
+  it('set no PATH of their own', () => {
+    fails(top((m) => (m.engine!.launch.env = { PATH: '/x' })), '/engine/launch/env/PATH reserved');
+    assert.deepEqual(top((m) => (m.engine!.launch.env = { TERM: 'xterm' })), []);
+  });
+
+  it('keep install and update steps under 32 KiB each', () => {
+    const steps = (n: number) => Array.from({ length: n }, () => 'x'.repeat(1023));
+    const install = (m: Loose, n: number) => {
+      m.install = { steps: steps(n) };
+      m.versionCheck = { argv: ['top', '-v'], pattern: '(.+)' };
+    };
+    // 32 steps of 1023 bytes, joined by newlines: one byte under the cap.
+    assert.deepEqual(top((m) => install(m, 32)), []);
+    fails(top((m) => install(m, 33)), '/install/steps too-large');
+    fails(
+      top((m) => {
+        install(m, 1);
+        m.update = { steps: steps(33) };
+      }),
+      '/update/steps too-large',
+    );
+  });
 });

@@ -1,0 +1,13 @@
+extensions:
+  phonecando:
+    enabled: true
+    type: streamable_http
+    name: phonecando
+    description: PhoneCanDo phone tools
+    uri: ${PHONECANDO_BRIDGE_URL}/mcp
+    headers:
+      Authorization: Bearer ${PHONECANDO_BRIDGE_TOKEN}
+    env_keys:
+      - PHONECANDO_BRIDGE_URL
+      - PHONECANDO_BRIDGE_TOKEN
+    timeout: 300

@@ -42,4 +42,6 @@ export type KindView = {
   hasInstall: boolean;
   /** Native kinds: every payload lib is in this APK. Image kinds: true. */
   payloadPresent: boolean;
+  /** The wire APIs it can use a local model with, in the order it prefers them; empty: none. */
+  models: ('openai-chat' | 'openai-responses' | 'anthropic')[];
 };

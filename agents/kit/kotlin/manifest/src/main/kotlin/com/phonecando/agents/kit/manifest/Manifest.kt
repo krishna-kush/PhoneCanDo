@@ -38,10 +38,14 @@ data class Manifest(
   val chats: Chats?,
   val idle: Idle?,
   val surfaces: Surfaces?,
+  /** How the kind reaches the phone tools (`phoneTools`); null when the manifest does not say, which is none. */
+  val phoneTools: PhoneTools?,
   /** The sign-in options the app shows, verbatim; empty when the manifest has none. */
   val signIn: JsonArray,
   /** The code hooks this kind uses, by id (agents/builtin registers them). */
   val hooks: List<String>,
+  /** How it takes a local model (`models`), in the order it prefers the APIs; empty: it does not. */
+  val models: List<ModelWiring> = emptyList(),
 )
 
 enum class Origin(val wire: String) {
@@ -50,6 +54,24 @@ enum class Origin(val wire: String) {
 
   /** Added by the user (files/state/agent-kinds/user/<id>.json). */
   USER("user"),
+}
+
+/**
+ * How a kind reaches the phone tools over the bridge. Only a kind that names
+ * one of them gets the bridge in its engine's env; NONE, like a manifest that
+ * says nothing, keeps the bridge (its URL and the agent's token) from it.
+ */
+enum class PhoneTools(val wire: String) {
+  /** Its own plugin, packaged in its config (opencode). */
+  PLUGIN("plugin"),
+
+  /** An MCP server in a config file it reads. */
+  MCP_CONFIG("mcp:config"),
+
+  /** An MCP server in its launch args. */
+  MCP_ARGV("mcp:argv"),
+
+  NONE("none"),
 }
 
 /** Whether a kind needs a Linux image. */
@@ -148,6 +170,13 @@ enum class PtySignal(val wire: String) {
 
   /** OSC 9;4 progress; its text is what follows `9;4;` (state;value). */
   PROGRESS("progress"),
+
+  /**
+   * OSC 7501, a Program Status Protocol report the spec keeps; its text is
+   * the report after `7501;` worded one way (kit-term ProgramStatus):
+   * `state=<state>` first, then `id`, `kind`, `progress`, `app`, `title`, `msg`.
+   */
+  OSC7501("osc7501"),
 }
 
 /** The engine event a PTY rule or a hook event raises. */
@@ -156,6 +185,9 @@ enum class PtyEvent(val wire: String) {
   WAITING("waiting"),
   FINISHED("finished"),
   FAILED("failed"),
+
+  /** The run ended with no verdict (you stopped it), or its result was seen: the chat leaves the board, no alert. */
+  STOPPED("stopped"),
 }
 
 /** Where a chat's title is read: GET [path], then the JSON pointer [pointer]. */

@@ -18,5 +18,6 @@
       { "name": "lib__PREFIX__-engine.so", "from": "__ID__.bin", "role": "engine", "linkage": "system-only" }
     ]
   },
-  "build": { "toolchains": ["ndk"] }
+  "build": { "toolchains": ["ndk"] },
+  "phoneTools": "none"
 }

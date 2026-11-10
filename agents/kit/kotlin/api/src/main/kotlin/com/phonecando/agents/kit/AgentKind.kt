@@ -18,7 +18,7 @@ interface AgentKind {
   /** The config this kind seeds into the engine HOME, or null for none. */
   val config: AgentConfig?
 
-  /** The kind's own argv and env; the host adds the image env and the bridge, and runs it in HOME. */
+  /** The kind's own argv, env and cwd; the host adds the image env and the bridge, and runs it there (HOME when no cwd). */
   fun launch(ctx: LaunchContext): LaunchSpec
 
   /** Request that answers 200 once the engine serves requests. */
@@ -53,6 +53,10 @@ data class LaunchContext(
   val image: File? = null,
   /** The agent's engine ran before: the launch adds the kind's resume args. */
   val resume: Boolean = false,
+  /** The local model the agent uses; null: whatever the agent itself is set up with. */
+  val model: ModelEndpoint? = null,
+  /** The phone-tools bridge's base URL; "" when the kind gets no bridge. Its token stays in the env. */
+  val bridgeUrl: String = "",
 )
 
 /** The kind's part of a launch: argv[0] is the engine binary; [cwd] null means HOME. */

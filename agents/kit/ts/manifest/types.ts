@@ -1,9 +1,7 @@
 // The agent kind manifest (agent.json, schema 1) and the runtime plugin
 // manifest (runtime.json, schema 1) as TypeScript types. The JSON Schemas
 // are agents/kit/schema/{agent,runtime}.schema.json; validate.ts and
-// runtime-plugin.ts hold the same rules in code. `models` is reserved for a
-// later phase (local models): v1 accepts it loosely typed and nothing reads
-// it yet.
+// runtime-plugin.ts hold the same rules in code.
 
 export type Origin = 'bundled' | 'user';
 export type Channel = 'full' | 'lite' | 'play';
@@ -18,10 +16,10 @@ export type IdleSource = 'events' | 'output';
 export type LinuxNeed = 'required' | 'optional' | 'none';
 /** An image OS's package family (lre-api's PackageFamily ids). */
 export type Family = 'apt' | 'apk' | 'dnf' | 'yum' | 'microdnf' | 'pacman' | 'zypper' | 'xbps';
-/** What a tui engine's PTY output signals: BEL, OSC 9, OSC 777 notify, OSC 9;4 progress. */
-export type PtySignal = 'bel' | 'osc9' | 'osc777' | 'progress';
+/** What a tui engine's PTY output signals: BEL, OSC 9, OSC 777 notify, OSC 9;4 progress, an OSC 7501 status report. */
+export type PtySignal = 'bel' | 'osc9' | 'osc777' | 'progress' | 'osc7501';
 /** The engine event a PTY rule raises. */
-export type PtyEvent = 'working' | 'waiting' | 'finished' | 'failed';
+export type PtyEvent = 'working' | 'waiting' | 'finished' | 'failed' | 'stopped';
 export type SignInMethod = 'device-code' | 'paste-code' | 'browser' | 'api-key' | 'in-tui' | 'in-ui';
 /** The app palette roles a web adapter maps CSS variables onto. */
 export type PaletteRole =
@@ -276,7 +274,18 @@ export interface Manifest {
   install?: Install;
   update?: Update;
   versionCheck?: VersionCheck;
-  models?: Record<string, unknown>;
+  /** How the kind takes a local model, by wire API in the order it prefers them. */
+  models?: Partial<Record<ModelApi, ModelWiring>>;
+}
+
+/** A wire API a model server may serve and a kind may speak. */
+export type ModelApi = 'openai-chat' | 'openai-responses' | 'anthropic';
+
+/** What a kind sets to use a local model: {{baseUrl}}, {{model}}, {{contextWindow}}; {{modelKey}} in env only. */
+export interface ModelWiring {
+  env?: Record<string, string>;
+  /** Go in right after the program. */
+  args?: string[];
 }
 
 /**

@@ -1,0 +1,60 @@
+{
+  "general": {
+    "enableAutoUpdate": false
+  },
+  "mcpServers": {
+    "phonecando": {
+      "httpUrl": "${PHONECANDO_BRIDGE_URL}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${PHONECANDO_BRIDGE_TOKEN}"
+      }
+    }
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event UserPromptSubmit",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event PermissionRequest",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event Stop",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event StopFailure",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

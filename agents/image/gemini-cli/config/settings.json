@@ -3,9 +3,6 @@
     "enableAutoUpdate": false,
     "enableAutoUpdateNotification": false
   },
-  "ui": {
-    "showHomeDirectoryWarning": false
-  },
   "mcpServers": {
     "phonecando": {
       "httpUrl": "${PHONECANDO_BRIDGE_URL}/mcp",

@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "id": "goose",
+  "label": "goose",
+  "version": "1",
+  "type": "image",
+  "channels": ["full", "lite"],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "source": "https://github.com/aaif-goose/goose"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": ["bash", "git"]
+  },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/goose",
+    "required": ["config.yaml"]
+  },
+  "install": {
+    "families": ["apt", "apk", "dnf", "pacman", "zypper"],
+    "packages": {
+      "apt": ["bash", "bzip2", "ca-certificates", "curl", "git", "ripgrep", "tar"],
+      "apk": ["bash", "bzip2", "ca-certificates", "curl", "git", "libgcc", "ripgrep", "tar"],
+      "dnf": ["bash", "bzip2", "ca-certificates", "git", "ripgrep", "tar"],
+      "pacman": ["bash", "bzip2", "ca-certificates", "curl", "git", "ripgrep", "tar"],
+      "zypper": ["bash", "bzip2", "ca-certificates", "curl", "git", "ripgrep", "tar"]
+    },
+    "steps": [
+      "curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh -o /tmp/goose-install.sh",
+      "CONFIGURE=false GOOSE_BIN_DIR=\"$HOME/.local/bin\" bash /tmp/goose-install.sh",
+      "rm -f /tmp/goose-install.sh"
+    ],
+    "timeoutSec": 1200
+  },
+  "update": {
+    "steps": [
+      "curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh -o /tmp/goose-install.sh",
+      "CONFIGURE=false GOOSE_BIN_DIR=\"$HOME/.local/bin\" bash /tmp/goose-install.sh",
+      "rm -f /tmp/goose-install.sh"
+    ]
+  },
+  "versionCheck": {
+    "argv": ["/root/.local/bin/goose", "--version"],
+    "pattern": "(\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": [
+        "sh",
+        "-c",
+        "if [ -z \"${GOOSE_PROVIDER:-}\" ] && ! grep -qsE '^(active_provider|GOOSE_PROVIDER):' \"$HOME/.config/goose/config.yaml\"; then /root/.local/bin/goose configure || exit; fi; exec /root/.local/bin/goose session \"$@\"",
+        "goose"
+      ],
+      "env": {
+        "GOOSE_ADDITIONAL_CONFIG_FILES": "/root/.phonecando/goose/config.yaml"
+      },
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
+    "resume": { "args": ["-r"] }
+  },
+  "events": [
+    {
+      "pty": {
+        "rules": [
+          { "on": "osc7501", "match": "^state=working", "event": "working" },
+          { "on": "osc7501", "match": "^state=blocked", "event": "waiting" },
+          { "on": "osc7501", "match": "^state=done", "event": "finished" },
+          { "on": "osc7501", "match": "^state=error", "event": "failed" },
+          { "on": "osc7501", "match": "^state=idle", "event": "stopped" }
+        ]
+      }
+    }
+  ],
+  "idle": { "from": ["output"], "quietSec": 120 },
+  "surfaces": {
+    "home": "tui",
+    "terminal": { "shell": true }
+  },
+  "phoneTools": "mcp:config",
+  "signIn": [
+    { "method": "api-key", "note": "On first start goose runs its own setup (goose configure): pick a provider and paste its API key. Run goose configure in this machine's terminal to change it." }
+  ],
+  "models": {
+    "openai-chat": {
+      "env": {
+        "GOOSE_PROVIDER": "openai",
+        "OPENAI_HOST": "{{baseUrl}}",
+        "OPENAI_BASE_PATH": "v1/chat/completions",
+        "OPENAI_API_KEY": "{{modelKey}}",
+        "GOOSE_MODEL": "{{model}}",
+        "GOOSE_CONTEXT_LIMIT": "{{contextWindow}}"
+      }
+    }
+  }
+}

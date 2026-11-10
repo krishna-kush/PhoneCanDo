@@ -42,11 +42,20 @@ object ManifestDecoder {
       chats = m.optObj("chats")?.let(::chats),
       idle = m.optObj("idle")?.let { Idle(oneOf(it, "from", IDLE_SOURCES), it.int("quietSec")) },
       surfaces = m.optObj("surfaces")?.let(::surfaces),
+      phoneTools = if (m.has("phoneTools")) enumOf(m, "phoneTools", PhoneTools.entries) { it.wire } else null,
       signIn = m.optArray("signIn") ?: JsonArray(emptyList()),
       hooks = m.optStrings("hooks"),
+      models = m.optObj("models")?.let(::models).orEmpty(),
     )
     if (origin == Origin.USER) UserRules.check(m, manifest)
     return manifest
+  }
+
+  // One wiring per API, in manifest order: the kind's preference.
+  private fun models(ms: JsonFields): List<ModelWiring> = ms.tree.keys.map { api ->
+    if (api !in ModelWiring.APIS) throw ManifestException(ms.at(api), "must be one of ${ModelWiring.APIS.joinToString()}")
+    val w = ms.obj(api)
+    ModelWiring(api, w.stringMap("env"), w.optStrings("args"))
   }
 
   private fun payloadLibs(p: JsonFields): List<String> {

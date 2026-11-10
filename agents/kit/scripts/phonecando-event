@@ -7,9 +7,9 @@
 #   <name> TAB <session> TAB <message>
 #
 # The runner maps <name> through the kind's `events[].hook.map` (Stop,
-# Notification, ...) to working, waiting, finished or failed. <session> is
-# $PHONECANDO_SESSION, else the `session_id` of the JSON a hook gets on
-# stdin, else empty. The file is $PHONECANDO_EVENTS, else
+# Notification, ...) to working, waiting, finished, failed or stopped.
+# <session> is $PHONECANDO_SESSION, else the `session_id` of the JSON a
+# hook gets on stdin, else empty. The file is $PHONECANDO_EVENTS, else
 # $HOME/.phonecando/events.
 #
 # <name> is 1 to 64 of A-Z a-z 0-9 . _ : - (a leading @ is the runner's own).

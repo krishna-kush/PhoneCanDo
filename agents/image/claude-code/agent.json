@@ -88,5 +88,19 @@
     { "method": "browser", "note": "Pick a sign-in method in Claude Code (it asks on first start, or run /login); the phone offers to open the sign-in page." },
     { "method": "paste-code", "note": "If the page shows a code instead of returning, paste it at Claude Code's \"Paste code here\" prompt." },
     { "method": "api-key", "note": "An Anthropic API key also works: set ANTHROPIC_API_KEY in the env block of ~/.claude/settings.json in this machine." }
-  ]
+  ],
+  "models": {
+    "anthropic": {
+      "env": {
+        "ANTHROPIC_BASE_URL": "{{baseUrl}}",
+        "ANTHROPIC_AUTH_TOKEN": "{{modelKey}}",
+        "ANTHROPIC_MODEL": "{{model}}",
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": "{{model}}",
+        "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "{{contextWindow}}",
+        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        "API_TIMEOUT_MS": "0",
+        "API_FORCE_IDLE_TIMEOUT": "0"
+      }
+    }
+  }
 }

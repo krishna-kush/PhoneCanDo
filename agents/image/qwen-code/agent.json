@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "id": "qwen-code",
+  "label": "Qwen Code",
+  "version": "1",
+  "type": "image",
+  "channels": ["full", "lite"],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "terms": "https://qwenlm.github.io/qwen-code-docs/en/users/support/tos-privacy/",
+    "source": "https://github.com/QwenLM/qwen-code"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": ["bash", "git", "rg"],
+    "runtimes": ["node>=22"]
+  },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/qwen",
+    "required": ["settings.json", "local-model.json"]
+  },
+  "install": {
+    "families": ["apt", "apk", "dnf", "pacman", "zypper"],
+    "packages": {
+      "apt": ["bash", "ca-certificates", "git", "ripgrep"],
+      "apk": ["bash", "ca-certificates", "git", "ripgrep"],
+      "dnf": ["bash", "ca-certificates", "git", "ripgrep"],
+      "pacman": ["bash", "ca-certificates", "git", "ripgrep"],
+      "zypper": ["bash", "ca-certificates", "git", "ripgrep"]
+    },
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" @qwen-code/qwen-code@latest"
+    ],
+    "timeoutSec": 1800
+  },
+  "update": {
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" @qwen-code/qwen-code@latest"
+    ]
+  },
+  "versionCheck": {
+    "argv": ["/root/.local/bin/qwen", "--version"],
+    "pattern": "(?:^|\\n)(\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": ["/root/.local/bin/qwen"],
+      "env": {
+        "QWEN_CODE_SYSTEM_SETTINGS_PATH": "/root/.phonecando/qwen/settings.json"
+      },
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": { "output": { "settleMs": 500, "timeoutSec": 180 } },
+    "resume": { "args": ["--continue"], "at": 1 }
+  },
+  "events": [
+    {
+      "hook": {
+        "map": {
+          "UserPromptSubmit": "working",
+          "PermissionRequest": "waiting",
+          "Stop": "finished",
+          "StopFailure": "failed"
+        }
+      }
+    },
+    {
+      "pty": {
+        "rules": [
+          { "on": "osc7501", "match": "^state=working", "event": "working" },
+          { "on": "osc7501", "match": "^state=blocked", "event": "waiting" },
+          { "on": "osc7501", "match": "^state=done", "event": "finished" },
+          { "on": "osc7501", "match": "^state=error", "event": "failed" },
+          { "on": "osc7501", "match": "^state=idle", "event": "stopped" }
+        ]
+      }
+    }
+  ],
+  "idle": { "from": ["output", "events"], "quietSec": 120 },
+  "surfaces": {
+    "home": "tui",
+    "terminal": { "shell": true },
+    "chatTitle": "^(?:[^\\x00-\\x7F]+ )?(?![^\\x00-\\x7F]+ )(?!Qwen - )(.+?)\\s*$"
+  },
+  "phoneTools": "mcp:config",
+  "signIn": [
+    { "method": "api-key", "note": "On first start pick a provider under \"Connect a Provider\" (QwenCloud, Alibaba ModelStudio or another) and paste its API key." },
+    { "method": "device-code", "note": "\"Qwen Account with Subscription\" (a Plus or Pro plan) prints a link: open it, sign in and approve; Qwen Code picks it up by itself." }
+  ],
+  "models": {
+    "openai-chat": {
+      "args": ["--auth-type", "openai"],
+      "env": {
+        "OPENAI_BASE_URL": "{{baseUrl}}/v1",
+        "OPENAI_API_KEY": "{{modelKey}}",
+        "OPENAI_MODEL": "{{model}}",
+        "QWEN_CODE_API_TIMEOUT_MS": "0",
+        "QWEN_STREAM_IDLE_TIMEOUT_MS": "0",
+        "QWEN_CODE_SYSTEM_DEFAULTS_PATH": "/root/.phonecando/qwen/local-model.json"
+      }
+    }
+  }
+}

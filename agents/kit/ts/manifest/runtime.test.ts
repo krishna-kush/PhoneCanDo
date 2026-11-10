@@ -31,7 +31,7 @@ describe('templates', () => {
   });
 
   it('refuse an unknown placeholder, and a stray {{', () => {
-    fails((m) => m.engine!.launch.argv.push('{{bridgeUrl}}'), '/engine/launch/argv/6 unknown');
+    fails((m) => m.engine!.launch.argv.push('{{bridgeToken}}'), '/engine/launch/argv/6 unknown');
     fails((m) => m.engine!.launch.argv.push('{{{port}}}'), '/engine/launch/argv/6 pattern');
     fails((m) => m.engine!.launch.argv.push('{{port'), '/engine/launch/argv/6 pattern');
   });

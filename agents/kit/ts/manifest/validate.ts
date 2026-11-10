@@ -10,7 +10,6 @@
 import {
   fields,
   isObject,
-  kindOf,
   list,
   oneOf,
   relPath,
@@ -28,7 +27,6 @@ import {
   CONFIG_NEEDS_DIR,
   FIELDS,
   KIND_TYPES,
-  LATER_FIELDS,
   LINKAGES,
   MAX,
   MAX_USER_MANIFEST_BYTES,
@@ -40,7 +38,9 @@ import {
   STABILITIES,
   TOOLCHAINS,
   USER_ID_PREFIX,
+  USER_OPTIONAL,
 } from './rules.ts';
+import { checkModels } from './models.ts';
 import { checkRuntime } from './runtime.ts';
 import type { Problem, ValidateOptions, ValidationResult } from './types.ts';
 
@@ -63,7 +63,7 @@ export function validate(json: unknown, options: ValidateOptions): ValidationRes
     add('', 'too-large', `a user-added manifest is at most ${MAX_USER_MANIFEST_BYTES} bytes`);
   }
 
-  fields(add, '', json, FIELDS, REQUIRED);
+  fields(add, '', json, FIELDS, user ? REQUIRED.filter((key) => !USER_OPTIONAL.includes(key)) : REQUIRED);
   if ('schema' in json && json.schema !== SCHEMA_VERSION) {
     add('/schema', 'const', `schema must be ${SCHEMA_VERSION}`);
   }
@@ -81,7 +81,7 @@ export function validate(json: unknown, options: ValidateOptions): ValidationRes
   if ('requires' in json) checkRequires(add, json.requires);
   checkInstall(add, json);
   checkRuntime(add, json);
-  checkLater(add, json);
+  if ('models' in json) checkModels(add, json.models);
 
   checkType(add, json);
   if (user) checkUser(add, json);
@@ -179,10 +179,4 @@ function checkConfig(add: Add, config: unknown) {
   }
 }
 
-// --- fields of the later phases ---------------------------------------------
 
-function checkLater(add: Add, m: Json) {
-  for (const [key, types] of Object.entries(LATER_FIELDS)) {
-    if (key in m && !types.includes(kindOf(m[key]))) add(`/${key}`, 'type', `must be ${types.join(' or ')}`);
-  }
-}

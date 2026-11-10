@@ -102,7 +102,8 @@ class ManifestDecoderTest {
           { "on": "bel", "event": "waiting" },
           { "on": "osc9", "match": "^Approval requested", "event": "waiting" },
           { "on": "osc777", "event": "finished" },
-          { "on": "progress", "match": "^2", "event": "failed" }
+          { "on": "progress", "match": "^2", "event": "failed" },
+          { "on": "osc7501", "match": "^state=blocked", "event": "waiting" }
         ] } }],
         "idle": { "from": ["output"], "quietSec": 120 },
         "surfaces": { "home": "tui", "terminal": { "shell": true }, "chatTitle": "^(.+)$" }
@@ -124,6 +125,7 @@ class ManifestDecoderTest {
         PtyRule(PtySignal.OSC9, "^Approval requested", PtyEvent.WAITING),
         PtyRule(PtySignal.OSC777, null, PtyEvent.FINISHED),
         PtyRule(PtySignal.PROGRESS, "^2", PtyEvent.FAILED),
+        PtyRule(PtySignal.OSC7501, "^state=blocked", PtyEvent.WAITING),
       ),
       (m.events.single() as EventSource.Pty).rules,
     )
@@ -166,8 +168,43 @@ class ManifestDecoderTest {
     )
     assertEquals("/surfaces/web: a user kind has no web surface", userProblem { it.replace("{\"home\":\"tui\"}", "{\"home\":\"tui\",\"web\":{}}") })
     assertEquals("/surfaces/home: a user kind's Home is its TUI (tui)", userProblem { it.replace("{\"home\":\"tui\"}", "{\"home\":\"web\"}") })
+    assertEquals(
+      "/engine/launch/env/PATH: PATH is the host's to set",
+      userProblem { it.replace("[\"top\"]}", "[\"top\"],\"env\":{\"TERM\":\"x\",\"PATH\":\"/x\"}}") },
+    )
+    assertEquals(
+      "/engine/launch/env/LD_PRELOAD: LD_PRELOAD is the host's to set",
+      userProblem { it.replace("[\"top\"]}", "[\"top\"],\"env\":{\"LD_PRELOAD\":\"/x.so\"}}") },
+    )
     // A bundled kind is not held to them.
     assertEquals("top", ManifestDecoder.decode(user.replace("user.top", "top")).id)
+  }
+
+  @Test fun userScriptsAreCapped() {
+    val step = "x".repeat(1023)
+    fun steps(n: Int) = (1..n).joinToString(",") { "\"$step\"" }
+    // 32 steps of 1023 bytes, joined by newlines: one byte under 32 KiB.
+    val install = ",\"install\":{\"steps\":[${steps(32)}]},\"versionCheck\":{\"argv\":[\"top\"],\"pattern\":\"(.+)\"}}"
+    val atCap = user.removeSuffix("}") + install
+    assertEquals(32, ManifestDecoder.decode(atCap, Origin.USER).install!!.steps.size)
+    assertEquals(
+      "/install/steps: a user kind's install steps are at most 32 KiB",
+      userProblem { atCap.replace("[${steps(32)}]", "[${steps(32)},\"x\"]") },
+    )
+    assertEquals(
+      "/update/steps: a user kind's update steps are at most 32 KiB",
+      userProblem { atCap.replace(",\"versionCheck\"", ",\"update\":{\"steps\":[${steps(33)}]},\"versionCheck\"") },
+    )
+  }
+
+  @Test fun readsPhoneTools() {
+    assertNull(ManifestDecoder.decode(user).phoneTools)
+    assertEquals(PhoneTools.NONE, ManifestDecoder.decode(with("\"phoneTools\":\"none\"")).phoneTools)
+    assertEquals(PhoneTools.MCP_ARGV, ManifestDecoder.decode(with("\"phoneTools\":\"mcp:argv\"")).phoneTools)
+    assertEquals(
+      "/phoneTools: must be one of plugin, mcp:config, mcp:argv, none, not bluetooth",
+      problem(with("\"phoneTools\":\"bluetooth\"")),
+    )
   }
 
   private fun problem(json: String): String = assertFailsWith<ManifestException> { ManifestDecoder.decode(json) }.message!!
@@ -201,7 +238,7 @@ class ManifestDecoderTest {
     assertEquals("/events/0: is no event source this build reads (sse, pty, hook)", problem(with("\"events\":[{\"acp\":{}}]")))
     assertEquals("/events/0/pty/rules: is required", problem(with("\"events\":[{\"pty\":{}}]")))
     assertEquals(
-      "/events/0/pty/rules/0/on: must be one of bel, osc9, osc777, progress, not osc52",
+      "/events/0/pty/rules/0/on: must be one of bel, osc9, osc777, progress, osc7501, not osc52",
       problem(with("\"events\":[{\"pty\":{\"rules\":[{\"on\":\"osc52\",\"event\":\"waiting\"}]}}]")),
     )
     assertEquals("/requires/linux: must be one of required, optional, none, not yes", problem(with("\"requires\":{\"linux\":\"yes\"}")))

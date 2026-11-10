@@ -9,8 +9,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 
-/** A manifest that cannot be read; [path] is the JSON pointer of the bad value ("" for the whole file). */
-class ManifestException(val path: String, detail: String) : IllegalArgumentException("${path.ifEmpty { "/" }}: $detail")
+/** A manifest that cannot be read; [path] is the JSON pointer of the bad value ("" for the whole file), [detail] what is wrong with it. */
+class ManifestException(val path: String, val detail: String) : IllegalArgumentException("${path.ifEmpty { "/" }}: $detail")
 
 // Typed reads from one JSON object, each failure naming the JSON pointer of
 // the value. Absent and null differ: an optional field may be absent, never

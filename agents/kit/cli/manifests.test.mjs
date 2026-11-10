@@ -40,6 +40,7 @@ function nativeKind(id, prefix, extra = {}) {
     [`agents/native/${id}/config/opencode.json`]: '{}\n',
     [`agents/native/${id}/config/AGENTS.md`]: 'full\n',
     [`agents/native/${id}/config-lite/AGENTS.md`]: 'lite\n',
+    ...(manifest.models ? { [`agents/native/${id}/one-shot.json`]: { argv: [`{{libDir}}/lib${prefix}-engine.so`, 'run', '{{prompt}}'] } } : {}),
   };
 }
 const PHONE_TOOLS = { 'agents/shared/phone-tools/part.json': { into: 'phone-tools', fullOnly: ['control/**'] } };
@@ -124,6 +125,19 @@ describe('folder rules', () => {
     assert.ok(got.includes('agents/native/alpha/agent.json /prefix reserved'));
     const broken = codes(makeRoot({ 'agents/native/alpha/agent.json': '{ nope' }));
     assert.deepEqual(broken, ['agents/native/alpha/agent.json  json']);
+  });
+
+  it('wants a one-shot.json exactly with a models block, and a valid one', () => {
+    const alpha = nativeKind('alpha', 'al');
+    const shot = 'agents/native/alpha/one-shot.json';
+    const without = { ...alpha, ...PHONE_TOOLS };
+    delete without[shot];
+    assert.deepEqual(codes(makeRoot(without)), ['agents/native/alpha/agent.json /models missing']);
+    const unused = nativeKind('alpha', 'al', { models: undefined });
+    unused[shot] = alpha[shot];
+    assert.deepEqual(codes(makeRoot({ ...unused, ...PHONE_TOOLS })), [`${shot}  unused`]);
+    const bad = { ...alpha, ...PHONE_TOOLS, [shot]: { argv: ['{{libDir}}/libother.so', 'run'] } };
+    assert.deepEqual(codes(makeRoot(bad)), [`${shot} /argv pattern`, `${shot} /argv/0 pattern`]);
   });
 
   it('throws with every problem from loadManifests', () => {

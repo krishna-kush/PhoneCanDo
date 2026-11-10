@@ -1,0 +1,7 @@
+{
+  "model": {
+    "generationConfig": {
+      "contextWindowSize": 16384
+    }
+  }
+}

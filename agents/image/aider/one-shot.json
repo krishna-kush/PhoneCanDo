@@ -1,0 +1,1 @@
+{ "argv": ["/root/.local/bin/aider", "--no-check-update", "--analytics-disable", "--yes-always", "--message", "{{prompt}}"] }

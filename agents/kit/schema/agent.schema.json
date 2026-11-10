@@ -211,7 +211,7 @@
                 "type": "object",
                 "minProperties": 1,
                 "propertyNames": { "maxLength": 64, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
-                "additionalProperties": { "enum": ["working", "waiting", "finished", "failed"] }
+                "additionalProperties": { "enum": ["working", "waiting", "finished", "failed", "stopped"] }
               }
             }
           },
@@ -375,7 +375,13 @@
       "description": "Run after an install: group 1 of pattern in its output is the installed version.",
       "$ref": "#/$defs/versionCheck"
     },
-    "models": { "type": "object" }
+    "models": {
+      "description": "How the kind takes a local model: per wire API, in the order it prefers them, the env it sets and the args that go right after its program. {{baseUrl}}, {{model}} and {{contextWindow}} anywhere; {{modelKey}} only in env values.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "enum": ["openai-chat", "openai-responses", "anthropic"] },
+      "additionalProperties": { "$ref": "#/$defs/modelWiring" }
+    }
   },
   "dependentRequired": {
     "install": ["versionCheck"],
@@ -453,6 +459,23 @@
     }
   ],
   "$defs": {
+    "modelWiring": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "env": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "maxLength": 128, "not": { "pattern": "^(?:PHONECANDO_.*|LD_.*|HOME|TMPDIR)$" } },
+          "additionalProperties": { "type": "string", "maxLength": 1024, "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:baseUrl|model|contextWindow|modelKey)\\}\\})*$" }
+        },
+        "args": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "maxLength": 1024, "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:baseUrl|model|contextWindow)\\}\\})*$" }
+        }
+      }
+    },
     "text": { "type": "string", "minLength": 1, "maxLength": 64 },
     "name": { "type": "string", "maxLength": 64, "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
     "url": { "type": "string", "maxLength": 512, "pattern": "^https://[^\\s]+$" },
@@ -484,16 +507,16 @@
       }
     },
     "template": {
-      "description": "A string with {{placeholder}}s (libDir, home, tmp, port, serverUrl, projectDir, sessionId, code); ${...} passes through untouched. Never {{password}}.",
+      "description": "A string with {{placeholder}}s (libDir, home, tmp, port, serverUrl, bridgeUrl, projectDir, sessionId, code); ${...} passes through untouched. Never {{password}}.",
       "type": "string",
       "maxLength": 1024,
-      "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:libDir|home|tmp|port|serverUrl|projectDir|sessionId|code)\\}\\})*$"
+      "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:libDir|home|tmp|port|serverUrl|bridgeUrl|projectDir|sessionId|code)\\}\\})*$"
     },
     "envTemplate": {
       "description": "An env value: a template that may also hold {{password}}.",
       "type": "string",
       "maxLength": 1024,
-      "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:libDir|home|tmp|port|serverUrl|password|projectDir|sessionId|code)\\}\\})*$"
+      "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:libDir|home|tmp|port|serverUrl|bridgeUrl|password|projectDir|sessionId|code)\\}\\})*$"
     },
     "family": {
       "description": "An image OS's package family: lre-api's PackageFamily ids.",
@@ -557,7 +580,7 @@
             "required": ["when", "args"],
             "properties": {
               "when": {
-                "enum": ["libDir", "home", "tmp", "port", "serverUrl", "password", "projectDir", "sessionId", "code"]
+                "enum": ["libDir", "home", "tmp", "port", "serverUrl", "bridgeUrl", "password", "projectDir", "sessionId", "code"]
               },
               "args": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/template" } }
             }
@@ -596,9 +619,9 @@
       "additionalProperties": false,
       "required": ["on", "event"],
       "properties": {
-        "on": { "enum": ["bel", "osc9", "osc777", "progress"] },
+        "on": { "enum": ["bel", "osc9", "osc777", "progress", "osc7501"] },
         "match": { "description": "A regex over the OSC text; a bell has none.", "type": "string", "maxLength": 256, "format": "regex" },
-        "event": { "enum": ["working", "waiting", "finished", "failed"] }
+        "event": { "enum": ["working", "waiting", "finished", "failed", "stopped"] }
       }
     },
     "webPair": {

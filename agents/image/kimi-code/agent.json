@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "id": "kimi-code",
+  "label": "Kimi Code",
+  "version": "1",
+  "type": "image",
+  "channels": ["full", "lite"],
+  "stability": "preview",
+  "licence": {
+    "spdx": "MIT",
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "terms": "https://www.kimi.com/user/agreement/modelUse",
+    "source": "https://github.com/MoonshotAI/kimi-code"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": ["bash", "git", "rg"],
+    "runtimes": ["node>=22"]
+  },
+  "install": {
+    "families": ["apt", "apk", "dnf", "pacman", "zypper"],
+    "packages": {
+      "apt": ["bash", "ca-certificates", "git", "ripgrep"],
+      "apk": ["bash", "ca-certificates", "git", "ripgrep"],
+      "dnf": ["bash", "ca-certificates", "git", "ripgrep"],
+      "pacman": ["bash", "ca-certificates", "git", "ripgrep"],
+      "zypper": ["bash", "ca-certificates", "git", "ripgrep"]
+    },
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" @moonshot-ai/kimi-code@latest"
+    ],
+    "timeoutSec": 1800
+  },
+  "update": {
+    "steps": [
+      "npm install -g --prefix \"$HOME/.local\" @moonshot-ai/kimi-code@latest"
+    ]
+  },
+  "versionCheck": {
+    "argv": ["/root/.local/bin/kimi", "--version"],
+    "pattern": "(?:^|\\n)(\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": ["/root/.local/bin/kimi"],
+      "env": {
+        "KIMI_CODE_NO_AUTO_UPDATE": "1"
+      },
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
+    "resume": { "args": ["--continue"], "at": 1 }
+  },
+  "events": [
+    {
+      "pty": {
+        "rules": [
+          { "on": "osc7501", "match": "^state=working(?!:id=)", "event": "working" },
+          { "on": "osc7501", "match": "^state=blocked", "event": "waiting" },
+          { "on": "osc7501", "match": "^state=done(?!:id=)", "event": "finished" },
+          { "on": "osc7501", "match": "^state=error(?!:id=)", "event": "failed" },
+          { "on": "osc7501", "match": "^state=idle(?!:id=)", "event": "stopped" }
+        ]
+      }
+    }
+  ],
+  "idle": { "from": ["output"], "quietSec": 120 },
+  "surfaces": {
+    "home": "tui",
+    "terminal": { "shell": true },
+    "chatTitle": "^(?!Kimi Code$)(.+)$"
+  },
+  "phoneTools": "none",
+  "signIn": [
+    { "method": "device-code", "note": "Run /login in Kimi Code: it shows a link and a code; open the link, sign in to your Kimi account and enter the code." }
+  ],
+  "models": {
+    "openai-chat": {
+      "env": {
+        "KIMI_MODEL_PROVIDER_TYPE": "openai",
+        "KIMI_MODEL_NAME": "{{model}}",
+        "KIMI_MODEL_API_KEY": "{{modelKey}}",
+        "KIMI_MODEL_BASE_URL": "{{baseUrl}}/v1",
+        "KIMI_MODEL_MAX_CONTEXT_SIZE": "{{contextWindow}}"
+      }
+    }
+  }
+}

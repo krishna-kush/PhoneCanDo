@@ -21,5 +21,6 @@
   "versionCheck": {
     "argv": ["__ID__", "--version"],
     "pattern": "(\\d+\\.\\d+\\.\\d+)"
-  }
+  },
+  "phoneTools": "none"
 }

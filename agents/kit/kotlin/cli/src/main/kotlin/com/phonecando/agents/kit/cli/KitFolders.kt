@@ -10,7 +10,8 @@ import java.io.File
 // The kit's folders on disk, read as the runner reads them from the APK's
 // assets: a kind's agent.json, and every runtime plugin under a runtimes
 // folder (<id>/runtime.json, its scripts beside it). A user.* id is read
-// with the user rules, as the phone reads a user-added kind.
+// with the user rules, as the phone reads a user-added kind. A kind's
+// one-shot.json is CI's alone.
 object KitFolders {
   private const val USER_PREFIX = "user."
 
@@ -20,6 +21,17 @@ object KitFolders {
     val text = file.readText()
     val manifest = ManifestDecoder.decode(text)
     return if (manifest.id.startsWith(USER_PREFIX)) ManifestDecoder.decode(text, Origin.USER) else manifest
+  }
+
+  /** The kind's one-shot mode (one-shot.json in [dir]); null when it has none. */
+  fun oneShot(dir: File): OneShot? {
+    val file = File(dir, OneShot.FILE)
+    if (!file.isFile) return null
+    return try {
+      OneShot.decode(file.readText())
+    } catch (e: ManifestException) {
+      throw ManifestException(e.path, "${e.detail} (in $file)")
+    }
   }
 
   /** Every plugin in [dir], by id; a folder must be named after its runtime's id. */

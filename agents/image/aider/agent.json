@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "id": "aider",
+  "label": "Aider",
+  "version": "1",
+  "type": "image",
+  "channels": ["full", "lite"],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "source": "https://github.com/Aider-AI/aider"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": ["git"],
+    "runtimes": ["python"]
+  },
+  "install": {
+    "families": ["apt", "dnf", "pacman", "zypper"],
+    "packages": {
+      "apt": ["bash", "ca-certificates", "git"],
+      "dnf": ["bash", "ca-certificates", "git"],
+      "pacman": ["bash", "ca-certificates", "git"],
+      "zypper": ["bash", "ca-certificates", "git"]
+    },
+    "steps": [
+      "UV_LINK_MODE=copy uv tool install --force --python 3.12 --with pip aider-chat@latest",
+      "uv cache clean"
+    ],
+    "timeoutSec": 2400
+  },
+  "update": {
+    "steps": [
+      "UV_LINK_MODE=copy uv tool install --force --python 3.12 --with pip aider-chat@latest",
+      "uv cache clean"
+    ]
+  },
+  "versionCheck": {
+    "argv": ["/root/.local/bin/aider", "--version"],
+    "pattern": "aider (\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": [
+        "/root/.local/bin/aider",
+        "--no-check-update",
+        "--no-show-release-notes",
+        "--notifications",
+        "--notifications-command",
+        "sh /root/.phonecando/bin/phonecando-event Ready"
+      ],
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": { "output": { "settleMs": 500, "timeoutSec": 180 } },
+    "resume": { "args": ["--restore-chat-history"] }
+  },
+  "events": [
+    { "hook": { "map": { "Ready": "finished" } } }
+  ],
+  "idle": { "from": ["output", "events"], "quietSec": 120 },
+  "surfaces": { "home": "tui", "terminal": { "shell": true } },
+  "phoneTools": "none",
+  "signIn": [
+    { "method": "api-key", "note": "Put your provider's key in ~/.env in this machine (OPENAI_API_KEY=…, ANTHROPIC_API_KEY=… and so on), or in ~/.aider.conf.yml (api-key: …)." },
+    { "method": "browser", "note": "With no key Aider offers OpenRouter's sign-in: the phone offers to open the page, which returns to Aider on a localhost port in this machine." }
+  ],
+  "models": {
+    "openai-chat": {
+      "args": ["--model", "openai/{{model}}", "--no-show-model-warnings"],
+      "env": {
+        "OPENAI_API_BASE": "{{baseUrl}}/v1",
+        "OPENAI_API_KEY": "{{modelKey}}"
+      }
+    }
+  }
+}

@@ -1,8 +1,9 @@
 // Event sources and the idle rule. A server engine streams server-sent
 // events, parsed by a code hook of the kind; a tui engine's PTY output is
-// scanned for bells and OSC notifications, which rules map to engine events,
-// and the kind's own hooks may call `phonecando-event <name>`, which `hook`
-// maps to one. Idle means nothing from `idle.from` for `quietSec`.
+// scanned for bells, OSC notifications and OSC 7501 status reports, which
+// rules map to engine events, and the kind's own hooks may call
+// `phonecando-event <name>`, which `hook` maps to one. Idle means nothing
+// from `idle.from` for `quietSec`.
 import { fields, integer, list, oneOf, record, regex, string, type Add, type Json } from './primitives.ts';
 import { EVENT_SOURCES as SOURCES, IDLE_SOURCES, MAX, PATTERNS, PTY_EVENTS, PTY_SIGNALS } from './rules.ts';
 import { httpBlock } from './templates.ts';

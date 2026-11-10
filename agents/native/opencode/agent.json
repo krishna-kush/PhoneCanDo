@@ -41,7 +41,8 @@
         "OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER": "true",
         "OPENCODE_SERVER_PASSWORD": "{{password}}",
         "OPENTUI_LIB_PATH": "{{libDir}}/liboc-opentui.so"
-      }
+      },
+      "cwd": "{{projectDir}}"
     },
     "auth": { "basic": { "user": "opencode" } },
     "readiness": { "http": { "path": "/api/session" } }
@@ -105,5 +106,13 @@
   },
   "phoneTools": "plugin",
   "hooks": ["opencode.events"],
-  "signIn": [{ "method": "in-ui", "note": "Connect a provider in the web UI settings." }]
+  "signIn": [{ "method": "in-ui", "note": "Connect a provider in the web UI settings." }],
+  "models": {
+    "openai-chat": {
+      "env": {
+        "OPENCODE_CONFIG_CONTENT": "{\"provider\":{\"phonecando-local\":{\"npm\":\"@ai-sdk/openai-compatible\",\"name\":\"On this phone\",\"options\":{\"baseURL\":\"{{baseUrl}}/v1\",\"apiKey\":\"{env:LOCAL_MODEL_KEY}\"},\"models\":{\"{{model}}\":{\"name\":\"{{model}}\",\"limit\":{\"context\":{{contextWindow}},\"output\":8192}}}}},\"model\":\"phonecando-local/{{model}}\",\"small_model\":\"phonecando-local/{{model}}\"}",
+        "LOCAL_MODEL_KEY": "{{modelKey}}"
+      }
+    }
+  }
 }

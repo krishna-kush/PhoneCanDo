@@ -91,11 +91,11 @@ describe('rules beyond the fixtures', () => {
     assert.ok(result.problems.some((p) => p.path === '/a~1b~0c' && p.code === 'unknown'));
   });
 
-  it('accepts the field of a later phase loosely, typed only at the top', () => {
-    const later = { ...opencode(), models: { anthropic: { env: {}, anything: [1] } } };
-    assert.deepEqual(validate(later, { origin: 'bundled' }).problems, []);
+  it('checks models in full (models.test.ts has the rules)', () => {
     const wrong = validate({ ...opencode(), models: [] }, { origin: 'bundled' });
     assert.ok(wrong.problems.some((p) => p.path === '/models' && p.code === 'type'));
+    const extra = validate({ ...opencode(), models: { anthropic: { env: {}, anything: [1] } } }, { origin: 'bundled' });
+    assert.ok(extra.problems.some((p) => p.path === '/models/anthropic/anything'));
   });
 
   it('reports a missing field once, as required', () => {

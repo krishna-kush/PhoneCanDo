@@ -62,6 +62,7 @@ describe('resume and launch', () => {
 describe('PTY rules', () => {
   it('map known signals to known events', () => {
     ok((m) => rules(m).push({ on: 'progress', event: 'working' }, { on: 'osc777', event: 'failed', match: 'error' }));
+    ok((m) => rules(m).push({ on: 'osc7501', match: '^state=blocked', event: 'waiting' }, { on: 'osc7501', match: '^state=idle', event: 'stopped' }));
     fails((m) => (rules(m)[0].on = 'osc8' as never), '/events/0/pty/rules/0/on enum');
     fails((m) => (rules(m)[0].event = 'idle' as never), '/events/0/pty/rules/0/event enum');
   });

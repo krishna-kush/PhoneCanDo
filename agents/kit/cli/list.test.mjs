@@ -21,8 +21,8 @@ describe('list.mjs', () => {
   it('builds a matrix row per kind', () => {
     assert.deepEqual(matrix([native, image]), {
       include: [
-        { id: 'opencode', prefix: 'oc', toolchains: 'bun,zig,ndk' },
-        { id: 'claude-code', prefix: '', toolchains: '' },
+        { id: 'opencode', type: 'native', prefix: 'oc', toolchains: 'bun,zig,ndk' },
+        { id: 'claude-code', type: 'image', prefix: '', toolchains: '' },
       ],
     });
   });
@@ -35,7 +35,20 @@ describe('list.mjs', () => {
     const { code, out } = run(['--type', 'native', '--matrix']);
     assert.equal(code, 0);
     const { include } = JSON.parse(out.join(''));
-    assert.deepEqual(include.find((r) => r.id === 'opencode'), { id: 'opencode', prefix: 'oc', toolchains: 'bun,zig,ndk' });
+    assert.deepEqual(include.find((r) => r.id === 'opencode'), {
+      id: 'opencode',
+      type: 'native',
+      prefix: 'oc',
+      toolchains: 'bun,zig,ndk',
+    });
+  });
+
+  it('keeps only the kinds with a models block for the local-model check', () => {
+    const { code, out } = run(['--models', '--matrix']);
+    assert.equal(code, 0);
+    const { include } = JSON.parse(out.join(''));
+    assert.ok(include.length > 0 && include.some((r) => r.id === 'opencode'));
+    assert.ok(!include.some((r) => r.id === 'gemini-cli'), 'gemini-cli takes no endpoint');
   });
 
   it('rejects an unknown type or argument', () => {

@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "id": "codex",
+  "label": "Codex",
+  "version": "1",
+  "type": "image",
+  "channels": ["full", "lite"],
+  "stability": "preview",
+  "licence": {
+    "spdx": "Apache-2.0",
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "terms": "https://openai.com/policies/row-terms-of-use/",
+    "source": "https://github.com/openai/codex"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": ["bash", "git", "rg"]
+  },
+  "install": {
+    "families": ["apt", "apk", "dnf", "pacman", "zypper"],
+    "packages": {
+      "apt": ["bash", "ca-certificates", "curl", "git", "ripgrep"],
+      "apk": ["bash", "ca-certificates", "curl", "git", "ripgrep"],
+      "dnf": ["bash", "ca-certificates", "git", "ripgrep"],
+      "pacman": ["bash", "ca-certificates", "curl", "git", "ripgrep"],
+      "zypper": ["bash", "ca-certificates", "curl", "git", "ripgrep"]
+    },
+    "steps": [
+      "curl -fsSL https://chatgpt.com/codex/install.sh -o /tmp/codex-install.sh",
+      "PATH=\"$HOME/.local/bin:$PATH\" CODEX_NON_INTERACTIVE=1 sh /tmp/codex-install.sh",
+      "rm -f /tmp/codex-install.sh"
+    ],
+    "timeoutSec": 1800
+  },
+  "update": {
+    "steps": [
+      "curl -fsSL https://chatgpt.com/codex/install.sh -o /tmp/codex-install.sh",
+      "PATH=\"$HOME/.local/bin:$PATH\" CODEX_NON_INTERACTIVE=1 sh /tmp/codex-install.sh",
+      "rm -f /tmp/codex-install.sh"
+    ]
+  },
+  "versionCheck": {
+    "argv": ["/root/.local/bin/codex", "--version"],
+    "pattern": "codex-cli (\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": [
+        "/root/.local/bin/codex",
+        "--sandbox",
+        "danger-full-access",
+        "-c",
+        "check_for_update_on_startup=false",
+        "-c",
+        "features.daemon_auto_start=false",
+        "-c",
+        "tui.notification_method=\"osc9\"",
+        "-c",
+        "tui.notification_condition=\"always\"",
+        "-c",
+        "tui.terminal_title=[\"thread-name\"]",
+        {
+          "when": "bridgeUrl",
+          "args": [
+            "-c",
+            "mcp_servers.phonecando.url=\"{{bridgeUrl}}/mcp\"",
+            "-c",
+            "mcp_servers.phonecando.bearer_token_env_var=\"PHONECANDO_BRIDGE_TOKEN\""
+          ]
+        }
+      ],
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
+    "resume": { "args": ["resume", "--last"], "at": 1 }
+  },
+  "events": [
+    {
+      "pty": {
+        "rules": [
+          { "on": "osc9", "match": "^(?:Approval requested|Codex wants to|Plan mode prompt|Question:)", "event": "waiting" },
+          { "on": "osc9", "event": "finished" },
+          { "on": "osc7501", "match": "^state=working", "event": "working" },
+          { "on": "osc7501", "match": "^state=blocked", "event": "waiting" },
+          { "on": "osc7501", "match": "^state=done", "event": "finished" },
+          { "on": "osc7501", "match": "^state=error", "event": "failed" },
+          { "on": "osc7501", "match": "^state=idle", "event": "stopped" }
+        ]
+      }
+    }
+  ],
+  "idle": { "from": ["output"], "quietSec": 120 },
+  "surfaces": {
+    "home": "tui",
+    "terminal": { "shell": true },
+    "chatTitle": "^(.+)$"
+  },
+  "phoneTools": "mcp:argv",
+  "signIn": [
+    { "method": "browser", "note": "Pick \"Sign in with ChatGPT\": the phone offers to open the sign-in page, which returns to Codex on localhost:1455 in this machine." },
+    { "method": "device-code", "note": "Or pick the device code sign-in (turn it on first in ChatGPT's security settings): open the link it shows and enter the code." },
+    { "method": "api-key", "note": "An OpenAI API key works too: printenv OPENAI_API_KEY | codex login --with-api-key, in this machine's terminal." }
+  ],
+  "models": {
+    "openai-responses": {
+      "args": [
+        "-c",
+        "model_providers.local.name=\"On this phone\"",
+        "-c",
+        "model_providers.local.base_url=\"{{baseUrl}}/v1\"",
+        "-c",
+        "model_providers.local.env_key=\"LOCAL_MODEL_KEY\"",
+        "-c",
+        "model_providers.local.wire_api=\"responses\"",
+        "-c",
+        "model_providers.local.stream_idle_timeout_ms=3600000",
+        "-c",
+        "model_provider=\"local\"",
+        "-c",
+        "model_context_window={{contextWindow}}",
+        "-m",
+        "{{model}}"
+      ],
+      "env": {
+        "LOCAL_MODEL_KEY": "{{modelKey}}"
+      }
+    }
+  }
+}

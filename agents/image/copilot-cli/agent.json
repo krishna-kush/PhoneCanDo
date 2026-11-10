@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "id": "copilot-cli",
+  "label": "GitHub Copilot CLI",
+  "version": "1",
+  "type": "image",
+  "channels": ["full", "lite"],
+  "stability": "preview",
+  "licence": {
+    "spdx": null,
+    "redistributed": false,
+    "notice": "NOTICE.md",
+    "terms": "https://docs.github.com/en/site-policy/github-terms/github-terms-for-additional-products-and-features",
+    "source": "https://github.com/github/copilot-cli"
+  },
+  "requires": {
+    "linux": "required",
+    "commands": ["bash", "git"]
+  },
+  "config": {
+    "dir": "config",
+    "into": ".copilot/hooks",
+    "required": ["phonecando.json"]
+  },
+  "install": {
+    "families": ["apt", "dnf", "pacman", "zypper"],
+    "packages": {
+      "apt": ["bash", "ca-certificates", "curl", "git", "libssl3"],
+      "dnf": ["bash", "ca-certificates", "git", "openssl-libs"],
+      "pacman": ["bash", "ca-certificates", "curl", "git", "openssl"],
+      "zypper": ["bash", "ca-certificates", "curl", "git", "libopenssl3"]
+    },
+    "steps": [
+      "curl -fsSL https://gh.io/copilot-install -o /tmp/copilot-install.sh",
+      "PATH=\"$HOME/.local/bin:$PATH\" PREFIX=\"$HOME/.local\" bash /tmp/copilot-install.sh",
+      "rm -f /tmp/copilot-install.sh"
+    ],
+    "timeoutSec": 1200
+  },
+  "update": {
+    "steps": [
+      "curl -fsSL https://gh.io/copilot-install -o /tmp/copilot-install.sh",
+      "PATH=\"$HOME/.local/bin:$PATH\" PREFIX=\"$HOME/.local\" bash /tmp/copilot-install.sh",
+      "rm -f /tmp/copilot-install.sh"
+    ]
+  },
+  "versionCheck": {
+    "argv": ["/root/.local/bin/copilot", "--version"],
+    "pattern": "Copilot CLI (\\d+\\.\\d+\\.\\d+)"
+  },
+  "engine": {
+    "style": "tui",
+    "launch": {
+      "argv": [
+        "/root/.local/bin/copilot",
+        "--no-auto-update",
+        {
+          "when": "bridgeUrl",
+          "args": [
+            "--additional-mcp-config",
+            "{\"mcpServers\":{\"phonecando\":{\"type\":\"http\",\"url\":\"{{bridgeUrl}}/mcp\",\"headers\":{\"Authorization\":\"Bearer ${PHONECANDO_BRIDGE_TOKEN}\"},\"tools\":[\"*\"]}}}"
+          ]
+        }
+      ],
+      "cwd": "{{projectDir}}"
+    },
+    "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
+    "resume": { "args": ["--continue"] }
+  },
+  "events": [
+    {
+      "hook": {
+        "map": {
+          "userPromptSubmitted": "working",
+          "permissionRequest": "waiting",
+          "agentStop": "finished",
+          "errorOccurred": "failed"
+        }
+      }
+    },
+    {
+      "pty": {
+        "rules": [
+          { "on": "osc7501", "match": "^state=working", "event": "working" },
+          { "on": "osc7501", "match": "^state=blocked", "event": "waiting" },
+          { "on": "osc7501", "match": "^state=done", "event": "finished" },
+          { "on": "osc7501", "match": "^state=error", "event": "failed" }
+        ]
+      }
+    }
+  ],
+  "idle": { "from": ["output", "events"], "quietSec": 120 },
+  "surfaces": {
+    "home": "tui",
+    "terminal": { "shell": true }
+  },
+  "phoneTools": "mcp:argv",
+  "signIn": [
+    { "method": "device-code", "note": "Run /login in Copilot: it shows a code and github.com/login/device; enter the code there and approve. Needs a Copilot plan (Free included)." },
+    { "method": "api-key", "note": "A fine-grained token with the Copilot Requests permission works too: set COPILOT_GITHUB_TOKEN in this machine's environment." }
+  ]
+}
