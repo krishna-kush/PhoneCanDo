@@ -11,6 +11,15 @@ export function listSubfolders(path: string): string[] {
   return names.sort((a, b) => a.localeCompare(b));
 }
 
+/** Whether `path` (absolute) is a folder. */
+export function folderExists(path: string): boolean {
+  try {
+    return new Directory(`file://${path}`).exists;
+  } catch {
+    return false;
+  }
+}
+
 /** Free bytes on the app's data storage; null when Android won't say. */
 export function freeDiskBytes(): number | null {
   try {

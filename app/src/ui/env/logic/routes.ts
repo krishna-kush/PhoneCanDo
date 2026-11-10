@@ -31,8 +31,18 @@ export type EnvRoute =
   | { name: 'new-env-confirm'; repo: string; tag: PickedTag; typed: boolean }
   /** Own: the download running. */
   | { name: 'new-env-pull'; repo: string; tag: string; envId: EnvId }
-  /** Choose agent: which kind the new agent is (only when there is a choice). */
-  | { name: 'new-agent'; target: NewAgentTarget };
+  /** Choose agent: which kind the new agent is (only when there is a choice); `picked` starts picked. */
+  | { name: 'new-agent'; target: NewAgentTarget; picked?: string }
+  /** Custom agents: the user's own kinds, to add, edit, share or delete. */
+  | { name: 'custom-agents' }
+  /** A custom agent's form: a new one (kindId null) or an edit; from Choose agent when `target` is set. */
+  | { name: 'custom-agent'; kindId: string | null; target: NewAgentTarget | null }
+  /** A custom agent pasted in. */
+  | { name: 'custom-agent-import' }
+  /** Local models: suggestions, Hugging Face search, downloads, the models on the phone; from an agent's page when `agentId` is set. */
+  | { name: 'models'; agentId?: AgentId }
+  /** One Hugging Face repository's models. */
+  | { name: 'model-repo'; repo: string; agentId?: AgentId };
 
 /** Where Back goes; null on the list (the app's own Back takes over). */
 export function parentRoute(route: EnvRoute): EnvRoute | null {
@@ -51,6 +61,16 @@ export function parentRoute(route: EnvRoute): EnvRoute | null {
       return route.typed ? { name: 'new-env-os' } : { name: 'new-env-tags', repo: route.repo };
     case 'new-agent':
       return parentOfTarget(route.target);
+    case 'custom-agents':
+      return { name: 'list' };
+    case 'custom-agent':
+      return route.target ? { name: 'new-agent', target: route.target } : { name: 'custom-agents' };
+    case 'custom-agent-import':
+      return { name: 'custom-agents' };
+    case 'models':
+      return route.agentId ? { name: 'agent', agentId: route.agentId } : { name: 'list' };
+    case 'model-repo':
+      return { name: 'models', agentId: route.agentId };
   }
 }
 

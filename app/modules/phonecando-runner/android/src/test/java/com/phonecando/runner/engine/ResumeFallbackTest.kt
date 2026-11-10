@@ -48,6 +48,16 @@ class ResumeFallbackTest {
     assertFalse(ResumeFallback.applies(again, 1))
   }
 
+  @Test fun anExitAfterReadyFallsBackOnlyBeforeAnyEvent() {
+    val first = plan(resuming, ranBefore = true)
+    // A first-run screen made it ready; its resume then found nothing.
+    assertTrue(ResumeFallback.appliesAfterReady(first, 1, sawEvent = false))
+    // It ran a prompt (an event): a later exit is a real death.
+    assertFalse(ResumeFallback.appliesAfterReady(first, 1, sawEvent = true))
+    assertFalse(ResumeFallback.appliesAfterReady(first, 0, sawEvent = false))
+    assertFalse(ResumeFallback.appliesAfterReady(plan(resuming, ranBefore = false), 1, sawEvent = false))
+  }
+
   @Test fun everyOtherExitCountsAsItWould() {
     // Exit 0 before ready, a launch that did not resume, a kind without resume args, a server.
     assertFalse(ResumeFallback.applies(plan(resuming, ranBefore = true), 0))

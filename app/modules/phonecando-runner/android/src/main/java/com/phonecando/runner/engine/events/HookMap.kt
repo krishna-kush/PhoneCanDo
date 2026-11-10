@@ -15,5 +15,6 @@ internal object HookMap {
     PtyEvent.WAITING -> EngineEvent.Kind.WAITING
     PtyEvent.FINISHED -> EngineEvent.Kind.FINISHED
     PtyEvent.FAILED -> EngineEvent.Kind.FAILED
+    PtyEvent.STOPPED -> EngineEvent.Kind.STOPPED
   }
 }

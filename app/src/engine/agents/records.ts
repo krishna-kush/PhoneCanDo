@@ -14,11 +14,15 @@ export type Agent = {
   name: string;
   /** The image this agent is attached to; created and deleted with it. */
   imageId: ImageId;
+  /** Its work folder, projects/ in its HOME (host path): where its engine and terminals start. */
+  projectDir: string;
   createdAt: number;
   /** The version its last install or update recorded; null before one finished. */
   installedVersion: string | null;
   /** Its kind has an install and none finished yet: its engine refuses to start (agent_not_installed). */
   needsInstall: boolean;
+  /** The local model it runs on (engine/models/); null: the agent's own setup. */
+  model: string | null;
 };
 
 export type EngineState = 'stopped' | 'starting' | 'ready' | 'stopping' | 'died' | 'failed';
@@ -42,4 +46,6 @@ export type EngineStartError =
   | 'port_unavailable'
   | 'start_failed'
   /** Its kind has an install and none finished yet (installAgent). */
-  | 'agent_not_installed';
+  | 'agent_not_installed'
+  /** Its local model cannot serve it; the message says why (gone, too big, another model loaded, ...). */
+  | 'model_unavailable';

@@ -1,5 +1,6 @@
 package com.phonecando.linux.terminal
 
+import com.phonecando.agents.kit.ProjectDir
 import com.phonecando.lre.api.ImageLayout
 import java.io.File
 
@@ -17,16 +18,19 @@ data class TerminalRecipe(
 
   companion object {
     /**
-     * A login shell inside a Linux image. shims/bash is a link to our
-     * launcher, which runs bash in the guest (launch.conf maps it to the
-     * guest's /bin/sh when there is no bash). HOME is the guest's /root,
-     * where home/ is bound.
+     * A login shell inside a Linux image, in the work folder every agent
+     * starts in (ProjectDir, /root/projects). shims/sh is a link to our
+     * launcher, which runs sh in the guest; that sh enters the folder and
+     * execs the image's login shell, `$SHELL -l` (launch.conf sets SHELL:
+     * bash, else the image's sh). HOME is the guest's /root, where home/ is
+     * bound, so the prompt shows ~/projects.
      *
      * cwd is run/ on purpose: the launcher keeps the current dir as the
      * guest cwd only when it lies under a `same` path (home/ and tmp/ under
      * each data-dir spelling) and otherwise starts in the `home` directive,
-     * /root. Starting in home/ itself would show the long host spelling of
-     * that dir as the prompt's cwd instead of ~.
+     * /root. Starting in home/projects itself would show the long host
+     * spelling of that dir as the prompt's cwd instead of ~/projects, so the
+     * guest sh changes dir instead. The caller makes the folder first.
      *
      * TMPDIR is the guest's /tmp (tmp/ is bound there): our PTY passes the
      * app's own environment on, whose TMPDIR is the app's cache dir, which
@@ -43,10 +47,10 @@ data class TerminalRecipe(
      * carrying that tag, and the terminal is not an engine.
      */
     fun linux(layout: ImageLayout): TerminalRecipe = TerminalRecipe(
-      cmd = listOf(File(layout.shims, "bash").path, "-l"),
+      cmd = listOf(File(layout.shims, "sh").path, "-c", LOGIN_IN_PROJECTS),
       env = mapOf(
         "PHONECANDO_IMAGE" to layout.root.path,
-        "HOME" to "/root",
+        "HOME" to GUEST_HOME,
         "TMPDIR" to "/tmp",
         "TERM" to TERM,
         "COLORTERM" to COLORTERM,
@@ -57,9 +61,10 @@ data class TerminalRecipe(
     )
 
     /**
-     * Android's shell in an image with no Linux: HOME and TMPDIR are the
-     * image's home/ and tmp/. It keeps the terminal itself: mksh doesn't
-     * take one it is handed.
+     * Android's shell in an image with no Linux, in the work folder in its
+     * home/ (the caller makes it): HOME and TMPDIR are the image's home/ and
+     * tmp/. It keeps the terminal itself: mksh doesn't take one it is
+     * handed.
      */
     fun android(layout: ImageLayout): TerminalRecipe = TerminalRecipe(
       cmd = listOf("/system/bin/sh", "-l"),
@@ -69,9 +74,15 @@ data class TerminalRecipe(
         "TERM" to TERM,
         "COLORTERM" to COLORTERM,
       ),
-      cwd = layout.home.path,
+      cwd = ProjectDir.of(layout.home).path,
       handOver = false,
     )
+
+    /** Where launch.conf binds the image's home/ in the guest. */
+    private const val GUEST_HOME = "/root"
+
+    /** The guest sh's script: the work folder, then the image's login shell. */
+    private val LOGIN_IN_PROJECTS = "cd '${ProjectDir.of(GUEST_HOME)}'; exec \"\$SHELL\" -l"
 
     private const val TERM = "xterm-256color"
     private const val COLORTERM = "truecolor"

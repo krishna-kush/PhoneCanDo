@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { getBuildChannel } from '../../../engine/runner';
 import { useAgentsStore } from '../../../state/agents';
 import { useLinuxStore } from '../../../state/linux';
+import { useModelsStore } from '../../../state/models';
 import AppButton from '../../common/AppButton';
 import Screen from '../../common/Screen';
 import SectionTitle from '../../common/SectionTitle';
@@ -12,14 +13,17 @@ import Note from '../parts/Note';
 import EnvSection from './EnvSection';
 
 // The Env tab's home: every env with the agents whose machines come from it.
-// New env only where Linux runs (never on play); elsewhere New agent makes
-// one with Android's own shell (after Choose agent when there is a choice).
+// New env and Custom agents only where Linux runs (never on play);
+// elsewhere New agent makes one with Android's own shell (after Choose
+// agent when there is a choice). Models on every channel, where the phone
+// can run local models at all.
 export default function EnvList() {
   const envs = useLinuxStore((s) => s.envs);
   const images = useLinuxStore((s) => s.images);
   const linuxAvailable = useLinuxStore((s) => s.status.available);
   const agents = useAgentsStore((s) => s.agents);
   const open = useEnvNav((s) => s.open);
+  const modelsOffered = useModelsStore((s) => s.device.supported);
   const sections = useMemo(() => buildEnvSections(envs, images, agents), [envs, images, agents]);
   const play = getBuildChannel() === 'play';
   const newAgent = useNewAgent();
@@ -45,7 +49,12 @@ export default function EnvList() {
       ))}
       {sections.length === 0 ? <Note>Nothing here yet.</Note> : null}
       {linuxAvailable ? (
-        <AppButton onPress={() => open({ name: 'new-env' })}>New env</AppButton>
+        <>
+          <AppButton onPress={() => open({ name: 'new-env' })}>New env</AppButton>
+          <AppButton variant="secondary" onPress={() => open({ name: 'custom-agents' })}>
+            Custom agents
+          </AppButton>
+        </>
       ) : (
         <>
           {!play ? <Note>Linux isn't available in this build, so agents use Android's own shell.</Note> : null}
@@ -55,6 +64,11 @@ export default function EnvList() {
           {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
         </>
       )}
+      {modelsOffered ? (
+        <AppButton variant="secondary" onPress={() => open({ name: 'models' })}>
+          Models
+        </AppButton>
+      ) : null}
     </Screen>
   );
 }

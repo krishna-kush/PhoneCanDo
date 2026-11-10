@@ -2,17 +2,17 @@ package com.phonecando.runner.agents
 
 import com.phonecando.agents.kit.KindHooks
 import com.phonecando.agents.kit.manifest.ManifestDecoder
-import com.phonecando.agents.kit.manifest.Origin
 import com.phonecando.agents.kit.render.KindAssets
 import com.phonecando.agents.kit.render.ManifestKind
+import com.phonecando.runner.agents.user.UserKindRules
 import java.io.File
 
 // Every agent kind this build can run, by id: each packaged manifest
 // (assets/agents/<id>/agent.json, see agents.gradle) decoded and bound to its
 // kind's code hooks, then each kind the user added (<id>.json in the user
-// folder, files/state/agent-kinds/user/ on the phone), decoded as origin
-// user (ManifestDecoder's user rules: an image kind whose engine is its TUI,
-// no hooks) and capped at MAX_USER_BYTES. A kind that cannot be read or run
+// folder, files/state/agent-kinds/user/ on the phone), held to the user
+// kinds' rules (user/UserKindRules: an image kind whose engine is its TUI,
+// no hooks, at most 64 KiB). A kind that cannot be read or run
 // here (a bad manifest, a hook this build lacks, an id taken or not its
 // file's) is left out and reported through `skipped`, so one broken kind
 // never takes the others down. Each kind is bound to the runtime plugins
@@ -33,9 +33,6 @@ class KindCatalog(kinds: List<ManifestKind>, private val defaultId: String) {
   val default: ManifestKind? get() = byId[defaultId]
 
   companion object {
-    const val MAX_USER_BYTES = 64 * 1024
-    private const val USER_SUFFIX = ".json"
-
     /** Folders of assets/agents/ that are no kind (agents.gradle packages them beside the kinds). */
     val NOT_KINDS = setOf(RuntimeCatalog.FOLDER, "kit", "shared")
 
@@ -70,15 +67,14 @@ class KindCatalog(kinds: List<ManifestKind>, private val defaultId: String) {
       runtimes: RuntimeCatalog,
       skipped: (String, Exception) -> Unit,
     ): List<ManifestKind> {
-      val files = dir.listFiles { f -> f.name.endsWith(USER_SUFFIX) }.orEmpty().sortedBy { it.name }
+      val files = dir.listFiles { f -> f.name.endsWith(UserKindRules.SUFFIX) }.orEmpty().sortedBy { it.name }
       return files.mapNotNull { file ->
         try {
           require(file.isFile) { "not a file" }
-          require(file.length() <= MAX_USER_BYTES) { "larger than ${MAX_USER_BYTES / 1024} KiB" }
-          val manifest = ManifestDecoder.decode(file.readText(Charsets.UTF_8), Origin.USER)
-          require(file.name == manifest.id + USER_SUFFIX) { "its id is ${manifest.id}" }
-          require(manifest.id !in taken) { "${manifest.id} is a bundled kind's id" }
-          ManifestKind.of(manifest, null, runtimes.byId)
+          require(file.length() <= UserKindRules.MAX_BYTES) { "larger than ${UserKindRules.MAX_BYTES / 1024} KiB" }
+          val kind = UserKindRules.kind(file.readBytes(), taken, runtimes.byId)
+          require(file.name == UserKindRules.fileName(kind.id)) { "its id is ${kind.id}" }
+          kind
         } catch (e: Exception) {
           skipped("user/${file.name}", e)
           null

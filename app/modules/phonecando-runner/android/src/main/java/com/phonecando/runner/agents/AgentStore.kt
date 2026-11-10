@@ -85,6 +85,9 @@ class AgentStore(
   /** What the kind's install put in the agent's image, read back by its version check. */
   fun setInstalledVersion(id: String, version: String): AgentRecord = update(id) { it.copy(installedVersion = version) }
 
+  /** The local model the agent runs on; null: its own setup. */
+  fun setModel(id: String, model: String?): AgentRecord = update(id) { it.copy(model = model) }
+
   private fun update(id: String, change: (AgentRecord) -> AgentRecord): AgentRecord = synchronized(lock) {
     val list = loaded()
     val index = list.indexOfFirst { it.id == id }
@@ -179,6 +182,7 @@ class AgentStore(
           createdAt = o.optLong("createdAt", 0L),
           ranBefore = o.optBoolean("ranBefore", false),
           installedVersion = if (o.isNull("installedVersion")) null else o.optString("installedVersion", "").ifEmpty { null },
+          model = if (o.isNull("model")) null else o.optString("model", "").ifEmpty { null },
         )
       }
       return out
@@ -198,7 +202,8 @@ class AgentStore(
             .put("bridgeToken", a.bridgeToken)
             .put("createdAt", a.createdAt)
             .put("ranBefore", a.ranBefore)
-            .put("installedVersion", a.installedVersion ?: JSONObject.NULL),
+            .put("installedVersion", a.installedVersion ?: JSONObject.NULL)
+            .put("model", a.model ?: JSONObject.NULL),
         )
       }
       return JSONObject().put("agents", array).toString(2)

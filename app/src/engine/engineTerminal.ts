@@ -41,7 +41,16 @@ export function engineTerminalResize(viewerId: TerminalViewerId, rows: number, c
   nativeRunner().engineTerminalResize(viewerId, rows, cols);
 }
 
-/** Stops viewing; the engine keeps running. */
+/**
+ * Whether the view shows the program (on screen, the app in front). The
+ * program counts as focused only then (focus reports, if it asked for
+ * them); a view that attached and never said so does not.
+ */
+export function engineTerminalFocus(viewerId: TerminalViewerId, shown: boolean): void {
+  nativeRunner().engineTerminalFocus(viewerId, shown);
+}
+
+/** Stops viewing; the engine keeps running, unfocused. */
 export function engineTerminalDetach(viewerId: TerminalViewerId): void {
   nativeRunner().engineTerminalDetach(viewerId);
 }

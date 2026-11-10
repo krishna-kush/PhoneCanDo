@@ -122,6 +122,10 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
     return chats.values.removeAll { it.agentId == agentId }
   }
 
+  /** The agents with a run going: a working chat, the one on screen included. */
+  @Synchronized
+  fun working(): Set<String> = chats.values.filter { it.state == State.WORKING }.mapTo(HashSet()) { it.agentId }
+
   /** Waiting first, then working, error, done; newest first within each. */
   @Synchronized
   fun chats(): List<Chat> {

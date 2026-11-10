@@ -47,6 +47,14 @@ enum class EngineStartError(val code: String) {
 
   /** The kind installs into the agent's image, and no install of it is recorded yet. */
   AGENT_NOT_INSTALLED("agent_not_installed"),
+
+  /**
+   * The agent's local model cannot serve it: gone from the phone, too big
+   * for its RAM, a phone or kind that cannot use one, another model loaded
+   * for a running agent, or a server that never answered ready. The detail
+   * says which, fit for the UI.
+   */
+  MODEL_UNAVAILABLE("model_unavailable"),
 }
 
 /** A refused start: the message starts with the code, so JS can read it from either. */

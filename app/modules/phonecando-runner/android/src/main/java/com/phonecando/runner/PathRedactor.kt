@@ -23,7 +23,8 @@ import com.phonecando.runner.agents.KindCatalog
 // line runs up to it, spaces included; otherwise the unquoted rule applies.
 // Either way only a trailing `:line` or `:line:col` (a stack frame) stays.
 // This matches tce/core/redact.ts. Secrets: the given values (every agent's engine password, its Basic
-// credential, bridge token), Authorization / x-api-key header values,
+// credential, bridge token, and the local model server's keys,
+// models/ModelServerKeys), Authorization / x-api-key header values,
 // Bearer/Basic credentials and common provider key shapes become `<secret>`.
 // The placeholders start with '<', itself a stop, so redacting twice changes
 // nothing.

@@ -6,6 +6,7 @@ import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent, useAgentsStore } from '../../state/agents';
 import { useAppStore, type TerminalSession } from '../../state/app';
 import { webGoBack, webGoHome } from '../chat/webNavigation';
+import ReadingChip from '../models/parts/ReadingChip';
 import AgentSheet from './agent-switcher/AgentSheet';
 import EngineDot from './agent-switcher/EngineDot';
 import ArrowIcon from './ArrowIcon';
@@ -22,7 +23,8 @@ import { HIT, useTheme } from './globals';
 // the agent switcher. Home IS that agent's own UI (no app-side
 // projects/chats): the ⋮ menu leads into it by what its home shows (see
 // agentItems), then Settings, About. An open terminal shows what it is
-// attached to.
+// attached to. While the agent's local model reads a prompt, a short line
+// says so beside the title (ReadingChip), never changing the bar's height.
 export default function AppHeader() {
   const t = useTheme();
   const terminal = useAppStore((s) => s.terminal);
@@ -111,6 +113,7 @@ export default function AppHeader() {
         )}
       </XStack>
 
+      <ReadingChip agentId={terminal?.agentId ?? agent?.id ?? null} />
       <CardMenu items={menuItems} label="Menu" offset={-24} />
 
       <Sheet

@@ -15,6 +15,12 @@ export type PtyTransport = {
   read(max: number): string | null;
   write(b64: string): void;
   resize(rows: number, cols: number): void;
+  /**
+   * Whether the view shows the program: an engine's PTY tells the program
+   * (focus reports), since nothing else does. A PTY of the view's own has
+   * none: its program sees no focus at all.
+   */
+  focus?(shown: boolean): void;
   /** Hangs up or detaches. Safe before open finishes (open then opens nothing) and twice. */
   close(): void;
 };

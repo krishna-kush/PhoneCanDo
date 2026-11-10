@@ -1,18 +1,21 @@
 package com.phonecando.runner.api
 
 import android.content.Context
+import com.phonecando.agents.kit.ProjectDir
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.agents.install.InstallGate
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.engine.image.ImageDir
 import com.phonecando.runner.notify.AgentNotices
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
 import kotlin.concurrent.thread
 
-// The agents for JS (records.ts Agent): list, create, rename, delete. The
-// password, bridge token and port never leave native code here.
+// The agents for JS (records.ts Agent): list, create, rename, delete (an
+// agent's local model: AgentModelFunctions). The password, bridge token
+// and port never leave native code here.
 internal fun ModuleDefinitionBuilder.agentFunctions(context: () -> Context) {
   Function("listAgents") {
     val ctx = context()
@@ -56,12 +59,15 @@ internal fun ModuleDefinitionBuilder.agentFunctions(context: () -> Context) {
 
 // needsInstall: its kind installs into its image and no install is
 // recorded (InstallGate); an agent of a kind this build lacks needs none.
+// projectDir: the work folder in its image's home/ (ProjectDir), host path.
 internal fun agentToJs(context: Context, a: AgentRecord): Map<String, Any?> = mapOf(
   "id" to a.id,
   "kind" to a.kind,
   "name" to a.name,
   "imageId" to a.imageId,
+  "projectDir" to ProjectDir.of(ImageDir.of(context.filesDir, a.imageId).home).path,
   "createdAt" to a.createdAt.toDouble(),
   "installedVersion" to a.installedVersion,
+  "model" to a.model,
   "needsInstall" to (KindCatalogs.get(context).get(a.kind)?.let { InstallGate.needsInstall(it, a) } == true),
 )

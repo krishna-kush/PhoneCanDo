@@ -1,6 +1,7 @@
 package com.phonecando.runner.engine
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.agents.kit.render.ManifestKind
@@ -20,6 +21,10 @@ import com.phonecando.runner.engine.ready.TuiReady
 import com.phonecando.runner.engine.spawn.TuiProcess
 import com.phonecando.runner.engine.tui.TerminalViewException
 import com.phonecando.runner.engine.tui.TerminalViewers
+import com.phonecando.runner.models.ModelServerKeys
+import com.phonecando.runner.models.ModelSlots
+import com.phonecando.runner.models.prompt.PromptReading
+import com.phonecando.runner.models.prompt.PromptWatch
 import com.phonecando.runner.notify.AgentAlerts
 import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.ChatTracker
@@ -35,13 +40,21 @@ import kotlin.concurrent.withLock
 // (EnginePolicy: at most three, else stop the least recently used idle
 // one, else too_many_running), clear out processes an earlier life of this
 // agent left behind, read the image and seed its HOME
-// (EngineLauncher.plan), open the shared bridge, take a
+// (EngineLauncher.plan), bring up its local model when it has one (the
+// model slot, LocalModelBinding: this waits while the model loads; an
+// agent whose model cannot serve it is refused model_unavailable), open
+// the shared bridge when its kind has phone tools (BridgeAccess), take a
 // port (PortAllocator; a server engine only) and spawn by the kind's engine
 // style; the call returns once the process runs (and a server's port is
-// known). EngineWatch then reports ready (the kind's ReadyProbe), a 401
-// (relaunch on a fresh port), a boot timeout or an exit; an engine that
-// dies is marked died and its handle dropped, so the next start launches it
-// again (nothing restarts it by itself); a TUI that exits 0 just stopped.
+// known). Whenever an engine is gone (stop, failed start, death) its hold
+// on the model ends, and the last one stops the model server; a model
+// server that dies takes its agents down (died, model_unavailable); while
+// it is busy for an agent with a run going, its prompt reading is watched
+// (models/prompt/). EngineWatch then reports ready (the kind's
+// ReadyProbe), a 401 (relaunch on a fresh port), a boot timeout or an
+// exit; an engine that dies is marked died and its handle dropped, so
+// the next start launches it again (nothing restarts it by itself); a TUI
+// that exits 0 just stopped.
 // A TUI engine's terminal stays with its slot while it runs; viewers attach
 // to it through `terminals`. Stop: ask the engine to end (SIGTERM, or a
 // TUI's hang-up) and SIGTERM every process tagged with its agent id, wait
@@ -61,7 +74,13 @@ internal class EngineSupervisor(
   private val settled = lock.newCondition()
   private val slots = ConcurrentHashMap<String, EngineSlot>()
   private var bridge: BridgeHandle? = null
-  private val chats = ChatTracker { listener.onChats() }
+  private val chats: ChatTracker = ChatTracker {
+    listener.onChats()
+    // A run may have started or ended.
+    prompts.poke()
+  }
+  private val models = ModelSlots.binding(context, ports, reaper, ::onModelDied)
+  private val prompts: PromptWatch = ModelSlots.promptWatch(context, models, chats::working) { listener.onPrompt(it) }
   private val streams = EngineStreams(
     onActivity = ::onActivity,
     alerts = AgentAlerts(context, store),
@@ -83,6 +102,9 @@ internal class EngineSupervisor(
 
   /** The chats the running engines are busy with (the service notification). */
   fun chats(): List<ChatBoard.Chat> = chats.chats()
+
+  /** The model server reading a prompt for a bound agent's run; null when not (or not watched). */
+  fun promptReading(): PromptReading? = prompts.current()
 
   /** The user has this agent's chat in front: its done and error chats go. */
   fun chatsSeen(agentId: String) = chats.seen(agentId)
@@ -140,6 +162,7 @@ internal class EngineSupervisor(
     val kind = KindCatalogs.get(context).get(record.kind)
       ?: throw EngineStartException(EngineStartError.START_FAILED, "unknown agent kind ${record.kind}")
     InstallGate.check(kind, record)
+    models.check(record, kind)
     val gen = when (val seat = takeSeat(agentId)) {
       is Seat.Running -> return seat.port
       is Seat.Taken -> seat.gen
@@ -149,8 +172,8 @@ internal class EngineSupervisor(
       // Processes of this agent now are leftovers (a dead engine's
       // children, an engine from an earlier app process): end them first.
       reaper.stop(emptyList(), setOf(agentId))
-      val plan = launcher.plan(record, kind, requestedAt)
-      val bridgeUrl = ensureBridge()?.url
+      val plan = launcher.plan(record, kind, requestedAt).copy(model = models.endpoint(record, kind))
+      val bridgeUrl = bridgeFor(kind)
       if (kind.style == EngineStyle.SERVER) {
         val alloc = ports.allocate(record.port?.toIntOrNull())
         port = alloc.port
@@ -171,6 +194,8 @@ internal class EngineSupervisor(
       return started
     } catch (e: Exception) {
       port?.let(ports::release)
+      // Starts of one agent run one at a time, so no engine of it holds the model now.
+      models.release(agentId)
       val failure = e as? EngineStartException
         ?: EngineStartException(EngineStartError.START_FAILED, e.message ?: e.javaClass.simpleName)
       fail(agentId, gen, failure)
@@ -274,13 +299,15 @@ internal class EngineSupervisor(
       process = proc,
       ready = ready,
       requestedAt = plan.requestedAt,
-      secrets = { PathRedactor.agentSecrets(store.all(), KindCatalogs.get(context)) },
+      secrets = { PathRedactor.agentSecrets(store.all(), KindCatalogs.get(context)) + ModelServerKeys.issued() },
       isDeath = dies,
       onReady = { onHealthy(slot.agentId, proc) },
       onSquatted = { onSquatted(slot.agentId, proc) },
       onBootTimeout = { timeoutMs -> onBootTimeout(slot.agentId, proc, timeoutMs) },
       onBootExit = { status -> ResumeFallback.applies(plan, status) && relaunchWithoutResume(slot.agentId, proc, status) },
-      onUnexpectedExit = { status -> onExited(slot.agentId, proc, status, died = dies(status)) },
+      onUnexpectedExit = { status ->
+        if (!relaunchWithoutResume(slot.agentId, proc, status, afterReady = true)) onExited(slot.agentId, proc, status, died = dies(status))
+      },
     )
   }
 
@@ -296,15 +323,25 @@ internal class EngineSupervisor(
       settled.signalAll()
       slot.status()
     }
+    models.release(agentId)
     Log.w(TAG, "engine $agentId failed to start: ${e.message}")
     emit(status)
     afterEngineGone()
   }
 
-  // Lock-free (slots is concurrent, state volatile): bridge threads ask on
-  // every request.
-  private fun bridgeLive(agentId: String): Boolean =
-    slots[agentId]?.state.let { it == EngineState.STARTING || it == EngineState.READY }
+  // Lock-free (slots is concurrent, state and plan volatile): bridge
+  // threads ask on every request. Only an engine that runs and was given
+  // the bridge (BridgeAccess) is answered.
+  private fun bridgeLive(agentId: String): Boolean {
+    val slot = slots[agentId] ?: return false
+    val live = slot.state.let { it == EngineState.STARTING || it == EngineState.READY }
+    return live && slot.plan?.kind?.manifest?.let(BridgeAccess::granted) == true
+  }
+
+  // The bridge URL for an engine of [kind]: null when its kind has no phone
+  // tools (it gets no bridge) or the bridge would not open.
+  private fun bridgeFor(kind: ManifestKind): String? =
+    if (BridgeAccess.granted(kind.manifest)) ensureBridge()?.url else null
 
   private fun ensureBridge(): BridgeHandle? = lock.withLock {
     bridge ?: try {
@@ -378,7 +415,7 @@ internal class EngineSupervisor(
     try {
       val alloc = ports.allocate(null, avoid = setOf(oldPort))
       port = alloc.port
-      val next = launcher.spawn(plan, alloc.port, ensureBridge()?.url)
+      val next = launcher.spawn(plan, alloc.port, bridgeFor(plan.kind))
       if (!adopt(agentId, gen, plan, next, alloc.port)) {
         reaper.stop(listOf(next), setOf(agentId))
         return
@@ -393,24 +430,41 @@ internal class EngineSupervisor(
   }
 
   // Its resume args may have found nothing to resume (ResumeFallback): the
-  // same start, once more without them. False when the start is no longer
-  // this one (stopped meanwhile), so the exit counts as it would have.
-  private fun relaunchWithoutResume(agentId: String, proc: EngineProcess, status: Int): Boolean {
+  // same start, once more without them. [afterReady]: it exited once ready
+  // (still nothing to resume when it raised no event), so it is starting
+  // again. False when it does not apply or the start is no longer this one
+  // (stopped meanwhile), so the exit counts as it would have.
+  private fun relaunchWithoutResume(agentId: String, proc: EngineProcess, status: Int, afterReady: Boolean = false): Boolean {
     val plan: LaunchPlan
     val gen: Int
+    var restarting: EngineStatus? = null
     lock.withLock {
       val slot = slots[agentId] ?: return false
-      if (slot.process !== proc || slot.state != EngineState.STARTING) return false
-      plan = ResumeFallback.without(slot.plan ?: return false)
+      val launched = slot.plan ?: return false
+      if (slot.process !== proc) return false
+      if (afterReady) {
+        if (slot.state != EngineState.READY) return false
+        if (!ResumeFallback.appliesAfterReady(launched, status, sawEvent = slot.lastEventAt != null)) return false
+        slot.events?.stop()
+        slot.events = null
+        slot.state = EngineState.STARTING
+        restarting = slot.status()
+      } else if (slot.state != EngineState.STARTING) {
+        return false
+      }
+      // After ready its readiness clock starts again: the start was requested
+      // long before (a first-run screen can wait for minutes).
+      plan = ResumeFallback.without(launched).let { if (afterReady) it.copy(requestedAt = SystemClock.elapsedRealtime()) else it }
       gen = slot.gen
       slot.process = null
       slot.watch = null
       slot.terminal = null
     }
-    Log.w(TAG, "engine $agentId exited with $status before it was ready, resuming; launching it again without its resume args")
+    restarting?.let(::emit)
+    Log.w(TAG, "engine $agentId exited with $status ${if (afterReady) "before any event" else "before it was ready"}, resuming; launching it again without its resume args")
     reaper.stop(listOf(proc), setOf(agentId))
     try {
-      val next = launcher.spawn(plan, null, ensureBridge()?.url, counted = false)
+      val next = launcher.spawn(plan, null, bridgeFor(plan.kind), counted = false)
       if (!adopt(agentId, gen, plan, next, null)) reaper.stop(listOf(next), setOf(agentId))
     } catch (e: Exception) {
       fail(agentId, gen, e as? EngineStartException ?: EngineStartException(EngineStartError.START_FAILED, e.message ?: "relaunch failed"))
@@ -441,15 +495,26 @@ internal class EngineSupervisor(
       settled.signalAll()
       slot.status()
     }
+    models.release(agentId)
     chats.detach(agentId)
     emit(status)
     afterEngineGone()
+  }
+
+  // The model server of these agents ended by itself: their engines can no
+  // longer reach it, so they stop too (died, with why).
+  private fun onModelDied(agentIds: Set<String>, detail: String) {
+    Log.w(TAG, "local model gone, stopping ${agentIds.joinToString()}")
+    terminate(agentIds, EngineState.DIED, "${EngineStartError.MODEL_UNAVAILABLE.code}: $detail")
   }
 
   // ---- stop --------------------------------------------------------------
 
   /** Blocks up to ~3 s. Also ends leftovers tagged with this agent when nothing runs. */
   fun stop(agentId: String) = terminate(setOf(agentId), EngineState.STOPPED, null)
+
+  /** [agentIds] within one grace period. Blocks up to ~3 s. */
+  fun stop(agentIds: Set<String>) = terminate(agentIds, EngineState.STOPPED, null)
 
   /** Every engine and every tagged process, within one grace period. Blocks up to ~3 s. */
   fun stopAll() = terminate(null, EngineState.STOPPED, null)
@@ -499,7 +564,11 @@ internal class EngineSupervisor(
     }
     stopping.forEach(::emit)
     ending.forEach { (slot, _) -> chats.detach(slot.agentId) }
+    // A stop-all ends the model server in the same grace; otherwise each
+    // agent's hold ends below, once its engine is gone.
+    if (agentIds == null) models.stopAll()
     reaper.stop(engines, agentIds)
+    ending.forEach { (slot, _) -> models.release(slot.agentId) }
     val ended = ArrayList<EngineStatus>()
     lock.withLock {
       for ((slot, gen) in ending) {

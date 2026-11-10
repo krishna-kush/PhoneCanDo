@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import android.util.Log
 import com.phonecando.agents.kit.AgentKind
 import com.phonecando.agents.kit.LaunchContext
+import com.phonecando.agents.kit.ModelEndpoint
+import com.phonecando.agents.kit.ProjectDir
 import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.agents.kit.render.ImageLaunch
 import com.phonecando.agents.kit.render.ManifestKind
@@ -32,21 +34,26 @@ internal data class LaunchPlan(
   val requestedAt: Long,
   /** The launch adds the kind's resume args: the agent ran before (ResumeFallback may drop them). */
   val resume: Boolean = record.ranBefore,
+  /** The local model server the agent runs on (LocalModelBinding); null: its own setup. Holds the server's key. */
+  val model: ModelEndpoint? = null,
 ) {
   val logFile: File get() = File(image.logs, "engine.log")
 }
 
 // Turns an agent into a running engine process. plan() reads the image
-// (engine.env), seeds the kind's config into the image HOME (ConfigSeeder,
+// (engine.env), makes the work folder in HOME ({{projectDir}}, ProjectDir;
+// an image kind's guest sees it at /root/projects, so its `cd` there cannot
+// fail), seeds the kind's config into the image HOME (ConfigSeeder,
 // then the image's OS note into the kind's instructions file) and, for a
 // TUI engine, the kit scripts and an empty events file (KitFiles); spawn()
-// renders the kind's launch (its resume args when the agent ran before; an
-// image kind through its image's shell) and starts it with the layered
-// environment (EngineEnv) by the kind's engine style: a server from the
-// native-library dir, the only place Android lets us exec, with cwd = HOME
-// and stdout + stderr in <image>/logs/engine.log (ServerSpawner); a TUI on
-// a PTY of its own in its cwd, with what a terminal program needs in its
-// env (TuiSpawner).
+// renders the kind's launch (its resume args when the agent ran before, its
+// local model's wiring when it has one; an image kind through its image's
+// shell) and starts it in its cwd (HOME when it names none; an image kind's
+// guest sh changes dir itself) with the layered environment (EngineEnv) by
+// the kind's engine style: a server from the native-library dir, the only
+// place Android lets us exec, with stdout + stderr in
+// <image>/logs/engine.log (ServerSpawner); a TUI on a PTY of its own, with
+// what a terminal program needs in its env (TuiSpawner).
 internal class EngineLauncher(private val context: Context) {
   private val libDir: String = context.applicationInfo.nativeLibraryDir
   private val assets by lazy { AssetManagerTree(context.assets) }
@@ -68,6 +75,7 @@ internal class EngineLauncher(private val context: Context) {
     val image = ImageDir.of(context.filesDir, record.imageId)
     val env = image.readEnv()
     val home = File(env.getValue("HOME")).apply { mkdirs() }
+    ProjectDir.of(home).mkdirs()
     File(env.getValue("TMPDIR")).mkdirs()
     image.logs.mkdirs()
     seedConfig(kind, home, image)
@@ -91,6 +99,8 @@ internal class EngineLauncher(private val context: Context) {
       password = plan.record.password,
       image = plan.image.root,
       resume = plan.resume,
+      model = plan.model,
+      bridgeUrl = bridgeUrl.orEmpty(),
     )
     val spec = plan.kind.launch(ctx)
     if (counted) TelemetryRecorder.engineStartRequested()
@@ -112,12 +122,12 @@ internal class EngineLauncher(private val context: Context) {
       agentId = plan.record.id,
       eventsFile = if (tui) KitFiles.events(kitHome).path else null,
     )
+    val cwd = spec.cwd?.let(::File) ?: plan.home
     return try {
       if (tui) {
-        val cwd = spec.cwd?.let(::File) ?: plan.home
         TuiSpawner.spawn(spec.argv, env, cwd, handOver = plan.kind.manifest.type == TYPE_IMAGE)
       } else {
-        ServerSpawner.spawn(spec.argv, env, plan.home, plan.logFile)
+        ServerSpawner.spawn(spec.argv, env, cwd, plan.logFile)
       }
     } catch (e: Exception) {
       TelemetryRecorder.engineStartFailed()

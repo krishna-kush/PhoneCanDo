@@ -33,6 +33,16 @@ class ChatBoardTest {
     assertEquals(ChatBoard.Change(true, "s1"), on("a", Kind.WORKING, "s1"))
   }
 
+  @Test fun workingCountsTheChatOnScreenToo() {
+    on("a", Kind.WORKING, "s1")
+    on("b", Kind.WAITING, "s2")
+    on("c", Kind.FINISHED, "s3")
+    board.setOpen("a", "s1")
+    assertEquals(setOf("a"), board.working())
+    on("a", Kind.FINISHED, "s1")
+    assertEquals(emptySet<String>(), board.working())
+  }
+
   @Test fun orderIsWaitingWorkingErrorDoneNewestFirst() {
     on("a", Kind.WORKING, "s1")
     on("b", Kind.FINISHED, "s2")

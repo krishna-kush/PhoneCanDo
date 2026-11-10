@@ -1,5 +1,6 @@
-// Installing an agent into its machine: the run fold and its progress
-// (src/state/flows/logic/installRun.ts), why a run stopped
+// Installing an agent into its machine: the run fold and where its bar
+// lands at each stage (src/state/flows/logic/installRun.ts; the bar's
+// math in test_install_progress.js), why a run stopped
 // (installErrors.ts), the words on the agent page and Home
 // (src/ui/env/logic/installText.ts, errorText.ts, hints.ts), and the open
 // link prompt's words (src/ui/common/promptQueue.ts). Imports the real pure
@@ -22,28 +23,29 @@ const ui = (p) => src('ui/env/logic', p);
 
 (async () => {
   // --- the run fold -------------------------------------------------------
-  const { startRun, applyInstallEvent, tailLines, installFraction, TAIL_MAX } = await import(flows('installRun.ts'));
+  const { startRun, applyInstallEvent, tailLines, TAIL_MAX } = await import(flows('installRun.ts'));
+  const { START, CHECK_AT, phaseSpans } = await import(flows('installProgress.ts'));
   const fold = (run, events) => events.reduce(applyInstallEvent, run);
   const phases = ['runtime:node', 'packages', 'install', 'verify'];
 
   const fresh = startRun('install');
   t('a run starts waiting for the machine', [fresh.status, fresh.stage, fresh.phase, fresh.tail], ['running', 'machine', null, []]);
-  t('no bar while waiting for the machine', installFraction(fresh), null);
+  t('the bar starts a little ahead while waiting for the machine', fresh.fraction, START);
   const planned = fold(fresh, [{ type: 'stage', stage: 'plan' }, { type: 'plan', phases }]);
-  t('no bar before the script', installFraction(planned), null);
+  t('still there before the script', planned.fraction, START);
   const script = fold(planned, [{ type: 'stage', stage: 'script' }]);
-  t('script before its first phase', installFraction(script), 0);
+  t('script before its first phase', script.fraction, START);
   const packages = fold(script, [{ type: 'progress', phase: 'packages', tail: ['a', 'b'] }]);
   t('phase and tail land', [packages.phase, packages.tail], ['packages', ['a', 'b']]);
-  t('second of four phases', installFraction(packages), 0.95 / 4);
+  t('second of four phases starts at its share', packages.fraction, phaseSpans(phases)[1].from);
   const quiet = fold(packages, [{ type: 'progress' }]);
   t('an event without phase or tail keeps both', [quiet.phase, quiet.tail], ['packages', ['a', 'b']]);
   const odd = fold(packages, [{ type: 'progress', phase: 'later', tail: 'x' }]);
-  t('a phase the plan does not list reads as the start', installFraction(odd), 0);
+  t('a phase the plan does not list keeps the bar where it was', odd.fraction, packages.fraction);
   const verify = fold(packages, [{ type: 'stage', stage: 'verify' }]);
-  t('our version check', installFraction(verify), 0.95);
+  t('our version check', verify.fraction, CHECK_AT);
   const done = fold(verify, [{ type: 'done', version: '0.12.0' }]);
-  t('done', [done.status, done.version, installFraction(done)], ['done', '0.12.0', 1]);
+  t('done', [done.status, done.version, done.fraction], ['done', '0.12.0', 1]);
   t('an ended run ignores later events', fold(done, [{ type: 'stage', stage: 'machine' }, { type: 'failed', failure: { code: 'internal', message: '' } }]), done);
   const failed = fold(packages, [{ type: 'failed', failure: { code: 'command_failed', message: 'exit 100' } }]);
   t('failed keeps where it stopped', [failed.status, failed.stage, failed.phase, failed.failure.code], ['failed', 'script', 'packages', 'command_failed']);

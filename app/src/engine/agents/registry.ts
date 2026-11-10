@@ -1,6 +1,7 @@
 // Every agent kind the app can run, as the runner lists them: each kind's
 // manifest (agents/<type>/<id>/agent.json, packaged per channel) without
-// templates or secrets (KindView). Read and parsed once per JS run. Screens
+// templates or secrets (KindView). Read and parsed once per JS run, and
+// again after a custom agent kind is saved or deleted (reloadKinds). Screens
 // look up the kind of the agent in question (`agentKind(agent.kind)`); there
 // is no app-wide kind.
 import type { KindView } from '../../../../agents/kit/ts/contract/view.ts';
@@ -22,6 +23,12 @@ export function allKinds(): KindView[] {
     }
   }
   return kinds;
+}
+
+/** Forgets the kinds read so far: the next read asks the runner again (it reloaded its catalog). */
+export function reloadKinds(): void {
+  kinds = null;
+  unknown.clear();
 }
 
 /** The kind a fresh install starts with (the one the runner marks default). */
@@ -59,6 +66,7 @@ export function agentKind(id: AgentKindId): KindView {
     hasInstall: false,
     // Not in this build: never offered, and never started.
     payloadPresent: false,
+    models: [],
   };
   unknown.set(id, standIn);
   return standIn;

@@ -4,6 +4,7 @@ import com.phonecando.agents.builtin.BuiltinHooks
 import com.phonecando.agents.kit.AgentConfig
 import com.phonecando.agents.kit.manifest.Origin
 import com.phonecando.agents.kit.render.KindView
+import com.phonecando.runner.agents.user.UserKindRules
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
@@ -122,7 +123,7 @@ class KindCatalogTest {
     user("user.moved.json", userKind("user.other"))
     user("user.server.json", userKind("user.server").replace("\"tui\"", "\"server\""))
     user("user.hooked.json", userKind("user.hooked").replace("\"schema\":1,", "\"schema\":1,\"hooks\":[\"user.hooked.events\"],"))
-    user("user.huge.json", userKind("user.huge").replace("\"label\":\"top\"", "\"label\":\"${"x".repeat(KindCatalog.MAX_USER_BYTES)}\""))
+    user("user.huge.json", userKind("user.huge").replace("\"label\":\"top\"", "\"label\":\"${"x".repeat(UserKindRules.MAX_BYTES)}\""))
     user("plain.json", userKind("plain"))
     File(users, "user.dir.json").mkdirs()
     val skipped = mutableMapOf<String, String?>()

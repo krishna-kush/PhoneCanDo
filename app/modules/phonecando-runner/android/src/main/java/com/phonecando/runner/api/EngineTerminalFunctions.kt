@@ -9,7 +9,8 @@ import expo.modules.kotlin.modules.ModuleDefinitionBuilder
 
 // A TUI engine's terminal for JS (the Home tab of a TUI-home agent): attach
 // as its one viewer, read what it shows (first the replay of its screen,
-// then live output), type, resize, detach; the engine runs on either way.
+// then live output), type, resize, say whether it is shown, detach; the
+// engine runs on either way.
 // Bytes cross as base64. Every call is synchronous and quick: reads never
 // wait, a write gives up after about a second while the program does not
 // read. Attach and read refuse with a CodedException whose code (also the
@@ -41,6 +42,12 @@ internal fun ModuleDefinitionBuilder.engineTerminalFunctions(context: () -> Cont
 
   Function("engineTerminalResize") { viewerId: String, rows: Int, cols: Int ->
     Engines.peek()?.terminals?.resize(viewerId, rows.coerceAtLeast(1), cols.coerceAtLeast(1))
+  }
+
+  // Whether the view shows the program (on screen, the app in front): the
+  // program counts as focused only then (focus reports, DECSET 1004).
+  Function("engineTerminalFocus") { viewerId: String, shown: Boolean ->
+    Engines.peek()?.terminals?.focus(viewerId, shown)
   }
 
   Function("engineTerminalDetach") { viewerId: String ->

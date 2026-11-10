@@ -1,5 +1,6 @@
 package com.phonecando.linux.images
 
+import com.phonecando.agents.kit.ProjectDir
 import com.phonecando.linux.LinuxHost
 import com.phonecando.linux.errors.LinuxError
 import com.phonecando.linux.errors.LinuxErrorCode
@@ -155,9 +156,14 @@ class ImageOps(private val host: LinuxHost) {
     return ImageSetup.checkTools(paths.image(imageId), commands)
   }
 
-  /** A login shell in the image for our PTY. Cheap: the caller ran [prepareForStart] first. */
+  /**
+   * A login shell in the image for our PTY, in the work folder in its
+   * home/ (ProjectDir), made here as an engine start makes it. Cheap: the
+   * caller ran [prepareForStart] first.
+   */
   fun terminalRecipe(imageId: String): TerminalRecipe {
     val layout = paths.image(imageId)
+    ProjectDir.of(layout.home).mkdirs()
     return if (startable(imageId)) TerminalRecipe.linux(layout) else TerminalRecipe.android(layout)
   }
 

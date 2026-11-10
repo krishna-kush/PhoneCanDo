@@ -2,12 +2,13 @@
 // (engine/engineTerminal.ts): the view attaches as its one viewer and
 // detaches on close, and the program keeps running. Attach reports the
 // PTY's size, so the replay that the first reads return lands at the size
-// it was drawn at.
+// it was drawn at. The view says when it shows the program (focus).
 import type { AgentId } from '../../../engine/agents/records';
 import {
   engineTerminalAttach,
   engineTerminalDetach,
   engineTerminalEnd,
+  engineTerminalFocus,
   engineTerminalRead,
   engineTerminalResize,
   engineTerminalWrite,
@@ -42,6 +43,9 @@ export function engineTransport(agentId: AgentId): PtyTransport {
     },
     write: (b64) => engineTerminalWrite(attached(), b64),
     resize: (rows, cols) => engineTerminalResize(attached(), rows, cols),
+    focus(shown) {
+      if (viewer != null) engineTerminalFocus(viewer, shown);
+    },
     close() {
       if (viewer == null) return;
       const was = viewer;

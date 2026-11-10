@@ -3,9 +3,11 @@ import LogoLoader from '../../common/LogoLoader';
 import { useTheme } from '../../common/globals';
 
 // A job's line: its step in words over a thin bar, or the small logo loader
-// while the total is unknown. Square and hairline like the rest.
+// while the total is unknown. Square and hairline like the rest. The bar is
+// drawn to a tenth of a percent, so a slow one still creeps.
 export default function ProgressBar({ label, fraction }: { label: string; fraction: number | null }) {
   const t = useTheme();
+  const percent = fraction == null ? 0 : Math.round(Math.min(1, Math.max(0, fraction)) * 1000) / 10;
   return (
     <YStack gap="$2">
       <XStack alignItems="center" gap="$2">
@@ -19,9 +21,9 @@ export default function ProgressBar({ label, fraction }: { label: string; fracti
           height={4}
           backgroundColor={t.line}
           accessibilityRole="progressbar"
-          accessibilityValue={{ min: 0, max: 100, now: Math.round(fraction * 100) }}
+          accessibilityValue={{ min: 0, max: 100, now: Math.round(percent) }}
         >
-          <YStack height={4} width={`${Math.round(fraction * 100)}%`} backgroundColor={t.primary} />
+          <YStack height={4} width={`${percent}%`} backgroundColor={t.primary} />
         </YStack>
       ) : null}
     </YStack>

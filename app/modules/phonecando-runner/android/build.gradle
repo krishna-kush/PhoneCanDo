@@ -80,6 +80,15 @@ dependencies {
   // (com.phonecando.terminal.host), which outlive the JS that shows them.
   implementation project(':phonecando-terminal')
 
+  // The model slot (models/): the models module's one store and device
+  // reading (ModelsHost), and its jobs, which keep our service up. Of lme
+  // (pure JVM, the included lme/ build) the runner uses the shared types,
+  // the store's registry (read only) and the launch plan; never the catalog.
+  implementation project(':phonecando-models')
+  implementation 'com.phonecando.lme:lme-api:0.1.0-dev'
+  implementation 'com.phonecando.lme:lme-store:0.1.0-dev'
+  implementation 'com.phonecando.lme:lme-host:0.1.0-dev'
+
   // The app's settings plugin substitutes these coordinates with the included
   // `pce/` build; lite/play never resolve them.
   fullImplementation 'com.phonecando.pce:pce-api:0.1.0-dev'

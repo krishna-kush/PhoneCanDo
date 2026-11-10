@@ -1,9 +1,11 @@
 // One install (or update) of an agent into its machine, folded from what the
 // flow reports: its stage, the plan's phases, the script's job events (the
 // current `@phase`, a `@retry` under way, the time and bytes so far, the
-// log's last lines) and how it ended. Pure: the install store applies every
-// event through applyInstallEvent.
+// time the phone was offline, the log's last lines), how far along it is
+// for its bar (installProgress.ts) and how it ended. Pure: the install store applies every event through
+// applyInstallEvent.
 import type { InstallFailure } from './installErrors.ts';
+import { progressNow, START, type ActivityMark } from './installProgress.ts';
 
 export type InstallMode = 'install' | 'update';
 
@@ -38,6 +40,14 @@ export type InstallRun = {
   retry: InstallRetry | null;
   /** The script's time and bytes so far; null before its first event. */
   activity: InstallActivity | null;
+  /** The activity when the script's phase now began (the script's start for the first); null before. */
+  phaseStart: ActivityMark | null;
+  /** Seconds the script ran while the phone said it was offline: the time up to each reading that says
+      so. The bar leaves them out, so it holds still offline and goes on from the same place. */
+  offlineSec: number;
+  /** How far along it is for the bar, in [0, 1]: a little ahead from the start, never less than
+      before, 1 only once it ended well (installProgress.ts). */
+  fraction: number;
   /** Once done: the version recorded; null when the kind had nothing to install. */
   version: string | null;
   /** Once failed: why. */
@@ -74,6 +84,9 @@ export function startRun(mode: InstallMode): InstallRun {
     tail: [],
     retry: null,
     activity: null,
+    phaseStart: null,
+    offlineSec: 0,
+    fraction: START,
     version: null,
     failure: null,
   };
@@ -122,6 +135,11 @@ export function activityOf(e: {
 export function applyInstallEvent(run: InstallRun, e: InstallEvent): InstallRun {
   // An ended run stays as it ended; the next one starts fresh.
   if (run.status !== 'running') return run;
+  const next = foldEvent(run, e);
+  return { ...next, fraction: Math.max(run.fraction, progressNow(next)) };
+}
+
+function foldEvent(run: InstallRun, e: InstallEvent): InstallRun {
   switch (e.type) {
     case 'stage':
       return { ...run, stage: e.stage };
@@ -129,9 +147,14 @@ export function applyInstallEvent(run: InstallRun, e: InstallEvent): InstallRun 
       return { ...run, phases: [...e.phases] };
     case 'progress': {
       const phase = typeof e.phase === 'string' && e.phase ? e.phase : run.phase;
+      // A new phase counts from the reading before the event that named it.
+      const phaseStart = phase === run.phase ? run.phaseStart : markOf(run.activity, run.offlineSec);
       // A missing retry keeps the last; null (native sends it on every event) ends it.
       const retry = e.retry === undefined ? run.retry : retryOf(e.retry);
-      return { ...run, phase, tail: tailLines(e.tail) ?? run.tail, retry, activity: activityOf(e) ?? run.activity };
+      const reading = activityOf(e);
+      const offlineSec = run.offlineSec + offlineSince(run.activity, reading);
+      const activity = reading ?? run.activity;
+      return { ...run, phase, phaseStart, tail: tailLines(e.tail) ?? run.tail, retry, activity, offlineSec };
     }
     case 'done':
       return { ...run, status: 'done', version: e.version };
@@ -140,14 +163,15 @@ export function applyInstallEvent(run: InstallRun, e: InstallEvent): InstallRun 
   }
 }
 
-// The script is most of the run; our own version check is the rest.
-const SCRIPT_SHARE = 0.95;
+// Native counts time and bytes from the script's start, so before any reading both are 0.
+function markOf(activity: InstallActivity | null, offlineSec: number): ActivityMark {
+  return activity
+    ? { elapsedSec: activity.elapsedSec, downloadedBytes: activity.downloadedBytes, offlineSec }
+    : { elapsedSec: 0, downloadedBytes: 0, offlineSec };
+}
 
-/** How far along it is in [0, 1]; null while that is unknown (waiting for the machine, no plan yet). */
-export function installFraction(run: InstallRun): number | null {
-  if (run.status === 'done') return 1;
-  if (run.stage === 'verify') return SCRIPT_SHARE;
-  if (run.stage !== 'script' || run.phases.length === 0) return null;
-  const at = run.phase == null ? 0 : Math.max(0, run.phases.indexOf(run.phase));
-  return (SCRIPT_SHARE * at) / run.phases.length;
+/** The time since the last reading, when the new one says the phone is offline; 0 when it does not (online, or Android won't say). */
+export function offlineSince(before: InstallActivity | null, now: InstallActivity | null): number {
+  if (now?.online !== false) return 0;
+  return Math.max(0, now.elapsedSec - (before?.elapsedSec ?? 0));
 }

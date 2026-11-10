@@ -4,7 +4,6 @@ import { agentKind } from '../../../engine/agents/registry';
 import type { Image } from '../../../engine/linux/types';
 import { installAgent } from '../../../state/flows/installAgent';
 import { useInstallRun } from '../../../state/flows/installRuns';
-import { installFraction } from '../../../state/flows/logic/installRun';
 import AppButton from '../../common/AppButton';
 import { installActivityLines, installDoneLine, installFailureText, installLine } from '../logic/installText';
 import LogTail from './LogTail';
@@ -27,7 +26,7 @@ export default function InstallStatus({ agent, image }: Props) {
   if (run?.status === 'running') {
     return (
       <YStack gap="$2">
-        <ProgressBar label={installLine(run, label)} fraction={installFraction(run)} />
+        <ProgressBar label={installLine(run, label)} fraction={run.fraction} />
         <StatusLines lines={installActivityLines(run)} />
         <LogTail lines={run.tail} />
       </YStack>

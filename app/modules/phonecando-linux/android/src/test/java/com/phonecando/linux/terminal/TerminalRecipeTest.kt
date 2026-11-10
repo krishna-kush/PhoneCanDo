@@ -11,9 +11,12 @@ import java.io.File
 class TerminalRecipeTest {
   private val layout = ImageLayout(File("/data/user/0/pkg/files/images/a1b2c3"))
 
-  @Test fun linuxRunsALoginShellThroughTheBashShim() {
+  @Test fun linuxRunsALoginShellInTheWorkFolderThroughTheShShim() {
     val r = TerminalRecipe.linux(layout)
-    assertEquals(listOf("/data/user/0/pkg/files/images/a1b2c3/shims/bash", "-l"), r.cmd)
+    assertEquals(
+      listOf("/data/user/0/pkg/files/images/a1b2c3/shims/sh", "-c", "cd '/root/projects'; exec \"\$SHELL\" -l"),
+      r.cmd,
+    )
     assertEquals(
       mapOf(
         "PHONECANDO_IMAGE" to "/data/user/0/pkg/files/images/a1b2c3",
@@ -38,12 +41,12 @@ class TerminalRecipeTest {
     assertFalse("PHONECANDO_AGENT" in TerminalRecipe.android(layout).env)
   }
 
-  @Test fun androidRunsTheSystemShellInTheImageHome() {
+  @Test fun androidRunsTheSystemShellInTheWorkFolder() {
     val r = TerminalRecipe.android(layout)
     assertEquals(listOf("/system/bin/sh", "-l"), r.cmd)
     assertEquals(layout.home.path, r.env["HOME"])
     assertEquals(layout.tmp.path, r.env["TMPDIR"])
-    assertEquals(layout.home.path, r.cwd)
+    assertEquals("${layout.home.path}/projects", r.cwd)
     assertFalse("PHONECANDO_IMAGE" in r.env)
   }
 

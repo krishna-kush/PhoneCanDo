@@ -20,6 +20,16 @@ class TerminalViewersTest {
     e.code
   }
 
+  @Test fun aViewSaysWhetherItShowsTheProgram() {
+    val pty = FakePty()
+    val t = EngineTerminal(30, 90).also { it.bind(pty) }
+    t.onOutput("\u001b[?1004h".toByteArray(), 8)
+    val a = viewers.attach(t)
+    viewers.focus(a.viewerId, true)
+    viewers.focus("v999", false)
+    assertEquals(listOf("\u001b[O", "\u001b[I"), pty.written)
+  }
+
   @Test fun attachReadDetach() {
     val t = terminal()
     val a = viewers.attach(t)

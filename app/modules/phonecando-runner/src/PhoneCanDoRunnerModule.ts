@@ -6,9 +6,14 @@ import type {
   NativeClientRecipe,
   NativeEngineStatus,
   NativeInstallPlan,
+  NativeKindDeleted,
+  NativeKindProblem,
+  NativeKindSaved,
   NativeLaunchTarget,
   NativeOpenUrlAction,
+  NativePromptReading,
   NativeTerminalAttach,
+  NativeUserKind,
   NativeVersionCheck,
 } from './PhoneCanDoRunner.types';
 import type { TelemetryNativeSnapshot } from './telemetry.types';
@@ -20,9 +25,14 @@ export type {
   NativeClientRecipe,
   NativeEngineStatus,
   NativeInstallPlan,
+  NativeKindDeleted,
+  NativeKindProblem,
+  NativeKindSaved,
   NativeLaunchTarget,
   NativeOpenUrlAction,
+  NativePromptReading,
   NativeTerminalAttach,
+  NativeUserKind,
   NativeVersionCheck,
 } from './PhoneCanDoRunner.types';
 
@@ -30,6 +40,7 @@ type RunnerEvents = {
   phonecandoLaunchTarget(e: NativeLaunchTarget): void;
   phonecandoBridgePrompt(e: NativeBridgePrompt): void;
   phonecandoEngineState(e: NativeEngineStatus): void;
+  phonecandoPromptReading(e: { reading: NativePromptReading | null }): void;
 };
 
 declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
@@ -58,6 +69,7 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   createAgent(params: { kind: string; name: string; imageId: string }): NativeAgent;
   renameAgent(id: string, name: string): NativeAgent;
   deleteAgent(id: string): Promise<boolean>;
+  promptReading(): NativePromptReading | null;
   startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;
@@ -67,6 +79,13 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   engineStatuses(): NativeEngineStatus[];
   engineHealth(agentId: string): string;
   listKinds(): string;
+  listUserKinds(): NativeUserKind[];
+  readUserKind(id: string): string | null;
+  validateUserKind(json: string): NativeKindProblem[];
+  saveUserKind(json: string, replace: boolean): NativeKindSaved;
+  deleteUserKind(id: string): NativeKindDeleted;
+  copyText(text: string): boolean;
+  clipboardText(): string | null;
   pairWebUi(agentId: string): Promise<string>;
   clientRecipe(agentId: string, projectDir: string, sessionId: string | null): NativeClientRecipe;
   isEngineIdle(agentId: string): boolean;
@@ -79,6 +98,7 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   engineTerminalRead(viewerId: string, max: number): string | null;
   engineTerminalWrite(viewerId: string, b64: string): void;
   engineTerminalResize(viewerId: string, rows: number, cols: number): void;
+  engineTerminalFocus(viewerId: string, shown: boolean): void;
   engineTerminalDetach(viewerId: string): void;
   getTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WebView } from 'react-native-webview';
 import { toB64 } from './keys';
 import { PtyEndError, ptyEndOf, type PtyEnd, type PtyTransport } from './transport/types';
+import { useViewFocus } from './useViewFocus';
 
 export type TermSize = { cols: number; rows: number };
 
@@ -54,6 +55,9 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
   activeRef.current = active;
   // The open transport; null until open (and, for an attach, its replay) is done.
   const fdRef = useRef<PtyTransport | null>(null);
+  // The same, as state: the view's focus goes to it once it is open.
+  const [opened, setOpened] = useState<PtyTransport | null>(null);
+  useViewFocus(opened, active);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // The pump of the open PTY; null before open and once output ended.
   const pumpRef = useRef<(() => void) | null>(null);
@@ -137,6 +141,7 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
           }
         }
         fdRef.current = t;
+        setOpened(t);
         if (pendingSize.current) {
           try {
             t.resize(pendingSize.current.rows, pendingSize.current.cols);

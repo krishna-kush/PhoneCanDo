@@ -8,7 +8,9 @@ import android.content.Context
 
 // The foreground service's one notification: the chats the agents are busy
 // with, one line each, the chat, then its agent, then its state
-// (ChatBoard). Engines themselves never show. Chat titles stay off the lock
+// (ChatBoard), then the model server reading a prompt (ReadingLines), then
+// the model downloads and imports running (TransferLines). Engines
+// themselves never show. Chat titles and model names stay off the lock
 // screen: the public version only counts. Tapping opens the app; on that
 // agent's Home when every chat listed belongs to one agent (or, with none,
 // one engine runs).
@@ -19,28 +21,55 @@ internal class ServiceNotification(private val context: Context) {
     )
   }
 
-  /** [names]: agent id → name; [running]: agents whose engine is live. */
-  fun build(chats: List<ChatBoard.Chat>, names: Map<String, String>, running: List<String>): Notification {
+  /**
+   * [names]: agent id → name; [running]: agents whose engine is live;
+   * [transfers]: TransferLines of the model jobs; [reading]: the ReadingLines
+   * line while the model server reads a prompt.
+   */
+  fun build(
+    chats: List<ChatBoard.Chat>,
+    names: Map<String, String>,
+    running: List<String>,
+    transfers: List<String> = emptyList(),
+    reading: String? = null,
+  ): Notification {
     val agent = chats.map { it.agentId }.distinct().singleOrNull()
       ?: running.singleOrNull()?.takeIf { chats.isEmpty() }
     val tap = agent?.let { LaunchTargets.tap(context, LaunchTarget("home", it)) } ?: launchIntent()
-    val summary = summary(chats)
+    val summary = listOf(summary(chats), if (reading != null) READING else "", transferCount(transfers))
+      .filter { it.isNotEmpty() }
+      .joinToString(" · ")
+    val extra = listOfNotNull(reading) + transfers
     val builder = base(tap)
-    when (chats.size) {
-      0 -> builder.setContentTitle("PhoneCanDo").setContentText(NO_CHATS)
-      1 -> {
+    when {
+      chats.isEmpty() && extra.size <= 1 ->
+        builder.setContentTitle("PhoneCanDo").setContentText(extra.firstOrNull() ?: NO_CHATS)
+      chats.size == 1 && extra.isEmpty() -> {
         val chat = chats[0]
         builder.setContentTitle(title(chat)).setContentText("${name(chat, names)} · ${chat.state.label}")
       }
       else -> {
+        val lines = chats.map { "${title(it)} · ${name(it, names)} · ${it.state.label}" } + extra
         val style = Notification.InboxStyle()
-        chats.take(MAX_LINES).forEach { style.addLine("${title(it)} · ${name(it, names)} · ${it.state.label}") }
-        if (chats.size > MAX_LINES) style.setSummaryText("+${chats.size - MAX_LINES} more")
-        builder.setContentTitle("${chats.size} chats").setContentText(summary).setStyle(style)
+        lines.take(MAX_LINES).forEach { style.addLine(it) }
+        if (lines.size > MAX_LINES) style.setSummaryText("+${lines.size - MAX_LINES} more")
+        val title = when (chats.size) {
+          0 -> "PhoneCanDo"
+          1 -> "1 chat"
+          else -> "${chats.size} chats"
+        }
+        builder.setContentTitle(title).setContentText(summary).setStyle(style)
       }
     }
     val public = base(tap).setContentTitle("PhoneCanDo").setContentText(summary.ifEmpty { NO_CHATS }).build()
     return builder.setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(public).build()
+  }
+
+  // "2 models coming in": no names, so the lock screen may show it.
+  private fun transferCount(transfers: List<String>): String = when (transfers.size) {
+    0 -> ""
+    1 -> "1 model coming in"
+    else -> "${transfers.size} models coming in"
   }
 
   private fun base(tap: PendingIntent?): Notification.Builder =
@@ -72,6 +101,9 @@ internal class ServiceNotification(private val context: Context) {
     const val CHANNEL_ID = "phonecando-engine"
     const val NOTIFICATION_ID = 4101
     private const val NO_CHATS = "No chats running"
+
+    // No model name, so the lock screen may show it.
+    private const val READING = "reading the prompt"
 
     // InboxStyle shows about five lines; the rest are counted.
     private const val MAX_LINES = 5

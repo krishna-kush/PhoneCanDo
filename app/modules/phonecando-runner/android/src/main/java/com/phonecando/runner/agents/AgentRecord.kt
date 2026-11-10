@@ -22,6 +22,11 @@ data class AgentRecord(
     val ranBefore: Boolean = false,
     /** The version its kind's install put in its image (recordInstall); null before that. */
     val installedVersion: String? = null,
+    /**
+     * The local model it runs on (a model id in files/models/); null: the
+     * agent's own setup. Only a kind with a `models` block gets one.
+     */
+    val model: String? = null,
 )
 
 /** Read access to the agents, for the bridge (caller identity) and redaction. */

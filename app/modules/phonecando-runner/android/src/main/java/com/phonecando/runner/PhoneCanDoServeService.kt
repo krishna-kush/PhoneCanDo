@@ -10,23 +10,33 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import com.phonecando.models.ModelsHost
+import com.phonecando.models.jobs.JobTarget
+import com.phonecando.models.jobs.ModelJobs
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.engine.EngineRequests
 import com.phonecando.runner.engine.EngineStartError
 import com.phonecando.runner.engine.EngineStartException
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.models.prompt.PromptReading
+import com.phonecando.runner.notify.ReadingLines
 import com.phonecando.runner.notify.ServiceNotification
+import com.phonecando.runner.notify.TransferLines
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 
 // The foreground service (dataSync) that keeps the agents' engines alive
-// while the app is in the background. The engines themselves live in the
-// process's EngineSupervisor (engine/); this service is their anchor: it
-// runs start requests (ACTION_START from the module's startEngine, one at a
-// time on its own thread), shows one notification listing the running
-// agents, and stops itself once nothing runs. Nothing restarts it: every
+// while the app is in the background, and the process while a model
+// download or import runs. The engines themselves live in the process's
+// EngineSupervisor (engine/), the model jobs in the models module's
+// ModelsHost; this service is their anchor: it runs start requests
+// (ACTION_START from the module's startEngine, one at a time on its own
+// thread), holds for model jobs (ACTION_HOLD, models/ModelJobsAnchor),
+// shows one notification listing the running agents' chats, the model
+// server reading a prompt and the model jobs, and stops itself once
+// nothing runs. Nothing restarts it: every
 // command answers START_NOT_STICKY, and a null-intent restart starts
 // nothing (the app ensures its engines again when it comes to the
 // foreground).
@@ -55,6 +65,18 @@ class PhoneCanDoServeService : Service() {
     override fun onChats() {
       main.post { render() }
     }
+
+    override fun onPrompt(reading: PromptReading?) {
+      main.post { render() }
+    }
+  }
+
+  // Model jobs begin, end and move on (at most every 2 s each).
+  private val jobsListener = ModelJobs.Listener {
+    main.post {
+      render()
+      stopIfIdle()
+    }
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -69,6 +91,7 @@ class PhoneCanDoServeService : Service() {
       Thread(r, "phonecando-engine-start").apply { isDaemon = true }
     }
     Engines.addListener(engineListener)
+    ModelsHost.get(this).jobs.addListener(jobsListener)
     goForeground()
   }
 
@@ -86,7 +109,9 @@ class PhoneCanDoServeService : Service() {
         return START_NOT_STICKY
       }
     }
-    // A null-intent restart or nothing to do: start nothing.
+    // ACTION_HOLD (a model job runs), a null-intent restart or nothing to
+    // do: start nothing; stay while a job runs.
+    render()
     stopIfIdle()
     return START_NOT_STICKY
   }
@@ -123,11 +148,13 @@ class PhoneCanDoServeService : Service() {
   }
 
   private fun stopIfIdle() {
-    if (pendingStarts == 0 && Engines.peek()?.anyLive() != true) stopSelf(lastStartId)
+    val jobs = ModelsHost.peek()?.jobs?.anyRunning() == true
+    if (pendingStarts == 0 && Engines.peek()?.anyLive() != true && !jobs) stopSelf(lastStartId)
   }
 
   override fun onDestroy() {
     Engines.removeListener(engineListener)
+    ModelsHost.peek()?.jobs?.removeListener(jobsListener)
     starts.shutdownNow()
     for (id in pendingRequests) EngineRequests.complete(id, failure("the engine service stopped"))
     pendingRequests.clear()
@@ -174,12 +201,17 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
-  // The chats the engines are busy with, each with its agent's name.
+  // The chats the engines are busy with, each with its agent's name, the
+  // prompt the model server reads, and the model jobs.
   private fun content(): Notification {
     val supervisor = Engines.peek()
     val names = AgentStores.get(this).all().associate { it.id to it.name }
     val running = supervisor?.statuses()?.filter { it.state.live }?.map { it.agentId }.orEmpty()
-    return notification.build(supervisor?.chats().orEmpty(), names, running)
+    val transfers = ModelsHost.peek()?.jobs?.running().orEmpty().map {
+      TransferLines.of(it.label, it.target.kind == JobTarget.Kind.IMPORT, it.done, it.total)
+    }
+    val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read) }
+    return notification.build(supervisor?.chats().orEmpty(), names, running, transfers, reading)
   }
 
   private fun failure(detail: String): Result<Int> =
@@ -188,6 +220,7 @@ class PhoneCanDoServeService : Service() {
   companion object {
     const val TAG = "PhoneCanDoServeService"
     const val ACTION_START = "com.phonecando.runner.START_ENGINE"
+    const val ACTION_HOLD = "com.phonecando.runner.HOLD_FOR_MODEL_JOBS"
     const val EXTRA_AGENT_ID = "agentId"
     const val EXTRA_REQUEST_ID = "requestId"
     const val EXTRA_REQUESTED_AT = "requestedAtElapsed"

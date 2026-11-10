@@ -4,7 +4,7 @@ import { Text, YStack } from 'tamagui';
 import { useActiveAgent } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { agentHome } from '../../engine/engines';
-import { listSubfolders } from '../../engine/files';
+import { folderExists, listSubfolders } from '../../engine/files';
 import { isRunnerAvailable } from '../../engine/runner';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
@@ -14,9 +14,10 @@ import { useTheme } from '../common/globals';
 
 // TUI entry point: pick which folder the active agent's terminal UI attaches
 // to. Tree from the agent's HOME (its image's home, the place its engine and
-// the PTY can both reach), folders only, picker state never persists. A
-// switch of the active agent re-roots it. No creation here: only existing
-// folders.
+// the PTY can both reach), folders only, picker state never persists. It
+// opens in the agent's work folder (~/projects, which each engine start
+// makes), or HOME until that exists. A switch of the active agent re-roots
+// it. No creation here: only existing folders.
 export default function FolderPicker() {
   const t = useTheme();
   const agent = useActiveAgent();
@@ -33,7 +34,7 @@ export default function FolderPicker() {
       if (!agent) throw new Error('no agent yet');
       const home = agentHome(agent);
       setRoot(home);
-      setCwd(home);
+      setCwd(folderExists(agent.projectDir) ? agent.projectDir : home);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }

@@ -4,14 +4,19 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.phonecando.runner.api.agentFunctions
+import com.phonecando.runner.api.agentModelFunctions
+import com.phonecando.runner.api.clipboardFunctions
 import com.phonecando.runner.api.engineFunctions
 import com.phonecando.runner.api.engineTerminalFunctions
 import com.phonecando.runner.api.installFunctions
 import com.phonecando.runner.api.kindFunctions
 import com.phonecando.runner.api.notifyFunctions
+import com.phonecando.runner.api.userKindFunctions
 import com.phonecando.runner.bridge.BridgePrompts
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.models.ModelJobsAnchor
+import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.prompts.OpenUrlPrompts
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -38,10 +43,16 @@ class PhoneCanDoRunnerModule : Module() {
     }
   }
 
-  // Every engine change, as the phonecandoEngineState event (EngineStatus.toMap).
+  // Every engine change, as the phonecandoEngineState event (EngineStatus.toMap),
+  // and the model server's prompt reading as phonecandoPromptReading
+  // ({reading}: PromptReading.toMap, null once nothing is read).
   private val engineListener = object : Engines.Listener {
     override fun onStatus(status: EngineStatus) {
       sendEvent("phonecandoEngineState", status.toMap())
+    }
+
+    override fun onPrompt(reading: PromptReading?) {
+      sendEvent("phonecandoPromptReading", mapOf("reading" to reading?.toMap()))
     }
   }
 
@@ -61,7 +72,7 @@ class PhoneCanDoRunnerModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("PhoneCanDoRunner")
-    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState")
+    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading")
 
     OnCreate {
       instance = this@PhoneCanDoRunnerModule
@@ -76,6 +87,8 @@ class PhoneCanDoRunnerModule : Module() {
       // manifest that lacks the provider.
       appContext.reactContext?.let { TelemetryRecorder.install(it) }
       Engines.addListener(engineListener)
+      // Model downloads and imports keep the process in the foreground.
+      appContext.reactContext?.let { ModelJobsAnchor.install(it) }
     }
     OnDestroy {
       Engines.removeListener(engineListener)
@@ -83,11 +96,14 @@ class PhoneCanDoRunnerModule : Module() {
     }
 
     agentFunctions { context() }
+    agentModelFunctions { context() }
     engineFunctions { context() }
     engineTerminalFunctions { context() }
     installFunctions { context() }
     kindFunctions { context() }
+    userKindFunctions { context() }
     notifyFunctions { context() }
+    clipboardFunctions { context() }
 
     Function("getPrefix") {
       appFilesDir().absolutePath

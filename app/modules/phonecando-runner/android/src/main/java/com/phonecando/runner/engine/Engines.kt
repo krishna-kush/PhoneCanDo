@@ -3,14 +3,16 @@ package com.phonecando.runner.engine
 import android.content.Context
 import android.util.Log
 import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.models.prompt.PromptReading
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 
 // The process's one EngineSupervisor, and who hears about it: the
 // foreground service (notification, stop when idle) and the native module
-// (the phonecandoEngineState event). Listeners run on the thread that
-// changed the engine, never the main thread by default.
+// (the phonecandoEngineState and phonecandoPromptReading events). Listeners
+// run on the thread that changed the engine, never the main thread by
+// default.
 internal object Engines {
   interface Listener {
     fun onStatus(status: EngineStatus) {}
@@ -20,6 +22,9 @@ internal object Engines {
 
     /** The chats the engines are busy with changed (EngineSupervisor.chats). */
     fun onChats() {}
+
+    /** The model server's prompt reading changed (EngineSupervisor.promptReading); null: none. */
+    fun onPrompt(reading: PromptReading?) {}
   }
 
   private val listeners = CopyOnWriteArrayList<Listener>()
@@ -47,6 +52,8 @@ internal object Engines {
     override fun onIdle() = each { it.onIdle() }
 
     override fun onChats() = each { it.onChats() }
+
+    override fun onPrompt(reading: PromptReading?) = each { it.onPrompt(reading) }
 
     private inline fun each(block: (Listener) -> Unit) {
       for (l in listeners) {

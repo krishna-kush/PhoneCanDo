@@ -89,6 +89,10 @@ dependencies {
   implementation 'com.phonecando.lre:lre-tar:0.1.0-dev'
   implementation 'com.phonecando.lre:lre-oci:0.1.0-dev'
   implementation 'com.phonecando.lre:lre-image:0.1.0-dev'
+  // The agents kit's API (agents/, pure JVM, Kotlin stdlib only;
+  // withAgentsCompositeBuild.js): only its ProjectDir, the work folder the
+  // machine's shell starts in, as every agent does.
+  implementation 'com.phonecando.agents:agents-kit-api:0.1.0-dev'
 
   // JVM tests of the pure parts (records, ids, error codes, jobs, recipes,
   // gates): ./gradlew :phonecando-linux:testLiteDebugUnitTest

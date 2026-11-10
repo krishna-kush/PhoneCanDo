@@ -45,8 +45,12 @@ export function failureText(failure: JobFailure): string {
   return failure.code === 'internal' && detail ? `${text} (${detail})` : text;
 }
 
-/** Any rejection from the Linux seam, the runner or a flow, as a sentence. */
+/** Any rejection from the Linux seam, the runner or a flow, as a sentence; a refused start or model pick says why. */
 export function linuxFailureText(e: unknown): string {
+  const code = (e as { code?: unknown } | null)?.code;
+  if (typeof code === 'string' && Object.prototype.hasOwnProperty.call(START_TEXT, code)) {
+    return startFailureText(code as EngineStartError, e instanceof Error ? e.message : null);
+  }
   return failureText(failureOfError(e));
 }
 
@@ -74,10 +78,24 @@ const START_TEXT: Record<EngineStartError, string> = {
   port_unavailable: "We couldn't find a free port to start on. Try again.",
   start_failed: "The agent didn't start. Try again.",
   agent_not_installed: "This agent isn't installed in its machine yet. Install it on its page in the Env tab.",
+  model_unavailable: "This agent's local model can't run right now.",
 };
 
 export function startErrorText(code: EngineStartError): string {
   return START_TEXT[code];
+}
+
+/**
+ * A refused start as a sentence, from its code and the native message
+ * (`model_unavailable: its model (x) is no longer on this phone`). Only
+ * model_unavailable adds its detail: it has many causes, each with a
+ * different fix.
+ */
+export function startFailureText(code: EngineStartError, message: string | null | undefined): string {
+  const text = START_TEXT[code];
+  if (code !== 'model_unavailable' || !message) return text;
+  const detail = message.replace(/^.*?model_unavailable:\s*/, '').trim();
+  return detail ? `${text} ${detail.charAt(0).toUpperCase()}${detail.slice(1)}.` : text;
 }
 
 /** The code inside an EnsureResult status (`start-failed:<code>`), else null. */

@@ -3,7 +3,8 @@ package com.phonecando.runner.engine
 // One engine's environment, in layers: our own process env, then the
 // image's engine.env (for a TUI engine also TERMINAL: what our xterm
 // renders and UTF-8), then the kind's launch env, then ours on top: the
-// bridge URL and this agent's token, a TUI engine's events file (where the
+// bridge URL and this agent's token (only for a kind with phone tools,
+// BridgeAccess; else neither), a TUI engine's events file (where the
 // kit scripts write), the build channel, and the agent tag.
 // The tag (PHONECANDO_AGENT=<agentId>) is inherited by everything the engine
 // starts, which is how a stop finds every process of an agent (proc/). It

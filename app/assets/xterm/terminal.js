@@ -102,6 +102,15 @@
     if (!resizing) nextResize();
   }
 
+  // xterm's resize moves the row the view shows (ydisp) but not its scroll
+  // area's position, so with the view scrolled up the next scroll started
+  // from the old place: scrollToBottom landed on the old bottom, the view
+  // stayed up and typing no longer brought it down. Sync it after each.
+  function syncScrollArea() {
+    var v = term._core && term._core._viewport;
+    if (v && typeof v._sync === 'function') v._sync();
+    noteScrolled();
+  }
   function nextResize() {
     resizing = true;
     term.write('', function () {
@@ -109,6 +118,7 @@
       var rows = wanted.rows;
       wanted = null;
       var done = function () {
+        syncScrollArea();
         if (wanted) nextResize();
         else resizing = false;
       };

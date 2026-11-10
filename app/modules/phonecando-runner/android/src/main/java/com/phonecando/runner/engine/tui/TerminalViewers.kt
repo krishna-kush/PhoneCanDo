@@ -42,6 +42,10 @@ internal class TerminalViewers {
     terminals[viewerId]?.resize(viewerId, rows, cols)
   }
 
+  fun focus(viewerId: String, shown: Boolean) {
+    terminals[viewerId]?.focus(viewerId, shown)
+  }
+
   fun detach(viewerId: String) {
     terminals.remove(viewerId)?.detach(viewerId)
   }

@@ -97,6 +97,16 @@ class AgentStoreTest {
     assertNull(store().get(a.id)!!.installedVersion)
   }
 
+  @Test fun aLocalModelIsKept() {
+    val s = store()
+    val a = s.create("opencode", "Main", "img1")
+    assertNull(a.model)
+    assertEquals("qwen3-5-4b-q4-k-m", s.setModel(a.id, "qwen3-5-4b-q4-k-m").model)
+    assertEquals("qwen3-5-4b-q4-k-m", store().get(a.id)!!.model)
+    assertNull(s.setModel(a.id, null).model)
+    assertNull(store().get(a.id)!!.model)
+  }
+
   @Test fun rejectsBadInput() {
     val s = store()
     for (id in listOf("", ".", "..", "a/b", "../x", "a b", "x".repeat(49))) {

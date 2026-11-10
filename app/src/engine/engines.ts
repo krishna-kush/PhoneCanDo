@@ -29,6 +29,30 @@ export function renameAgent(id: AgentId, name: string): Agent {
   return nativeRunner().renameAgent(id, name) as Agent;
 }
 
+/**
+ * Sets the local model the agent runs on (a model on the phone), or null
+ * for its own setup. A starting or running engine is stopped first:
+ * `wasRunning` says to start it again (state/flows/agentModel.ts does).
+ * Rejects an EngineStartFailure model_unavailable for a kind that takes no
+ * local model or a model that is not on the phone.
+ */
+export async function setAgentModel(id: AgentId, modelId: string | null): Promise<{ wasRunning: boolean; agent: Agent }> {
+  try {
+    return (await nativeRunner().setAgentModel(id, modelId)) as { wasRunning: boolean; agent: Agent };
+  } catch (e) {
+    throw asStartFailure(e);
+  }
+}
+
+/**
+ * Stops every agent set to the local model whose engine is starting or running (the model server goes with the
+ * last), so a change to the model's context takes effect; resolves their ids to start again
+ * (state/flows/modelContext.ts does).
+ */
+export function stopModelAgents(modelId: string): Promise<AgentId[]> {
+  return nativeRunner().stopModelAgents(modelId);
+}
+
 /** Stops the agent's engine, then forgets the agent. The image is the Linux module's to delete. */
 export function deleteAgent(id: AgentId): Promise<boolean> {
   return nativeRunner().deleteAgent(id);
@@ -57,6 +81,7 @@ const START_ERRORS: EngineStartError[] = [
   'port_unavailable',
   'start_failed',
   'agent_not_installed',
+  'model_unavailable',
 ];
 
 /** Any start rejection as an EngineStartFailure (native puts the code first in the message). */

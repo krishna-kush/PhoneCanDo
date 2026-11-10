@@ -19,6 +19,8 @@ type Props = {
   icon?: ReactNode;
   /** Hairline box around the index plate (false: icon only). */
   plate?: boolean;
+  /** More lines under the subtitle (a model's dates). */
+  children?: ReactNode;
 };
 
 // Square index plate + hairline row, per the site's plates: no rainbow
@@ -35,6 +37,7 @@ export default function AppCard({
   selected,
   icon,
   plate = true,
+  children,
 }: Props) {
   const t = useTheme();
   const initial = (title.replace(/^\.+/, '').trim().charAt(0) || '•').toUpperCase();
@@ -89,6 +92,7 @@ export default function AppCard({
             {subtitle}
           </Text>
         ) : null}
+        {children}
       </YStack>
       {menu && menu.length > 0 ? (
         <CardMenu items={menu} label={menuLabel ?? `Actions for ${title}`} />

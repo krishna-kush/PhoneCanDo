@@ -52,6 +52,9 @@ internal class ChatTracker(private val onChange: () -> Unit) {
 
   fun chats(): List<ChatBoard.Chat> = board.chats()
 
+  /** The agents with a run going (ChatBoard.working). */
+  fun working(): Set<String> = board.working()
+
   private fun readTitle(agentId: String, sessionId: String) {
     val source = sources[agentId] ?: return
     reader.execute {

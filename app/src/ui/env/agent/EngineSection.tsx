@@ -10,7 +10,7 @@ import SectionTitle from '../../common/SectionTitle';
 import EngineDot from '../../common/agent-switcher/EngineDot';
 import { useTheme } from '../../common/globals';
 import { engineIsUp, engineStateWord } from '../logic/engineState';
-import { startErrorText, startFailureCode } from '../logic/errorText';
+import { startFailureCode, startFailureText } from '../logic/errorText';
 import Note from '../parts/Note';
 
 type Props = { agent: Agent; image: Image | undefined; linux: boolean };
@@ -44,7 +44,7 @@ export default function EngineSection({ agent, image, linux }: Props) {
       .then((res) => {
         if (res.status === 'unavailable') setError("This build can't run agents.");
         const code = startFailureCode(res.status);
-        if (code) setError(startErrorText(code));
+        if (code) setError(startFailureText(code, res.error));
       })
       .finally(() => setBusy(null));
   };

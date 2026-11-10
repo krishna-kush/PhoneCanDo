@@ -26,7 +26,9 @@ internal class EngineSlot(val agentId: String) {
   var process: EngineProcess? = null
   var watch: EngineWatch? = null
   var events: EventSource? = null
-  var plan: LaunchPlan? = null
+
+  /** What the running process was launched with; volatile, as the bridge reads its kind without the lock. */
+  @Volatile var plan: LaunchPlan? = null
 
   /** A TUI engine's terminal, which viewers attach to; null for a server engine. */
   @Volatile var terminal: EngineTerminal? = null

@@ -10,7 +10,9 @@ import org.junit.Test
 
 // JVM checks for EngineTerminal: output drains with or without a viewer, a
 // viewer starts with the replay, one viewer at a time, a paused viewer's
-// queue is bounded, and the end reaches the viewer after its last output.
+// queue is bounded, the end reaches the viewer after its last output, and
+// the terminal answers the program: the status query, and focus reports
+// that follow the viewer showing it.
 class EngineTerminalTest {
   private var now = 1_000L
   private val pty = FakePty()
@@ -110,6 +112,55 @@ class EngineTerminalTest {
     t.listen(null)
     t.out("\u0007")
     assertEquals(listOf(Signal.Bell, Signal.Title("t")), seen)
+  }
+
+  @Test fun answersTheStatusQueryEvenBeforeItIsBound() {
+    val t = EngineTerminal(24, 80, clock = { now })
+    t.out("\u001b]7501;?\u0007")
+    assertTrue(pty.written.isEmpty())
+    t.bind(pty)
+    t.out("\u001b]7501;?\u001b\\\u001b]7501;state=idle\u0007")
+    assertEquals(listOf("\u001b]7501;?\u0007", "\u001b]7501;?\u001b\\"), pty.written)
+  }
+
+  @Test fun focusFollowsTheViewerThatShowsTheProgram() {
+    val t = terminal()
+    t.attach("v1")
+    t.focus("v1", true)
+    assertTrue("no reports before the program asks", pty.written.isEmpty())
+    // Asked for while shown: in, at once.
+    t.out("\u001b[?1004h")
+    t.focus("v1", true)
+    t.focus("v1", false)
+    t.focus("v1", true)
+    assertEquals(listOf("\u001b[I", "\u001b[O", "\u001b[I"), pty.written)
+    pty.written.clear()
+    // A takeover keeps the focus until the new viewer says; the old one is ignored.
+    t.attach("v2")
+    t.focus("v1", false)
+    assertTrue(pty.written.isEmpty())
+    t.focus("v2", false)
+    t.detach("v1")
+    t.focus("v2", true)
+    t.detach("v2")
+    assertEquals(listOf("\u001b[O", "\u001b[I", "\u001b[O"), pty.written)
+  }
+
+  @Test fun noViewerMeansUnfocused() {
+    val t = terminal()
+    t.out("\u001b[?1004h")
+    assertEquals(listOf("\u001b[O"), pty.written)
+    t.attach("v1")
+    t.detach("v1")
+    assertEquals("attached but never shown: no change", listOf("\u001b[O"), pty.written)
+    // A reset turns reports off; after the end nothing is written.
+    t.attach("v1")
+    t.out("\u001bc")
+    t.focus("v1", true)
+    t.out("\u001b[?1004h")
+    t.onExit(0)
+    t.focus("v1", false)
+    assertEquals(listOf("\u001b[O", "\u001b[I"), pty.written)
   }
 
   @Test fun tailOfTheRing() {

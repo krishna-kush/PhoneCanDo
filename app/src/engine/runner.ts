@@ -8,9 +8,14 @@ import type {
   NativeClientRecipe,
   NativeEngineStatus,
   NativeInstallPlan,
+  NativeKindDeleted,
+  NativeKindProblem,
+  NativeKindSaved,
   NativeLaunchTarget,
   NativeOpenUrlAction,
+  NativePromptReading,
   NativeTerminalAttach,
+  NativeUserKind,
   NativeVersionCheck,
 } from '../../modules/phonecando-runner/src/PhoneCanDoRunner.types';
 import type { NativeCrash, TelemetryNativeSnapshot } from '../../modules/phonecando-runner/src/telemetry.types';
@@ -27,6 +32,9 @@ export type RunnerModule = {
   createAgent(params: { kind: string; name: string; imageId: string }): NativeAgent;
   renameAgent(id: string, name: string): NativeAgent;
   deleteAgent(id: string): Promise<boolean>;
+  setAgentModel(id: string, modelId: string | null): Promise<{ wasRunning: boolean; agent: NativeAgent }>;
+  stopModelAgents(modelId: string): Promise<string[]>;
+  promptReading(): NativePromptReading | null;
   startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;
@@ -38,6 +46,13 @@ export type RunnerModule = {
   engineStatuses(): NativeEngineStatus[];
   engineHealth(agentId: string): string;
   listKinds(): string;
+  listUserKinds(): NativeUserKind[];
+  readUserKind(id: string): string | null;
+  validateUserKind(json: string): NativeKindProblem[];
+  saveUserKind(json: string, replace: boolean): NativeKindSaved;
+  deleteUserKind(id: string): NativeKindDeleted;
+  copyText(text: string): boolean;
+  clipboardText(): string | null;
   pairWebUi(agentId: string): Promise<string>;
   clientRecipe(agentId: string, projectDir: string, sessionId: string | null): NativeClientRecipe;
   isEngineIdle(agentId: string): boolean;
@@ -45,6 +60,7 @@ export type RunnerModule = {
   engineTerminalRead(viewerId: string, max: number): string | null;
   engineTerminalWrite(viewerId: string, b64: string): void;
   engineTerminalResize(viewerId: string, rows: number, cols: number): void;
+  engineTerminalFocus(viewerId: string, shown: boolean): void;
   engineTerminalDetach(viewerId: string): void;
   pendingPrompts(): NativeBridgePrompt[];
   resolveUnlock(requestId: string, ok: boolean): boolean;

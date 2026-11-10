@@ -12,8 +12,9 @@
   `app/modules/phonecando-linux/android/src/linux/libs/arm64-v8a/`
   (`lre/proot/stage.sh`) and a Default image (`./manage image fetch` +
   `./manage image stage` for the locked one, or `./manage image build` +
-  `./manage image stage --local` for a local one, debug builds only). Both are gitignored. Without them the app runs, and first launch
-  makes an Android image (no Linux).
+  `./manage image stage --local` for a local one, debug builds only). Both
+  are gitignored. Without them the app runs, and first launch makes an
+  Android image (no Linux).
 
 ## Install and run
 
@@ -34,25 +35,26 @@ switching channels is one command and compiled outputs are reused. Add
 `pnpm android:<channel>` installs a debug-signed **PhoneCanDo Lite Dev** or
 **PhoneCanDo Full Dev** (`com.phonecando.app.<channel>.dev`), separate from
 each other and from the release `com.phonecando.app`, so all three can live
-on the phone. Debug builds show the update pitch but refuse the install: the
-release APK is another package (`com.phonecando.app`), so it would install
-beside the dev app, never update it. An adb install also never gets the
-restricted-settings lock (it follows the installer's package source, not
-debuggability), so those two flows are release-build tests. JS/asset-only changes reload
-from Metro; native module, manifest or dependency changes need another
-`pnpm android:full`.
+on the phone. Debug builds show the update pitch but refuse the install
+(the release APK is another package, so it would install beside the dev
+app), and an adb install never gets the restricted-settings lock, so both
+flows are release-build tests. JS/asset-only changes reload from Metro;
+native module, manifest or dependency changes need another
+`pnpm android:<channel>`.
 
 ## First boot
 
 - First launch makes the first agent and its machine: with Linux, an image
-  of the Default env (offline, about half a minute); without (play, or no
-  proot or Default image staged), an Android image. A failure says why, with
-  Retry and, on the Linux path, Continue without Linux. When more than one
-  agent kind can be made, Choose agent comes first (the default kind
-  preselected); every other creation path in the Env tab asks the same way.
+  of the Default env (offline); without (play, or no proot or Default image
+  staged), an Android image. A failure says why, with Retry and, on the
+  Linux path, Continue without Linux.
+- When more than one agent kind can be made, Choose agent comes first (the
+  default kind preselected), here and wherever the Env tab makes an agent.
+  It also offers Add your own agent; the Env tab's Custom agents lists,
+  edits, shares and deletes those.
 - Home is the active agent's own UI: opencode's web UI (paired with a fresh
   code per mount), or the TUI of a kind like Claude Code or Gemini CLI,
-  after its install finishes. The header title switches agents.
+  once its install finishes. The header title switches agents.
 - The header menu opens a terminal: opencode's TUI in a folder you pick, or
   a Linux shell in the agent's machine.
 - The Env tab lists envs and their machines (one image + its agent each) and
