@@ -1,0 +1,13 @@
+{
+  "name": "phonecando-models",
+  "version": "0.1.0",
+  "description": "PhoneCanDo local models host: model files, Hugging Face, downloads, imports and the llama-server payload.",
+  "main": "src/PhoneCanDoModelsModule.ts",
+  "types": "src/PhoneCanDoModelsModule.ts",
+  "license": "SEE LICENSE IN ../../../LICENSE",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

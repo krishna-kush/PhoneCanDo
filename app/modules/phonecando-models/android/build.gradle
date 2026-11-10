@@ -1,0 +1,38 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.phonecando.models'
+version = '0.1.0'
+
+android {
+  namespace "com.phonecando.models"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  // libllama-server.so (lme/llamacpp, an executable named lib*.so) is staged
+  // into src/main/jniLibs/arm64-v8a/ by lme/llamacpp/stage.sh, never
+  // committed. Every channel ships it, play included: the binary is in the
+  // APK, the weights are data. nativeLibraryDir is the one place Android
+  // lets us exec from; the runner's model slot starts it.
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // The local model engine (lme/), pure JVM: the app's settings plugin
+  // substitutes these coordinates with the included build
+  // (withLmeCompositeBuild.js). The runner's model slot reads the store and
+  // the device through this module and plans with lme-host itself.
+  implementation 'com.phonecando.lme:lme-api:0.1.0-dev'
+  implementation 'com.phonecando.lme:lme-catalog:0.1.0-dev'
+  implementation 'com.phonecando.lme:lme-store:0.1.0-dev'
+  implementation 'com.phonecando.lme:lme-host:0.1.0-dev'
+
+  // JVM tests of the pure parts (CPU info, RAM checks, error codes, jobs,
+  // rates, token rules): ./gradlew :phonecando-models:testDebugUnitTest
+  testImplementation 'junit:junit:4.13.2'
+}

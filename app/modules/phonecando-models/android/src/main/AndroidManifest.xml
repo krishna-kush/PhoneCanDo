@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Hugging Face search, file lists and model downloads. -->
+  <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

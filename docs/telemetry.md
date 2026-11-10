@@ -288,9 +288,9 @@ is not counted anywhere.
 
 ## Downloads (`GET /v1/dl/<channel>`, Analytics Engine `phonecando_downloads`, `site_daily`)
 
-The site's buttons and QR code go through `https://api.phonecando.app/v1/dl/lite`
-and `.../v1/dl/full`, which
-redirect to that version's APK on GitHub. Stored in Analytics Engine for about
+The site's buttons and QR code go through
+`https://api.phonecando.app/v1/dl/lite` and `.../v1/dl/full`, which redirect
+to that version's APK on GitHub. Stored in Analytics Engine for about
 3 months: channel, version, country, the Android major version from the user
 agent, the referrer's host and the user-agent class. Also counted, for good,
 in `site_daily`: +1 on the row (UTC day, `download`, channel, country). No ID,
@@ -351,11 +351,14 @@ numbers.
 | The container registry of an Own env (Docker Hub's `registry-1.docker.io` and its token service, or the registry the image name gives), the storage it redirects downloads to and, for Docker Hub official images when Docker Hub refuses or fails, `public.ecr.aws` and `mirror.gcr.io` | full and lite, only when you add an Own env or retry its download | the image name and tag you picked; a `User-Agent: phonecando-lre` header |
 | An agent's install or update in its Linux machine: the image's package mirrors, Node.js from `nodejs.org` (or Alpine's mirrors) for a kind that needs it, and the vendor's own source (Claude Code: `claude.ai/install.sh` and what it downloads; Gemini CLI: the npm registry) | full and lite, when an agent of such a kind is made, and on Install, Retry or Update agent | nothing beyond normal requests |
 | The model providers you configure, and an installed agent's own vendor | whenever the agent runs | your prompts and that provider's key, straight from the phone to the provider, plus whatever that agent sends under its vendor's terms; PhoneCanDo's server is never in that path |
+| Hugging Face's API: `https://huggingface.co/api/models` (the GGUF model list and its next pages), `…/api/models/<repo>/revision/main`, `…/tree/<commit>`, and `…/api/models/<original>?expand[]=createdAt&expand[]=safetensors` (the day a listed model's or repository's original was created and its parameter count, for its dates and size: once per original we don't know, at most six at a time, kept until the app restarts; under a size filter also for listed models whose names give no size). The size filter never leaves the phone: we match it there, so with it on one list or one More reads up to 3 pages of 100 models, fewer once 10 match | every channel, only on Env → Models: opening the page (the most downloaded chat models: one request the first time, kept until the app restarts, plus the dates of the models listed), a search as you type after a short pause, a filter change, More, opening a repository | the search text, the sort, license and chat-models-only filters (never the size) and repository names; a `User-Agent: phonecando-lme` header; your Hugging Face token as `Authorization: Bearer` when you saved one |
+| A model's files: `https://huggingface.co/<repo>/resolve/<commit>/<file>` and the storage it redirects to (Hugging Face's CDN) | only when you tap Download or Resume, and a running download's automatic retries | the repository, commit and file, with `Range` when resuming; your token to huggingface.co only, never to the storage; a `User-Agent: phonecando-lme` header |
 | Whatever you or the agent start | the agent's web fetch and web search tools, a `curl` or a package install in the terminal or an agent's image | what that command sends |
 
 The engine's own auto-update and language-server downloads are off
 (`OPENCODE_DISABLE_AUTOUPDATE`, `OPENCODE_DISABLE_LSP_DOWNLOAD`, set for every
 engine by `engine.launch` in `agents/native/opencode/agent.json`).
 The chat tab's web UI and the phone-control bridge talk to the engines over
-`127.0.0.1` only. The Default env's image ships inside the APK, so a Default
-machine is made without any network call.
+`127.0.0.1` only; an agent set to a local model sends its prompts to the
+model server on `127.0.0.1` only. The Default env's image ships inside the
+APK, so a Default machine is made without any network call.

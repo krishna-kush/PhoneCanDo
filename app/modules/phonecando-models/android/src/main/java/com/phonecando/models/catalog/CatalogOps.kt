@@ -1,0 +1,134 @@
+package com.phonecando.models.catalog
+
+import com.phonecando.lme.api.model.ModelDates
+import com.phonecando.lme.catalog.HfCatalog
+import com.phonecando.lme.catalog.ModelVariant
+import com.phonecando.lme.catalog.RepoFile
+import com.phonecando.lme.catalog.SearchPage
+import com.phonecando.lme.catalog.filters.ModelFilters
+import com.phonecando.lme.catalog.parameters.ParameterCount
+import com.phonecando.lme.catalog.suggested.Suggested
+import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
+import com.phonecando.lme.store.download.DownloadRequest
+import com.phonecando.lme.store.download.RemoteFile
+import com.phonecando.models.ModelsHost
+import com.phonecando.models.api.datesMap
+import com.phonecando.models.ram.RamChecks
+
+/**
+ * What the Models page reads from Hugging Face and our suggestions, as JS
+ * maps: each model with its RAM verdict on this phone, its dates and size
+ * ([HubOrigins]) and, when it is here already, its local id. Network calls
+ * block: run them off the JS thread.
+ */
+class CatalogOps(private val host: ModelsHost) {
+  private val origins = HubOrigins(host.executor)
+  private val pages = ListPages(origins)
+  private val popular = PopularPage()
+
+  /** Our suggestions, best first; no network. Their verdicts count the KV cache at the automatic context here. */
+  fun suggested(): List<Map<String, Any?>> {
+    val device = host.device.read()
+    val local = local()
+    return Suggested.MODELS.map { s ->
+      mapOf(
+        "title" to s.title,
+        "note" to s.note,
+        "repo" to s.repo,
+        "revision" to s.revision,
+        "file" to fileMap(s.file),
+        "sizeBytes" to s.file.sizeBytes.toDouble(),
+        "dates" to datesMap(s.origin.dates),
+        "ram" to RamChecks.of(device, LlamaCppRuntime.contextPlan(device, s.file.sizeBytes, s.kvCache, s.contextLength, null)).toMap(),
+        "onPhone" to local.model(s.file.sha256),
+        "downloadId" to local.download(s.file.sha256),
+      )
+    }
+  }
+
+  /**
+   * GGUF repositories matching [query] (all when blank) under [filters]
+   * ([ListPages]); the list the page opens on is kept ([PopularPage]).
+   */
+  fun search(query: String, filters: ModelFilters, limit: Int): Map<String, Any?> {
+    val hub = host.hub()
+    return pageMap(hub, popular.get(query, filters, limit) { pages.first(hub, query, filters, limit) })
+  }
+
+  /** The page after one whose `next` is [cursor] (a [ListCursor]), under the same filters. */
+  fun nextPage(cursor: String): Map<String, Any?> = host.hub().let { pageMap(it, pages.next(it, cursor)) }
+
+  /**
+   * [repo] pinned to its `main` commit, with the models in it, smallest
+   * first. A variant's verdict counts its files alone: the KV cache is known
+   * only once its header is on the phone.
+   */
+  fun repo(repo: String): Map<String, Any?> {
+    val hub = host.hub()
+    val revision = hub.revision(repo)
+    val variants = hub.variants(hub.files(revision.repo, revision.sha))
+    val device = host.device.read()
+    val local = local()
+    return mapOf(
+      "repo" to revision.repo,
+      "revision" to revision.sha,
+      "gated" to revision.gated,
+      "dates" to datesMap(origins.dates(hub, revision)),
+      "variants" to variants.map { v -> variantMap(v, RamChecks.of(device, v.sizeBytes).toMap(), local) },
+    )
+  }
+
+  /**
+   * The download of [files] (a variant's, as [repo] listed them) from [repo]
+   * at commit [revision], with the [dates] the listing showed for it.
+   */
+  fun request(repo: String, revision: String, files: List<RepoFile>, dates: ModelDates?): DownloadRequest {
+    val hub = host.hub()
+    return DownloadRequest(
+      repo = repo,
+      revision = revision,
+      files = files.map { f ->
+        RemoteFile(f.name, hub.downloadUrl(repo, revision, f), f.sizeBytes, f.sha256 ?: throw IllegalArgumentException("${f.name} has no sha256"))
+      },
+      dates = dates,
+    )
+  }
+
+  private fun local() = LocalMatch(host.store.models(), host.store.downloads())
+
+  private fun pageMap(hub: HfCatalog, page: SearchPage): Map<String, Any?> {
+    origins.lookUp(hub, page.hits)
+    return mapOf(
+      "hits" to page.hits.map { h ->
+        mapOf(
+          "repo" to h.repo,
+          "downloads" to h.downloads.toDouble(),
+          "likes" to h.likes.toDouble(),
+          "pipelineTag" to h.pipelineTag,
+          "createdAt" to h.createdAt?.toString(),
+          "dates" to datesMap(origins.dates(h)),
+          "params" to origins.size(h)?.let(::paramsMap),
+        )
+      },
+      "next" to page.next,
+    )
+  }
+
+  // ModelParams in app/src/engine/models/types.ts.
+  private fun paramsMap(p: ParameterCount): Map<String, Any?> = mapOf("count" to p.count.toDouble(), "effective" to p.effective)
+
+  private fun variantMap(v: ModelVariant, ram: Map<String, Any?>, local: LocalMatch): Map<String, Any?> = mapOf(
+    "quant" to v.quant,
+    "files" to v.files.map(::fileMap),
+    "sizeBytes" to v.sizeBytes.toDouble(),
+    "ram" to ram,
+    "onPhone" to local.model(v.entry.sha256),
+    "downloadId" to local.download(v.entry.sha256),
+  )
+
+  private fun fileMap(f: RepoFile): Map<String, Any?> = mapOf(
+    "path" to f.path,
+    "sizeBytes" to f.sizeBytes.toDouble(),
+    "sha256" to f.sha256,
+  )
+}
