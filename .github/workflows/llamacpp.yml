@@ -1,0 +1,164 @@
+name: llama.cpp
+
+# llama.cpp's llama-server for local models (lme/llamacpp): pinned sources
+# (pins.env) with our patches (patches/), CPU only, static, KleidiAI
+# kernels on. build-android
+# cross-builds the arm64 jniLib (libllama-server.so) with the pinned NDK,
+# proves it at the ELF level (no runner can exec bionic), uploads it and
+# builds it again in another workdir to prove the bytes do not move.
+# Nothing here creates or touches a release. Runs on payload changes and on
+# demand; the pins never move on their own, so a scheduled rebuild would
+# prove nothing a push does not.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - 'lme/llamacpp/**'
+      # The Linux host build is local-models.yml's.
+      - '!lme/llamacpp/build-host.sh'
+      - '.github/workflows/llamacpp.yml'
+  pull_request:
+    paths:
+      - 'lme/llamacpp/**'
+      # The Linux host build is local-models.yml's.
+      - '!lme/llamacpp/build-host.sh'
+      - '.github/workflows/llamacpp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Manual runs get their own group.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Explicit bash runs steps with -eo pipefail, so a `verify.sh | tee` step
+# fails when the check does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-android:
+    name: build-android
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pins.env is the only copy of the versions; this also puts
+      # NDK_VERSION in the env for the NDK step. Values must be plain
+      # literals: anything else would be evaluated by build.sh, so it fails
+      # here first.
+      - name: Pins (lme/llamacpp/pins.env)
+        run: |
+          set -euo pipefail
+          pins=lme/llamacpp/pins.env
+          lines="$(grep -E '^[A-Z][A-Z0-9_]*=' "$pins")"
+          bad="$(grep -vE '^[A-Z][A-Z0-9_]*=[A-Za-z0-9._:/+-]+$' <<<"$lines" || true)"
+          if [ -n "$bad" ]; then
+            echo "::error file=$pins::not a plain KEY=literal line: $bad"
+            exit 1
+          fi
+          printf '%s\n' "$lines" >> "$GITHUB_ENV"
+          {
+            echo "### llama.cpp pins (\`$pins\`)"
+            echo
+            echo '| Pin | Value |'
+            echo '|---|---|'
+            while IFS='=' read -r key value; do printf '| `%s` | `%s` |\n' "$key" "$value"; done <<<"$lines"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Host tools (cmake, ninja, readelf, file)
+        run: |
+          set -euo pipefail
+          pkgs=()
+          command -v ninja >/dev/null || pkgs+=(ninja-build)
+          command -v cmake >/dev/null || pkgs+=(cmake)
+          command -v readelf >/dev/null || pkgs+=(binutils)
+          command -v file >/dev/null || pkgs+=(file)
+          if [ "${#pkgs[@]}" -gt 0 ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends "${pkgs[@]}"
+          fi
+          cmake --version | sed -n 1p
+          echo "ninja $(ninja --version)"
+          readelf --version | sed -n 1p
+
+      # Not cached: the zip comes from dl.google.com about as fast as a cache
+      # restore would (as in proot.yml).
+      - name: Set up Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
+        with:
+          ndk-version: ${{ env.NDK_VERSION }}
+          add-to-path: false
+
+      - name: Build (lme/llamacpp/build.sh)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: bash lme/llamacpp/build.sh "$RUNNER_TEMP/llamacpp-work" "$RUNNER_TEMP/llamacpp-android"
+
+      - name: ELF checks and SHA256SUMS (lme/llamacpp/verify.sh)
+        run: bash lme/llamacpp/verify.sh "$RUNNER_TEMP/llamacpp-android" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Consumers fetch it by this exact name and stage it with
+      # lme/llamacpp/stage.sh. The zip drops the exec bit; stage.sh sets 0755.
+      - name: Upload llamacpp-android-arm64
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: llamacpp-android-arm64
+          path: |
+            ${{ runner.temp }}/llamacpp-android/libllama-server.so
+            ${{ runner.temp }}/llamacpp-android/SHA256SUMS
+            ${{ runner.temp }}/llamacpp-android/INPUTS
+          retention-days: 14
+          if-no-files-found: error
+
+      # After the upload on purpose: a build that fails here is still there
+      # to inspect. Same sources, another workdir: the bytes must not move.
+      - name: Reproducible (second build in another workdir)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/llamacpp-work-2"
+          cp -r "$RUNNER_TEMP/llamacpp-work/downloads" "$RUNNER_TEMP/llamacpp-work-2/"
+          bash lme/llamacpp/build.sh "$RUNNER_TEMP/llamacpp-work-2" "$RUNNER_TEMP/llamacpp-android-2"
+          cd "$RUNNER_TEMP/llamacpp-android-2"
+          if sha256sum -c "$RUNNER_TEMP/llamacpp-android/SHA256SUMS"; then
+            echo "Second build in another workdir: bit-identical." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::the second build differs from the first: the build is not reproducible"
+            exit 1
+          fi
+
+  llamacpp-ok:
+    # The one llama.cpp check to require in branch protection: green only
+    # when every job above succeeded (a skipped or cancelled job counts as a
+    # failure).
+    name: llamacpp-ok
+    if: always()
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every blocking llama.cpp job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=llamacpp-ok::not green: $failed"
+            exit 1
+          fi

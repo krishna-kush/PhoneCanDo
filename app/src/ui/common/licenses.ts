@@ -219,6 +219,69 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ==============================================================================
+llama.cpp, ggml, cpp-httplib and nlohmann/json — MIT License
+==============================================================================
+
+llama-server (libllama-server.so) 0.9.0 with our patches, which runs
+local models.
+
+Copyright (c) 2023-2026 The ggml authors (llama.cpp and ggml)
+Copyright (c) 2017 yhirose (cpp-httplib)
+Copyright (c) 2013-2025 Niels Lohmann (nlohmann/json)
+
+The MIT License text is the same as the opencode section above.
+
+==============================================================================
+KleidiAI — Apache License 2.0
+==============================================================================
+
+KleidiAI 1.32.0, CPU kernels inside libllama-server.so.
+
+Copyright 2024-2026 Arm Limited and/or its affiliates
+
+The Apache License 2.0 text is the same as the AndroidX section above.
+
+==============================================================================
+xxHash — BSD-2-Clause
+==============================================================================
+
+xxHash, inside libllama-server.so.
+
+xxHash Library
+Copyright (c) 2012-2021 Yann Collet
+All rights reserved.
+
+BSD 2-Clause License (https://www.opensource.org/licenses/bsd-license.php)
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+==============================================================================
+stb_image, miniaudio, SHA-1, SHA-256 and subprocess.h — public domain
+==============================================================================
+
+Inside libllama-server.so. Each is dedicated to the public domain
+(subprocess.h through the Unlicense), and we use them on those terms.
+
+==============================================================================
 Default Linux image (Debian-based) — per-package licenses
 ==============================================================================
 

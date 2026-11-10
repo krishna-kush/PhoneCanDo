@@ -44,6 +44,9 @@ const SHIPPED = [
   ['org.nanohttpd:nanohttpd', 'NanoHTTPD', 'NanoHTTPD',
     ['app/modules/phonecando-runner/android/build.gradle', /'org\.nanohttpd:nanohttpd:([^']+)'/]],
   ['Default Linux image (assets/default-image/)', 'Default Linux image', 'linux-image-'],
+  ['libllama-server.so', 'llama.cpp', 'libllama-server.so', ['lme/llamacpp/pins.env', /^LLAMACPP_VERSION=(\S+)$/m]],
+  ['KleidiAI (static in libllama-server.so)', 'KleidiAI', 'libllama-server.so', ['lme/llamacpp/pins.env', /^KLEIDIAI_VERSION=(\S+)$/m]],
+  ['xxHash (static in libllama-server.so)', 'xxHash', 'libllama-server.so'],
 ];
 
 // Start and end phrases of each full license text (whitespace-insensitive);
@@ -54,7 +57,9 @@ const SHIPPED = [
 const TEXTS = {
   'MIT License': [['Permission is hereby granted, free of charge, to any person obtaining a copy of this software', 'OTHER DEALINGS IN THE SOFTWARE.']],
   'SIL Open Font License 1.1': [['SIL OPEN FONT LICENSE Version 1.1', 'OTHER DEALINGS IN THE FONT SOFTWARE.']],
-  'BSD-3-Clause': [['Redistributions of source code must retain', 'EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.']],
+  // The BSD texts share their first clauses; each starts at what only it has.
+  'BSD-3-Clause': [['Neither the name of', 'EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.']],
+  'BSD-2-Clause': [['BSD 2-Clause License', 'EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.']],
   'Apache License 2.0': [['Apache License Version 2.0, January 2004', 'limitations under the License.']],
   '0BSD': [['Permission to use, copy, modify, and/or distribute this software', 'PERFORMANCE OF THIS SOFTWARE.']],
   'GPL-2.0-or-later': [
@@ -67,6 +72,8 @@ const TEXTS = {
   ],
   // The packages' own texts ship inside the image (/usr/share/doc/*/copyright).
   'per-package licenses': [],
+  // No text to carry: a public-domain dedication asks for none.
+  'public domain': [],
 };
 
 const args = process.argv.slice(2);

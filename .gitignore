@@ -34,6 +34,8 @@ app/ios/
 app/modules/phonecando-runner/android/src/agents/*/libs/
 # Staged proot + loader for Linux images (built from lre/proot; not committed)
 app/modules/phonecando-linux/android/src/linux/libs/
+# Staged llama-server for local models (built from lme/llamacpp; not committed)
+app/modules/phonecando-models/android/src/main/jniLibs/
 # Staged Default env image (lre/images/default/lock.json; ./manage image stage)
 app/modules/phonecando-linux/android/src/linux/assets/
 # A locally built Default env image for debug builds (./manage image stage --local)

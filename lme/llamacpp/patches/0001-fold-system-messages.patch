@@ -1,0 +1,159 @@
+Ours (PhoneCanDo), not from llama.cpp. When a chat template refuses the
+messages as sent, folds the system messages and renders once more, so a
+template that allows one system message, first, takes requests with more.
+
+Codex (Responses API) starts with two developer messages, which the server
+maps to system, and Claude Code (Anthropic /v1/messages) sends its
+environment block as a system message after the user turn. Qwen3.5's
+template allows one system message, first, and raises "System message must
+be at the beginning" otherwise, so every request from either failed.
+
+common_chat_templates_apply, which chat completions, Responses and
+Anthropic messages all reach, renders the messages as sent first: a
+template that takes them (Gemma 4, Llama 3.x, Qwen3, GLM, Mistral and
+others) renders exactly as before. Only if that throws (the template's
+raise arrives wrapped differently per path, so any error counts) does it
+render once more with the system messages folded, after developer is
+mapped to system; that attempt's error, if any, is the one reported, and
+everything it returns (prompt, grammar, parser) comes from the attempt
+that rendered. The fold:
+- the leading run of system messages becomes one, their text a blank line
+  apart;
+- a later one becomes "[System note]\n<text>": at the end of the user or
+  tool message before it, else at the start of the user message after it,
+  else (after an assistant turn) a user message of its own;
+- in text parts the text joins the part next to it (templates such as
+  Gemma 4's trim each part); other parts stay as they are. Text is trimmed
+  first, and blank system messages are dropped.
+
+--- a/common/chat.cpp
++++ b/common/chat.cpp
+@@ -1161,6 +1161,84 @@
+     }
+ }
+ 
++// PhoneCanDo patch, used only when the template refused the messages as sent
++// (common_chat_templates_apply): templates such as Qwen3.5's allow one system
++// message, first, but agents send more (Codex starts with two developer
++// messages, Claude Code puts its environment block after the user turn). The
++// leading run of system messages becomes one, their text a blank line apart.
++// A later one becomes "[System note]\n<text>": at the end of the user or tool
++// message before it, else at the start of the user message after it, else
++// (after an assistant turn) a user message of its own. Blank ones are dropped.
++
++static json text_content(const std::string & text, bool typed) {
++    return typed ? json::array({ json{ {"type", "text"}, {"text", text} } }) : json(text);
++}
++
++// text added before or after content, a blank line apart; in text parts it
++// joins the part next to it (templates such as Gemma 4's trim each part)
++static json add_text(const json & content, const std::string & text, bool before) {
++    if (!content.is_array()) {
++        const std::string s = content.is_string() ? content.get<std::string>() : "";
++        return json(s.empty() ? text : before ? text + "\n\n" + s : s + "\n\n" + text);
++    }
++    json parts = content;
++    if (!parts.empty()) {
++        json & edge = before ? parts.front() : parts.back();
++        if (edge.value("type", "") == "text") {
++            const std::string t = edge.value("text", "");
++            edge["text"]        = before ? text + "\n\n" + t : t + "\n\n" + text;
++            return parts;
++        }
++    }
++    if (!before) {
++        parts.push_back(text_content(text, true).at(0));
++        return parts;
++    }
++    json out = text_content(text, true);
++    out.insert(parts);
++    return out;
++}
++
++static void fold_system_messages(json & messages) {
++    json   out = json::array();
++    size_t i   = 0;
++    while (i < messages.size()) {
++        if (messages.at(i).at("role") != "system") {
++            out.push_back(messages.at(i++));
++            continue;
++        }
++        const bool  leading = i == 0;
++        std::string text;
++        bool        typed = false;
++        for (; i < messages.size() && messages.at(i).at("role") == "system"; i++) {
++            const json        content = messages.at(i).value("content", json());
++            const std::string t       = trim_whitespace(
++                content.is_array()  ? messages_inp_normalizer::concat_content_parts(content) :
++                content.is_string() ? content.get<std::string>() : "");
++            typed = typed || content.is_array();
++            if (!t.empty()) {
++                text += text.empty() ? t : "\n\n" + t;
++            }
++        }
++        if (text.empty()) {
++            continue;
++        }
++        const std::string note = "[System note]\n" + text;
++        if (leading) {
++            out.push_back({ {"role", "system"}, {"content", text_content(text, typed)} });
++        } else if (out.back().at("role") == "user" || out.back().at("role") == "tool") {
++            out.back()["content"] = add_text(out.back().value("content", json()), note, false);
++        } else if (i < messages.size() && messages.at(i).at("role") == "user") {
++            json next       = messages.at(i++);
++            next["content"] = add_text(next.value("content", json()), note, true);
++            out.push_back(next);
++        } else {
++            out.push_back({ {"role", "user"}, {"content", text_content(note, typed)} });
++        }
++    }
++    messages = std::move(out);
++}
++
+ 
+ // if first message is system and template does not support it, merge it with next message
+ static void system_message_not_supported(json & messages) {
+@@ -1464,7 +1542,8 @@
+ }
+ 
+ static common_chat_params common_chat_templates_apply_jinja(const struct common_chat_templates *        tmpls,
+-                                                            const struct common_chat_templates_inputs & inputs) {
++                                                            const struct common_chat_templates_inputs & inputs,
++                                                            bool                                        fold_system) {
+     autoparser::generation_params params;
+     params.tools = common_chat_tools_to_json_oaicompat(inputs.tools);
+     const auto & tmpl =
+@@ -1518,6 +1597,10 @@
+         workaround::map_developer_role_to_system(params.messages);
+     }
+ 
++    if (fold_system) {
++        workaround::fold_system_messages(params.messages);
++    }
++
+     if (!tmpl.original_caps().supports_system_role) {
+         workaround::system_message_not_supported(params.messages);
+     }
+@@ -1678,8 +1761,20 @@
+ common_chat_params common_chat_templates_apply(const struct common_chat_templates *        tmpls,
+                                                const struct common_chat_templates_inputs & inputs) {
+     GGML_ASSERT(tmpls != nullptr);
+-    return inputs.use_jinja ? common_chat_templates_apply_jinja(tmpls, inputs) :
+-                              common_chat_templates_apply_legacy(tmpls, inputs);
++    if (!inputs.use_jinja) {
++        return common_chat_templates_apply_legacy(tmpls, inputs);
++    }
++    // PhoneCanDo patch: the messages as sent first, so a template that takes
++    // them renders exactly as before. Only if that throws (a template's raise
++    // arrives wrapped differently per path, so any error counts), once more
++    // with the system messages folded (workaround::fold_system_messages); that
++    // attempt's error, if any, is the one reported. Everything returned (the
++    // prompt, grammar and parser) comes from the one attempt that rendered.
++    try {
++        return common_chat_templates_apply_jinja(tmpls, inputs, /* fold_system = */ false);
++    } catch (const std::exception &) {
++    }
++    return common_chat_templates_apply_jinja(tmpls, inputs, /* fold_system = */ true);
+ }
+ 
+ std::string common_chat_prompt::str() const {

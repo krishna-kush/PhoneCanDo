@@ -70,6 +70,38 @@ stream with [XZ for Java](https://github.com/tukaani-project/xz-java) 1.10
 (`org.tukaani:xz`), in every channel. BSD Zero Clause License (0BSD).
 Copyright (C) The XZ for Java authors and contributors.
 
+## llama.cpp, ggml, cpp-httplib and nlohmann/json — MIT License
+
+Local models run on llama-server (`libllama-server.so`), built by
+`lme/llamacpp/` from [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
+0.9.0 with our patches (`lme/llamacpp/patches/`: a chat template that
+allows one system message takes requests with more), in every channel. MIT
+License. Copyright (c) 2023-2026 The ggml authors
+(llama.cpp and ggml); Copyright (c) 2017 yhirose (cpp-httplib); Copyright (c)
+2013-2025 Niels Lohmann (nlohmann/json). The NDK's libc++, linked in
+statically, is Apache-2.0 WITH LLVM-exception, whose exception asks no notice
+for code compiled into a binary. Our build scripts' notice is
+`lme/llamacpp/NOTICE.md`.
+
+## KleidiAI — Apache License 2.0
+
+`libllama-server.so` includes Arm's [KleidiAI](https://github.com/ARM-software/kleidiai)
+1.32.0 CPU kernels. Apache License 2.0. Copyright 2024-2026 Arm Limited and/or
+its affiliates.
+
+## xxHash — BSD-2-Clause
+
+`libllama-server.so` includes xxHash, vendored in llama.cpp. BSD 2-Clause
+License. Copyright (c) 2012-2021 Yann Collet. The full text is in the app's
+About screen.
+
+## stb_image, miniaudio, SHA-1, SHA-256 and subprocess.h — public domain
+
+`libllama-server.so` includes these, vendored in llama.cpp. Each is dedicated
+to the public domain (subprocess.h through the Unlicense; stb_image and
+miniaudio are also offered under MIT and MIT-0), and we use them on the
+public-domain terms.
+
 ## PRoot — GPL-2.0-or-later
 
 The full and lite apps run Linux images under [PRoot](https://github.com/termux/proot),

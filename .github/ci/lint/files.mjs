@@ -19,6 +19,7 @@ const PRUNE_PATHS = new Set([
   'app/modules/phonecando-linux/android/src/linux/libs',
   'app/modules/phonecando-linux/android/src/linux/assets',
   'app/modules/phonecando-linux/android/src/linux/dev-assets',
+  'app/modules/phonecando-models/android/src/main/jniLibs',
 ]);
 // The same, for ignored paths with a wildcard (staged native agent payloads).
 const PRUNE_PATTERNS = [/^app\/modules\/phonecando-runner\/android\/src\/agents\/[^/]+\/libs$/];

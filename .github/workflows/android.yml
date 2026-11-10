@@ -31,6 +31,17 @@ on:
       - 'lre/*.kts'
       - 'lre/gradle.properties'
       - 'lre/gradle/**'
+      # Local models: the lme modules phonecando-models and the runner include
+      # (app/plugins/withLmeCompositeBuild.js) and the payload's stage script.
+      - 'lme/api/**'
+      - 'lme/gguf/**'
+      - 'lme/catalog/**'
+      - 'lme/store/**'
+      - 'lme/host/**'
+      - 'lme/*.kts'
+      - 'lme/gradle.properties'
+      - 'lme/gradle/**'
+      - 'lme/llamacpp/stage.sh'
       # Bundled into the app by its telemetry adapter (app/src/engine/telemetry/).
       - 'tce/client/**'
       - 'tce/core/**'
@@ -90,6 +101,17 @@ on:
       - 'lre/*.kts'
       - 'lre/gradle.properties'
       - 'lre/gradle/**'
+      # Local models: the lme modules phonecando-models and the runner include
+      # (app/plugins/withLmeCompositeBuild.js) and the payload's stage script.
+      - 'lme/api/**'
+      - 'lme/gguf/**'
+      - 'lme/catalog/**'
+      - 'lme/store/**'
+      - 'lme/host/**'
+      - 'lme/*.kts'
+      - 'lme/gradle.properties'
+      - 'lme/gradle/**'
+      - 'lme/llamacpp/stage.sh'
       # Bundled into the app by its telemetry adapter (app/src/engine/telemetry/).
       - 'tce/client/**'
       - 'tce/core/**'
@@ -144,6 +166,14 @@ on:
           artifact is staged into the release-shape build (lre/proot/stage.sh
           checks it against its SHA256SUMS) and the audit's proot gate is
           enforced.
+        required: false
+        default: ''
+        type: string
+      llamacpp_run_id:
+        description: >-
+          Optional run id of a llamacpp.yml run: its llamacpp-android-arm64
+          artifact (libllama-server.so, for local models) is staged into the
+          release-shape build (lme/llamacpp/stage.sh checks its SHA256SUMS).
         required: false
         default: ''
         type: string
@@ -360,6 +390,28 @@ jobs:
           fi
           echo "mode=$mode" >>"$GITHUB_OUTPUT"
           echo "proot: **$([ "$mode" = required ] && echo staged || echo 'not staged (not in the repository)')**" >>"$GITHUB_STEP_SUMMARY"
+      - name: Fetch llama-server (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.llamacpp_run_id != '' }}
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: llamacpp-android-arm64
+          run-id: ${{ inputs.llamacpp_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/llamacpp
+      - name: Stage llama-server
+        env:
+          LLAMACPP_DIR: ${{ runner.temp }}/llamacpp
+        run: |
+          set -euo pipefail
+          # Not in the repository (lme/llamacpp builds it); without it the
+          # app builds and local models say the server is missing.
+          if [ -f "$LLAMACPP_DIR/libllama-server.so" ]; then
+            bash lme/llamacpp/stage.sh "$LLAMACPP_DIR"
+            echo "llama-server: **staged**" >>"$GITHUB_STEP_SUMMARY"
+          else
+            echo "llama-server: **not staged (not in the repository)**" >>"$GITHUB_STEP_SUMMARY"
+          fi
       - name: Stage the locked Default image
         id: image
         env:
