@@ -1,9 +1,13 @@
 name: Cancel Replaced
 
-# A force-push to prod (amend + push) replaces the old head commit, so its
-# still-running push runs test code that no longer exists: cancel them. A
-# normal push never cancels anything (every commit's runs finish), and
-# scheduled, manual and PR runs are never touched.
+# Runs on every push to prod, so the push's own runs come first:
+# - A force-push (amend + push) replaces the old head commit, so its
+#   still-running push runs test code that no longer exists: cancel them. A
+#   normal push never cancels another push's runs (every commit's finish).
+# - Dependabot's update PRs yield: their queued and running runs are
+#   cancelled, so they don't hold the runners while the push waits. They
+#   build again when the PR is rebased (`@dependabot rebase`).
+# Scheduled, manual and other PR runs are never touched.
 
 on:
   push:
@@ -38,3 +42,29 @@ jobs:
             n=$((n + 1))
           done <<< "$ids"
           echo "Force-push replaced \`${BEFORE:0:7}\`: cancelled $n run(s)." >> "$GITHUB_STEP_SUMMARY"
+
+  dependabot-yields:
+    name: cancel Dependabot PR runs so the push runs first
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel queued and running Dependabot PR runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          n=0
+          for status in requested waiting pending queued in_progress; do
+            ids=$(gh api "repos/$REPO/actions/runs?event=pull_request&status=$status&per_page=100" \
+              --jq '.workflow_runs[] | select(.head_branch | startswith("dependabot/")) | .id')
+            while read -r id; do
+              [ -n "$id" ] || continue
+              echo "cancelling run $id ($status)"
+              gh api -X POST "repos/$REPO/actions/runs/$id/cancel" >/dev/null || true
+              n=$((n + 1))
+            done <<< "$ids"
+          done
+          echo "Push to prod: cancelled $n Dependabot PR run(s); they build again when rebased." >> "$GITHUB_STEP_SUMMARY"

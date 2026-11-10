@@ -3,6 +3,9 @@
 # One ecosystem per weekday so update PRs do not land at once. Every updater
 # waits 7 days after a release (cooldown) before proposing it: fresh releases
 # are where regressions and hijacked packages show up. PRs target prod.
+# No automatic rebase: every push to prod would rebuild every open update PR
+# and queue its runs ahead of the push's own. Comment `@dependabot rebase` on
+# a PR to bring it up to date before merging.
 #
 # Expo-managed packages: Expo SDK upgrades are manual (`expo install --fix`
 # after an SDK bump), so Dependabot never proposes an Expo SDK major, and never
@@ -21,6 +24,7 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    rebase-strategy: disabled
     commit-message:
       prefix: ci(deps)
     groups:
@@ -37,6 +41,7 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    rebase-strategy: disabled
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
@@ -101,6 +106,7 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 3
+    rebase-strategy: disabled
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
@@ -128,6 +134,7 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 3
+    rebase-strategy: disabled
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
@@ -157,6 +164,7 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 3
+    rebase-strategy: disabled
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps-dev)
@@ -182,6 +190,7 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 3
+    rebase-strategy: disabled
     commit-message:
       prefix: chore(deps)
     groups:
@@ -210,6 +219,7 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 3
+    rebase-strategy: disabled
     commit-message:
       prefix: chore(deps)
     groups:
@@ -229,6 +239,7 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 3
+    rebase-strategy: disabled
     commit-message:
       prefix: chore(deps)
     groups:
