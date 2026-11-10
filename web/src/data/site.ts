@@ -66,6 +66,8 @@ export const site = {
   size: `${Math.round(release.lite.size / 1024 / 1024)} MB`,
   sha256: release.lite.sha256,
   license: 'Source-available',
+  // Where people write to us: hi for anything, support for help with the app.
+  email: { hi: 'hi@phonecando.app', support: 'support@phonecando.app' },
   // Hero screen recording. Drop the files in public/ and fill both paths.
   hero: { video: '', poster: '' },
   // Gate screen recording: the in-app biometric prompt. Same deal.

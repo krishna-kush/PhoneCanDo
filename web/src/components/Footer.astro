@@ -22,6 +22,10 @@ const home = Astro.site.origin;
         Alpha software, built on a phone. Bundles open-source agent components under their own
         licenses. Android is a trademark of Google LLC. Not affiliated with Google or opencode.
       </p>
+      <p class="footer-mail">
+        <span>Say hi <a href={`mailto:${site.email.hi}`}>{site.email.hi}</a></span>
+        <span>Get help <a href={`mailto:${site.email.support}`}>{site.email.support}</a></span>
+      </p>
     </div>
 
     <nav class="footer-links" aria-label="Elsewhere">
@@ -115,6 +119,16 @@ const home = Astro.site.origin;
   }
   .footer .brand { font-size: 14px; }
   .footer .meta { margin-top: 10px; font: 400 10px/1.7 var(--mono); color: var(--faint); max-width: 46ch; }
+  .footer-mail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    margin-top: 12px;
+    font: 400 10px/1.7 var(--mono);
+    color: var(--faint);
+  }
+  .footer-mail a { color: var(--muted); border-bottom: 1px solid var(--line-2); }
+  .footer-mail a:hover { color: var(--red); border-bottom-color: var(--red); }
   .footer-links { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: flex-end; }
   .footer-links a { font: 500 10px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
   .footer-links a:hover { color: var(--red); }

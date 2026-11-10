@@ -1,6 +1,6 @@
 ---
-// The way out: the published schema and the issue tracker, under one big
-// spinning question mark.
+// The way out: the published schema, the issue tracker and our support
+// address, under one big spinning question mark.
 import { site } from '../../data/site';
 
 const schema = `${site.repo}/blob/HEAD/docs/telemetry.md`;
@@ -19,7 +19,8 @@ const issues = `${site.repo}/issues`;
       <p class="pv-ask-text">
         The full list of fields, limits and network calls is the published
         schema, next to the code that sends it. Questions or a problem: open
-        an issue on GitHub.
+        an issue on GitHub, or, if it shouldn't be public, write to{" "}
+        <a href={`mailto:${site.email.support}`}>{site.email.support}</a>.
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary" href={schema} target="_blank" rel="noreferrer">
@@ -64,6 +65,8 @@ const issues = `${site.repo}/issues`;
     color: var(--muted);
     text-wrap: pretty;
   }
+  .pv-ask-text a { color: var(--fg); border-bottom: 1px solid var(--line-2); }
+  .pv-ask-text a:hover { color: var(--red); border-bottom-color: var(--red); }
 
   @keyframes pv-ponder {
     0%, 100% { rotate: -8deg; }
