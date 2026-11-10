@@ -1,0 +1,381 @@
+name: Local models
+
+# Every agent kind with a `models` block, run against our llama-server: the
+# check that earns a kind its block (agents/AGENTS.md → Local models).
+#   plan     the kinds with a models block (agents/kit/cli/list.mjs --models),
+#            so a new block is tested from the commit that adds it
+#   server   lme/llamacpp/build-host.sh: the pinned sources (pins.env) with
+#            our patches, built for x86_64 Linux, cached by its INPUTS digest
+#   models   the test models of .github/ci/local-models/models.json, one per
+#            chat template family (pinned repo, revision and sha256), cached
+#   tools    kit-cli (render-install, render-model) and lme-cli (plan)
+#   legs     .github/ci/local-models/leg.sh per kind: installed into a fresh
+#            machine (Dockerfile) as the phone installs it, then its one-shot
+#            mode (one-shot.json) once per model, the server started from
+#            lme-cli's plan (the phone's flags, context and key handling);
+#            each run needs exit 0 and the answer to its prompt on stdout
+# Image kinds install their newest upstream release, so the weekly run
+# also catches a kind that stops working with our server. Runs on changes
+# to what the legs run, weekly (Mondays, beside lre-compat.yml's run), on
+# demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - '.github/workflows/local-models.yml'
+      - '.github/ci/local-models/**'
+      # The kinds: manifests (their models blocks), one-shot modes, a native
+      # kind's host engine and pins.
+      - 'agents/native/*/agent.json'
+      - 'agents/image/*/agent.json'
+      - 'agents/native/*/one-shot.json'
+      - 'agents/image/*/one-shot.json'
+      - 'agents/native/*/ci/host-engine.sh'
+      - 'agents/native/*/build/pins.env'
+      - 'agents/runtimes/**'
+      # list.mjs and its manifest loader and validators.
+      - 'agents/kit/cli/**'
+      - 'agents/kit/ts/manifest/**'
+      # kit-cli and the kit-render code it runs (the agents/ Gradle build).
+      - 'agents/kit/kotlin/api/**'
+      - 'agents/kit/kotlin/manifest/**'
+      - 'agents/kit/kotlin/render/**'
+      - 'agents/kit/kotlin/cli/**'
+      - 'agents/*.kts'
+      - 'agents/gradle.properties'
+      - 'agents/gradle/**'
+      - 'agents/gradlew'
+      # lme-cli with the host plan it prints (the lme/ Gradle build), and the server.
+      - 'lme/api/**'
+      - 'lme/gguf/**'
+      - 'lme/host/**'
+      - 'lme/cli/**'
+      - 'lme/*.kts'
+      - 'lme/gradle.properties'
+      - 'lme/gradle/**'
+      - 'lme/gradlew'
+      - 'lme/llamacpp/pins.env'
+      - 'lme/llamacpp/build-host.sh'
+      - 'lme/llamacpp/patches/**'
+  pull_request:
+    paths:
+      - '.github/workflows/local-models.yml'
+      - '.github/ci/local-models/**'
+      # The kinds: manifests (their models blocks), one-shot modes, a native
+      # kind's host engine and pins.
+      - 'agents/native/*/agent.json'
+      - 'agents/image/*/agent.json'
+      - 'agents/native/*/one-shot.json'
+      - 'agents/image/*/one-shot.json'
+      - 'agents/native/*/ci/host-engine.sh'
+      - 'agents/native/*/build/pins.env'
+      - 'agents/runtimes/**'
+      # list.mjs and its manifest loader and validators.
+      - 'agents/kit/cli/**'
+      - 'agents/kit/ts/manifest/**'
+      # kit-cli and the kit-render code it runs (the agents/ Gradle build).
+      - 'agents/kit/kotlin/api/**'
+      - 'agents/kit/kotlin/manifest/**'
+      - 'agents/kit/kotlin/render/**'
+      - 'agents/kit/kotlin/cli/**'
+      - 'agents/*.kts'
+      - 'agents/gradle.properties'
+      - 'agents/gradle/**'
+      - 'agents/gradlew'
+      # lme-cli with the host plan it prints (the lme/ Gradle build), and the server.
+      - 'lme/api/**'
+      - 'lme/gguf/**'
+      - 'lme/host/**'
+      - 'lme/cli/**'
+      - 'lme/*.kts'
+      - 'lme/gradle.properties'
+      - 'lme/gradle/**'
+      - 'lme/gradlew'
+      - 'lme/llamacpp/pins.env'
+      - 'lme/llamacpp/build-host.sh'
+      - 'lme/llamacpp/patches/**'
+  workflow_dispatch:
+  schedule:
+    - cron: '47 7 * * 1'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Explicit bash runs steps with -eo pipefail, so a `leg.sh | tee` step fails
+# when the leg does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      kinds: ${{ steps.plan.outputs.kinds }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: agents
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Kinds with a models block (agents/kit/cli/list.mjs --models)
+        id: plan
+        run: |
+          kinds="$(node agents/kit/cli/list.mjs --models --matrix | jq -c '.include')"
+          count="$(jq 'length' <<<"$kinds")"
+          {
+            echo "kinds=$kinds"
+            echo "count=$count"
+          } >>"$GITHUB_OUTPUT"
+          {
+            echo "### Kinds with a models block: $count"
+            echo
+            jq -r '.[] | "- `\(.id)` (\(.type))"' <<<"$kinds"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  server:
+    name: server (llama-server, x86_64 Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: lme/llamacpp
+
+      # The digest build-host.sh writes to INPUTS: the same pins, script and
+      # patches, the same binary.
+      - name: Inputs
+        id: inputs
+        run: echo "digest=$(cd lme/llamacpp && sha256sum pins.env build-host.sh patches/*.patch | sha256sum | cut -d' ' -f1)" >>"$GITHUB_OUTPUT"
+
+      - name: Cached build
+        id: cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/llama-out
+          key: llama-server-host-x64-${{ steps.inputs.outputs.digest }}
+
+      - name: Host tools (ninja)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: command -v ninja >/dev/null || { sudo apt-get update -q && sudo apt-get install -yq ninja-build; }
+
+      - name: Build (lme/llamacpp/build-host.sh)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: bash lme/llamacpp/build-host.sh "$RUNNER_TEMP/llama-work" "$RUNNER_TEMP/llama-out"
+
+      - name: Same inputs
+        run: |
+          set -euo pipefail
+          got="$(cat "$RUNNER_TEMP/llama-out/INPUTS")"
+          [ "$got" = "${{ steps.inputs.outputs.digest }}" ] || { echo "::error::INPUTS $got"; exit 1; }
+          "$RUNNER_TEMP/llama-out/llama-server" --version 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Every leg takes it by this exact name.
+      - name: Upload llama-server
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: llama-server-host
+          path: ${{ runner.temp }}/llama-out/llama-server
+          retention-days: 7
+          if-no-files-found: error
+
+  models:
+    name: models
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/ci/local-models
+
+      - name: Cache key (models.json)
+        id: key
+        run: echo "key=local-models-${{ hashFiles('.github/ci/local-models/models.json') }}" >>"$GITHUB_OUTPUT"
+
+      - name: Cached models
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/models
+          key: ${{ steps.key.outputs.key }}
+
+      # Every file checked against its size and sha256, cached or not.
+      - name: Fetch (.github/ci/local-models/fetch-models.sh)
+        run: |
+          bash .github/ci/local-models/fetch-models.sh .github/ci/local-models/models.json "$RUNNER_TEMP/models" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Saved now, so every leg can restore it.
+      - name: Save models
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/models
+          key: ${{ steps.key.outputs.key }}
+
+  tools:
+    name: tools (kit-cli, lme-cli)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            agents
+            lme
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: kit-cli (test, installDist)
+        working-directory: agents
+        run: ./gradlew :kit-cli:test :kit-cli:installDist --console=plain
+
+      - name: lme-cli (test, installDist)
+        working-directory: lme
+        run: ./gradlew :cli:test :cli:installDist --console=plain
+
+      # Every leg takes it by this exact name; a tarball keeps the exec bits.
+      - name: Pack the tools
+        run: |
+          tar -czf "$RUNNER_TEMP/local-models-tools.tar.gz" \
+            -C agents/kit/kotlin/cli/build/install kit-cli \
+            -C "$GITHUB_WORKSPACE/lme/cli/build/install" lme-cli
+
+      - name: Upload the tools
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: local-models-tools
+          path: ${{ runner.temp }}/local-models-tools.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+  legs:
+    name: leg (${{ matrix.id }})
+    needs: [plan, server, models, tools]
+    if: needs.plan.outputs.count != '0'
+    runs-on: ubuntu-latest
+    # An install (up to its manifest's timeout) and a one-shot run per model
+    # (up to RUN_TIMEOUT); a long agent prompt takes minutes on four vCPUs.
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.kinds) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/ci/local-models
+            agents
+
+      # kit-cli's and lme-cli's start scripts need a JVM.
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download llama-server
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: llama-server-host
+          path: ${{ runner.temp }}/server
+
+      - name: Download the tools
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: local-models-tools
+          path: ${{ runner.temp }}/dl
+
+      - name: Restore the models
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/models
+          key: ${{ needs.models.outputs.key }}
+          fail-on-cache-miss: true
+
+      - name: Unpack
+        run: |
+          mkdir -p "$RUNNER_TEMP/tools"
+          tar -xzf "$RUNNER_TEMP/dl/local-models-tools.tar.gz" -C "$RUNNER_TEMP/tools"
+          chmod 0755 "$RUNNER_TEMP/server/llama-server"
+
+      - name: Machine (.github/ci/local-models/Dockerfile)
+        run: docker build -q -t phonecando-local-models .github/ci/local-models
+
+      - name: Leg (.github/ci/local-models/leg.sh)
+        env:
+          KIND: ${{ matrix.id }}
+          MACHINE: phonecando-local-models
+        run: |
+          bash .github/ci/local-models/leg.sh "$KIND" "$RUNNER_TEMP/tools/kit-cli" "$RUNNER_TEMP/tools/lme-cli" \
+            "$RUNNER_TEMP/server/llama-server" "$RUNNER_TEMP/models" "$RUNNER_TEMP/leg" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the replies and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: local-models-${{ matrix.id }}
+          path: |
+            ${{ runner.temp }}/leg/results.jsonl
+            ${{ runner.temp }}/leg/*.log
+            ${{ runner.temp }}/leg/*/*.txt
+            ${{ runner.temp }}/leg/*/*.log
+          retention-days: 14
+          if-no-files-found: warn
+
+  local-models-ok:
+    # The one local-model check to require in branch protection: green only
+    # when every job above succeeded (a skipped or cancelled job counts as a
+    # failure; the legs may skip only when no kind has a models block).
+    name: local-models-ok
+    if: always()
+    needs: [plan, server, models, tools, legs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every local-model job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          COUNT: ${{ needs.plan.outputs.count }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r --arg count "$COUNT" '[to_entries[]
+            | select(.value.result != "success")
+            | select((.key == "legs" and .value.result == "skipped" and $count == "0") | not)
+            | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=local-models-ok::not green: $failed"
+            exit 1
+          fi

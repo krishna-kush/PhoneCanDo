@@ -19,29 +19,34 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{chat,terminal,env,setup,settings,accessibility,common}/` —
-  feature screens. `accessibility/` is the whole Accessibility setup guide:
-  `guide.ts` (pure: the `RESTRICTED_FLOW` switch, steps and every line of
-  copy), the hook, the step list, the Settings block and the agent's dialog.
+- `app/src/ui/{chat,terminal,env,setup,settings,accessibility,models,common}/` —
+  feature screens. `models/` is the Models page (Env → Models) and a
+  repository's variants; an agent's Model section is in `env/agent/`.
+  `accessibility/` is the whole Accessibility setup guide: `guide.ts`
+  (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
+  hook, the step list, the Settings block and the agent's dialog.
   Terminal split: `TerminalScreen.tsx` (session shell) + `TerminalView.tsx`
   (the IME, mirror, sizing and spacer; used by the terminal tab and by a
   TUI-home agent's Home) + `transport/` (local PTY or the engine's hosted
   PTY) + `keys.ts`, `reconcile.ts`, `sizing.ts` (pure, zero RN imports) +
-  `usePtySession.ts`, `useMirrorInput.ts`, `useInitialInput.ts` (hooks) +
-  `sessionRecipe.ts` (agent TUI client or image shell) + `ExtraKeysBar.tsx`,
-  `FolderPicker.tsx`. Home (`chat/HomeScreen.tsx`) is the kind's web UI or,
+  `usePtySession.ts`, `useMirrorInput.ts`, `useInitialInput.ts`,
+  `useViewFocus.ts` (hooks) + `sessionRecipe.ts` (agent TUI client or
+  image shell) + `ExtraKeysBar.tsx`, `FolderPicker.tsx`. Home (`chat/HomeScreen.tsx`) is the kind's web UI or,
   for a TUI-style kind, its TUI (`chat/tui/`).
   `env/` is the Env tab: envs (fixed base OS) → machines (one image + its
-  agent) → the agent's page, plus New env; pure parts in `env/logic/`.
+  agent) → the agent's page, plus New env and Custom agents
+  (`custom-agents/`: the user's own kinds); pure parts in `env/logic/`.
   `setup/` is first launch (the first agent and its machine). The header
   agent switcher is `common/agent-switcher/`; Settings is app-wide only.
 - `app/src/engine/` — the ONLY importer of native modules (`terminal.ts`
   PTY transport, `runner.ts` engine host, `linux/native.ts` Linux runtime,
-  `files.ts` file system, `auth.ts` biometrics). Agents and engines:
+  `models/native.ts` local models, `files.ts` file system, `auth.ts`
+  biometrics). Agents and engines:
   `engines.ts`, `ensureEngine.ts`, `connection.ts`; agent kinds through
   `agents/registry.ts` (each kind's `KindView`, from the runner's
-  `listKinds`), `agents/webAdapter.ts` and `agents/records.ts`. Screens
-  stay dumb.
+  `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
+  `agents/user/` (the user's own kinds); `sharing.ts` (clipboard, share
+  sheet). Screens stay dumb.
 - `theme/tokens.json` — the ONLY palette (dark + light, web-sourced). Web
   (`Base.astro`) and app (`globals/theme.ts`, `tamagui.config.ts`) read it
   directly; never hardcode a theme colour on either side. Brand/favicon
@@ -51,12 +56,13 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `web/src/lib/logoLoaderCss.ts`; the app imports it directly.
 - `app/src/state/` — zustand stores: `app.ts` (navigation, prefs and
   telemetry slices in `app/`), `agents.ts` (agents, engine states, the
-  active agent), `linux.ts` (envs, images, job progress), `keyboard.ts` (keyboard
-  open, the footer's height; the per-frame room is a UI-thread value in
-  `ui/common/keyboard/room.ts`); multi-step flows in
-  `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
+  active agent), `linux.ts` (envs, images, job progress), `models.ts`
+  (local models, downloads, job progress), `kinds.ts` (the user's own
+  kinds), `keyboard.ts` (keyboard open, the footer's height; the per-frame
+  room is a UI-thread value in `ui/common/keyboard/room.ts`); multi-step
+  flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
-- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux}/` —
+- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models}/` —
   own Expo modules (Kotlin + TS shims, clean-room). The PTY's plain POSIX
   core is `phonecando-terminal/android/src/main/cpp/pty/` (`forkpty.c` is the
   JNI glue). `phonecando-linux` is the Linux runtime's Android host (env and
@@ -64,15 +70,20 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   catalog) and packages the launcher and the staged proot libs and Default
   image (full and lite only; play refuses every Linux path). Its
   `src/linux/dev-assets/` holds a local, unlocked image for debug variants
-  only (`./manage image stage --local`). Never Termux code in our own
+  only (`./manage image stage --local`). `phonecando-models` is the local
+  models' Android host (lme's ModelStore over `files/models/`, Hugging Face,
+  download and import jobs, the HF token in Keystore) and packages
+  `libllama-server.so` on every channel (staged by `lme/llamacpp/stage.sh`);
+  the runner's model slot (`runner/models/`, `LocalModelBinding.kt` the one
+  join) serves a model to an agent. Never Termux code in our own
   modules; programs we ship as-is (opencode, proot from the termux fork) are
   third-party payloads with their own licenses, built from pinned sources.
   The runner packages every agent kind from `agents/` (`agents.gradle`:
   assets `agents/<id>/`, per-channel staged libs in
   `src/agents/<id>/libs/`) and never names a kind; `KindCatalog` reads
-  the packaged manifests and binds `BuiltinHooks`. The runner's `engine/` is the supervisor
-  (max 3, LRU idle stop, tagged-process reaper), `bridge/` the loopback
-  bridge (per-agent tokens, prompts, screen lease).
+  the packaged manifests and binds `BuiltinHooks`. The runner's `engine/`
+  is the supervisor (max 3, LRU idle stop, tagged-process reaper),
+  `bridge/` the loopback bridge (per-agent tokens, prompts, screen lease).
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
 - `docs/README.md` — repo docs map; `app/docs/README.md` — app/engine docs.
@@ -116,6 +127,16 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   to `prod`). Read `tce/AGENTS.md`; open work in `tce/docs/planning/todo.md`.
   Only `app/src/engine/telemetry/` imports it; a new field ships with its
   line in `docs/telemetry.md`.
+- `lme/` — local model engine: finds, fetches and checks GGUF weights and
+  plans the llama.cpp server that serves them on loopback; read
+  `lme/AGENTS.md`, docs in `lme/docs/README.md`, work in
+  `lme/docs/planning/todo.md`. Pure-JVM Gradle build (`cd lme && ./gradlew
+  build`): api ← gguf, api ← catalog, api + gguf ← store, api ← host,
+  gguf + host ← cli (lme-cli, for CI) (no android.*, no org.json; it never
+  imports `agents/` and `agents/` never imports it). `lme/llamacpp/` builds
+  `libllama-server.so` from pinned sources (`pins.env`) and our
+  `patches/`, stages it into `phonecando-models`, and `build-host.sh`
+  builds it for Linux for CI's local-model check (`local-models.yml`).
 
 ## Dev loop (physical Android 16 device on adb, Metro :8081)
 
@@ -159,9 +180,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
    prove on-device, not just `tsc`.
 6. Debug dyes (red/blue/yellow) are temporary: always revert to production
    colors before finishing.
-7. One concern per commit-sized change. The base
-   commit gets amended as work lands — check `git log`/`git show HEAD`
-   before assuming what HEAD contains.
+7. One concern per commit-sized change. The base commit gets amended as
+   work lands — check `git log`/`git show HEAD` before assuming what HEAD
+   contains.
 8. Never run git commands, at all (no status/diff/log/add/commit) — the
    user owns all git operations; use file tools and report, don't verify
    via git.
@@ -174,9 +195,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
    owned by PhoneCanDo; modularity, dependency direction and typed errors are
    quality gates.
 11. CI path filters: `android.yml`, `tce.yml`, `web.yml`, `pce.yml`,
-   `agents.yml`, `agent-payload.yml`, `lre.yml`, `proot.yml`, `lre-image.yml`
-   and `lre-compat.yml` run only for the `paths:` they list. When a change gives
-   a build or check a new input (the app importing a new folder, a CI script
+   `agents.yml`, `agent-payload.yml`, `lre.yml`, `proot.yml`, `lre-image.yml`,
+   `lre-compat.yml`, `lme.yml`, `llamacpp.yml` and `local-models.yml` run
+   only for the `paths:` they list. When a change gives a build or check a
+   new input (the app importing a new folder, a CI script
    reading a new file, a new packaged asset), add that path to the matching
    lists in the same change. `ci`, `lint`, `security` and `codeql` run on
    everything; never filter them. The nightly runs catch what a list misses.

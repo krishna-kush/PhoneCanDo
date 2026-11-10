@@ -152,7 +152,7 @@ test('unpushed commit: refused, never overridable, and no CI lookup', () => {
 test('red CI without the override: refused, with the hint', () => {
   const result = preflight({ gh: fakeGh({ ci: redCi() }) });
   assert.equal(result.proceed, false);
-  assert.deepEqual(result.refusals, ['CI: not green: ci-ok (failure); 7 warning(s)']);
+  assert.deepEqual(result.refusals, ['CI: not green: ci-ok (failure); 10 warning(s)']);
   const text = preflightReport(result).join('\n');
   assert.match(text, /ci-ok\s+CI\s+failure\s+required gate\s+BLOCK/);
   assert.match(text, /overridden with --allow-red-ci/);

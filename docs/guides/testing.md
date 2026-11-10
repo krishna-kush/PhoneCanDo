@@ -5,18 +5,16 @@
 - `pnpm typecheck` (`tsc --noEmit`) — TypeScript.
 - `pnpm check:vectors` — the pure-logic vectors (terminal keys and
   reconcile, scroll keys, keyboard room, agent offers and installs, the web
-  adapter, chat pages).
+  adapter, chat pages, models).
 - Agent kinds: `cd agents && ./gradlew build`, `pnpm -C agents check`.
-- On-device: logcat `[phonecando-kb]` / `[phonecando-size]`, plus
-  `adb exec-out screencap` for any layout claim.
-- Device evidence is required for Android behavior, IME, sizing and
-  accessibility claims. Type-checking alone is not proof.
 - JVM tests of the engine host (agents, supervisor, ports, reaper, bridge
   router, lease, prompts, redaction) and the Linux host (records, jobs,
   terminal recipes, play refusals), from `app/android`:
   `./gradlew :phonecando-runner:testLiteDebugUnitTest
-  :phonecando-linux:testLiteDebugUnitTest` (`Full` and `Play` variants too).
+  :phonecando-linux:testLiteDebugUnitTest` (`Full` and `Play` too).
 - PTY core on the host: `sh app/modules/phonecando-terminal/android/src/test/c/run.sh`.
+- On-device: logcat `[phonecando-kb]` / `[phonecando-size]`, plus
+  `adb exec-out screencap` for any layout claim.
 
 ## Linux runtime checks
 
@@ -29,25 +27,28 @@
   rootfs): background processes, exit statuses and the terminal as on a PC.
 - `lre/proot/verify.sh` checks a proot build at the ELF level;
   `lre/images/default/verify.py` checks a Default image build.
-- Device proof is still required for anything proot does on the phone
+- Anything proot does on the phone needs device proof
   (`../../app/docs/context.md` → Linux images).
 
 ## CI workflows
 
 Each workflow runs only for the `paths:` it lists (AGENTS.md rule 11), plus
-nightly or weekly runs and on demand; `lint`, `security` and `codeql` run on
+nightly or weekly and on demand; `lint`, `security` and `codeql` run on
 everything. The `*-ok` job is the one check to require for each.
 
 | Workflow | Gate | What it proves |
 |---|---|---|
-| `ci.yml` | `ci-ok` | typecheck and vectors, the Android JS bundle and config plugins, generated files, theme spec, website build, script wiring, the release preflight tests (`scripts/release/`) and the licence notices (notices, Licenses dialog and every shipped item in sync) |
-| `android.yml` | — | prebuild, debug APKs per channel with the runner and Linux JVM tests and an APK audit each, a release-shape lite + full build (stages proot from a `proot.yml` run id and the Default image named by the lock when there is one; audited per channel), the PTY host test, lint, emulator smoke |
-| `lre.yml` | `lre-ok` | the `lre/` Gradle build and tests, and the launcher built with gcc and run against its host tests |
-| `proot.yml` | `proot-ok` | the pinned proot build for arm64 Android (checked at the ELF level), the same sources built for glibc booting an Alpine rootfs and running our launcher (background processes, statuses, the terminal), and the GPL source pack |
-| `lre-image.yml` | `lre-image-ok` | the Default image built twice to the same bytes, tier 1 (the image through our launcher and proot as opencode uses it), its Debian sources and `lock.json`; on prod and on demand only, a green image is published as the prerelease `linux-image-<version>`, which `./manage image lock <run-id>` adopts |
-| `lre-compat.yml` | `lre-compat-ok` | tier 2: one registry image per package family set up with `lre/cli` and used as a native engine uses it, plus an agents leg per runtime plugin and family (installed as the phone's install job does, twice) (blocking); tier 3: a weekly report-only rotation that opens or updates one issue |
+| `ci.yml` | `ci-ok` | typecheck and vectors, the Android JS bundle and config plugins, generated files, theme spec, website build, script wiring, the release preflight tests (`scripts/release/`), and the licence notices, Licenses dialog and shipped items in sync |
+| `android.yml` | — | prebuild; debug APKs per channel with the runner and Linux JVM tests and an APK audit each; a release-shape lite + full build (proot from a `proot.yml` run id, the Default image the lock names when there is one; audited per channel); the PTY host test, lint, emulator smoke |
+| `lre.yml` | `lre-ok` | the `lre/` Gradle build and tests; the launcher built with gcc and run against its host tests |
+| `proot.yml` | `proot-ok` | the pinned proot for arm64 Android (ELF-checked); the same sources built for glibc, booting an Alpine rootfs and running our launcher (background processes, statuses, the terminal); the GPL source pack |
+| `lre-image.yml` | `lre-image-ok` | the Default image built twice to the same bytes, tier 1 (the image through our launcher and proot as opencode uses it), its Debian sources and `lock.json`; on prod and on demand only, a green image becomes the prerelease `linux-image-<version>`, which `./manage image lock <run-id>` adopts |
+| `lre-compat.yml` | `lre-compat-ok` | tier 2 (blocking): one registry image per package family set up with `lre/cli` and used as a native engine uses it, plus an agents leg per runtime plugin and family (installed twice, as the phone's install job does); tier 3: a weekly report-only rotation that opens or updates one issue |
 | `agents.yml` | `agents-ok` | the `agents/` Gradle build, TS checks, dependency law and manifests |
 | `agent-payload.yml` | — | per native kind: patches and pins against upstream, and the payload build |
+| `lme.yml` | `lme-ok` | the `lme/` Gradle build and tests: GGUF reader, catalog over recorded responses, model store, launch plan, RAM gate |
+| `llamacpp.yml` | `llamacpp-ok` | the pinned llama-server for arm64 Android, ELF-checked and built twice to the same bytes |
+| `local-models.yml` | `local-models-ok` | every agent kind with a `models` block, installed in an x86_64 container as the phone installs it, runs its one-shot mode against our llama-server (the same pins built for Linux, started from lme's launch plan) once per test model (one per chat template). A run passes on exit 0, output on stdout and at least one answer the server finished: it proves the wiring, not the model. Weekly (Mondays) against each kind's newest release |
 | `pce.yml`, `tce.yml`, `web.yml` | `pce-ok`, `tce-ok`, `web-ok` | their own trees |
 
 ## Automation test layers
@@ -89,5 +90,7 @@ commands.
 
 ## Evidence rule
 
-No sizing, layout or device claim is accepted without logs or pixels. Keep
-vectors in sync with the code they test or delete them.
+No sizing, layout or device claim is accepted without logs or pixels;
+Android behavior, IME, sizing and accessibility need device evidence, and
+type-checking alone is not proof. Keep vectors in sync with the code they
+test or delete them.

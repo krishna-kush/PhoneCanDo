@@ -35,6 +35,10 @@ export const WORKFLOWS = {
   'lre-compat.yml': { gate: 'lre-compat-ok', reportOnly: [/^tier3/] },
   'proot.yml': { gate: 'proot-ok' },
   'agents.yml': { gate: 'agents-ok' },
+  'lme.yml': { gate: 'lme-ok' },
+  'llamacpp.yml': { gate: 'llamacpp-ok' },
+  // Every kind with a models block against our llama-server (weekly too).
+  'local-models.yml': { gate: 'local-models-ok' },
   'android.yml': {
     jobsBlock: true,
     reportOnly: ['Android lint'],

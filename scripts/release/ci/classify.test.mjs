@@ -28,7 +28,7 @@ const names = (rows) => rows.map((r) => r.name).sort();
 test('real prod commit, all green: nothing blocks; workflows that did not run only warn', () => {
   const result = classifyChecks(web());
   assert.deepEqual(result.blocks, []);
-  assert.deepEqual(names(result.warns), ['(all jobs)', 'agents-ok', 'lre-compat-ok', 'lre-image-ok', 'lre-ok', 'pce-ok', 'proot-ok']);
+  assert.deepEqual(names(result.warns), ['(all jobs)', 'agents-ok', 'llamacpp-ok', 'lme-ok', 'local-models-ok', 'lre-compat-ok', 'lre-image-ok', 'lre-ok', 'pce-ok', 'proot-ok']);
   for (const gate of ['ci-ok', 'lint-ok', 'web-ok', 'tce-ok']) assert.equal(row(result, gate).decision, 'ok', gate);
   assert.equal(row(result, 'ci-ok').role, 'required gate');
   assert.equal(row(result, 'pce-ok').state, 'not run');
@@ -38,7 +38,7 @@ test('real prod commit, all green: nothing blocks; workflows that did not run on
 test('real prod commit with Android: its jobs gate, the experimental legs and lint do not', () => {
   const result = classifyChecks(android());
   assert.deepEqual(result.blocks, []);
-  assert.deepEqual(names(result.warns), ['agents-ok', 'lre-compat-ok', 'lre-image-ok', 'lre-ok', 'pce-ok', 'proot-ok', 'web-ok']);
+  assert.deepEqual(names(result.warns), ['agents-ok', 'llamacpp-ok', 'lme-ok', 'local-models-ok', 'lre-compat-ok', 'lre-image-ok', 'lre-ok', 'pce-ok', 'proot-ok', 'web-ok']);
   assert.equal(row(result, 'Emulator smoke (lite, API 36)').role, 'blocking job');
   assert.equal(row(result, 'Release shape (lite + full, throwaway key)').role, 'blocking job');
   assert.equal(row(result, 'Debug APK (play)').role, 'blocking job');
