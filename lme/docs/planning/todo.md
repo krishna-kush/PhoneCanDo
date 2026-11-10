@@ -30,6 +30,9 @@ slot.
 - [ ] Safety net: `stage.sh` compares the staged `INPUTS` with this tree's
       digest (pins, script, patches) and says when the staged lib is out
       of date, as `lre/proot/ensure.sh` does for proot.
+- [ ] Claude Code refuses a 16k context ("Prompt is too long"; its own
+      prompt is about 12.6k): when automatic falls to the floor, its Model
+      section could say so before the start fails.
 - [ ] Codex on a local model: its `models` block waits for the first CI
       run of `local-models.yml`.
 - [ ] Device check: later replies, Qwen3.5 4B, RAM and heat over a long

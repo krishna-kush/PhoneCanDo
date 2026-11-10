@@ -6,6 +6,8 @@ renderer, Zig), both bionic aarch64. The app build does **not** build it:
 run `./manage agent opencode build|stage` first (it stages into
 `app/modules/phonecando-runner/android/src/agents/opencode/libs/arm64-v8a/`),
 then build the app. Steps, patches, checks and version bumps: `build.md`.
+Pinned in `../build/pins.env`: `--branch v2.0.26`, Bun 1.4.2, NDK r28c,
+Zig 0.16 (`ci/pins.sh` checks this line and `build.md` name the same).
 
 We build from upstream sources, so opencode stays current and carries the
 embedded web UI and pair API the Home tab needs.

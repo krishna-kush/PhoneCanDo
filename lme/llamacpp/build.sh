@@ -105,7 +105,9 @@ grep -qF 'workaround::fold_system_messages(params.messages)' "$ROOT/llama.cpp/co
 # repository around the workdir must not leak its own into the binary.
 export GIT_DIR=/nonexistent
 # Build and NDK paths never reach the binary (ggml's asserts print
-# __FILE__), so CI and a laptop build the same bytes.
+# __FILE__), so CI and a laptop build the same bytes. No build ID either:
+# the linker hashes the unstripped binary, whose symbols still name the
+# workdir, so two workdirs gave the same code with different IDs.
 prefix_map="-ffile-prefix-map=$ROOT=. -ffile-prefix-map=$ANDROID_NDK_HOME=/ndk"
 
 # The device spike's configuration (CPU only; GGML_NATIVE off so CPU_ARCH
@@ -119,7 +121,7 @@ cmake -S "$ROOT/llama.cpp" -B "$ROOT/build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_FLAGS="$prefix_map" \
   -DCMAKE_CXX_FLAGS="$prefix_map" \
-  -DCMAKE_EXE_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
+  -DCMAKE_EXE_LINKER_FLAGS="-Wl,-z,max-page-size=16384 -Wl,--build-id=none" \
   -DBUILD_SHARED_LIBS=OFF \
   -DGGML_NATIVE=OFF \
   -DGGML_CCACHE=OFF \

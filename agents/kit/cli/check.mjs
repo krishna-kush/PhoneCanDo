@@ -7,12 +7,12 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { formatProblem, REPO_ROOT, scanManifests } from './manifests.mjs';
 
-export function main(argv, { log = console.log } = {}) {
+export function main(argv, { log = console.log, env = process.env } = {}) {
   const at = argv.indexOf('--root');
   const root = at >= 0 ? resolve(argv[at + 1] ?? '.') : REPO_ROOT;
   const { entries, runtimes, problems } = scanManifests({ root });
   for (const p of problems) {
-    if (process.env.GITHUB_ACTIONS === 'true') log(`::error file=${p.file},title=agent manifest::${p.path} ${p.code}: ${p.detail}`);
+    if (env.GITHUB_ACTIONS === 'true') log(`::error file=${p.file},title=agent manifest::${p.path} ${p.code}: ${p.detail}`);
     else log(`error: ${formatProblem(p)}`);
   }
   const ids = [...entries.map((e) => `${e.type}/${e.id}`), ...runtimes.map((r) => `runtimes/${r.id}`)].join(', ');

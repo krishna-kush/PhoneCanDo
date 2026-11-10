@@ -41,6 +41,8 @@ Over `anthropic`, env only:
 - `CLAUDE_CODE_MAX_CONTEXT_TOKENS` is the server's context: Claude Code
   does not know our model ids and would assume 200k. The
   `[claude-code:unrecognized_model]` line on stderr is only a notice.
+  Its own prompt is about 12.6k tokens, so it answers "Prompt is too
+  long" on a 16k context; it needs a phone that can spare more.
 - `ANTHROPIC_DEFAULT_HAIKU_MODEL` is the same model, for its background
   requests.
 - `API_TIMEOUT_MS=0` and `API_FORCE_IDLE_TIMEOUT=0` let it wait out a cold

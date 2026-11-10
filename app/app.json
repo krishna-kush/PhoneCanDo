@@ -39,6 +39,7 @@
       "./plugins/withLmeCompositeBuild.js",
       "./plugins/withAgentsCompositeBuild.js",
       "./plugins/withStoredAssets.js",
+      "./plugins/withDotAssets.js",
       "./plugins/withLoopbackCleartext.js",
       "./plugins/withReleaseSigning.js",
       "expo-asset"

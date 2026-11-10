@@ -9,9 +9,10 @@ import { main } from './check.mjs';
 const roots = [];
 after(() => roots.forEach((r) => rmSync(r, { recursive: true, force: true })));
 
+// The local output format, also under Actions (where main prints annotations).
 function run(argv) {
   const out = [];
-  const code = main(argv, { log: (line) => out.push(line) });
+  const code = main(argv, { log: (line) => out.push(line), env: {} });
   return { code, out };
 }
 

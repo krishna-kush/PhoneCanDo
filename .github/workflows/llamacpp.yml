@@ -73,6 +73,8 @@ jobs:
             echo
             echo '| Pin | Value |'
             echo '|---|---|'
+            # The backticks are Markdown code marks, not command substitution.
+            # shellcheck disable=SC2016
             while IFS='=' read -r key value; do printf '| `%s` | `%s` |\n' "$key" "$value"; done <<<"$lines"
             echo
           } >> "$GITHUB_STEP_SUMMARY"

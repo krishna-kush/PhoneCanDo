@@ -32,8 +32,9 @@
 #   <models-dir>   the files models.json names (fetch-models.sh)
 # Env: MACHINE (image tag, default phonecando-local-models), MODELS (the
 #   list, default models.json beside this script), RUN_TIMEOUT
-#   (seconds per one-shot run, default 1800), PROMPT and EXPECT (an ERE
-#   noted when the reply on stdout matches it, case-insensitive).
+#   (seconds per one-shot run, default 1800), CONTEXT (the served context,
+#   default 65536), PROMPT and EXPECT (an ERE noted when the reply on stdout
+#   matches it, case-insensitive).
 # Markdown on stdout, <scratch>/results.jsonl one line per model, exit 1 on
 # any FAIL. Needs docker, jq, curl and java.
 set -uo pipefail
@@ -50,6 +51,10 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
 MACHINE="${MACHINE:-phonecando-local-models}"
 RUN_TIMEOUT="${RUN_TIMEOUT:-1800}"
+# The served context: a phone with RAM to spare serves far more than the 16k
+# floor (our 8 GB test phone: 177k+ for the 0.8B), and Claude Code's own
+# prompt alone is about 12.6k tokens, so it refuses a 16k window outright.
+CONTEXT="${CONTEXT:-65536}"
 # Plain on purpose: naming tools ("do not use any tools") sent opencode on
 # Qwen3.5-0.8B into a loop of tool calls.
 PROMPT="${PROMPT:-Say hello in one short sentence.}"
@@ -160,7 +165,7 @@ while $installed && IFS=$'\t' read -r model file; do
   mkdir -p "$out"
   start=$SECONDS
   if ! "$LME_CLI" plan --model "$MODELS_DIR/$file" --id "$model" --server "$SERVER" --port "$PORT" \
-    --key-env LLAMA_API_KEY </dev/null >"$out/plan.json" 2>"$out/plan.log"; then
+    --key-env LLAMA_API_KEY --context "$CONTEXT" </dev/null >"$out/plan.json" 2>"$out/plan.log"; then
     fail "$model: lme-cli plan" $((SECONDS - start)) "failed" "$(cat "$out/plan.log")"
     result "$model" false $((SECONDS - start)) "lme-cli plan failed"
     continue

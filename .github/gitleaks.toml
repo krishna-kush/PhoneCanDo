@@ -19,9 +19,17 @@ paths = [
 ]
 
 [[allowlists]]
-description = "Made-up keys the telemetry redaction tests feed in to check they come out as <secret>; only the rules they trip, so a real token of another kind in these files still fails"
+description = "Made-up keys the redaction tests (telemetry, guest logs) feed in to check they come out as <secret>; only the rules they trip, so a real token of another kind in these files still fails"
 targetRules = ["generic-api-key", "curl-auth-header", "gcp-api-key"]
 paths = [
   '''(?:^|/)app/modules/phonecando-runner/android/src/test/java/com/phonecando/runner/PathRedactorTest\.kt$''',
+  '''(?:^|/)app/modules/phonecando-linux/android/src/test/java/com/phonecando/linux/guest/LogRedactorTest\.kt$''',
   '''(?:^|/)tce/core/redact\.test\.ts$''',
+]
+
+[[allowlists]]
+description = "The made-up model-server key kit-cli's render-model tests use to check the key never reaches the output"
+targetRules = ["generic-api-key"]
+paths = [
+  '''(?:^|/)agents/kit/kotlin/cli/src/test/kotlin/com/phonecando/agents/kit/cli/RenderModelTest\.kt$''',
 ]

@@ -47,6 +47,7 @@ need app/build.gradle '// phonecando: release signing begin' withReleaseSigning
 need app/build.gradle 'signingConfig signingConfigs.release' withReleaseSigning
 need app/build.gradle '// phonecando: dev app id begin' withDevAppId
 need app/build.gradle '// phonecando: stored assets begin' withStoredAssets
+need app/build.gradle '// phonecando: dot assets begin' withDotAssets
 need settings.gradle '// phonecando: build the PCE from source begin' withPceCompositeBuild
 need settings.gradle '// phonecando: build the Linux runtime from source begin' withLreCompositeBuild
 need settings.gradle '// phonecando: build the agent integrations from source begin' withAgentsCompositeBuild

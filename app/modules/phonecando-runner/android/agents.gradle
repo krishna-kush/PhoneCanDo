@@ -27,6 +27,16 @@
 // flavor it lists: executed from nativeLibraryDir, the only place SELinux
 // permits exec.
 
+// A kind's config may hold dot-named files (Cursor CLI's
+// .cursor-plugin/plugin.json); AGP's default asset pattern drops every `.*`
+// name, here and again in the app (plugins/withDotAssets.js). The rest of the
+// default stays.
+android {
+  androidResources {
+    ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~'
+  }
+}
+
 def agentsRoot = file("../../../../agents")
 def sharedPartFile = "part.json"
 

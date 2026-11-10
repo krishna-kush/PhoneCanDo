@@ -4,6 +4,7 @@ import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.model.ModelIds
 import com.phonecando.lme.gguf.read.GgufReader
 import com.phonecando.lme.gguf.shape.ModelShapes
+import com.phonecando.lme.host.context.ContextRange
 import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -14,11 +15,12 @@ import java.io.IOException
 import java.io.PrintStream
 
 // lme's CLI for CI:
-//   lme-cli plan --model <file.gguf> --id <model-id> --server <llama-server> --port <n> --key-env <NAME> [--threads <n>]
+//   lme-cli plan --model <file.gguf> --id <model-id> --server <llama-server> --port <n> --key-env <NAME>
+//     [--threads <n>] [--context <n>]
 // prints the llama-server command LlamaCppRuntime.serve gives for that
-// model: the floor context for its GGUF header as the phone's store reads it
-// (16k, less when the model was trained for less; a phone sizes its own from
-// its RAM, a CI host has no such budget), every flag the phone's plan
+// model: --context (kept within the model's range: the 16k floor up to its
+// trained context; a phone sizes its own from its RAM, a CI host has no such
+// budget), else the floor, every flag the phone's plan
 // passes, without the phone's device and RAM checks, and without
 // --cache-ram (the phone caps the prompt cache by its budget; a CI host
 // keeps the server's default). One JSON line on stdout:
@@ -29,9 +31,9 @@ import java.io.PrintStream
 // Exit codes: 0 the plan, 1 a model file it cannot read, 2 usage.
 object Cli {
     const val USAGE = "usage: lme-cli plan --model <file.gguf> --id <model-id> --server <llama-server> --port <n> " +
-        "--key-env <NAME> [--threads <n>]"
+        "--key-env <NAME> [--threads <n>] [--context <n>]"
 
-    private val VALUED = setOf("--model", "--id", "--server", "--port", "--key-env", "--threads")
+    private val VALUED = setOf("--model", "--id", "--server", "--port", "--key-env", "--threads", "--context")
 
     fun main(args: List<String>, out: PrintStream, err: PrintStream, env: (String) -> String? = System::getenv): Int {
         if (args.isEmpty() || args.first() in listOf("help", "--help", "-h")) {
@@ -69,7 +71,10 @@ object Cli {
 
         val shape = model.inputStream().use { ModelShapes.of(GgufReader.read(it)) }
         // serve() refuses a key ApiKeys would not make, without naming it.
-        val command = LlamaCppRuntime.serve(server.path, model.path, id, LlamaCppRuntime.baseContext(shape.contextLength), null, port, threads, key)
+        val range = ContextRange.of(shape.contextLength)
+        val context = options["--context"]?.let { it.toLongOrNull() ?: throw IllegalArgumentException("--context is a number") }
+            ?.let(range::coerce) ?: range.min
+        val command = LlamaCppRuntime.serve(server.path, model.path, id, context, null, port, threads, key)
         val endpoint = command.endpoint
         out.println(
             buildJsonObject {
