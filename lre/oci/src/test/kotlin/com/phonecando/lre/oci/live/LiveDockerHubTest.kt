@@ -54,8 +54,15 @@ class LiveDockerHubTest {
         assertEquals("latest", tags.tags.first().name)
         val kali = catalog.tags("kalilinux/kali-rolling")
         assertTrue(kali.tags.any { it.name == "latest" })
+        val community = catalog.communityOperatingSystems()
+        assertTrue(community.any { it.name == "kalilinux/kali-rolling" && it.logoUrl != null })
+        val unofficial = catalog.unofficialOperatingSystems()
+        assertTrue(unofficial.images.size > 50 && unofficial.next == 2)
+        assertTrue(unofficial.images.none { it.name == "kalilinux/kali-rolling" })
         println("live: ${images.size} official OS images: ${images.joinToString { it.name }}")
         println("live: alpine tags page 1: ${tags.tags.take(8).joinToString { it.name }} ... next=${tags.next}")
         println("live: kali-rolling arm64 tags: ${kali.tags.joinToString { it.name }}")
+        println("live: ${community.size} community OS images: ${community.joinToString { it.name }}")
+        println("live: unofficial OS page 1: ${unofficial.images.take(8).joinToString { it.name }} ... next=${unofficial.next}")
     }
 }

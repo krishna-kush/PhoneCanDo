@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 /** `GET /api/search/v4` (the search behind hub.docker.com's own pages). */
 @Serializable
-internal data class SearchPage(val results: List<SearchResult> = emptyList())
+internal data class SearchPage(val total: Int = 0, val results: List<SearchResult> = emptyList())
 
 @Serializable
 internal data class SearchResult(
@@ -27,7 +27,10 @@ internal data class Named(val name: String = "")
 internal data class Category(val slug: String = "")
 
 @Serializable
-internal data class LogoUrl(val small: String? = null, val large: String? = null)
+internal data class LogoUrl(val small: String? = null, val large: String? = null) {
+    /** The small logo, else the large one; only an https link. */
+    fun https(): String? = (small ?: large)?.takeIf { it.startsWith("https://") }
+}
 
 /** `GET /v2/namespaces/{namespace}/repositories` (documented Hub API). */
 @Serializable

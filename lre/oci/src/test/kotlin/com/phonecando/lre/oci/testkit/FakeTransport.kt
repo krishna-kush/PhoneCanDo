@@ -14,7 +14,8 @@ data class Request(val url: String, val headers: Map<String, String>) {
 /**
  * A scripted [HttpTransport]: exact-URL routes answer in order (the last
  * answer repeats), prefix routes answer whatever starts with them, anything
- * else is a 404. Every request is recorded.
+ * else is a 404. Every request is recorded. Safe to call from several
+ * threads (the Hub catalog asks a few things at once).
  */
 class FakeTransport : HttpTransport {
     val requests = mutableListOf<Request>()
@@ -32,6 +33,7 @@ class FakeTransport : HttpTransport {
 
     fun requestsTo(prefix: String): List<Request> = requests.filter { it.url.startsWith(prefix) }
 
+    @Synchronized
     override fun get(url: String, headers: Map<String, String>): HttpResponse {
         val request = Request(url, headers)
         requests += request

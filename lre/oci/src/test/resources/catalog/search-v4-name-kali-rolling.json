@@ -1,0 +1,121 @@
+{
+ "total": 9527,
+ "results": [
+  {
+   "id": "kalilinux/kali-rolling",
+   "name": "kalilinux/kali-rolling",
+   "badge": "open_source",
+   "short_description": "Official Kali Linux Docker image (weekly snapshot of kali-rolling)",
+   "raw_pull_count": 9567812,
+   "archived": false,
+   "architectures": [
+    {
+     "name": "386",
+     "label": "386"
+    },
+    {
+     "name": "amd64",
+     "label": "x86-64"
+    },
+    {
+     "name": "arm",
+     "label": "arm"
+    },
+    {
+     "name": "arm64",
+     "label": "ARM 64"
+    }
+   ],
+   "categories": [
+    {
+     "slug": "operating-systems",
+     "name": "Operating systems"
+    },
+    {
+     "slug": "security",
+     "name": "Security"
+    }
+   ],
+   "logo_url": {
+    "large": "https://www.gravatar.com/avatar/d1044b233e8db9d34f103a5431052fdd?s=80&r=g&d=mm",
+    "small": "https://www.gravatar.com/avatar/d1044b233e8db9d34f103a5431052fdd?s=80&r=g&d=mm"
+   }
+  },
+  {
+   "id": "kasmweb/core-kali-rolling",
+   "name": "kasmweb/core-kali-rolling",
+   "badge": "verified_publisher",
+   "short_description": "Kali Rolling XFCE Desktop With Default Tools Metapackage",
+   "raw_pull_count": 3699757,
+   "archived": false,
+   "architectures": [
+    {
+     "name": "amd64",
+     "label": "x86-64"
+    },
+    {
+     "name": "arm64",
+     "label": "ARM 64"
+    }
+   ],
+   "categories": [
+    {
+     "slug": "networking",
+     "name": "Networking"
+    },
+    {
+     "slug": "operating-systems",
+     "name": "Operating systems"
+    },
+    {
+     "slug": "security",
+     "name": "Security"
+    }
+   ],
+   "logo_url": {
+    "large": "https://djeqr6to3dedg.cloudfront.net/repo-logos/kasmweb/core-kali-rolling/live/logo-1707622223794.png",
+    "small": "https://djeqr6to3dedg.cloudfront.net/repo-logos/kasmweb/core-kali-rolling/live/logo-1707622223794.png"
+   }
+  },
+  {
+   "id": "kalilinux/kali-last-release",
+   "name": "kalilinux/kali-last-release",
+   "badge": "open_source",
+   "short_description": "Image built from the last snapshot of the official release (updated quarterly)",
+   "raw_pull_count": 515293,
+   "archived": false,
+   "architectures": [
+    {
+     "name": "amd64",
+     "label": "x86-64"
+    },
+    {
+     "name": "arm",
+     "label": "arm"
+    },
+    {
+     "name": "arm64",
+     "label": "ARM 64"
+    },
+    {
+     "name": "386",
+     "label": "386"
+    }
+   ],
+   "categories": [
+    {
+     "slug": "operating-systems",
+     "name": "Operating systems"
+    },
+    {
+     "slug": "security",
+     "name": "Security"
+    }
+   ],
+   "logo_url": {
+    "large": "https://www.gravatar.com/avatar/d1044b233e8db9d34f103a5431052fdd?s=80&r=g&d=mm",
+    "small": "https://www.gravatar.com/avatar/d1044b233e8db9d34f103a5431052fdd?s=80&r=g&d=mm"
+   }
+  }
+ ]
+}

@@ -17,7 +17,7 @@ internal object OfficialOs {
                 name = pullName(it.id, it.name),
                 description = it.shortDescription.orEmpty(),
                 pullCount = it.rawPullCount,
-                logoUrl = (it.logoUrl?.small ?: it.logoUrl?.large)?.takeIf { url -> url.startsWith("https://") },
+                logoUrl = it.logoUrl?.https(),
             )
         }
 
@@ -35,7 +35,7 @@ internal object OfficialOs {
             )
         }
 
-    private fun deprecated(description: String?): Boolean =
+    fun deprecated(description: String?): Boolean =
         description?.trimStart()?.startsWith("DEPRECATED", ignoreCase = true) == true
 
     /** `library/alpine` pulls as `alpine`; others keep their namespace. */

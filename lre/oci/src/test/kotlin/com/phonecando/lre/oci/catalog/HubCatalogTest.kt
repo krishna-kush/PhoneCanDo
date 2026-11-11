@@ -85,6 +85,81 @@ class HubCatalogTest {
     }
 
     @Test
+    fun `community systems keep the list's order, Hub's words where it answers`() {
+        fake.onPrefix(HubCatalog.SEARCH_NAME_URL, { reply(404, "{}") })
+        fake.on(searchFor("kalilinux/kali-rolling"), { reply(200, Fixtures.bytes("catalog/search-v4-name-kali-rolling.json")) })
+        val images = catalog.communityOperatingSystems()
+
+        assertEquals(CommunityOs.CURATED.map { it.name }, images.map { it.name })
+        val kali = images.first()
+        assertEquals(9567812, kali.pullCount)
+        assertTrue(kali.description.startsWith("Official Kali Linux Docker image"))
+        assertTrue(kali.logoUrl!!.startsWith("https://www.gravatar.com/avatar/"))
+        // Not found by its search: the list's own words, no pulls or logo.
+        val manjaro = images.single { it.name == "manjarolinux/base" }
+        assertEquals("Manjaro: Arch-based", manjaro.description)
+        assertNull(manjaro.pullCount)
+        assertNull(manjaro.logoUrl)
+        assertEquals(CommunityOs.CURATED.size, fake.requestsTo(HubCatalog.SEARCH_NAME_URL).size)
+    }
+
+    @Test
+    fun `a community system Hub lists archived or without arm64 is left out`() {
+        fun hit(name: String, arch: String = "arm64", archived: Boolean = false) =
+            """{"results":[{"id":"$name","name":"x","short_description":"","archived":$archived,"architectures":[{"name":"$arch"}]}]}"""
+        fake.onPrefix(HubCatalog.SEARCH_NAME_URL, { reply(200, """{"results":[]}""") })
+        fake.on(searchFor("parrotsec/core"), { reply(200, hit("parrotsec/core", arch = "amd64")) })
+        fake.on(searchFor("opensuse/leap"), { reply(200, hit("opensuse/leap", archived = true)) })
+        fake.on(searchFor("gentoo/stage3"), { reply(200, hit("gentoo/stage3")) })
+        val images = catalog.communityOperatingSystems()
+
+        assertTrue(images.none { it.name == "parrotsec/core" || it.name == "opensuse/leap" })
+        // An empty description falls back to ours.
+        assertEquals("Gentoo stage3: everything built from source", images.single { it.name == "gentoo/stage3" }.description)
+        assertEquals(CommunityOs.CURATED.size - 2, images.size)
+    }
+
+    @Test
+    fun `when every community search fails the first error is thrown`() {
+        fake.onPrefix(HubCatalog.SEARCH_NAME_URL, { reply(429, "") })
+        assertThrows<LreException.RateLimited> { catalog.communityOperatingSystems() }
+    }
+
+    @Test
+    fun `unofficial systems page by pulls, without the official, curated or archived ones`() {
+        fun hit(id: String, badge: String = "open_source", arch: String = "arm64", archived: Boolean = false, text: String = "$id os") =
+            """{"id":"$id","name":"x","badge":"$badge","short_description":"$text","raw_pull_count":7,"archived":$archived,""" +
+                """"architectures":[{"name":"$arch"}],"logo_url":{"small":"https://logo.test/$id.png"}}"""
+        val rows = listOf(
+            hit("acme/os"),
+            hit("library/alpine", badge = "official"),
+            hit("kalilinux/kali-rolling"),
+            hit("old/os", archived = true),
+            hit("x86/os", arch = "amd64"),
+            hit("gone/os", text = "DEPRECATED: use acme/os"),
+        ) + List(94) { hit("filler/os$it", badge = "none") }
+        fake.on("${HubCatalog.UNOFFICIAL_URL}&from=100", { reply(200, """{"total":1526,"results":[${rows.joinToString(",")}]}""") })
+        val page = catalog.unofficialOperatingSystems(page = 2)
+
+        assertEquals("acme/os", page.images.first().name)
+        assertEquals("https://logo.test/acme/os.png", page.images.first().logoUrl)
+        assertEquals(7, page.images.first().pullCount)
+        assertEquals(1 + 94, page.images.size)
+        assertEquals(3, page.next)
+    }
+
+    @Test
+    fun `unofficial pages end at a short page and at Hub's anonymous limit`() {
+        val full = List(100) { """{"id":"a/os$it","badge":"none"}""" }.joinToString(",")
+        fake.on("${HubCatalog.UNOFFICIAL_URL}&from=0", { reply(200, """{"total":40,"results":[{"id":"a/os","badge":"none"}]}""") })
+        fake.on("${HubCatalog.UNOFFICIAL_URL}&from=900", { reply(200, """{"total":1526,"results":[$full]}""") })
+        assertNull(catalog.unofficialOperatingSystems(page = 1).next)
+        assertNull(catalog.unofficialOperatingSystems(page = 10).next)
+    }
+
+    private fun searchFor(name: String) = HubCatalog.SEARCH_NAME_URL + name.replace("/", "%2F")
+
+    @Test
     fun `tags keep arm64 images only, common tags first`() {
         fake.on("$alpineTags?page=1&page_size=100", { reply(200, Fixtures.bytes("catalog/tags-alpine.json")) })
         val page = catalog.tags("alpine")

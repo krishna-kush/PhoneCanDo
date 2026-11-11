@@ -66,6 +66,20 @@ hop leaves the origin, and refuses an https → http downgrade.
   API first (undocumented, the only one that filters by category, badge
   and architecture) and falls back to the documented repository listing,
   which is capped at 100 rows for anonymous callers and has no logos.
+- `communityOperatingSystems()` — a short hand-kept list of community
+  distributions (Kali, Parrot, openSUSE, Arch Linux ARM…, each checked
+  for arm64; `catalog/CommunityOs.kt`) with Hub's description, pulls and
+  logo from one name search each, four at a time. The picker shows them
+  first: outside the official badge Hub's "Operating systems" category is
+  mostly desktops, JDKs and CI images, so by pulls alone they would drown.
+  A failed search keeps the list's own words; only when all fail is it an
+  error.
+- `unofficialOperatingSystems(page)` — every other unofficial one: the
+  category with arm64 and no official badge, most pulled first, 100 a
+  page, without the curated ones (`catalog/UnofficialOs.kt`). Hub pages
+  anonymous callers only through the first 1000 rows (`from` + `size`;
+  its `search_after` cursor is ignored), so the pages end there (checked
+  2026-11-11: about 1500 match).
 - `tags(repo, page, query)` — one page of a Hub repository's tags that
   have a linux/arm64 image, in picker order: `latest`, `stable`, versions
   newest first, then the rest as Hub sent them (`catalog/TagOrder.kt`).

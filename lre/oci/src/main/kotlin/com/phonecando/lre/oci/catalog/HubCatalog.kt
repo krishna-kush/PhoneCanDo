@@ -9,12 +9,14 @@ import com.phonecando.lre.oci.http.fetch
 import com.phonecando.lre.oci.http.readCapped
 import com.phonecando.lre.oci.ref.ImageRef
 import java.net.URLEncoder
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 
 /**
  * Docker Hub's catalog for the "Own env" picker: the official operating
- * systems and the arm64 tags of any Hub repository (official or not, e.g.
- * `kalilinux/kali-rolling`). Anonymous, blocking; call from a background
- * thread.
+ * systems, a short list of community ones, every other unofficial one and
+ * the arm64 tags of any Hub repository (official or not, e.g. `kalilinux/kali-rolling`). Anonymous,
+ * blocking; call from a background thread.
  */
 class HubCatalog(private val transport: HttpTransport) {
     /**
@@ -49,6 +51,56 @@ class HubCatalog(private val transport: HttpTransport) {
         } catch (e: LreException) {
             throw searchError ?: e
         }
+    }
+
+    /**
+     * The community operating systems ([CommunityOs.CURATED], in its order)
+     * with Docker Hub's description, pull count and logo.
+     *
+     * One search per repository by its name ([SEARCH_NAME_URL]), a few at a
+     * time: the exact hit carries the logo, which the documented repository
+     * API lacks. A row whose search fails keeps the list's own words (the
+     * tag list will say if the repository is really gone); when every search
+     * fails we throw the first error. A repository Hub now lists archived or
+     * without arm64 is left out.
+     */
+    fun communityOperatingSystems(cancel: CancelSignal = CancelSignal.NEVER): List<CatalogImage> {
+        val pool = Executors.newFixedThreadPool(COMMUNITY_LOOKUPS)
+        val results = try {
+            CommunityOs.CURATED
+                .map { entry -> pool.submit(Callable { runCatching { lookup(entry, cancel) } }) }
+                .map { it.get() }
+        } finally {
+            pool.shutdownNow()
+        }
+        results.firstNotNullOfOrNull { it.exceptionOrNull() as? LreException.Cancelled }?.let { throw it }
+        results.firstNotNullOfOrNull { it.exceptionOrNull()?.takeIf { e -> e !is LreException } }?.let { throw it }
+        if (results.all { it.isFailure }) throw results.first().exceptionOrNull()!!
+        return CommunityOs.CURATED.zip(results).mapNotNull { (entry, result) ->
+            result.getOrElse { CommunityOs.fallback(entry) }
+        }
+    }
+
+    /**
+     * One page (1-based [page]) of every other unofficial operating system:
+     * Hub's "Operating systems" category with an arm64 build and no official
+     * badge, most pulled first, without [CommunityOs.CURATED] (the picker
+     * shows those first). Many are apps or desktops built on an OS. Hub
+     * answers anonymous callers only up to the [ANONYMOUS_ROWS]th row, so the
+     * pages end there.
+     */
+    fun unofficialOperatingSystems(page: Int = 1, cancel: CancelSignal = CancelSignal.NEVER): ImagePage {
+        require(page >= 1) { "pages start at 1" }
+        val from = (page - 1) * OS_PAGE_SIZE
+        val doc = get<SearchPage>("$UNOFFICIAL_URL&from=$from", "Docker Hub search", cancel)
+        val end = from + doc.results.size
+        val more = doc.results.size == OS_PAGE_SIZE && end < doc.total && end < ANONYMOUS_ROWS
+        return ImagePage(UnofficialOs.fromSearch(doc), next = if (more) page + 1 else null)
+    }
+
+    private fun lookup(entry: CommunityOs.Entry, cancel: CancelSignal): CatalogImage? {
+        val url = SEARCH_NAME_URL + URLEncoder.encode(entry.name, "UTF-8")
+        return CommunityOs.pick(entry, get<SearchPage>(url, "Docker Hub search", cancel))
     }
 
     /**
@@ -99,12 +151,26 @@ class HubCatalog(private val transport: HttpTransport) {
         const val SEARCH_URL = "$HUB/api/search/v4?query=&type=image&badges=official" +
             "&categories=${OfficialOs.CATEGORY}&architectures=arm64&size=100"
 
+        /** Rows per page of the unofficial listing (declared before the URL that uses it). */
+        private const val OS_PAGE_SIZE = 100
+
+        /** Not official + "Operating systems" + arm64, most pulled first; append `&from=`. */
+        const val UNOFFICIAL_URL = "$HUB/api/search/v4?query=&type=image&badges=verified_publisher,open_source,none" +
+            "&categories=${OfficialOs.CATEGORY}&architectures=arm64&sort=pull_count&order=desc&size=$OS_PAGE_SIZE"
+
+        /** Rows Hub's search pages through for anonymous callers (checked 2026-11-11). */
+        const val ANONYMOUS_ROWS = 1000
+
+        /** One repository by name (append it, URL-encoded); its exact hit comes first. */
+        const val SEARCH_NAME_URL = "$HUB/api/search/v4?type=image&size=5&query="
+
         /** Official images by pull count; anonymous callers get the first 100 only. */
         const val REPOSITORIES_URL = "$HUB/v2/namespaces/library/repositories?page_size=100&ordering=pull_count"
 
         const val TAGS_URL = "$HUB/v2/namespaces/{namespace}/repositories/{repository}/tags"
 
         private const val TAG_PAGE_SIZE = 100
+        private const val COMMUNITY_LOOKUPS = 4
         private const val BODY_LIMIT = 16L * 1024 * 1024
     }
 }

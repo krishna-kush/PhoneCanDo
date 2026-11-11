@@ -23,3 +23,6 @@ data class CatalogTag(
 
 /** One page of tags; [next] is the page number to ask for next, null on the last page. */
 data class TagPage(val tags: List<CatalogTag>, val next: Int?)
+
+/** One page of repositories; [next] is the page number to ask for next, null on the last page. */
+data class ImagePage(val images: List<CatalogImage>, val next: Int?)
