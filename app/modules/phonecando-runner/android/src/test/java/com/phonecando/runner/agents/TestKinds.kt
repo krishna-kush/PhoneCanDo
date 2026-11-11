@@ -46,7 +46,7 @@ object TestKinds {
 
   /** Every repo kind with the build's hooks and the repo's runtimes; a kind that does not load fails the test. */
   val catalog: KindCatalog by lazy {
-    KindCatalog.load(assets, null, BuiltinHooks.all, runtimes, BuiltinHooks.defaultKindId) { folder, e ->
+    KindCatalog.load(assets, null, BuiltinHooks.all, runtimes) { folder, e ->
       throw AssertionError("agent kind $folder does not load: ${e.message}", e)
     }
   }

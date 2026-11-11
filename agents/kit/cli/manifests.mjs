@@ -9,7 +9,8 @@
 //   - every folder under native/ and image/ holds an agent.json, every one
 //     under runtimes/ a runtime.json;
 //   - the folder is named after the id (a kind's sits under its type);
-//   - ids and prefixes are unique across all kinds;
+//   - ids and prefixes are unique across all kinds, and at most one kind is
+//     the default (`default: true`: the kind a fresh install starts with);
 //   - the files a manifest names exist: the notice, the config folder and
 //     its overlay, the required files (in the overlay too when full-only),
 //     every shared part, agents/shared/<name>/ with its part.json, and every
@@ -59,6 +60,7 @@ export function scanManifests({ root = REPO_ROOT } = {}) {
   }
   unique(entries, problems, 'id', 'duplicate-id');
   unique(entries.filter((e) => e.manifest.prefix), problems, 'prefix', 'duplicate-prefix');
+  unique(entries.filter((e) => e.manifest.default === true), problems, 'default', 'duplicate-default');
   const runtimes = scanRuntimes(root, problems);
   for (const entry of entries) checkNeeds(entry, runtimes, problems);
   return { entries, runtimes, problems };

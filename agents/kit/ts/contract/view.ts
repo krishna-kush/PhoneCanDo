@@ -18,7 +18,7 @@ export type KindView = {
   type: 'native' | 'image';
   channels: ('full' | 'lite' | 'play')[];
   stability: 'stable' | 'preview';
-  /** The kind a fresh install starts with; exactly one kind has it. */
+  /** The kind a fresh install starts with: the bundled one whose manifest says `default: true`; one kind at most. */
   isDefault: boolean;
   /** What the home tab shows. */
   home: KindHome;

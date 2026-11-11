@@ -6,7 +6,8 @@ import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { forChannel, loadManifests, matchesGlob, nativeManifests, REPO_ROOT, scanManifests } from './manifests.mjs';
 
-const OPENCODE = JSON.parse(readFileSync(join(REPO_ROOT, 'agents/native/opencode/agent.json'), 'utf8'));
+// opencode's manifest as a base for test kinds, less its default flag.
+const { default: _, ...OPENCODE } = JSON.parse(readFileSync(join(REPO_ROOT, 'agents/native/opencode/agent.json'), 'utf8'));
 const roots = [];
 after(() => roots.forEach((r) => rmSync(r, { recursive: true, force: true })));
 
@@ -89,6 +90,13 @@ describe('folder rules', () => {
   it('wants unique prefixes', () => {
     const got = codes(makeRoot({ ...nativeKind('alpha', 'al'), ...nativeKind('beta', 'al'), ...PHONE_TOOLS }));
     assert.deepEqual(got, ['agents/native/beta/agent.json /prefix duplicate-prefix']);
+  });
+
+  it('wants one default kind at most', () => {
+    const alpha = nativeKind('alpha', 'al', { default: true });
+    assert.deepEqual(codes(makeRoot({ ...alpha, ...nativeKind('beta', 'be', { default: false }), ...PHONE_TOOLS })), []);
+    const got = codes(makeRoot({ ...alpha, ...nativeKind('beta', 'be', { default: true }), ...PHONE_TOOLS }));
+    assert.deepEqual(got, ['agents/native/beta/agent.json /default duplicate-default']);
   });
 
   it('wants an agent.json in every kind folder', () => {

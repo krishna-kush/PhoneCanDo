@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
 
 /** A manifest that cannot be read; [path] is the JSON pointer of the bad value ("" for the whole file), [detail] what is wrong with it. */
@@ -27,6 +28,11 @@ internal class JsonFields(val path: String, val tree: JsonObject) {
   fun optInt(key: String): Int? = tree[key]?.let { value ->
     (value as? JsonPrimitive)?.takeIf { !it.isString }?.intOrNull
       ?: throw ManifestException(at(key), "must be an integer")
+  }
+
+  fun optBoolean(key: String): Boolean? = tree[key]?.let { value ->
+    (value as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
+      ?: throw ManifestException(at(key), "must be true or false")
   }
 
   /** Whether [key] is present at all (an optional field may be absent, never null). */

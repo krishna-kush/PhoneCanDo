@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "PhoneCanDo agent kind manifest (agent.json), v1",
-  "description": "One agent kind: agents/native/<id>/agent.json (built for Android, in the APK) or agents/image/<id>/agent.json (installed into the machine's Linux image). The rules JSON Schema cannot say (lib name = lib<prefix>-<role>.so, unique lib names and roles, reserved ids and prefixes, hook names and SSE parsers, regexes with a capture group, a bell with no match, a runtime named once, package families install.families names, user-origin limits) live in agents/kit/ts/manifest/validate.ts, which implements this whole schema too; agents/kit/cli/check.mjs adds the folder rules (the runtimes named exist in agents/runtimes/ and agree on families). Templates hold {{placeholder}}s; {{password}} goes only in env values, and what runs in the guest (install steps, version checks) holds {{home}} only.",
+  "description": "One agent kind: agents/native/<id>/agent.json (built for Android, in the APK) or agents/image/<id>/agent.json (installed into the machine's Linux image). The rules JSON Schema cannot say (lib name = lib<prefix>-<role>.so, unique lib names and roles, reserved ids and prefixes, hook names and SSE parsers, regexes with a capture group, a bell with no match, a runtime named once, package families install.families names, user-origin limits) live in agents/kit/ts/manifest/validate.ts, which implements this whole schema too; agents/kit/cli/check.mjs adds the folder rules (the runtimes named exist in agents/runtimes/ and agree on families; at most one kind is the default). Templates hold {{placeholder}}s; {{password}} goes only in env values, and what runs in the guest (install steps, version checks) holds {{home}} only.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "id", "label", "version", "type", "channels", "stability", "licence"],
@@ -29,6 +29,10 @@
       "items": { "enum": ["full", "lite", "play"] }
     },
     "stability": { "enum": ["stable", "preview"] },
+    "default": {
+      "description": "The kind a fresh install starts with (the app's first agent; the website deals it first). At most one bundled kind sets it, checked by agents/kit/cli/manifests.mjs; a user-added kind never does.",
+      "type": "boolean"
+    },
     "licence": {
       "type": "object",
       "additionalProperties": false,

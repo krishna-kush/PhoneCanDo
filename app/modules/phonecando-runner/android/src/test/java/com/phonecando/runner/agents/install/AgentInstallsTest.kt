@@ -116,7 +116,7 @@ class AgentInstallsTest {
     fx.write("agents/needsruby/agent.json", InstallFixture.kind("needsruby", InstallFixture.INSTALL, "\"ruby\""))
     fx.write("agents/needsnode30/agent.json", InstallFixture.kind("needsnode30", InstallFixture.INSTALL, "\"node>=30\""))
     val skipped = mutableListOf<String>()
-    val again = KindCatalog.load(fx.tree, null, emptyMap(), fx.runtimes(), "plain") { folder, _ -> skipped += folder }
+    val again = KindCatalog.load(fx.tree, null, emptyMap(), fx.runtimes()) { folder, _ -> skipped += folder }
     assertEquals(listOf("demo", "plain"), again.all().map { it.id })
     assertEquals(listOf("needsnode30", "needsruby"), skipped)
   }

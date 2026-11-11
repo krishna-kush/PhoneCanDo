@@ -131,6 +131,6 @@ class UserKindsTest {
 
       override fun open(path: String): InputStream = throw java.io.FileNotFoundException(path)
     }
-    return KindCatalog.load(none, dir, BuiltinHooks.all, TestKinds.runtimes, BuiltinHooks.defaultKindId) { _, _ -> }
+    return KindCatalog.load(none, dir, BuiltinHooks.all, TestKinds.runtimes) { _, _ -> }
   }
 }

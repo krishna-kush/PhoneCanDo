@@ -82,13 +82,21 @@ class KindCatalogTest {
     // Packaged beside the kinds, and no kind.
     for (folder in KindCatalog.NOT_KINDS) File(root, "agents/$folder/x").mkdirs()
     val skipped = mutableListOf<String>()
-    val catalog = KindCatalog.load(tree, null, BuiltinHooks.all, noRuntimes, BuiltinHooks.defaultKindId) { folder, _ -> skipped += folder }
+    val catalog = KindCatalog.load(tree, null, BuiltinHooks.all, noRuntimes) { folder, _ -> skipped += folder }
     assertEquals(listOf("opencode"), catalog.all().map { it.id })
     assertEquals(listOf("broken", "empty", "hookless", "moved", "nofile"), skipped)
   }
 
+  @Test fun theDefaultIsTheKindWhoseManifestSaysSo() {
+    val opencode = TestKinds.assets.open("agents/opencode/agent.json").use { it.reader().readText() }
+    kind("opencode", opencode.replace("\"default\": true,", ""))
+    val catalog = KindCatalog.load(tree, null, BuiltinHooks.all, noRuntimes) { _, e -> throw e }
+    assertEquals(listOf("opencode"), catalog.all().map { it.id })
+    assertNull(catalog.default)
+  }
+
   @Test fun noKindsAtAll() {
-    val catalog = KindCatalog.load(tree, File(root, "missing"), BuiltinHooks.all, noRuntimes, BuiltinHooks.defaultKindId) { _, e -> throw e }
+    val catalog = KindCatalog.load(tree, File(root, "missing"), BuiltinHooks.all, noRuntimes) { _, e -> throw e }
     assertEquals(emptyList<Any>(), catalog.all())
     assertNull(catalog.default)
   }
@@ -109,7 +117,7 @@ class KindCatalogTest {
     user("user.top.json", userKind("user.top", ""","readiness":{"alive":{"ms":500}}"""))
     user("user.htop.json", userKind("user.htop"))
     user("notes.txt", "not a manifest")
-    val catalog = KindCatalog.load(tree, users, BuiltinHooks.all, noRuntimes, BuiltinHooks.defaultKindId) { _, e -> throw e }
+    val catalog = KindCatalog.load(tree, users, BuiltinHooks.all, noRuntimes) { _, e -> throw e }
     assertEquals(listOf("opencode", "user.htop", "user.top"), catalog.all().map { it.id })
     assertEquals(Origin.USER, catalog.get("user.top")!!.manifest.origin)
     assertSame(catalog.get("opencode"), catalog.default)
@@ -127,7 +135,7 @@ class KindCatalogTest {
     user("plain.json", userKind("plain"))
     File(users, "user.dir.json").mkdirs()
     val skipped = mutableMapOf<String, String?>()
-    val catalog = KindCatalog.load(tree, users, BuiltinHooks.all, noRuntimes, BuiltinHooks.defaultKindId) { folder, e -> skipped[folder] = e.message }
+    val catalog = KindCatalog.load(tree, users, BuiltinHooks.all, noRuntimes) { folder, e -> skipped[folder] = e.message }
     assertEquals(listOf("user.good"), catalog.all().map { it.id })
     assertEquals(
       listOf("user/plain.json", "user/user.broken.json", "user/user.dir.json", "user/user.hooked.json", "user/user.huge.json", "user/user.moved.json", "user/user.server.json"),

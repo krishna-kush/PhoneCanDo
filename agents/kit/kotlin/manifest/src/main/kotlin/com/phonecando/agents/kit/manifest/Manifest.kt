@@ -19,6 +19,8 @@ data class Manifest(
   val channels: List<String>,
   /** "stable" | "preview". */
   val stability: String,
+  /** `default`: the kind a fresh install starts with (at most one bundled kind, never a user's). */
+  val isDefault: Boolean,
   /** The packaged names of a native kind's libs (`payload.libs[].name`); empty for none. */
   val payloadLibs: List<String>,
   /** `requires.linux`; null when the manifest does not say. */

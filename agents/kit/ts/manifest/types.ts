@@ -257,6 +257,8 @@ export interface Manifest {
   prefix?: string;
   channels: Channel[];
   stability: Stability;
+  /** The kind a fresh install starts with; at most one bundled kind sets it, never a user's. */
+  default?: boolean;
   licence: Licence;
   payload?: { libs: PayloadLib[] };
   build?: { toolchains: Toolchain[] };

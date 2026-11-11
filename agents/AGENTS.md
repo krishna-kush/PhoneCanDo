@@ -55,6 +55,9 @@ An image kind with no code has exactly the shape a user-added agent has.
 - CI: `kit/cli/list.mjs --matrix` feeds `agent-payload.yml`
 - the APK audit (`scripts/apk-audit.mjs`, `.github/ci/android/audit-apk.mjs`):
   listed libs and configs present, unlisted ones absent
+- the default kind: `default: true` on at most one bundled kind (never a
+  user's) is the one a fresh install starts with (the runner's
+  `KindCatalog`) and the first card our website deals
 
 Never hardcode a kind's lib, asset or config name anywhere else; read the
 manifest. Run `node kit/cli/check.mjs` after any manifest change.

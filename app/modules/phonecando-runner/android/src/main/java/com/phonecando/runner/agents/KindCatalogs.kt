@@ -41,7 +41,7 @@ object KindCatalogs {
     val app = context.applicationContext ?: context
     val user = File(app.filesDir, USER_DIR)
     val runtimes = RuntimeCatalogs.get(app)
-    return KindCatalog.load(AssetManagerTree(app.assets), user, BuiltinHooks.all, runtimes, BuiltinHooks.defaultKindId) { folder, e ->
+    return KindCatalog.load(AssetManagerTree(app.assets), user, BuiltinHooks.all, runtimes) { folder, e ->
       Log.w("PhoneCanDoKinds", "agent kind $folder left out: ${e.message}")
     }
   }

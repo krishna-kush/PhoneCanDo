@@ -5,6 +5,7 @@ import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -162,6 +163,7 @@ class ManifestDecoderTest {
     assertEquals("/requires/linux: a user kind needs Linux (required)", userProblem { it.replace("\"required\"", "\"optional\"") })
     assertEquals("/hooks: a user kind has none", userProblem { it.replace("\"stability\"", "\"hooks\":[],\"stability\"") })
     assertEquals("/payload: a user kind has none", userProblem { it.replace("\"stability\"", "\"payload\":{\"libs\":[]},\"stability\"") })
+    assertEquals("/default: a user kind is never the default", userProblem { it.replace("\"stability\"", "\"default\":true,\"stability\"") })
     assertEquals(
       "/config/overlay: a user kind packages no config",
       userProblem { it.replace("\"stability\"", "\"config\":{\"into\":\".top\",\"overlay\":\"x\"},\"stability\"") },
@@ -205,6 +207,14 @@ class ManifestDecoderTest {
       "/phoneTools: must be one of plugin, mcp:config, mcp:argv, none, not bluetooth",
       problem(with("\"phoneTools\":\"bluetooth\"")),
     )
+  }
+
+  @Test fun readsTheDefaultFlag() {
+    assertFalse(ManifestDecoder.decode(user).isDefault)
+    assertTrue(ManifestDecoder.decode(with("\"default\":true")).isDefault)
+    assertFalse(ManifestDecoder.decode(with("\"default\":false")).isDefault)
+    assertEquals("/default: must be true or false", problem(with("\"default\":\"yes\"")))
+    assertEquals("/default: must be true or false", problem(with("\"default\":1")))
   }
 
   private fun problem(json: String): String = assertFailsWith<ManifestException> { ManifestDecoder.decode(json) }.message!!

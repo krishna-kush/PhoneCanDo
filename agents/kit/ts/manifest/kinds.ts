@@ -3,7 +3,8 @@
 // runs in the agent's Linux image, so it needs Linux, and its program is a
 // guest command. A user-added kind is an image kind with a TUI the user
 // describes: no code hooks, nothing packaged in the APK, no web UI, no PATH
-// of its own, and install and update steps of at most 32 KiB each.
+// of its own, never the default, and install and update steps of at most
+// 32 KiB each.
 import { checkRuntimeNeeds } from './install.ts';
 import { fields, isObject, list, oneOf, string, utf8Length, type Add, type Json } from './primitives.ts';
 import { CONFIG_NEEDS_DIR, LINUX_NEEDS, MAX, MAX_USER_SCRIPT_BYTES, PATTERNS, USER_RESERVED_ENV } from './rules.ts';
@@ -65,6 +66,7 @@ export function checkUser(add: Add, m: Json) {
   for (const key of ['payload', 'hooks']) {
     if (key in m) add(`/${key}`, 'forbidden', `a user-added kind has no ${key}`);
   }
+  if ('default' in m) add('/default', 'forbidden', 'a user-added kind is never the default');
   if (isObject(m.config)) {
     for (const key of ['dir', ...CONFIG_NEEDS_DIR]) {
       if (key in m.config) add(`/config/${key}`, 'forbidden', 'a user-added kind has no bundled config folder');

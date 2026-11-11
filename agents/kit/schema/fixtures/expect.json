@@ -418,6 +418,18 @@
         "path": "/events/0/hook/map/bad name",
         "code": "pattern"
       }
+    ],
+    "default-not-boolean.json": [
+      {
+        "path": "/default",
+        "code": "type"
+      }
+    ],
+    "user-default.json": [
+      {
+        "path": "/default",
+        "code": "forbidden"
+      }
     ]
   }
 }

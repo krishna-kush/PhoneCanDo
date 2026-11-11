@@ -74,6 +74,7 @@ export function validate(json: unknown, options: ValidateOptions): ValidationRes
   if ('prefix' in json) checkPrefix(add, json.prefix);
   list(add, '/channels', json.channels, { min: 1, unique: true }, (p, v) => oneOf(add, p, v, CHANNELS));
   oneOf(add, '/stability', json.stability, STABILITIES);
+  if ('default' in json && typeof json.default !== 'boolean') add('/default', 'type', 'must be true or false');
   if ('licence' in json) checkLicence(add, json.licence);
   if ('payload' in json) checkPayload(add, json.payload, json.prefix);
   if ('build' in json) checkBuild(add, json.build);

@@ -19,8 +19,10 @@ import java.io.File
 // it needs (RuntimeCatalog); one that needs a runtime this build lacks, or
 // a newer one, cannot run here and is left out the same way. The asset
 // folders beside the kinds that hold none (NOT_KINDS: the runtimes, the
-// kit's scripts, shared parts) are passed over. Pure: the phone reads the
-// APK assets (KindCatalogs), the JVM tests a folder.
+// kit's scripts, shared parts) are passed over. The default kind is the
+// bundled one whose manifest says so (`default: true`; the kit's checks
+// allow one at most, the user rules none). Pure: the phone reads the APK
+// assets (KindCatalogs), the JVM tests a folder.
 class KindCatalog(kinds: List<ManifestKind>, private val defaultId: String) {
   private val byId: Map<String, ManifestKind> = kinds.associateBy { it.id }
 
@@ -42,7 +44,6 @@ class KindCatalog(kinds: List<ManifestKind>, private val defaultId: String) {
       userDir: File?,
       hooks: Map<String, KindHooks>,
       runtimes: RuntimeCatalog,
-      defaultId: String,
       skipped: (folder: String, error: Exception) -> Unit,
     ): KindCatalog {
       val folders = assets.list(KindAssets.ROOT).orEmpty().filter { it !in NOT_KINDS }.sorted()
@@ -58,6 +59,7 @@ class KindCatalog(kinds: List<ManifestKind>, private val defaultId: String) {
         }
       }
       val taken = bundled.map { it.id }.toSet()
+      val defaultId = bundled.firstOrNull { it.manifest.isDefault }?.id.orEmpty()
       return KindCatalog(bundled + userDir?.let { loadUser(it, taken, runtimes, skipped) }.orEmpty(), defaultId)
     }
 

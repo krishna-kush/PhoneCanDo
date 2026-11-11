@@ -29,6 +29,7 @@ object ManifestDecoder {
       type = m.string("type"),
       channels = m.strings("channels"),
       stability = m.string("stability"),
+      isDefault = m.optBoolean("default") ?: false,
       payloadLibs = m.optObj("payload")?.let(::payloadLibs).orEmpty(),
       linux = m.optObj("requires")?.takeIf { it.has("linux") }?.let { enumOf(it, "linux", LinuxNeed.entries) { need -> need.wire } },
       commands = m.optObj("requires")?.optStrings("commands").orEmpty(),

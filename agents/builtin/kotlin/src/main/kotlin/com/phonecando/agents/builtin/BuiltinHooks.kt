@@ -8,7 +8,4 @@ import com.phonecando.agents.opencode.OpencodeHooks
 // and a kind without any needs none.
 object BuiltinHooks {
   val all: Map<String, KindHooks> = listOf<KindHooks>(OpencodeHooks).associateBy { it.id }
-
-  /** The kind a fresh install starts with: the one place a default kind is named. */
-  const val defaultKindId = "opencode"
 }

@@ -31,7 +31,7 @@ class InstallFixture(private val root: File) {
     RuntimeCatalog.load(tree, skipped)
 
   fun kinds(skipped: (String, Exception) -> Unit = { f, e -> throw AssertionError("kind $f: ${e.message}", e) }) =
-    KindCatalog.load(tree, null, BuiltinHooks.all, runtimes(), "plain", skipped)
+    KindCatalog.load(tree, null, BuiltinHooks.all, runtimes(), skipped)
 
   init {
     write(

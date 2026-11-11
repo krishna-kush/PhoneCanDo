@@ -155,6 +155,8 @@ export const MAX = {
 export const CONFIG_NEEDS_DIR = ['overlay', 'fullOnly', 'shared'];
 
 export const REQUIRED = ['schema', 'id', 'label', 'version', 'type', 'channels', 'stability', 'licence'];
+/** The kind a fresh install starts with: true on at most one bundled kind (cli/manifests.mjs), never a user's. */
+const DEFAULT_FIELDS = ['default'];
 const PACKAGING_FIELDS = ['prefix', 'payload', 'build', 'config'];
 /** What the kind needs from its machine (kinds.ts checks it). */
 const NEEDS_FIELDS = ['requires'];
@@ -164,4 +166,4 @@ export const INSTALL_FIELDS = ['install', 'update', 'versionCheck'];
 export const RUNTIME_FIELDS = ['engine', 'events', 'chats', 'idle', 'surfaces', 'phoneTools', 'hooks', 'signIn'];
 /** How a local model is wired into the kind (models.ts checks it). */
 export const MODEL_FIELDS = ['models'];
-export const FIELDS = [...REQUIRED, ...PACKAGING_FIELDS, ...NEEDS_FIELDS, ...RUNTIME_FIELDS, ...INSTALL_FIELDS, ...MODEL_FIELDS];
+export const FIELDS = [...REQUIRED, ...DEFAULT_FIELDS, ...PACKAGING_FIELDS, ...NEEDS_FIELDS, ...RUNTIME_FIELDS, ...INSTALL_FIELDS, ...MODEL_FIELDS];

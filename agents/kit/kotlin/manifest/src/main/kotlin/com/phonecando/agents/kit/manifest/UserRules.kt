@@ -3,11 +3,11 @@ package com.phonecando.agents.kit.manifest
 // What a user-added kind may be, checked on the phone because its manifest
 // never went through our CI (the kit's TS validator has the same rules for
 // origin user): an `user.` id, an image kind whose engine is its own TUI and
-// which needs Linux; no code hooks, no native payload, no config packaged
-// from assets (`config.dir`, `overlay`, `shared`) and no web surface; no
-// env name the host sets (RESERVED_ENV); install steps and update steps of
-// at most MAX_SCRIPT_BYTES each. Each break throws ManifestException at the
-// JSON pointer of the offending value.
+// which needs Linux and is never the default; no code hooks, no native
+// payload, no config packaged from assets (`config.dir`, `overlay`,
+// `shared`) and no web surface; no env name the host sets (RESERVED_ENV);
+// install steps and update steps of at most MAX_SCRIPT_BYTES each. Each
+// break throws ManifestException at the JSON pointer of the offending value.
 internal object UserRules {
   const val ID_PREFIX = "user."
 
@@ -25,6 +25,7 @@ internal object UserRules {
     if (manifest.engine?.style != EngineStyle.TUI) fail(engine.at("style"), "a user kind's engine is its TUI (tui)")
     if (manifest.linux != LinuxNeed.REQUIRED) fail("${m.at("requires")}/linux", "a user kind needs Linux (required)")
     for (key in listOf("hooks", "payload")) if (m.has(key)) fail(m.at(key), "a user kind has none")
+    if (m.has("default")) fail(m.at("default"), "a user kind is never the default")
     m.optObj("config")?.let { c ->
       for (key in listOf("dir", "overlay", "shared")) if (c.has(key)) fail(c.at(key), "a user kind packages no config")
     }
