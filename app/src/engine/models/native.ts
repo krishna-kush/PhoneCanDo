@@ -39,12 +39,12 @@ type ModelsModule = {
   searchModels(query: string, filters: Record<string, string | boolean>, limit: number): Promise<SearchPage>;
   nextModelsPage(cursor: string): Promise<SearchPage>;
   repoModels(repo: string): Promise<RepoModels>;
-  startDownload(params: {
-    repo: string;
-    revision: string;
-    files: CatalogFile[];
-    dates: ModelDates | null;
-  }): Promise<{ jobId: string; downloadId: string }>;
+  startDownload(
+    repo: string,
+    revision: string,
+    files: CatalogFile[],
+    dates: ModelDates | null,
+  ): Promise<{ jobId: string; downloadId: string }>;
   resumeDownload(downloadId: string): Promise<{ jobId: string }>;
   deleteModel(id: string): Promise<null>;
   importModel(): Promise<{ jobId: string } | null>;
@@ -58,6 +58,7 @@ type ModelsModule = {
 const CODES: ReadonlySet<string> = new Set<ModelErrorCode>([
   'invalid_gguf',
   'too_large',
+  'bad_answer',
   'invalid_name',
   'exists',
   'no_space',
@@ -221,7 +222,7 @@ export function startDownload(
   files: CatalogFile[],
   dates: ModelDates | null,
 ): Promise<{ jobId: string; downloadId: string }> {
-  return callAsync((m) => m.startDownload({ repo, revision, files, dates }));
+  return callAsync((m) => m.startDownload(repo, revision, files, dates));
 }
 
 /** Runs a paused download again from what is on disk. Rejects busy while it runs. */

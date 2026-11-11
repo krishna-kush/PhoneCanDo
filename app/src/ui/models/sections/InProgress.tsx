@@ -1,6 +1,6 @@
 import { XStack } from 'tamagui';
 import type { ModelDownload, ModelProgress } from '../../../engine/models/types';
-import { importJobs, modelJobKey } from '../../../state/flows/logic/modelProgress';
+import { importJobs, lostDownloadJobs, modelJobKey } from '../../../state/flows/logic/modelProgress';
 import { cancelJob, remove, resume } from '../../../state/flows/modelActions';
 import { useModelsStore } from '../../../state/models';
 import AppButton from '../../common/AppButton';
@@ -13,21 +13,25 @@ import ModelPanel from '../parts/ModelPanel';
 import { useAction } from '../useAction';
 
 // Downloads that run or wait (a cancel, an app restart, a network that
-// stayed down: Resume carries on from what arrived), and imports that run
-// or failed.
+// stayed down: Resume carries on from what arrived), downloads that failed
+// with nothing left to resume, and imports that run or failed.
 export default function InProgress() {
   const downloads = useModelsStore((s) => s.downloads);
   const jobs = useModelsStore((s) => s.jobs);
   const imports = importJobs(jobs);
-  if (downloads.length === 0 && imports.length === 0) return null;
+  const lost = lostDownloadJobs(jobs, downloads.map((d) => d.id));
+  if (downloads.length === 0 && imports.length === 0 && lost.length === 0) return null;
   return (
     <>
       <SectionTitle>In progress</SectionTitle>
       {downloads.map((d) => (
         <DownloadPanel key={d.id} download={d} job={jobs[modelJobKey({ kind: 'download', id: d.id })]} />
       ))}
+      {lost.map((p) => (
+        <JobPanel key={p.jobId} job={p} line="Downloaded, then removed" />
+      ))}
       {imports.map((p) => (
-        <ImportPanel key={p.jobId} job={p} />
+        <JobPanel key={p.jobId} job={p} line="Copying from the phone" />
       ))}
     </>
   );
@@ -66,11 +70,12 @@ function DownloadPanel({ download, job }: { download: ModelDownload; job: ModelP
   );
 }
 
-function ImportPanel({ job }: { job: ModelProgress }) {
+// A job with no download row: an import, or a download whose record went.
+function JobPanel({ job, line }: { job: ModelProgress; line: string }) {
   const dismiss = useModelsStore((s) => s.dismissJob);
   const running = !job.finished;
   return (
-    <ModelPanel title={job.label} lines={['Copying from the phone']}>
+    <ModelPanel title={job.label} lines={[line]}>
       <ProgressBar label={jobLine(running ? job : undefined, null) || 'Stopped'} fraction={fraction(job.done, job.total)} />
       {!running && job.errorCode ? <Note tone="error">{modelErrorText(job.errorCode, job.error ?? '')}</Note> : null}
       {running ? (

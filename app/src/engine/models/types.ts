@@ -185,6 +185,7 @@ export type ModelProgress = {
 export type ModelErrorCode =
   | 'invalid_gguf'
   | 'too_large'
+  | 'bad_answer'
   | 'invalid_name'
   | 'exists'
   | 'no_space'

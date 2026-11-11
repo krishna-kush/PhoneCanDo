@@ -4,7 +4,8 @@ import type { ModelErrorCode } from '../../../engine/models/types';
 
 const TEXT: Record<ModelErrorCode, string> = {
   invalid_gguf: "That file isn't a model we can run (a GGUF file).",
-  too_large: 'That answer was too big to read.',
+  too_large: "That model's file has a header too big for us to read.",
+  bad_answer: "Hugging Face sent an answer we couldn't read. Try again later.",
   invalid_name: "That isn't a valid model or repository name.",
   exists: 'This model is already on the phone.',
   no_space: 'Your phone is out of space. Free some up and try again.',
@@ -35,6 +36,7 @@ function isCode(code: string): code is ModelErrorCode {
 export function modelErrorText(code: string, message: string): string {
   if (code === 'in_use') return `${message} ${message.includes(',') ? 'run' : 'runs'} on it. Pick another model for them first.`;
   if (isCode(code) && code !== 'internal') return TEXT[code];
-  const detail = message.trim();
+  // Its first line only: a bridge failure goes on with a JS stack.
+  const detail = message.trim().split('\n')[0].trim();
   return detail ? `${TEXT.internal} (${detail})` : TEXT.internal;
 }

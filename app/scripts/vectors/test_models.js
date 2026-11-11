@@ -72,6 +72,20 @@ const model = (over) => ({
     'download:qwen': event({}),
   });
   t('imports, oldest first', imports.map((p) => p.target.id), ['import-9', 'import-10']);
+  const { lostDownloadJobs } = await import(src('state/flows/logic', 'modelProgress.ts'));
+  const failedAs = (id, errorCode) =>
+    event({ target: { kind: 'download', id }, finished: true, ok: false, error: 'x', errorCode });
+  const lost = lostDownloadJobs(
+    {
+      'download:gone': failedAs('gone', 'invalid_gguf'),
+      'download:kept': failedAs('kept', 'network'),
+      'download:deleted': failedAs('deleted', 'cancelled'),
+      'download:running': event({ target: { kind: 'download', id: 'running' } }),
+      'import:import-1': event({ target: { kind: 'import', id: 'import-1' }, finished: true, ok: false, errorCode: 'invalid_gguf' }),
+    },
+    ['kept'],
+  );
+  t('a failed download with no record left is shown', lost.map((p) => p.target.id), ['gone']);
 
   // --- state/flows/logic/modelStep: a new agent's Model step ----------------
   const ms = await import(src('state/flows/logic', 'modelStep.ts'));
@@ -203,6 +217,11 @@ const model = (over) => ({
   const { modelErrorText } = await import(src('ui/models/logic', 'errorText.ts'));
   t('known code', modelErrorText('exists', 'already on the phone as qwen'), 'This model is already on the phone.');
   t('internal keeps the line', modelErrorText('internal', 'boom'), 'Something went wrong on our side. (boom)');
+  t(
+    'internal drops the stack',
+    modelErrorText('internal', '[startDownload] Cannot convert x\n\nError: Value is null\n    at startDownload (native)'),
+    'Something went wrong on our side. ([startDownload] Cannot convert x)',
+  );
   t('unknown code is internal', modelErrorText('weird', 'x'), 'Something went wrong on our side. (x)');
   t('prototype key is no code', modelErrorText('toString', ''), 'Something went wrong on our side.');
   t('in use by one', modelErrorText('in_use', 'Main'), 'Main runs on it. Pick another model for them first.');

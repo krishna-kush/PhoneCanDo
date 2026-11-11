@@ -30,6 +30,22 @@ export function dropModelJob(jobs: ModelJobs, key: string): ModelJobs {
   return rest;
 }
 
+/**
+ * Downloads that failed after their record went (a model that failed its
+ * header check is removed with its download): no download row is left to
+ * say why, so these get their own. A delete ends its job `cancelled`.
+ */
+export function lostDownloadJobs(jobs: ModelJobs, pendingIds: readonly string[]): ModelProgress[] {
+  return Object.values(jobs).filter(
+    (p) =>
+      p.target.kind === 'download' &&
+      p.finished &&
+      p.errorCode != null &&
+      p.errorCode !== 'cancelled' &&
+      !pendingIds.includes(p.target.id),
+  );
+}
+
 /** The imports to show: running or failed, oldest first. */
 export function importJobs(jobs: ModelJobs): ModelProgress[] {
   return Object.values(jobs)

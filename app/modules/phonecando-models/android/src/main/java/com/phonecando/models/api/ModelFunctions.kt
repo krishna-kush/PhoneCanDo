@@ -79,15 +79,14 @@ internal fun ModuleDefinitionBuilder.modelFunctions(host: () -> ModelsHost, pick
     runAsync(h, promise) { h.catalog.repo(repo) }
   }
 
-  // { repo, revision, files: [{ path, sizeBytes, sha256 }], dates }: a variant as repoModels or suggestedModels listed it.
-  AsyncFunction("startDownload") { params: Map<String, Any?>, promise: Promise ->
+  // A variant as repoModels or suggestedModels listed it: files [{ path, sizeBytes, sha256 }], dates or null.
+  // Each object is its own typed argument: Expo converts a null held by a Map<String, Any?> value, but
+  // not one inside an object or array held by Any ("Value is null, expected an Object"), such as a
+  // sha256 or cutoff of null.
+  AsyncFunction("startDownload") { repo: String, revision: String, files: List<Map<String, Any?>>, dates: Map<String, Any?>?, promise: Promise ->
     val h = host()
     runAsync(h, promise) {
-      val repo = params["repo"] as? String ?: throw IllegalArgumentException("repo is required")
-      val revision = params["revision"] as? String ?: throw IllegalArgumentException("revision is required")
-      @Suppress("UNCHECKED_CAST")
-      val files = repoFiles(params["files"] as? List<Map<String, Any?>> ?: throw IllegalArgumentException("files are required"))
-      val job = h.downloads.start(h.catalog.request(repo, revision, files, datesOf(params["dates"])))
+      val job = h.downloads.start(h.catalog.request(repo, revision, repoFiles(files), datesOf(dates)))
       mapOf("jobId" to job.id, "downloadId" to job.target.id)
     }
   }
