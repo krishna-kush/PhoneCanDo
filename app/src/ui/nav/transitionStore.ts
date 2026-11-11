@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import { useAppStore } from '../../state/app';
 import type { Page } from '../../state/app/stack';
 import { setTransitionBusy } from './backTarget';
@@ -104,4 +104,16 @@ export function useShown(): Shown {
 /** One layer's part; its component re-renders only when that part changes. */
 export function useLayerRole(key: string): LayerRole {
   return useSyncExternalStore(subscribe, () => roleIn(current, key));
+}
+
+/**
+ * Whether the stack has been at rest (no slide running) since this layer
+ * was drawn: false while a new page slides in, true from its end on and for
+ * good after that (the latch keeps later motions from re-rendering it).
+ */
+export function useRestedOnce(): boolean {
+  const rested = useRef(false);
+  const atRest = useSyncExternalStore(subscribe, () => rested.current || current.anim === null);
+  if (atRest) rested.current = true;
+  return atRest;
 }

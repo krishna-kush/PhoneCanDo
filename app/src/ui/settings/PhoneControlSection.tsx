@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
-import { Text } from 'tamagui';
 import { confirmUser } from '../../engine/auth';
 import * as runner from '../../engine/runner';
 import { track } from '../../engine/telemetry';
@@ -9,8 +8,10 @@ import { COPY } from '../accessibility/guide';
 import { useAccessibilitySteps } from '../accessibility/useAccessibilitySteps';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
+import PlainText from '../common/PlainText';
 import SectionTitle from '../common/SectionTitle';
 import ThumbIcon from '../common/ThumbIcon';
+import AfterSlide from '../nav/AfterSlide';
 import { usePageActive } from '../nav/pageActive';
 
 const runnerAvailable = runner.isRunnerAvailable();
@@ -75,10 +76,10 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
     return (
       <>
         <SectionTitle>Phone control</SectionTitle>
-        <Text fontSize={14} color="color10">
+        <PlainText fontSize={14} color="muted">
           This {channel} build has no screen automation. Notifications, clipboard, and opening
           links still work.
-        </Text>
+        </PlainText>
       </>
     );
   }
@@ -87,39 +88,42 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
     <>
       <SectionTitle>Phone control</SectionTitle>
       {switchedOn ? null : (
-        <Text fontSize={14} color="color10">
+        <PlainText fontSize={14} color="muted">
           {COPY.why}
-        </Text>
+        </PlainText>
       )}
       <AccessibilitySetup a11y={a11y} />
-      {switchedOn ? null : (
-        <Text fontSize={13} color="color10">
-          {COPY.api}
-        </Text>
-      )}
-      <AppCard
-        title={unlocked ? 'Unlocked' : 'Locked'}
-        subtitle={
-          unlocked
-            ? 'The agent can act on the phone until you lock it or PhoneCanDo restarts.'
-            : 'Biometric unlock is required before the agent can act on the phone.'
-        }
-        chevron={false}
-        icon={<ThumbIcon up={unlocked} size={26} />}
-      />
-      <AppButton onPress={toggleLock}>
-        {unlocked ? 'Lock phone control' : 'Unlock with biometrics'}
-      </AppButton>
-      {trustMsg ? (
-        <Text fontSize={13} color="color10">
-          {trustMsg}
-        </Text>
-      ) : null}
-      {unlocked ? null : (
-        <Text fontSize={13} color="color10">
-          {UNLOCK_WHY}
-        </Text>
-      )}
+      {/* Below a phone's first screen (SettingsScreen.tsx). */}
+      <AfterSlide>
+        {switchedOn ? null : (
+          <PlainText fontSize={13} color="muted">
+            {COPY.api}
+          </PlainText>
+        )}
+        <AppCard
+          title={unlocked ? 'Unlocked' : 'Locked'}
+          subtitle={
+            unlocked
+              ? 'The agent can act on the phone until you lock it or PhoneCanDo restarts.'
+              : 'Biometric unlock is required before the agent can act on the phone.'
+          }
+          chevron={false}
+          icon={<ThumbIcon up={unlocked} size={26} />}
+        />
+        <AppButton onPress={toggleLock}>
+          {unlocked ? 'Lock phone control' : 'Unlock with biometrics'}
+        </AppButton>
+        {trustMsg ? (
+          <PlainText fontSize={13} color="muted">
+            {trustMsg}
+          </PlainText>
+        ) : null}
+        {unlocked ? null : (
+          <PlainText fontSize={13} color="muted">
+            {UNLOCK_WHY}
+          </PlainText>
+        )}
+      </AfterSlide>
     </>
   );
 }

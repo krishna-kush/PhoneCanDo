@@ -11,6 +11,7 @@ import Screen from '../common/Screen';
 import SectionTitle from '../common/SectionTitle';
 import LogoMark from '../common/LogoMark';
 import { useScheme } from '../common/globals';
+import AfterSlide from '../nav/AfterSlide';
 import PhoneControlSection from './PhoneControlSection';
 import PrivacySection from './PrivacySection';
 import TerminalSection from './TerminalSection';
@@ -21,7 +22,9 @@ const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark'];
 
 // App-wide options only: about and licences, updates, theme, the terminal's
 // extra keys, phone control, privacy. Each agent's engine, reset and delete
-// live on its page (the drawer's › beside it).
+// live on its page (the drawer's › beside it). A phone's first screen ends
+// around Phone control's Accessibility card; what follows it there, and
+// Privacy, mount once the page has slid in.
 export default function SettingsScreen() {
   const scheme = useScheme();
   const themeMode = useAppStore((s) => s.themeMode);
@@ -79,7 +82,9 @@ export default function SettingsScreen() {
 
       {channel !== 'lite' ? <PhoneControlSection channel={channel} /> : null}
 
-      <PrivacySection showTester={showTester} />
+      <AfterSlide>
+        <PrivacySection showTester={showTester} />
+      </AfterSlide>
 
       <LicensesDialog open={licensesOpen} onClose={() => setLicensesOpen(false)} />
     </Screen>

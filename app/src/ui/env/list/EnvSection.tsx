@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { cancelJob } from '../../../engine/linux/native';
 import type { Env, Image } from '../../../engine/linux/types';
@@ -10,7 +10,9 @@ import { useTargetProgress } from '../../../state/linux';
 import AppButton from '../../common/AppButton';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import SectionTitle from '../../common/SectionTitle';
-import { HIT, useTheme } from '../../common/globals';
+import { HIT } from '../../common/globals';
+import PlainText from '../../common/PlainText';
+import { useSlidInList } from '../../nav/slidIn';
 import { linuxFailureText, recordErrorText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
 import type { EnvRow } from '../logic/sections';
@@ -19,6 +21,9 @@ import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
 import MachineRow from './MachineRow';
+
+// Agent rows drawn as the page opens; the rest come once it has slid in.
+const FIRST_SCREEN_ROWS = 6;
 
 type Props = {
   env: Env | null;
@@ -48,12 +53,12 @@ function deleteMessage(env: Env): string {
 // with New agent here as its last row), then Delete system, offered only
 // once no machine comes from it.
 export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onDeleted }: Props) {
-  const t = useTheme();
   const progress = useTargetProgress(env ? { kind: 'env', id: env.id } : null);
   const [busy, setBusy] = useState<'retry' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const newAgentHere = useNewAgent();
+  const shown = useSlidInList(rows, FIRST_SCREEN_ROWS);
 
   const run = (what: 'retry' | 'delete', job: () => Promise<unknown>) => {
     if (busy) return;
@@ -109,9 +114,9 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
       {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
 
       <SectionTitle>{agents === 1 ? '1 agent on it' : `${agents} agents on it`}</SectionTitle>
-      <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel}>
-        {rows.map((r, i) => (
-          <YStack key={r.key} borderTopWidth={i > 0 ? 1 : 0} borderColor={t.line}>
+      <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
+        {shown.map((r, i) => (
+          <YStack key={r.key} borderTopWidth={i > 0 ? 1 : 0} borderColor="line">
             <MachineRow image={r.image} agent={r.agent} onOpen={onOpenAgent} />
           </YStack>
         ))}
@@ -132,19 +137,19 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
             minHeight={HIT.buttonH}
             paddingHorizontal="3"
             borderTopWidth={rows.length > 0 || makingFirst ? 1 : 0}
-            borderColor={t.line}
-            backgroundColor={`press:${t.panel2}`}
+            borderColor="line"
+            backgroundColor="press:panel2"
             opacity={newAgentHere.busy ? 0.5 : 1}
             onPress={newAgentHere.busy ? undefined : newAgent}
             accessibilityRole="button"
             accessibilityLabel="New agent here"
           >
-            <Text fontFamily="mono" fontSize={18} color={t.primary} width={25} textAlign="center">
+            <PlainText fontFamily="mono" fontSize={18} color="primary" width={25} textAlign="center">
               +
-            </Text>
-            <Text fontFamily="mono" fontSize={12} letterSpacing={1.2} textTransform="uppercase">
+            </PlainText>
+            <PlainText fontFamily="mono" fontSize={12} letterSpacing={1.2} textTransform="uppercase">
               {newAgentHere.busy ? 'Making a new agent…' : 'New agent here'}
-            </Text>
+            </PlainText>
           </XStack>
         ) : null}
       </YStack>

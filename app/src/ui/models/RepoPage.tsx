@@ -7,12 +7,16 @@ import AppButton from '../common/AppButton';
 import PageHeader from '../common/PageHeader';
 import Screen from '../common/Screen';
 import Note from '../env/parts/Note';
+import { useSlidInList } from '../nav/slidIn';
 import ProgressBar from '../env/parts/ProgressBar';
 import { modelErrorText } from './logic/errorText';
 import { variantLine, variantTitle } from './logic/modelText';
 import DatesLine from './parts/DatesLine';
 import ModelPanel from './parts/ModelPanel';
 import { useAction } from './useAction';
+
+// Panels drawn as the page opens; the rest come once it has slid in.
+const FIRST_SCREEN_PANELS = 3;
 
 // One Hugging Face repository's models at its latest commit, smallest
 // first, each with its size and verdict (its files alone: the context's
@@ -35,6 +39,7 @@ export default function RepoPage({ repo }: { repo: string }) {
   }, [repo]);
 
   useEffect(load, [load, changes]);
+  const variants = useSlidInList(models?.variants ?? [], FIRST_SCREEN_PANELS);
 
   return (
     <Screen>
@@ -53,7 +58,7 @@ export default function RepoPage({ repo }: { repo: string }) {
           <DatesLine dates={models.dates} />
           {models.gated ? <Note>Gated: accept its terms on huggingface.co and save a token from that account first.</Note> : null}
           {models.variants.length === 0 ? <Note>No GGUF model we can run in this repository.</Note> : null}
-          {models.variants.map((v) => (
+          {variants.map((v) => (
             <VariantPanel
               key={v.files[0]?.path ?? variantTitle(v)}
               repo={models.repo}

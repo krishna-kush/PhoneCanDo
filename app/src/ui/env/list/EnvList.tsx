@@ -7,10 +7,14 @@ import { useModelsStore } from '../../../state/models';
 import AppButton from '../../common/AppButton';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
+import { useSlidIn, useSlidInList } from '../../nav/slidIn';
 import { buildEnvSections } from '../logic/sections';
 import { useAddSystem } from '../new-env/useAddSystem';
 import Note from '../parts/Note';
 import SystemCard from './SystemCard';
+
+// Cards drawn as the page opens; the rest come once it has slid in.
+const FIRST_SCREEN_CARDS = 6;
 
 // Systems, from the drawer: every env (system) as one card with its OS,
 // size and how many agents run on it (a download shows its bar); a tap
@@ -24,13 +28,19 @@ export default function EnvList() {
   const push = useAppStore((s) => s.push);
   const addSystem = useAddSystem();
   const sections = useMemo(() => buildEnvSections(envs, images, agents), [envs, images, agents]);
+  const shown = useSlidInList(sections, FIRST_SCREEN_CARDS);
   const play = getBuildChannel() === 'play';
+  const slidIn = useSlidIn();
 
+  // Once the page is in, not on the tap: the re-read re-renders the drawer
+  // and Home too, and the page's first draw waits for all of it, so on the
+  // tap the page only showed up after its slide had ended.
   useEffect(() => {
+    if (!slidIn) return;
     useLinuxStore.getState().refreshLinux();
     useAgentsStore.getState().refreshAgents();
     useModelsStore.getState().refreshModels();
-  }, []);
+  }, [slidIn]);
 
   return (
     <Screen>
@@ -41,7 +51,7 @@ export default function EnvList() {
           : 'A system is a base OS. Each agent gets its own machine made from one, and what it installs stays in that machine.'}
       </Note>
       {!linuxAvailable && !play ? <Note>Linux isn't available in this build, so agents use Android's own shell.</Note> : null}
-      {sections.map((s) => (
+      {shown.map((s) => (
         <SystemCard key={s.key} env={s.env} rows={s.rows} onOpen={() => push({ name: 'system', envId: s.env?.id ?? null })} />
       ))}
       {sections.length === 0 ? <Note>Nothing here yet.</Note> : null}

@@ -4,6 +4,7 @@ import AppCard from '../../common/AppCard';
 import AppInput from '../../common/AppInput';
 import SectionTitle from '../../common/SectionTitle';
 import Note from '../../env/parts/Note';
+import { useSlidInList } from '../../nav/slidIn';
 import ProgressBar from '../../env/parts/ProgressBar';
 import { listKey } from '../logic/filters';
 import { hitLine } from '../logic/modelText';
@@ -19,9 +20,11 @@ const SEARCH_DELAY_MS = 400;
 // list; clearing the field goes back. The filters apply to both, and More
 // keeps them. A size filter is matched natively over a few Hub pages, so a
 // page can come back empty while More can still find some. A row shows its
-// size when we know it and opens its repository's models.
-export default function Search({ onOpen }: { onOpen: (repo: string) => void }) {
+// size when we know it and opens its repository's models. When it is in
+// the first screen, `firstScreen` rows draw as the page opens (ModelsPage.tsx).
+export default function Search({ firstScreen, onOpen }: { firstScreen: number; onOpen: (repo: string) => void }) {
   const { query, filters, hits, next, listed, loading, error, setQuery, setFilters, load, more } = useSearch();
+  const rows = useSlidInList(hits ?? [], firstScreen);
   const words = query.trim();
   const key = listKey(query, filters);
   const current = listed === key;
@@ -54,7 +57,7 @@ export default function Search({ onOpen }: { onOpen: (repo: string) => void }) {
       <HfFilters filters={filters} onChange={setFilters} />
       {current && hits?.length === 0 ? <Note>{next ? 'Nothing found yet. More looks further.' : 'Nothing found.'}</Note> : null}
       {current
-        ? hits?.map((h) => (
+        ? rows.map((h) => (
             <AppCard key={h.repo} title={h.repo} subtitle={hitLine(h)} onPress={() => onOpen(h.repo)}>
               <DatesLine dates={h.dates} />
             </AppCard>

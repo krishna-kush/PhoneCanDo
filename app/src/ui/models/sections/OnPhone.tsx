@@ -8,6 +8,7 @@ import ConfirmDialog from '../../common/ConfirmDialog';
 import SectionTitle from '../../common/SectionTitle';
 import { formatBytes } from '../../env/logic/format';
 import Note from '../../env/parts/Note';
+import { useSlidInList } from '../../nav/slidIn';
 import ContextSetting from '../context/ContextSetting';
 import { canChoose, contextButtonText, reducedLine } from '../logic/context';
 import { modelLine, sourceText } from '../logic/modelText';
@@ -17,9 +18,10 @@ import { useAction } from '../useAction';
 // The models on the phone, each with its verdict, a line when we serve it
 // with less context than it was trained for, its Context setting and Delete
 // (refused while an agent is set to it), and Import: a GGUF file from the
-// phone's storage.
-export default function OnPhone() {
+// phone's storage. `firstScreen` panels draw as the page opens (ModelsPage.tsx).
+export default function OnPhone({ firstScreen }: { firstScreen: number }) {
   const models = useModelsStore((s) => s.models);
+  const shown = useSlidInList(models, firstScreen);
   const [doomed, setDoomed] = useState<LocalModel | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const deleting = useAction();
@@ -35,7 +37,7 @@ export default function OnPhone() {
     <>
       <SectionTitle>On this phone</SectionTitle>
       {models.length === 0 ? <Note>No models yet: download one below, or import a GGUF file.</Note> : null}
-      {models.map((m) => {
+      {shown.map((m) => {
         const reduced = reducedLine(m);
         const choosable = canChoose(m.contextRange) || m.contextChoice != null;
         return (

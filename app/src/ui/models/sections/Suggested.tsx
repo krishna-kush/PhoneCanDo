@@ -5,18 +5,21 @@ import AppButton from '../../common/AppButton';
 import SectionTitle from '../../common/SectionTitle';
 import { formatBytes } from '../../env/logic/format';
 import Note from '../../env/parts/Note';
+import { useSlidInList } from '../../nav/slidIn';
 import ModelPanel from '../parts/ModelPanel';
 import { useAction } from '../useAction';
 
 // Our suggestions, best first, each with its verdict for this phone (files
 // plus the context's memory). Search below stays open to any model.
-export default function Suggested() {
+// `firstScreen` panels draw as the page opens (ModelsPage.tsx).
+export default function Suggested({ firstScreen }: { firstScreen: number }) {
   const suggested = useModelsStore((s) => s.suggested);
+  const shown = useSlidInList(suggested, firstScreen);
   if (suggested.length === 0) return null;
   return (
     <>
       <SectionTitle>Suggested</SectionTitle>
-      {suggested.map((s) => (
+      {shown.map((s) => (
         <SuggestedPanel key={`${s.repo}/${s.file.path}`} model={s} />
       ))}
     </>

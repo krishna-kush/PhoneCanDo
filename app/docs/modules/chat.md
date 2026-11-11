@@ -71,6 +71,11 @@ lists every agent with its engine state and makes the tapped one active
   (`ui/nav/transitionStore.ts`), not a React effect, so Back starts its
   slide on the UI thread before any render. A new page slides two frames
   after it commits, so its first draw does not eat the slide's start.
+- A page draws its first screen on the tap and the rest once its slide is
+  over (`ui/nav/slidIn.ts`): `AfterSlide` holds a part below the fold and
+  `useSlidInList` a list's rows past it, until the stack first rests with
+  the page drawn. That flip is a React transition, so a tap right after
+  the slide is not held up by the rest of the page.
   Nothing above the stack re-renders for a transition: App does not
   subscribe to the stack, and Home reads whether it is in front from
   `ui/nav/homeInFront.ts`.

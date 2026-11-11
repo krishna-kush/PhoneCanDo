@@ -8,6 +8,7 @@ import AppInput from '../../common/AppInput';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import SectionTitle from '../../common/SectionTitle';
+import { useSlidInList } from '../../nav/slidIn';
 import { useAppStore } from '../../../state/app';
 import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { linuxFailureText } from '../logic/errorText';
@@ -15,6 +16,9 @@ import { formatCount } from '../logic/format';
 import { imageRefProblem, parseImageRef } from '../logic/imageRef';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
+
+// Official systems drawn as the page opens; the rest come once it has slid in.
+const FIRST_SCREEN_CARDS = 6;
 
 // Download a Linux, step 1: which OS, for the agent New agent picked
 // (`pick`; Add system picks it after the last look). The free name field
@@ -37,6 +41,7 @@ export default function OsPicker({ pick }: { pick?: AgentPick }) {
   }, []);
 
   useEffect(load, [load]);
+  const shown = useSlidInList(list ?? [], FIRST_SCREEN_CARDS);
 
   const submit = () => {
     const ref = parseImageRef(name);
@@ -90,7 +95,7 @@ export default function OsPicker({ pick }: { pick?: AgentPick }) {
       ) : list == null ? (
         <ProgressBar label="Loading the list" fraction={null} />
       ) : (
-        list.map((os) => (
+        shown.map((os) => (
           <AppCard
             key={os.name}
             title={os.name}

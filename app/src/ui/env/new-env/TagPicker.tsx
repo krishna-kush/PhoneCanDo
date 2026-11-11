@@ -6,6 +6,7 @@ import AppCard from '../../common/AppCard';
 import AppInput from '../../common/AppInput';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
+import { useSlidInList } from '../../nav/slidIn';
 import { useAppStore } from '../../../state/app';
 import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { linuxErrorText, linuxFailureText } from '../logic/errorText';
@@ -15,6 +16,9 @@ import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
 
 const SEARCH_DELAY_MS = 400;
+
+// Versions drawn as the page opens; the rest come once it has slid in.
+const FIRST_SCREEN_CARDS = 8;
 
 // Download another Linux, step 2: which version. Native lists only tags with an arm64
 // build (the rest would fail on this phone); the usual ones (latest, plain
@@ -61,11 +65,12 @@ export default function TagPicker({ repo, pick }: { repo: string; pick?: AgentPi
     return () => clearTimeout(timer);
   }, [fetchPages, query]);
 
-  const shown = rankTags(tags);
+  const ranked = rankTags(tags);
+  const shown = useSlidInList(ranked, FIRST_SCREEN_CARDS);
   const now = Date.now();
   const q = query.trim();
   let empty: string | null = null;
-  if (!loading && !error && shown.length === 0) {
+  if (!loading && !error && ranked.length === 0) {
     if (q) empty = `No arm64 version matches “${q}”.`;
     else if (next == null) empty = linuxErrorText('no_arm64');
     else empty = 'No arm64 versions on the first pages yet.';
