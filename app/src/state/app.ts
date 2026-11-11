@@ -7,7 +7,7 @@ import { createPrefsSlice, type PrefsSlice } from './app/prefs';
 import { createTelemetrySlice, type TelemetrySlice } from './app/telemetry';
 
 export { selectTerminal } from './app/navigation';
-export type { NewAgentTarget, PickedTag, Route, TerminalSession } from './app/routes';
+export type { NewAgentTarget, PickedTag, Route, SettingsPageId, TerminalSession } from './app/routes';
 export type { ThemeMode } from './app/prefs';
 
 export type AppState = NavigationSlice & PrefsSlice & TelemetrySlice;

@@ -12,6 +12,7 @@ import { HIT, useTheme } from '../common/globals';
 import LogoMark from '../common/LogoMark';
 import { useHomeInFront } from '../nav/homeInFront';
 import MenuHead from './MenuHead';
+import MemoryChip from '../memory/indicators/MemoryChip';
 import ReadingChip from '../models/parts/ReadingChip';
 import { webGoHome } from './webNavigation';
 
@@ -22,7 +23,8 @@ import { webGoHome } from './webNavigation';
 // its home shows (agentItems) and to its page; the agent's face heads it
 // (MenuHead) and each row has a shell-ish hint (`cd ~`, `>_`). While the agent's local model
 // reads a prompt, a short line says so beside the name (ReadingChip),
-// never changing the bar's height.
+// never changing the bar's height; so does the RAM warning's countdown
+// while memory is short and the warning is closed (MemoryChip).
 export default function HomeHeader() {
   const t = useTheme();
   const agent = useActiveAgent();
@@ -83,6 +85,7 @@ export default function HomeHeader() {
       </XStack>
 
       <ReadingChip agentId={agent?.id ?? null} />
+      <MemoryChip />
       <CardMenu items={menuItems} label="Menu" offset={-24} head={<MenuHead agentId={agent?.id ?? null} />} />
     </XStack>
   );

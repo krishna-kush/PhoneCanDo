@@ -72,13 +72,16 @@ export function installErrorText(failure: InstallFailure): string {
 }
 
 const START_TEXT: Record<EngineStartError, string> = {
-  too_many_running: 'Three agents are already running. Stop one first.',
+  too_many_running:
+    "You're at your cap for agents running at once, and none has sat idle long enough to make room. Stop one, or raise the cap in Settings → Agents & models.",
   image_not_ready: "This agent's machine isn't ready yet. Wait for its setup to finish.",
   engine_missing: "This build doesn't include the agent's program.",
   port_unavailable: "We couldn't find a free port to start on. Try again.",
   start_failed: "The agent didn't start. Try again.",
   agent_not_installed: "This agent isn't installed in its machine yet. Install it on its page: tap its name up top, then its ›.",
   model_unavailable: "This agent's local model can't run right now.",
+  too_many_models:
+    "You're at your cap for local models loaded at once. Stop one on the Models page, or raise the cap in Settings → Agents & models.",
 };
 
 export function startErrorText(code: EngineStartError): string {

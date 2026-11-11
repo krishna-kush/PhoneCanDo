@@ -3,8 +3,12 @@
 // signal: rows say the state in words too.
 import type { EngineState } from '../../../engine/agents/records';
 
-/** awake: running · busy: starting, stopping or installing · asleep: stopped · oops: failed or died. */
-export type Mood = 'awake' | 'busy' | 'asleep' | 'oops';
+/**
+ * awake: running · busy: starting, stopping or installing · asleep: stopped ·
+ * oops: failed or died · sweaty: A-01 itself while the phone is nearly out
+ * of memory (the RAM warning; no engine state maps to it).
+ */
+export type Mood = 'awake' | 'busy' | 'asleep' | 'oops' | 'sweaty';
 
 /** The loader's poses (theme/logo.json), toned down so a row stays a row. */
 export type Pose = 'square' | 'wide' | 'tall';

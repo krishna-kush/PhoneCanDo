@@ -1,6 +1,6 @@
 // The JS contract of the phonecando-models native module (its maps:
 // RecordMaps.kt, CatalogOps.kt, JobReporter.kt). Local models are GGUF
-// files on the phone, served by llama-server in the runner's model slot.
+// files on the phone, served by llama-server in the runner (one server per loaded model).
 
 export type ModelId = string;
 

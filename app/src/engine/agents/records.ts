@@ -40,6 +40,7 @@ export type EngineStatus = {
 
 /** Typed reasons a start is refused. */
 export type EngineStartError =
+  /** The user's cap on agents at once is reached and none has been idle long enough to stop for room. */
   | 'too_many_running'
   | 'image_not_ready'
   | 'engine_missing'
@@ -47,5 +48,7 @@ export type EngineStartError =
   | 'start_failed'
   /** Its kind has an install and none finished yet (installAgent). */
   | 'agent_not_installed'
-  /** Its local model cannot serve it; the message says why (gone, too big, another model loaded, ...). */
-  | 'model_unavailable';
+  /** Its local model cannot serve it; the message says why (gone, too big, ...). */
+  | 'model_unavailable'
+  /** Its local model is not loaded and the user's cap on models at once is reached. */
+  | 'too_many_models';

@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { XStack } from 'tamagui';
 import type { LocalModel } from '../../../engine/models/types';
 import { importFromPhone, remove } from '../../../state/flows/modelActions';
+import { useAgentsStore } from '../../../state/agents';
 import { useModelsStore } from '../../../state/models';
 import AppButton from '../../common/AppButton';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import SectionTitle from '../../common/SectionTitle';
+import { engineIsUp } from '../../env/logic/engineState';
 import { formatBytes } from '../../env/logic/format';
 import Note from '../../env/parts/Note';
+import StopModelButton from '../../memory/StopModelButton';
 import { useSlidInList } from '../../nav/slidIn';
 import ContextSetting from '../context/ContextSetting';
 import { canChoose, contextButtonText, reducedLine } from '../logic/context';
@@ -16,11 +19,15 @@ import ModelPanel from '../parts/ModelPanel';
 import { useAction } from '../useAction';
 
 // The models on the phone, each with its verdict, a line when we serve it
-// with less context than it was trained for, its Context setting and Delete
-// (refused while an agent is set to it), and Import: a GGUF file from the
-// phone's storage. `firstScreen` panels draw as the page opens (ModelsPage.tsx).
+// with less context than it was trained for, Stop while it is loaded (its
+// running agents stop first, and it asks first when there are any), its
+// Context setting and Delete (refused while an agent is set to it), and
+// Import: a GGUF file from the phone's storage. `firstScreen` panels draw
+// as the page opens (ModelsPage.tsx).
 export default function OnPhone({ firstScreen }: { firstScreen: number }) {
   const models = useModelsStore((s) => s.models);
+  const agents = useAgentsStore((s) => s.agents);
+  const statuses = useAgentsStore((s) => s.statuses);
   const shown = useSlidInList(models, firstScreen);
   const [doomed, setDoomed] = useState<LocalModel | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -42,6 +49,13 @@ export default function OnPhone({ firstScreen }: { firstScreen: number }) {
         const choosable = canChoose(m.contextRange) || m.contextChoice != null;
         return (
           <ModelPanel key={m.id} title={m.name} lines={[modelLine(m), sourceText(m.source)]} dates={m.dates} ram={m.ram} note={reduced}>
+            {m.serving ? (
+              <StopModelButton
+                modelId={m.id}
+                name={m.name}
+                agentNames={agents.filter((a) => a.model === m.id && engineIsUp(statuses[a.id]?.state)).map((a) => a.name)}
+              />
+            ) : null}
             {editing === m.id ? <ContextSetting model={m} onDone={() => setEditing(null)} /> : null}
             <XStack gap="2">
               {choosable && editing !== m.id ? (

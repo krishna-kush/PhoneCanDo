@@ -3,15 +3,15 @@ import { useAppStore } from '../../state/app';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
 import PlainText from '../common/PlainText';
-import SectionTitle from '../common/SectionTitle';
 import ThumbIcon from '../common/ThumbIcon';
 
 function Thumb({ up }: { up: boolean }) {
   return <ThumbIcon up={up} size={26} />;
 }
 
-// Settings → Update. Lite: the full-build pitch and its launch prompt
-// switch. Full: the GitHub update check. Play: Play keeps it current.
+// Settings → Updates, the body of its page (pages/UpdatesPage.tsx). Lite:
+// the full-build pitch and its launch prompt switch. Full: the GitHub
+// update check. Play: Play keeps it current.
 export default function UpdateSection({ channel }: { channel: string }) {
   const requestUpdatePrompt = useAppStore((s) => s.requestUpdatePrompt);
   const updatePromptMuted = useAppStore((s) => s.updatePromptMuted);
@@ -21,7 +21,6 @@ export default function UpdateSection({ channel }: { channel: string }) {
   if (channel === 'lite') {
     return (
       <>
-        <SectionTitle>Update</SectionTitle>
         <AppCard
           title="Starter build: a brain in a jar"
           subtitle="Chat and terminal only. No eyes, no hands."
@@ -49,7 +48,6 @@ export default function UpdateSection({ channel }: { channel: string }) {
 
   return (
     <>
-      <SectionTitle>Update</SectionTitle>
       <AppCard
         title={channel === 'play' ? 'Updates come through Play' : 'Full build'}
         subtitle={

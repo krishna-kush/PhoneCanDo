@@ -1,6 +1,8 @@
 // Agents and their engines (contract: agents/records.ts). Several engines
-// run at once, one per agent, in the runner's foreground service: at most
-// three, the least recently used idle one stopped to make room. Each engine
+// run at once, one per agent, in the runner's foreground service: as many as
+// the user's cap allows (none by default, runLimits.ts), the least recently
+// used idle one stopped to make room past it; the memory guard (memory.ts)
+// watches the phone's RAM whatever the cap. Each engine
 // has its own port and password, which stay native: pairing the web UI, the
 // TUI's start recipe and the idle check are made there from the kind's
 // manifest. Reads answer empty where the native module is absent; changes
@@ -53,6 +55,16 @@ export function stopModelAgents(modelId: string): Promise<AgentId[]> {
   return nativeRunner().stopModelAgents(modelId);
 }
 
+/**
+ * Unloads a local model: every agent on it stops first, then its server.
+ * Resolves the agents it stopped. A native build from before it stops the
+ * agents, and the server goes with the last of them.
+ */
+export function stopModel(modelId: string): Promise<AgentId[]> {
+  const m = nativeRunner();
+  return typeof m.stopModel === 'function' ? m.stopModel(modelId) : m.stopModelAgents(modelId);
+}
+
 /** Stops the agent's engine, then forgets the agent. The image is the Linux module's to delete. */
 export function deleteAgent(id: AgentId): Promise<boolean> {
   return nativeRunner().deleteAgent(id);
@@ -82,6 +94,7 @@ const START_ERRORS: EngineStartError[] = [
   'start_failed',
   'agent_not_installed',
   'model_unavailable',
+  'too_many_models',
 ];
 
 /** Any start rejection as an EngineStartFailure (native puts the code first in the message). */

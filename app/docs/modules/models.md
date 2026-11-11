@@ -4,8 +4,8 @@
 local models on the phone: GGUF files found on Hugging Face or picked from
 the phone, downloaded or copied in and checked by the local model engine
 (`lme/`, rules and RAM gate in `lme/docs/README.md`), with each model's RAM
-verdict. Apart from the runner's model slot (`runner.md` → The model
-slot), it is the only app module that imports `lme/`, built from source
+verdict. Apart from the runner's model servers (`runner.md` → Local model
+servers), it is the only app module that imports `lme/`, built from source
 through `app/plugins/withLmeCompositeBuild.js`.
 
 It packages `libllama-server.so` in every channel, play included: the
@@ -115,9 +115,10 @@ serve one.
   so.
 - **Chosen**: kept on the model in `models.json` (`context`), for every
   agent on it.
-- **On the card**: while a server runs, its own context (the runner sets
-  `ModelsHost.serving`, since the server's memory would make a new pick
-  look smaller); else what a start would get now.
+- **On the card**: while its server runs, its own context (the runner
+  sets `ModelsHost.serving` to every model it serves, since the server's
+  memory would make a new pick look smaller); else what a start would get
+  now.
 
 ## Jobs
 
@@ -152,8 +153,10 @@ JS; a file the key cannot open is deleted.
 ## Screens
 
 `src/ui/models/`: the Models page (Env → Models, on every channel where
-the phone can run local models): In progress, On this phone (Context;
-Delete, refused while an agent is set to the model; Import), Suggested,
+the phone can run local models): In progress, On this phone (Stop while
+it is loaded, which stops the agents on it first and asks before when
+there are any; Context; Delete, refused while an agent is set to the
+model; Import), Suggested,
 Hugging Face with a repository's variants, and the token. The list opens
 on the most downloaded chat models; typing searches after a pause. Sort
 and Filters (a sheet: Size, License, chat models only) are two half-width
@@ -178,8 +181,8 @@ agents on the model (`state/flows/modelContext.ts`), which brings the
 server up with the new context.
 
 While the model reads a prompt for the agent in front, the app bar shows
-"Reading prompt · 4.1k" (`parts/ReadingChip.tsx`, from `runner.md` → The
-model slot) without changing its height. Pure parts live in
+"Reading prompt · 4.1k" (`parts/ReadingChip.tsx`, from `runner.md` → Local
+model servers) without changing its height. Pure parts live in
 `src/ui/models/logic/` and `src/state/flows/logic/`, checked by
 `scripts/vectors/test_models.js`.
 

@@ -18,9 +18,9 @@ export type PrefsSlice = {
   themeMode: ThemeMode;
   /** The terminal's extra keys stay up with the keyboard down too (else they come and go with it). */
   extraKeysSticky: boolean;
-  /** Bumped by Settings → Update; UpdateDialog re-checks GitHub on change. */
+  /** Bumped by Settings → Updates; UpdateDialog re-checks GitHub on change. */
   updatePromptNonce: number;
-  /** Lite: stop opening the full-build pitch on launch (Settings → Update). */
+  /** Lite: stop opening the full-build pitch on launch (Settings → Updates). */
   updatePromptMuted: boolean;
   /**
    * Restricted-settings guide progress: 1 Android's note, 2 App info (Allow

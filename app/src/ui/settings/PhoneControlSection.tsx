@@ -9,9 +9,7 @@ import { useAccessibilitySteps } from '../accessibility/useAccessibilitySteps';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
 import PlainText from '../common/PlainText';
-import SectionTitle from '../common/SectionTitle';
 import ThumbIcon from '../common/ThumbIcon';
-import AfterSlide from '../nav/AfterSlide';
 import { usePageActive } from '../nav/pageActive';
 
 const runnerAvailable = runner.isRunnerAvailable();
@@ -20,11 +18,11 @@ const runnerAvailable = runner.isRunnerAvailable();
 const UNLOCK_WHY =
   "Why unlock? It's your yes: the agent can see and tap your phone only while it's unlocked, and it locks again when you say so or PhoneCanDo restarts.";
 
-// Settings → Phone control. Full: what it is for, the one-time Accessibility
-// setup, then the biometric lock that gates every session. Each explanation
-// steps aside once its key is turned: the Accessibility lines once the switch
-// is on, the unlock reason once unlocked. Lite and play: what the build
-// cannot do.
+// Settings → Phone control, on Settings itself above the rows.
+// Full: what it is for, the one-time Accessibility setup, then the
+// biometric lock that gates every session. Each explanation steps aside
+// once its key is turned: the Accessibility lines once the switch is on,
+// the unlock reason once unlocked. Lite and play: what the build cannot do.
 export default function PhoneControlSection({ channel }: { channel: string }) {
   const inFront = usePageActive();
   const a11y = useAccessibilitySteps();
@@ -74,56 +72,49 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
 
   if (channel !== 'full') {
     return (
-      <>
-        <SectionTitle>Phone control</SectionTitle>
-        <PlainText fontSize={14} color="muted">
-          This {channel} build has no screen automation. Notifications, clipboard, and opening
-          links still work.
-        </PlainText>
-      </>
+      <PlainText fontSize={14} color="muted">
+        This {channel} build has no screen automation. Notifications, clipboard, and opening
+        links still work.
+      </PlainText>
     );
   }
 
   return (
     <>
-      <SectionTitle>Phone control</SectionTitle>
       {switchedOn ? null : (
         <PlainText fontSize={14} color="muted">
           {COPY.why}
         </PlainText>
       )}
       <AccessibilitySetup a11y={a11y} />
-      {/* Below a phone's first screen (SettingsScreen.tsx). */}
-      <AfterSlide>
-        {switchedOn ? null : (
-          <PlainText fontSize={13} color="muted">
-            {COPY.api}
-          </PlainText>
-        )}
-        <AppCard
-          title={unlocked ? 'Unlocked' : 'Locked'}
-          subtitle={
-            unlocked
-              ? 'The agent can act on the phone until you lock it or PhoneCanDo restarts.'
-              : 'Biometric unlock is required before the agent can act on the phone.'
-          }
-          chevron={false}
-          icon={<ThumbIcon up={unlocked} size={26} />}
-        />
-        <AppButton onPress={toggleLock}>
-          {unlocked ? 'Lock phone control' : 'Unlock with biometrics'}
-        </AppButton>
-        {trustMsg ? (
-          <PlainText fontSize={13} color="muted">
-            {trustMsg}
-          </PlainText>
-        ) : null}
-        {unlocked ? null : (
-          <PlainText fontSize={13} color="muted">
-            {UNLOCK_WHY}
-          </PlainText>
-        )}
-      </AfterSlide>
+      {switchedOn ? null : (
+        <PlainText fontSize={13} color="muted">
+          {COPY.api}
+        </PlainText>
+      )}
+      <AppCard
+        title={unlocked ? 'Unlocked' : 'Locked'}
+        subtitle={
+          unlocked
+            ? 'The agent can act on the phone until you lock it or PhoneCanDo restarts.'
+            : 'Biometric unlock is required before the agent can act on the phone.'
+        }
+        chevron={false}
+        icon={<ThumbIcon up={unlocked} size={26} />}
+      />
+      <AppButton onPress={toggleLock}>
+        {unlocked ? 'Lock phone control' : 'Unlock with biometrics'}
+      </AppButton>
+      {trustMsg ? (
+        <PlainText fontSize={13} color="muted">
+          {trustMsg}
+        </PlainText>
+      ) : null}
+      {unlocked ? null : (
+        <PlainText fontSize={13} color="muted">
+          {UNLOCK_WHY}
+        </PlainText>
+      )}
     </>
   );
 }

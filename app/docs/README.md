@@ -15,12 +15,14 @@ limits) stay in the repo-root `docs/` tree.
 ## Modules
 
 - [`modules/runner.md`](modules/runner.md) — engine host: agents and kinds,
-  engines (server or TUI), installs, the local model slot, the foreground
-  service, notifications and telemetry counters.
+  engines (server or TUI), installs, the local model servers, run limits
+  and the memory guard, the foreground service, notifications and
+  telemetry counters.
 - [`modules/terminal.md`](modules/terminal.md) — JNI PTY, xterm renderer,
   input/sizing contract and terminal sessions (agent TUI or image shell).
 - [`modules/chat.md`](modules/chat.md) — Home: the active agent's web UI or
-  TUI, and the navigation around it (page stack, drawer, Back).
+  TUI, the navigation around it (page stack, drawer, Back) and the RAM
+  warning over it.
 - [`modules/models.md`](modules/models.md) — local models: files, Hugging
   Face, downloads and imports, RAM verdicts, context and the token.
 - [`modules/bridge.md`](modules/bridge.md) — loopback bridge, per-agent tokens,

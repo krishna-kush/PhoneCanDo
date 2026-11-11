@@ -100,6 +100,28 @@ lists every agent with its engine state and makes the tapped one active
   steps, so Back returns to where the run began. A deleted agent's pages
   close. A notification tap brings its place to the front, but an open
   terminal stays on top.
+- Settings (`ui/settings/SettingsScreen.tsx`) shows Phone control on
+  itself, at the top; under it a short hub of one row per page (Look &
+  feel, Agents & models, Privacy, Updates, About), each saying what is
+  inside and how it is set now; a row opens its page (the
+  `settings-page` route).
+
+## The RAM warning
+
+The runner's memory guard (`engine/memory.ts`, contract
+`NativeMemoryStatus`) feeds `state/memory.ts`, and
+`state/logic/memoryEpisode.ts` decides when the warning opens by itself:
+once when memory runs short and once more if it turns critical, not again
+until the level has stayed ok for three minutes. The warning (`ui/memory/`,
+mounted once over everything by `MemoryGuard`) is a sheet from the bottom:
+A-01 sweating, the phone's RAM, the countdown to the runner stopping one
+agent itself, the running agents (each with Stop) and the loaded local
+models (Stop asks in place: the agents on it stop first). Closed with
+"I'll handle it", a chip in Home's or a terminal's bar, or a pill at the
+foot of any other page, keeps the countdown in sight and opens it again.
+After an automatic stop a line drops in at the top saying who was stopped.
+Settings → Agents & models sets the caps (`engine/runLimits.ts`, none by
+default) and opens the warning at any level.
 
 ## TUI home
 

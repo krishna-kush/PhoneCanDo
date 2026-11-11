@@ -3,8 +3,9 @@
 // page's words and lines, a prompt being read, its error sentences, the
 // model choices, a model's dates line, the Hugging Face list's filters and
 // a model's context and its slider (src/ui/models/logic/) and the start
-// failure text for model_unavailable (src/ui/env/logic/). Imports the
-// real pure modules (Node 22.18+ strips their types), so these cannot drift.
+// failure text for model_unavailable and the caps (src/ui/env/logic/).
+// Imports the real pure modules (Node 22.18+ strips their types), so these
+// cannot drift.
 // Run: node test_models.js (or pnpm check:vectors)
 'use strict';
 const path = require('node:path');
@@ -276,7 +277,17 @@ const model = (over) => ({
     "This agent's local model can't run right now. Its model (qwen) is no longer on this phone.",
   );
   t('without a message', startFailureText('model_unavailable', null), "This agent's local model can't run right now.");
-  t('other codes keep their sentence', startFailureText('too_many_running', 'too_many_running: 3'), 'Three agents are already running. Stop one first.');
+  t(
+    'other codes keep their sentence',
+    startFailureText('too_many_running', 'too_many_running: 3'),
+    "You're at your cap for agents running at once, and none has sat idle long enough to make room. Stop one, or raise the cap in Settings → Agents & models.",
+  );
+  t(
+    'a models cap says where to change it',
+    startFailureText('too_many_models', 'too_many_models: 1'),
+    "You're at your cap for local models loaded at once. Stop one on the Models page, or raise the cap in Settings → Agents & models.",
+  );
+  t('a models cap code from status', startFailureCode('start-failed:too_many_models'), 'too_many_models');
   t('code from status', startFailureCode('start-failed:model_unavailable'), 'model_unavailable');
   const { linuxFailureText } = await import(src('ui/env/logic', 'errorText.ts'));
   const refused = Object.assign(new Error('model_unavailable: its model (qwen) is no longer on this phone'), { code: 'model_unavailable' });

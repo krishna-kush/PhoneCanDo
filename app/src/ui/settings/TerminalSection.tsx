@@ -4,8 +4,8 @@ import AppButton from '../common/AppButton';
 import PlainText from '../common/PlainText';
 import SectionTitle from '../common/SectionTitle';
 
-// Settings → Terminal: whether the extra keys (Esc, Tab, PgUp, arrows…) come
-// and go with the keyboard or stay up while reading too.
+// Settings → Look & feel → Terminal: whether the extra keys (Esc, Tab,
+// PgUp, arrows…) come and go with the keyboard or stay up while reading too.
 export default function TerminalSection() {
   const sticky = useAppStore((s) => s.extraKeysSticky);
   const setSticky = useAppStore((s) => s.setExtraKeysSticky);

@@ -2,8 +2,10 @@
 
 On-device coding agents for Android. Each agent is one instance of an agent
 kind (opencode built in; Claude Code, Gemini CLI installed into its machine)
-with its own engine in the runner's foreground service: up to three at
-once, each with its own bridge token (a server engine also gets its own
+with its own engine in the runner's foreground service: as many at once
+as RAM allows (no cap unless the user sets one; the runner's memory guard
+warns near the peak and stops the sleepiest itself if nobody does), each
+with its own bridge token (a server engine also gets its own
 loopback port and password); JS starts them through `ensureEngine.ts`.
 Each agent lives in its own image: VM-like Linux through proot, or Android
 without Linux. Home is the active agent's own UI (opencode's pair-loaded
@@ -19,14 +21,16 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
   the one Back handler (`useBackChain.ts`). `drawer/` is the side menu,
   opened from Home's header. `common/face/` is A-01, the site's mascot, as
   each agent's face. `models/` is the Models page; an agent's Model page is
-  in `env/agent/`.
+  in `env/agent/`. `memory/` is the RAM warning (sheet, Home chip, pill,
+  auto-stop line; pure copy and rows in `memory/logic/`), mounted once
+  over every page.
   `accessibility/` is the whole Accessibility setup guide: `guide.ts`
   (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
   hook, the step list, the Settings block and the agent's dialog.
@@ -43,11 +47,14 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `new-env/` downloads a Linux), Systems (`list/`) and Custom agents
   (`custom-agents/`); pure parts in `env/logic/`. `setup/` is first
   launch (the first agent and its machine). Settings and About are
-  app-wide only.
+  app-wide only: Phone control sits on Settings itself, then a hub of rows
+  (`settings/logic/hub.ts`), each opening its own page (`settings/pages/`),
+  the run caps among them.
 - `app/src/engine/` — the ONLY importer of native modules (`terminal.ts`
   PTY transport, `runner.ts` engine host, `linux/native.ts` Linux runtime,
   `models/native.ts` local models, `files.ts` file system, `auth.ts`
-  biometrics, `backGesture.ts` the back gesture's progress). Agents and engines:
+  biometrics, `backGesture.ts` the back gesture's progress, `memory.ts` the
+  memory guard's reading, `runLimits.ts` the run caps). Agents and engines:
   `engines.ts`, `ensureEngine.ts`, `connection.ts`; agent kinds through
   `agents/registry.ts` (each kind's `KindView`, from the runner's
   `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
@@ -64,7 +71,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   telemetry slices in `app/`), `agents.ts` (agents, engine states, the
   active agent), `linux.ts` (envs, images, job progress), `models.ts`
   (local models, downloads, job progress), `kinds.ts` (the user's own
-  kinds), `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
+  kinds), `memory.ts` (the memory guard's reading, the warning's
+  episode), `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
   value in `ui/common/keyboard/room.ts`); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
@@ -80,8 +88,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   models' Android host (lme's ModelStore over `files/models/`, Hugging Face,
   download and import jobs, the HF token in Keystore) and packages
   `libllama-server.so` on every channel (staged by `lme/llamacpp/stage.sh`);
-  the runner's model slot (`runner/models/`, `LocalModelBinding.kt` the one
-  join) serves a model to an agent. `phonecando-back-gesture` runs the
+  the runner's model servers (`runner/models/`, one per loaded model, shared
+  by its agents; `LocalModelBinding.kt` the one join) serve a model to an
+  agent. `phonecando-back-gesture` runs the
   back gesture's steps on the UI thread while a page or the drawer is open
   and tells JS the commit (optional: without it Back still works). Never Termux code in our own
   modules; programs we ship as-is (opencode, proot from the termux fork) are
@@ -90,7 +99,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   assets `agents/<id>/`, per-channel staged libs in
   `src/agents/<id>/libs/`) and never names a kind; `KindCatalog` reads
   the packaged manifests and binds `BuiltinHooks`. The runner's `engine/`
-  is the supervisor (max 3, LRU idle stop, tagged-process reaper),
+  is the supervisor (the user's optional cap with LRU idle stop,
+  tagged-process reaper), `limits/` the run caps, `memory/` the memory
+  guard (pure `MemoryPolicy`, numbers in `MemoryRules`),
   `bridge/` the loopback bridge (per-agent tokens, prompts, screen lease).
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
@@ -104,7 +115,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   APK lib dir, outside proot: opencode), `image/<id>/` (installed into a
   machine's image at creation, data only), `builtin/` (the one place code
   hooks are registered), `shared/phone-tools/`. Each kind's `agent.json`
-  drives packaging, CI matrices and the APK audit. Pure-JVM Gradle build
+  drives packaging, CI matrices, the APK audit, the website's agent cards
+  and which kind is the default (`"default": true` on at most one bundled
+  kind: the app's first agent and the site's built-in card). Pure-JVM Gradle build
   (`cd agents && ./gradlew build`) and own pnpm package
   (`pnpm -C agents check`); read `agents/AGENTS.md` (dependency law,
   naming, adding a kind). opencode's payload build and docs:
@@ -140,8 +153,13 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `lme/AGENTS.md`, docs in `lme/docs/README.md`, work in
   `lme/docs/planning/todo.md`. Pure-JVM Gradle build (`cd lme && ./gradlew
   build`): api ← gguf, api ← catalog, api + gguf ← store, api ← host,
-  gguf + host ← cli (lme-cli, for CI) (no android.*, no org.json; it never
-  imports `agents/` and `agents/` never imports it). `lme/llamacpp/` builds
+  gguf + host ← cli (lme-cli, for CI); catalog's tests also use host
+  (no android.*, no org.json; it never
+  imports `agents/` and `agents/` never imports it). Our suggested models,
+  best first, with the phone RAM each needs, are catalog's
+  `suggested/suggested.json` resource: the app reads it as
+  `Suggested.MODELS` and the website imports it (`SuggestedRamTest` keeps
+  its RAM in step with `RamRules`). `lme/llamacpp/` builds
   `libllama-server.so` from pinned sources (`pins.env`) and our
   `patches/`, stages it into `phonecando-models`, and `build-host.sh`
   builds it for Linux for CI's local-model check (`local-models.yml`).

@@ -17,18 +17,19 @@ import AppCard from '../common/AppCard';
 import ConfirmDialog from '../common/ConfirmDialog';
 import PlainText from '../common/PlainText';
 import PromptDialog from '../common/PromptDialog';
-import SectionTitle from '../common/SectionTitle';
 import ThumbIcon from '../common/ThumbIcon';
 
 type Busy = 'report' | 'forget' | 'reset' | null;
 
-// Settings → Privacy: the usage-stats switch, what it sends and what it never
-// does, and the user's tools (new anonymous id, send a report, delete my
-// data). Reset only starts a new install id; Delete my data is what removes
-// the phone's data from the server, so the copy never blurs the two.
-// `showTester` reveals our tester-device switch (long-press the
-// About card); debug builds also get the local dev host switch.
-export default function PrivacySection({ showTester }: { showTester: boolean }) {
+// Settings → Privacy, the body of its page (pages/PrivacyPage.tsx): the
+// usage-stats switch, what it sends and what it never does, and the user's
+// tools (new anonymous id, send a report, delete my data). Reset only
+// starts a new install id; Delete my data is what removes the phone's data
+// from the server, so the copy never blurs the two. For our own test
+// phones, a long-press on the usage-stats card reveals the tester-device
+// switch; debug builds also get the local dev host switch.
+export default function PrivacySection() {
+  const [showTester, setShowTester] = useState(false);
   const telemetry = useAppStore((s) => s.telemetry);
   const { ready, available, enabled, tester, devLocal } = telemetry;
   const [busy, setBusy] = useState<Busy>(null);
@@ -65,23 +66,20 @@ export default function PrivacySection({ showTester }: { showTester: boolean }) 
 
   if (ready && !available) {
     return (
-      <>
-        <SectionTitle>Privacy</SectionTitle>
-        <PlainText fontSize={14} color="muted">
-          Usage stats are not available in this build, so nothing is sent.
-        </PlainText>
-      </>
+      <PlainText fontSize={14} color="muted">
+        Usage stats are not available in this build, so nothing is sent.
+      </PlainText>
     );
   }
 
   return (
     <>
-      <SectionTitle>Privacy</SectionTitle>
       <AppCard
         title="Share anonymous usage stats"
         subtitle={!ready ? 'Loading…' : enabled ? 'On · helps find bugs' : 'Off · nothing is sent'}
         chevron={false}
         icon={<ThumbIcon up={enabled} size={26} />}
+        onLongPress={() => setShowTester((v) => !v)}
       />
       <XStack gap="2">
         <AppButton

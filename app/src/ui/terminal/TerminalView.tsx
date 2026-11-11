@@ -249,7 +249,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
         onToggleShift={toggleShift}
         onPressKey={pressExtraKey}
         keyboardVisible={keyboardOpen}
-        // With the keyboard; Settings → Terminal keeps them up while reading
+        // With the keyboard; Settings → Look & feel keeps them up while reading
         // too (the only way to send scroll keys with the keyboard down).
         visibleWhenKeyboardOpen={!extraKeysSticky}
       />

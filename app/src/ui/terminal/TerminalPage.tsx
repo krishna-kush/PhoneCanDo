@@ -3,6 +3,7 @@ import { useAgentsStore } from '../../state/agents';
 import { useAppStore, type TerminalSession } from '../../state/app';
 import CardMenu, { type CardMenuItem } from '../common/CardMenu';
 import { HIT } from '../common/globals';
+import MemoryChip from '../memory/indicators/MemoryChip';
 import { usePageActive } from '../nav/pageActive';
 import TerminalScreen from './TerminalScreen';
 
@@ -10,7 +11,8 @@ import TerminalScreen from './TerminalScreen';
 // a terminal UI, whose machine a Linux shell runs in) with its ⋮ menu,
 // over the terminal itself. Back closes it, as does the menu (no button
 // of its own: Android's Back is the way back). It holds the
-// keyboard only while it is the page in front.
+// keyboard only while it is the page in front. While memory is short, the
+// RAM warning's countdown sits in its bar (MemoryChip).
 export default function TerminalPage({ session }: { session: TerminalSession }) {
   const active = usePageActive();
   const closeTerminal = useAppStore((s) => s.closeTerminal);
@@ -46,6 +48,7 @@ export default function TerminalPage({ session }: { session: TerminalSession }) 
             {title}
           </Text>
         </YStack>
+        <MemoryChip />
         <CardMenu items={menu} label="Menu" offset={-24} />
       </XStack>
       <TerminalScreen session={session} active={active} />

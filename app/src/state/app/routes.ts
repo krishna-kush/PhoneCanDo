@@ -25,6 +25,9 @@ export type TerminalSession =
   /** A shell in the agent's Linux image; `initialInput` is typed in without Enter. */
   | { id: number; kind: 'linux'; agentId: AgentId; initialInput?: string };
 
+/** Settings' own pages, each opened from a row of the Settings hub. */
+export type SettingsPageId = 'look' | 'agents' | 'privacy' | 'updates';
+
 export type Route =
   /** One agent: its engine, the ways in and its settings rows; `fresh` right after it was made. */
   | { name: 'agent'; agentId: AgentId; fresh?: boolean }
@@ -70,7 +73,9 @@ export type Route =
   | { name: 'models' }
   /** One Hugging Face repository's models. */
   | { name: 'model-repo'; repo: string }
+  /** Settings: a short hub of rows, each opening one of its pages. */
   | { name: 'settings' }
+  | { name: 'settings-page'; page: SettingsPageId }
   | { name: 'about' }
   /** Which folder the active agent's terminal UI opens in. */
   | { name: 'folder-picker' }

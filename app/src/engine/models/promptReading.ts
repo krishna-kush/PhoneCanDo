@@ -1,4 +1,4 @@
-// The model server reading a prompt (the runner's model slot,
+// The model server reading a prompt (the runner's model servers,
 // models/prompt/ there): which model, for which agents (bound to it, with a
 // run going), how many new prompt tokens it has read and how many its
 // cache already held. The total is not known while it reads (the pinned

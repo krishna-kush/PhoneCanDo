@@ -19,6 +19,7 @@ import TagPicker from '../env/new-env/TagPicker';
 import ModelsPage from '../models/ModelsPage';
 import RepoPage from '../models/RepoPage';
 import AboutPage from '../settings/AboutPage';
+import SettingsPage from '../settings/SettingsPage';
 import SettingsScreen from '../settings/SettingsScreen';
 import FolderPicker from '../terminal/FolderPicker';
 import TerminalPage from '../terminal/TerminalPage';
@@ -66,6 +67,8 @@ function PageView({ route }: { route: Route }) {
       return <RepoPage repo={route.repo} />;
     case 'settings':
       return <SettingsScreen />;
+    case 'settings-page':
+      return <SettingsPage page={route.page} />;
     case 'about':
       return <AboutPage />;
     case 'folder-picker':

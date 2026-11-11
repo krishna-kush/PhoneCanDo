@@ -12,8 +12,10 @@ import type {
   NativeKindProblem,
   NativeKindSaved,
   NativeLaunchTarget,
+  NativeMemoryStatus,
   NativeOpenUrlAction,
   NativePromptReading,
+  NativeRunLimits,
   NativeTerminalAttach,
   NativeTerminalTheme,
   NativeUserKind,
@@ -35,6 +37,11 @@ export type RunnerModule = {
   deleteAgent(id: string): Promise<boolean>;
   setAgentModel(id: string, modelId: string | null): Promise<{ wasRunning: boolean; agent: NativeAgent }>;
   stopModelAgents(modelId: string): Promise<string[]>;
+  /** The agents on the model first, then its server. Absent from native builds older than these four. */
+  stopModel?(modelId: string): Promise<string[]>;
+  runLimits?(): NativeRunLimits;
+  setRunLimits?(limits: NativeRunLimits): NativeRunLimits;
+  memoryStatus?(): NativeMemoryStatus;
   promptReading(): NativePromptReading | null;
   startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;

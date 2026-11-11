@@ -19,9 +19,11 @@ import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
 import KeyboardTracker from './src/ui/common/keyboard/KeyboardTracker';
+import MemoryGuard from './src/ui/memory/MemoryGuard';
 import { useAgentsStore } from './src/state/agents';
 import { useAppStore } from './src/state/app';
 import { useLinuxStore } from './src/state/linux';
+import { useMemoryStore } from './src/state/memory';
 import { useModelsStore } from './src/state/models';
 import {
   consumeLaunchTarget,
@@ -102,6 +104,8 @@ export default function App() {
     // The drawer, the systems and the agent pages read these.
     useLinuxStore.getState().hydrateLinux();
     useModelsStore.getState().hydrateModels();
+    // The RAM warning listens from launch: it may need to speak first.
+    useMemoryStore.getState().hydrateMemory();
     void Promise.allSettled([hydrate(), useAgentsStore.getState().hydrateAgents()]).finally(() => {
       takeLaunchTarget();
       // Usage stats: deferred and fire-and-forget, never on the boot path.
@@ -117,6 +121,7 @@ export default function App() {
       } else if (state === 'active') {
         takeLaunchTarget();
         useAgentsStore.getState().refreshAgents();
+        useMemoryStore.getState().refreshMemory();
         startActiveAgent();
       }
     });
@@ -166,6 +171,8 @@ export default function App() {
                   }
                 />
                 <AppDrawer />
+                {/* Over Home, the pages and the drawer: the RAM warning. */}
+                <MemoryGuard />
               </View>
             )}
           </SafeAreaView>

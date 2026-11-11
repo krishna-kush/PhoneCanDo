@@ -37,7 +37,7 @@ function errText(e: unknown): string {
 
 // Full: checks GitHub two seconds after launch and only speaks up when a
 // newer build exists. Lite: the full build always exists, so the pitch opens
-// at once and the manifest fills in behind it. Settings → Update re-runs the
+// at once and the manifest fills in behind it. Settings → Updates re-runs the
 // check on demand through the store nonce. Android always shows its own
 // installer; the best this can do is download and hand the APK over.
 export default function UpdateDialog() {
@@ -85,7 +85,7 @@ export default function UpdateDialog() {
     // dev loop; only the install is refused (see downloadAndInstall).
     if (!hydrated) return;
     if (lite) {
-      // Settings → Update can silence the launch pitch; the button there
+      // Settings → Updates can silence the launch pitch; the button there
       // still opens it on demand.
       if (muted) return;
       void check(false);
@@ -100,7 +100,7 @@ export default function UpdateDialog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lite, hydrated]);
 
-  // Settings → Update.
+  // Settings → Updates.
   useEffect(() => {
     if (nonce > 0) void check(false);
   }, [nonce]);

@@ -1,92 +1,86 @@
-import { useState } from 'react';
-import { XStack } from 'tamagui';
-import { useAppStore, type ThemeMode } from '../../state/app';
-import * as runner from '../../engine/runner';
+import { useEffect, useState } from 'react';
+import { XStack, YStack } from 'tamagui';
+import { getBuildChannel } from '../../engine/runner';
+import { runLimits } from '../../engine/runLimits';
 import { installedVersion } from '../../engine/updates';
-import AppButton from '../common/AppButton';
+import { useAppStore } from '../../state/app';
 import AppCard from '../common/AppCard';
-import LicensesDialog from '../common/LicensesDialog';
+import AgentFace from '../common/face/AgentFace';
+import { settingsLine } from '../common/face/lines';
 import PageHeader from '../common/PageHeader';
+import PlainText from '../common/PlainText';
 import Screen from '../common/Screen';
 import SectionTitle from '../common/SectionTitle';
-import LogoMark from '../common/LogoMark';
-import { useScheme } from '../common/globals';
-import AfterSlide from '../nav/AfterSlide';
+import { usePageActive } from '../nav/pageActive';
+import { hubRows, type HubFacts } from './logic/hub';
 import PhoneControlSection from './PhoneControlSection';
-import PrivacySection from './PrivacySection';
-import TerminalSection from './TerminalSection';
-import UpdateSection from './UpdateSection';
 
-const runnerAvailable = runner.isRunnerAvailable();
-const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark'];
-
-// App-wide options only: about and licences, updates, theme, the terminal's
-// extra keys, phone control, privacy. Each agent's engine, reset and delete
-// live on its page (the drawer's › beside it). A phone's first screen ends
-// around Phone control's Accessibility card; what follows it there, and
-// Privacy, mount once the page has slid in.
+// Settings: Phone control on the page itself, at the top (it gates what
+// agents may do, so it is never a tap away), then a short hub of one row
+// per page (Look & feel, Agents & models, Privacy, Updates, About), each
+// with a line of what is inside and how it is set now. App-wide options
+// only: each agent's own settings live on its page. The rows re-read what
+// they show whenever Settings is back in front.
 export default function SettingsScreen() {
-  const scheme = useScheme();
+  const push = useAppStore((s) => s.push);
   const themeMode = useAppStore((s) => s.themeMode);
-  const setThemeMode = useAppStore((s) => s.setThemeMode);
-  const [licensesOpen, setLicensesOpen] = useState(false);
-  // For our own test phones: long-press About reveals the tester-device switch.
-  const [showTester, setShowTester] = useState(false);
-  const version = installedVersion();
-  // Build channel (only full ships the automation driver).
-  // Sync native call; pre-channel installs and Expo Go read as full.
-  let channel = 'full';
-  try {
-    if (runnerAvailable) channel = runner.getBuildChannel();
-  } catch {
-    // native bridge absent
-  }
+  const extraKeysSticky = useAppStore((s) => s.extraKeysSticky);
+  const telemetry = useAppStore((s) => s.telemetry);
+  const active = usePageActive();
+  const [limits, setLimits] = useState(runLimits);
+  const [line] = useState(() => settingsLine(Math.random() * 1000));
+  const [boops, setBoops] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    setLimits(runLimits());
+  }, [active]);
+
+  const facts: HubFacts = {
+    channel: getBuildChannel(),
+    themeMode,
+    extraKeysSticky,
+    limits,
+    telemetry: telemetry.ready && telemetry.available ? telemetry.enabled : null,
+    version: installedVersion().version,
+  };
 
   return (
     <Screen>
       <PageHeader kicker="app-wide" title="Settings" />
-      <SectionTitle>About</SectionTitle>
-      <AppCard
-        title="PhoneCanDo on-device agent"
-        subtitle={`v${version.version} (${version.versionCode}) · theme ${scheme} · channel ${channel}`}
-        chevron={false}
-        icon={<LogoMark size={36} />}
-        plate={false}
-        onLongPress={() => setShowTester((v) => !v)}
-      />
-      <AppButton variant="secondary" onPress={() => setLicensesOpen(true)}>
-        Licenses
-      </AppButton>
-
-      {/* Lite has no phone control; saying so belongs next to what the build is. */}
-      {channel === 'lite' ? <PhoneControlSection channel={channel} /> : null}
-
-      <UpdateSection channel={channel} />
-
-      <SectionTitle>Appearance</SectionTitle>
-      <XStack gap="2">
-        {THEME_MODES.map((mode) => (
-          <AppButton
-            key={mode}
-            flex={1}
-            variant={themeMode === mode ? 'primary' : 'secondary'}
-            onPress={() => void setThemeMode(mode)}
-            accessibilityState={{ selected: themeMode === mode }}
-          >
-            {mode}
-          </AppButton>
-        ))}
+      <XStack alignItems="center" gap="3" paddingBottom="1">
+        <YStack
+          onPress={() => setBoops((n) => n + 1)}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="A-01, the mascot. Tap it."
+        >
+          <AgentFace mood="awake" size={22} hop={boops} still={!active} />
+        </YStack>
+        <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase" flexShrink={1}>
+          {`A-01 · ${line}`}
+        </PlainText>
       </XStack>
-
-      <TerminalSection />
-
-      {channel !== 'lite' ? <PhoneControlSection channel={channel} /> : null}
-
-      <AfterSlide>
-        <PrivacySection showTester={showTester} />
-      </AfterSlide>
-
-      <LicensesDialog open={licensesOpen} onClose={() => setLicensesOpen(false)} />
+      <SectionTitle>Phone control</SectionTitle>
+      <PhoneControlSection channel={facts.channel} />
+      <SectionTitle>Everything else</SectionTitle>
+      {hubRows(facts).map((row, i) => (
+        <AppCard
+          key={row.target}
+          title={row.title}
+          subtitle={row.line}
+          icon={
+            <PlainText fontFamily="mono" fontSize={14} fontWeight="600" color="secondaryInk">
+              {String(i + 1).padStart(2, '0')}
+            </PlainText>
+          }
+          onPress={() => push(row.target === 'about' ? { name: 'about' } : { name: 'settings-page', page: row.target })}
+        >
+          <PlainText fontFamily="mono" fontSize={11} color="secondaryInk" numberOfLines={1}>
+            {row.now}
+          </PlainText>
+        </AppCard>
+      ))}
     </Screen>
   );
 }

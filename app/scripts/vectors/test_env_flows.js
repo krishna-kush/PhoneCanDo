@@ -124,7 +124,11 @@ const ui = (p) => src('ui/env/logic', p);
   t('start code', startFailureCode('start-failed:too_many_running'), 'too_many_running');
   t('start code unknown', startFailureCode('start-failed:nope'), null);
   t('start code not a failure', startFailureCode('started'), null);
-  t('too many running', startErrorText('too_many_running'), 'Three agents are already running. Stop one first.');
+  t(
+    'too many running points at the cap',
+    startErrorText('too_many_running'),
+    "You're at your cap for agents running at once, and none has sat idle long enough to make room. Stop one, or raise the cap in Settings → Agents & models.",
+  );
 
   const { stepLabel, stepFraction, progressLine, setupPhase, setupFraction } = await import(ui('steps.ts'));
   t('known step', stepLabel('detect'), 'Detecting the system');
