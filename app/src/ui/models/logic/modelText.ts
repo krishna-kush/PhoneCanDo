@@ -9,6 +9,7 @@ import type {
   ModelSource,
   ModelVariant,
   RamCheck,
+  RepoSizes,
 } from '../../../engine/models/types';
 import { formatBytes, formatCount, formatRate } from '../../env/logic/format.ts';
 import { contextText } from './context.ts';
@@ -87,9 +88,27 @@ export function variantLine(v: ModelVariant): string {
   return `${formatBytes(v.sizeBytes)}${parts}`;
 }
 
-/** "27B · 1.2M downloads · 340 likes", the size first when we know it. */
-export function hitLine(hit: ModelHit): string {
-  return [hitSizeText(hit.params), `${formatCount(hit.downloads) || '0'} downloads`, `${formatCount(hit.likes) || '0'} likes`]
+/**
+ * A repository's smallest to largest download: "1.6–61.1 GB", "800 MB–3.2 GB",
+ * "2.7 GB" for one size; '' when unknown or it holds no model we can run.
+ */
+export function sizeRangeText(sizes: RepoSizes | null | undefined): string {
+  if (!sizes || sizes.count === 0) return '';
+  const low = formatBytes(sizes.smallest);
+  const high = formatBytes(sizes.largest);
+  if (low === high) return high;
+  const unit = high.slice(high.lastIndexOf(' '));
+  return low.endsWith(unit) ? `${low.slice(0, -unit.length)}–${high}` : `${low}–${high}`;
+}
+
+/** "27B · 1.6–61.1 GB · 1.2M downloads · 340 likes": its size and its download sizes first when we know them. */
+export function hitLine(hit: ModelHit, sizes: RepoSizes | null | undefined = hit.sizes): string {
+  return [
+    hitSizeText(hit.params),
+    sizeRangeText(sizes),
+    `${formatCount(hit.downloads) || '0'} downloads`,
+    `${formatCount(hit.likes) || '0'} likes`,
+  ]
     .filter(Boolean)
     .join(' · ');
 }
@@ -106,6 +125,7 @@ export function jobLine(p: ModelProgress | undefined, paused: ModelDownload | nu
     if (p.step === 'retry' && p.retry) {
       return `Connection lost: trying again in ${p.retry.delaySec} s (try ${p.retry.attempt} of ${p.retry.max})`;
     }
+    if (p.step === 'offline') return `No network: it goes on by itself when one is back (${formatBytes(p.done)} here)`;
     if (p.step === 'verify') return `Checking what is already here: ${formatBytes(p.done)}`;
     if (p.step === 'start') return 'Starting';
     const total = p.total != null ? ` of ${formatBytes(p.total)}` : '';

@@ -79,6 +79,12 @@ internal fun ModuleDefinitionBuilder.modelFunctions(host: () -> ModelsHost, pick
     runAsync(h, promise) { h.catalog.repo(repo) }
   }
 
+  // Search hits' size ranges, { repo: { count, smallest, largest } }, for the rows that came into view.
+  AsyncFunction("repoSizes") { repos: List<String>, promise: Promise ->
+    val h = host()
+    runAsync(h, promise) { h.catalog.repoSizes(repos) }
+  }
+
   // A variant as repoModels or suggestedModels listed it: files [{ path, sizeBytes, sha256 }], dates or null.
   // Each object is its own typed argument: Expo converts a null held by a Map<String, Any?> value, but
   // not one inside an object or array held by Any ("Value is null, expected an Object"), such as a
@@ -124,9 +130,21 @@ internal fun ModuleDefinitionBuilder.modelFunctions(host: () -> ModelsHost, pick
   // The token is write-only from JS.
   Function("hasHfToken") { coded { host().tokens.has() } }
 
-  Function("setHfToken") { token: String -> coded { host().tokens.save(token) } }
+  Function("setHfToken") { token: String ->
+    coded {
+      val h = host()
+      h.tokens.save(token)
+      h.catalog.tokenChanged()
+    }
+  }
 
-  Function("clearHfToken") { coded { host().tokens.clear() } }
+  Function("clearHfToken") {
+    coded {
+      val h = host()
+      h.tokens.clear()
+      h.catalog.tokenChanged()
+    }
+  }
 }
 
 private fun model(host: ModelsHost, id: String): ModelRecord =

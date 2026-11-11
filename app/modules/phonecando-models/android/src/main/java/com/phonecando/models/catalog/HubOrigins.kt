@@ -18,8 +18,9 @@ import java.util.concurrent.ExecutorService
  * HfCatalog.origin): the day each was created on the Hub, for dates
  * (OriginDates), and its checkpoint's parameter count, for sizes
  * (ModelSizes), in one request per original we have not seen, [PARALLEL] at
- * a time. Neither ever changes, so they are kept for the process. A lookup
- * that fails leaves its models without them; it never fails the search or
+ * a time. Neither ever changes, so they are kept for the process, and so is
+ * an original the Hub says is missing or private. A lookup that fails
+ * otherwise leaves its models without them; it never fails the search or
  * the repository page.
  */
 class HubOrigins(private val executor: ExecutorService) {
@@ -62,6 +63,11 @@ class HubOrigins(private val executor: ExecutorService) {
   private fun lookup(hub: HfCatalog, origin: String) {
     try {
       facts[origin] = hub.origin(origin)
+    } catch (_: LmeException.NotFound) {
+      facts[origin] = UNKNOWN
+    } catch (_: LmeException.AccessDenied) {
+      // Missing or private alike (the Hub answers 401 for both): asking again won't change it.
+      facts[origin] = UNKNOWN
     } catch (_: LmeException) {
       // No dates or size for its models this time; the next list asks again.
     }
@@ -69,5 +75,8 @@ class HubOrigins(private val executor: ExecutorService) {
 
   private companion object {
     const val PARALLEL = 6
+
+    /** An original the Hub has no page for: kept so no list asks for it again. */
+    val UNKNOWN = OriginFacts(null, null)
   }
 }

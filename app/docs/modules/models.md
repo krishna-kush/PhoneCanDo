@@ -31,9 +31,14 @@ Typed in `src/engine/models/native.ts` (the seam) and
   server keeps its context until it starts again.
 - Hugging Face: `suggestedModels()` (no network), `searchModels(query,
   filters, limit)` and `nextModelsPage(cursor)` (by default chat models
-  most downloaded in the last 30 days; with no query and default filters
-  the first page is fetched once per process), `repoModels(repo)` (at its
-  `main` commit, variants smallest first). Every entry carries `ram`, and
+  most downloaded in the last 30 days; the last 24 pages read are kept for
+  the process and forgotten when the token changes), `repoSizes(repos)`
+  (each hit's `count`, `smallest` and `largest` download, for the rows that
+  came into view), `repoModels(repo)` (at its `main` commit, variants
+  smallest first). A repository costs one Hub request, kept for the
+  process: repoSizes and repoModels share it, a hit carries `sizes` once it
+  is kept, and repoSizes holds back while the Hub's `RateLimit` header says
+  fewer than 100 calls are left. Every entry carries `ram`, and
   `onPhone` or `downloadId` when it is already here (matched by sha256);
   suggestions, results, a repository and a model on the phone carry
   `dates`.
@@ -129,14 +134,19 @@ thread shared by every module), at most one per download or import
 - **Download** (`jobs/DownloadOps.kt`): registered in `models.json` first;
   lme fetches each file into its `.part` with `Range` resume, renames it
   only after size and sha256 match, and checks the GGUF header last.
-  Network trouble, server errors and rate limits retry by themselves
-  (`RetryPolicy`). A cancel (Pause) keeps what arrived; after an app
-  restart a download shows as paused, and Resume carries on.
+  Network trouble, server errors, rate limits (as long as `Retry-After`
+  asks) and a 401/403 from the CDN retry by themselves; with no network a
+  download waits for one without using up its tries (`RetryPolicy`,
+  `RetryLoop`). A retry goes on from where its hash got to; a Pause cuts
+  even a hanging read and keeps what arrived. A download the process or a
+  long outage stopped runs again on the next start (`jobs/ResumeList.kt`);
+  one the user paused waits for Resume.
 - **Import** (`jobs/ImportOps.kt`): the picked `content://` file is copied
   in (llama.cpp needs a real path); magic checked on the first bytes, the
   header after the copy; on any failure nothing of it stays.
 - **Events** (`jobs/JobReporter.kt`): a few per second; `step` is
-  `download`, `verify` (re-reading a resumed `.part`), `import` or `retry`.
+  `download`, `verify` (re-reading a resumed `.part`), `import`, `retry`
+  or `offline` (waiting for a network).
 - **Foreground.** A model is gigabytes, and Android ends a background
   app's process long before such a download is done. The first job starts
   the runner's foreground service (`ACTION_HOLD`, `models/ModelJobsAnchor.kt`),

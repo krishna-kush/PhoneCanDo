@@ -64,10 +64,26 @@ class HubOriginsTest {
     assertNull(origins.dates(hits[4]))
     assertEquals(2, asked.size)
 
+    // The next list asks nothing: the gone original is kept as gone too.
     origins.lookUp(hub, hits)
-    assertEquals(listOf("$api/acme/Gone$expand"), asked.drop(2))
-    assertEquals(llama, origins.dates(hub, RepoRevision("bartowski/Llama-3.2-1B-Instruct-GGUF", "0".repeat(40), false, "meta-llama/Llama-3.2-1B-Instruct", day)))
-    assertEquals(3, asked.size)
+    assertNull(origins.dates(hits[4]))
+    val revision = RepoRevision("bartowski/Llama-3.2-1B-Instruct-GGUF", "0".repeat(40), false, "meta-llama/Llama-3.2-1B-Instruct", day, emptyList())
+    assertEquals(llama, origins.dates(hub, revision))
+    assertEquals(2, asked.size)
+  }
+
+  @Test
+  fun `a lookup that fails for a passing reason is asked again by the next list`() {
+    var down = true
+    val flaky = HttpPort { url, headers -> if (down) HttpResponse(503, emptyMap(), ByteArrayInputStream("{}".toByteArray())) else port.get(url, headers) }
+    val hits = listOf(hit("bartowski/Llama-3.2-1B-Instruct-GGUF", "meta-llama/Llama-3.2-1B-Instruct"))
+    val origins = HubOrigins(executor)
+    origins.lookUp(HfCatalog(flaky), hits)
+    assertNull(origins.dates(hits[0]))
+
+    down = false
+    origins.lookUp(HfCatalog(flaky), hits)
+    assertEquals(ModelDates.OnHub(LocalDate.of(2024, 9, 18)), origins.dates(hits[0]))
   }
 
   @Test

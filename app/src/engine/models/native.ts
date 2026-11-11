@@ -5,10 +5,12 @@
 //
 // Downloads and imports resolve at once with a jobId; the job then reports
 // `onModelProgress` events (a few per second, each new step and every
-// retry at once) and ends with one `finished: true` event, `error` and
-// `errorCode` set when it failed. A dropped connection waits and resumes
-// by itself; a cancelled download stays pending with what arrived, and
-// resumeDownload carries on. Every model or download change fires
+// retry or wait for a network at once) and ends with one `finished: true`
+// event, `error` and `errorCode` set when it failed. A dropped connection
+// waits and resumes by itself, with no network it waits for one, and one
+// the app's process or a long outage stopped resumes on the next start; a
+// cancelled download stays pending with what arrived, and resumeDownload
+// carries on. Every model or download change fires
 // `onModelsChanged`: re-read listModels() / listDownloads().
 //
 // The Hugging Face token goes in (setHfToken) and never comes back out.
@@ -23,6 +25,7 @@ import type {
   ModelFilters,
   RamCheck,
   RepoModels,
+  RepoSizes,
   SearchPage,
   SuggestedModel,
 } from './types';
@@ -39,6 +42,7 @@ type ModelsModule = {
   searchModels(query: string, filters: Record<string, string | boolean>, limit: number): Promise<SearchPage>;
   nextModelsPage(cursor: string): Promise<SearchPage>;
   repoModels(repo: string): Promise<RepoModels>;
+  repoSizes(repos: string[]): Promise<Record<string, RepoSizes>>;
   startDownload(
     repo: string,
     revision: string,
@@ -189,8 +193,9 @@ export function suggestedModels(): SuggestedModel[] {
 }
 
 /**
- * GGUF repositories matching `query` (all when blank) under `filters`. The list the Models page opens on (no query,
- * the default filters) is asked of Hugging Face once per process.
+ * GGUF repositories matching `query` (all when blank) under `filters`. Native keeps the pages it read for the
+ * process (the most recent few), so the list the Models page opens on, a search typed again or a filter set back
+ * asks Hugging Face nothing; saving or clearing the token forgets them.
  */
 export function searchModels(query: string, filters: ModelFilters, limit = 30): Promise<SearchPage> {
   // Only defined fields: a null filter is left out.
@@ -208,6 +213,15 @@ export function nextModelsPage(cursor: string): Promise<SearchPage> {
 /** A repository's models at its `main` commit. Rejects access_denied for a gated or private one without a token that may see it. */
 export function repoModels(repo: string): Promise<RepoModels> {
   return callAsync((m) => m.repoModels(repo));
+}
+
+/**
+ * The size ranges of `repos` (search hits, at most 30). Native asks Hugging Face once per repository and
+ * keeps the answer, which repoModels then reuses; it leaves out one it couldn't read or held back because
+ * the Hub's call limit runs low.
+ */
+export function repoSizes(repos: string[]): Promise<Record<string, RepoSizes>> {
+  return callAsync((m) => m.repoSizes(repos));
 }
 
 // --- Jobs ---------------------------------------------------------------------

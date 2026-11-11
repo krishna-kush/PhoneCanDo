@@ -3,16 +3,19 @@ package com.phonecando.models
 import android.content.Context
 import com.phonecando.lme.api.http.UrlConnectionPort
 import com.phonecando.lme.catalog.HfCatalog
+import com.phonecando.lme.catalog.HubCallsLeft
 import com.phonecando.lme.store.ModelStore
 import com.phonecando.lme.store.layout.ModelLayout
 import com.phonecando.models.catalog.CatalogOps
 import com.phonecando.models.device.DeviceReader
+import com.phonecando.models.device.NetworkState
 import com.phonecando.models.errors.ModelErrorCode
 import com.phonecando.models.jobs.DownloadOps
 import com.phonecando.models.jobs.ImportOps
 import com.phonecando.models.jobs.JobReporter
 import com.phonecando.models.jobs.ModelJob
 import com.phonecando.models.jobs.ModelJobs
+import com.phonecando.models.jobs.ResumeList
 import com.phonecando.models.serving.ServingSource
 import com.phonecando.models.store.ModelPaths
 import com.phonecando.models.token.HfTokenVault
@@ -25,7 +28,8 @@ import java.util.concurrent.Executors
  * `files/models/` (swept once, before any job), the phone as lme sees it,
  * the Hugging Face token, the running jobs and our own executor (a download
  * takes minutes; Expo's async queue is one thread shared by every module).
- * It outlives a JS reload, so jobs keep running. The runner's model servers
+ * It outlives a JS reload, so jobs keep running, and its creation resumes
+ * the downloads the last process was running. The runner's model servers
  * read the store and the device through it and say which models they serve
  * ([serving]); the runner's service stays in the foreground while [jobs]
  * run. Events go to whichever module instances listen.
@@ -46,6 +50,8 @@ class ModelsHost private constructor(context: Context) {
   val device = DeviceReader(app)
   val store = ModelStore(ModelLayout(ModelPaths.models(app.filesDir)), http)
   val tokens = HfTokenVault(ModelPaths.token(app.filesDir))
+  val network = NetworkState(app)
+  val resumeList = ResumeList(ModelPaths.resumeList(app.filesDir))
   val jobs = ModelJobs()
   val executor: ExecutorService = Executors.newCachedThreadPool { task ->
     Thread(task, "phonecando-models").apply { isDaemon = true }
@@ -60,16 +66,21 @@ class ModelsHost private constructor(context: Context) {
   val imports = ImportOps(this, app.contentResolver)
 
   init {
-    // What an import killed mid-copy left: before any job can run.
+    // What an import killed mid-copy left: before any job can run. Then the
+    // downloads the last process left running carry on.
     try {
       store.sweep()
+      downloads.resumeInterrupted()
     } catch (_: Exception) {
       // A registry we cannot read fails every call that needs it instead.
     }
   }
 
+  /** What the Hub's last answer said is left of its API calls, kept across every [hub]. */
+  private val callsLeft = HubCallsLeft()
+
   /** The Hub, with the user's token when one is kept. */
-  fun hub(): HfCatalog = HfCatalog(http, tokens.read())
+  fun hub(): HfCatalog = HfCatalog(http, tokens.read(), callsLeft)
 
   fun addListener(listener: Listener) = listeners.addIfAbsent(listener)
 

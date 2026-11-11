@@ -24,7 +24,8 @@ import com.phonecando.models.ram.RamChecks
 class CatalogOps(private val host: ModelsHost) {
   private val origins = HubOrigins(host.executor)
   private val pages = ListPages(origins)
-  private val popular = PopularPage()
+  private val kept = KeptPages()
+  private val listings = RepoListings(host.executor)
 
   /** Our suggestions, best first; no network. Their verdicts count the KV cache at the automatic context here. */
   fun suggested(): List<Map<String, Any?>> {
@@ -48,25 +49,43 @@ class CatalogOps(private val host: ModelsHost) {
 
   /**
    * GGUF repositories matching [query] (all when blank) under [filters]
-   * ([ListPages]); the list the page opens on is kept ([PopularPage]).
+   * ([ListPages]), as kept when read before ([KeptPages]).
    */
   fun search(query: String, filters: ModelFilters, limit: Int): Map<String, Any?> {
     val hub = host.hub()
-    return pageMap(hub, popular.get(query, filters, limit) { pages.first(hub, query, filters, limit) })
+    return pageMap(hub, kept.get(KeptPages.First(query, filters, limit)) { pages.first(hub, query, filters, limit) })
   }
 
   /** The page after one whose `next` is [cursor] (a [ListCursor]), under the same filters. */
-  fun nextPage(cursor: String): Map<String, Any?> = host.hub().let { pageMap(it, pages.next(it, cursor)) }
+  fun nextPage(cursor: String): Map<String, Any?> {
+    val hub = host.hub()
+    return pageMap(hub, kept.get(KeptPages.Next(cursor)) { pages.next(hub, cursor) })
+  }
+
+  /** Forgets the kept pages: the token changed, and with it what the Hub may list. */
+  fun tokenChanged() = kept.clear()
+
+  /**
+   * The size range of each of [repos] (search hits' names) that we have
+   * or may ask for now ([RepoListings.lookUp]); one we can't is left out.
+   */
+  fun repoSizes(repos: List<String>): Map<String, Any?> {
+    val hub = host.hub()
+    val asked = repos.take(MAX_SIZES)
+    listings.lookUp(hub, asked)
+    return asked.mapNotNull { repo -> listings.kept(repo)?.let { repo to sizesMap(hub.variants(it.files)) } }.toMap()
+  }
 
   /**
    * [repo] pinned to its `main` commit, with the models in it, smallest
-   * first. A variant's verdict counts its files alone: the KV cache is known
-   * only once its header is on the phone.
+   * first, as kept when read before ([RepoListings]). A variant's verdict
+   * counts its files alone: the KV cache is known only once its header is
+   * on the phone.
    */
   fun repo(repo: String): Map<String, Any?> {
     val hub = host.hub()
-    val revision = hub.revision(repo)
-    val variants = hub.variants(hub.files(revision.repo, revision.sha))
+    val revision = listings.get(hub, repo)
+    val variants = hub.variants(revision.files)
     val device = host.device.read()
     val local = local()
     return mapOf(
@@ -108,6 +127,7 @@ class CatalogOps(private val host: ModelsHost) {
           "createdAt" to h.createdAt?.toString(),
           "dates" to datesMap(origins.dates(h)),
           "params" to origins.size(h)?.let(::paramsMap),
+          "sizes" to listings.kept(h.repo)?.let { sizesMap(hub.variants(it.files)) },
         )
       },
       "next" to page.next,
@@ -116,6 +136,13 @@ class CatalogOps(private val host: ModelsHost) {
 
   // ModelParams in app/src/engine/models/types.ts.
   private fun paramsMap(p: ParameterCount): Map<String, Any?> = mapOf("count" to p.count.toDouble(), "effective" to p.effective)
+
+  // RepoSizes in app/src/engine/models/types.ts: how many models it holds, its smallest and largest download.
+  private fun sizesMap(variants: List<ModelVariant>): Map<String, Any?> = mapOf(
+    "count" to variants.size,
+    "smallest" to (variants.minOfOrNull { it.sizeBytes } ?: 0L).toDouble(),
+    "largest" to (variants.maxOfOrNull { it.sizeBytes } ?: 0L).toDouble(),
+  )
 
   private fun variantMap(v: ModelVariant, ram: Map<String, Any?>, local: LocalMatch): Map<String, Any?> = mapOf(
     "quant" to v.quant,
@@ -131,4 +158,9 @@ class CatalogOps(private val host: ModelsHost) {
     "sizeBytes" to f.sizeBytes.toDouble(),
     "sha256" to f.sha256,
   )
+
+  private companion object {
+    /** A list page's worth: JS asks for the rows that come into view together. */
+    const val MAX_SIZES = 30
+  }
 }

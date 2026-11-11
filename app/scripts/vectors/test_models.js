@@ -146,6 +146,18 @@ const model = (over) => ({
   t('hit line', mt.hitLine({ repo: 'a/b', downloads: 1_234_567, likes: 340 }), '1.2M downloads · 340 likes');
   t('hit line, none yet', mt.hitLine({ repo: 'a/b', downloads: 0, likes: 0 }), '0 downloads · 0 likes');
   t('hit line, its size first', mt.hitLine({ repo: 'a/b', downloads: 1_234_567, likes: 340, params: { count: 27e9, effective: false } }), '27B · 1.2M downloads · 340 likes');
+  const sized = (smallest, largest, count = 4) => ({ count, smallest, largest });
+  t(
+    'hit line, its download sizes after its size',
+    mt.hitLine({ repo: 'a/b', downloads: 10, likes: 1, params: { count: 4e9, effective: false }, sizes: sized(1.6 * GB, 61.1 * GB) }),
+    '4B · 1.6–61.1 GB · 10 downloads · 1 likes',
+  );
+  t('hit line, sizes asked after the list came', mt.hitLine({ repo: 'a/b', downloads: 10, likes: 1, sizes: null }, sized(GB, 2 * GB)), '1–2 GB · 10 downloads · 1 likes');
+  t('size range, one unit', mt.sizeRangeText(sized(1.6 * GB, 61.1 * GB)), '1.6–61.1 GB');
+  t('size range, two units', mt.sizeRangeText(sized(800e6, 3.2 * GB)), '800 MB–3.2 GB');
+  t('size range, one size', mt.sizeRangeText(sized(2.7 * GB, 2.7 * GB, 1)), '2.7 GB');
+  t('size range, no model we can run', mt.sizeRangeText(sized(0, 0, 0)), '');
+  t('size range, unknown', [mt.sizeRangeText(null), mt.sizeRangeText(undefined)], ['', '']);
   t('hit size, Gemma E2B', mt.hitSizeText({ count: 2e9, effective: true }), '2B effective');
   t('hit size, from a checkpoint', mt.hitSizeText({ count: 179_999_981_459, effective: false }), '180B');
   t('hit size, unknown', [mt.hitSizeText(null), mt.hitSizeText(undefined)], ['', '']);
@@ -160,6 +172,11 @@ const model = (over) => ({
     'Connection lost: trying again in 5 s (try 2 of 6)',
   );
   t('job line, verify', mt.jobLine(event({ step: 'verify' }), null), 'Checking what is already here: 1.2 GB');
+  t(
+    'job line, offline',
+    mt.jobLine(event({ step: 'offline' }), null),
+    'No network: it goes on by itself when one is back (1.2 GB here)',
+  );
   const paused = { id: 'qwen', name: 'q', repo: 'r', revision: 'v', sizeBytes: 2.7 * GB, doneBytes: 1.2 * GB, startedAt: 0, jobId: null };
   t('paused line', mt.jobLine(undefined, paused), 'Paused at 1.2 GB of 2.7 GB');
   t('a finished job reads as paused', mt.jobLine(event({ finished: true, ok: false }), paused), 'Paused at 1.2 GB of 2.7 GB');

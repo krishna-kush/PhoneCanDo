@@ -40,7 +40,7 @@ export default function ModelsPage() {
   }, [slidIn]);
 
   return (
-    <Screen>
+    <Screen viewport>
       <PageHeader kicker="on this phone" title="Models" />
       <Note>
         Models that run on this phone itself: no account or API key needed. An agent that can use one picks it on its

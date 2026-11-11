@@ -70,10 +70,15 @@ export type ModelHit = {
   dates: ModelDates | null;
   /** Its size: from its name, else its original's; null when neither says (lme's ModelSizes). */
   params: ModelParams | null;
+  /** Its models' download sizes, when native has its files already (repoSizes asks for them). */
+  sizes: RepoSizes | null;
 };
 
 /** How many parameters a model has; `effective` for Gemma's E sizes ("E2B" is 2B effective). */
 export type ModelParams = { count: number; effective: boolean };
+
+/** A repository's models (variants, as repoModels lists them): how many, and the smallest and largest download in bytes. */
+export type RepoSizes = { count: number; smallest: number; largest: number };
 
 /** One page of results; `next` is the cursor for nextModelsPage (it keeps the filters), null on the last page. */
 export type SearchPage = { hits: ModelHit[]; next: string | null };
@@ -170,8 +175,8 @@ export type ModelProgress = {
   target: ModelJobTarget;
   /** The model's name, or the picked file's. */
   label: string;
-  /** `verify` re-reads what an earlier try left; `retry` waits before the next try. */
-  step: 'start' | 'download' | 'verify' | 'import' | 'retry';
+  /** `verify` re-reads what an earlier try left; `retry` waits before the next try; `offline` waits for a network. */
+  step: 'start' | 'download' | 'verify' | 'import' | 'retry' | 'offline';
   done: number;
   total: number | null;
   rateBytesPerSec: number | null;
