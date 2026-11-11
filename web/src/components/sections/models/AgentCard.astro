@@ -1,0 +1,327 @@
+---
+// One agent's trading card, printed face down and hidden until a pack deals
+// it (lib/booster/). The front is the agent: its creature, where it lives,
+// how it signs in, and its brain, which follows the cartridge in the phone
+// when it takes a local model. The built-in one wears a double frame and
+// a Built in stamp.
+import Bot from "./Bot.astro";
+import LogoMark from "../../LogoMark.astro";
+import type { AgentCard } from "../../../data/agentCards";
+
+interface Props {
+    card: AgentCard;
+    /** The cartridge in the phone when the page loads. */
+    brain: string;
+}
+const { card, brain } = Astro.props;
+const no = String(card.no).padStart(2, "0");
+const rarity = card.builtIn ? "Built in" : card.stable ? "Stable" : "Preview";
+const flavour = card.builtIn
+    ? "Comes with the app: no machine to set up, and at home on the phone's own brain."
+    : card.local
+      ? "Moves into a Linux machine of its own. Brings its own brain, or borrows the phone's."
+      : "Moves into a Linux machine of its own and signs in to its own provider.";
+---
+
+<li class="card" data-card={card.id} data-label={card.label} data-face="down" style={`--i:${card.no}`} hidden>
+    <div class="card-tilt">
+        <div class="card-flip">
+            <article class="card-front" data-built-in={card.builtIn ? "" : undefined}>
+                <p class="card-top">
+                    <span>No. {no}</span>
+                    <span class="card-rarity">{rarity}</span>
+                </p>
+                <div class="card-art">
+                    <Bot look={card.look} size={15.5} unit="cqi" />
+                    {card.builtIn && <span class="card-stamp">Built in</span>}
+                </div>
+                <h3 class="card-name">{card.label}</h3>
+                <p class="card-type">Agent · {card.builtIn ? "built into the app" : "lives in its own machine"}</p>
+                <dl class="card-stats">
+                    <div>
+                        <dt>Sign-in</dt>
+                        <dd>{card.signIn.join(" · ")}</dd>
+                    </div>
+                    <div>
+                        <dt>Brain</dt>
+                        {card.local ? (
+                            <dd><b class="card-chip" data-brain-name>{brain}</b> on the phone, or its own</dd>
+                        ) : (
+                            <dd><b class="card-chip card-chip-own">Its own</b> no local model</dd>
+                        )}
+                    </div>
+                </dl>
+                <p class="card-flavour">{flavour}</p>
+                <p class="card-foot">
+                    <span>Agents · Series 01</span>
+                    <span>{card.local ? "◆ Local-ready" : "Sign-in only"}</span>
+                </p>
+            </article>
+            <div class="card-back" aria-hidden="true">
+                <LogoMark size={30} />
+                <span class="card-back-name">PhoneCanDo</span>
+                <span class="card-back-set">Agents</span>
+            </div>
+        </div>
+    </div>
+</li>
+
+<style is:global>
+    /* Three layers so their moves never fight: the card is dealt and fanned,
+       its tilt follows the pointer, its flip turns it over. Everything on
+       the face is sized by the card's own width (cqi), so a card prints the
+       same at any size. */
+    .card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 63 / 88;
+      list-style: none;
+      perspective: 1000px;
+      container-type: inline-size;
+    }
+    .card-tilt,
+    .card-flip {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+    }
+    .card-tilt {
+      transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+      transition: transform 0.25s ease-out, translate 0.2s;
+    }
+    .card-flip { transition: transform 0.65s cubic-bezier(0.3, 1.35, 0.5, 1); }
+    .card[data-face='down'] .card-flip { transform: rotateY(180deg); }
+    .card-front,
+    .card-back {
+      position: absolute;
+      inset: 0;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      border: 1px solid var(--line-2);
+      box-shadow: 6px 6px 0 var(--accent);
+    }
+
+    .card-front {
+      display: flex;
+      flex-direction: column;
+      padding: 4.3cqi 4.7cqi 3.8cqi;
+      background: var(--panel);
+      overflow: hidden;
+    }
+    /* Glare where the pointer is. */
+    .card-front::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at var(--mx, 50%) var(--my, 30%), color-mix(in srgb, var(--fg) 14%, transparent), transparent 45%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    /* Built in: a double amber frame, like the passports' pages, and a
+       stamp that lands on the art as the card turns over. */
+    .card-front[data-built-in] {
+      box-shadow: 6px 6px 0 var(--accent), inset 0 0 0 3px var(--panel), inset 0 0 0 4px var(--accent);
+    }
+    .card-stamp {
+      position: absolute;
+      z-index: 1;
+      top: 3cqi;
+      right: 3cqi;
+      padding: 1.6cqi 2.2cqi;
+      border: 1px solid var(--red);
+      background: var(--art-bg);
+      box-shadow: inset 0 0 0 2px var(--art-bg), inset 0 0 0 3px var(--red);
+      color: var(--red);
+      font: 600 3.4cqi/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      rotate: -9deg;
+    }
+    .card:not([data-face='down']) .card-stamp {
+      animation: card-stamp 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.2) 0.45s backwards;
+    }
+    @keyframes card-stamp { from { opacity: 0; scale: 1.9; rotate: -22deg; } }
+    .card-top,
+    .card-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 3cqi;
+      font: 500 3.2cqi/1.3 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .card-rarity { color: var(--red); }
+    .card-front[data-built-in] .card-rarity { color: var(--accent-ink); }
+    /* The creature's window: night ink and a grid, a floor it stands on. */
+    .card-art {
+      position: relative;
+      display: grid;
+      flex: none;
+      place-items: end center;
+      height: 34%;
+      margin-top: 3cqi;
+      padding-bottom: 5cqi;
+      border: 1px solid var(--line-2);
+      background-color: var(--art-bg);
+      background-image:
+        linear-gradient(color-mix(in srgb, var(--art-fg) 6%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--art-fg) 6%, transparent) 1px, transparent 1px);
+      background-size: 5cqi 5cqi;
+      overflow: hidden;
+    }
+    .card-art::after {
+      content: '';
+      position: absolute;
+      right: 16%;
+      bottom: 5cqi;
+      left: 16%;
+      height: 1px;
+      background: var(--art-dim);
+      opacity: 0.5;
+    }
+    .card-art .bot {
+      animation: bot-bob 2.6s ease-in-out infinite;
+      animation-delay: calc(var(--i) * -0.37s);
+    }
+    .card-art .bot-eye { animation: bot-blink 5s infinite; animation-delay: calc(var(--i) * -0.83s); }
+    .card-art .bot[data-eyes='sleepy'] .bot-eye { animation: none; }
+    @keyframes bot-bob { 50% { translate: 0 -1.6cqi; } }
+    @keyframes bot-blink { 0%, 95%, 100% { scale: 1 1; } 97% { scale: 1 0.1; } }
+    @keyframes bot-hop {
+      30% { translate: 0 -6cqi; rotate: -8deg; }
+      60% { translate: 0 0; rotate: 0deg; scale: 1.1 0.9; }
+      80% { scale: 0.96 1.04; }
+    }
+    .card-name {
+      margin-top: 3.6cqi;
+      font: 400 10cqi/1 var(--serif);
+      letter-spacing: -0.01em;
+      overflow-wrap: anywhere;
+    }
+    .card-type {
+      margin-top: 1.6cqi;
+      font: 500 3.1cqi/1.3 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+    }
+    .card-stats {
+      display: grid;
+      gap: 2.2cqi;
+      margin: 3.4cqi 0 0;
+      padding-top: 3.2cqi;
+      border-top: 1px solid var(--line);
+    }
+    .card-stats div {
+      display: grid;
+      grid-template-columns: 17cqi minmax(0, 1fr);
+      gap: 2.4cqi;
+      align-items: baseline;
+    }
+    .card-stats dt {
+      font: 500 2.9cqi/1.3 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .card-stats dd {
+      margin: 0;
+      font: 400 3.9cqi/1.45 var(--mono);
+      color: var(--muted);
+    }
+    .card-chip {
+      display: inline-block;
+      margin-right: 1cqi;
+      padding: 0.3cqi 2cqi;
+      background: var(--accent);
+      color: var(--art-bg);
+      font-weight: 500;
+    }
+    .card-chip-own {
+      border: 1px dashed var(--line-2);
+      background: none;
+      color: var(--fg);
+    }
+    /* A new cartridge: every card on a local model takes it at once. */
+    .card-chip[data-swapped] { animation: chip-swap 0.5s cubic-bezier(0.3, 1.5, 0.5, 1); }
+    @keyframes chip-swap { 0% { scale: 0.4; background: var(--red); color: var(--on-primary); } }
+    .card-flavour {
+      margin-top: auto;
+      padding-top: 3cqi;
+      font: italic 400 5cqi/1.28 var(--serif);
+      color: var(--muted);
+      text-wrap: pretty;
+    }
+    .card-foot {
+      margin-top: 2.8cqi;
+      padding-top: 2.4cqi;
+      border-top: 1px solid var(--line);
+    }
+
+    /* The back: night ink, a red frame and the brand mark. */
+    .card-back {
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 4cqi;
+      transform: rotateY(180deg);
+      background-color: var(--art-bg);
+      background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 35%, transparent) 1px, transparent 1.5px);
+      background-size: 11px 11px;
+    }
+    .card-back::before {
+      content: '';
+      position: absolute;
+      inset: 4cqi;
+      border: 2px solid var(--red);
+      pointer-events: none;
+    }
+    .card-back-name {
+      font: 600 5.2cqi/1 var(--mono);
+      letter-spacing: -0.02em;
+      color: var(--art-fg);
+    }
+    .card-back-set {
+      font: italic 400 8.6cqi/1 var(--serif);
+      color: var(--art-accent);
+    }
+
+    /* A card the binder didn't have yet gets a sticker when it turns over. */
+    .card[data-new]::after {
+      content: 'New!';
+      position: absolute;
+      z-index: 1;
+      top: -12px;
+      right: -14px;
+      padding: 7px 8px;
+      background: var(--red);
+      color: var(--on-primary);
+      font: 600 9px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      rotate: 12deg;
+      box-shadow: 2px 2px 0 var(--art-bg);
+      animation: card-sticker 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.4) 0.35s backwards;
+      pointer-events: none;
+    }
+    @keyframes card-sticker { from { opacity: 0; scale: 2.2; rotate: -10deg; } }
+
+    @media (hover: hover) {
+      .card:not([data-face='down']):hover .card-tilt { translate: 0 -8px; }
+      .card:hover .card-front::before { opacity: 1; }
+      .card:not([data-face='down']):hover .card-art .bot { animation: bot-hop 0.55s ease-out; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .card-tilt,
+      .card-flip { transition: none; }
+      .card-art .bot,
+      .card-art .bot-eye,
+      .card:not([data-face='down']) .card-stamp,
+      .card-chip[data-swapped],
+      .card[data-new]::after,
+      .card:hover .card-art .bot { animation: none; }
+    }
+</style>

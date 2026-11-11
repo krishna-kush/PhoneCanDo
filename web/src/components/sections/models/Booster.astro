@@ -1,0 +1,462 @@
+---
+// The booster pack: every agent kind is a trading card. Tear a pack and
+// three fly out, the three agents a phone runs at once; the binder fills
+// as they come, a pack of new cards at a time until the set is full. The cartridge pushed into the
+// phone is the brain of every card that takes a local model, one at a time,
+// as in the app. lib/booster/ wires it; the cards are printed here, face
+// down and hidden, so no manifest reaches the browser.
+import AgentCard from "./AgentCard.astro";
+import Bot from "./Bot.astro";
+import LogoMark from "../../LogoMark.astro";
+import { cards, cartridges, firstCartridge, firstPull } from "../../../data/agentCards";
+
+const loaded = cartridges.find((c) => c.id === firstCartridge) ?? cartridges[0];
+---
+
+<figure class="booster" data-booster data-state="sealed" data-first={firstPull}>
+    <div class="booster-bar">
+        <span>Booster · Agents series 01</span>
+        <span class="booster-count"><b data-got>0</b> collected</span>
+        <button class="toy-btn booster-open" type="button" data-open>
+            <span class="open-icon" aria-hidden="true"></span>
+            <span data-open-label>Tear it open</span>
+        </button>
+    </div>
+
+    <div class="booster-stage">
+        <ul class="hand">
+            {cards.map((card) => <AgentCard card={card} brain={loaded.name} />)}
+        </ul>
+        <button class="pack" type="button" data-pack aria-label="Tear open a pack of three agent cards">
+            <span class="pack-crimp pack-top" aria-hidden="true"></span>
+            <span class="pack-body" aria-hidden="true">
+                <span class="pack-tear">✂ tear here</span>
+                <span class="pack-label">
+                    <LogoMark size={20} />
+                    <span class="pack-title">Agents</span>
+                    <span class="pack-sub">Series 01 · 3 cards</span>
+                    <span class="pack-odds">Collect them all · 1 built in</span>
+                </span>
+            </span>
+            <span class="pack-crimp pack-bottom" aria-hidden="true"></span>
+        </button>
+    </div>
+
+    <div class="carts">
+        <p class="booster-label">
+            <b>The phone's brain</b>
+            <span>One cartridge in at a time · every card that takes a local model runs on it</span>
+        </p>
+        <div class="carts-row" role="group" aria-label="Local model in the phone">
+            {cartridges.map((c) => (
+                <button class="cart" type="button" data-cart={c.id} data-name={c.name} aria-pressed={c === loaded ? "true" : "false"}>
+                    <span class="cart-grip" aria-hidden="true"></span>
+                    <i class="cart-led" aria-hidden="true"></i>
+                    <span class="cart-name">{c.name}</span>
+                    <span class="cart-note">{c.note}</span>
+                </button>
+            ))}
+        </div>
+        <p class="carts-slot" aria-hidden="true">llama.cpp · 127.0.0.1 · on the phone</p>
+    </div>
+
+    <div class="binder-wrap">
+        <p class="booster-label">
+            <b>Binder</b>
+            <span class="binder-full">Full set</span>
+        </p>
+        <ol class="binder" data-binder>
+            {cards.map((card) => (
+                <li data-binder-card={card.id}>
+                    <Bot look={card.look} size={13} />
+                    <span class="binder-no">{String(card.no).padStart(2, "0")}</span>
+                    <span class="binder-name">{card.label}</span>
+                </li>
+            ))}
+        </ol>
+    </div>
+
+    <p class="sr" data-live aria-live="polite"></p>
+    <figcaption class="booster-foot">
+        <span>3 cards a pack · 3 agents run at once</span>
+        <span class="right">1 brain in the phone · shared</span>
+    </figcaption>
+</figure>
+
+<script>
+    import { mountBooster } from "../../../lib/booster/booster";
+
+    const root = document.querySelector<HTMLElement>("[data-booster]");
+    if (root) mountBooster(root);
+</script>
+
+<style is:global>
+    .booster {
+      position: relative;
+      margin: 0;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--plate-shadow);
+    }
+    .booster .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .booster-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 16px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--line);
+      font: 500 10px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .booster-count { margin-left: auto; color: var(--dim); }
+    .booster-count b { font-weight: 500; color: var(--fg); }
+    .booster[data-full] .booster-count b { color: var(--red); }
+    .booster-open { padding-block: 6px; }
+    /* A pack in miniature: red foil, a strip torn off its top. */
+    .open-icon {
+      width: 9px;
+      height: 12px;
+      border-top: 2px dotted var(--on-primary);
+      background: var(--red);
+      transition: border-top-color 0.15s;
+    }
+    @media (hover: hover) {
+      .booster-open:hover .open-icon { animation: icon-tear 0.5s ease-in-out; }
+    }
+    @keyframes icon-tear { 40% { border-top-color: transparent; translate: 0 2px; } }
+    .booster-label {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px 14px;
+      font: 500 8px/1.4 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .booster-label b { font-weight: 500; color: var(--accent-ink); }
+
+    /* The table: the pack and the hand share one cell, so cards fly out of
+       the pack where it lies. */
+    .booster-stage {
+      display: grid;
+      place-items: center;
+      min-height: 420px;
+      padding: 36px 24px 42px;
+      background-color: var(--panel-2);
+      background-image: radial-gradient(circle, var(--line) 1px, transparent 1.6px);
+      background-size: 14px 14px;
+    }
+    .booster-stage > * { grid-area: 1 / 1; }
+    .hand {
+      display: grid;
+      grid-template-columns: repeat(3, 232px);
+      gap: 34px;
+      margin: 0;
+      padding: 0;
+    }
+    .hand .card[data-slot='0'] { rotate: -4deg; translate: 0 10px; }
+    .hand .card[data-slot='2'] { rotate: 4deg; translate: 0 10px; }
+    .booster:is([data-state='sealed'], [data-state='clearing']) .hand { pointer-events: none; }
+
+    .pack {
+      position: relative;
+      z-index: 1;
+      width: 200px;
+      height: 290px;
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: pointer;
+      transition: scale 0.2s;
+    }
+    .booster:is([data-state='open'], [data-state='clearing']) .pack { visibility: hidden; }
+    .booster[data-state='sealed'] .pack { animation: pack-wiggle 3.4s ease-in-out 1s infinite; }
+    .pack[data-fresh] { animation: pack-in 0.55s cubic-bezier(0.3, 1.4, 0.5, 1), pack-wiggle 3.4s ease-in-out 1.5s infinite; }
+    @media (hover: hover) {
+      .booster[data-state='sealed'] .pack:hover { scale: 1.04; animation-play-state: paused; }
+    }
+    @keyframes pack-wiggle {
+      0%, 78%, 100% { rotate: 0deg; }
+      82% { rotate: -5deg; }
+      86% { rotate: 4deg; }
+      90% { rotate: -2deg; }
+      94% { rotate: 1deg; }
+    }
+    @keyframes pack-in { from { translate: 0 -60px; opacity: 0; } }
+    .pack-body,
+    .pack-crimp {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background-color: var(--red);
+    }
+    .pack-body {
+      top: 16px;
+      bottom: 16px;
+      display: grid;
+      place-items: center;
+      background-image: repeating-linear-gradient(
+        155deg,
+        transparent 0 16px,
+        color-mix(in srgb, var(--art-bg) 14%, transparent) 16px 28px
+      );
+      box-shadow: 8px 8px 0 var(--accent);
+    }
+    .pack-crimp {
+      height: 17px;
+      background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--art-bg) 30%, transparent) 0 2px, transparent 2px 5px);
+    }
+    .pack-top { top: 0; }
+    .pack-bottom { bottom: 0; box-shadow: 8px 8px 0 var(--accent); }
+    .pack-tear {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      left: 8px;
+      padding-top: 4px;
+      border-top: 1px dashed var(--on-primary);
+      font: 500 7px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-align: left;
+      color: var(--on-primary);
+    }
+    .pack-label {
+      display: grid;
+      justify-items: center;
+      gap: 7px;
+      padding: 16px 18px 14px;
+      border: 1px solid var(--line-2);
+      background: var(--panel);
+      rotate: -4deg;
+      box-shadow: 3px 3px 0 color-mix(in srgb, var(--art-bg) 35%, transparent);
+    }
+    .pack-title { font: 400 36px/0.9 var(--serif); color: var(--fg); }
+    .pack-sub,
+    .pack-odds {
+      font: 500 7.5px/1.2 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .pack-odds { color: var(--red); }
+    /* The tear: the strip flies off, the rest of the foil drops away. */
+    .booster[data-state='tearing'] .pack { animation: none; }
+    .booster[data-state='tearing'] .pack-top { animation: pack-tear 0.5s cubic-bezier(0.3, 0.6, 0.4, 1) forwards; }
+    .booster[data-state='tearing'] :is(.pack-body, .pack-bottom) { animation: pack-sink 0.5s ease-in 0.3s forwards; }
+    @keyframes pack-tear { to { translate: 90px -110px; rotate: 28deg; opacity: 0; } }
+    @keyframes pack-sink { to { translate: 0 90px; opacity: 0; } }
+
+    /* The phone's cartridges, all on one shelf: the one in the phone is lit
+       and tagged, the rest wait their turn. */
+    .carts {
+      padding: 14px 18px 0;
+      border-top: 1px solid var(--line);
+    }
+    .carts-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+      padding: 0 8px;
+    }
+    .cart {
+      position: relative;
+      display: grid;
+      justify-items: start;
+      align-content: start;
+      gap: 4px;
+      padding: 16px 12px 12px;
+      border: 1px solid var(--line-2);
+      background: var(--panel-2);
+      color: var(--fg);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 var(--accent);
+      transition: translate 0.15s, box-shadow 0.15s, background 0.2s, border-color 0.2s;
+    }
+    .cart[aria-pressed='true'] {
+      border-color: var(--accent-line);
+      background: var(--accent-soft);
+      cursor: default;
+      animation: cart-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+    }
+    .cart[aria-pressed='true']::after {
+      content: 'In the phone';
+      position: absolute;
+      top: -9px;
+      right: 10px;
+      padding: 3px 5px;
+      background: var(--accent);
+      color: var(--art-bg);
+      font: 500 7px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    @keyframes cart-in { from { scale: 0.94; } }
+    @media (hover: hover) {
+      .cart[aria-pressed='false']:hover { translate: -1px -1px; box-shadow: 4px 4px 0 var(--accent); }
+    }
+    .cart[aria-pressed='false']:active { translate: 1px 1px; box-shadow: 1px 1px 0 var(--accent); }
+    .cart-grip {
+      position: absolute;
+      top: 6px;
+      right: 26px;
+      left: 12px;
+      height: 4px;
+      background: repeating-linear-gradient(90deg, var(--line-2) 0 2px, transparent 2px 5px);
+    }
+    .cart-led {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      width: 6px;
+      height: 6px;
+      background: var(--line-2);
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .cart[aria-pressed='true'] .cart-led {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .cart-name { font: 400 18px/1.05 var(--serif); word-spacing: 0.08em; }
+    .cart-note {
+      font: 500 7.5px/1.35 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .carts-slot {
+      margin: 16px -18px 0;
+      padding: 9px 18px 8px;
+      border-top: 1px solid var(--line);
+      background: var(--panel-2);
+      font: 500 7.5px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-align: center;
+      color: var(--faint);
+    }
+
+    .binder-wrap {
+      padding: 14px 18px 16px;
+      border-top: 1px solid var(--line);
+    }
+    .binder-full {
+      padding: 4px 7px;
+      border: 1px solid var(--red);
+      color: var(--red);
+      transform: rotate(-4deg);
+      visibility: hidden;
+    }
+    .booster[data-full] .binder-full {
+      visibility: visible;
+      animation: full-stamp 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.2);
+    }
+    @keyframes full-stamp { from { opacity: 0; transform: rotate(-16deg) scale(1.9); } }
+    .binder {
+      display: grid;
+      grid-template-columns: repeat(var(--binder-cols, 14), minmax(0, 1fr));
+      gap: 6px;
+      margin: 10px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .binder li {
+      --bot-line: var(--fg);
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: 5px;
+      min-height: 78px;
+      padding: 12px 3px 6px;
+      border: 1px dashed var(--line-2);
+      text-align: center;
+    }
+    .binder .bot { opacity: 0.22; filter: grayscale(1); }
+    .binder-no {
+      font: 500 7px/1 var(--mono);
+      letter-spacing: 0.1em;
+      color: var(--faint);
+    }
+    .binder-name {
+      font: 500 7px/1.3 var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--faint);
+      overflow-wrap: anywhere;
+    }
+    .binder li[data-got] { border-style: solid; background: var(--panel-2); }
+    .binder li[data-got] .bot { opacity: 1; filter: none; }
+    .binder li[data-got] .binder-name { color: var(--fg); }
+    .binder li[data-new] { animation: binder-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1); }
+    @keyframes binder-pop { from { scale: 0.6; } }
+
+    .booster-foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 12px;
+      padding: 8px 14px;
+      border-top: 1px solid var(--line);
+      font: 500 9px/1.3 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .booster-foot .right { margin-left: auto; color: var(--dim); }
+
+    @media (max-width: 980px) {
+      .hand { grid-template-columns: repeat(3, 200px); gap: 22px; }
+      .binder { --binder-cols: 7; }
+    }
+    /* Narrow: the hand is a row you swipe, the cards upright. It sits on the
+       stage's floor, so its scrollbar runs along the bottom edge, and the
+       sealed pack's empty row does not scroll at all. */
+    @media (max-width: 760px) {
+      .booster-stage { padding: 0; }
+      .hand {
+        align-self: end;
+        grid-template-columns: repeat(3, 236px);
+        justify-content: start;
+        max-width: 100%;
+        padding: 42px 20px 32px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-padding-inline: 20px;
+      }
+      .booster[data-state='sealed'] .hand { overflow-x: hidden; }
+      .hand .card { scroll-snap-align: start; }
+      .hand .card[data-slot] { rotate: none; translate: none; }
+      .carts-row { gap: 8px; padding: 0; }
+      .cart { padding: 16px 8px 10px; }
+      .cart-name { font-size: 15px; }
+      .cart-note { font-size: 6.5px; }
+      .binder { --binder-cols: 4; }
+    }
+    @media (max-width: 420px) {
+      .cart-note { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .booster .pack,
+      .booster[data-state] .pack,
+      .booster-open:hover .open-icon,
+      .binder li[data-new],
+      .booster[data-full] .binder-full,
+      .cart[aria-pressed='true'] { animation: none; }
+      .cart { transition: none; }
+    }
+</style>

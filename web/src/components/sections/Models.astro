@@ -1,180 +1,100 @@
 ---
-import Crate from "./models/Crate.astro";
+import Booster from "./models/Booster.astro";
+import { agentsClaim, cards } from "../../data/agentCards";
+
+const localKinds = cards.filter((c) => c.local).length;
 ---
 
 <section class="section models" id="models">
     <div class="sec-head">
         <div class="sec-rail">
-            <p class="kicker">Sec. 02 / Local intelligence</p>
-            <p class="fig-label">FIG. 03 — Model manifest</p>
+            <p class="kicker">Sec. 02 / Agents &amp; models</p>
+            <p class="fig-label">FIG. 03 — Booster pack</p>
         </div>
         <div class="sec-body">
-            <h2>The model is in the room.</h2>
+            <h2>Collect your crew. Pick its brain.</h2>
             <p class="lead">
-                Bring your own model, or download one from our
-                registry inside the app and run it with ease. The
-                model sits in app-private storage, the runtime does
-                the work on the phone, and{" "}
-                <em>no request has to leave the device.</em>
+                Choose from {agentsClaim} coding agents — opencode, Claude
+                Code, Codex, Gemini CLI and more — each in a machine of its
+                own, three at a time. Each signs in to its own provider, or
+                runs on a model right on the phone:{" "}
+                <em>the prompt never leaves the device.</em>
             </p>
         </div>
     </div>
 
-    <div class="model-freight">
-        <span class="stamp freight-stamp">In development</span>
-        <div class="freight-head">
-            <p class="freight-kicker">Two routes / one room</p>
+    <Booster />
+
+    <dl class="house-rules">
+        <div>
+            <dt>Agents</dt>
+            <dd><b>{agentsClaim}</b> kinds to pick from. opencode comes built in; the rest install into their machine. Or add your own.</dd>
         </div>
-
-        <div class="freight-body">
-            <div class="freight-route route-left">
-                <p class="route-no">Route 01</p>
-                <h3>Carry it in.</h3>
-                <p>
-                    Point PhoneCanDo at weights you already have.
-                    They move into app storage and stay there.
-                </p>
-                <p class="route-note">~/models → app storage</p>
-            </div>
-
-            <span class="freight-arrow arrow-in" aria-hidden="true"></span>
-
-            <Crate />
-
-            <span class="freight-arrow arrow-out" aria-hidden="true"></span>
-
-            <div class="freight-route route-right">
-                <p class="route-no">Route 02</p>
-                <h3>Have it delivered.</h3>
-                <p>
-                    Pick a model in the registry and download it
-                    inside the app. No computer, no side-loading.
-                </p>
-                <p class="route-note">registry → app storage</p>
-            </div>
+        <div>
+            <dt>At once</dt>
+            <dd><b>3</b> agents run together. A fourth takes the seat of one that has sat idle a minute.</dd>
         </div>
-
-        <div class="freight-foot">
-            <p><span>Destination</span> / app-private storage</p>
-            <p class="freight-checks">
-                ✓ no upload · ✓ no account · ✓ no PC
-            </p>
+        <div>
+            <dt>On the phone</dt>
+            <dd><b>1</b> model loaded at a time, shared by every agent on it.</dd>
         </div>
-    </div>
+        <div>
+            <dt>RAM</dt>
+            <dd><b>6 GB</b> to run a model, 8 GB to run it well. The app checks the fit before you download.</dd>
+        </div>
+    </dl>
 
     <p class="model-foot">
-        Support depends on RAM, quantization and the runtime.
+        {localKinds} of them take a local model ·
+        opencode is stable, the others are previews · weights from Hugging
+        Face or a GGUF file on the phone
     </p>
 </section>
 
 <style is:global>
-    /* model freight: two routes, one crate */
-    .model-freight {
-      position: relative;
+    /* The operator's card: the board's house rules, one numbered cell each. */
+    .house-rules {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin: 30px 0 0;
       border: 1px solid var(--line);
-      background: var(--panel);
-      box-shadow: var(--plate-shadow);
+      background: var(--bg);
     }
-    .freight-stamp {
-      position: absolute;
-      z-index: 2;
-      top: -11px;
-      right: -8px;
-      background: var(--panel);
-      transform: rotate(-12deg);
+    .house-rules div {
+      padding: 16px 18px 18px;
+      border-left: 1px dashed var(--line-2);
     }
-    .freight-head {
+    .house-rules div:first-child { border-left: 0; }
+    .house-rules dt {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 18px;
-      border-bottom: 1px solid var(--line);
-    }
-    .freight-kicker {
-      font: 500 8px/1.4 var(--mono);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--faint);
-    }
-    .freight-body {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 40px auto 40px minmax(0, 1fr);
-      gap: 16px;
-      align-items: center;
-      padding: 36px 28px;
-    }
-    .freight-route { display: flex; flex-direction: column; }
-    .route-left { align-items: flex-end; text-align: right; }
-    .route-right { align-items: flex-start; text-align: left; }
-    .route-no {
-      font: 500 8px/1.4 var(--mono);
+      gap: 6px;
+      font: 500 8.5px/1.4 var(--mono);
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: var(--accent-ink);
+      color: var(--faint);
     }
-    .freight-route h3 {
-      margin-top: 8px;
-      font: 400 26px/1.05 var(--serif);
-      letter-spacing: -0.01em;
+    .house-rules dt::before {
+      content: '';
+      width: 4px;
+      height: 4px;
+      flex: none;
+      background: var(--accent);
     }
-    .freight-route p {
-      margin-top: 8px;
-      max-width: 30ch;
+    .house-rules dd {
+      margin: 8px 0 0;
       font-size: 13px;
-      line-height: 1.6;
+      line-height: 1.55;
       color: var(--muted);
     }
-    .route-note {
-      margin-top: 10px;
-      font: 500 8px/1.5 var(--mono);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--faint);
-      white-space: nowrap;
+    .house-rules b {
+      display: block;
+      margin-bottom: 4px;
+      font: 400 44px/0.9 var(--serif);
+      letter-spacing: -0.02em;
+      color: var(--fg);
     }
-    /* Dashes, not a border, so they can march: pointing at a route sends
-       its arrow's dashes running into the crate. */
-    .freight-arrow {
-      position: relative;
-      width: 100%;
-      height: 1px;
-      background: repeating-linear-gradient(to right, var(--accent) 0 3px, transparent 3px 6px);
-    }
-    @media (hover: hover) {
-      .freight-body:has(.route-left:hover) .arrow-in,
-      .freight-body:has(.route-right:hover) .arrow-out,
-      .freight-body:has(.crate-wrap:hover) .freight-arrow { animation: freight-march 0.5s linear infinite; }
-    }
-    @keyframes freight-march { to { background-position: 6px 0; } }
-    .freight-arrow::after {
-      content: '';
-      position: absolute;
-      top: -3px;
-      right: -1px;
-      width: 7px;
-      height: 7px;
-      border-top: 1px solid var(--accent);
-      border-right: 1px solid var(--accent);
-      transform: rotate(45deg);
-    }
-    .arrow-out { transform: scaleX(-1); }
-
-    .freight-foot {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px 18px;
-      padding: 12px 18px;
-      border-top: 1px solid var(--line);
-      font: 500 8px/1.5 var(--mono);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--faint);
-    }
-    .freight-foot span { color: var(--accent-ink); }
-    .freight-checks { color: var(--dim); }
+    .house-rules div:nth-child(2) b { color: var(--red); }
     .model-foot {
       margin-top: 14px;
       font: 400 9px/1.6 var(--mono);
@@ -184,37 +104,13 @@ import Crate from "./models/Crate.astro";
     }
 
     @media (max-width: 860px) {
-      .freight-body {
-        grid-template-columns: 1fr;
-        gap: 14px;
-        padding: 26px 18px;
-      }
-      .freight-route { align-items: flex-start; text-align: left; }
-      .freight-route p { max-width: 52ch; }
-      .freight-arrow {
-        width: 1px;
-        height: 40px;
-        justify-self: center;
-        background: repeating-linear-gradient(to bottom, var(--accent) 0 3px, transparent 3px 6px);
-      }
-      @keyframes freight-march { to { background-position: 0 6px; } }
-      .arrow-out { animation-direction: reverse; }
-      .freight-arrow::after {
-        top: auto;
-        right: auto;
-        bottom: -1px;
-        left: -3px;
-        transform: rotate(135deg);
-      }
-      .arrow-out { transform: none; }
-      .arrow-out::after {
-        top: -1px;
-        bottom: auto;
-        transform: rotate(-45deg);
-      }
+      .house-rules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .house-rules div:nth-child(3) { border-left: 0; }
+      .house-rules div:nth-child(n + 3) { border-top: 1px dashed var(--line-2); }
     }
-
-    @media (prefers-reduced-motion: reduce) {
-      .freight-body .freight-arrow { animation: none; }
+    @media (max-width: 340px) {
+      .house-rules { grid-template-columns: 1fr; }
+      .house-rules div { border-left: 0; }
+      .house-rules div + div { border-top: 1px dashed var(--line-2); }
     }
 </style>

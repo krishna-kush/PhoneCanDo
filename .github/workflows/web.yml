@@ -3,8 +3,9 @@ name: Web
 # The static site in web/ (Astro, deployed elsewhere from web/dist; nothing
 # here deploys). Builds once, then checks the built pages: links, release
 # downloads, page weight, browsers × viewports × colour schemes, axe,
-# Lighthouse. Runs when the site, the shared theme or the app version (which
-# the site's download links derive from) changes, and nightly for drift.
+# Lighthouse. Runs when the site, the shared theme, the app version (which
+# the site's download links derive from) or an agent kind's manifest (the
+# Models switchboard lists every kind) changes, and nightly for drift.
 
 on:
   push:
@@ -13,6 +14,8 @@ on:
       - web/**
       - theme/**
       - app/app.json
+      - agents/native/*/agent.json
+      - agents/image/*/agent.json
       - .github/workflows/web.yml
       - .github/ci/web/**
   pull_request:
@@ -20,6 +23,8 @@ on:
       - web/**
       - theme/**
       - app/app.json
+      - agents/native/*/agent.json
+      - agents/image/*/agent.json
       - .github/workflows/web.yml
       - .github/ci/web/**
   workflow_dispatch:

@@ -1,0 +1,109 @@
+---
+// A card's creature: a cousin of A-01 (components/Mascot.astro), drawn the
+// brand mark's way: a red block on a hard amber one, a face on the front
+// block. Each agent stands in its own pose (data/agentCards.ts). Static; the
+// card makes it bob, blink and hop.
+import logo from "../../../../../theme/logo.json";
+import type { BotLook } from "../../../data/agentCards";
+
+interface Props {
+    look: BotLook;
+    /** The block's short side, in [unit]s. */
+    size: number;
+    /** cqi: sized by its container, as on a card that scales. */
+    unit?: "px" | "cqi";
+    class?: string;
+}
+const { look, size, unit = "px", class: extra } = Astro.props;
+const [, wide, , , tall] = logo.loader.poses;
+const w = look.pose === "wide" ? wide.w : 1;
+const h = look.pose === "tall" ? tall.h : 1;
+const offset =
+    unit === "px" ? Math.max(logo.shadow.minAssetPx, Math.round(size * logo.shadow.ratio)) : Number((size * logo.shadow.ratio).toFixed(2));
+---
+
+<span
+    class:list={["bot", extra]}
+    style={`--b-s:${size}${unit};--b-o:${offset}${unit};--b-w:${w};--b-h:${h}`}
+    data-eyes={look.eyes}
+    data-swap={look.swap ? "" : undefined}
+    data-antenna={look.antenna ? "" : undefined}
+    aria-hidden="true"
+>
+    <i class="bot-ink bot-red"></i>
+    <i class="bot-ink bot-amber"></i>
+    <i class="bot-face"><i class="bot-eye"><b></b></i><i class="bot-eye"><b></b></i></i>
+</span>
+
+<style is:global>
+    /* --bot-line: the antenna's ink, light for the dark card art unless the
+       bot stands on the page.
+       The front block sits at the top left, its partner one offset down and
+       right; a swap trades which colour is in front. The face is always on
+       the front block. */
+    .bot {
+      position: relative;
+      display: inline-block;
+      flex: none;
+      width: calc(var(--b-s) * var(--b-w) + var(--b-o));
+      height: calc(var(--b-s) * var(--b-h) + var(--b-o));
+    }
+    .bot-ink,
+    .bot-face {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: calc(var(--b-s) * var(--b-w));
+      height: calc(var(--b-s) * var(--b-h));
+    }
+    .bot-red { z-index: 1; background: var(--red); }
+    .bot-amber { z-index: 0; translate: var(--b-o) var(--b-o); background: var(--accent); }
+    .bot[data-swap] .bot-red { z-index: 0; translate: var(--b-o) var(--b-o); }
+    .bot[data-swap] .bot-amber { z-index: 1; translate: none; }
+    .bot-face {
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      gap: calc(var(--b-s) * 0.08);
+      padding-top: calc(var(--b-s) * 0.29);
+    }
+    .bot-eye {
+      position: relative;
+      width: calc(var(--b-s) * 0.25);
+      height: calc(var(--b-s) * 0.29);
+      background: var(--on-primary);
+      transform-origin: 50% 100%;
+    }
+    .bot-eye b {
+      position: absolute;
+      top: 28%;
+      left: 25%;
+      width: 50%;
+      height: 43%;
+      background: var(--art-bg);
+      transition: translate 0.2s;
+    }
+    .bot[data-eyes='look'] .bot-eye b { translate: 45% 0; }
+    .bot[data-eyes='wide'] .bot-eye { height: calc(var(--b-s) * 0.36); }
+    .bot[data-eyes='wide'] .bot-eye b { top: 36%; height: 30%; }
+    .bot[data-eyes='sleepy'] .bot-eye { transform: scaleY(0.4); }
+    .bot[data-antenna]::before,
+    .bot[data-antenna]::after {
+      content: '';
+      position: absolute;
+      left: calc(var(--b-s) * var(--b-w) / 2);
+      background: var(--bot-line, var(--art-fg));
+    }
+    .bot[data-antenna]::before {
+      top: calc(var(--b-s) * -0.32);
+      width: max(1px, calc(var(--b-s) * 0.04));
+      height: calc(var(--b-s) * 0.32);
+    }
+    .bot[data-antenna]::after {
+      top: calc(var(--b-s) * -0.42);
+      width: calc(var(--b-s) * 0.14);
+      height: calc(var(--b-s) * 0.14);
+      translate: -45% 0;
+      background: var(--red);
+    }
+</style>
