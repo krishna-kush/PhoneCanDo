@@ -10,7 +10,6 @@ import { useModelsStore } from '../../state/models';
 import AppButton from '../common/AppButton';
 import { crewLine } from '../common/face/lines';
 import { moodOf } from '../common/face/mood';
-import { useTheme } from '../common/globals';
 import LogoMark from '../common/LogoMark';
 import SectionTitle from '../common/SectionTitle';
 import { useStartNewAgent } from '../env/new-agent/useStartNewAgent';
@@ -18,6 +17,13 @@ import Note from '../env/parts/Note';
 import AgentRow from './AgentRow';
 import DownloadRow from './DownloadRow';
 import LinkRow from '../common/LinkRow';
+import PlainText from '../common/PlainText';
+
+// The drawer's padding and the space between its parts. The places' rows
+// reach over both (LinkRow `reach`), so a tap beside a row still opens it.
+const PAD = 16;
+const GAP = 8;
+const PLACE_REACH = { x: PAD, y: GAP / 2 };
 
 function channel(): string {
   try {
@@ -32,7 +38,6 @@ function channel(): string {
 // Systems, Custom agents, Settings, About. Memoised: the drawer's own
 // renders (open, shut) pass the same `still` until its slide ends.
 function DrawerContent({ still }: { still: boolean }) {
-  const t = useTheme();
   const agents = useAgentsStore((s) => s.agents);
   const statuses = useAgentsStore((s) => s.statuses);
   const activeAgentId = useAgentsStore((s) => s.activeAgentId);
@@ -49,16 +54,16 @@ function DrawerContent({ still }: { still: boolean }) {
   const version = installedVersion();
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 8 }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: PAD, gap: GAP }}>
       <XStack alignItems="center" gap="2" paddingTop="2">
         <LogoMark size={16} />
-        <Text fontFamily="mono" fontSize={18} fontWeight="600" letterSpacing={-0.4}>
+        <PlainText fontFamily="mono" fontSize={18} fontWeight="600" letterSpacing={-0.4}>
           PhoneCanDo
-        </Text>
+        </PlainText>
       </XStack>
-      <Text fontFamily="mono" fontSize={11} letterSpacing={1.4} color={t.dim} textTransform="uppercase">
+      <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase">
         {crewLine(agents.length, awake)}
-      </Text>
+      </PlainText>
 
       <SectionTitle>Agents</SectionTitle>
       <YStack gap="1">
@@ -84,21 +89,29 @@ function DrawerContent({ still }: { still: boolean }) {
       </AppButton>
       {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
 
-      <YStack height={1} backgroundColor={t.line} marginVertical="3" />
+      <YStack height={1} backgroundColor="line" marginVertical="3" />
 
       {modelsOffered ? (
         <LinkRow
           label="Models"
           detail={modelCount === 1 ? '1 on phone' : `${modelCount} on phone`}
           onPress={() => push({ name: 'models' })}
+          reach={PLACE_REACH}
         />
       ) : null}
-      <LinkRow label="Systems" detail={envs.length === 1 ? '1 system' : `${envs.length} systems`} onPress={() => push({ name: 'systems' })} />
-      {linuxAvailable ? <LinkRow label="Custom agents" onPress={() => push({ name: 'custom-agents' })} /> : null}
-      <LinkRow label="Settings" onPress={() => push({ name: 'settings' })} />
-      <LinkRow label="About" onPress={() => push({ name: 'about' })} />
+      <LinkRow
+        label="Systems"
+        detail={envs.length === 1 ? '1 system' : `${envs.length} systems`}
+        onPress={() => push({ name: 'systems' })}
+        reach={PLACE_REACH}
+      />
+      {linuxAvailable ? (
+        <LinkRow label="Custom agents" onPress={() => push({ name: 'custom-agents' })} reach={PLACE_REACH} />
+      ) : null}
+      <LinkRow label="Settings" onPress={() => push({ name: 'settings' })} reach={PLACE_REACH} />
+      <LinkRow label="About" onPress={() => push({ name: 'about' })} reach={PLACE_REACH} />
 
-      <Text fontFamily="mono" fontSize={10} letterSpacing={1.2} color={t.faint} textTransform="uppercase" marginTop="4">
+      <Text fontFamily="mono" fontSize={10} letterSpacing={1.2} color="faint" textTransform="uppercase" marginTop="4">
         {`v${version.version} · ${channel()}`}
       </Text>
     </ScrollView>
