@@ -41,7 +41,7 @@ class LocalModelBindingTest {
       override fun kill(pid: Int) {}
     }, 1, 1),
     libDir = "/nowhere",
-    logFile = File("/nowhere/model-server.log"),
+    logFile = { File("/nowhere", ModelServer.logName(it)) },
     device = { throw AssertionError("no device read in these tests") },
     modelFile = { File("/nowhere/${it.id}") },
     onDied = { _, _ -> },
@@ -100,6 +100,44 @@ class LocalModelBindingTest {
     assertFalse(spec.argv.any { key in it })
   }
 
+  @Test fun eachModelHasItsOwnLog() {
+    assertEquals("model-server-qwen3-5-4b-q4-k-m.log", ModelServer.logName(qwen.id))
+    assertEquals("model-server-a_b_.log", ModelServer.logName("a/b."))
+  }
+
+  @Test fun nothingLoadedServesNothing() {
+    assertTrue(binding.serving().isEmpty())
+    assertTrue(binding.loaded().isEmpty())
+    assertTrue(binding.holders(qwen.id).isEmpty())
+    assertTrue(binding.stop(qwen.id).isEmpty())
+    // Releasing an agent that holds nothing does nothing.
+    binding.release("a1")
+  }
+
+  @Test fun theModelsCapRefusesBeforeASeatIsTaken() {
+    var cap: Int? = null
+    val capped = LocalModelBinding(
+      ModelServer(
+        ports = PortAllocator({ true }, { 9000 }),
+        reaper = ProcessReaper({ emptyList() }, object : ProcessReaper.Signals {
+          override fun term(pid: Int) {}
+          override fun kill(pid: Int) {}
+        }, 1, 1),
+        libDir = "/nowhere",
+        logFile = { File("/nowhere", ModelServer.logName(it)) },
+        device = { throw AssertionError("no device read in these tests") },
+        modelFile = { File("/nowhere/${it.id}") },
+        maxModels = { cap },
+        onDied = { _, _ -> },
+      ),
+    ) { listOf(qwen) }
+    // Nothing is loaded, so even a cap of one admits the first model.
+    cap = 1
+    capped.check(agent("opencode", qwen.id), kind("opencode"))
+    cap = null
+    capped.check(agent("opencode", qwen.id), kind("opencode"))
+  }
+
   @Test fun reasonsReadAsSentences() {
     assertEquals("6.2 GB", ModelReasons.gb(6_217_393_376))
     assertEquals(
@@ -108,5 +146,13 @@ class LocalModelBindingTest {
     )
     assertEquals("its model server (Qwen) stopped", ModelReasons.exited("Qwen", null))
     assertEquals("its model server (Qwen) stopped with exit code 1", ModelReasons.exited("Qwen", 1))
+    assertEquals(
+      "a local model is already loaded, the most you set in Settings; stop one first or raise the limit",
+      ModelReasons.capped(1),
+    )
+    assertEquals(
+      "3 local models are already loaded, the most you set in Settings; stop one first or raise the limit",
+      ModelReasons.capped(3),
+    )
   }
 }

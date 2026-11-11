@@ -24,6 +24,10 @@ data class EngineStatus(
   val state: EngineState,
   /** The loopback port while starting or ready. */
   val port: String?,
+  /**
+   * Why it failed or died; for a stopped engine only why we stopped it
+   * ourselves (the memory guard: MemoryRules.STOPPED_REASON), else null.
+   */
   val error: String?,
   /** Epoch ms of the last start, engine event, bridge call or touch. */
   val lastUsedAt: Long?,
@@ -39,7 +43,11 @@ data class EngineStatus(
 
 /** Typed reasons a start is refused; [code] is what JS matches (records.ts EngineStartError). */
 enum class EngineStartError(val code: String) {
+  /** The user's cap on running agents (RunLimits.maxAgents) is reached and none has been idle a minute. */
   TOO_MANY_RUNNING("too_many_running"),
+
+  /** The agent's model is not loaded and the user's cap on loaded models (RunLimits.maxModels) is reached. */
+  TOO_MANY_MODELS("too_many_models"),
   IMAGE_NOT_READY("image_not_ready"),
   ENGINE_MISSING("engine_missing"),
   PORT_UNAVAILABLE("port_unavailable"),
@@ -50,9 +58,9 @@ enum class EngineStartError(val code: String) {
 
   /**
    * The agent's local model cannot serve it: gone from the phone, too big
-   * for its RAM, a phone or kind that cannot use one, another model loaded
-   * for a running agent, or a server that never answered ready. The detail
-   * says which, fit for the UI.
+   * for its RAM, a phone or kind that cannot use one, still loading for
+   * another agent, or a server that never answered ready. The detail says
+   * which, fit for the UI.
    */
   MODEL_UNAVAILABLE("model_unavailable"),
 }

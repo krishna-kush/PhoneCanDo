@@ -25,10 +25,11 @@ RN shell (Expo / Tamagui / Zustand)
 ```
 
 - Several agents, one engine each. The runner's foreground service anchors
-  every engine; at most three start or run at once, and a further start
-  stops the least recently used engine that has been idle for a minute (or
-  is refused). The header switches the active agent; Home and the terminal
-  follow it.
+  every engine; any number may run, and when the phone nears its memory
+  peak the runner warns, then stops the least recently used one itself
+  (the user's optional cap in Settings stops an idle one to make room, or
+  refuses the start). The header switches the active agent; Home and the
+  terminal follow it.
 - The agent's own UI owns projects and sessions end to end. There is no
   app-side chat or project creation.
 - For a web-home kind the terminal is a TUI client of the same engine

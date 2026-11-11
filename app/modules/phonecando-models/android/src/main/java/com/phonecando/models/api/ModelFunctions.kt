@@ -28,7 +28,7 @@ internal fun ModuleDefinitionBuilder.modelFunctions(host: () -> ModelsHost, pick
       val h = host()
       val device = h.device.read()
       val serving = h.serving.current()
-      h.store.models().map { it.toMap(device, serving) }
+      h.store.models().map { record -> record.toMap(device, serving.firstOrNull { it.modelId == record.id }) }
     }
   }
 

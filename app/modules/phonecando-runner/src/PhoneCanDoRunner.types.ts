@@ -95,3 +95,66 @@ export type NativeKindSaved = { id: string | null; problems: NativeKindProblem[]
 
 /** A delete: whether a kind was removed; usedBy names the agents of it, which keep it. */
 export type NativeKindDeleted = { deleted: boolean; usedBy: string[] };
+
+/**
+ * The user's caps on what runs at once (Settings), kept natively so the
+ * supervisor holds to them with no JS around. null: no cap (the default);
+ * otherwise at least 1. A start past the agents' cap first stops the least
+ * recently used agent idle a minute, else fails too_many_running; a model
+ * past the models' cap fails too_many_models.
+ */
+export type NativeRunLimits = { maxAgents: number | null; maxModels: number | null };
+
+/**
+ * How close the phone is to running out of memory: ok, warn (near the peak:
+ * the runner counts down to stopping one agent itself) or critical (Android
+ * is about to kill processes: a short countdown).
+ */
+export type NativeMemoryLevel = 'ok' | 'warn' | 'critical';
+
+/** A running engine (starting or ready) and what its processes take. */
+export type NativeMemoryAgent = {
+  agentId: string;
+  /** Resident memory of its processes (PSS where readable), null when unread. */
+  bytes: number | null;
+  /** A run is going (the kind's idle rule says it is not idle). */
+  working: boolean;
+  lastUsedAt: number | null;
+  /** The local model it runs on, null for none. */
+  modelId: string | null;
+};
+
+/** A loaded local model server and the agents holding it. */
+export type NativeMemoryModel = {
+  modelId: string;
+  name: string;
+  bytes: number | null;
+  /** The agents on it; stopping the model stops these first. */
+  agentIds: string[];
+  /** It answered ready (false while it loads). */
+  ready: boolean;
+};
+
+/** What the runner stopped by itself to free memory. */
+export type NativeAutoStop = { at: number; agentIds: string[]; modelIds: string[] };
+
+/**
+ * The memory guard's reading, sent as phonecandoMemory on every level or
+ * countdown change and while the level is not ok (about every 5 s).
+ */
+export type NativeMemoryStatus = {
+  level: NativeMemoryLevel;
+  totalBytes: number;
+  /** MemoryInfo.availMem now. */
+  availBytes: number;
+  /** Below this much free memory the level is warn. */
+  warnBelowBytes: number;
+  /** When the runner stops one agent by itself (epoch ms); null with no countdown. */
+  stopAt: number | null;
+  /** The agent the countdown would stop now; null with no countdown. */
+  nextStopAgentId: string | null;
+  agents: NativeMemoryAgent[];
+  models: NativeMemoryModel[];
+  /** The last automatic stop in this process, so the UI can say what was stopped. */
+  lastAutoStop: NativeAutoStop | null;
+};

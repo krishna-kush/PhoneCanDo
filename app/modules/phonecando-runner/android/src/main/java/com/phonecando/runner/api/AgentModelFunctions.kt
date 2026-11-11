@@ -14,11 +14,12 @@ import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
 import kotlin.concurrent.thread
 
-// An agent's local model for JS (records.ts Agent.model), and the model
-// server reading a prompt (src/engine/models/promptReading.ts). The model
-// ids come from the models module (app/src/engine/models/).
+// An agent's local model for JS (records.ts Agent.model), stopping a
+// model with its agents, and a model server reading a prompt
+// (src/engine/models/promptReading.ts). The model ids come from the models
+// module (app/src/engine/models/).
 internal fun ModuleDefinitionBuilder.agentModelFunctions(context: () -> Context) {
-  // The prompt the model server is reading for a bound agent's run
+  // The prompt a model server is reading for a bound agent's run
   // (PromptReading.toMap), null when none; changes come as the
   // phonecandoPromptReading event.
   Function("promptReading") {
@@ -57,7 +58,7 @@ internal fun ModuleDefinitionBuilder.agentModelFunctions(context: () -> Context)
   }
 
   // Stops every agent set to the model whose engine is starting or ready
-  // (one grace for all; the model server goes with the last), so a change
+  // (one grace for all; the model's server goes with the last), so a change
   // to the model's context takes effect: resolves their ids, and JS starts
   // them again as after setAgentModel.
   AsyncFunction("stopModelAgents") { modelId: String, promise: Promise ->
@@ -71,6 +72,21 @@ internal fun ModuleDefinitionBuilder.agentModelFunctions(context: () -> Context)
           .filter { engines.status(it).state.let { s -> s == EngineState.STARTING || s == EngineState.READY } }
         if (running.isNotEmpty()) engines.stop(running.toSet())
         promise.resolve(running)
+      } catch (e: Exception) {
+        promise.reject("stop_failed", e.message ?: e.javaClass.simpleName, e)
+      }
+    }
+  }
+
+  // Stops the model: every agent on it first (holding its server, or set
+  // to it and starting or ready; one grace for all, as a user stop), then
+  // its server, also while it loads. Resolves the agents it stopped; JS
+  // does not start them again.
+  AsyncFunction("stopModel") { modelId: String, promise: Promise ->
+    val ctx = context()
+    thread(name = "phonecando-model-stop", isDaemon = true) {
+      try {
+        promise.resolve(Engines.get(ctx).stopModel(modelId))
       } catch (e: Exception) {
         promise.reject("stop_failed", e.message ?: e.javaClass.simpleName, e)
       }

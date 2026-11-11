@@ -34,17 +34,28 @@ class PromptWatchTest {
       """"n_prompt_tokens_cache":0,"next_token":[{"n_decoded":$decoded}]}]"""
 
   @Test fun busyForTheHoldersWithARunGoing() {
-    val target = PromptWatch.busy(serving, setOf("a3", "a1", "other"))
+    val target = PromptWatch.busy(listOf(serving), setOf("a3", "a1", "other"))
     assertEquals(listOf("a1", "a3"), target?.agentIds)
     assertEquals("http://127.0.0.1:9000", target?.baseUrl)
     assertEquals("Qwen3.5 0.8B", target?.modelName)
     assertFalse(target.toString().contains(key))
-    assertNull(PromptWatch.busy(serving, setOf("other")))
-    assertNull(PromptWatch.busy(null, setOf("a1")))
+    assertNull(PromptWatch.busy(listOf(serving), setOf("other")))
+    assertNull(PromptWatch.busy(emptyList(), setOf("a1")))
+  }
+
+  @Test fun withSeveralServersTheFirstBusyOneIsWatched() {
+    val gemma = ModelServer.Serving(
+      qwen.copy(id = "gemma-3-1b", name = "Gemma 3 1B"),
+      ServedEndpoint("http://127.0.0.1:9001", "gemma-3-1b", key, 8_192, setOf(WireApi.OPENAI_CHAT)),
+      setOf("b1"),
+    )
+    assertEquals("gemma-3-1b", PromptWatch.busy(listOf(serving, gemma), setOf("b1"))?.modelId)
+    assertEquals("http://127.0.0.1:9001", PromptWatch.busy(listOf(serving, gemma), setOf("b1"))?.baseUrl)
+    assertEquals(qwen.id, PromptWatch.busy(listOf(serving, gemma), setOf("b1", "a1"))?.modelId)
   }
 
   @Test fun asksWhileBusyAndTellsEachChange() {
-    var busy: PromptWatch.Target? = PromptWatch.busy(serving, setOf("a1"))
+    var busy: PromptWatch.Target? = PromptWatch.busy(listOf(serving), setOf("a1"))
     var body = slots(true, 0, 0)
     val asked = mutableListOf<Pair<String, String>>()
     val told = mutableListOf<PromptReading?>()
@@ -67,7 +78,7 @@ class PromptWatchTest {
   }
 
   @Test fun noAskWhileNobodyLooksAndAFailedAskKeepsTheLastAnswer() {
-    val busy = PromptWatch.busy(serving, setOf("a1"))
+    val busy = PromptWatch.busy(listOf(serving), setOf("a1"))
     var looking = false
     var body: String? = slots(true, 2048, 0)
     var asks = 0

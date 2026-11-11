@@ -3,16 +3,21 @@ package com.phonecando.runner.engine
 import android.content.Context
 import android.util.Log
 import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.limits.RunLimitStore
+import com.phonecando.runner.memory.MemoryGuard
+import com.phonecando.runner.memory.MemoryGuards
+import com.phonecando.runner.memory.MemoryStatus
 import com.phonecando.runner.models.prompt.PromptReading
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 
-// The process's one EngineSupervisor, and who hears about it: the
-// foreground service (notification, stop when idle) and the native module
-// (the phonecandoEngineState and phonecandoPromptReading events). Listeners
-// run on the thread that changed the engine, never the main thread by
-// default.
+// The process's one EngineSupervisor with its memory guard (memory/), and
+// who hears about them: the foreground service (notification, stop when
+// idle) and the native module (the phonecandoEngineState,
+// phonecandoPromptReading and phonecandoMemory events). The supervisor
+// holds to the user's run limits (RunLimitStore). Listeners run on the
+// thread that changed the engine, never the main thread by default.
 internal object Engines {
   interface Listener {
     fun onStatus(status: EngineStatus) {}
@@ -23,20 +28,36 @@ internal object Engines {
     /** The chats the engines are busy with changed (EngineSupervisor.chats). */
     fun onChats() {}
 
-    /** The model server's prompt reading changed (EngineSupervisor.promptReading); null: none. */
+    /** A model server's prompt reading changed (EngineSupervisor.promptReading); null: none. */
     fun onPrompt(reading: PromptReading?) {}
+
+    /** The memory guard's reading changed, or is not ok (MemoryGuard). */
+    fun onMemory(status: MemoryStatus) {}
   }
 
   private val listeners = CopyOnWriteArrayList<Listener>()
   @Volatile private var supervisor: EngineSupervisor? = null
+  @Volatile private var guard: MemoryGuard? = null
 
   fun get(context: Context): EngineSupervisor = supervisor ?: synchronized(this) {
-    supervisor ?: EngineSupervisor(context.applicationContext ?: context, AgentStores.get(context), relay)
-      .also { supervisor = it }
+    supervisor ?: create(context.applicationContext ?: context).also { supervisor = it }
   }
 
   /** The supervisor if anything created it yet (nothing can run before that). */
   fun peek(): EngineSupervisor? = supervisor
+
+  /** The memory guard, made with the supervisor. */
+  fun memory(context: Context): MemoryGuard {
+    get(context)
+    return checkNotNull(guard)
+  }
+
+  private fun create(app: Context): EngineSupervisor {
+    val limits = RunLimitStore.get(app)
+    val engines = EngineSupervisor(app, AgentStores.get(app), relay, limits = limits::read)
+    guard = MemoryGuards.install(app, engines) { relay.onMemory(it) }
+    return engines
+  }
 
   fun addListener(listener: Listener) {
     listeners.addIfAbsent(listener)
@@ -54,6 +75,8 @@ internal object Engines {
     override fun onChats() = each { it.onChats() }
 
     override fun onPrompt(reading: PromptReading?) = each { it.onPrompt(reading) }
+
+    override fun onMemory(status: MemoryStatus) = each { it.onMemory(status) }
 
     private inline fun each(block: (Listener) -> Unit) {
       for (l in listeners) {

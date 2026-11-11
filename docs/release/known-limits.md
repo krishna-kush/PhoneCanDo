@@ -86,10 +86,14 @@ These are not scheduled work unless they are also listed in
 - Battery-exemption prompting is not implemented, and a dead engine is not
   restarted by itself: the next start (its chat or terminal opening, or the
   app coming to the foreground for the active agent) launches it again.
-- At most three engines run at once. A further start stops the least
-  recently used engine that has been idle for a minute, and is refused
-  (`too_many_running`) when none has. An agent's terminal and web UI share
-  its engine; different agents are separate engines in separate images.
+- Any number of engines and local model servers may run at once; when the
+  phone nears its memory peak the runner warns and then stops the least
+  recently used agent itself (`app/docs/modules/runner.md` → Memory guard).
+  Optional caps in Settings limit both: a start past the agents' cap stops
+  the least recently used engine idle for a minute, and is refused
+  (`too_many_running`) when none has; a model past the models' cap is
+  refused (`too_many_models`). An agent's terminal and web UI share its
+  engine; different agents are separate engines in separate images.
 - iOS cannot run the local container; it is remote-only (later phase).
 
 ## Linux images

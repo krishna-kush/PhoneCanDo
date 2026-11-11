@@ -2,8 +2,9 @@
 
 `phonecando-runner` (`com.phonecando.runner`) is the Expo module that hosts
 the agents' engines: the agent records, the engine supervisor and its
-foreground service, the loopback bridge (`bridge.md`), agent installs, the
-local model server and the config it seeds into each engine's HOME.
+foreground service, the memory guard and the user's run limits, the
+loopback bridge (`bridge.md`), agent installs, the local model servers and
+the config it seeds into each engine's HOME.
 
 ## Native API
 
@@ -11,15 +12,18 @@ local model server and the config it seeds into each engine's HOME.
   imageId})`, `renameAgent`, `deleteAgent` (stops the agent's engine first;
   the image stays, and JS deletes it through `phonecando-linux`). The record
   JS sees is `src/engine/agents/records.ts`.
-- `api/AgentModelFunctions.kt` (see The model slot):
+- `api/AgentModelFunctions.kt` (see Local model servers):
   `setAgentModel(agentId, modelId | null)` stops a starting or running
   engine and resolves `{wasRunning, agent}`; JS starts it again. It rejects
   `model_unavailable` for a kind that takes no local model or a model not
   on the phone. `stopModelAgents(modelId)` stops every agent on the model
   whose engine is starting or ready (one grace) and resolves their ids for
   JS to start again: how a new context takes effect (`models.md` →
-  Context). `promptReading()` and the `phonecandoPromptReading` event
-  (`{reading}`) give the prompt the model server reads now.
+  Context). `stopModel(modelId)` stops the model: its agents first (as
+  above, plus any holding its server), then its server, also while it
+  loads; it resolves the agents it stopped, which stay stopped.
+  `promptReading()` and the `phonecandoPromptReading` event (`{reading}`)
+  give the prompt a model server reads now.
 - `api/EngineFunctions.kt`: `startEngine(agentId)`, `stopEngine`,
   `stopAllEngines`, `isAnyEngineAlive`, `touchEngine`, `engineStatus`,
   `engineStatuses`, `isEngineIdle` (the kind's idle rule) and
@@ -58,6 +62,11 @@ local model server and the config it seeds into each engine's HOME.
   (plain text; how a custom agent's JSON is shared and imported).
 - `api/NotifyFunctions.kt`: `consumeLaunchTarget` and `dismissAgentAlert`
   (see Notifications).
+- `api/RunLimitFunctions.kt` (see Run limits), synchronous: `runLimits()`
+  and `setRunLimits({maxAgents, maxModels})` → the caps as kept.
+- `api/MemoryFunctions.kt` (see Memory guard): `memoryStatus()`, the
+  guard's reading now with each running agent's and model server's bytes;
+  changes come as the `phonecandoMemory` event (same shape).
 - `PhoneCanDoRunnerModule.kt`: `getPrefix`, `getBuildChannel`, the
   phone-control switch, the `phonecandoLaunchTarget` event, the bridge
   prompts (`pendingPrompts`, `resolveUnlock`, `resolveAccessibility`, event
@@ -87,7 +96,9 @@ local model server and the config it seeds into each engine's HOME.
   finds and ends an agent's processes, `engine/spawn/` starts an engine by
   its style, `engine/ready/` says when it is ready, `engine/tui/` is a TUI
   engine's terminal and viewers.
-- `models/`: the local model server (see The model slot).
+- `models/`: the local model servers (see Local model servers).
+- `memory/`: the memory guard (see Memory guard); `limits/`: the user's
+  run limits (see Run limits).
 - `notify/` and `prompts/`: the agents' notifications, alerts and links to
   open, and where a tap opens the app (see Notifications).
 - `PhoneCanDoServeService.kt`: the foreground service (`dataSync` type).
@@ -163,10 +174,11 @@ are in `engine/spawn/`.
 - **Start.** `startEngine` registers a request and sends `ACTION_START` to
   the service, which runs starts one at a time on its own thread. A start
   is refused with `agent_not_installed` while the agent's install is owed
-  (see Installing an agent), then takes a seat (`EnginePolicy`: at most
-  three engines starting or ready; a further start stops the least
-  recently used ready engine that has been idle for a minute, and is
-  refused with `too_many_running` when none has), ends processes an
+  (see Installing an agent), then takes a seat (`EnginePolicy`: no cap by
+  default, the memory guard looks after RAM; with the user's cap on
+  agents, see Run limits, a start past it stops the least recently used
+  ready engine that has been idle for a minute, and is refused with
+  `too_many_running` when none has), ends processes an
   earlier life of this agent left behind, reads the image
   (`run/engine.env`; missing means `image_not_ready`), makes the work
   folder (see Agent images), seeds the config, opens the bridge, takes a
@@ -196,7 +208,10 @@ are in `engine/spawn/`.
   meanwhile get SIGTERM too), then SIGKILL to the rest (`engine/proc/`).
   Everything an engine starts inherits the tag, so this also ends shells,
   language servers and proot it left behind, and engines from an earlier
-  app process. Stopping every agent takes the same one wait.
+  app process. Stopping every agent takes the same one wait. A stop by the
+  memory guard ends as `stopped` with the error `low_memory: stopped to
+  free memory`, the only stopped status with an error (the next start
+  clears it).
 - **Death.** An exit nobody asked for marks the engine `died` and drops its
   process, so the next start launches it again; a TUI that exits 0 just
   stopped (`stopped`, no error). Nothing restarts it by itself.
@@ -298,7 +313,7 @@ with `waitForEngine` (`src/engine/connection.ts`). It never talks to an
 engine itself: the web UI's sign-in URL and the TUI's recipe come from this
 module (`pairWebUi`, `clientRecipe`).
 
-## The model slot
+## Local model servers
 
 An agent of a kind with a `models` block (`agents/AGENTS.md` → Engine
 styles) can run on a local model instead of its own provider. The model
@@ -309,39 +324,117 @@ files are `phonecando-models`' (`models.md`); the runner serves them
   models; neither `agents/` nor `lme/` knows the other (its header traces
   a record's `model` to the kind's env and args). A start refuses
   `model_unavailable` at once for a kind that takes no model or a model
-  that is gone, then, once the seat is taken, gets the model's server up.
-- **The server.** `ModelServer.kt` holds at most one llama-server, outside
-  the cap of three engines, started on demand from lme-host's launch plan:
-  `libllama-server.so` from the native-library dir, loopback on a port from
-  `PortAllocator`, a fresh random key per start in `LLAMA_API_KEY` (never
-  the argv), one slot, the context lme-host plans (`models.md` → Context;
-  the kind's `{{contextWindow}}` is what the server got) and `--cache-ram`
-  from what that leaves. The plan goes to logcat (`PhoneCanDoModels`). It
-  tells `ModelsHost` what it serves, so the model's card shows the
-  server's own context. The start waits for `/health` (up to 5 min), so the
-  agent stays `starting` while its model loads, and the service's start
-  thread waits with it. Output goes to `files/logs/model-server.log`; the
-  process carries `PHONECANDO_AGENT=model-server`, so a stop-all and a
-  later process's leftover sweep find it.
-- **Sharing and stopping.** Agents bound to the same model share the
-  server; another model is refused while an agent runs on the first
-  (`ModelSlotPolicy.kt`). Each engine's hold ends with it (a stop, a
-  failed start, a death), and the last one stops the server (SIGTERM,
-  SIGKILL after 3 s). A server that exits by itself takes its agents down
-  (`died`, `model_unavailable`): their engines had its URL and key.
+  that is gone, and `too_many_models` for a model that is not loaded while
+  the user's cap on loaded models is reached (see Run limits); once the
+  seat is taken it gets the model's server up.
+- **The servers.** `ModelServer.kt` runs one llama-server per model, as
+  many models at once as the user's cap allows (none by default; the
+  memory guard looks after RAM), outside the agents' cap, each started on
+  demand from lme-host's launch plan: `libllama-server.so` from the
+  native-library dir, loopback on a port from `PortAllocator`, a fresh
+  random key per start in `LLAMA_API_KEY` (never the argv), one slot, the
+  context lme-host plans (`models.md` → Context; the kind's
+  `{{contextWindow}}` is what the server got) and `--cache-ram` from what
+  that leaves. The plan goes to logcat (`PhoneCanDoModels`); a plan past
+  the RAM budget is logged, never refused. It tells `ModelsHost` what each
+  serves, so each model's card shows its server's own context. The start
+  waits for `/health` (up to 5 min), so the agent stays `starting` while
+  its model loads, and the service's start thread waits with it. Each
+  server's output goes to `files/logs/model-server-<model id>.log`; its
+  process carries `PHONECANDO_AGENT=model-server` and
+  `PHONECANDO_MODEL=<model id>`, so a stop-all finds every one and the
+  memory guard tells them apart. The first launch in an app process ends
+  what an earlier process left (later, a tagged server is a sibling of
+  ours, so only then).
+- **Sharing and stopping.** Agents bound to the same model share its
+  server (`ModelSlotPolicy.kt`: join it when it answers; refuse with
+  `model_unavailable` while it still loads for another agent, which is
+  rare as starts run one at a time). Each engine's hold on its model ends
+  with it (a stop, a failed start, a death), and the last one stops that
+  server (SIGTERM, SIGKILL after 3 s). `stopModel` stops its agents first,
+  then the server, also while it loads. A server that exits by itself
+  takes its agents down (`died`, `model_unavailable`): their engines had
+  its URL and key.
 - **Refusals** say why after `model_unavailable:`, in words the agent's
   page shows as they are (`ModelReasons.kt`; never a path or a key).
 - **Secrets.** Every key this process gave a model server
   (`ModelServerKeys`) is redacted like an agent's password.
 - **Prompt reading** (`models/prompt/`). A first reply on a phone CPU
   waits minutes while the model reads the agent's prompt. While an agent
-  bound to the server has a working chat and the screen is on,
-  `PromptWatch` asks its `GET /slots` every 2 s. A slot that is processing
+  bound to a server has a working chat and the screen is on,
+  `PromptWatch` asks that server's `GET /slots` every 2 s (with several
+  busy at once, the first; the app shows one reading). A slot that is processing
   and has decoded no token is reading: `read` is
   `n_prompt_tokens_processed` (it grows once per 2048-token batch) and
   `cached` is `n_prompt_tokens_cache`. /slots gives no total for the
   prompt, so none is shown. Each change goes to the app (the event) and to
   the service notification (`notify/ReadingLines.kt`).
+
+## Run limits
+
+By default any number of agents may run and any number of local models may
+be loaded; the memory guard (below) keeps the phone from running out. The
+user can set hard caps in Settings: `setRunLimits({maxAgents, maxModels})`
+keeps them in the runner prefs (`limits/RunLimitStore.kt`, keys
+`run_max_agents` and `run_max_models`; absent is no cap), so the
+supervisor holds to them with no JS around. A cap is null or a whole number
+1-99: `RunLimits.kt` (pure) rounds and clamps what JS sends, and anything
+that is not a finite number is no cap. Both are read at each start:
+
+- **Agents** (`EnginePolicy`): at the cap, a start stops the least recently
+  used ready engine idle for a minute, and asks again; with none idle it
+  is refused with `too_many_running` ("N agents are running, the most you
+  set in Settings, …"). Engines stopping do not count.
+- **Models** (`ModelSlotPolicy`): at the cap (servers loading or ready), a
+  start whose model is not loaded is refused with `too_many_models`, once
+  before the seat is taken and again when the server would start. Joining
+  a loaded model never counts.
+
+A cap lowered below what runs now stops nothing: it applies to the next
+start.
+
+## Memory guard
+
+With no cap, the phone's memory is the limit. `memory/MemoryGuard.kt`
+watches it while an engine or a model server runs, and when the phone
+nears its peak the app warns and, unless the user stops agents
+themselves, the runner stops one after a countdown. Every number is in
+`memory/MemoryRules.kt` (`MemoryPolicyTest` pins them):
+
+- **Reading.** Android's `ActivityManager.MemoryInfo` (`SystemMemory.kt`):
+  `availMem`, `totalMem`, `threshold` and `lowMemory`. **warn** when
+  `availMem` is under max(12% of total, threshold + 512 MiB);
+  **critical** when `lowMemory` or under threshold + 128 MiB; back to
+  **ok** only once it is at least the warn line plus 4% of total.
+- **Countdown** (`MemoryPolicy.kt`, pure): 60 s from entering warn, at
+  most 15 s once critical (easing back to warn gives the minute back).
+  When it runs out, one agent is stopped; then 10 s for memory to settle,
+  and if still not ok a fresh 30 s (15 s critical) for the next. Back at
+  ok the episode ends and the next starts with the full minute.
+- **Who goes.** Never the agent on screen while the app is in front (the
+  one `setOpenChat` names); agents with no run going (their kind's idle
+  rule) first, least recently used first, then working ones the same way.
+  With nothing it may stop it keeps warning with no countdown. A stop is a
+  user's stop (`stopped`, error `low_memory: stopped to free memory`), so
+  a model server goes with its last holder.
+- **Cost.** One thread, a look every 5 s only while something of ours
+  runs, and at once when an engine starts or Android calls
+  `onTrimMemory`/`onLowMemory` (Android 14+ no longer sends the running-low
+  levels, so polling is the real signal). What each agent and model server
+  takes (`ProcessMemory.kt`: PSS from `/proc/<pid>/smaps_rollup`, else
+  `VmRSS`, summed over the processes tagged with the agent, or with
+  `model-server` and the model id) is read only while the level is not ok
+  or when the app asks.
+- **To the app.** `phonecandoMemory` (`MemoryStatus.toMap`) on every level
+  or countdown change, after an automatic stop (`lastAutoStop`: what it
+  stopped, agents and the models that went with them) and on every look
+  while not ok; `memoryStatus()` reads it now.
+- **Notifications** (`notify/MemoryNotices.kt`, words in
+  `MemoryLines.kt`): while PhoneCanDo is not in front, one warning per
+  episode, then after each automatic stop one notice naming what was
+  stopped (replacing the warning; later stops update it quietly). A
+  warning nothing came of goes once memory is back or nothing of ours
+  runs. A tap opens Home.
 
 ## Foreground service and lifetime
 
@@ -367,7 +460,8 @@ for `quietSec`, 60 s for opencode; an engine with none since its start is
 idle); it does nothing while phone control is unlocked, so an agent driving
 another app is not cut off. A start, a chat in front (`useEngineTouch`,
 every two minutes), each bridge call and each engine event mark an engine
-used, so it is not the one stopped to make room.
+used, so it is not the one stopped to make room (under the user's cap) or
+to free memory (the memory guard).
 
 Android 15+ lets a `dataSync` foreground service run 6 hours in any 24
 while the app is in the background; bringing the app to the foreground
@@ -387,7 +481,8 @@ notification never replaces another's. Per agent, one slot (id 4500)
 holds its "come back to me" notice, the `/app` return notice or an alert
 (below), so there is never more than one; its own posts (`/notify`) take
 4600-8695, one per title, its prompts 9000-9255 and its links to open
-9300-9363. The engine service (4101) and the update notice (4202) are
+9300-9363. The engine service (4101), the update notice (4202) and the
+memory guard's notice (4301, on the agents' channel; see Memory guard) are
 untagged.
 
 - **Where a tap lands.** A `LaunchTarget` names a place (`home`, `env` or
@@ -689,7 +784,8 @@ sends later, even from a new process, can still attach it. The shape is
   share `/pce/act`.
 - Low memory (`TelemetryMemoryCallbacks.kt`): `onTrimMemory` at
   `RUNNING_LOW`, `RUNNING_CRITICAL` or `COMPLETE`, and `onLowMemory`.
-  Android 14+ delivers none of these, so the counter stays 0 there.
+  Android 14+ delivers none of these, so the counter stays 0 there (the
+  memory guard polls instead).
 - Live fields (`TelemetrySnapshot.kt`, read on every call):
   `installSource` (installer package), `batteryOptIgnored`,
   `fgServiceRunning` (true while any agent's engine is starting, ready or

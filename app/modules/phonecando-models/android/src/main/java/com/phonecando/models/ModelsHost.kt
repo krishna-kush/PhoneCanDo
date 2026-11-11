@@ -25,8 +25,8 @@ import java.util.concurrent.Executors
  * `files/models/` (swept once, before any job), the phone as lme sees it,
  * the Hugging Face token, the running jobs and our own executor (a download
  * takes minutes; Expo's async queue is one thread shared by every module).
- * It outlives a JS reload, so jobs keep running. The runner's model slot
- * reads the store and the device through it and says which model it serves
+ * It outlives a JS reload, so jobs keep running. The runner's model servers
+ * read the store and the device through it and say which models they serve
  * ([serving]); the runner's service stays in the foreground while [jobs]
  * run. Events go to whichever module instances listen.
  */
@@ -51,7 +51,7 @@ class ModelsHost private constructor(context: Context) {
     Thread(task, "phonecando-models").apply { isDaemon = true }
   }
 
-  /** The model the runner's model slot serves now (it sets this when it starts). */
+  /** The models the runner's model servers serve now (it sets this when it starts). */
   @Volatile
   var serving: ServingSource = ServingSource.NONE
 

@@ -10,8 +10,10 @@ import type {
   NativeKindProblem,
   NativeKindSaved,
   NativeLaunchTarget,
+  NativeMemoryStatus,
   NativeOpenUrlAction,
   NativePromptReading,
+  NativeRunLimits,
   NativeTerminalAttach,
   NativeTerminalTheme,
   NativeUserKind,
@@ -22,6 +24,7 @@ import type { TelemetryNativeSnapshot } from './telemetry.types';
 export type { EngineHealth, NativeCrash, TelemetryNativeSnapshot } from './telemetry.types';
 export type {
   NativeAgent,
+  NativeAutoStop,
   NativeBridgePrompt,
   NativeClientRecipe,
   NativeEngineStatus,
@@ -30,8 +33,13 @@ export type {
   NativeKindProblem,
   NativeKindSaved,
   NativeLaunchTarget,
+  NativeMemoryAgent,
+  NativeMemoryLevel,
+  NativeMemoryModel,
+  NativeMemoryStatus,
   NativeOpenUrlAction,
   NativePromptReading,
+  NativeRunLimits,
   NativeTerminalAttach,
   NativeTerminalTheme,
   NativeUserKind,
@@ -43,6 +51,7 @@ type RunnerEvents = {
   phonecandoBridgePrompt(e: NativeBridgePrompt): void;
   phonecandoEngineState(e: NativeEngineStatus): void;
   phonecandoPromptReading(e: { reading: NativePromptReading | null }): void;
+  phonecandoMemory(e: NativeMemoryStatus): void;
 };
 
 declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
@@ -75,6 +84,12 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;
+  /** Stops the agents on the model first, then its server; resolves with the agents it stopped. */
+  stopModel(modelId: string): Promise<string[]>;
+  runLimits(): NativeRunLimits;
+  /** Saves the caps (null: none) and returns them as kept. */
+  setRunLimits(limits: NativeRunLimits): NativeRunLimits;
+  memoryStatus(): NativeMemoryStatus;
   isAnyEngineAlive(): boolean;
   touchEngine(agentId: string): void;
   engineStatus(agentId: string): NativeEngineStatus;

@@ -6,12 +6,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.concurrent.thread
 
-// Watches the model server read prompts. It asks the server's /slots
+// Watches a model server read prompts. It asks the server's /slots
 // (loopback, with the per-start key, a few hundred bytes; the pinned server
 // answers it between decode steps, never behind a long prompt) every 2 s,
-// and only while the server is busy for someone and someone could look: an
+// and only while a server is busy for someone and someone could look: an
 // agent bound to it has a run going (a working chat, ChatBoard) and the
-// screen is on. [onChange] hears each new reading (PromptReading), and null
+// screen is on. With several servers busy at once it watches the first
+// (busy); the app shows one reading at a time. [onChange] hears each new reading (PromptReading), and null
 // once nothing is read or nobody is busy. A failed ask keeps the last
 // answer. poke() whenever a run may have started (a chat moved); one thread
 // at a time, which ends once nobody is busy. The key never leaves the
@@ -86,12 +87,14 @@ internal class PromptWatch(
     private const val CONNECT_MS = 1_000
     private const val READ_MS = 5_000
 
-    /** The server busy for the agents holding it with a run going ([working]); null when none is. */
-    fun busy(serving: ModelServer.Serving?, working: Set<String>): Target? {
-      val server = serving ?: return null
-      val agents = server.holders.filter(working::contains).sorted()
-      if (agents.isEmpty()) return null
-      return Target(server.endpoint.baseUrl, server.endpoint.key, server.model.id, server.model.name, agents)
+    /** The first server busy for agents holding it with a run going ([working]); null when none is. */
+    fun busy(serving: List<ModelServer.Serving>, working: Set<String>): Target? {
+      for (server in serving) {
+        val agents = server.holders.filter(working::contains).sorted()
+        if (agents.isEmpty()) continue
+        return Target(server.endpoint.baseUrl, server.endpoint.key, server.model.id, server.model.name, agents)
+      }
+      return null
     }
 
     // GET /slots with the server's key; null on any failure.

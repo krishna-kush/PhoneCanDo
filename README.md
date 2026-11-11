@@ -37,7 +37,7 @@ stay local; the app's network calls are listed in
 | | |
 |---|---|
 | **Chat** | The agent's own UI: opencode's web UI paired with the local engine, or the agent's TUI. |
-| **Several agents** | Pick the agent when you make a machine. Up to three run at once, each with its own engine; switch between them from the header. |
+| **Several agents** | Pick the agent when you make a machine. Run as many at once as RAM allows (or set a cap in Settings), each with its own engine; switch between them from the header. Near the RAM peak the app warns and lists what runs, and stops the sleepiest itself if you don't. |
 | **Linux machines** | Each agent works in its own Linux image (proot): the Debian-based default ships in the APK, or pick any arm64 image from Docker Hub. Packages you or the agent install stay in that image. It keeps your work apart; it is not a security sandbox. |
 | **Terminal** | A real PTY and TUI, rendered by xterm.js; or a Linux shell inside an agent's image. |
 | **Phone control** | Accessibility-driven observe/act, gated by an in-app switch. |

@@ -8,8 +8,11 @@ import com.phonecando.runner.engine.EngineEnv
 // server or a proot an engine left behind, and engines from an earlier app
 // process. Never our own pid. Pure: ProcScanner feeds it /proc.
 
-/** One /proc entry: [tag] is its PHONECANDO_AGENT value, null when absent or unreadable. */
-data class ProcEntry(val pid: Int, val uid: Int, val zombie: Boolean, val tag: String?)
+/**
+ * One /proc entry: [tag] is its PHONECANDO_AGENT value, null when absent or
+ * unreadable; [model] its PHONECANDO_MODEL (a model server's model id).
+ */
+data class ProcEntry(val pid: Int, val uid: Int, val zombie: Boolean, val tag: String?, val model: String? = null)
 
 object TaggedProcesses {
   const val TAG = EngineEnv.AGENT
@@ -23,6 +26,10 @@ object TaggedProcesses {
 
   /** The tag in /proc/<pid>/environ (NUL-separated KEY=VALUE). */
   fun tagOf(environ: ByteArray): String? = parseEnviron(environ)[TAG]
+
+  /** The tag and the model id in /proc/<pid>/environ. */
+  fun tagsOf(environ: ByteArray): Pair<String?, String?> =
+    parseEnviron(environ).let { it[TAG] to it[EngineEnv.MODEL] }
 
   fun parseEnviron(environ: ByteArray): Map<String, String> {
     val out = LinkedHashMap<String, String>()

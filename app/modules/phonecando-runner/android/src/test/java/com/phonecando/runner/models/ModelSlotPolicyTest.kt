@@ -1,28 +1,38 @@
 package com.phonecando.runner.models
 
 import com.phonecando.runner.models.ModelSlotPolicy.Decision
+import com.phonecando.runner.models.ModelSlotPolicy.Wanted
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ModelSlotPolicyTest {
   @Test fun nothingThereStartsIt() {
-    assertEquals(Decision.Start, ModelSlotPolicy.decide(null, false, false, emptySet(), "qwen"))
+    assertEquals(Decision.Start, ModelSlotPolicy.decide(null, 0, null))
   }
 
   @Test fun theSameModelUpIsShared() {
-    assertEquals(Decision.Reuse, ModelSlotPolicy.decide("qwen", true, true, setOf("a"), "qwen"))
-    assertEquals(Decision.Reuse, ModelSlotPolicy.decide("qwen", true, true, emptySet(), "qwen"))
+    assertEquals(Decision.Reuse, ModelSlotPolicy.decide(Wanted(alive = true, ready = true, heldByOthers = true), 0, null))
+    assertEquals(Decision.Reuse, ModelSlotPolicy.decide(Wanted(alive = true, ready = true, heldByOthers = false), 0, null))
+    // Joining a model that is up never counts against the cap.
+    assertEquals(Decision.Reuse, ModelSlotPolicy.decide(Wanted(alive = true, ready = true, heldByOthers = true), 4, 1))
   }
 
-  @Test fun anotherModelInUseIsBusy() {
-    assertEquals(Decision.Busy("gemma"), ModelSlotPolicy.decide("gemma", true, true, setOf("a"), "qwen"))
-    // Still loading for another agent.
-    assertEquals(Decision.Busy("qwen"), ModelSlotPolicy.decide("qwen", false, true, setOf("a"), "qwen"))
+  @Test fun anotherModelLoadedIsNoReasonToRefuse() {
+    assertEquals(Decision.Start, ModelSlotPolicy.decide(null, 3, null))
   }
 
-  @Test fun anUnusedOrDeadServerIsReplaced() {
-    assertEquals(Decision.Start, ModelSlotPolicy.decide("gemma", true, true, emptySet(), "qwen"))
-    assertEquals(Decision.Start, ModelSlotPolicy.decide("qwen", true, false, setOf("a"), "qwen"))
-    assertEquals(Decision.Start, ModelSlotPolicy.decide("gemma", true, false, setOf("a"), "qwen"))
+  @Test fun theCapCountsTheOtherModelsUp() {
+    assertEquals(Decision.Capped(2), ModelSlotPolicy.decide(null, 2, 2))
+    assertEquals(Decision.Capped(1), ModelSlotPolicy.decide(null, 3, 1))
+    assertEquals(Decision.Start, ModelSlotPolicy.decide(null, 1, 2))
+  }
+
+  @Test fun stillLoadingForAnotherAgentIsRefused() {
+    assertEquals(Decision.Loading, ModelSlotPolicy.decide(Wanted(alive = true, ready = false, heldByOthers = true), 0, null))
+  }
+
+  @Test fun aDeadOrUnheldServerIsReplaced() {
+    assertEquals(Decision.Start, ModelSlotPolicy.decide(Wanted(alive = false, ready = true, heldByOthers = true), 0, null))
+    assertEquals(Decision.Start, ModelSlotPolicy.decide(Wanted(alive = true, ready = false, heldByOthers = false), 0, null))
   }
 }

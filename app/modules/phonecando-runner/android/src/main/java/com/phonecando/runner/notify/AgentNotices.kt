@@ -12,8 +12,8 @@ import android.content.Context
 // PhoneCanDo on that agent (LaunchTargets: the target rides in the tap).
 // Ids within an agent: SLOT, /notify 4600-8695 (one per title), prompts
 // 9000-9255, links to open (prompts/OpenUrlPrompts) 9300-9363. The engine
-// service (4101) and the update notice (4202) are untagged, so they never
-// meet these.
+// service (4101), the update notice (4202) and the memory notice (4301,
+// MemoryNotices, on this channel) are untagged, so they never meet these.
 internal class AgentNotices(private val context: Context) {
   data class Notice(
     val agentId: String,
@@ -31,9 +31,7 @@ internal class AgentNotices(private val context: Context) {
   /** Posts it; true when notifications show at all (no POST_NOTIFICATIONS grant posts nothing). */
   fun post(notice: Notice): Boolean {
     val nm = manager() ?: return false
-    nm.createNotificationChannel(
-      NotificationChannel(CHANNEL, "PhoneCanDo agent", NotificationManager.IMPORTANCE_DEFAULT),
-    )
+    createChannel(nm)
     val builder = Notification.Builder(context, CHANNEL)
       .setContentTitle(notice.title)
       .setContentText(notice.text)
@@ -61,6 +59,10 @@ internal class AgentNotices(private val context: Context) {
 
   companion object {
     const val CHANNEL = "phonecando-agent"
+
+    fun createChannel(nm: NotificationManager) {
+      nm.createNotificationChannel(NotificationChannel(CHANNEL, "PhoneCanDo agent", NotificationManager.IMPORTANCE_DEFAULT))
+    }
 
     /** The agent's one "come back to me" notice: the /app return notice and its alerts. */
     const val SLOT = 4500

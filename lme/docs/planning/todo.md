@@ -14,8 +14,10 @@ slot.
 
 ## Runner model slot
 
-- [x] Built: one model server outside the 3-agent cap, started and stopped
-      with its agents; the one join (`LocalModelBinding`).
+- [x] Built: one model server per model, several at once (the user's
+      optional cap in Settings; the runner's memory guard looks after
+      RAM), started and stopped with its agents; the one join
+      (`LocalModelBinding`).
 - [x] Several system messages on Qwen3.5: our fold patch
       (`lme/docs/README.md` → The system-message fold).
 - [x] Device checks on Qwen3.5-0.8B: opencode, Claude Code (patched
@@ -71,7 +73,7 @@ slot.
       context may pass the budget, so it can run at 16k there with the
       warning.
 - [ ] Device logs of a large context (the 0.8B at 256k): the `CPU compute
-      buffer size` in `model-server.log`, which the gate does not count.
+      buffer size` in `model-server-<id>.log`, which the gate does not count.
       More context on small phones would need a quantised KV cache
       (`--cache-type-k q8_0`).
 - [ ] Device numbers: does a smaller chosen context with a prompt cache

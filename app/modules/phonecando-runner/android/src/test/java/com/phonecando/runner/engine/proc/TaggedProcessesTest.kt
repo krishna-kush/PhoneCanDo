@@ -64,6 +64,7 @@ class TaggedProcessesTest {
     fake("201", 10999, "S (sleeping)", environ("PHONECANDO_AGENT=a1"))
     fake("202", uid, "R (running)", null) // environ unreadable
     fake("203", uid, "Z (zombie)", environ("PHONECANDO_AGENT=a1"))
+    fake("204", uid, "S (sleeping)", environ("PHONECANDO_AGENT=model-server", "PHONECANDO_MODEL=qwen3-4b"))
     File(proc, "self").mkdirs()
     File(proc, "meminfo").writeText("x")
     val entries = ProcScanner(proc).scan(uid).sortedBy { it.pid }
@@ -74,9 +75,12 @@ class TaggedProcessesTest {
         ProcEntry(201, 10999, false, null),
         ProcEntry(202, uid, false, null),
         ProcEntry(203, uid, true, null),
+        // A model server: tagged as one, and which model it serves.
+        ProcEntry(204, uid, false, "model-server", "qwen3-4b"),
       ),
       entries,
     )
     assertEquals(listOf(200), TaggedProcesses.select(entries, setOf("a1"), me, uid))
+    assertEquals(listOf(204), TaggedProcesses.select(entries, setOf("model-server"), me, uid))
   }
 }

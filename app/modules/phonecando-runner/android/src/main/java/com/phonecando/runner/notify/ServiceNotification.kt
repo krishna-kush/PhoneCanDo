@@ -8,7 +8,7 @@ import android.content.Context
 
 // The foreground service's one notification: the chats the agents are busy
 // with, one line each, the chat, then its agent, then its state
-// (ChatBoard), then the model server reading a prompt (ReadingLines), then
+// (ChatBoard), then a model server reading a prompt (ReadingLines), then
 // the model downloads and imports running (TransferLines). Engines
 // themselves never show. Chat titles and model names stay off the lock
 // screen: the public version only counts. Tapping opens the app; on that
@@ -24,7 +24,7 @@ internal class ServiceNotification(private val context: Context) {
   /**
    * [names]: agent id → name; [running]: agents whose engine is live;
    * [transfers]: TransferLines of the model jobs; [reading]: the ReadingLines
-   * line while the model server reads a prompt.
+   * line while a model server reads a prompt.
    */
   fun build(
     chats: List<ChatBoard.Chat>,

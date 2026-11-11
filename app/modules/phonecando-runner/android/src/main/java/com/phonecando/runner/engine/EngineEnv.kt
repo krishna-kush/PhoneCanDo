@@ -10,9 +10,14 @@ import com.phonecando.agents.kit.term.TermTheme
 // kit scripts write), the build channel, and the agent tag.
 // The tag (PHONECANDO_AGENT=<agentId>) is inherited by everything the engine
 // starts, which is how a stop finds every process of an agent (proc/). It
-// is set last, so no image or kind can change it. Pure.
+// is set last, so no image or kind can change it. A local model server
+// carries AGENT=model-server and MODEL=<model id> (models/ModelServer).
+// Pure.
 object EngineEnv {
   const val AGENT = "PHONECANDO_AGENT"
+
+  /** A model server's model id, beside AGENT=model-server: how the memory guard tells servers apart. */
+  const val MODEL = "PHONECANDO_MODEL"
   const val BRIDGE_URL = "PHONECANDO_BRIDGE_URL"
   const val BRIDGE_TOKEN = "PHONECANDO_BRIDGE_TOKEN"
   const val CHANNEL = "PHONECANDO_CHANNEL"

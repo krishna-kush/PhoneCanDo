@@ -202,7 +202,7 @@ class PhoneCanDoServeService : Service() {
   }
 
   // The chats the engines are busy with, each with its agent's name, the
-  // prompt the model server reads, and the model jobs.
+  // prompt a model server reads, and the model jobs.
   private fun content(): Notification {
     val supervisor = Engines.peek()
     val names = AgentStores.get(this).all().associate { it.id to it.name }
@@ -228,8 +228,8 @@ class PhoneCanDoServeService : Service() {
 
     // The runner's own prefs file: the launch target waiting for the app
     // (notify/LaunchTargets), the notification-permission ask, the
-    // self-update mark, the accessibility-connected flag. Engine state lives
-    // in agents.json.
+    // self-update mark, the accessibility-connected flag, the user's run
+    // limits (limits/RunLimitStore). Engine state lives in agents.json.
     const val PREFS = "phonecando-engine"
   }
 }

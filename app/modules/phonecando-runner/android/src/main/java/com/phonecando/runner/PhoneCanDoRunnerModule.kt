@@ -10,11 +10,14 @@ import com.phonecando.runner.api.engineFunctions
 import com.phonecando.runner.api.engineTerminalFunctions
 import com.phonecando.runner.api.installFunctions
 import com.phonecando.runner.api.kindFunctions
+import com.phonecando.runner.api.memoryFunctions
 import com.phonecando.runner.api.notifyFunctions
+import com.phonecando.runner.api.runLimitFunctions
 import com.phonecando.runner.api.userKindFunctions
 import com.phonecando.runner.bridge.BridgePrompts
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.memory.MemoryStatus
 import com.phonecando.runner.models.ModelJobsAnchor
 import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.prompts.OpenUrlPrompts
@@ -44,8 +47,9 @@ class PhoneCanDoRunnerModule : Module() {
   }
 
   // Every engine change, as the phonecandoEngineState event (EngineStatus.toMap),
-  // and the model server's prompt reading as phonecandoPromptReading
-  // ({reading}: PromptReading.toMap, null once nothing is read).
+  // a model server's prompt reading as phonecandoPromptReading
+  // ({reading}: PromptReading.toMap, null once nothing is read) and the
+  // memory guard's reading as phonecandoMemory (MemoryStatus.toMap).
   private val engineListener = object : Engines.Listener {
     override fun onStatus(status: EngineStatus) {
       sendEvent("phonecandoEngineState", status.toMap())
@@ -53,6 +57,10 @@ class PhoneCanDoRunnerModule : Module() {
 
     override fun onPrompt(reading: PromptReading?) {
       sendEvent("phonecandoPromptReading", mapOf("reading" to reading?.toMap()))
+    }
+
+    override fun onMemory(status: MemoryStatus) {
+      sendEvent("phonecandoMemory", status.toMap())
     }
   }
 
@@ -72,7 +80,7 @@ class PhoneCanDoRunnerModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("PhoneCanDoRunner")
-    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading")
+    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory")
 
     OnCreate {
       instance = this@PhoneCanDoRunnerModule
@@ -104,6 +112,8 @@ class PhoneCanDoRunnerModule : Module() {
     userKindFunctions { context() }
     notifyFunctions { context() }
     clipboardFunctions { context() }
+    runLimitFunctions { context() }
+    memoryFunctions { context() }
 
     Function("getPrefix") {
       appFilesDir().absolutePath

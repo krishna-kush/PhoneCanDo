@@ -11,8 +11,8 @@ import com.phonecando.runner.engine.EngineStartError
 import com.phonecando.runner.engine.EngineStartException
 
 // The one place agents meet local models; neither agents/ nor lme/ knows
-// the other. An agent record's `model` (a model id in the store) becomes a
-// running model server (ModelServer, from lme-host's launch plan), whose
+// the other. An agent record's `model` (a model id in the store) becomes
+// that model's running server (ModelServer, from lme-host's launch plan), whose
 // ServedEndpoint becomes the kit's ModelEndpoint; the kind's `models` block
 // then picks the wire API (ManifestKind.modelApi) and EngineLauncher hands
 // the endpoint to the launch (LaunchContext.model), which renders that
@@ -24,11 +24,16 @@ internal class LocalModelBinding(
   /** The ready models in the store (models.json). */
   private val models: () -> List<ModelRecord>,
 ) {
-  /** Refuses at once, before a seat is taken, what cannot work: the kind takes no model, or the model is gone. */
+  /**
+   * Refuses at once, before a seat is taken, what cannot work: the kind
+   * takes no model, the model is gone, or it is not loaded and the user's
+   * cap on loaded models is reached (too_many_models).
+   */
   fun check(record: AgentRecord, kind: ManifestKind) {
     val id = record.model ?: return
     if (!accepts(kind)) throw unavailable(ModelReasons.kindTakesNone(kind.displayName))
     if (models().none { it.id == id }) throw unavailable(ModelReasons.gone(id))
+    server.checkCap(id)
   }
 
   /**
@@ -48,11 +53,20 @@ internal class LocalModelBinding(
     return endpoint
   }
 
-  /** The agent's engine is gone: its hold on the server ends (the last one stops it). */
+  /** The agent's engine is gone: its hold on its model's server ends (the last one stops it). */
   fun release(agentId: String) = server.release(agentId)
 
-  /** The server that answers now, and who holds it; null while none is ready. */
-  fun serving(): ModelServer.Serving? = server.serving()
+  /** The servers that answer now, and who holds each. */
+  fun serving(): List<ModelServer.Serving> = server.serving()
+
+  /** Every server loading or ready, and who holds each. */
+  fun loaded(): List<ModelServer.Loaded> = server.loaded()
+
+  /** The agents holding [modelId]'s server, also while it loads. */
+  fun holders(modelId: String): Set<String> = server.holders(modelId)
+
+  /** Ends [modelId]'s server, also while it loads (stop its agents first); the agents it still held. */
+  fun stop(modelId: String): Set<String> = server.stop(modelId)
 
   fun stopAll() = server.stopAll()
 

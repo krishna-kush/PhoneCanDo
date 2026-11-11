@@ -17,7 +17,7 @@ import com.phonecando.models.serving.ServingModel
 // in app/src/engine/models/types.ts). Numbers go out as doubles: a JS number
 // holds any file size we will ever see.
 
-/** [serving]: the model the runner serves now, if any (its card shows that server's context). */
+/** [serving]: this model's running server, if any (its card shows that server's context). */
 internal fun ModelRecord.toMap(device: DeviceInfo, serving: ServingModel?): Map<String, Any?> {
   val view = ModelContexts.view(device, this, serving)
   return mapOf(

@@ -2,9 +2,9 @@ package com.phonecando.runner.engine.proc
 
 import java.io.File
 
-// Lists the processes in /proc with their uid and agent tag. The environ
-// of a process is read only when it runs as [myUid]: Android shows an app
-// little else (hidepid), and others are unreadable anyway. Entries that
+// Lists the processes in /proc with their uid, agent tag and model id. The
+// environ of a process is read only when it runs as [myUid]: Android shows
+// an app little else (hidepid), and others are unreadable anyway. Entries that
 // vanish or cannot be read are skipped. Pure JVM; the root is a parameter
 // so tests can hand it a folder.
 class ProcScanner(private val root: File = File("/proc")) {
@@ -19,16 +19,16 @@ class ProcScanner(private val root: File = File("/proc")) {
       } catch (_: Exception) {
         null
       } ?: continue
-      val tag = if (uid == myUid && !zombie) {
+      val (tag, model) = if (uid == myUid && !zombie) {
         try {
-          TaggedProcesses.tagOf(File(dir, "environ").readBytes())
+          TaggedProcesses.tagsOf(File(dir, "environ").readBytes())
         } catch (_: Exception) {
-          null
+          null to null
         }
       } else {
-        null
+        null to null
       }
-      out += ProcEntry(pid, uid, zombie, tag)
+      out += ProcEntry(pid, uid, zombie, tag, model)
     }
     return out
   }

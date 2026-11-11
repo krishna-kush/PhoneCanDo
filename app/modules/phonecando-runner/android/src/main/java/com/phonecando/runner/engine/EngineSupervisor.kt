@@ -21,6 +21,9 @@ import com.phonecando.runner.engine.ready.TuiReady
 import com.phonecando.runner.engine.spawn.TuiProcess
 import com.phonecando.runner.engine.tui.TerminalViewException
 import com.phonecando.runner.engine.tui.TerminalViewers
+import com.phonecando.runner.limits.RunLimits
+import com.phonecando.runner.memory.MemoryRules
+import com.phonecando.runner.models.ModelServer
 import com.phonecando.runner.models.ModelServerKeys
 import com.phonecando.runner.models.ModelSlots
 import com.phonecando.runner.models.prompt.PromptReading
@@ -37,20 +40,22 @@ import kotlin.concurrent.withLock
 // Runs the engines of several agents at once, keyed by agent id (one per
 // process, Engines.get). Start: refuse an agent whose kind installs into
 // its image while that install is not recorded (InstallGate), take a seat
-// (EnginePolicy: at most three, else stop the least recently used idle
-// one, else too_many_running), clear out processes an earlier life of this
-// agent left behind, read the image and seed its HOME
-// (EngineLauncher.plan), bring up its local model when it has one (the
-// model slot, LocalModelBinding: this waits while the model loads; an
-// agent whose model cannot serve it is refused model_unavailable), open
-// the shared bridge when its kind has phone tools (BridgeAccess), take a
-// port (PortAllocator; a server engine only) and spawn by the kind's engine
-// style; the call returns once the process runs (and a server's port is
-// known). Whenever an engine is gone (stop, failed start, death) its hold
-// on the model ends, and the last one stops the model server; a model
-// server that dies takes its agents down (died, model_unavailable); while
-// it is busy for an agent with a run going, its prompt reading is watched
-// (models/prompt/). EngineWatch then reports ready (the kind's
+// (EnginePolicy: no cap unless the user set one, RunLimits; at the cap stop
+// the least recently used idle one, else too_many_running; the memory
+// guard, memory/, looks after RAM), clear out processes an earlier life of
+// this agent left behind, read the image and seed its HOME
+// (EngineLauncher.plan), bring up its local model's server when it has one
+// (LocalModelBinding: this waits while the model loads; an agent whose
+// model cannot serve it is refused model_unavailable, one past the user's
+// cap on loaded models too_many_models), open the shared bridge when its
+// kind has phone tools (BridgeAccess), take a port (PortAllocator; a
+// server engine only) and spawn by the kind's engine style; the call
+// returns once the process runs (and a server's port is known). Whenever
+// an engine is gone (stop, failed start, death) its hold on its model ends,
+// and the last one stops that model's server; a model server that dies
+// takes its agents down (died, model_unavailable); while one is busy for an
+// agent with a run going, its prompt reading is watched (models/prompt/).
+// stopModel stops a model's agents, then its server. EngineWatch then reports ready (the kind's
 // ReadyProbe), a 401 (relaunch on a fresh port), a boot timeout or an
 // exit; an engine that dies is marked died and its handle dropped, so
 // the next start launches it again (nothing restarts it by itself); a TUI
@@ -69,6 +74,8 @@ internal class EngineSupervisor(
   private val launcher: EngineLauncher = EngineLauncher(context),
   private val reaper: ProcessReaper = OsSignals.reaper(),
   private val ports: PortAllocator = PortAllocator(LoopbackPorts::isFree, LoopbackPorts::pickFree),
+  /** The user's caps (RunLimitStore), read at each start. */
+  private val limits: () -> RunLimits = { RunLimits.NONE },
 ) {
   private val lock = ReentrantLock()
   private val settled = lock.newCondition()
@@ -79,7 +86,7 @@ internal class EngineSupervisor(
     // A run may have started or ended.
     prompts.poke()
   }
-  private val models = ModelSlots.binding(context, ports, reaper, ::onModelDied)
+  private val models = ModelSlots.binding(context, ports, reaper, { limits().maxModels }, ::onModelDied)
   private val prompts: PromptWatch = ModelSlots.promptWatch(context, models, chats::working) { listener.onPrompt(it) }
   private val streams = EngineStreams(
     onActivity = ::onActivity,
@@ -92,6 +99,10 @@ internal class EngineSupervisor(
   /** The viewers of the TUI engines' terminals (the engineTerminal* functions). */
   val terminals = TerminalViewers()
 
+  // The agent whose chat or TUI is on screen (setOpenChat); the memory
+  // guard never stops it while the app is in front.
+  @Volatile private var openAgent: String? = null
+
   // ---- reads (any thread) ------------------------------------------------
 
   fun status(agentId: String): EngineStatus = lock.withLock { slots[agentId]?.status() }
@@ -103,14 +114,23 @@ internal class EngineSupervisor(
   /** The chats the running engines are busy with (the service notification). */
   fun chats(): List<ChatBoard.Chat> = chats.chats()
 
-  /** The model server reading a prompt for a bound agent's run; null when not (or not watched). */
+  /** A model server reading a prompt for a bound agent's run; null when not (or not watched). */
   fun promptReading(): PromptReading? = prompts.current()
 
   /** The user has this agent's chat in front: its done and error chats go. */
   fun chatsSeen(agentId: String) = chats.seen(agentId)
 
   /** The chat on screen (by id, or a TUI's by title), left out of the notification; nulls for none. */
-  fun setOpenChat(agentId: String?, sessionId: String?, title: String?) = chats.setOpen(agentId, sessionId, title)
+  fun setOpenChat(agentId: String?, sessionId: String?, title: String?) {
+    openAgent = agentId
+    chats.setOpen(agentId, sessionId, title)
+  }
+
+  /** The agent the app has on screen (setOpenChat); null when none or the app is not in front. */
+  fun openAgent(): String? = openAgent
+
+  /** The local model servers loading or ready, and the agents holding each. */
+  fun loadedModels(): List<ModelServer.Loaded> = models.loaded()
 
   /** The port of a starting or ready server engine whose process runs; null otherwise. */
   fun livePort(agentId: String): Int? = lock.withLock {
@@ -225,7 +245,8 @@ internal class EngineSupervisor(
         val seats = slots.values
           .filter { it !== slot && (it.state == EngineState.STARTING || it.state == EngineState.READY) }
           .map { EnginePolicy.Seat(it.agentId, it.usedAt() ?: 0L, it.state == EngineState.READY) }
-        when (val decision = EnginePolicy.admit(seats, System.currentTimeMillis())) {
+        val cap = limits().maxAgents
+        when (val decision = EnginePolicy.admit(seats, System.currentTimeMillis(), cap)) {
           EnginePolicy.Admission.Admit -> {
             slot.state = EngineState.STARTING
             slot.gen++
@@ -241,7 +262,7 @@ internal class EngineSupervisor(
           is EnginePolicy.Admission.Evict -> evict = decision.agentId
           EnginePolicy.Admission.Reject -> throw EngineStartException(
             EngineStartError.TOO_MANY_RUNNING,
-            "${EnginePolicy.MAX_RUNNING} agents are running and none has been idle for a minute",
+            "${agents(checkNotNull(cap))} running, the most you set in Settings, and none has been idle for a minute",
           )
         }
       }
@@ -510,6 +531,8 @@ internal class EngineSupervisor(
 
   // ---- stop --------------------------------------------------------------
 
+  private fun up(state: EngineState) = state == EngineState.STARTING || state == EngineState.READY
+
   /** Blocks up to ~3 s. Also ends leftovers tagged with this agent when nothing runs. */
   fun stop(agentId: String) = terminate(setOf(agentId), EngineState.STOPPED, null)
 
@@ -518,6 +541,22 @@ internal class EngineSupervisor(
 
   /** Every engine and every tagged process, within one grace period. Blocks up to ~3 s. */
   fun stopAll() = terminate(null, EngineState.STOPPED, null)
+
+  /** The memory guard's stop: as a user's, with why on its status (MemoryRules.STOPPED_REASON). Blocks up to ~3 s. */
+  fun stopForMemory(agentId: String) = terminate(setOf(agentId), EngineState.STOPPED, MemoryRules.STOPPED_REASON)
+
+  /**
+   * Stops every agent on [modelId] (holding its server, or set to it with
+   * an engine starting or ready) within one grace, then ends its server,
+   * also while it loads. The agents it stopped. Blocks up to ~6 s.
+   */
+  fun stopModel(modelId: String): List<String> {
+    val bound = store.all().filter { it.model == modelId && up(status(it.id).state) }.map { it.id }
+    val agents = (models.holders(modelId) + bound).toSortedSet().toList()
+    if (agents.isNotEmpty()) stop(agents.toSet())
+    models.stop(modelId)
+    return agents
+  }
 
   /** stopAll on its own thread, for the service's main-thread callbacks. */
   fun stopAllAsync() {
@@ -564,7 +603,7 @@ internal class EngineSupervisor(
     }
     stopping.forEach(::emit)
     ending.forEach { (slot, _) -> chats.detach(slot.agentId) }
-    // A stop-all ends the model server in the same grace; otherwise each
+    // A stop-all ends the model servers in the same grace; otherwise each
     // agent's hold ends below, once its engine is gone.
     if (agentIds == null) models.stopAll()
     reaper.stop(engines, agentIds)
@@ -641,6 +680,8 @@ internal class EngineSupervisor(
 
   private companion object {
     const val TAG = "PhoneCanDoEngines"
+
+    fun agents(count: Int) = if (count == 1) "an agent is" else "$count agents are"
     const val MAX_SQUAT_RELAUNCHES = 2
     // Longest a start or stop waits for another call on the same engine.
     const val SETTLE_WAIT_MS = ProcessReaper.GRACE_MS + 3_000L

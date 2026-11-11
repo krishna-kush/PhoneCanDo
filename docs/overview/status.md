@@ -7,8 +7,9 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
 - opencode payload: self-built bionic `opencode v2.0.26-android-phonecando.1`
   (`liboc-engine.so` + `liboc-opentui.so`), web UI embedded, pair API live.
 - Several agents, each with its own engine in the runner's foreground
-  service (at most three running; the least recently used idle one stops to
-  make room), its own loopback port, password and bridge token. Engines are
+  service (no cap by default: near the memory peak the runner warns, then
+  stops the least recently used one; optional caps in Settings), its own
+  loopback port, password and bridge token. Engines are
   auth-first and quiet when idle; a dead engine is relaunched by the next
   start. Agent records live in `files/state/agents.json`.
 - Home is the active agent's pair-loaded web UI, re-paired on every switch;

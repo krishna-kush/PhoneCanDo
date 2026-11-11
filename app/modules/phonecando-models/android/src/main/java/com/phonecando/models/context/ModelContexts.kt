@@ -36,7 +36,7 @@ data class ContextView(
  * for a context on the slider, and whether a choice may be saved. Pure.
  */
 object ModelContexts {
-  /** [record] on [info] now; [serving] the model the slot serves, if any. */
+  /** [record] on [info] now; [serving] its running server, if any (another model's is ignored). */
   fun view(info: DeviceInfo, record: ModelRecord, serving: ServingModel?): ContextView {
     val auto = LlamaCppRuntime.contextPlan(info, record.copy(context = null))
     val running = serving?.takeIf { it.modelId == record.id }?.contextSize
