@@ -1,11 +1,13 @@
 package com.phonecando.models.token
 
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.security.KeyStore
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -16,8 +18,9 @@ import javax.crypto.spec.GCMParameterSpec
  * lives in the Android Keystore and never leaves it, the IV and ciphertext
  * in [file]. Only native code reads it back (HfCatalog, ModelStore.download);
  * JS can set, clear and ask whether one is kept, never read it, and it is
- * never logged. A file the key cannot open (a restore to another phone, a
- * key the system dropped) is deleted and reads as no token.
+ * never logged. A file the key can never open (a restore to another phone,
+ * a key the system dropped) is deleted and reads as no token; any other
+ * failure reads as no token this time and keeps the file.
  */
 class HfTokenVault(private val file: File) {
   private val lock = Any()
@@ -35,8 +38,10 @@ class HfTokenVault(private val file: File) {
       val cipher = Cipher.getInstance(TRANSFORMATION)
       cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(TAG_BITS, iv))
       cipher.doFinal(bytes, 1 + ivLength, bytes.size - 1 - ivLength).toString(Charsets.UTF_8)
-    } catch (_: Exception) {
-      file.delete()
+    } catch (e: Exception) {
+      // Only a file this key can never open goes (another phone's key, a dropped key and a new
+      // one in its place, a short file); a passing Keystore or disk error keeps it for next time.
+      if (e is AEADBadTagException || e is KeyPermanentlyInvalidatedException || e is IllegalArgumentException) file.delete()
       null
     }
   }
