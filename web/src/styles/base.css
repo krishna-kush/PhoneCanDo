@@ -79,7 +79,7 @@ h1, h2, h3, p { margin: 0; }
   * { scrollbar-width: thin; scrollbar-color: var(--red) transparent; }
 }
 
-/* One sheet, with a contained loader and a pair of registration ticks on each section. */
+/* One sheet, with a contained loader; the sections carry their own registration ticks. */
 .page {
   position: relative;
   max-width: var(--frame);

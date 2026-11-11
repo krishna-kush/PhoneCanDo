@@ -6,44 +6,38 @@
   border-top: 1px solid var(--line);
   scroll-margin-top: 58px;
 }
-.section:is(#demos, #linux, #gate, #install) .ticks-bottom {
+/* Every other section, from the first, is ticked at its four corners:
+   ::before draws the top pair, ::after the bottom pair, each corner two 1px
+   lines on the border it marks. Unticked neighbours keep pairs from meeting. */
+.section:nth-child(odd of .section)::before,
+.section:nth-child(odd of .section)::after {
+  --tick: linear-gradient(var(--accent), var(--accent));
+  content: '';
   position: absolute;
   right: var(--pad);
-  bottom: -1px;
   left: var(--pad);
   z-index: 1;
   height: 7px;
   pointer-events: none;
 }
-.section:is(#demos, #linux, #gate, #install) .ticks-bottom::before,
-.section:is(#demos, #linux, #gate, #install) .ticks-bottom::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  width: 7px;
-  height: 7px;
-  border-bottom: 1px solid var(--accent);
-}
-.section:is(#demos, #linux, #gate, #install) .ticks-bottom::before {
-  left: 0;
-  border-left: 1px solid var(--accent);
-}
-.section:is(#demos, #linux, #gate, #install) .ticks-bottom::after {
-  right: 0;
-  border-right: 1px solid var(--accent);
-}
-.section:is(#demos, #linux, #gate, #install)::before,
-.section:is(#demos, #linux, #gate, #install)::after {
-  content: '';
-  position: absolute;
+.section:nth-child(odd of .section)::before {
   top: -1px;
-  width: 7px;
-  height: 7px;
-  border-top: 1px solid var(--accent);
-  pointer-events: none;
+  background:
+    var(--tick) left top / 1px 100%,
+    var(--tick) left top / 7px 1px,
+    var(--tick) right top / 1px 100%,
+    var(--tick) right top / 7px 1px;
+  background-repeat: no-repeat;
 }
-.section:is(#demos, #linux, #gate, #install)::before { left: var(--pad); border-left: 1px solid var(--accent); }
-.section:is(#demos, #linux, #gate, #install)::after { right: var(--pad); border-right: 1px solid var(--accent); }
+.section:nth-child(odd of .section)::after {
+  bottom: -1px;
+  background:
+    var(--tick) left bottom / 1px 100%,
+    var(--tick) left bottom / 7px 1px,
+    var(--tick) right bottom / 1px 100%,
+    var(--tick) right bottom / 7px 1px;
+  background-repeat: no-repeat;
+}
 .sec-head {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
