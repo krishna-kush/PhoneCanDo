@@ -18,6 +18,27 @@ class RetryPolicyTest {
   }
 
   @Test
+  fun `a 4xx is the server's answer, but for a timeout and a CDN's 401 or 403`() {
+    fun status(code: Int) = RetryPolicy.retryable(LmeException.Network("https://cdn/x", code))
+    assertTrue(status(500))
+    assertTrue(status(503))
+    assertTrue(status(408))
+    assertTrue(status(403))
+    assertFalse(status(400))
+    assertFalse(status(405))
+  }
+
+  @Test
+  fun `a rate limit waits as long as the server asks, within reason`() {
+    val asked = LmeException.RateLimited("https://cdn/x", retryAfterSeconds = 90)
+    assertEquals(90_000L, RetryPolicy.delayMillis(1, asked))
+    assertEquals(120_000L, RetryPolicy.delayMillis(6, asked))
+    val greedy = LmeException.RateLimited("https://cdn/x", retryAfterSeconds = 86_400)
+    assertEquals(RetryPolicy.MAX_RETRY_AFTER_MS, RetryPolicy.delayMillis(1, greedy))
+    assertEquals(2_000L, RetryPolicy.delayMillis(1, LmeException.RateLimited("https://cdn/x")))
+  }
+
+  @Test
   fun `waits grow, then it gives up`() {
     val waits = (1..RetryPolicy.MAX_ATTEMPTS).map { RetryPolicy.delayMillis(it)!! }
     assertEquals(waits.sorted(), waits)

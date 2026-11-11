@@ -48,4 +48,16 @@ class JobReporterTest {
     assertEquals("download", last["step"])
     assertEquals(mapOf("kind" to "download", "id" to "qwen"), last["target"])
   }
+
+  @Test
+  fun `a wait for a network is one event until bytes come again`() {
+    reporter.report(Progress("download", 5, 100))
+    reporter.waitingForNetwork()
+    assertEquals("offline", events.last()["step"])
+    assertNull(events.last()["retry"])
+    assertEquals(5.0, events.last()["done"])
+    t = 1_000
+    reporter.report(Progress("download", 6, 100))
+    assertEquals("download", events.last()["step"])
+  }
 }
