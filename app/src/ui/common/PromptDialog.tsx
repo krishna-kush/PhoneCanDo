@@ -2,7 +2,6 @@ import { Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import AppButton from './AppButton';
 import AppInput from './AppInput';
-import { useTheme } from './globals';
 
 type Props = {
   open: boolean;
@@ -27,7 +26,6 @@ export default function PromptDialog({
   onChangeText,
   onConfirm,
 }: Props) {
-  const t = useTheme();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <YStack
@@ -38,9 +36,9 @@ export default function PromptDialog({
         padding="5"
       >
         <YStack
-          backgroundColor={t.panel}
+          backgroundColor="panel"
           borderWidth={1}
-          borderColor={t.lineStrong}
+          borderColor="lineStrong"
           borderRadius={0}
           padding="4"
           gap="3"

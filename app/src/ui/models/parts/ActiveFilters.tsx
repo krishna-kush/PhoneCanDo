@@ -1,7 +1,8 @@
 import { Fragment } from 'react';
-import { Button, Text, XStack } from 'tamagui';
+import { Button, XStack } from 'tamagui';
 import type { ModelFilters } from '../../../engine/models/types';
-import { HIT, useTheme } from '../../common/globals';
+import { HIT } from '../../common/globals';
+import PlainText from '../../common/PlainText';
 import { activeFilters } from '../logic/filters';
 
 // The filters that are on, under the Sort and Filters buttons: "Up to 2B ·
@@ -9,19 +10,18 @@ import { activeFilters } from '../logic/filters';
 // is not there while none is on. Clear sets every filter back to what the
 // page opens on; the sort stays.
 export default function ActiveFilters({ filters, onClear }: { filters: ModelFilters; onClear: () => void }) {
-  const t = useTheme();
   const on = activeFilters(filters);
   if (on.length === 0) return null;
   return (
     <XStack flexWrap="wrap" alignItems="center" columnGap="2" minHeight={HIT.minTouch}>
       {on.map((label) => (
         <Fragment key={label}>
-          <Text fontSize={13} color={t.fg} flexShrink={1}>
+          <PlainText fontSize={13} color="fg" flexShrink={1}>
             {label}
-          </Text>
-          <Text fontSize={13} color={t.dim}>
+          </PlainText>
+          <PlainText fontSize={13} color="dim">
             ·
-          </Text>
+          </PlainText>
         </Fragment>
       ))}
       <Button

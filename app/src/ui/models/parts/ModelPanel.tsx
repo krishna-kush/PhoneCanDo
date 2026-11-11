@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { Text, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import type { ModelDates, RamCheck } from '../../../engine/models/types';
-import { useTheme } from '../../common/globals';
 import DatesLine from './DatesLine';
 import VerdictLine from './VerdictLine';
+import PlainText from '../../common/PlainText';
 
 type Props = {
   title: string;
@@ -21,24 +21,23 @@ type Props = {
 // One model on the Models page: a hairline panel with its name, details,
 // dates, a note, its RAM verdict and actions, like the Choose agent cards.
 export default function ModelPanel({ title, lines, dates, note, ram, children }: Props) {
-  const t = useTheme();
   return (
-    <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel} padding="3" gap="2">
-      <Text fontSize={16} fontWeight="600" numberOfLines={2} ellipsizeMode="tail">
+    <YStack borderWidth={1} borderColor="line" backgroundColor="panel" padding="3" gap="2">
+      <PlainText fontSize={16} fontWeight="600" numberOfLines={2} ellipsizeMode="tail">
         {title}
-      </Text>
+      </PlainText>
       {lines
         .filter((l) => l.length > 0)
         .map((l) => (
-          <Text key={l} fontFamily="mono" fontSize={12} color={t.dim} numberOfLines={2}>
+          <PlainText key={l} fontFamily="mono" fontSize={12} color="dim" numberOfLines={2}>
             {l}
-          </Text>
+          </PlainText>
         ))}
       <DatesLine dates={dates} />
       {note ? (
-        <Text fontSize={13} color={t.muted}>
+        <PlainText fontSize={13} color="muted">
           {note}
-        </Text>
+        </PlainText>
       ) : null}
       {ram ? <VerdictLine ram={ram} /> : null}
       {children}

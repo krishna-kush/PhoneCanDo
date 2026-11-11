@@ -2,7 +2,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore, type TerminalSession } from '../../state/app';
 import CardMenu, { type CardMenuItem } from '../common/CardMenu';
-import { HIT, useTheme } from '../common/globals';
+import { HIT } from '../common/globals';
 import { usePageActive } from '../nav/pageActive';
 import TerminalScreen from './TerminalScreen';
 
@@ -12,7 +12,6 @@ import TerminalScreen from './TerminalScreen';
 // of its own: Android's Back is the way back). It holds the
 // keyboard only while it is the page in front.
 export default function TerminalPage({ session }: { session: TerminalSession }) {
-  const t = useTheme();
   const active = usePageActive();
   const closeTerminal = useAppStore((s) => s.closeTerminal);
   const push = useAppStore((s) => s.push);
@@ -28,7 +27,7 @@ export default function TerminalPage({ session }: { session: TerminalSession }) 
   ];
 
   return (
-    <YStack flex={1} backgroundColor={t.panel}>
+    <YStack flex={1} backgroundColor="panel">
       <XStack
         alignItems="center"
         gap="2"
@@ -36,11 +35,11 @@ export default function TerminalPage({ session }: { session: TerminalSession }) 
         paddingVertical="2"
         minHeight={HIT.headerH}
         borderBottomWidth={1}
-        borderColor={t.line}
-        backgroundColor={t.panel}
+        borderColor="line"
+        backgroundColor="panel"
       >
         <YStack flex={1} minWidth={0}>
-          <Text fontFamily="mono" fontSize={10} letterSpacing={1.4} color={t.dim} textTransform="uppercase" numberOfLines={1}>
+          <Text fontFamily="mono" fontSize={10} letterSpacing={1.4} color="dim" textTransform="uppercase" numberOfLines={1}>
             {kicker}
           </Text>
           <Text fontFamily="mono" fontSize={17} fontWeight="600" letterSpacing={-0.3} numberOfLines={1} ellipsizeMode="tail">

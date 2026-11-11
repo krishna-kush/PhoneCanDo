@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { contextCheck } from '../../../engine/models/native';
 import type { LocalModel, RamCheck } from '../../../engine/models/types';
 import { useAgentsStore } from '../../../state/agents';
 import { chooseModelContext } from '../../../state/flows/modelContext';
 import AppButton from '../../common/AppButton';
-import { useTheme } from '../../common/globals';
+import PlainText from '../../common/PlainText';
 import { startFailureCode, startFailureText } from '../../env/logic/errorText';
 import Note from '../../env/parts/Note';
 import ProgressBar from '../../env/parts/ProgressBar';
@@ -36,7 +36,6 @@ type Props = {
 // spare (Android may stop the model server), not its RAM. Saving restarts
 // the agents running on the model, which then start it with the new context.
 export default function ContextSetting({ model, onDone }: Props) {
-  const t = useTheme();
   const range = model.contextRange;
   const [automatic, setAutomatic] = useState(model.contextChoice == null);
   const [stop, setStop] = useState(() => stopOf(range, model.contextChoice ?? model.autoContext));
@@ -81,10 +80,10 @@ export default function ContextSetting({ model, onDone }: Props) {
   };
 
   return (
-    <YStack gap="2" borderTopWidth={1} borderColor={t.line} paddingTop="3">
-      <Text fontSize={14} fontWeight="600">
+    <YStack gap="2" borderTopWidth={1} borderColor="line" paddingTop="3">
+      <PlainText fontSize={14} fontWeight="600">
         Context
-      </Text>
+      </PlainText>
       <YStack gap="2" accessibilityRole="radiogroup">
         <ChoiceRow
           label="Automatic"
@@ -106,9 +105,9 @@ export default function ContextSetting({ model, onDone }: Props) {
         <>
           <XStack alignItems="center" gap="3">
             <ContextSlider range={range} stop={stop} disabled={busy} onStop={setStop} />
-            <Text fontFamily="mono" fontSize={14} minWidth={48} textAlign="right">
+            <PlainText fontFamily="mono" fontSize={14} minWidth={48} textAlign="right">
               {contextText(context)}
-            </Text>
+            </PlainText>
           </XStack>
           {ram ? <VerdictLine ram={ram} /> : null}
         </>

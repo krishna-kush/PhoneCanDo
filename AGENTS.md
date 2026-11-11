@@ -171,7 +171,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   no Babel plugin) and misses `tamagui.config.ts` edits: `rm -rf
   node_modules/.cache/tamagui` and restart Metro with `--clear`. Style props
   take bare names (`gap="2"`, `color="color10"`, `fontFamily="mono"`), never
-  `$`; `npx tamagui check` (in `app/`) checks them.
+  `$`; `npx tamagui check` (in `app/`) checks them. Colours on Tamagui
+  props are palette roles by name (`color="dim"`), never a `useTheme()`
+  value (that keeps the compiler from flattening the element).
 - Verify with `tsc --noEmit`, `pnpm check:vectors`, the host C tests
   (`sh app/modules/phonecando-terminal/android/src/test/c/run.sh`,
   `bash lre/launcher/test/run.sh`), logcat (`[phonecando-kb]`,

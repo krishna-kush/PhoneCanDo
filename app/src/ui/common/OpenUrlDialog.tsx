@@ -4,7 +4,6 @@ import { Text, XStack, YStack } from 'tamagui';
 import * as runner from '../../engine/runner';
 import type { OpenUrlAction } from '../../engine/runner';
 import AppButton from './AppButton';
-import { useTheme } from './globals';
 import { isWebLink, openUrlTitle, waitingLine } from './promptQueue';
 import { markAnswered, useBridgePrompts } from './useBridgePrompts';
 
@@ -14,7 +13,6 @@ import { markAnswered, useBridgePrompts } from './useBridgePrompts';
 // clipboard (native does it; it holds the link), Not now drops it. It shows
 // when the oldest waiting prompt is a link, over whatever tab is open.
 export default function OpenUrlDialog() {
-  const t = useTheme();
   const { current, queue } = useBridgePrompts();
   const prompt = current?.kind === 'open_url' ? current : null;
   const requestId = prompt?.requestId;
@@ -54,9 +52,9 @@ export default function OpenUrlDialog() {
     <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={close}>
       <YStack flex={1} backgroundColor="rgba(0,0,0,0.6)" alignItems="center" justifyContent="center" padding="5">
         <YStack
-          backgroundColor={t.panel}
+          backgroundColor="panel"
           borderWidth={1}
-          borderColor={t.lineStrong}
+          borderColor="lineStrong"
           borderRadius={0}
           padding="4"
           gap="3"
@@ -66,7 +64,7 @@ export default function OpenUrlDialog() {
           <Text fontSize={19} fontWeight="700">
             {prompt ? openUrlTitle(prompt) : 'Open a link'}
           </Text>
-          <Text fontFamily="mono" fontSize={12} color={t.dim} numberOfLines={6} userSelect="text">
+          <Text fontFamily="mono" fontSize={12} color="dim" numberOfLines={6} userSelect="text">
             {url}
           </Text>
           <Text fontSize={13} color="color10">

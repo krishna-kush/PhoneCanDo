@@ -1,11 +1,10 @@
-import { Text } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { agentKind } from '../../../engine/agents/registry';
 import type { Image } from '../../../engine/linux/types';
 import { installAgent } from '../../../state/flows/installAgent';
 import { useInstallRun } from '../../../state/flows/installRuns';
 import AppButton from '../../common/AppButton';
-import { useTheme } from '../../common/globals';
+import PlainText from '../../common/PlainText';
 import { versionLine } from '../logic/installText';
 import InstallStatus from '../parts/InstallStatus';
 import Note from '../parts/Note';
@@ -18,7 +17,6 @@ type Props = { agent: Agent; image: Image | undefined };
 // Install when it never finished, and Update agent once installed. Nothing
 // for a kind without an install.
 export default function InstallSection({ agent, image }: Props) {
-  const t = useTheme();
   const run = useInstallRun(agent.id);
   const kind = agentKind(agent.kind);
   if (!kind.hasInstall) return null;
@@ -29,9 +27,9 @@ export default function InstallSection({ agent, image }: Props) {
   return (
     <>
       {installed ? (
-        <Text fontFamily="mono" fontSize={13} color={t.dim} userSelect="text">
+        <PlainText fontFamily="mono" fontSize={13} color="dim" userSelect="text">
           {versionLine(agent.installedVersion ?? '')}
-        </Text>
+        </PlainText>
       ) : null}
       <InstallStatus agent={agent} image={image} />
       {installed && !running ? (

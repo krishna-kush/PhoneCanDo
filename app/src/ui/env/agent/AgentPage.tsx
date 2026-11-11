@@ -10,7 +10,6 @@ import LinkRow from '../../common/LinkRow';
 import PromptDialog from '../../common/PromptDialog';
 import Screen from '../../common/Screen';
 import SectionTitle from '../../common/SectionTitle';
-import { useTheme } from '../../common/globals';
 import { envTitle } from '../logic/titles';
 import ImageStatus from '../parts/ImageStatus';
 import InstallStatus from '../parts/InstallStatus';
@@ -29,7 +28,6 @@ import { useMissingTools } from './useMissingTools';
 // What needs a look now shows here too: a machine still setting up, an
 // install running or stopped, tools the machine lacks (on the Machine row).
 export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: boolean }) {
-  const t = useTheme();
   const push = useAppStore((s) => s.push);
   const { agent, image, env, linux } = useAgentRecords(agentId);
   const device = useModelsStore((s) => s.device);
@@ -82,7 +80,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
       {installBusy ? <InstallStatus agent={agent} image={image} /> : null}
 
       <SectionTitle>Settings</SectionTitle>
-      <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel}>
+      <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
         {hasModelSetting(agent, device.supported) ? (
           <LinkRow label="Model" {...rowProps(modelDetail(agent, models))} onPress={() => push({ name: 'agent-model', agentId })} />
         ) : null}

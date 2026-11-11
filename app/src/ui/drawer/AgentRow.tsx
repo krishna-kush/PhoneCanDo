@@ -1,4 +1,4 @@
-import { Button, Text, XStack, YStack } from 'tamagui';
+import { Button, XStack, YStack } from 'tamagui';
 import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { useAgentsStore } from '../../state/agents';
@@ -6,6 +6,7 @@ import ArrowIcon from '../common/ArrowIcon';
 import AgentFace from '../common/face/AgentFace';
 import { useAgentLook } from '../common/face/useAgentLook';
 import { HIT, useTheme } from '../common/globals';
+import PlainText from '../common/PlainText';
 import Stamp from '../common/Stamp';
 import { engineStateWord } from '../env/logic/engineState';
 
@@ -32,8 +33,8 @@ export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Pro
       alignItems="center"
       minHeight={64}
       borderWidth={1}
-      borderColor={active ? t.primary : 'transparent'}
-      backgroundColor={active ? t.primarySoft : 'transparent'}
+      borderColor={active ? 'primary' : 'transparent'}
+      backgroundColor={active ? 'primarySoft' : 'transparent'}
     >
       <XStack
         flex={1}
@@ -53,14 +54,14 @@ export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Pro
         <AgentFace mood={look.mood} pose={look.pose} size={22} still={still} />
         <YStack flex={1} minWidth={0} gap={2}>
           <XStack alignItems="center" gap="2">
-            <Text fontSize={16} fontWeight="600" numberOfLines={1} flexShrink={1}>
+            <PlainText fontSize={16} fontWeight="600" numberOfLines={1} flexShrink={1}>
               {agent.name}
-            </Text>
+            </PlainText>
             {active ? <Stamp>on duty</Stamp> : null}
           </XStack>
-          <Text fontFamily="mono" fontSize={11} color={t.dim} numberOfLines={1}>
+          <PlainText fontFamily="mono" fontSize={11} color="dim" numberOfLines={1}>
             {sub}
-          </Text>
+          </PlainText>
         </YStack>
       </XStack>
       <Button

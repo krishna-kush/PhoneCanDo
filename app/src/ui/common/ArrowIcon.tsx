@@ -1,5 +1,5 @@
 import { Path, Svg } from 'react-native-svg';
-import { useTheme } from 'tamagui';
+import { useTheme } from './globals';
 
 export type ArrowDir = 'up' | 'down' | 'left' | 'right';
 
@@ -11,8 +11,9 @@ const D: Record<ArrowDir, string> = {
 };
 
 // Pyramid (filled-triangle) arrows like keyboard keycaps — not chevrons.
-// Vector-drawn so they stay sharp and centered at any size. Color follows
-// the active Tamagui theme (or an explicit override).
+// Vector-drawn so they stay sharp and centered at any size. Color is the
+// body ink of the scheme (or an explicit override): pass one inside a
+// Tamagui component theme, whose ink differs.
 export default function ArrowIcon({
   dir,
   size = 16,
@@ -22,8 +23,8 @@ export default function ArrowIcon({
   size?: number;
   color?: string;
 }) {
-  const theme = useTheme();
-  const c = color ?? theme.color.get();
+  const t = useTheme();
+  const c = color ?? t.fg;
   return (
     <Svg
       width={size}

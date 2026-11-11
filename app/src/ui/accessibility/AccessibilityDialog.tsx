@@ -3,7 +3,6 @@ import { Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import * as runner from '../../engine/runner';
 import AppButton from '../common/AppButton';
-import { useTheme } from '../common/globals';
 import { askerTitle, waitingLine } from '../common/promptQueue';
 import { markAnswered, useBridgePrompts } from '../common/useBridgePrompts';
 import { COPY } from './guide';
@@ -20,7 +19,6 @@ import { useAccessibilitySteps } from './useAccessibilitySteps';
 // waiting request then returns and its prompt is gone), and "Not now" tells
 // this request's bridge call to stop waiting.
 export default function AccessibilityDialog() {
-  const t = useTheme();
   const { current, queue } = useBridgePrompts();
   const prompt = current?.kind === 'accessibility' ? current : null;
   const requestId = prompt?.requestId;
@@ -73,9 +71,9 @@ export default function AccessibilityDialog() {
         padding="5"
       >
         <YStack
-          backgroundColor={t.panel}
+          backgroundColor="panel"
           borderWidth={1}
-          borderColor={t.lineStrong}
+          borderColor="lineStrong"
           borderRadius={0}
           padding="4"
           gap="3"

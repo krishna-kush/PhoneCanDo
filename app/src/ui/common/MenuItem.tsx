@@ -1,5 +1,5 @@
 import { Button } from 'tamagui';
-import { HIT, useTheme } from './globals';
+import { HIT } from './globals';
 
 type Props = {
   label: string;
@@ -11,7 +11,6 @@ type Props = {
 // button label; only the destructive colour and the shared type treatment
 // live here. A press darkens the row without dimming it, as on Tamagui 2.
 export default function MenuItem({ label, onPress, danger }: Props) {
-  const t = useTheme();
   return (
     <Button
       minHeight={HIT.minTouch}
@@ -26,7 +25,7 @@ export default function MenuItem({ label, onPress, danger }: Props) {
       variant="quiet"
       opacity="1 press:1"
       justifyContent="flex-start"
-      color={danger ? t.primary : undefined}
+      color={danger ? 'primary' : undefined}
       onPress={onPress}
     >
       {label}

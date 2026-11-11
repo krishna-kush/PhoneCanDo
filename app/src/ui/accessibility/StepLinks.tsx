@@ -1,5 +1,5 @@
-import { Text, YStack } from 'tamagui';
-import { useTheme } from '../common/globals';
+import { YStack } from 'tamagui';
+import PlainText from '../common/PlainText';
 
 export type StepLink = { label: string; onPress: () => void };
 
@@ -10,7 +10,6 @@ export type StepLink = { label: string; onPress: () => void };
 // loses a press that moves while Reanimated's fast style path is on
 // (ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS).
 export default function StepLinks({ links }: { links: StepLink[] }) {
-  const t = useTheme();
   if (links.length === 0) return null;
   return (
     <YStack alignItems="center">
@@ -23,9 +22,9 @@ export default function StepLinks({ links }: { links: StepLink[] }) {
           paddingVertical={6}
           opacity="press:0.6"
         >
-          <Text fontSize={13} color={t.primary} textDecorationLine="underline" textAlign="center">
+          <PlainText fontSize={13} color="primary" textDecorationLine="underline" textAlign="center">
             {link.label}
-          </Text>
+          </PlainText>
         </YStack>
       ))}
     </YStack>

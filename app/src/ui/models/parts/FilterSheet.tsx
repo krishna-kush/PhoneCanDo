@@ -5,7 +5,6 @@ import type { ModelFilters } from '../../../engine/models/types';
 import AppButton from '../../common/AppButton';
 import MenuItem from '../../common/MenuItem';
 import SectionTitle from '../../common/SectionTitle';
-import { useTheme } from '../../common/globals';
 import { useBackInterceptor } from '../../nav/interceptors';
 import { type FilterOption, KIND_OPTIONS, LICENSE_OPTIONS, SIZE_OPTIONS, type SheetFilters } from '../logic/filters';
 
@@ -28,7 +27,6 @@ export default function FilterSheet({
   filters: ModelFilters;
   onChange: (change: Partial<SheetFilters>) => void;
 }) {
-  const t = useTheme();
   const { height } = useWindowDimensions();
 
   // The search field may hold the keyboard, which would cover the sheet.
@@ -49,7 +47,7 @@ export default function FilterSheet({
       snapPointsMode="fit"
     >
       <Sheet.Container padding="4" paddingBottom="6" gap="3">
-        <Sheet.Background borderRadius={0} borderWidth={1} borderColor={t.lineStrong} />
+        <Sheet.Background borderRadius={0} borderWidth={1} borderColor="lineStrong" />
         {/* Tamagui 3's sheet pads its scroll view; ours stays flush, as on 2. */}
         <Sheet.ScrollView maxHeight={height * CHOICES_SHARE} paddingHorizontal={0}>
           <Choices title="Size" options={SIZE_OPTIONS} value={filters.size} onChange={(size) => onChange({ size })} />

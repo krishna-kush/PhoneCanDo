@@ -5,7 +5,6 @@ import { confirmUser } from '../../engine/auth';
 import * as runner from '../../engine/runner';
 import { track } from '../../engine/telemetry';
 import AppButton from './AppButton';
-import { useTheme } from './globals';
 import { askerTitle, unlockCoversLine, waitingLine } from './promptQueue';
 import { markAnswered, pendingUnlockIds, useBridgePrompts } from './useBridgePrompts';
 
@@ -15,7 +14,6 @@ import { markAnswered, pendingUnlockIds, useBridgePrompts } from './useBridgePro
 // shows when the oldest waiting prompt is an unlock; the gate is one switch
 // for the phone, so a successful unlock answers every waiting unlock.
 export default function UnlockDialog() {
-  const t = useTheme();
   const { current, queue } = useBridgePrompts();
   const prompt = current?.kind === 'unlock' ? current : null;
   const [busy, setBusy] = useState(false);
@@ -73,9 +71,9 @@ export default function UnlockDialog() {
         padding="5"
       >
         <YStack
-          backgroundColor={t.panel}
+          backgroundColor="panel"
           borderWidth={1}
-          borderColor={t.lineStrong}
+          borderColor="lineStrong"
           borderRadius={0}
           padding="4"
           gap="3"

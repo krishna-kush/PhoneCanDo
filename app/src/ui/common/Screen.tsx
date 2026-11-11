@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { ScrollView } from 'react-native';
 import { YStack } from 'tamagui';
-import { useTheme } from './globals';
 
 type Props = {
   children: ReactNode;
@@ -14,16 +13,15 @@ type Props = {
 // ScrollView for list screens (Home / Project / Env / Settings) so short
 // phones don't clip the form.
 export default function Screen({ children, scroll = true, fabClearance = true }: Props) {
-  const t = useTheme();
   if (!scroll) {
     return (
-      <YStack flex={1} backgroundColor={t.bg} padding="4" gap="3" paddingBottom={fabClearance ? 96 : undefined}>
+      <YStack flex={1} backgroundColor="bg" padding="4" gap="3" paddingBottom={fabClearance ? 96 : undefined}>
         {children}
       </YStack>
     );
   }
   return (
-    <YStack flex={1} backgroundColor={t.bg}>
+    <YStack flex={1} backgroundColor="bg">
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{

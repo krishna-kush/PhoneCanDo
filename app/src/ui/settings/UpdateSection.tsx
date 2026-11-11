@@ -1,8 +1,8 @@
-import { Text } from 'tamagui';
 import { installedVersion } from '../../engine/updates';
 import { useAppStore } from '../../state/app';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
+import PlainText from '../common/PlainText';
 import SectionTitle from '../common/SectionTitle';
 import ThumbIcon from '../common/ThumbIcon';
 
@@ -28,21 +28,21 @@ export default function UpdateSection({ channel }: { channel: string }) {
           chevron={false}
           icon={<Thumb up={false} />}
         />
-        <Text fontSize={14} color="color10">
+        <PlainText fontSize={14} color="muted">
           Right now the agent can think but not act. It cannot see your screen, tap a button or
           type a word, so every "open WhatsApp and reply" ends in a polite shrug. The full build
           fixes that in one tap: it installs over this one, keeps your data, and gives the agent
           eyes and hands behind your fingerprint.
-        </Text>
+        </PlainText>
         <AppButton onPress={requestUpdatePrompt}>Install the full build</AppButton>
         <AppButton variant="secondary" onPress={() => void setUpdatePromptMuted(!updatePromptMuted)}>
           {updatePromptMuted ? 'Ask again on launch' : "Don't ask on launch"}
         </AppButton>
-        <Text fontSize={13} color="color10">
+        <PlainText fontSize={13} color="muted">
           {updatePromptMuted
             ? 'The full-build offer stays quiet at launch. This button brings it back.'
             : 'The full-build offer opens every launch until you install it or silence it here.'}
-        </Text>
+        </PlainText>
       </>
     );
   }

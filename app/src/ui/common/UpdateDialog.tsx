@@ -15,7 +15,6 @@ import {
 } from '../../engine/updates';
 import { track } from '../../engine/telemetry';
 import AppButton from './AppButton';
-import { useTheme } from './globals';
 
 type Phase =
   | 'idle'
@@ -42,7 +41,6 @@ function errText(e: unknown): string {
 // check on demand through the store nonce. Android always shows its own
 // installer; the best this can do is download and hand the APK over.
 export default function UpdateDialog() {
-  const t = useTheme();
   const current = installedVersion();
   const lite = isLiteUpgrade();
   const nonce = useAppStore((s) => s.updatePromptNonce);
@@ -206,9 +204,9 @@ export default function UpdateDialog() {
         padding="5"
       >
         <YStack
-          backgroundColor={t.panel}
+          backgroundColor="panel"
           borderWidth={1}
-          borderColor={t.lineStrong}
+          borderColor="lineStrong"
           borderRadius={0}
           padding="4"
           gap="3"
@@ -299,8 +297,8 @@ export default function UpdateDialog() {
               <Text fontSize={15} color="color10">
                 {pct}%{progress.total > 0 ? ` · ${mb(progress.written)} of ${mb(progress.total)}` : ''}
               </Text>
-              <YStack height={6} backgroundColor={t.line} width="100%">
-                <YStack height={6} backgroundColor={t.primary} width={`${pct}%`} />
+              <YStack height={6} backgroundColor="line" width="100%">
+                <YStack height={6} backgroundColor="primary" width={`${pct}%`} />
               </YStack>
               <Text fontSize={13} color="color10">
                 Keep the app open. The install starts when the download finishes.

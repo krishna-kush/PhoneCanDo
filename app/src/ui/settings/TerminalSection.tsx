@@ -1,6 +1,7 @@
-import { Text, XStack } from 'tamagui';
+import { XStack } from 'tamagui';
 import { useAppStore } from '../../state/app';
 import AppButton from '../common/AppButton';
+import PlainText from '../common/PlainText';
 import SectionTitle from '../common/SectionTitle';
 
 // Settings → Terminal: whether the extra keys (Esc, Tab, PgUp, arrows…) come
@@ -29,10 +30,10 @@ export default function TerminalSection() {
           Always
         </AppButton>
       </XStack>
-      <Text fontSize={14} color="color10">
+      <PlainText fontSize={14} color="muted">
         The extra keys row (Esc, Tab, PgUp/PgDn, ^C, arrows). Always keeps it up with the keyboard
         down, so you can still scroll and move around a program while reading.
-      </Text>
+      </PlainText>
     </>
   );
 }

@@ -50,8 +50,8 @@ export default function HomeHeader() {
       paddingVertical="2"
       minHeight={HIT.headerH}
       borderBottomWidth={1}
-      borderColor={t.line}
-      backgroundColor={t.panel}
+      borderColor="line"
+      backgroundColor="panel"
     >
       <XStack
         alignItems="center"

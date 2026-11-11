@@ -1,9 +1,10 @@
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import type { Env, Image } from '../../../engine/linux/types';
 import { useTargetProgress } from '../../../state/linux';
 import ArrowIcon from '../../common/ArrowIcon';
 import { useTheme } from '../../common/globals';
+import PlainText from '../../common/PlainText';
 import type { EnvRow } from '../logic/sections';
 import { progressLine, stepFraction } from '../logic/steps';
 import { envSubtitle, envTitle } from '../logic/titles';
@@ -33,8 +34,8 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
   return (
     <YStack
       borderWidth={1}
-      borderColor={env?.state === 'failed' ? t.primary : t.line}
-      backgroundColor={`${t.panel} press:${t.panel2}`}
+      borderColor={env?.state === 'failed' ? 'primary' : 'line'}
+      backgroundColor="panel press:panel2"
       padding="3"
       gap="3"
       onPress={onOpen}
@@ -42,21 +43,21 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
       accessibilityLabel={`${title}, ${sub}, ${count}`}
     >
       <XStack alignItems="center" gap="3">
-        <YStack width={44} height={44} borderWidth={1} borderColor={t.lineStrong} alignItems="center" justifyContent="center" flexShrink={0}>
-          <Text fontFamily="mono" fontSize={18} fontWeight="600" color={t.secondaryInk}>
+        <YStack width={44} height={44} borderWidth={1} borderColor="lineStrong" alignItems="center" justifyContent="center" flexShrink={0}>
+          <PlainText fontFamily="mono" fontSize={18} fontWeight="600" color="secondaryInk">
             {letter}
-          </Text>
+          </PlainText>
         </YStack>
         <YStack flex={1} minWidth={0} gap={2}>
-          <Text fontSize={16} fontWeight="600" numberOfLines={1}>
+          <PlainText fontSize={16} fontWeight="600" numberOfLines={1}>
             {title}
-          </Text>
-          <Text fontFamily="mono" fontSize={12} color={env?.state === 'failed' ? t.primary : t.dim} numberOfLines={1}>
+          </PlainText>
+          <PlainText fontFamily="mono" fontSize={12} color={env?.state === 'failed' ? 'primary' : 'dim'} numberOfLines={1}>
             {sub}
-          </Text>
-          <Text fontFamily="mono" fontSize={11} letterSpacing={1.2} color={t.secondaryInk} textTransform="uppercase" numberOfLines={1}>
+          </PlainText>
+          <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.2} color="secondaryInk" textTransform="uppercase" numberOfLines={1}>
             {count}
-          </Text>
+          </PlainText>
         </YStack>
         <ArrowIcon dir="right" size={14} color={t.faint} />
       </XStack>

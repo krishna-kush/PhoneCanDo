@@ -1,7 +1,6 @@
 import { Text, YStack } from 'tamagui';
 import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent } from '../../state/agents';
-import { useTheme } from '../common/globals';
 import AgentWebView from './AgentWebView';
 import InstallHome from './InstallHome';
 import AgentTuiHome from './tui/AgentTuiHome';
@@ -15,14 +14,13 @@ import { useEngineTouch } from './useEngineTouch';
 // to the engine's terminal and the replay restores its screen. An agent not
 // installed in its machine yet (a kind with an install) shows that install.
 export default function HomeScreen() {
-  const t = useTheme();
   const agent = useActiveAgent();
   useEngineTouch(agent?.id ?? null);
 
   if (!agent) {
     return (
-      <YStack flex={1} backgroundColor={t.bg} padding="4" justifyContent="center">
-        <Text color={t.muted} fontFamily="mono">
+      <YStack flex={1} backgroundColor="bg" padding="4" justifyContent="center">
+        <Text color="muted" fontFamily="mono">
           No agent yet. Tap the name up top to add one.
         </Text>
       </YStack>

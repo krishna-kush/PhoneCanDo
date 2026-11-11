@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Popover, YStack } from 'tamagui';
 import MenuItem from '../../common/MenuItem';
-import { useTheme } from '../../common/globals';
 import type { FilterOption } from '../logic/filters';
 import FilterButton from './FilterButton';
 
@@ -22,7 +21,6 @@ export default function FilterPicker<T>({
   value: T;
   onChange: (value: T) => void;
 }) {
-  const t = useTheme();
   const [open, setOpen] = useState(false);
 
   return (
@@ -32,7 +30,7 @@ export default function FilterPicker<T>({
       </Popover.Trigger>
       <Popover.Content
         borderWidth={1}
-        borderColor={t.lineStrong}
+        borderColor="lineStrong"
         borderRadius={0}
         padding="2"
         y="enter:-10px exit:-10px"

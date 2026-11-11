@@ -1,6 +1,7 @@
-import { type GetProps, Text, XStack } from 'tamagui';
+import { type GetProps, XStack } from 'tamagui';
 import ArrowIcon from '../../common/ArrowIcon';
 import { HIT, useTheme } from '../../common/globals';
+import PlainText from '../../common/PlainText';
 
 type Props = Omit<GetProps<typeof XStack>, 'children'> & {
   text: string;
@@ -25,23 +26,23 @@ export default function FilterButton({ text, changed, label, ...box }: Props) {
       paddingHorizontal="3"
       paddingVertical="2"
       borderWidth={1}
-      borderColor={changed ? t.fg : t.lineStrong}
+      borderColor={changed ? 'fg' : 'lineStrong'}
       opacity="press:0.8"
       accessibilityRole="button"
       accessibilityLabel={label}
       {...box}
     >
-      <Text
+      <PlainText
         flex={1}
         minWidth={0}
         fontFamily="mono"
         fontSize={12}
         letterSpacing={0.8}
         textTransform="uppercase"
-        color={changed ? t.fg : t.dim}
+        color={changed ? 'fg' : 'dim'}
       >
         {text}
-      </Text>
+      </PlainText>
       <ArrowIcon dir="down" size={8} color={t.dim} />
     </XStack>
   );

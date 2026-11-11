@@ -8,9 +8,13 @@ type Tokens = typeof tokens.dark;
 // Shared roles mapped onto a Tamagui theme, so component defaults (Input,
 // Button, Popover, Sheet, Text) follow the same palette as our own styles.
 // v3 components read the kebab-case names; the 12-step ramp keeps the v5
-// pack's spelling (`color10`).
+// pack's spelling (`color10`). Every role of tokens.json is a theme key by
+// its own name too (`color="dim"`, `backgroundColor="panel"`): a value the
+// compiler can read, where a colour from our useTheme() hook is one it
+// cannot, so it leaves the whole element to the runtime.
 function tamaguiTheme(t: Tokens) {
   return {
+    ...t,
     background: t.panel2,
     'background-hover': t.panel,
     'background-press': t.panel,
@@ -135,15 +139,18 @@ const sheetOverlay = { dark: 'rgba(0,0,0,0.9)', light: 'rgba(0,0,0,0.5)' };
 
 // The default mono font is a CSS stack, and a system font overlay can map
 // even `monospace` to the user's chosen sans. Bundle the site's Geist Mono
-// so the brand/kickers/tabs look the same on every device.
+// so the brand/kickers/tabs look the same on every device. Its file for
+// each weight is read by PlainText.tsx too.
+export const monoFace = {
+  400: { normal: 'GeistMono-Regular' },
+  500: { normal: 'GeistMono-Regular' },
+  600: { normal: 'GeistMono-Bold' },
+  700: { normal: 'GeistMono-Bold' },
+} as const;
+
 const monoFont = createFont({
-  family: 'GeistMono-Regular',
-  face: {
-    400: { normal: 'GeistMono-Regular' },
-    500: { normal: 'GeistMono-Regular' },
-    600: { normal: 'GeistMono-Bold' },
-    700: { normal: 'GeistMono-Bold' },
-  },
+  family: monoFace[400].normal,
+  face: monoFace,
   size: { 1: 11, 2: 12, 3: 13, 4: 14, 5: 16, 6: 18, 7: 20 },
   lineHeight: { 1: 16, 2: 18, 3: 20, 4: 21, 5: 24, 6: 27, 7: 30 },
   weight: { 4: '400', 5: '500', 6: '600', 7: '700' },

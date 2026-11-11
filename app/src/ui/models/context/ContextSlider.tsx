@@ -1,7 +1,7 @@
 import type { AccessibilityActionEvent } from 'react-native';
 import { Slider } from 'tamagui';
 import type { ContextRange } from '../../../engine/models/types';
-import { HIT, useTheme } from '../../common/globals';
+import { HIT } from '../../common/globals';
 import { contextAt, contextText, lastStop } from '../logic/context';
 
 const TRACK = 4;
@@ -20,7 +20,6 @@ type Props = {
 // screen reader hears the context ("64k tokens") and steps it with its
 // increment and decrement actions.
 export default function ContextSlider({ range, stop, disabled = false, onStop }: Props) {
-  const t = useTheme();
   const last = lastStop(range);
   const step = (by: number) => onStop(Math.min(last, Math.max(0, stop + by)));
   const onAction = (e: AccessibilityActionEvent) => {
@@ -40,8 +39,8 @@ export default function ContextSlider({ range, stop, disabled = false, onStop }:
       opacity={disabled ? 0.5 : 1}
     >
       {/* Tamagui 3 centres the track in the touch band, where it centres the thumb. */}
-      <Slider.Track height={TRACK} borderRadius={0} backgroundColor={t.line}>
-        <Slider.TrackActive borderRadius={0} backgroundColor={t.primary} />
+      <Slider.Track height={TRACK} borderRadius={0} backgroundColor="line">
+        <Slider.TrackActive borderRadius={0} backgroundColor="primary" />
       </Slider.Track>
       <Slider.Thumb
         index={0}
@@ -49,8 +48,8 @@ export default function ContextSlider({ range, stop, disabled = false, onStop }:
         height={THUMB}
         borderRadius={0}
         borderWidth={2}
-        borderColor={`${t.primary} press:${t.primary}`}
-        backgroundColor={`${t.panel} press:${t.primarySoft}`}
+        borderColor="primary press:primary"
+        backgroundColor="panel press:primarySoft"
         circular={false}
         aria-label="Context"
         aria-valuetext={`${contextText(contextAt(range, stop))} tokens`}

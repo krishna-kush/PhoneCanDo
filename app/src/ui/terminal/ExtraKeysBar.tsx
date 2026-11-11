@@ -1,6 +1,6 @@
 import { Button, XStack } from 'tamagui';
 import ArrowIcon, { type ArrowDir } from '../common/ArrowIcon';
-import { useScheme, useTheme } from '../common/globals';
+import { useScheme } from '../common/globals';
 import { termLook } from './theme/palette';
 
 // The above-keyboard accessory bar: the terminal's special keys plus sticky
@@ -56,11 +56,10 @@ export default function ExtraKeysBar({
   visibleWhenKeyboardOpen = true,
 }: Props) {
   const look = termLook(useScheme());
-  const t = useTheme();
   // Each key in the terminal's colours for the scheme; a latched Ctrl or
   // Shift in the primary red.
   const keyLook = { backgroundColor: `${look.key} press:${look.keyPress}`, color: look.keyText };
-  const latched = { backgroundColor: t.primary, color: 'white' };
+  const latched = { backgroundColor: 'primary', color: 'white' };
   if (visibleWhenKeyboardOpen && !keyboardVisible) return null;
   return (
     <XStack

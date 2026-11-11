@@ -1,6 +1,6 @@
-import { Text, XStack, YStack } from 'tamagui';
-import { useTheme } from '../../common/globals';
+import { XStack, YStack } from 'tamagui';
 import Note from '../parts/Note';
+import PlainText from '../../common/PlainText';
 
 type Props = {
   label: string;
@@ -14,7 +14,6 @@ type Props = {
 // A yes/no of the custom agent form: a square mark, its label and what it
 // means, the whole row a checkbox (the Choose agent cards' look).
 export default function OptionRow({ label, note, on, onToggle, problems = [] }: Props) {
-  const t = useTheme();
   return (
     <YStack gap="2">
       <XStack
@@ -23,8 +22,8 @@ export default function OptionRow({ label, note, on, onToggle, problems = [] }: 
         minHeight={64}
         padding="3"
         borderWidth={1}
-        borderColor={on ? t.primary : t.line}
-        backgroundColor={t.panel}
+        borderColor={on ? 'primary' : 'line'}
+        backgroundColor="panel"
         opacity="press:0.9"
         scale="press:0.99"
         onPress={onToggle}
@@ -32,16 +31,16 @@ export default function OptionRow({ label, note, on, onToggle, problems = [] }: 
         accessibilityState={{ checked: on }}
         accessibilityLabel={`${label}, ${note}`}
       >
-        <Text fontFamily="mono" fontSize={14} width={16} textAlign="center" color={on ? t.primary : t.faint}>
+        <PlainText fontFamily="mono" fontSize={14} width={16} textAlign="center" color={on ? 'primary' : 'faint'}>
           {on ? '■' : '□'}
-        </Text>
+        </PlainText>
         <YStack flex={1} minWidth={0} gap="1">
-          <Text fontSize={16} fontWeight="600">
+          <PlainText fontSize={16} fontWeight="600">
             {label}
-          </Text>
-          <Text fontSize={13} color={t.dim}>
+          </PlainText>
+          <PlainText fontSize={13} color="dim">
             {note}
-          </Text>
+          </PlainText>
         </YStack>
       </XStack>
       {problems.map((p) => (

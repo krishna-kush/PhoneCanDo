@@ -2,7 +2,6 @@ import { Text, YStack } from 'tamagui';
 import AppButton from '../../common/AppButton';
 import WakingLine from '../../common/face/WakingLine';
 import LogoLoader from '../../common/LogoLoader';
-import { useTheme } from '../../common/globals';
 import type { TuiPhase } from './tuiPhase';
 
 type Props = {
@@ -19,13 +18,12 @@ type Props = {
 // screen instead (over the extra keys, which have nothing to type into), so
 // the screen keeps its size and stays readable.
 export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
-  const t = useTheme();
 
   if (phase.name === 'starting') {
     return (
-      <YStack flex={1} backgroundColor={t.bg} padding="3" gap="4" alignItems="center" justifyContent="center">
+      <YStack flex={1} backgroundColor="bg" padding="3" gap="4" alignItems="center" justifyContent="center">
         <LogoLoader size={24} />
-        <Text color={t.fg} fontFamily="mono">
+        <Text color="fg" fontFamily="mono">
           Starting {label}…
         </Text>
         <WakingLine />
@@ -37,11 +35,11 @@ export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
   const overScreen = phase.name === 'stopped' && phase.screen;
   const body = (
     <>
-      <Text color={failed ? t.primary : t.fg} fontFamily="mono">
+      <Text color={failed ? 'primary' : 'fg'} fontFamily="mono">
         {failed ? `${label} could not start` : `${label} stopped`}
       </Text>
       {phase.error ? (
-        <Text color={t.dim} fontFamily="mono" fontSize={12} userSelect="text">
+        <Text color="dim" fontFamily="mono" fontSize={12} userSelect="text">
           {phase.error}
         </Text>
       ) : null}
@@ -58,9 +56,9 @@ export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
         left={0}
         right={0}
         bottom={0}
-        backgroundColor={t.bg}
+        backgroundColor="bg"
         borderTopWidth={1}
-        borderColor={t.line}
+        borderColor="line"
         padding="3"
         gap="2"
       >
@@ -69,7 +67,7 @@ export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
     );
   }
   return (
-    <YStack flex={1} backgroundColor={t.bg} padding="4" gap="3" justifyContent="center">
+    <YStack flex={1} backgroundColor="bg" padding="4" gap="3" justifyContent="center">
       {body}
     </YStack>
   );

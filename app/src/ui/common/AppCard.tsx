@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import ArrowIcon from './ArrowIcon';
 import CardMenu, { type CardMenuItem } from './CardMenu';
-import { useTheme } from './globals';
+import PlainText from './PlainText';
 
 type Props = {
   title: string;
@@ -39,7 +39,6 @@ export default function AppCard({
   plate = true,
   children,
 }: Props) {
-  const t = useTheme();
   const initial = (title.replace(/^\.+/, '').trim().charAt(0) || '•').toUpperCase();
   const showChevron = chevron ?? (onPress != null && menu == null);
 
@@ -48,11 +47,11 @@ export default function AppCard({
       alignItems="center"
       gap="3"
       borderWidth={1}
-      borderColor={selected ? t.primary : t.line}
+      borderColor={selected ? 'primary' : 'line'}
       borderRadius={0}
       padding="3"
       minHeight={72}
-      backgroundColor={t.panel}
+      backgroundColor="panel"
       opacity={onPress ? 'press:0.9' : undefined}
       scale={onPress ? 'press:0.99' : undefined}
       onPress={onPress}
@@ -62,36 +61,36 @@ export default function AppCard({
         width={48}
         height={48}
         borderWidth={plate ? 1 : 0}
-        borderColor={selected ? t.primary : t.lineStrong}
+        borderColor={selected ? 'primary' : 'lineStrong'}
         alignItems="center"
         justifyContent="center"
         flexShrink={0}
       >
         {icon ?? (
-          <Text
+          <PlainText
             fontFamily="mono"
             fontSize={18}
             fontWeight="600"
-            color={selected ? t.primary : t.secondaryInk}
+            color={selected ? 'primary' : 'secondaryInk'}
           >
             {initial}
-          </Text>
+          </PlainText>
         )}
       </YStack>
       <YStack flex={1} minWidth={0} gap="1" justifyContent="center">
-        <Text fontSize={16} fontWeight="600" numberOfLines={1} ellipsizeMode="tail">
+        <PlainText fontSize={16} fontWeight="600" numberOfLines={1} ellipsizeMode="tail">
           {selected ? `✓ ${title}` : title}
-        </Text>
+        </PlainText>
         {subtitle ? (
-          <Text
+          <PlainText
             fontFamily="mono"
             fontSize={12}
-            color={t.dim}
+            color="dim"
             numberOfLines={2}
             ellipsizeMode="tail"
           >
             {subtitle}
-          </Text>
+          </PlainText>
         ) : null}
         {children}
       </YStack>

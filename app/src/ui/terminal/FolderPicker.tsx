@@ -10,7 +10,6 @@ import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
 import PageHeader from '../common/PageHeader';
 import Screen from '../common/Screen';
-import { useTheme } from '../common/globals';
 
 // TUI entry point: pick which folder the active agent's terminal UI attaches
 // to. Tree from the agent's HOME (its image's home, the place its engine and
@@ -19,7 +18,6 @@ import { useTheme } from '../common/globals';
 // makes), or HOME until that exists. A switch of the active agent re-roots
 // it. No creation here: only existing folders.
 export default function FolderPicker() {
-  const t = useTheme();
   const agent = useActiveAgent();
   const openTerminalDir = useAppStore((s) => s.openTerminalDir);
   const back = useAppStore((s) => s.back);
@@ -63,11 +61,11 @@ export default function FolderPicker() {
     <Screen scroll={false}>
       <PageHeader kicker={agent ? `terminal UI · ${agent.name}` : 'terminal UI'} title="Pick a folder" />
       {error ? (
-        <Text fontSize={15} color={t.primary}>
+        <Text fontSize={15} color="primary">
           {error}
         </Text>
       ) : (
-        <Text fontFamily="mono" fontSize={13} color={t.muted} numberOfLines={1} ellipsizeMode="middle">
+        <Text fontFamily="mono" fontSize={13} color="muted" numberOfLines={1} ellipsizeMode="middle">
           {rel}
         </Text>
       )}

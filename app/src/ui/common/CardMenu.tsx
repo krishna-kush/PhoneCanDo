@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button, Popover, YStack } from 'tamagui';
 import DotsIcon from './DotsIcon';
 import MenuItem from './MenuItem';
-import { HIT, useTheme } from './globals';
+import { HIT } from './globals';
 
 export type CardMenuItem = {
   label: string;
@@ -23,7 +23,6 @@ export default function CardMenu({
   label?: string;
   offset?: number;
 }) {
-  const t = useTheme();
   const [open, setOpen] = useState(false);
 
   return (
@@ -49,7 +48,7 @@ export default function CardMenu({
       </Popover.Trigger>
       <Popover.Content
         borderWidth={1}
-        borderColor={t.lineStrong}
+        borderColor="lineStrong"
         borderRadius={0}
         padding="2"
         y="enter:-10px exit:-10px"

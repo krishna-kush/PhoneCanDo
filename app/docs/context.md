@@ -124,7 +124,11 @@ are in `modules/chat.md`. The non-negotiables:
 ## Theme
 
 `theme/tokens.json` is the only palette; web and app read it directly, so they
-cannot drift. The terminal follows the scheme from its `term*` roles
+cannot drift. Each role is also a Tamagui theme key by its own name
+(`tamagui.config.ts`), so Tamagui props name it (`color="dim"`): a colour
+from our `useTheme()` there stops Tamagui's compiler from flattening the
+element. Text with words known only at run time stays on Tamagui's runtime
+however it is coloured; the repeated kind is `ui/common/PlainText.tsx`. The terminal follows the scheme from its `term*` roles
 (`#0a0a0a` dark, white light; `modules/terminal.md` → Theme); the opencode web adapter's `themeScript` maps
 the palette onto opencode's `--v2-*` vars (see `modules/chat.md`).
 

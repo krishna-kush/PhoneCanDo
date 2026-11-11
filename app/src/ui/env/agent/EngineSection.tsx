@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, XStack } from 'tamagui';
+import { XStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { agentKind } from '../../../engine/agents/registry';
 import type { Image } from '../../../engine/linux/types';
@@ -8,7 +8,7 @@ import { useAppStore } from '../../../state/app';
 import AppButton from '../../common/AppButton';
 import { moodLine } from '../../common/face/lines';
 import { moodOf } from '../../common/face/mood';
-import { useTheme } from '../../common/globals';
+import PlainText from '../../common/PlainText';
 import { engineIsUp, engineStateWord } from '../logic/engineState';
 import { startFailureCode, startFailureText } from '../logic/errorText';
 import Note from '../parts/Note';
@@ -21,7 +21,6 @@ type Props = { agent: Agent; image: Image | undefined; linux: boolean };
 // machine. All need the machine ready; all but the shell need the agent
 // installed in it (a kind with an install, see InstallSection).
 export default function EngineSection({ agent, image, linux }: Props) {
-  const t = useTheme();
   const status = useAgentsStore((s) => s.statuses[agent.id]);
   const startAgent = useAgentsStore((s) => s.startAgent);
   const stopAgent = useAgentsStore((s) => s.stopAgent);
@@ -63,18 +62,18 @@ export default function EngineSection({ agent, image, linux }: Props) {
   return (
     <>
       <XStack alignItems="baseline" gap="2" flexWrap="wrap">
-        <Text fontSize={16} fontWeight="600">
+        <PlainText fontSize={16} fontWeight="600">
           {engineStateWord(status?.state)}
-        </Text>
-        <Text fontFamily="mono" fontSize={11} letterSpacing={1.2} color={t.dim} textTransform="uppercase">
+        </PlainText>
+        <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.2} color="dim" textTransform="uppercase">
           {status?.port && up ? `port ${status.port} · ${moodLine(moodOf(status.state))}` : moodLine(moodOf(status?.state))}
-        </Text>
+        </PlainText>
       </XStack>
       {error ? <Note tone="error">{error}</Note> : null}
       {!error && status?.error && (status.state === 'failed' || status.state === 'died') ? (
-        <Text fontFamily="mono" fontSize={12} color={t.dim} userSelect="text">
+        <PlainText fontFamily="mono" fontSize={12} color="dim" userSelect="text">
           {status.error}
-        </Text>
+        </PlainText>
       ) : null}
       {!machineReady ? <Note>It can start once its machine is ready.</Note> : null}
       {machineReady && !ready ? <Note>It can start once it's installed.</Note> : null}

@@ -1,7 +1,7 @@
-import { Text, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import type { KindReview } from '../../../engine/agents/user/review';
+import PlainText from '../../common/PlainText';
 import SectionTitle from '../../common/SectionTitle';
-import { useTheme } from '../../common/globals';
 import { familyName, PHONE_TOOLS_OFF, runtimeName } from '../logic/customAgentText';
 import Note from '../parts/Note';
 
@@ -60,12 +60,11 @@ export default function KindReviewView({ review }: { review: KindReview }) {
 
 // Shell text as it is, monospaced and selectable, in a hairline box.
 function Code({ text }: { text: string }) {
-  const t = useTheme();
   return (
-    <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel} padding="3">
-      <Text fontFamily="mono" fontSize={12} lineHeight="17px" color={t.fg} userSelect="text">
+    <YStack borderWidth={1} borderColor="line" backgroundColor="panel" padding="3">
+      <PlainText fontFamily="mono" fontSize={12} lineHeight="17px" color="fg" userSelect="text">
         {text}
-      </Text>
+      </PlainText>
     </YStack>
   );
 }

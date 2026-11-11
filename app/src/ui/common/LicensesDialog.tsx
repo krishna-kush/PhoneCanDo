@@ -22,13 +22,13 @@ export default function LicensesDialog({
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={['top', 'bottom', 'left', 'right']}>
         <Screen scroll={false} fabClearance={false}>
           <SectionTitle>Licenses</SectionTitle>
-          <Text fontSize={13} color={t.muted} lineHeight="19px">
+          <Text fontSize={13} color="muted" lineHeight="19px">
             PhoneCanDo bundles the components below. Their licenses require these notices to travel
             with the app.
           </Text>
           <YStack flex={1} minHeight={0}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
-              <Text fontSize={12} color={t.muted} lineHeight="18px" userSelect="text">
+              <Text fontSize={12} color="muted" lineHeight="18px" userSelect="text">
                 {LICENSES}
               </Text>
             </ScrollView>

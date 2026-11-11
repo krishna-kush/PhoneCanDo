@@ -1,6 +1,6 @@
-import { Text, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import AppInput from '../../common/AppInput';
-import { useTheme } from '../../common/globals';
+import PlainText from '../../common/PlainText';
 import Note from '../parts/Note';
 
 type Props = {
@@ -18,19 +18,18 @@ type Props = {
 // One field of the custom agent form: its label, the input, a hint and
 // what is wrong with it. Code fields grow with their lines.
 export default function FormField({ label, value, onChange, placeholder, hint, problems = [], code }: Props) {
-  const t = useTheme();
   return (
     <YStack gap="2">
-      <Text fontSize={15} fontWeight="600">
+      <PlainText fontSize={15} fontWeight="600">
         {label}
-      </Text>
+      </PlainText>
       <AppInput
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
         autoCorrect={false}
         spellCheck={false}
-        borderColor={problems.length > 0 ? t.primary : t.lineStrong}
+        borderColor={problems.length > 0 ? 'primary' : 'lineStrong'}
         {...(code
           ? { multiline: true, minHeight: 120, textAlignVertical: 'top', fontFamily: 'mono', fontSize: 14, paddingVertical: '3' }
           : {})}
