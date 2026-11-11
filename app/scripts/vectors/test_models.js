@@ -130,8 +130,17 @@ const model = (over) => ({
   t('model line, a context off the grid', mt.modelLine(model({ servedContext: 33_792 })), '2.7 GB · Q4_K_M · 4B · 33k context');
   t('source hf', mt.sourceText(model({}).source), 'unsloth/Qwen3.5-4B-GGUF');
   t('source imported', mt.sourceText({ kind: 'imported', fileName: 'my.gguf' }), 'Imported from my.gguf');
-  const split = { quant: null, files: [{ path: 'Q8_0/x-00001-of-00003.gguf', sizeBytes: 1, sha256: 'a' }, {}, {}], sizeBytes: 48.1 * GB };
-  t('variant title falls back to the file', mt.variantTitle(split), 'x-00001-of-00003.gguf');
+  const part = (i) => ({ path: `Q8_0/x-0000${i}-of-00003.gguf`, sizeBytes: [0, 20 * GB, 20 * GB, 8.1 * GB][i], sha256: 'a' });
+  const split = { quant: null, files: [part(1), part(2), part(3)], sizeBytes: 48.1 * GB };
+  t('variant title falls back to the file, part suffix left out', mt.variantTitle(split), 'x.gguf');
+  t('variant title, upper case part suffix', mt.variantTitle({ ...split, files: [{ path: 'X-00001-OF-00002.GGUF' }] }), 'X.GGUF');
+  t('variant title, no files', mt.variantTitle({ quant: null, files: [], sizeBytes: 0 }), 'Model');
+  t(
+    'variant files, every part by name with its size',
+    mt.variantFiles(split),
+    'x-00001-of-00003.gguf (20 GB), x-00002-of-00003.gguf (20 GB), x-00003-of-00003.gguf (8.1 GB)',
+  );
+  t('variant files, one file', mt.variantFiles({ ...split, files: [{ path: 'Q4/x-Q4_K_M.gguf' }] }), 'Q4/x-Q4_K_M.gguf');
   t('variant line, split', mt.variantLine(split), '48.1 GB in 3 parts');
   t('variant line', mt.variantLine({ ...split, files: [{}], quant: 'Q4_K_M' }), '48.1 GB');
   t('hit line', mt.hitLine({ repo: 'a/b', downloads: 1_234_567, likes: 340 }), '1.2M downloads · 340 likes');

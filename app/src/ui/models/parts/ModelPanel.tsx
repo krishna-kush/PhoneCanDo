@@ -9,6 +9,8 @@ type Props = {
   title: string;
   /** Mono detail lines (size, quant, source); empty ones are left out. */
   lines: string[];
+  /** Its files under the details, wrapped as long as it takes so every part shows; '' for none. */
+  files?: string;
   /** Its release and training-data dates, when known. */
   dates?: ModelDates | null;
   /** One plain line over the verdict (the context we reduced); '' for none. */
@@ -20,7 +22,7 @@ type Props = {
 
 // One model on the Models page: a hairline panel with its name, details,
 // dates, a note, its RAM verdict and actions, like the Choose agent cards.
-export default function ModelPanel({ title, lines, dates, note, ram, children }: Props) {
+export default function ModelPanel({ title, lines, files, dates, note, ram, children }: Props) {
   return (
     <YStack borderWidth={1} borderColor="line" backgroundColor="panel" padding="3" gap="2">
       <PlainText fontSize={16} fontWeight="600" numberOfLines={2} ellipsizeMode="tail">
@@ -33,6 +35,11 @@ export default function ModelPanel({ title, lines, dates, note, ram, children }:
             {l}
           </PlainText>
         ))}
+      {files ? (
+        <PlainText fontFamily="mono" fontSize={12} color="dim">
+          {files}
+        </PlainText>
+      ) : null}
       <DatesLine dates={dates} />
       {note ? (
         <PlainText fontSize={13} color="muted">

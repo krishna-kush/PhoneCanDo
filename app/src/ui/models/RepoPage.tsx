@@ -10,7 +10,7 @@ import Note from '../env/parts/Note';
 import { useSlidInList } from '../nav/slidIn';
 import ProgressBar from '../env/parts/ProgressBar';
 import { modelErrorText } from './logic/errorText';
-import { variantLine, variantTitle } from './logic/modelText';
+import { variantFiles, variantLine, variantTitle } from './logic/modelText';
 import DatesLine from './parts/DatesLine';
 import ModelPanel from './parts/ModelPanel';
 import { useAction } from './useAction';
@@ -79,7 +79,7 @@ function VariantPanel({ repo, revision, dates, variant }: VariantProps) {
   const action = useAction();
   const runs = variant.ram.verdict === 'fits' || variant.ram.verdict === 'tight';
   return (
-    <ModelPanel title={variantTitle(variant)} lines={[variantLine(variant), variant.files[0]?.path ?? '']} ram={variant.ram}>
+    <ModelPanel title={variantTitle(variant)} lines={[variantLine(variant)]} files={variantFiles(variant)} ram={variant.ram}>
       {variant.onPhone ? (
         <Note>On this phone.</Note>
       ) : variant.downloadId ? (

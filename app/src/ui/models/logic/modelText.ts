@@ -64,9 +64,21 @@ export function sourceText(source: ModelSource): string {
   return source.kind === 'huggingface' ? source.repo : `Imported from ${source.fileName}`;
 }
 
-/** "Q4_K_M", else the entry file's name. */
+// llama.cpp's split-file suffix, as lme's Shards reads it: `<stem>-00001-of-00003.gguf`.
+const PART_SUFFIX = /-[0-9]{5}-of-[0-9]{5}(\.gguf)$/i;
+
+/** "Q4_K_M", else the entry file's name, a split one's part suffix left out: "x.gguf" for "x-00001-of-00003.gguf". */
 export function variantTitle(v: ModelVariant): string {
-  return v.quant ?? v.files[0]?.path.split('/').pop() ?? 'Model';
+  return v.quant ?? (v.files[0]?.path.split('/').pop()?.replace(PART_SUFFIX, '$1') || 'Model');
+}
+
+/**
+ * Its file's path, "Q4/x-Q4_K_M.gguf"; a split one's parts in order, each
+ * with its size: "x-00001-of-00002.gguf (49.7 GB), x-00002-of-00002.gguf (11.4 GB)".
+ */
+export function variantFiles(v: ModelVariant): string {
+  if (v.files.length === 1) return v.files[0].path;
+  return v.files.map((f) => `${f.path.split('/').pop()} (${formatBytes(f.sizeBytes)})`).join(', ');
 }
 
 /** "2.7 GB", "48.1 GB in 3 parts" */
