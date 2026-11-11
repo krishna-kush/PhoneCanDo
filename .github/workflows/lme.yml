@@ -12,11 +12,13 @@ on:
     paths:
       - 'lme/**'
       - '!lme/llamacpp/**'
+      - 'network/**'
       - '.github/workflows/lme.yml'
   pull_request:
     paths:
       - 'lme/**'
       - '!lme/llamacpp/**'
+      - 'network/**'
       - '.github/workflows/lme.yml'
   workflow_dispatch:
   schedule:

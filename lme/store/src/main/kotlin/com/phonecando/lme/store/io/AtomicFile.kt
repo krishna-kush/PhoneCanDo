@@ -1,12 +1,10 @@
 package com.phonecando.lme.store.io
 
+import com.phonecando.network.download.SyncedFiles
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.nio.channels.FileChannel
 import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
 
 /**
  * Whole-file writes that survive a crash or power cut at any point: the
@@ -24,20 +22,6 @@ internal object AtomicFile {
             out.write(bytes)
             out.fd.sync()
         }
-        moveSynced(tmp, file)
-    }
-
-    /** Renames [from] over [to] (same dir) and syncs the dir. */
-    fun moveSynced(from: File, to: File) {
-        Files.move(from.toPath(), to.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-        syncDir(to.absoluteFile.parentFile)
-    }
-
-    /** Best effort: some file systems refuse to open a dir for sync, and then there is nothing more we can do. */
-    private fun syncDir(dir: File) {
-        try {
-            FileChannel.open(dir.toPath(), StandardOpenOption.READ).use { it.force(true) }
-        } catch (_: IOException) {
-        }
+        SyncedFiles.move(tmp, file)
     }
 }

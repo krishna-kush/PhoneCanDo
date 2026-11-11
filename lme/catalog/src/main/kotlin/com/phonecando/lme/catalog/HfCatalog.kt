@@ -1,8 +1,6 @@
 package com.phonecando.lme.catalog
 
-import com.phonecando.lme.api.CancelSignal
 import com.phonecando.lme.api.LmeException
-import com.phonecando.lme.api.http.HttpPort
 import com.phonecando.lme.catalog.files.Variants
 import com.phonecando.lme.catalog.filters.ChatModels
 import com.phonecando.lme.catalog.filters.ModelFilters
@@ -16,6 +14,8 @@ import com.phonecando.lme.catalog.hub.RevisionJson
 import com.phonecando.lme.catalog.hub.SiblingJson
 import com.phonecando.lme.catalog.origin.Origins
 import com.phonecando.lme.catalog.parameters.CheckpointSizes
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.http.HttpPort
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 

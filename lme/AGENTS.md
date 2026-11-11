@@ -44,12 +44,19 @@ gguf + host <- cli         (a leaf for CI: nothing depends on it, never publishe
   variant into a `DownloadRequest`. `host` plans from a `ModelRecord` and a
   `DeviceInfo` and never reads a file.
 - The build files are the law. Test helpers shared across modules are test
-  fixtures (`api`: `FakePort`; `gguf`: `GgufBytes`), never main code.
+  fixtures (`gguf`: `GgufBytes`; network's `FakePort` and `Served`), never
+  main code.
+- HTTP, downloads and retries are our shared `network/` build (`api`
+  exposes `network-http`; `store` uses `network-download`), included with
+  `includeBuild("../network")`. Never copy network code back into lme:
+  change it in network/, for every engine.
 
 ## 3. Errors and secrets
 
 - Every expected failure is a typed `LmeException`; local disk errors stay
-  `IOException`. A message names the thing, never a secret: URLs go
+  `IOException`. Network code throws `NetException`: every call into it
+  goes through `lmeNet { }` (`api/NetErrors.kt`), which maps it and keeps
+  it as the cause. A message names the thing, never a secret: URLs go
   through `redactUrl`.
 - The Hugging Face token is only ever a parameter (`HfCatalog`,
   `ModelStore.download`). It goes to `https://huggingface.co` only

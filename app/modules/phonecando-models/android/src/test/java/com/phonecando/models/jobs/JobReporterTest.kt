@@ -1,6 +1,7 @@
 package com.phonecando.models.jobs
 
-import com.phonecando.lme.api.Progress
+import com.phonecando.network.Progress
+import com.phonecando.network.retry.RetryWait
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -37,9 +38,9 @@ class JobReporterTest {
   @Test
   fun `a retry is one event, and the last event says how it ended`() {
     reporter.report(Progress("download", 5, 100))
-    reporter.retrying(RetryWait(2, 6, 5_000))
+    reporter.retrying(RetryWait(2, 6, 5_000, RetryWait.Reason.RATE_LIMITED))
     assertEquals("retry", events.last()["step"])
-    assertEquals(mapOf("attempt" to 2, "max" to 6, "delaySec" to 5), events.last()["retry"])
+    assertEquals(mapOf("attempt" to 2, "max" to 6, "delaySec" to 5, "reason" to "rate_limited"), events.last()["retry"])
     reporter.finish("network error on https://cdn/x", "network")
     val last = events.last()
     assertEquals(true, last["finished"])

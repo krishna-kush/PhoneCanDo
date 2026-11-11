@@ -28,6 +28,11 @@ dependencies {
   implementation 'com.phonecando.lme:lme-catalog:0.1.0-dev'
   implementation 'com.phonecando.lme:lme-store:0.1.0-dev'
   implementation 'com.phonecando.lme:lme-host:0.1.0-dev'
+  // Our shared network code (network/, withNetworkCompositeBuild.js): a
+  // download's retries and the list of downloads to resume.
+  implementation 'com.phonecando.network:network-retry:0.1.0-dev'
+  // Whether the phone is online.
+  implementation project(':phonecando-network')
 
   // JVM tests of the pure parts (CPU info, RAM checks, error codes, jobs,
   // rates, token rules): ./gradlew :phonecando-models:testDebugUnitTest

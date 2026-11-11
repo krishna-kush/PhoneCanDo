@@ -1,26 +1,29 @@
 package com.phonecando.lme.store
 
-import com.phonecando.lme.api.CancelSignal
 import com.phonecando.lme.api.LmeException
-import com.phonecando.lme.api.ProgressSink
-import com.phonecando.lme.api.http.HttpPort
+import com.phonecando.lme.api.lmeNet
 import com.phonecando.lme.api.model.ModelFile
 import com.phonecando.lme.api.model.ModelIds
 import com.phonecando.lme.api.model.ModelRecord
 import com.phonecando.lme.api.model.ModelSource
 import com.phonecando.lme.store.check.HeaderCheck
 import com.phonecando.lme.store.download.DownloadRequest
-import com.phonecando.lme.store.download.FileDownloader
-import com.phonecando.lme.store.download.HashCheckpoints
 import com.phonecando.lme.store.download.PendingDownload
 import com.phonecando.lme.store.ids.IdMaker
 import com.phonecando.lme.store.imports.ModelImport
-import com.phonecando.lme.store.io.AtomicFile
 import com.phonecando.lme.store.io.FreeSpace
 import com.phonecando.lme.store.io.TreeDelete
 import com.phonecando.lme.store.layout.FileNames
 import com.phonecando.lme.store.layout.ModelLayout
 import com.phonecando.lme.store.registry.ModelRegistry
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.download.ExpectedFile
+import com.phonecando.network.download.FileDownloader
+import com.phonecando.network.download.HashCheckpoints
+import com.phonecando.network.download.RangeOpener
+import com.phonecando.network.download.SyncedFiles
+import com.phonecando.network.http.HttpPort
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -120,7 +123,11 @@ class ModelStore(
             val target = layout.file(id, file.name)
             // A file under its final name was verified before the rename.
             if (!(target.isFile && target.length() == file.sizeBytes)) {
-                FileDownloader(http, headersFor(file.url, token), checkpoints).download(file, layout.part(id, file.name), target, base, total, sink, cancel)
+                val opener = RangeOpener.of(http, file.url, headersFor(file.url, token), file.name)
+                lmeNet {
+                    FileDownloader(checkpoints)
+                        .download(ExpectedFile(file.name, file.sizeBytes, file.sha256), opener, layout.part(id, file.name), target, base, total, sink, cancel)
+                }
             }
             base += file.sizeBytes
         }
@@ -179,7 +186,7 @@ class ModelStore(
         try {
             val copied = ModelImport.copy(input, part, sizeHint, sink, cancel)
             val shape = HeaderCheck.shape(part, parts = 1)
-            AtomicFile.moveSynced(part, target)
+            SyncedFiles.move(part, target)
             val record = ModelRecord(
                 id = id,
                 name = shape.name ?: IdMaker.stem(fileName).ifBlank { id },

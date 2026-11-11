@@ -4,6 +4,8 @@ import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.store.download.DownloadRequest
 import com.phonecando.models.ModelsHost
 import com.phonecando.models.errors.ModelError
+import com.phonecando.network.retry.RetryLoop
+import com.phonecando.network.retry.RetryPolicy
 
 /**
  * Downloads as background jobs. A start registers the download in
@@ -64,9 +66,7 @@ class DownloadOps(private val host: ModelsHost) {
     host.resumeList.add(id)
     host.run(job) { reporter ->
       try {
-        retries.run(reporter, { job.isCancelled }, { sleep(job, it) }) {
-          host.store.download(id, host.tokens.read(), reporter, job.cancel)
-        }
+        retries.run(reporter, job.cancel) { host.store.download(id, host.tokens.read(), reporter, job.cancel) }
         host.resumeList.remove(id)
       } catch (e: Throwable) {
         // It stays on the list only for what a later start can fix: a network that stayed down.
@@ -77,20 +77,9 @@ class DownloadOps(private val host: ModelsHost) {
     return job
   }
 
-  // Waits, checking the cancel flag a few times a second.
-  private fun sleep(job: ModelJob, millis: Long) {
-    val until = System.currentTimeMillis() + millis
-    while (System.currentTimeMillis() < until) {
-      if (job.isCancelled) throw LmeException.Cancelled()
-      Thread.sleep(minOf(POLL_MS, until - System.currentTimeMillis()).coerceAtLeast(1))
-    }
-  }
-
   private fun target(id: String) = JobTarget(JobTarget.Kind.DOWNLOAD, id)
 
   private companion object {
-    const val POLL_MS = 250L
-
     // Past a connect and a wait for the answer's headers (UrlConnectionPort: 15 s + 30 s), which
     // a cancel cannot cut short; a read on the body it cuts at once.
     const val STOP_WAIT_MS = 50_000L

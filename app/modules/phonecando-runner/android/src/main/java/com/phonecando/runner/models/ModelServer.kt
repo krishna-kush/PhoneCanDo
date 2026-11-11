@@ -3,7 +3,6 @@ package com.phonecando.runner.models
 import android.util.Log
 import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.device.DeviceInfo
-import com.phonecando.lme.api.http.UrlConnectionPort
 import com.phonecando.lme.api.model.ModelRecord
 import com.phonecando.lme.api.serve.ServedEndpoint
 import com.phonecando.lme.host.LaunchPlan
@@ -13,6 +12,7 @@ import com.phonecando.lme.host.health.Readiness
 import com.phonecando.lme.host.key.ApiKeys
 import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
 import com.phonecando.lme.host.ram.RamVerdict
+import com.phonecando.network.http.UrlConnectionPort
 import com.phonecando.runner.engine.EngineEnv
 import com.phonecando.runner.engine.EngineStartError
 import com.phonecando.runner.engine.EngineStartException

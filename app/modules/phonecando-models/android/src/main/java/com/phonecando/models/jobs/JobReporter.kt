@@ -1,10 +1,9 @@
 package com.phonecando.models.jobs
 
-import com.phonecando.lme.api.Progress
-import com.phonecando.lme.api.ProgressSink
-
-/** A download's wait before it tries again: try [attempt] of [max], in [delayMillis]. */
-data class RetryWait(val attempt: Int, val max: Int, val delayMillis: Long)
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.retry.RetrySink
+import com.phonecando.network.retry.RetryWait
 
 /**
  * A job's progress sink: lme's reports become `phonecandoModelsProgress`
@@ -98,12 +97,19 @@ class JobReporter(
     put("rateBytesPerSec", rate?.toDouble())
     put(
       "retry",
-      retry?.let { mapOf("attempt" to it.attempt, "max" to it.max, "delaySec" to (it.delayMillis / 1000).toInt()) },
+      retry?.let {
+        mapOf("attempt" to it.attempt, "max" to it.max, "delaySec" to (it.delayMillis / 1000).toInt(), "reason" to reasonOf(it))
+      },
     )
     put("finished", finished)
     if (finished) put("ok", error == null)
     put("error", error)
     put("errorCode", errorCode)
+  }
+
+  private fun reasonOf(wait: RetryWait): String = when (wait.reason) {
+    RetryWait.Reason.NETWORK -> "network"
+    RetryWait.Reason.RATE_LIMITED -> "rate_limited"
   }
 
   companion object {

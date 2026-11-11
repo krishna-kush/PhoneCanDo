@@ -2,7 +2,8 @@ package com.phonecando.lme.api
 
 /**
  * Every failure the engine reports, typed so the UI can say what went wrong.
- * A message names the thing, never a secret: URLs go through [com.phonecando.lme.api.http.redactUrl]
+ * One from our network code keeps its NetException as the cause ([toLme]).
+ * A message names the thing, never a secret: URLs go through [com.phonecando.network.http.redactUrl]
  * first, and a token or API key never reaches one.
  */
 sealed class LmeException(message: String, cause: Throwable? = null) : Exception(message, cause) {
@@ -23,26 +24,27 @@ sealed class LmeException(message: String, cause: Throwable? = null) : Exception
 
     class NoSpace(val needed: Long, val free: Long) : LmeException("needs $needed bytes, $free free")
 
-    class SizeMismatch(val what: String, val expected: Long, val actual: Long) :
-        LmeException("$what is $actual bytes, expected $expected")
+    class SizeMismatch(val what: String, val expected: Long, val actual: Long, cause: Throwable? = null) :
+        LmeException("$what is $actual bytes, expected $expected", cause)
 
-    class DigestMismatch(val what: String, val expected: String, val actual: String) :
-        LmeException("$what: sha256 mismatch, expected $expected, got $actual")
+    class DigestMismatch(val what: String, val expected: String, val actual: String, cause: Throwable? = null) :
+        LmeException("$what: sha256 mismatch, expected $expected, got $actual", cause)
 
     class Network(val url: String, val status: Int?, cause: Throwable? = null) :
         LmeException("network error on $url${status?.let { " (http $it)" } ?: ""}", cause)
 
     /** HTTP 429; [retryAfterSeconds] when the server said how long to wait. */
-    class RateLimited(val url: String, val retryAfterSeconds: Long? = null) : LmeException("rate limited on $url")
+    class RateLimited(val url: String, val retryAfterSeconds: Long? = null, cause: Throwable? = null) :
+        LmeException("rate limited on $url", cause)
 
-    class NotFound(val what: String) : LmeException("$what not found")
+    class NotFound(val what: String, cause: Throwable? = null) : LmeException("$what not found", cause)
 
     /**
      * HTTP 401 or 403: a gated or private repository, or a token without
      * access to it. Hugging Face also answers 401 for a repository that does
      * not exist when no token is sent.
      */
-    class AccessDenied(val what: String) : LmeException("no access to $what")
+    class AccessDenied(val what: String, cause: Throwable? = null) : LmeException("no access to $what", cause)
 
     /** A file of ours on the phone (`models.json`) we cannot read. */
     class Corrupt(val what: String, cause: Throwable? = null) : LmeException("corrupt $what", cause)
@@ -57,5 +59,5 @@ sealed class LmeException(message: String, cause: Throwable? = null) : Exception
     /** The model server exited or never answered ready; [reason] says which. */
     class ServerNotReady(val reason: String) : LmeException("model server not ready: $reason")
 
-    class Cancelled : LmeException("cancelled")
+    class Cancelled(cause: Throwable? = null) : LmeException("cancelled", cause)
 }

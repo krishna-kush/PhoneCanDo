@@ -1,11 +1,11 @@
 package com.phonecando.lme.catalog.parameters
 
-import com.phonecando.lme.api.testkit.FakePort
-import com.phonecando.lme.api.testkit.reply
 import com.phonecando.lme.catalog.HfCatalog
 import com.phonecando.lme.catalog.filters.ModelFilters
 import com.phonecando.lme.catalog.filters.ModelSize
 import com.phonecando.lme.catalog.support.Fixtures
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

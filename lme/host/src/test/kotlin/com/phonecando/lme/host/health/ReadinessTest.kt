@@ -1,9 +1,9 @@
 package com.phonecando.lme.host.health
 
 import com.phonecando.lme.api.LmeException
-import com.phonecando.lme.api.testkit.FakePort
-import com.phonecando.lme.api.testkit.noResponse
-import com.phonecando.lme.api.testkit.reply
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.noResponse
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals

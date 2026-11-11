@@ -23,6 +23,7 @@ on:
   push:
     branches: [prod]
     paths:
+      - 'network/**'
       - '.github/workflows/local-models.yml'
       - '.github/ci/local-models/**'
       # The kinds: manifests (their models blocks), one-shot modes, a native
@@ -60,6 +61,7 @@ on:
       - 'lme/llamacpp/patches/**'
   pull_request:
     paths:
+      - 'network/**'
       - '.github/workflows/local-models.yml'
       - '.github/ci/local-models/**'
       # The kinds: manifests (their models blocks), one-shot modes, a native
@@ -248,6 +250,7 @@ jobs:
           sparse-checkout: |
             agents
             lme
+            network
 
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:

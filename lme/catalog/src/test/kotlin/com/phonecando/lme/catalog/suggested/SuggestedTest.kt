@@ -1,13 +1,13 @@
 package com.phonecando.lme.catalog.suggested
 
 import com.phonecando.lme.api.model.KvCacheShape
-import com.phonecando.lme.api.testkit.FakePort
-import com.phonecando.lme.api.testkit.reply
 import com.phonecando.lme.catalog.HfCatalog
 import com.phonecando.lme.catalog.RepoFile
 import com.phonecando.lme.catalog.hub.HubNames
 import com.phonecando.lme.catalog.known.KnownModels
 import com.phonecando.lme.catalog.support.Fixtures
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.reply
 import kotlinx.serialization.SerializationException
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

@@ -1,10 +1,10 @@
 package com.phonecando.models.catalog
 
 import com.phonecando.lme.api.LmeException
-import com.phonecando.lme.api.http.HttpPort
-import com.phonecando.lme.api.http.HttpResponse
 import com.phonecando.lme.catalog.HfCatalog
 import com.phonecando.lme.catalog.HubCallsLeft
+import com.phonecando.network.http.HttpPort
+import com.phonecando.network.http.HttpResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

@@ -1,10 +1,10 @@
 package com.phonecando.lme.store.imports
 
-import com.phonecando.lme.api.CancelSignal
 import com.phonecando.lme.api.LmeException
-import com.phonecando.lme.api.Progress
-import com.phonecando.lme.api.ProgressSink
-import com.phonecando.lme.store.io.Sha256
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.download.Sha256
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException

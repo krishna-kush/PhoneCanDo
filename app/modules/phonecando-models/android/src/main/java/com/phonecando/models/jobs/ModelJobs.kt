@@ -1,8 +1,8 @@
 package com.phonecando.models.jobs
 
-import com.phonecando.lme.api.CancelSignal
 import com.phonecando.models.errors.ModelError
 import com.phonecando.models.errors.ModelErrorCode
+import com.phonecando.network.CancelSignal
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit

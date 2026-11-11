@@ -1,6 +1,7 @@
 package com.phonecando.models.errors
 
 import com.phonecando.lme.api.LmeException
+import com.phonecando.network.NetException
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.IOException
@@ -15,6 +16,8 @@ class ModelErrorCodeTest {
     // A Hub answer we cannot read is not our own list of models.
     assertEquals(ModelErrorCode.BAD_ANSWER, ModelErrorCode.of(LmeException.BadAnswer("repository x/y")))
     assertEquals(ModelErrorCode.CORRUPT, ModelErrorCode.of(LmeException.Corrupt("models.json")))
+    assertEquals(ModelErrorCode.CANCELLED, ModelErrorCode.of(NetException.Cancelled()))
+    assertEquals(ModelErrorCode.RATE_LIMITED, ModelErrorCode.of(NetException.RateLimited("https://cdn/x")))
     assertEquals(ModelErrorCode.CANCELLED, ModelErrorCode.of(LmeException.Cancelled()))
     assertEquals(ModelErrorCode.NOT_ENOUGH_MEMORY, ModelErrorCode.of(LmeException.NotEnoughMemory(2, 1)))
   }

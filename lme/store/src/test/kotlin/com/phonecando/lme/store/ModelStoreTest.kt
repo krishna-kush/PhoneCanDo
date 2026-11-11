@@ -1,20 +1,20 @@
 package com.phonecando.lme.store
 
-import com.phonecando.lme.api.CancelSignal
 import com.phonecando.lme.api.LmeException
-import com.phonecando.lme.api.ProgressSink
 import com.phonecando.lme.api.model.BaseModelRef
 import com.phonecando.lme.api.model.ModelDates
 import com.phonecando.lme.api.model.ModelSource
-import com.phonecando.lme.api.testkit.FakePort
-import com.phonecando.lme.api.testkit.reply
 import com.phonecando.lme.store.download.DownloadRequest
 import com.phonecando.lme.store.download.RemoteFile
 import com.phonecando.lme.store.io.FreeSpace
 import com.phonecando.lme.store.layout.ModelLayout
 import com.phonecando.lme.store.registry.RegistryCodec
-import com.phonecando.lme.store.support.Served
 import com.phonecando.lme.store.support.TestModels
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.download.testkit.Served
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir

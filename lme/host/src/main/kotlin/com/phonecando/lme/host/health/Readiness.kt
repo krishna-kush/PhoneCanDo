@@ -1,7 +1,7 @@
 package com.phonecando.lme.host.health
 
-import com.phonecando.lme.api.CancelSignal
 import com.phonecando.lme.api.LmeException
+import com.phonecando.network.CancelSignal
 
 /**
  * Waits for a started model server to answer ready: probes every

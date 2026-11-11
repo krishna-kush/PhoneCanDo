@@ -13,7 +13,7 @@ dependencies {
     api(project(":api"))
     // Same version as lre (lre/oci); kept internal to this module.
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
-    testImplementation(testFixtures(project(":api")))
+    testImplementation(testFixtures("com.phonecando.network:network-http:0.1.0-dev"))
     // Tests only: SuggestedRamTest checks suggested.json's phone sizes against host's RAM gate.
     testImplementation(project(":host"))
     testImplementation(kotlin("test-junit5"))

@@ -1,6 +1,8 @@
 package com.phonecando.models.errors
 
 import com.phonecando.lme.api.LmeException
+import com.phonecando.lme.api.toLme
+import com.phonecando.network.NetException
 import java.io.IOException
 
 /**
@@ -43,6 +45,8 @@ enum class ModelErrorCode(val code: String) {
     fun of(e: Throwable): ModelErrorCode = when (e) {
       is ModelError -> e.code
       is LmeException -> ofLme(e)
+      // One lme did not map (a cancel during a retry's wait) means the same as lme's.
+      is NetException -> ofLme(e.toLme())
       is InterruptedException -> CANCELLED
       is IOException -> if (isNoSpace(e)) NO_SPACE else INTERNAL
       else -> INTERNAL

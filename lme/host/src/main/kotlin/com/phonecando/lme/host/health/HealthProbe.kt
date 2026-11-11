@@ -1,6 +1,6 @@
 package com.phonecando.lme.host.health
 
-import com.phonecando.lme.api.http.HttpPort
+import com.phonecando.network.http.HttpPort
 import java.io.IOException
 
 /**
