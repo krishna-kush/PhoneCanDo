@@ -59,7 +59,7 @@ class HfCatalog(http: HttpPort, token: String? = null) {
         val name = HubNames.repo(repo)
         val what = "repository $name"
         val (doc, _) = calls.get(HubUrls.revision(name, ref), what, cancel) { HubCalls.JSON.decodeFromString<RevisionJson>(it) }
-        val sha = doc.sha.takeIf { HubNames.isSha(it) } ?: throw LmeException.Corrupt("$what: no commit sha")
+        val sha = doc.sha.takeIf { HubNames.isSha(it) } ?: throw LmeException.BadAnswer("$what: no commit sha")
         val gated = (doc.gated as? JsonPrimitive)?.let { it.booleanOrNull ?: it.isString } ?: false
         val origin = Origins.fromCard(name, doc.cardData?.baseModel, doc.cardData?.baseModelRelation, doc.tags)
         return RepoRevision(name, sha, gated, origin, HubTime.day(doc.createdAt))
@@ -87,7 +87,7 @@ class HfCatalog(http: HttpPort, token: String? = null) {
         var url: String? = HubUrls.tree(name, HubNames.sha(sha))
         var pages = 0
         while (url != null) {
-            if (++pages > MAX_TREE_PAGES) throw LmeException.TooLarge(what, MAX_TREE_PAGES.toLong())
+            if (++pages > MAX_TREE_PAGES) throw LmeException.BadAnswer("$what: over $MAX_TREE_PAGES pages")
             val (entries, next) = calls.get(url, what, cancel) { HubCalls.JSON.decodeFromString<List<TreeEntryJson>>(it) }
             entries.mapNotNullTo(files, ::fileOf)
             url = next

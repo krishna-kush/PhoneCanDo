@@ -12,6 +12,9 @@ class ModelErrorCodeTest {
     assertEquals(ModelErrorCode.NETWORK, ModelErrorCode.of(LmeException.Network("https://huggingface.co/x", 500)))
     assertEquals(ModelErrorCode.INVALID_GGUF, ModelErrorCode.of(LmeException.InvalidGguf("no GGUF magic")))
     assertEquals(ModelErrorCode.EXISTS, ModelErrorCode.of(LmeException.Exists("qwen")))
+    // A Hub answer we cannot read is not our own list of models.
+    assertEquals(ModelErrorCode.BAD_ANSWER, ModelErrorCode.of(LmeException.BadAnswer("repository x/y")))
+    assertEquals(ModelErrorCode.CORRUPT, ModelErrorCode.of(LmeException.Corrupt("models.json")))
     assertEquals(ModelErrorCode.CANCELLED, ModelErrorCode.of(LmeException.Cancelled()))
     assertEquals(ModelErrorCode.NOT_ENOUGH_MEMORY, ModelErrorCode.of(LmeException.NotEnoughMemory(2, 1)))
   }

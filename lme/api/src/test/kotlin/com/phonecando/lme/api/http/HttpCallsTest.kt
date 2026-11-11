@@ -40,7 +40,7 @@ class HttpCallsTest {
     @Test
     fun `bodies are read whole up to the cap`() {
         assertContentEquals("abc".toByteArray(), reply(200, "abc").readCapped(3, url, "page"))
-        assertThrows<LmeException.TooLarge> { reply(200, "abcd").readCapped(3, url, "page") }
+        assertThrows<LmeException.BadAnswer> { reply(200, "abcd").readCapped(3, url, "page") }
         assertThrows<LmeException.Network> { brokenReply(200, "ab".toByteArray()).readCapped(10, url, "page") }
     }
 

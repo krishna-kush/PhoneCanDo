@@ -11,6 +11,7 @@ import java.io.IOException
 enum class ModelErrorCode(val code: String) {
   INVALID_GGUF("invalid_gguf"),
   TOO_LARGE("too_large"),
+  BAD_ANSWER("bad_answer"),
   INVALID_NAME("invalid_name"),
   EXISTS("exists"),
   NO_SPACE("no_space"),
@@ -51,6 +52,7 @@ enum class ModelErrorCode(val code: String) {
     private fun ofLme(e: LmeException): ModelErrorCode = when (e) {
       is LmeException.InvalidGguf -> INVALID_GGUF
       is LmeException.TooLarge -> TOO_LARGE
+      is LmeException.BadAnswer -> BAD_ANSWER
       is LmeException.InvalidName -> INVALID_NAME
       is LmeException.Exists -> EXISTS
       is LmeException.NoSpace -> NO_SPACE

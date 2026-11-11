@@ -9,7 +9,11 @@ sealed class LmeException(message: String, cause: Throwable? = null) : Exception
     /** Not a GGUF file we can serve; [reason] says why, fit for the UI. */
     class InvalidGguf(val reason: String) : LmeException("not a usable GGUF file: $reason")
 
+    /** A GGUF header field past what we read ([limit]): no model we can serve. */
     class TooLarge(val what: String, val limit: Long) : LmeException("$what exceeds $limit")
+
+    /** A server's answer we cannot use for [what]: not the shape its API gives, or past our cap. */
+    class BadAnswer(val what: String, cause: Throwable? = null) : LmeException("unusable answer for $what", cause)
 
     /** Not a model id or repository name; [reason] says why, fit for the UI. */
     class InvalidName(val input: String, val reason: String) : LmeException("invalid name: $reason")
@@ -39,6 +43,7 @@ sealed class LmeException(message: String, cause: Throwable? = null) : Exception
      */
     class AccessDenied(val what: String) : LmeException("no access to $what")
 
+    /** A file of ours on the phone (`models.json`) we cannot read. */
     class Corrupt(val what: String, cause: Throwable? = null) : LmeException("corrupt $what", cause)
 
     /** The phone cannot serve local models at all; [reason] says why, fit for the UI. */

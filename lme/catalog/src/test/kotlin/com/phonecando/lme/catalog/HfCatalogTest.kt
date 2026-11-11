@@ -227,8 +227,8 @@ class HfCatalogTest {
         assertThrows<LmeException.NotFound> { catalog.revision("acme/m") }
         assertThrows<LmeException.RateLimited> { catalog.revision("acme/m") }
         assertThrows<LmeException.Network> { catalog.revision("acme/m") }
-        assertThrows<LmeException.Corrupt> { catalog.revision("acme/m") }
-        assertThrows<LmeException.Corrupt> { catalog.revision("acme/m") }
+        assertThrows<LmeException.BadAnswer> { catalog.revision("acme/m") }
+        assertThrows<LmeException.BadAnswer> { catalog.revision("acme/m") }
     }
 
     @Test
@@ -312,7 +312,7 @@ class HfCatalogTest {
     fun `a listing that never ends is cut off`() {
         val url = treeUrl("acme/m", QWEN_4B_SHA)
         fake.onPrefix(url) { reply(200, "[]", mapOf("Link" to "<$url&cursor=again>; rel=\"next\"")) }
-        assertThrows<LmeException.TooLarge> { HfCatalog(fake).files("acme/m", QWEN_4B_SHA) }
+        assertThrows<LmeException.BadAnswer> { HfCatalog(fake).files("acme/m", QWEN_4B_SHA) }
     }
 
     @Test

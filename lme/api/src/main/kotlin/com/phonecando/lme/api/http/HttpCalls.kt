@@ -24,7 +24,7 @@ fun HttpResponse.readCapped(limit: Long, url: String, what: String): ByteArray =
             val n = body.read(buffer)
             if (n < 0) break
             total += n
-            if (total > limit) throw LmeException.TooLarge(what, limit)
+            if (total > limit) throw LmeException.BadAnswer("$what: over $limit bytes")
             out.write(buffer, 0, n)
         }
     } catch (e: IOException) {

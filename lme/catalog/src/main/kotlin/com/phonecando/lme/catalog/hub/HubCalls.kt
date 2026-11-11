@@ -34,9 +34,9 @@ internal class HubCalls(private val http: HttpPort, private val token: String?) 
         val value = try {
             decode(text)
         } catch (e: SerializationException) {
-            throw LmeException.Corrupt(what, e)
+            throw LmeException.BadAnswer(what, e)
         } catch (e: IllegalArgumentException) {
-            throw LmeException.Corrupt(what, e)
+            throw LmeException.BadAnswer(what, e)
         }
         return value to next
     }
