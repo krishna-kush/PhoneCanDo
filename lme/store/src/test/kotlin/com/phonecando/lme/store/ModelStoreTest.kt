@@ -133,6 +133,31 @@ class ModelStoreTest {
     }
 
     @Test
+    fun `what a running download still has to write is spoken for`() {
+        val big = TestModels.gguf(padding = 20_000)
+        val small = TestModels.gguf()
+        val first = store.startDownload(DownloadRequest("acme/m-GGUF", sha, listOf(serve("a.gguf", big))))
+        val second = store.startDownload(DownloadRequest("acme/m-GGUF", sha, listOf(serve("b.gguf", small))))
+        val third = DownloadRequest("acme/m-GGUF", sha, listOf(serve("c.gguf", small)))
+        var checked = false
+        // The first report comes before the first byte: all of the first file is still to come.
+        val sink = ProgressSink {
+            if (!checked) {
+                checked = true
+                // Room for a small one alone, not for it and the rest of the big one.
+                free = ModelStore.SPACE_MARGIN + small.size + big.size - 1
+                assertThrows<LmeException.NoSpace> { store.download(second.id) }
+                assertThrows<LmeException.NoSpace> { store.startDownload(third) }
+            }
+        }
+        store.download(first.id, sink = sink)
+        assertTrue(checked)
+        // Done, the big one holds no space any more.
+        store.download(second.id)
+        store.startDownload(third)
+    }
+
+    @Test
     fun `an interrupted download resumes and shows its bytes on disk`() {
         val bytes = TestModels.gguf(padding = 20_000)
         val served = Served(bytes)

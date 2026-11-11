@@ -23,6 +23,7 @@ import com.phonecando.lme.store.registry.ModelRegistry
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The models on the phone (see [ModelLayout]): download from a URL with
@@ -40,6 +41,9 @@ class ModelStore(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val registry = ModelRegistry(layout.registry)
+
+    // Downloads running in this process: the space they still need is spoken for.
+    private val running: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     fun models(): List<ModelRecord> = registry.read().models
 
@@ -78,7 +82,7 @@ class ModelStore(
                 IdMaker.unique(first, current.ids + diskNames()), IdMaker.stem(first), request.repo, request.revision,
                 request.files, clock(), request.dates,
             )
-            checkSpace(pending.sizeBytes)
+            checkSpace(pending.sizeBytes + reserved(current.downloads, except = null))
             started = pending
             current.withDownload(pending)
         }
@@ -93,9 +97,19 @@ class ModelStore(
      * with its download.
      */
     fun download(id: String, token: String? = null, sink: ProgressSink = ProgressSink.NONE, cancel: CancelSignal = CancelSignal.NEVER): ModelRecord {
-        val pending = registry.read().download(id) ?: throw LmeException.NotFound("download $id")
+        running.add(id)
+        return try {
+            fetch(id, token, sink, cancel)
+        } finally {
+            running.remove(id)
+        }
+    }
+
+    private fun fetch(id: String, token: String?, sink: ProgressSink, cancel: CancelSignal): ModelRecord {
+        val state = registry.read()
+        val pending = state.download(id) ?: throw LmeException.NotFound("download $id")
         makeDir(layout.dir(id))
-        checkSpace(pending.sizeBytes - bytesOnDisk(pending))
+        checkSpace(pending.sizeBytes - bytesOnDisk(pending) + reserved(state.downloads, except = id))
         val total = pending.sizeBytes
         var base = 0L
         for (file in pending.files) {
@@ -226,6 +240,10 @@ class ModelStore(
     }
 
     private fun diskNames(): Set<String> = layout.root.list()?.toSet().orEmpty()
+
+    /** What the running downloads in [downloads], but [except], still have to write. */
+    private fun reserved(downloads: List<PendingDownload>, except: String?): Long =
+        downloads.filter { it.id != except && it.id in running }.sumOf { (it.sizeBytes - bytesOnDisk(it)).coerceAtLeast(0) }
 
     private fun checkSpace(needed: Long) {
         if (needed <= 0) return
