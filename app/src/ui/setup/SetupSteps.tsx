@@ -7,14 +7,14 @@ import { SETUP_PHASES } from '../env/logic/steps';
 export default function SetupSteps({ current, allDone }: { current: number; allDone: boolean }) {
   const t = useTheme();
   return (
-    <YStack gap="$2">
+    <YStack gap="2">
       {SETUP_PHASES.map((label, i) => {
         const done = allDone || i < current;
         const now = !allDone && i === current;
         return (
-          <XStack key={label} alignItems="center" gap="$3">
+          <XStack key={label} alignItems="center" gap="3">
             <Text
-              fontFamily="$mono"
+              fontFamily="mono"
               fontSize={14}
               width={16}
               textAlign="center"

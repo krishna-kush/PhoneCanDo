@@ -12,7 +12,7 @@ export default function VerdictLine({ ram }: { ram: RamCheck }) {
   const color = bad ? t.primary : ram.verdict === 'over_budget' ? t.secondaryInk : t.fg;
   const need = needText(ram);
   return (
-    <YStack gap="$1" accessibilityLiveRegion="polite">
+    <YStack gap="1" accessibilityLiveRegion="polite">
       <Text fontSize={14} fontWeight="600" color={color}>
         {verdictText(ram)}
       </Text>

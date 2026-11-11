@@ -45,9 +45,9 @@ export default function HomeHeader() {
   return (
     <XStack
       alignItems="center"
-      gap="$2"
-      paddingHorizontal="$3"
-      paddingVertical="$2"
+      gap="2"
+      paddingHorizontal="3"
+      paddingVertical="2"
       minHeight={HIT.headerH}
       borderBottomWidth={1}
       borderColor={t.line}
@@ -59,21 +59,21 @@ export default function HomeHeader() {
         flex={1}
         minWidth={0}
         minHeight={HIT.minTouch}
-        pressStyle={{ opacity: 0.7 }}
+        opacity="press:0.7"
         onPress={() => setDrawerOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={agent ? `Agent ${agent.name}. Opens the menu: agents, models, settings` : 'Open the menu'}
       >
         {agent ? <ChipFace agentId={agent.id} /> : <LogoMark size={13} />}
         <Text
-          fontFamily="$mono"
+          fontFamily="mono"
           fontSize={17}
           fontWeight="600"
           letterSpacing={-0.3}
           numberOfLines={1}
-          ellipsizeMode="tail"
           flexShrink={1}
           minWidth={0}
+          ellipsizeMode="tail"
         >
           {agent?.name ?? 'PhoneCanDo'}
         </Text>

@@ -66,7 +66,7 @@ export default function PrivacySection({ showTester }: { showTester: boolean }) 
     return (
       <>
         <SectionTitle>Privacy</SectionTitle>
-        <Text fontSize={14} color="$color10">
+        <Text fontSize={14} color="color10">
           Usage stats are not available in this build, so nothing is sent.
         </Text>
       </>
@@ -82,7 +82,7 @@ export default function PrivacySection({ showTester }: { showTester: boolean }) 
         chevron={false}
         icon={<ThumbIcon up={enabled} size={26} />}
       />
-      <XStack gap="$2">
+      <XStack gap="2">
         <AppButton
           flex={1}
           variant={enabled ? 'primary' : 'secondary'}
@@ -108,7 +108,7 @@ export default function PrivacySection({ showTester }: { showTester: boolean }) 
           Off
         </AppButton>
       </XStack>
-      <Text fontSize={14} color="$color10">
+      <Text fontSize={14} color="color10">
         Sent: your device type, Android and app version, crashes, engine health and how often
         features are used, under a random anonymous ID. Never sent: your chats, files, keys, or
         anything on your screen. Off stops it and deletes what has not been sent yet.
@@ -121,7 +121,7 @@ export default function PrivacySection({ showTester }: { showTester: boolean }) 
       >
         Reset anonymous ID
       </AppButton>
-      <Text fontSize={13} color="$color10">
+      <Text fontSize={13} color="color10">
         Starts a new install ID and drops data not sent yet. Data already sent stays linked to this
         phone; Delete my data removes it.
       </Text>
@@ -145,7 +145,7 @@ export default function PrivacySection({ showTester }: { showTester: boolean }) 
         Privacy details
       </AppButton>
       {msg ? (
-        <Text fontSize={13} color="$color10">
+        <Text fontSize={13} color="color10">
           {msg}
         </Text>
       ) : null}
@@ -175,7 +175,7 @@ export default function PrivacySection({ showTester }: { showTester: boolean }) 
           <AppButton variant="secondary" onPress={() => void setDevLocal(!devLocal)}>
             {devLocal ? 'Stop sending to dev host' : 'Send to local dev host'}
           </AppButton>
-          <Text fontSize={13} color="$color10">
+          <Text fontSize={13} color="color10">
             Debug builds send nothing unless this is on. Run pnpm -C tce dev, then adb reverse
             tcp:8787 tcp:8787.
           </Text>

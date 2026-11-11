@@ -41,7 +41,7 @@ export default function OnPhone() {
         return (
           <ModelPanel key={m.id} title={m.name} lines={[modelLine(m), sourceText(m.source)]} dates={m.dates} ram={m.ram} note={reduced}>
             {editing === m.id ? <ContextSetting model={m} onDone={() => setEditing(null)} /> : null}
-            <XStack gap="$2">
+            <XStack gap="2">
               {choosable && editing !== m.id ? (
                 <AppButton flex={1} variant="secondary" onPress={() => setEditing(m.id)}>
                   {contextButtonText(m)}

@@ -33,7 +33,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   Terminal split: `TerminalScreen.tsx` (session shell) + `TerminalView.tsx`
   (the IME, mirror, sizing and spacer; used by a terminal page and by a
   TUI-home agent's Home) + `transport/` (local PTY or the engine's hosted
-  PTY) + `keys.ts`, `reconcile.ts`, `sizing.ts` (pure, zero RN imports) +
+  PTY) + `theme/` (the app's scheme: colours, what programs are told) +
+  `keys.ts`, `reconcile.ts`, `sizing.ts` (pure, zero RN imports) +
   `usePtySession.ts`, `useMirrorInput.ts`, `useInitialInput.ts`,
   `useViewFocus.ts` (hooks) + `sessionRecipe.ts` (agent TUI client or
   image shell) + `ExtraKeysBar.tsx`, `FolderPicker.tsx`. Home (`chat/HomeScreen.tsx`) is the kind's web UI or,
@@ -160,12 +161,17 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 
 - JS/asset-only: reload from Metro. No rebuild.
 - `modules/*/android`, `android/`, manifest, native deps: `expo run:android`.
-  Prebuild runs with `--no-clean` (Expo CLI 57 otherwise deletes and
+  Prebuild runs with `--no-clean` (Expo CLI otherwise deletes and
   regenerates `app/android`), so `app/android` and its compiled outputs
   survive; pass `--clean` to `pnpm android:<channel>` / `./manage build` only
   when a build looks stale.
 - New JS native-module imports: restart Metro with `--clear` (stale haste
   map fails "Unable to resolve"). `adb reverse tcp:8081 tcp:8081`.
+- Tamagui 3 compiles inside Metro (`withTamagui` in `app/metro.config.js`,
+  no Babel plugin) and misses `tamagui.config.ts` edits: `rm -rf
+  node_modules/.cache/tamagui` and restart Metro with `--clear`. Style props
+  take bare names (`gap="2"`, `color="color10"`, `fontFamily="mono"`), never
+  `$`; `npx tamagui check` (in `app/`) checks them.
 - Verify with `tsc --noEmit`, `pnpm check:vectors`, the host C tests
   (`sh app/modules/phonecando-terminal/android/src/test/c/run.sh`,
   `bash lre/launcher/test/run.sh`), logcat (`[phonecando-kb]`,
@@ -176,7 +182,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 1. Evidence before synthesis: read files, run code, screenshot. Never ship
    a sizing/layout claim without pixels or logs.
 2. No per-device numbers: cells from xterm runtime, keyboard from live
-   native height, backgrounds matched to the TUI (`#0a0a0a`), not `#000`.
+   native height, backgrounds matched to the TUI (the scheme's `termBg`:
+   `#0a0a0a` dark, white light), not `#000`.
 3. IME contract is load-bearing: plain-text field, absolute 1x1 overlay
    (Android multiline min-height eats layout), mirror === remote line —
    fold EVERY text-inserting path into the shadow or backspace breaks.

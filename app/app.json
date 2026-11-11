@@ -25,7 +25,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": true,
-      "permissions": ["REQUEST_INSTALL_PACKAGES"]
+      "permissions": [
+        "REQUEST_INSTALL_PACKAGES"
+      ]
     },
     "plugins": [
       "expo-secure-store",
@@ -42,7 +44,9 @@
       "./plugins/withDotAssets.js",
       "./plugins/withLoopbackCleartext.js",
       "./plugins/withReleaseSigning.js",
-      "expo-asset"
+      "expo-asset",
+      "expo-font",
+      "expo-status-bar"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

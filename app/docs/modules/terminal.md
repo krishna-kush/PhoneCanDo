@@ -112,7 +112,7 @@ The IME contract is load-bearing:
   rows of it (Gemini CLI leaves a blank line under its frame), then puts
   it back: the content stays anchored at the bottom. Text that ends higher
   up (a prompt with blank rows below) stays where it is. Blanks use the TUI
-  bg (`#0a0a0a`), never `#000`.
+  bg (the theme's `termBg`: `#0a0a0a` dark, white light), never `#000`.
 - The keyboard: one tracker (`src/ui/common/keyboard/KeyboardTracker.tsx`,
   inside the KeyboardProvider and SafeAreaProvider) reads
   `react-native-keyboard-controller`'s live `e.height` every frame
@@ -130,7 +130,8 @@ The IME contract is load-bearing:
   suggested command) into the shadow, or Gboard's backspace diffs from a
   wrong base. Never use `visible-password` (it kills mic/glide/predictions).
 
-Pure logic stays pure: `keys.ts`, `reconcile.ts`, `sizing.ts`; hooks are
+Pure logic stays pure: `keys.ts`, `reconcile.ts`, `sizing.ts`,
+`theme/replies.ts`; hooks are
 `usePtySession.ts`, `useMirrorInput.ts`, `useInitialInput.ts` and
 `useViewFocus.ts`; `sessionRecipe.ts` builds what runs; the row is
 `ExtraKeysBar.tsx`.
@@ -149,6 +150,46 @@ one at a time.
   and gives it back for a sideways one. So a vertical swipe scrolls the
   terminal all the way, and a sideways one goes to the parent (the page
   reads the takeover as `touchcancel`).
+
+## Theme
+
+The terminal follows the app's scheme (`src/ui/terminal/theme/`). Its
+colours are the `term*` roles of `theme/tokens.json` (`palette.ts`): dark
+is the look it always had (`#0a0a0a`, opencode's dark background), light
+is the app's own light surfaces (`bg`, with its `fg`, `panel` and `line`)
+with an ANSI set that reads on them (4.5:1 normal, 3:1 bright). A
+program that paints its own background (a named light theme) keeps it. The page
+starts in the scheme (the theme rides on its URL, and its head paints the
+background first) and follows a change at once (`__setTheme`); the
+WebView, its box, the views around it and the extra-keys row and its keys
+(`termKey`, `termKeyPress`) take the same scheme (`termLook`).
+
+Programs hear the scheme the standard ways; whether they use it is theirs:
+
+- `COLORFGBG` at start: `15;0` dark, `0;15` light (vim, termenv, Claude
+  Code). A session adds it to its recipe (`sessionRecipe.ts`), a TUI engine
+  gets it from the runner. A program keeps the value it started with (an
+  engine until it restarts); the queries below follow a change.
+- Queries: `?` in OSC 10 / 11 / 12 (foreground, background, cursor) or
+  OSC 4 (palette) gets `rgb:rrrr/gggg/bbbb` (Gemini CLI, Claude Code's
+  auto theme, opencode's TUI, neovim); `CSI ? 996 n` gets `CSI ? 997 ; 1 n`
+  dark or `; 2 n` light. Device attributes (`CSI c`, as xterm.js answers)
+  and the status (`CSI 5 n`) are answered too: programs send one after a
+  colour query to learn no more answers are coming (Claude Code and Gemini
+  CLI DA1, neovim DSR 5).
+- DEC mode 2031 (contour's colour palette update notifications): while a
+  program has it on (until it resets it or the terminal), a change of
+  scheme sends it the `997` report. Claude Code and opencode's TUI turn it
+  on and ask for the colours again.
+
+xterm.js drops its own answers under `disableStdin`, so the page reports
+each query it parses (`{type:'query'}`, `{type:'themeReports'}`) and RN
+answers through the PTY (`replies.ts`; vectors
+`scripts/vectors/test_term_replies.js`). An engine's PTY is answered by the
+runner from the first byte (`runner.md` → TUI engines → Answers, from the
+theme `useEngineTerminalTheme` gives it at the root); its transport says
+`hostAnswers` and RN writes nothing, the replay's old queries included.
+Not answered: the cursor position (`CSI 6 n`), DA2, DECRQM.
 
 ## Sessions
 
@@ -236,8 +277,9 @@ the app goes away.
 
 ## Verification
 
-- `pnpm check:vectors` covers `keys.ts`, `reconcile.ts`, scroll keys and
-  the keyboard room; keep vectors in sync or delete them.
+- `pnpm check:vectors` covers `keys.ts`, `reconcile.ts`, scroll keys, the
+  keyboard room and the terminal's answers (`theme/replies.ts`); keep
+  vectors in sync or delete them.
 - `sh app/modules/phonecando-terminal/android/src/test/c/run.sh` runs the PTY
   core on the host (spawn, env, fds, signals, reaping, kill, resize, the
   poll wait), with `close_range` and with the fallback loop; CI runs it in

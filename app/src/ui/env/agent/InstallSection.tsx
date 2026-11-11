@@ -29,7 +29,7 @@ export default function InstallSection({ agent, image }: Props) {
   return (
     <>
       {installed ? (
-        <Text fontFamily="$mono" fontSize={13} color={t.dim} selectable>
+        <Text fontFamily="mono" fontSize={13} color={t.dim} userSelect="text">
           {versionLine(agent.installedVersion ?? '')}
         </Text>
       ) : null}

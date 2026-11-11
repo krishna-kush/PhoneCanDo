@@ -31,12 +31,15 @@ export default function AppButton({
   accessibilityState,
 }: Props) {
   const t = useTheme();
+  // A press also clears the border, as Tamagui 2's Button did.
   const style =
     variant === 'secondary' || loading
-      ? { backgroundColor: 'transparent', borderColor: t.lineStrong, color: t.fg }
+      ? { backgroundColor: 'transparent', borderColor: `${t.lineStrong} press:transparent`, color: t.fg }
       : variant === 'ghost'
         ? { backgroundColor: 'transparent', borderWidth: 0, color: t.fg }
-        : { backgroundColor: t.primary, borderColor: t.primary, color: t.onPrimary };
+        : { backgroundColor: t.primary, borderColor: `${t.primary} press:transparent`, color: t.onPrimary };
+  const sinks = variant !== 'ghost';
+  const opacity = disabled && !loading ? 0.5 : 1;
 
   return (
     <Button
@@ -46,18 +49,21 @@ export default function AppButton({
       flex={flex}
       accessibilityState={accessibilityState}
       minHeight={HIT.buttonH}
-      paddingHorizontal="$4"
-      paddingVertical="$3"
+      paddingHorizontal="4"
+      paddingVertical="3"
+      gap={9}
       borderRadius={0}
       borderWidth={1}
+      fontFamily="mono"
       fontSize={12}
       fontWeight="600"
       letterSpacing={1.2}
+      ellipsis
       textProps={{ textTransform: 'uppercase' }}
-      elevation={0}
-      boxShadow={variant === 'ghost' ? undefined : `2px 2px 0 ${t.secondary}`}
-      opacity={disabled && !loading ? 0.5 : 1}
-      pressStyle={variant === 'ghost' ? { opacity: 0.7 } : { x: 2, y: 2, boxShadow: `0px 0px 0 ${t.secondary}` }}
+      boxShadow={sinks ? `2px 2px 0 ${t.secondary} press:0px 0px 0 ${t.secondary}` : undefined}
+      x={sinks ? 'press:2' : undefined}
+      y={sinks ? 'press:2' : undefined}
+      opacity={`${opacity} press:${sinks ? opacity : 0.7}`}
       {...style}
     >
       {children}

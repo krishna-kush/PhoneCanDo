@@ -130,8 +130,8 @@ jobs:
           ./node_modules/.bin/expo config --type introspect --json > "$RUNNER_TEMP/expo-introspect.json"
           node ../.github/ci/js/check-expo-config.mjs "$RUNNER_TEMP/expo-introspect.json"
       # The same Metro + Hermes path a release build embeds, minus Gradle:
-      # proves every import resolves and the Tamagui/Reanimated Babel plugins
-      # compile the whole app for Android.
+      # proves every import resolves and Tamagui's Metro compiler and the
+      # worklets Babel plugin compile the whole app for Android.
       - name: Bundle JS for Android (expo export, Hermes bytecode)
         working-directory: app
         run: pnpm exec expo export --platform android --output-dir "$RUNNER_TEMP/expo-export" --source-maps

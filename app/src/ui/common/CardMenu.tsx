@@ -34,7 +34,8 @@ export default function CardMenu({
           height={HIT.minTouch}
           borderRadius={0}
           fontSize={22}
-          chromeless
+          variant="quiet"
+          opacity="1 press:1"
           flexShrink={0}
           paddingHorizontal={0}
           justifyContent="center"
@@ -50,12 +51,11 @@ export default function CardMenu({
         borderWidth={1}
         borderColor={t.lineStrong}
         borderRadius={0}
-        padding="$2"
-        enterStyle={{ y: -10, opacity: 0 }}
-        exitStyle={{ y: -10, opacity: 0 }}
-        elevate
+        padding="2"
+        y="enter:-10px exit:-10px"
+        opacity="enter:0 exit:0"
       >
-        <YStack gap="$1" minWidth={200}>
+        <YStack gap="1" minWidth={200}>
           {items.map((item) => (
             <MenuItem
               key={item.label}

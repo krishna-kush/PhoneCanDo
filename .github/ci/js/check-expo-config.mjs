@@ -7,7 +7,7 @@
 // It then checks the results the product depends on, naming the plugin that
 // owns each one:
 //
-//   extractNativeLibs=true          withExtractNativeLibs (engine exec'd from nativeLibraryDir)
+//   expo.useLegacyPackaging=true    withExtractNativeLibs (engine exec'd from nativeLibraryDir)
 //   loopback cleartext config       withLoopbackCleartext (pair UI on http://127.0.0.1)
 //   com.phonecando.channel meta     withBuildChannel (runtime channel source of truth)
 //   no a11y service/permission and  withBuildChannel (phone control only via the
@@ -50,10 +50,10 @@ const props = Object.fromEntries(
 );
 
 check(
-  'application android:extractNativeLibs="true"',
+  'expo.useLegacyPackaging=true (native libs extracted on install)',
   'withExtractNativeLibs',
-  attrs['android:extractNativeLibs'] === 'true',
-  `got ${attrs['android:extractNativeLibs']}`,
+  props['expo.useLegacyPackaging'] === 'true',
+  `got ${props['expo.useLegacyPackaging']}`,
 );
 check(
   'application android:networkSecurityConfig="@xml/network_security_config"',

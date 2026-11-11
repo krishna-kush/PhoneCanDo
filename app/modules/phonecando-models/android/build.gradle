@@ -17,9 +17,6 @@ android {
   // committed. Every channel ships it, play included: the binary is in the
   // APK, the weights are data. nativeLibraryDir is the one place Android
   // lets us exec from; the runner's model slot starts it.
-  lintOptions {
-    abortOnError false
-  }
 }
 
 dependencies {

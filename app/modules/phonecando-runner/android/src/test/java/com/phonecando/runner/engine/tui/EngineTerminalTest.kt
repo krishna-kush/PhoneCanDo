@@ -2,6 +2,7 @@ package com.phonecando.runner.engine.tui
 
 import com.phonecando.agents.kit.term.ScreenRing
 import com.phonecando.agents.kit.term.Signal
+import com.phonecando.agents.kit.term.TermTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -11,8 +12,9 @@ import org.junit.Test
 // JVM checks for EngineTerminal: output drains with or without a viewer, a
 // viewer starts with the replay, one viewer at a time, a paused viewer's
 // queue is bounded, the end reaches the viewer after its last output, and
-// the terminal answers the program: the status query, and focus reports
-// that follow the viewer showing it.
+// the terminal answers the program: the status query, focus reports that
+// follow the viewer showing it, and colour and theme queries from the
+// app's theme, with a report when it changes.
 class EngineTerminalTest {
   private var now = 1_000L
   private val pty = FakePty()
@@ -161,6 +163,21 @@ class EngineTerminalTest {
     t.onExit(0)
     t.focus("v1", false)
     assertEquals(listOf("\u001b[O", "\u001b[I"), pty.written)
+  }
+
+  @Test fun answersFromTheThemeAndReportsAChange() {
+    val ansi = List(16) { "#000000" }
+    val dark = checkNotNull(TermTheme.of(true, "#e6e6e6", "#0a0a0a", "#00ff00", ansi))
+    val light = checkNotNull(TermTheme.of(false, "#1a1a1a", "#ffffff", "#1a7f37", ansi))
+    val t = terminal()
+    t.out("\u001b]11;?\u0007\u001b[c")
+    assertEquals("no theme yet: only the fence", listOf("\u001b[?1;2c"), pty.written)
+    pty.written.clear()
+    t.theme(dark)
+    t.out("\u001b]11;?\u0007\u001b[?2031h")
+    t.theme(light)
+    t.theme(light)
+    assertEquals(listOf("\u001b]11;rgb:0a0a/0a0a/0a0a\u0007", "\u001b[?997;2n"), pty.written)
   }
 
   @Test fun tailOfTheRing() {

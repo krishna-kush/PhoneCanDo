@@ -23,7 +23,7 @@ export default function ReadingChip({ agentId }: { agentId: AgentId | null }) {
       accessibilityLabel={readingLabel(reading.read)}
       accessibilityLiveRegion="polite"
     >
-      <Text fontFamily="$mono" fontSize={12} color={t.secondaryInk} numberOfLines={1}>
+      <Text fontFamily="mono" fontSize={12} color={t.secondaryInk} numberOfLines={1}>
         {readingText(reading.read)}
       </Text>
     </XStack>

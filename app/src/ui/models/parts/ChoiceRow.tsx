@@ -22,23 +22,23 @@ export default function ChoiceRow({ label, note, dates, selected, disabled = fal
   return (
     <XStack
       alignItems="center"
-      gap="$3"
+      gap="3"
       minHeight={64}
-      padding="$3"
+      padding="3"
       borderWidth={1}
       borderColor={selected ? t.primary : t.line}
       backgroundColor={t.panel}
-      opacity={disabled ? 0.5 : 1}
-      pressStyle={disabled ? undefined : { opacity: 0.9, scale: 0.99 }}
+      opacity={disabled ? 0.5 : '1 press:0.9'}
+      scale={disabled ? undefined : 'press:0.99'}
       onPress={disabled ? undefined : onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={when ? `${label}, ${note}, ${when}` : `${label}, ${note}`}
     >
-      <Text fontFamily="$mono" fontSize={14} width={16} textAlign="center" color={selected ? t.primary : t.faint}>
+      <Text fontFamily="mono" fontSize={14} width={16} textAlign="center" color={selected ? t.primary : t.faint}>
         {selected ? '■' : '□'}
       </Text>
-      <YStack flex={1} minWidth={0} gap="$1">
+      <YStack flex={1} minWidth={0} gap="1">
         <Text fontSize={16} fontWeight="600" numberOfLines={2}>
           {label}
         </Text>

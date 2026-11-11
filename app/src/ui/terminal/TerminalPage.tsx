@@ -31,19 +31,19 @@ export default function TerminalPage({ session }: { session: TerminalSession }) 
     <YStack flex={1} backgroundColor={t.panel}>
       <XStack
         alignItems="center"
-        gap="$2"
-        paddingHorizontal="$3"
-        paddingVertical="$2"
+        gap="2"
+        paddingHorizontal="3"
+        paddingVertical="2"
         minHeight={HIT.headerH}
         borderBottomWidth={1}
         borderColor={t.line}
         backgroundColor={t.panel}
       >
         <YStack flex={1} minWidth={0}>
-          <Text fontFamily="$mono" fontSize={10} letterSpacing={1.4} color={t.dim} textTransform="uppercase" numberOfLines={1}>
+          <Text fontFamily="mono" fontSize={10} letterSpacing={1.4} color={t.dim} textTransform="uppercase" numberOfLines={1}>
             {kicker}
           </Text>
-          <Text fontFamily="$mono" fontSize={17} fontWeight="600" letterSpacing={-0.3} numberOfLines={1} ellipsizeMode="tail">
+          <Text fontFamily="mono" fontSize={17} fontWeight="600" letterSpacing={-0.3} numberOfLines={1} ellipsizeMode="tail">
             {title}
           </Text>
         </YStack>

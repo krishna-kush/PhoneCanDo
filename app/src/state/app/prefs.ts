@@ -1,5 +1,6 @@
-// The user's app-wide choices, kept in AsyncStorage: theme, the lite build's
-// update offer and the restricted-settings guide's progress.
+// The user's app-wide choices, kept in AsyncStorage: theme, the terminal's
+// extra keys, the lite build's update offer and the restricted-settings
+// guide's progress.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StateCreator } from 'zustand';
 import type { AppState } from '../app';
@@ -7,6 +8,7 @@ import type { AppState } from '../app';
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 const THEME_MODE_KEY = 'phonecando.themeMode.v1';
+const EXTRA_KEYS_STICKY_KEY = 'phonecando.extraKeysSticky.v1';
 const UPDATE_PROMPT_MUTED_KEY = 'phonecando.updatePromptMuted.v1';
 const A11Y_STEP_KEY = 'phonecando.a11yStep.v3';
 
@@ -14,6 +16,8 @@ export type PrefsSlice = {
   hydrated: boolean;
   /** UI palette: follow the system or pin light/dark. */
   themeMode: ThemeMode;
+  /** The terminal's extra keys stay up with the keyboard down too (else they come and go with it). */
+  extraKeysSticky: boolean;
   /** Bumped by Settings → Update; UpdateDialog re-checks GitHub on change. */
   updatePromptNonce: number;
   /** Lite: stop opening the full-build pitch on launch (Settings → Update). */
@@ -31,6 +35,7 @@ export type PrefsSlice = {
 
   hydrate: () => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
+  setExtraKeysSticky: (sticky: boolean) => Promise<void>;
   requestUpdatePrompt: () => void;
   setUpdatePromptMuted: (muted: boolean) => Promise<void>;
   setA11yStep: (step: 1 | 2 | 3) => Promise<void>;
@@ -49,16 +54,18 @@ async function save(key: string, value: string): Promise<void> {
 export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set) => ({
   hydrated: false,
   themeMode: 'system',
+  extraKeysSticky: false,
   updatePromptNonce: 0,
   updatePromptMuted: false,
   a11yStep: 1,
   a11yGuideForced: false,
 
   hydrate: async () => {
-    const stored = await AsyncStorage.multiGet([THEME_MODE_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY]);
-    const [theme, muted, step] = stored.map(([, v]) => v);
+    const stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY]);
+    const [theme, sticky, muted, step] = stored.map(([, v]) => v);
     set({
       themeMode: theme === 'light' || theme === 'dark' ? theme : 'system',
+      extraKeysSticky: sticky === '1',
       updatePromptMuted: muted === '1',
       a11yStep: step === '2' ? 2 : step === '3' ? 3 : 1,
       hydrated: true,
@@ -68,6 +75,11 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
   setThemeMode: async (themeMode) => {
     set({ themeMode });
     await save(THEME_MODE_KEY, themeMode);
+  },
+
+  setExtraKeysSticky: async (extraKeysSticky) => {
+    set({ extraKeysSticky });
+    await save(EXTRA_KEYS_STICKY_KEY, extraKeysSticky ? '1' : '0');
   },
 
   requestUpdatePrompt: () => set((s) => ({ updatePromptNonce: s.updatePromptNonce + 1 })),

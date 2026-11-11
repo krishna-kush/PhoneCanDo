@@ -7,19 +7,24 @@ type Props = {
   danger?: boolean;
 };
 
-// One popover row for every menu (header ⋮ and per-row ⋮). The mono family
-// comes from the Button default in tamagui.config.ts; only the destructive
-// colour and the shared type treatment live here.
+// One popover row for every menu (header ⋮ and per-row ⋮). Mono like every
+// button label; only the destructive colour and the shared type treatment
+// live here. A press darkens the row without dimming it, as on Tamagui 2.
 export default function MenuItem({ label, onPress, danger }: Props) {
   const t = useTheme();
   return (
     <Button
       minHeight={HIT.minTouch}
+      paddingHorizontal="4"
       borderRadius={0}
+      fontFamily="mono"
       fontSize={13}
+      fontWeight="400"
       letterSpacing={0.8}
+      ellipsis
       textProps={{ textTransform: 'uppercase' }}
-      chromeless
+      variant="quiet"
+      opacity="1 press:1"
       justifyContent="flex-start"
       color={danger ? t.primary : undefined}
       onPress={onPress}

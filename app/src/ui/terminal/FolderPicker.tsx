@@ -67,13 +67,13 @@ export default function FolderPicker() {
           {error}
         </Text>
       ) : (
-        <Text fontFamily="$mono" fontSize={13} color={t.muted} numberOfLines={1} ellipsizeMode="middle">
+        <Text fontFamily="mono" fontSize={13} color={t.muted} numberOfLines={1} ellipsizeMode="middle">
           {rel}
         </Text>
       )}
       <YStack flex={1} minHeight={0}>
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
-          <YStack gap="$2" paddingBottom="$2">
+          <YStack gap="2" paddingBottom="2">
             {canUp ? (
               <AppCard title="…" subtitle="Up one level" onPress={up} chevron={false} />
             ) : null}
@@ -86,7 +86,7 @@ export default function FolderPicker() {
               />
             ))}
             {entries.length === 0 && !error ? (
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 No subfolders.
               </Text>
             ) : null}

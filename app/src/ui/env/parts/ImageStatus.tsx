@@ -42,7 +42,7 @@ export default function ImageStatus({ image }: { image: Image }) {
   const where = image.failedStep ? ` while ${stepLabel(image.failedStep).toLowerCase()}` : '';
   const why = recordErrorText(image);
   return (
-    <YStack gap="$2">
+    <YStack gap="2">
       <Note tone="error">{`Setup stopped${where}.${why ? ` ${why}` : ''}`}</Note>
       {retryError ? <Note tone="error">{retryError}</Note> : null}
       <AppButton

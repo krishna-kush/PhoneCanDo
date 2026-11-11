@@ -35,15 +35,15 @@ export default function PromptDialog({
         backgroundColor="rgba(0,0,0,0.6)"
         alignItems="center"
         justifyContent="center"
-        padding="$5"
+        padding="5"
       >
         <YStack
           backgroundColor={t.panel}
           borderWidth={1}
           borderColor={t.lineStrong}
           borderRadius={0}
-          padding="$4"
-          gap="$3"
+          padding="4"
+          gap="3"
           width="100%"
           maxWidth={360}
         >
@@ -58,7 +58,7 @@ export default function PromptDialog({
             onSubmitEditing={onConfirm}
             returnKeyType="done"
           />
-          <XStack gap="$2" marginTop="$2">
+          <XStack gap="2" marginTop="2">
             <AppButton variant="secondary" flex={1} onPress={onClose}>
               Cancel
             </AppButton>

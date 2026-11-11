@@ -273,5 +273,13 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
     boostFn.current(steps, postedAt);
   }
 
-  return { termSize, error, outputSettled, applySize, sendText, boostPump };
+  // What the terminal answers the program (theme/replies.ts). A PTY whose
+  // host answers itself (an engine's) has its answers already; the page
+  // also parses its replay, whose old queries need none.
+  function reply(text: string) {
+    if (fdRef.current?.hostAnswers) return;
+    sendText(text);
+  }
+
+  return { termSize, error, outputSettled, applySize, sendText, reply, boostPump };
 }

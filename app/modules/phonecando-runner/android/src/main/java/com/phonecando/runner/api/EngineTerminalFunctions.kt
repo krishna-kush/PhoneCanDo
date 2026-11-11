@@ -2,7 +2,9 @@ package com.phonecando.runner.api
 
 import android.content.Context
 import android.util.Base64
+import com.phonecando.agents.kit.term.TermTheme
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.engine.tui.TerminalThemes
 import com.phonecando.runner.engine.tui.TerminalViewException
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
@@ -52,6 +54,22 @@ internal fun ModuleDefinitionBuilder.engineTerminalFunctions(context: () -> Cont
 
   Function("engineTerminalDetach") { viewerId: String ->
     Engines.peek()?.terminals?.detach(viewerId)
+  }
+
+  // The app's terminal theme (TerminalThemes), at start and on every change
+  // of scheme: { dark, foreground, background, cursor, ansi: 16 colours },
+  // each `#rrggbb`. Every TUI engine's terminal answers from it, and one
+  // that starts gets it as COLORFGBG. False when it is not that shape.
+  Function("engineTerminalTheme") { theme: Map<String, Any?> ->
+    val parsed = TermTheme.of(
+      dark = theme["dark"] == true,
+      foreground = theme["foreground"] as? String ?: "",
+      background = theme["background"] as? String ?: "",
+      cursor = theme["cursor"] as? String ?: "",
+      ansi = (theme["ansi"] as? List<*>)?.map { it as? String ?: "" }.orEmpty(),
+    ) ?: return@Function false
+    TerminalThemes.set(parsed)
+    true
   }
 }
 

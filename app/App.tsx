@@ -11,6 +11,7 @@ import HomeScreen from './src/ui/chat/HomeScreen';
 import AppDrawer from './src/ui/drawer/AppDrawer';
 import PageStack from './src/ui/nav/PageStack';
 import { useBackChain } from './src/ui/nav/useBackChain';
+import { useEngineTerminalTheme } from './src/ui/terminal/theme/useEngineTerminalTheme';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
@@ -48,6 +49,9 @@ export default function App() {
   // Android Back walks what the screen shows: a step inside a page, the
   // drawer, the top page, the web UI's history, then leaves the app.
   useBackChain();
+
+  // The TUI engines' terminals answer in the app's scheme, shown or not.
+  useEngineTerminalTheme();
 
   useEffect(() => {
     // Where to land when the app opens for a reason: a tap on an agent's

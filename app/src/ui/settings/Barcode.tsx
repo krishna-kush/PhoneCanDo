@@ -8,7 +8,7 @@ import { useScheme } from '../common/globals';
 // Code 128 of `text`, the same encoder, so any phone scanner reads it. Bars
 // land on whole modules; ten-module quiet zones either side. Scanners want
 // dark on light, so the dark theme prints it on a label of the light
-// theme's paper.
+// theme's background.
 const QUIET = 10;
 
 export default function Barcode({ text, module = 2, height = 44 }: { text: string; module?: number; height?: number }) {
@@ -30,7 +30,7 @@ export default function Barcode({ text, module = 2, height = 44 }: { text: strin
       >
         <Path d={path} fill={ink} />
       </Svg>
-      <Text fontFamily="$mono" fontSize={10} letterSpacing={2} color={ink}>
+      <Text fontFamily="mono" fontSize={10} letterSpacing={2} color={ink}>
         {text}
       </Text>
     </YStack>

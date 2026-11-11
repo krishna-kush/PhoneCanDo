@@ -21,6 +21,13 @@ export type PtyTransport = {
    * none: its program sees no focus at all.
    */
   focus?(shown: boolean): void;
+  /**
+   * The PTY's host answers the program's queries itself (an engine's: the
+   * runner, from the first byte, watched or not), so the view's answers
+   * (theme/replies.ts) are not written. A PTY of the view's own has only
+   * the view to answer.
+   */
+  hostAnswers?: boolean;
   /** Hangs up or detaches. Safe before open finishes (open then opens nothing) and twice. */
   close(): void;
 };

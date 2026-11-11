@@ -1,8 +1,10 @@
 package com.phonecando.runner.engine
 
+import com.phonecando.agents.kit.term.TermTheme
+
 // One engine's environment, in layers: our own process env, then the
-// image's engine.env (for a TUI engine also TERMINAL: what our xterm
-// renders and UTF-8), then the kind's launch env, then ours on top: the
+// image's engine.env (for a TUI engine also terminal(): what our xterm
+// renders, UTF-8 and the theme), then the kind's launch env, then ours on top: the
 // bridge URL and this agent's token (only for a kind with phone tools,
 // BridgeAccess; else neither), a TUI engine's events file (where the
 // kit scripts write), the build channel, and the agent tag.
@@ -18,6 +20,16 @@ object EngineEnv {
 
   /** What a program on our PTY needs to know about it (as the terminal tab's recipes set). */
   val TERMINAL = mapOf("TERM" to "xterm-256color", "COLORTERM" to "truecolor", "LANG" to "C.UTF-8")
+
+  const val COLORFGBG = "COLORFGBG"
+
+  /**
+   * [TERMINAL], and whether the terminal is dark or light as COLORFGBG
+   * when the app has told us its [theme] (TerminalThemes); the program
+   * keeps that value until it restarts.
+   */
+  fun terminal(theme: TermTheme?): Map<String, String> =
+    if (theme == null) TERMINAL else TERMINAL + (COLORFGBG to theme.colorFgBg)
 
   /** [bridgeUrl] null: the bridge is down and the engine gets neither bridge value; [eventsFile] null: a server engine, none. */
   fun build(

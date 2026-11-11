@@ -9,7 +9,7 @@ export default function WakingLine() {
   const t = useTheme();
   const [seed] = useState(() => Math.floor(Math.random() * 1000));
   return (
-    <Text fontFamily="$mono" fontSize={11} letterSpacing={1.4} color={t.dim} textTransform="uppercase">
+    <Text fontFamily="mono" fontSize={11} letterSpacing={1.4} color={t.dim} textTransform="uppercase">
       {`A-01 · ${wakingLine(seed)}`}
     </Text>
   );

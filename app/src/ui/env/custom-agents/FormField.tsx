@@ -20,7 +20,7 @@ type Props = {
 export default function FormField({ label, value, onChange, placeholder, hint, problems = [], code }: Props) {
   const t = useTheme();
   return (
-    <YStack gap="$2">
+    <YStack gap="2">
       <Text fontSize={15} fontWeight="600">
         {label}
       </Text>
@@ -32,7 +32,7 @@ export default function FormField({ label, value, onChange, placeholder, hint, p
         spellCheck={false}
         borderColor={problems.length > 0 ? t.primary : t.lineStrong}
         {...(code
-          ? { multiline: true, minHeight: 120, textAlignVertical: 'top', fontFamily: '$mono', fontSize: 14, paddingVertical: '$3' }
+          ? { multiline: true, minHeight: 120, textAlignVertical: 'top', fontFamily: 'mono', fontSize: 14, paddingVertical: '3' }
           : {})}
       />
       {hint ? <Note>{hint}</Note> : null}

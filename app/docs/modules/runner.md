@@ -211,8 +211,9 @@ holds it like any engine) and survives a JS reload. Home shows it.
 - **Launch** (`TuiSpawner`): a cooked tty, as a terminal emulator gives (a
   raw start drops every carriage return), 24×80 until a viewer resizes it,
   in `launch.cwd` (default HOME), with the server engine's layered
-  environment plus `TERM`, `COLORTERM` and `LANG=C.UTF-8` under the kind's
-  env. A native TUI kind runs from the native-library dir. An image kind
+  environment plus `TERM`, `COLORTERM`, `LANG=C.UTF-8` and, once the app
+  has given its terminal theme, `COLORFGBG` (`15;0` dark, `0;15` light,
+  kept until the engine restarts) under the kind's env. A native TUI kind runs from the native-library dir. An image kind
   runs in its image through `<image>/shims/sh` (`agents/AGENTS.md` → Image
   kinds), on a PTY handed on to the guest (`handOver`, as for the Linux
   shell); an image without Linux has no `shims/sh` (`image_not_ready`). It
@@ -250,6 +251,14 @@ holds it like any engine) and survives a JS reload. Home shows it.
   after the replay), `CSI O` with no viewer, a hidden one or after a
   detach. So a TUI that notifies only while unfocused does so whenever
   nobody looks. xterm.js never reports focus itself (`disableStdin`).
+  From the app's terminal theme (`engineTerminalTheme`, which JS sets at
+  start and on every change of scheme; `TerminalThemes` holds it for every
+  engine) it answers colour queries (OSC 4 / 10 / 11 / 12) and the theme
+  query (`CSI ? 996 n`), and while the TUI has DEC mode 2031 on, a change
+  sends the theme report (`CSI ? 997 ; 1 n` dark, `; 2 n` light). Device
+  attributes (`CSI c`) and the status (`CSI 5 n`) are always answered,
+  the fences programs put after a colour query. Before JS gave a theme,
+  colour and theme queries go unanswered (`terminal.md` → Theme).
   Answers due before the PTY is bound go out once it is.
 - **Events** (`engine/tui/TuiEvents.kt`): the kind's `events[].pty.rules`
   turn bells, OSC 9 / 9;4 / 777 notices and OSC 7501 status reports into

@@ -23,9 +23,9 @@ export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
 
   if (phase.name === 'starting') {
     return (
-      <YStack flex={1} backgroundColor={t.bg} padding="$3" gap="$4" alignItems="center" justifyContent="center">
+      <YStack flex={1} backgroundColor={t.bg} padding="3" gap="4" alignItems="center" justifyContent="center">
         <LogoLoader size={24} />
-        <Text color={t.fg} fontFamily="$mono">
+        <Text color={t.fg} fontFamily="mono">
           Starting {label}…
         </Text>
         <WakingLine />
@@ -37,11 +37,11 @@ export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
   const overScreen = phase.name === 'stopped' && phase.screen;
   const body = (
     <>
-      <Text color={failed ? t.primary : t.fg} fontFamily="$mono">
+      <Text color={failed ? t.primary : t.fg} fontFamily="mono">
         {failed ? `${label} could not start` : `${label} stopped`}
       </Text>
       {phase.error ? (
-        <Text color={t.dim} fontFamily="$mono" fontSize={12} selectable>
+        <Text color={t.dim} fontFamily="mono" fontSize={12} userSelect="text">
           {phase.error}
         </Text>
       ) : null}
@@ -61,15 +61,15 @@ export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
         backgroundColor={t.bg}
         borderTopWidth={1}
         borderColor={t.line}
-        padding="$3"
-        gap="$2"
+        padding="3"
+        gap="2"
       >
         {body}
       </YStack>
     );
   }
   return (
-    <YStack flex={1} backgroundColor={t.bg} padding="$4" gap="$3" justifyContent="center">
+    <YStack flex={1} backgroundColor={t.bg} padding="4" gap="3" justifyContent="center">
       {body}
     </YStack>
   );

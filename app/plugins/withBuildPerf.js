@@ -11,6 +11,9 @@ const PROPS = {
   'org.gradle.workers.max': '6',
   'kotlin.daemon.jvmargs': '-Xmx1536m',
   reactNativeArchitectures: 'arm64-v8a',
+  // SDK 58's template turns R8 on for release builds; we keep it off until
+  // the APK audit and a minified release are ready for it (docs/planning/todo.md).
+  'android.enableMinifyInReleaseBuilds': 'false',
 };
 
 module.exports = function withBuildPerf(config) {

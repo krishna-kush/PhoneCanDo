@@ -50,18 +50,18 @@ function DrawerContent({ still }: { still: boolean }) {
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 8 }}>
-      <XStack alignItems="center" gap="$2" paddingTop="$2">
+      <XStack alignItems="center" gap="2" paddingTop="2">
         <LogoMark size={16} />
-        <Text fontFamily="$mono" fontSize={18} fontWeight="600" letterSpacing={-0.4}>
+        <Text fontFamily="mono" fontSize={18} fontWeight="600" letterSpacing={-0.4}>
           PhoneCanDo
         </Text>
       </XStack>
-      <Text fontFamily="$mono" fontSize={11} letterSpacing={1.4} color={t.dim} textTransform="uppercase">
+      <Text fontFamily="mono" fontSize={11} letterSpacing={1.4} color={t.dim} textTransform="uppercase">
         {crewLine(agents.length, awake)}
       </Text>
 
       <SectionTitle>Agents</SectionTitle>
-      <YStack gap="$1">
+      <YStack gap="1">
         {agents.map((agent) => (
           <AgentRow
             key={agent.id}
@@ -84,7 +84,7 @@ function DrawerContent({ still }: { still: boolean }) {
       </AppButton>
       {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
 
-      <YStack height={1} backgroundColor={t.line} marginVertical="$3" />
+      <YStack height={1} backgroundColor={t.line} marginVertical="3" />
 
       {modelsOffered ? (
         <LinkRow
@@ -98,7 +98,7 @@ function DrawerContent({ still }: { still: boolean }) {
       <LinkRow label="Settings" onPress={() => push({ name: 'settings' })} />
       <LinkRow label="About" onPress={() => push({ name: 'about' })} />
 
-      <Text fontFamily="$mono" fontSize={10} letterSpacing={1.2} color={t.faint} textTransform="uppercase" marginTop="$4">
+      <Text fontFamily="mono" fontSize={10} letterSpacing={1.2} color={t.faint} textTransform="uppercase" marginTop="4">
         {`v${version.version} · ${channel()}`}
       </Text>
     </ScrollView>

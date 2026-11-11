@@ -1,5 +1,5 @@
-import { cancelAnimation, Easing, runOnJS, withTiming } from 'react-native-reanimated';
-import { runOnUISync } from 'react-native-worklets';
+import { cancelAnimation, Easing, withTiming } from 'react-native-reanimated';
+import { runOnUISync, scheduleOnRN } from 'react-native-worklets';
 import { COMMIT_MS, PRESS_MS, PUSH_MS } from './motion';
 import {
   belowKey,
@@ -61,9 +61,9 @@ export function startPush(id: number, onStart: () => void, onEnd: MotionEnd) {
           if (motionId.value !== i || motionKind.value !== 1) return;
           pushProgress.value = withTiming(1, { duration: PUSH_MS, easing: EMPHASIZED }, (finished) => {
             'worklet';
-            if (finished) runOnJS(onEnd)(i);
+            if (finished) scheduleOnRN(onEnd, i);
           });
-          runOnJS(onStart)();
+          scheduleOnRN(onStart);
         });
       });
     },
@@ -85,14 +85,14 @@ export function beginPop(id: number, moving: string, under: string, onEnd: Motio
       motionId.value = i;
       const done = (finished?: boolean) => {
         'worklet';
-        if (finished) runOnJS(onEnd)(i);
+        if (finished) scheduleOnRN(onEnd, i);
       };
       if (motionKind.value === 1 && movingKey.value === m && underKey.value === u && pushProgress.value < 1) {
         previewing.value = false;
         // Not in sight yet (its slide had not started): nothing to move.
         if (pushProgress.value === 0) {
           cancelAnimation(pushProgress);
-          runOnJS(onEnd)(i);
+          scheduleOnRN(onEnd, i);
           return;
         }
         pushProgress.value = withTiming(0, { duration: COMMIT_MS, easing: STANDARD }, done);

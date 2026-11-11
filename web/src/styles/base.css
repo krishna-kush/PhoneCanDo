@@ -2,13 +2,13 @@
    bar, shared keyframes. Theme colours are NOT declared here:
    theme/tokens.json is the single source for the site and the app, and
    layouts/Base.astro emits those vars. Only decorative, site-only vars
-   live below. */
+   live below; the ones made of a theme colour are mixed from its var. */
 
 :root {
   color-scheme: dark;
-  --nav-bg: rgba(12, 11, 9, 0.92);
+  --nav-bg: color-mix(in srgb, var(--bg) 92%, transparent);
   --grid: rgba(245, 158, 11, 0.09);
-  --ghost-hover: rgba(242, 236, 223, 0.05);
+  --ghost-hover: color-mix(in srgb, var(--fg) 5%, transparent);
   --glow: rgba(240, 32, 56, 0.16);
   --phone-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   --media-shadow: none;
@@ -35,14 +35,12 @@
 
 [data-theme='light'] {
   color-scheme: light;
-  --nav-bg: rgba(242, 236, 223, 0.93);
+  --nav-bg: color-mix(in srgb, var(--bg) 93%, transparent);
   --grid: rgba(253, 197, 13, 0.12);
-  --ghost-hover: rgba(23, 19, 13, 0.05);
   --glow: rgba(225, 25, 47, 0.1);
-  --phone-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 30px 60px -30px rgba(30, 20, 10, 0.45);
+  --phone-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 30px 60px -30px rgba(0, 0, 0, 0.35);
   --media-shadow: none;
   --qr-ink: var(--red);
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.1'/%3E%3C/svg%3E");
 }
 
 * { box-sizing: border-box; }

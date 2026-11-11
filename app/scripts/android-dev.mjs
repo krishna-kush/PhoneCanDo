@@ -27,7 +27,7 @@ const variant = `${channel}Debug`;
 // and keeps every compiled native library; --clean regenerates from scratch.
 // CI=1 only keeps prebuild from prompting: run:android must not see it, or
 // Expo starts Metro with reloads disabled.
-// Expo CLI 57 deletes and regenerates app/android on every prebuild unless
+// Expo CLI deletes and regenerates app/android on every prebuild unless
 // --no-clean is passed, so --no-clean is the default here and --clean opts in.
 run('npx', ['expo', 'prebuild', '-p', 'android', '--no-install', clean ? '--clean' : '--no-clean'], {
   ...env,

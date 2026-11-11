@@ -18,10 +18,10 @@ export default function LinkRow({ label, detail, alert = false, onPress }: Props
   return (
     <XStack
       alignItems="center"
-      gap="$3"
+      gap="3"
       minHeight={HIT.buttonH}
-      paddingHorizontal="$2"
-      pressStyle={{ backgroundColor: t.panel2 }}
+      paddingHorizontal="2"
+      backgroundColor={`press:${t.panel2}`}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={detail ? `${label}, ${detail}` : label}
@@ -31,7 +31,7 @@ export default function LinkRow({ label, detail, alert = false, onPress }: Props
       </Text>
       <XStack flex={1} minWidth={0} justifyContent="flex-end">
         {detail ? (
-          <Text fontFamily="$mono" fontSize={12} color={alert ? t.primary : t.dim} numberOfLines={1}>
+          <Text fontFamily="mono" fontSize={12} color={alert ? t.primary : t.dim} numberOfLines={1}>
             {detail}
           </Text>
         ) : null}

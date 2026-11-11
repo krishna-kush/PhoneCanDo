@@ -11,10 +11,10 @@ export default function ProgressBar({ label, fraction }: { label: string; fracti
   const t = useTheme();
   const percent = fraction == null ? 0 : Math.round(Math.min(1, Math.max(0, fraction)) * 1000) / 10;
   return (
-    <YStack gap="$2">
-      <XStack alignItems="center" gap="$2">
+    <YStack gap="2">
+      <XStack alignItems="center" gap="2">
         {fraction == null ? <LogoLoader size={8} /> : null}
-        <Text fontFamily="$mono" fontSize={12} color={t.dim} numberOfLines={1} flexShrink={1}>
+        <Text fontFamily="mono" fontSize={12} color={t.dim} numberOfLines={1} flexShrink={1}>
           {label}
         </Text>
       </XStack>

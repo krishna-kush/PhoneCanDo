@@ -1,9 +1,11 @@
 import { Button, XStack } from 'tamagui';
 import ArrowIcon, { type ArrowDir } from '../common/ArrowIcon';
-import { TUI } from '../common/globals';
+import { useScheme, useTheme } from '../common/globals';
+import { termLook } from './theme/palette';
 
-// The above-keyboard accessory bar: terminal спецkeys plus sticky Ctrl/Shift
-// toggles. Presentational only — all PTY wiring (press/modifiers) lives in
+// The above-keyboard accessory bar: the terminal's special keys plus sticky
+// Ctrl/Shift toggles, in the terminal's own colours for the scheme.
+// Presentational only — all PTY wiring (press/modifiers) lives in
 // TerminalView, which passes callbacks + latch state down.
 export type ExtraKey = { label: string; seq: string; icon?: ArrowDir };
 
@@ -40,6 +42,10 @@ type Props = {
   visibleWhenKeyboardOpen?: boolean;
 };
 
+// Every key keeps Tamagui 2's Button: 44 tall, a mono label in the regular
+// weight, and a press that darkens without dimming.
+const KEY = { height: 44, fontFamily: 'mono', fontWeight: '400', ellipsis: true, opacity: '1 press:1' } as const;
+
 export default function ExtraKeysBar({
   ctrlOn,
   shiftOn,
@@ -49,18 +55,24 @@ export default function ExtraKeysBar({
   keyboardVisible,
   visibleWhenKeyboardOpen = true,
 }: Props) {
+  const look = termLook(useScheme());
+  const t = useTheme();
+  // Each key in the terminal's colours for the scheme; a latched Ctrl or
+  // Shift in the primary red.
+  const keyLook = { backgroundColor: `${look.key} press:${look.keyPress}`, color: look.keyText };
+  const latched = { backgroundColor: t.primary, color: 'white' };
   if (visibleWhenKeyboardOpen && !keyboardVisible) return null;
   return (
     <XStack
       width="100%"
-      gap="$1"
-      paddingHorizontal="$2"
-      paddingVertical="$1"
+      gap="1"
+      paddingHorizontal="2"
+      paddingVertical="1"
       flexWrap="wrap"
       borderTopWidth={1}
       borderBottomWidth={1}
-      borderColor={TUI.line}
-      backgroundColor={TUI.panel}
+      borderColor={look.line}
+      backgroundColor={look.panel}
     >
       {EXTRA_KEYS.map((k) => (
         <Button
@@ -68,12 +80,14 @@ export default function ExtraKeysBar({
           minHeight={30}
           minWidth={36}
           borderRadius={0}
+          {...KEY}
           fontSize={12}
-          paddingHorizontal="$1"
+          paddingHorizontal="1"
+          {...keyLook}
           accessibilityLabel={k.label}
           onPress={() => onPressKey(k.seq)}
         >
-          {k.icon ? <ArrowIcon dir={k.icon} /> : k.label}
+          {k.icon ? <ArrowIcon dir={k.icon} color={look.keyText} /> : k.label}
         </Button>
       ))}
       <Button
@@ -81,11 +95,11 @@ export default function ExtraKeysBar({
         minHeight={30}
         minWidth={44}
         borderRadius={0}
+        {...KEY}
         fontSize={12}
-        paddingHorizontal="$1"
+        paddingHorizontal="1"
         onPress={onToggleCtrl}
-        backgroundColor={ctrlOn ? TUI.primary : undefined}
-        color={ctrlOn ? 'white' : undefined}
+        {...(ctrlOn ? latched : keyLook)}
       >
         Ctrl
       </Button>
@@ -94,11 +108,11 @@ export default function ExtraKeysBar({
         minHeight={30}
         minWidth={44}
         borderRadius={0}
+        {...KEY}
         fontSize={12}
-        paddingHorizontal="$1"
+        paddingHorizontal="1"
         onPress={onToggleShift}
-        backgroundColor={shiftOn ? TUI.primary : undefined}
-        color={shiftOn ? 'white' : undefined}
+        {...(shiftOn ? latched : keyLook)}
       >
         Shift
       </Button>

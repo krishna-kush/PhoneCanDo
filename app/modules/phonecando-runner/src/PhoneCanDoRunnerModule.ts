@@ -13,6 +13,7 @@ import type {
   NativeOpenUrlAction,
   NativePromptReading,
   NativeTerminalAttach,
+  NativeTerminalTheme,
   NativeUserKind,
   NativeVersionCheck,
 } from './PhoneCanDoRunner.types';
@@ -32,6 +33,7 @@ export type {
   NativeOpenUrlAction,
   NativePromptReading,
   NativeTerminalAttach,
+  NativeTerminalTheme,
   NativeUserKind,
   NativeVersionCheck,
 } from './PhoneCanDoRunner.types';
@@ -100,6 +102,7 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   engineTerminalResize(viewerId: string, rows: number, cols: number): void;
   engineTerminalFocus(viewerId: string, shown: boolean): void;
   engineTerminalDetach(viewerId: string): void;
+  engineTerminalTheme(theme: NativeTerminalTheme): boolean;
   getTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   setTelemetryEnabled(enabled: boolean): void;

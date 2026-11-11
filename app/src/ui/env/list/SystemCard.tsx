@@ -34,17 +34,16 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
     <YStack
       borderWidth={1}
       borderColor={env?.state === 'failed' ? t.primary : t.line}
-      backgroundColor={t.panel}
-      padding="$3"
-      gap="$3"
-      pressStyle={{ backgroundColor: t.panel2 }}
+      backgroundColor={`${t.panel} press:${t.panel2}`}
+      padding="3"
+      gap="3"
       onPress={onOpen}
       accessibilityRole="button"
       accessibilityLabel={`${title}, ${sub}, ${count}`}
     >
-      <XStack alignItems="center" gap="$3">
+      <XStack alignItems="center" gap="3">
         <YStack width={44} height={44} borderWidth={1} borderColor={t.lineStrong} alignItems="center" justifyContent="center" flexShrink={0}>
-          <Text fontFamily="$mono" fontSize={18} fontWeight="600" color={t.secondaryInk}>
+          <Text fontFamily="mono" fontSize={18} fontWeight="600" color={t.secondaryInk}>
             {letter}
           </Text>
         </YStack>
@@ -52,10 +51,10 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
           <Text fontSize={16} fontWeight="600" numberOfLines={1}>
             {title}
           </Text>
-          <Text fontFamily="$mono" fontSize={12} color={env?.state === 'failed' ? t.primary : t.dim} numberOfLines={1}>
+          <Text fontFamily="mono" fontSize={12} color={env?.state === 'failed' ? t.primary : t.dim} numberOfLines={1}>
             {sub}
           </Text>
-          <Text fontFamily="$mono" fontSize={11} letterSpacing={1.2} color={t.secondaryInk} textTransform="uppercase" numberOfLines={1}>
+          <Text fontFamily="mono" fontSize={11} letterSpacing={1.2} color={t.secondaryInk} textTransform="uppercase" numberOfLines={1}>
             {count}
           </Text>
         </YStack>

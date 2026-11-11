@@ -29,7 +29,7 @@ export default function FirstLaunchScreen() {
 
   return (
     <Screen fabClearance={false}>
-      <YStack flex={1} justifyContent="center" gap="$4" paddingVertical="$6">
+      <YStack flex={1} justifyContent="center" gap="4" paddingVertical="6">
         {failed || choosing ? <LogoMark size={18} /> : <LogoLoader size={18} />}
         <Text fontSize={24} fontWeight="700">
           {choosing ? CHOOSE_TITLE : setupTitle(ctx)}
@@ -45,7 +45,7 @@ export default function FirstLaunchScreen() {
           <ProgressBar label="Getting ready" fraction={null} />
         ) : null}
         {phase.kind === 'failed' ? (
-          <YStack gap="$3">
+          <YStack gap="3">
             <Note tone="error">{`${where}${phase.reason}`}</Note>
             <AppButton onPress={retry}>Retry</AppButton>
             {linux ? (

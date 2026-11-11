@@ -15,6 +15,7 @@ import type {
   NativeOpenUrlAction,
   NativePromptReading,
   NativeTerminalAttach,
+  NativeTerminalTheme,
   NativeUserKind,
   NativeVersionCheck,
 } from '../../modules/phonecando-runner/src/PhoneCanDoRunner.types';
@@ -62,6 +63,8 @@ export type RunnerModule = {
   engineTerminalResize(viewerId: string, rows: number, cols: number): void;
   engineTerminalFocus(viewerId: string, shown: boolean): void;
   engineTerminalDetach(viewerId: string): void;
+  /** Absent from native builds older than this function. */
+  engineTerminalTheme?(theme: NativeTerminalTheme): boolean;
   pendingPrompts(): NativeBridgePrompt[];
   resolveUnlock(requestId: string, ok: boolean): boolean;
   resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean;

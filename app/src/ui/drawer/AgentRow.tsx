@@ -39,10 +39,10 @@ export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Pro
         flex={1}
         minWidth={0}
         alignItems="center"
-        gap="$3"
-        paddingVertical="$2"
-        paddingLeft="$2"
-        pressStyle={{ opacity: 0.7 }}
+        gap="3"
+        paddingVertical="2"
+        paddingLeft="2"
+        opacity="press:0.7"
         onPress={onSwitch}
         onLongPress={onOpen}
         accessibilityRole="button"
@@ -52,13 +52,13 @@ export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Pro
       >
         <AgentFace mood={look.mood} pose={look.pose} size={22} still={still} />
         <YStack flex={1} minWidth={0} gap={2}>
-          <XStack alignItems="center" gap="$2">
+          <XStack alignItems="center" gap="2">
             <Text fontSize={16} fontWeight="600" numberOfLines={1} flexShrink={1}>
               {agent.name}
             </Text>
             {active ? <Stamp>on duty</Stamp> : null}
           </XStack>
-          <Text fontFamily="$mono" fontSize={11} color={t.dim} numberOfLines={1}>
+          <Text fontFamily="mono" fontSize={11} color={t.dim} numberOfLines={1}>
             {sub}
           </Text>
         </YStack>
@@ -66,7 +66,8 @@ export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Pro
       <Button
         width={HIT.minTouch}
         height={HIT.minTouch}
-        chromeless
+        variant="quiet"
+        opacity="1 press:1"
         borderRadius={0}
         paddingHorizontal={0}
         onPress={onOpen}

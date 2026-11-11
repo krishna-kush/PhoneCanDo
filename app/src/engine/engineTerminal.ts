@@ -55,6 +55,33 @@ export function engineTerminalDetach(viewerId: TerminalViewerId): void {
   nativeRunner().engineTerminalDetach(viewerId);
 }
 
+/**
+ * Dark or light, and the colours the TUI engines' terminals answer
+ * queries with (`#rrggbb`; `ansi`: black to bright white).
+ */
+export type EngineTerminalTheme = {
+  dark: boolean;
+  foreground: string;
+  background: string;
+  cursor: string;
+  ansi: readonly string[];
+};
+
+/**
+ * The app's terminal theme, for every TUI engine at once: its terminal
+ * answers colour and theme queries from it, a program that asked for theme
+ * reports (DEC mode 2031) hears a change, and an engine that starts gets
+ * it as COLORFGBG. Set it before an engine starts and on every change. A
+ * native build without it, or no runner, takes nothing.
+ */
+export function engineTerminalTheme(theme: EngineTerminalTheme): void {
+  try {
+    nativeRunner().engineTerminalTheme?.({ ...theme, ansi: [...theme.ansi] });
+  } catch {
+    // no runner here (Expo Go, web)
+  }
+}
+
 /** The end a native error names (its code, or in its message), or null for any other failure. */
 export function engineTerminalEnd(e: unknown): EngineTerminalEnd | null {
   const raw = (e as { code?: unknown } | null)?.code;

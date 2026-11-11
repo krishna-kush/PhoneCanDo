@@ -39,18 +39,19 @@ export default function ContextSlider({ range, stop, disabled = false, onStop }:
       onValueChange={([v]) => onStop(v ?? 0)}
       opacity={disabled ? 0.5 : 1}
     >
-      <Slider.Track height={TRACK} marginTop={(HIT.minTouch - TRACK) / 2} borderRadius={0} backgroundColor={t.line}>
+      {/* Tamagui 3 centres the track in the touch band, where it centres the thumb. */}
+      <Slider.Track height={TRACK} borderRadius={0} backgroundColor={t.line}>
         <Slider.TrackActive borderRadius={0} backgroundColor={t.primary} />
       </Slider.Track>
       <Slider.Thumb
         index={0}
-        size={THUMB}
-        circular={false}
+        width={THUMB}
+        height={THUMB}
         borderRadius={0}
         borderWidth={2}
-        borderColor={t.primary}
-        backgroundColor={t.panel}
-        pressStyle={{ backgroundColor: t.primarySoft, borderColor: t.primary }}
+        borderColor={`${t.primary} press:${t.primary}`}
+        backgroundColor={`${t.panel} press:${t.primarySoft}`}
+        circular={false}
         aria-label="Context"
         aria-valuetext={`${contextText(contextAt(range, stop))} tokens`}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}

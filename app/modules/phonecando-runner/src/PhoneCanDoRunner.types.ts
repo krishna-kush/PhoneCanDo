@@ -52,6 +52,19 @@ export type NativeClientRecipe = { cmd: string[]; env: Record<string, string>; c
 /** A viewer attached to a TUI-style engine's PTY, and that PTY's size now (the replay is drawn at it). */
 export type NativeTerminalAttach = { viewerId: string; rows: number; cols: number };
 
+/**
+ * The app's terminal theme for the TUI engines' terminals (engineTerminalTheme):
+ * dark or light, and the colours they answer queries with, each `#rrggbb`
+ * (`ansi`: the 16 ANSI colours, black to bright white).
+ */
+export type NativeTerminalTheme = {
+  dark: boolean;
+  foreground: string;
+  background: string;
+  cursor: string;
+  ansi: string[];
+};
+
 export type NativeBridgePrompt = {
   requestId: string;
   kind: 'unlock' | 'accessibility' | 'open_url';

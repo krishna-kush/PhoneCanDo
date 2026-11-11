@@ -12,16 +12,16 @@ export default function SystemFacts({ facts }: { facts: Fact[] }) {
         <XStack
           key={f.label}
           alignItems="center"
-          gap="$3"
+          gap="3"
           minHeight={44}
-          paddingHorizontal="$3"
+          paddingHorizontal="3"
           borderTopWidth={i > 0 ? 1 : 0}
           borderColor={t.line}
         >
-          <Text fontFamily="$mono" fontSize={11} letterSpacing={1.2} color={t.dim} textTransform="uppercase" width={84}>
+          <Text fontFamily="mono" fontSize={11} letterSpacing={1.2} color={t.dim} textTransform="uppercase" width={84}>
             {f.label}
           </Text>
-          <Text fontSize={15} flex={1} minWidth={0} numberOfLines={2} selectable>
+          <Text fontSize={15} flex={1} minWidth={0} numberOfLines={2} userSelect="text">
             {f.value}
           </Text>
         </XStack>

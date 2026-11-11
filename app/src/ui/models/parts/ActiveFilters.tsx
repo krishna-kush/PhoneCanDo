@@ -13,7 +13,7 @@ export default function ActiveFilters({ filters, onClear }: { filters: ModelFilt
   const on = activeFilters(filters);
   if (on.length === 0) return null;
   return (
-    <XStack flexWrap="wrap" alignItems="center" columnGap="$2" minHeight={HIT.minTouch}>
+    <XStack flexWrap="wrap" alignItems="center" columnGap="2" minHeight={HIT.minTouch}>
       {on.map((label) => (
         <Fragment key={label}>
           <Text fontSize={13} color={t.fg} flexShrink={1}>
@@ -25,12 +25,16 @@ export default function ActiveFilters({ filters, onClear }: { filters: ModelFilt
         </Fragment>
       ))}
       <Button
-        chromeless
+        variant="quiet"
+        opacity="1 press:1"
         minHeight={HIT.minTouch}
-        paddingHorizontal="$2"
+        paddingHorizontal="2"
         borderRadius={0}
+        fontFamily="mono"
         fontSize={12}
+        fontWeight="400"
         letterSpacing={0.8}
+        ellipsis
         textProps={{ textTransform: 'uppercase' }}
         onPress={onClear}
         accessibilityLabel="Clear filters"

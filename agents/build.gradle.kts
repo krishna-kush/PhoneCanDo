@@ -8,7 +8,7 @@
 // builtin, never on a kind. No kind depends on another. No android.* here; opencode alone
 // may compile against org.json (Android ships it), never package it.
 plugins {
-    kotlin("jvm") version "2.1.20" apply false
+    kotlin("jvm") version "2.2.10" apply false
 }
 
 allprojects {

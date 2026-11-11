@@ -23,14 +23,14 @@ type Props = {
 export default function ModelPanel({ title, lines, dates, note, ram, children }: Props) {
   const t = useTheme();
   return (
-    <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel} padding="$3" gap="$2">
+    <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel} padding="3" gap="2">
       <Text fontSize={16} fontWeight="600" numberOfLines={2} ellipsizeMode="tail">
         {title}
       </Text>
       {lines
         .filter((l) => l.length > 0)
         .map((l) => (
-          <Text key={l} fontFamily="$mono" fontSize={12} color={t.dim} numberOfLines={2}>
+          <Text key={l} fontFamily="mono" fontSize={12} color={t.dim} numberOfLines={2}>
             {l}
           </Text>
         ))}

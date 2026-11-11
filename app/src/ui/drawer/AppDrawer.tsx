@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Keyboard, StyleSheet, useWindowDimensions } from 'react-native';
-import { Gesture, GestureDetector, Pressable } from 'react-native-gesture-handler';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { GestureDetector, Pressable, usePanGesture } from 'react-native-gesture-handler';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { useLinuxStore } from '../../state/linux';
@@ -52,7 +53,7 @@ export default function AppDrawer() {
     const slideOpen = () => {
       shown.value = withTiming(1, { duration: OPEN_MS, easing: EMPHASIZED }, (finished) => {
         'worklet';
-        if (finished) runOnJS(refresh)();
+        if (finished) scheduleOnRN(refresh);
       });
     };
     const slideShut = () => {
@@ -61,7 +62,7 @@ export default function AppDrawer() {
       drawerPull.value = 0;
       shown.value = withTiming(0, { duration: CLOSE_MS, easing: STANDARD }, (finished) => {
         'worklet';
-        if (finished) runOnJS(setAwake)(false);
+        if (finished) scheduleOnRN(setAwake, false);
       });
     };
     if (useAppStore.getState().drawerOpen) slideOpen();
@@ -82,22 +83,17 @@ export default function AppDrawer() {
 
   const close = () => setDrawerOpen(false);
   // A swipe to the left: horizontal first, so the list still scrolls.
-  const swipe = useMemo(
-    () =>
-      Gesture.Pan()
-        .activeOffsetX(-12)
-        .failOffsetY([-12, 12])
-        .onUpdate((e) => {
-          shown.value = Math.min(1, Math.max(0, 1 + e.translationX / panelW));
-        })
-        .onEnd((e) => {
-          if (e.translationX < -panelW * 0.3 || e.velocityX < -500) runOnJS(close)();
-          else shown.value = withTiming(1, { duration: CANCEL_MS, easing: STANDARD });
-        }),
-    // close only calls the store's setter.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [panelW, shown],
-  );
+  const swipe = usePanGesture({
+    activeOffsetX: -12,
+    failOffsetY: [-12, 12],
+    onUpdate: (e) => {
+      shown.value = Math.min(1, Math.max(0, 1 + e.translationX / panelW));
+    },
+    onDeactivate: (e) => {
+      if (e.translationX < -panelW * 0.3 || e.velocityX < -500) scheduleOnRN(close);
+      else shown.value = withTiming(1, { duration: CANCEL_MS, easing: STANDARD });
+    },
+  });
 
   const panel = useAnimatedStyle(() => ({
     transform: [{ translateX: -panelW * (1 - shown.value * (1 - PULL * drawerPull.value)) }],

@@ -48,15 +48,10 @@ export default function FilterSheet({
       dismissOnSnapToBottom
       snapPointsMode="fit"
     >
-      <Sheet.Frame
-        padding="$4"
-        paddingBottom="$6"
-        gap="$3"
-        borderRadius={0}
-        borderWidth={1}
-        borderColor={t.lineStrong}
-      >
-        <Sheet.ScrollView maxHeight={height * CHOICES_SHARE}>
+      <Sheet.Container padding="4" paddingBottom="6" gap="3">
+        <Sheet.Background borderRadius={0} borderWidth={1} borderColor={t.lineStrong} />
+        {/* Tamagui 3's sheet pads its scroll view; ours stays flush, as on 2. */}
+        <Sheet.ScrollView maxHeight={height * CHOICES_SHARE} paddingHorizontal={0}>
           <Choices title="Size" options={SIZE_OPTIONS} value={filters.size} onChange={(size) => onChange({ size })} />
           <Choices
             title="License"
@@ -74,8 +69,9 @@ export default function FilterSheet({
         <AppButton variant="secondary" onPress={onClose}>
           Done
         </AppButton>
-      </Sheet.Frame>
-      <Sheet.Overlay />
+      </Sheet.Container>
+      {/* Tamagui 2's backdrop: the theme's sheet-overlay, not dimmed further. */}
+      <Sheet.Overlay backgroundColor="sheet-overlay" opacity={1} />
     </Sheet>
   );
 }

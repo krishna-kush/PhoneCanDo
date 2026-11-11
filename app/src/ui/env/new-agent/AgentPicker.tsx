@@ -11,7 +11,7 @@ type Props = { offers: readonly Offer[]; selected: string | null; onSelect: (kin
 export default function AgentPicker({ offers, selected, onSelect }: Props) {
   const none = noOfferText(offers);
   return (
-    <YStack gap="$2" accessibilityRole="radiogroup">
+    <YStack gap="2" accessibilityRole="radiogroup">
       {offers.map((o) => (
         <KindOption key={o.id} offer={o} selected={o.id === selected} onSelect={() => onSelect(o.id)} />
       ))}

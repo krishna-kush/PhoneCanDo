@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { TextInput } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { applyInsertMods, modifiedSeq } from './keys';
 import { diffToEdit, SUBMIT_DEDUPE_MS } from './reconcile';
 
@@ -8,7 +8,7 @@ type Opts = { sendText: (text: string) => void };
 // Owns the shadow document + sticky modifiers. Invariant: mirror ===
 // remoteLine, except transiently mid-edit. See reconcile.ts for the model.
 export function useMirrorInput({ sendText }: Opts) {
-  const inputRef = useRef<TextInput | null>(null);
+  const inputRef = useRef<TextInputInstance | null>(null);
   const [mirror, setMirror] = useState('');
   const mirrorRef = useRef('');
   const remoteLineRef = useRef('');

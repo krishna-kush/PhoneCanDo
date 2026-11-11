@@ -17,7 +17,7 @@ export default function Screen({ children, scroll = true, fabClearance = true }:
   const t = useTheme();
   if (!scroll) {
     return (
-      <YStack flex={1} backgroundColor={t.bg} padding="$4" gap="$3" paddingBottom={fabClearance ? 96 : undefined}>
+      <YStack flex={1} backgroundColor={t.bg} padding="4" gap="3" paddingBottom={fabClearance ? 96 : undefined}>
         {children}
       </YStack>
     );

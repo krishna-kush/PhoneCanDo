@@ -34,12 +34,11 @@ export default function FilterPicker<T>({
         borderWidth={1}
         borderColor={t.lineStrong}
         borderRadius={0}
-        padding="$2"
-        enterStyle={{ y: -10, opacity: 0 }}
-        exitStyle={{ y: -10, opacity: 0 }}
-        elevate
+        padding="2"
+        y="enter:-10px exit:-10px"
+        opacity="enter:0 exit:0"
       >
-        <YStack gap="$1" minWidth={200}>
+        <YStack gap="1" minWidth={200}>
           {options.map((o) => (
             <MenuItem
               key={o.label}

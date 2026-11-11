@@ -17,24 +17,24 @@ export default function KindOption({ offer, selected, onSelect }: Props) {
   return (
     <XStack
       alignItems="center"
-      gap="$3"
+      gap="3"
       minHeight={64}
-      padding="$3"
+      padding="3"
       borderWidth={1}
       borderColor={selected ? t.primary : t.line}
       backgroundColor={t.panel}
-      opacity={disabled ? 0.5 : 1}
-      pressStyle={disabled ? undefined : { opacity: 0.9, scale: 0.99 }}
+      opacity={disabled ? 0.5 : '1 press:0.9'}
+      scale={disabled ? undefined : 'press:0.99'}
       onPress={disabled ? undefined : onSelect}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={[offer.label, ...badges, reason].filter(Boolean).join(', ')}
     >
-      <Text fontFamily="$mono" fontSize={14} width={16} textAlign="center" color={selected ? t.primary : t.faint}>
+      <Text fontFamily="mono" fontSize={14} width={16} textAlign="center" color={selected ? t.primary : t.faint}>
         {selected ? '●' : '○'}
       </Text>
-      <YStack flex={1} minWidth={0} gap="$1">
-        <XStack alignItems="center" gap="$2" flexWrap="wrap">
+      <YStack flex={1} minWidth={0} gap="1">
+        <XStack alignItems="center" gap="2" flexWrap="wrap">
           <Text fontSize={16} fontWeight="600" numberOfLines={1} ellipsizeMode="tail" flexShrink={1}>
             {offer.label}
           </Text>
@@ -43,7 +43,7 @@ export default function KindOption({ offer, selected, onSelect }: Props) {
           ))}
         </XStack>
         {reason ? (
-          <Text fontFamily="$mono" fontSize={12} color={t.dim} numberOfLines={1}>
+          <Text fontFamily="mono" fontSize={12} color={t.dim} numberOfLines={1}>
             {reason}
           </Text>
         ) : null}

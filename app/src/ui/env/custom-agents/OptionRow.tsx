@@ -16,25 +16,26 @@ type Props = {
 export default function OptionRow({ label, note, on, onToggle, problems = [] }: Props) {
   const t = useTheme();
   return (
-    <YStack gap="$2">
+    <YStack gap="2">
       <XStack
         alignItems="center"
-        gap="$3"
+        gap="3"
         minHeight={64}
-        padding="$3"
+        padding="3"
         borderWidth={1}
         borderColor={on ? t.primary : t.line}
         backgroundColor={t.panel}
-        pressStyle={{ opacity: 0.9, scale: 0.99 }}
+        opacity="press:0.9"
+        scale="press:0.99"
         onPress={onToggle}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: on }}
         accessibilityLabel={`${label}, ${note}`}
       >
-        <Text fontFamily="$mono" fontSize={14} width={16} textAlign="center" color={on ? t.primary : t.faint}>
+        <Text fontFamily="mono" fontSize={14} width={16} textAlign="center" color={on ? t.primary : t.faint}>
           {on ? '■' : '□'}
         </Text>
-        <YStack flex={1} minWidth={0} gap="$1">
+        <YStack flex={1} minWidth={0} gap="1">
           <Text fontSize={16} fontWeight="600">
             {label}
           </Text>

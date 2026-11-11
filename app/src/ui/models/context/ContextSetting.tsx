@@ -81,11 +81,11 @@ export default function ContextSetting({ model, onDone }: Props) {
   };
 
   return (
-    <YStack gap="$2" borderTopWidth={1} borderColor={t.line} paddingTop="$3">
+    <YStack gap="2" borderTopWidth={1} borderColor={t.line} paddingTop="3">
       <Text fontSize={14} fontWeight="600">
         Context
       </Text>
-      <YStack gap="$2" accessibilityRole="radiogroup">
+      <YStack gap="2" accessibilityRole="radiogroup">
         <ChoiceRow
           label="Automatic"
           note={automaticNote(model)}
@@ -104,9 +104,9 @@ export default function ContextSetting({ model, onDone }: Props) {
       <Note>{SPEED_NOTE}</Note>
       {!automatic ? (
         <>
-          <XStack alignItems="center" gap="$3">
+          <XStack alignItems="center" gap="3">
             <ContextSlider range={range} stop={stop} disabled={busy} onStop={setStop} />
-            <Text fontFamily="$mono" fontSize={14} minWidth={48} textAlign="right">
+            <Text fontFamily="mono" fontSize={14} minWidth={48} textAlign="right">
               {contextText(context)}
             </Text>
           </XStack>
@@ -119,7 +119,7 @@ export default function ContextSetting({ model, onDone }: Props) {
         <Note>{restartNote(running)}</Note>
       ) : null}
       {error ? <Note tone="error">{error}</Note> : null}
-      <XStack gap="$2">
+      <XStack gap="2">
         <AppButton flex={1} loading={busy} disabled={!changed || refused} onPress={() => void save()}>
           Save
         </AppButton>

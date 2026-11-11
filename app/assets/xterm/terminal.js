@@ -9,11 +9,36 @@
   // attaches to editable fields, so the keyboard stays with the RN input.
   // DOM focus (cursor) and Android input focus (keyboard) coexist.
   // Blanks (unfilled pixels, empty cells) must blend with the TUI's own
-  // background (#0a0a0a): row math always leaves a rounding remainder and
-  // the TUI may trail the PTY by a resize, and pure-black blanks read as a
-  // "margin" between the TUI and the keyboard. Never use #000 here.
-  var term = new Terminal({
-    theme: { background: '#0a0a0a', foreground: '#e6e6e6', cursor: '#00ff00' },
+  // background (the theme's: #0a0a0a dark, white light): row math always
+  // leaves a rounding remainder and the TUI may trail the PTY by a resize,
+  // and pure-black blanks read as a "margin" between the TUI and the
+  // keyboard. Never use #000 here.
+  //
+  // The theme is the app's scheme (RN, src/ui/terminal/theme/): the page
+  // starts in the one on its URL and takes a new one from __setTheme. The
+  // page's own blanks (padding, the fit remainder) follow its background
+  // (--bg, which terminal.html's head sets first).
+  function startTheme() {
+    try {
+      var t = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+      if (t && typeof t.background === 'string') return t;
+    } catch (e) {}
+    return null;
+  }
+  var themeKey = '';
+  function applyTheme(t) {
+    if (!t || typeof t.background !== 'string') return;
+    var key = JSON.stringify(t);
+    if (key === themeKey) return;
+    themeKey = key;
+    document.documentElement.style.setProperty('--bg', t.background);
+    if (term) term.options.theme = t;
+  }
+  var term = null;
+  var theme = startTheme();
+  applyTheme(theme);
+  term = new Terminal({
+    theme: theme || {},
     fontFamily: 'monospace',
     fontSize: 14,
     allowProposedApi: true,
@@ -380,6 +405,56 @@
   // RN reads it (opencode: the chat on screen).
   term.onTitleChange(function (title) {
     post({ type: 'title', title: String(title || '').slice(0, 200) });
+  });
+
+  window.__setTheme = applyTheme;
+
+  // What the program asks the terminal about itself, for RN to answer
+  // through the PTY (theme/replies.ts; an engine's PTY is answered by the
+  // runner and RN writes nothing): colours (`?` in OSC 4, 10, 11, 12), dark
+  // or light (CSI ? 996 n), device attributes (CSI c) and the status (CSI
+  // 5 n); and whether it wants a theme report on a change (DEC mode 2031,
+  // off again on a reset). xterm.js's own answers go nowhere under
+  // disableStdin. Each handler but the 996 one (xterm has none) lets xterm
+  // go on with the sequence: a colour a program sets, its modes, a reset.
+  function ask(query) {
+    post({ type: 'query', query: query });
+  }
+  function only(params, value) {
+    return params.length === 1 && params[0] === value;
+  }
+  [4, 10, 11, 12].forEach(function (code) {
+    term.parser.registerOscHandler(code, function (data) {
+      if (data.indexOf('?') >= 0) ask({ q: 'osc', code: code, data: data });
+      return false;
+    });
+  });
+  term.parser.registerCsiHandler({ prefix: '?', final: 'n' }, function (params) {
+    if (!only(params, 996)) return false;
+    ask({ q: 'theme' });
+    return true;
+  });
+  term.parser.registerCsiHandler({ final: 'c' }, function (params) {
+    if (params.length === 0 || only(params, 0)) ask({ q: 'attributes' });
+    return false;
+  });
+  term.parser.registerCsiHandler({ final: 'n' }, function (params) {
+    if (only(params, 5)) ask({ q: 'status' });
+    return false;
+  });
+  function themeReports(on) {
+    return function (params) {
+      for (var i = 0; i < params.length; i++) {
+        if (params[i] === 2031) post({ type: 'themeReports', on: on });
+      }
+      return false;
+    };
+  }
+  term.parser.registerCsiHandler({ prefix: '?', final: 'h' }, themeReports(true));
+  term.parser.registerCsiHandler({ prefix: '?', final: 'l' }, themeReports(false));
+  term.parser.registerEscHandler({ final: 'c' }, function () {
+    post({ type: 'themeReports', on: false });
+    return false;
   });
 
   var __cell0 = trueCell();

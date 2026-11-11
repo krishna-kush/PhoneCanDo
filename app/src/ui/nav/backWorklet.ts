@@ -1,6 +1,6 @@
-import { Easing, withTiming } from 'react-native-reanimated';
+import { cancelAnimation, Easing, withTiming } from 'react-native-reanimated';
 import { CANCEL_MS } from './motion';
-import { backTarget, drawerPull, gestureTarget, previewing, pullEdge, pullProgress } from './progress';
+import { backTarget, commitProgress, drawerPull, gestureTarget, previewing, pullEdge, pullProgress } from './progress';
 
 const STANDARD = Easing.bezier(0.2, 0, 0, 1);
 
@@ -21,6 +21,10 @@ export function onBackGestureStep(phase: string, progress: number, edge: string)
     if (target === 1) {
       pullEdge.value = edge === 'right' ? -1 : 1;
       pullProgress.value = 0;
+      // The last pop leaves its slide-out at 1; the preview reads it too
+      // (motion.ts 'leave'), and at 1 it would draw the page already gone.
+      cancelAnimation(commitProgress);
+      commitProgress.value = 0;
       previewing.value = true;
     } else if (target === 2) {
       drawerPull.value = 0;

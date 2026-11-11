@@ -21,10 +21,11 @@ Only `*.so` names are packaged. The build output (`opencode2.bin`) is staged as
 `liboc-engine.so`, next to `liboc-opentui.so`. Verify with
 `unzip -l app-debug.apk | grep lib/arm64`.
 
-### `extractNativeLibs=true` required
+### Native libs must be extracted
 Expo defaults it off → `lib/arm64/` empty on device. Config plugin
-`app/plugins/withExtractNativeLibs.js`. Verify on-device dir listing, not just
-APK contents.
+`app/plugins/withExtractNativeLibs.js` sets `expo.useLegacyPackaging=true`
+(AGP 9 refuses `extractNativeLibs` in the manifest). Verify on-device dir
+listing, not just APK contents.
 
 ### Expo Go is out, prebuild is in
 No custom native code runs in Expo Go. Path: prebuild + dev-client APKs, local
@@ -116,14 +117,15 @@ are in `modules/chat.md`. The non-negotiables:
   every text-inserting path is folded into the shadow. Never WebView stdin —
   PTY bytes are irreversible.
 - The xterm page's pixels are the sizing truth; RN applies the result to xterm
-  and the PTY. Use the TUI background (`#0a0a0a`), never `#000`.
+  and the PTY. Use the TUI background (the theme's `termBg`), never `#000`.
 - The keyboard spacer uses live keyboard height, not `keyboardDidShow`; the
   input is an absolute 1x1 overlay; never `visible-password`.
 
 ## Theme
 
 `theme/tokens.json` is the only palette; web and app read it directly, so they
-cannot drift. The terminal canvas stays `#0a0a0a`; the opencode web adapter's `themeScript` maps
+cannot drift. The terminal follows the scheme from its `term*` roles
+(`#0a0a0a` dark, white light; `modules/terminal.md` → Theme); the opencode web adapter's `themeScript` maps
 the palette onto opencode's `--v2-*` vars (see `modules/chat.md`).
 
 ## Related

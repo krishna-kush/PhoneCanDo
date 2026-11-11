@@ -25,7 +25,7 @@ export default function KindReviewView({ review }: { review: KindReview }) {
         <Note key={p.family}>{`Packages, ${familyName(p.family)}: ${p.names.join(' ')}`}</Note>
       ))}
       {review.installSteps.map((step, i) => (
-        <YStack key={`${i}:${step}`} gap="$1">
+        <YStack key={`${i}:${step}`} gap="1">
           <Note>{`Step ${i + 1}`}</Note>
           <Code text={step} />
         </YStack>
@@ -35,7 +35,7 @@ export default function KindReviewView({ review }: { review: KindReview }) {
         <>
           <SectionTitle>Update</SectionTitle>
           {review.updateSteps.map((step, i) => (
-            <YStack key={`${i}:${step}`} gap="$1">
+            <YStack key={`${i}:${step}`} gap="1">
               <Note>{`Step ${i + 1}`}</Note>
               <Code text={step} />
             </YStack>
@@ -62,8 +62,8 @@ export default function KindReviewView({ review }: { review: KindReview }) {
 function Code({ text }: { text: string }) {
   const t = useTheme();
   return (
-    <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel} padding="$3">
-      <Text fontFamily="$mono" fontSize={12} lineHeight={17} color={t.fg} selectable>
+    <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel} padding="3">
+      <Text fontFamily="mono" fontSize={12} lineHeight="17px" color={t.fg} userSelect="text">
         {text}
       </Text>
     </YStack>

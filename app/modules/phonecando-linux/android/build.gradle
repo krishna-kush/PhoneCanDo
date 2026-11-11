@@ -75,9 +75,6 @@ android {
   androidResources {
     noCompress 'xz'
   }
-  lintOptions {
-    abortOnError false
-  }
 }
 
 dependencies {

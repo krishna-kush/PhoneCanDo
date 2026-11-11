@@ -21,8 +21,8 @@ export default function HomeScreen() {
 
   if (!agent) {
     return (
-      <YStack flex={1} backgroundColor={t.bg} padding="$4" justifyContent="center">
-        <Text color={t.muted} fontFamily="$mono">
+      <YStack flex={1} backgroundColor={t.bg} padding="4" justifyContent="center">
+        <Text color={t.muted} fontFamily="mono">
           No agent yet. Tap the name up top to add one.
         </Text>
       </YStack>

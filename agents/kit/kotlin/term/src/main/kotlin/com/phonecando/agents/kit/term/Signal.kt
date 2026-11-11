@@ -34,4 +34,21 @@ sealed interface Signal {
 
   /** DEC private modes set or reset (CSI ? Pm h / l); an AltScreen comes first when one of them is. */
   data class Modes(val modes: List<Int>, val set: Boolean) : Signal
+
+  /**
+   * A colour asked for (`?` in OSC 4, 10, 11 or 12): [osc] is the command
+   * (an OSC 10 field after the first asks for 11, then 12), [index] the
+   * palette entry for OSC 4; [bel] when the query ended with BEL. One
+   * sequence may ask for several.
+   */
+  data class ColorQuery(val osc: Int, val index: Int?, val bel: Boolean) : Signal
+
+  /** CSI ? 996 n: is the theme dark or light (TermTheme.report). */
+  data object ThemeQuery : Signal
+
+  /** CSI c or CSI 0 c: primary device attributes. Programs send it after other queries, as a fence. */
+  data object DeviceAttributesQuery : Signal
+
+  /** CSI 5 n: the operating status report (DSR). */
+  data object OperatingStatusQuery : Signal
 }

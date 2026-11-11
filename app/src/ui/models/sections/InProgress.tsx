@@ -53,7 +53,7 @@ function DownloadPanel({ download, job }: { download: ModelDownload; job: ModelP
           Pause
         </AppButton>
       ) : (
-        <XStack gap="$2">
+        <XStack gap="2">
           <AppButton flex={1} loading={action.busy} onPress={() => void action.run(() => resume(download.id))}>
             Resume
           </AppButton>

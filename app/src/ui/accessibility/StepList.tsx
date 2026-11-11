@@ -7,16 +7,16 @@ import { type A11yStep, stepCopy } from './guide';
 export default function StepList({ step, note }: { step: A11yStep; note: boolean }) {
   const t = useTheme();
   return (
-    <YStack gap="$2">
+    <YStack gap="2">
       {([1, 2, 3] as const).map((n) => {
         const copy = stepCopy(n, note);
         const current = n === step;
         return (
-          <XStack key={n} gap="$2" alignItems="flex-start">
+          <XStack key={n} gap="2" alignItems="flex-start">
             <Text width={22} fontSize={14} fontWeight="700" color={current ? t.primary : t.muted}>
               {n < step ? '✓' : `${n}.`}
             </Text>
-            <YStack flex={1} gap="$1">
+            <YStack flex={1} gap="1">
               <Text fontSize={14} fontWeight={current ? '700' : '400'} color={current ? t.fg : t.muted}>
                 {copy.title}
               </Text>

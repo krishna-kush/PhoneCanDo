@@ -8,12 +8,14 @@ import { usePtySession } from './usePtySession';
 import { useMirrorInput } from './useMirrorInput';
 import { useInitialInput } from './useInitialInput';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { useAppStore } from '../../state/app';
 import { useKeyboardStore } from '../../state/keyboard';
 import { keyboardRoom } from '../common/keyboard/room';
 import { arrowSeq, wheelSeq } from './keys';
 import type { PtyEnd, PtyTransport } from './transport/types';
 import LogoLoader from '../common/LogoLoader';
-import { TUI } from '../common/globals';
+import { useTheme } from '../common/globals';
+import { useTermTheme, type ThemePageMsg } from './theme/useTermTheme';
 import { isTerminalAvailable, TerminalGestureHost } from '../../engine/terminal';
 
 type PageMsg =
@@ -25,7 +27,8 @@ type PageMsg =
   /** The page's own scrollback left its bottom (or came back). */
   | { type: 'scrolled'; up: boolean }
   | { type: 'input'; data: string }
-  | { type: 'title'; title: string };
+  | { type: 'title'; title: string }
+  | ThemePageMsg;
 
 type Props = {
   /** Makes what the view talks to (transport/): its own PTY, or a TUI
@@ -55,7 +58,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
 
   const available = useMemo(() => isTerminalAvailable(), []);
 
-  const { termSize, error: ptyError, outputSettled, applySize, sendText, boostPump } = usePtySession({
+  const { termSize, error: ptyError, outputSettled, applySize, sendText, reply, boostPump } = usePtySession({
     available,
     htmlUri,
     webRef,
@@ -63,6 +66,11 @@ export default function TerminalView({ transport, active, name, initialInput, on
     active,
     onEnd,
   });
+  // The app's scheme: the page's colours, the views around it, and what
+  // the program hears about it (theme/).
+  const theme = useTermTheme({ webRef, htmlUri, reply });
+  const { look } = theme;
+  const primary = useTheme().primary;
   // What the user types goes to the program with the view at the bottom,
   // as in a desktop terminal: a swipe may have scrolled the page's own
   // scrollback up ('scrolled').
@@ -104,6 +112,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
   // terminal (no footer), so the room is the spacer as is. A terminal that
   // mounts with the keyboard up has it at once.
   const keyboardOpen = useKeyboardStore((s) => s.open);
+  const extraKeysSticky = useAppStore((s) => s.extraKeysSticky);
   const spacer = useAnimatedStyle(() => ({ height: keyboardRoom.value }));
 
   useEffect(() => {
@@ -125,11 +134,13 @@ export default function TerminalView({ transport, active, name, initialInput, on
   function onMessage(e: WebViewMessageEvent) {
     try {
       const msg = JSON.parse(e.nativeEvent.data) as PageMsg;
+      if (theme.onMessage(msg)) return;
       if (msg.type === 'ready') {
         console.log(
           `[phonecando-size] ready cols=${msg.cols} rows=${msg.rows} px=${msg.pxW}x${msg.pxH} cell=${(msg.pxW / msg.cols).toFixed(1)}x${(msg.pxH / msg.rows).toFixed(1)} true=${msg.cellW ?? '?'}x${msg.cellH ?? '?'}`,
         );
         applySize(msg.cols, msg.rows);
+        theme.onReady();
         if (active) inputRef.current?.focus();
       } else if (msg.type === 'termsize') {
         console.log(
@@ -168,11 +179,11 @@ export default function TerminalView({ transport, active, name, initialInput, on
 
   if (!available) {
     return (
-      <YStack flex={1} backgroundColor={TUI.bg} padding="$3" gap="$2">
-        <Text color="#0f0" fontFamily="$mono">
+      <YStack flex={1} backgroundColor={look.xterm.background} padding="3" gap="2">
+        <Text color={look.xterm.cursor} fontFamily="mono">
           $ {name}
         </Text>
-        <Text color={TUI.fg} fontFamily="$mono">
+        <Text color={look.muted} fontFamily="mono">
           Native PTY terminal needs a dev build (Expo Go can't load it).
         </Text>
       </YStack>
@@ -181,8 +192,8 @@ export default function TerminalView({ transport, active, name, initialInput, on
 
   if (error) {
     return (
-      <YStack flex={1} backgroundColor={TUI.bg} padding="$3">
-        <Text color={TUI.primary} fontFamily="$mono">
+      <YStack flex={1} backgroundColor={look.xterm.background} padding="3">
+        <Text color={primary} fontFamily="mono">
           Terminal error: {error}
         </Text>
       </YStack>
@@ -193,14 +204,14 @@ export default function TerminalView({ transport, active, name, initialInput, on
     return (
       <YStack
         flex={1}
-        backgroundColor={TUI.bg}
-        padding="$3"
-        gap="$4"
+        backgroundColor={look.xterm.background}
+        padding="3"
+        gap="4"
         alignItems="center"
         justifyContent="center"
       >
         <LogoLoader size={24} />
-        <Text color={TUI.fg} fontFamily="$mono">
+        <Text color={look.muted} fontFamily="mono">
           Loading terminal…
         </Text>
       </YStack>
@@ -208,11 +219,11 @@ export default function TerminalView({ transport, active, name, initialInput, on
   }
 
   return (
-    <YStack flex={1} backgroundColor={TUI.panel}>
+    <YStack flex={1} backgroundColor={look.panel}>
       {/* No onTouchStart focus here: the page posts 'tap' only for true taps
           (swipes become 'scroll'), so focusing on raw touch-down would summon
           the keyboard while the user is just trying to read back. */}
-      <YStack flex={1} backgroundColor={TUI.bg}>
+      <YStack flex={1} backgroundColor={look.xterm.background}>
         {/* Up/down gestures stay with the terminal wherever it is hosted;
             sideways ones go to its parents (engine/terminal.ts). WebView<object>: react-native-webview
             13.16.2 defaults its extra-props type to `undefined`, which leaves
@@ -220,8 +231,8 @@ export default function TerminalView({ transport, active, name, initialInput, on
         <TerminalGestureHost style={{ flex: 1 }}>
           <WebView<object>
             ref={webRef}
-            source={{ uri: htmlUri }}
-            style={{ flex: 1, backgroundColor: TUI.bg }}
+            source={{ uri: theme.uri ?? htmlUri }}
+            style={{ flex: 1, backgroundColor: look.xterm.background }}
             originWhitelist={['*']}
             allowFileAccess
             allowUniversalAccessFromFileURLs
@@ -238,9 +249,9 @@ export default function TerminalView({ transport, active, name, initialInput, on
         onToggleShift={toggleShift}
         onPressKey={pressExtraKey}
         keyboardVisible={keyboardOpen}
-        // Scroll keys must work while reading (keyboard closed): the bar is
-        // the only input path to the render-only WebView.
-        visibleWhenKeyboardOpen={false}
+        // With the keyboard; Settings → Terminal keeps them up while reading
+        // too (the only way to send scroll keys with the keyboard down).
+        visibleWhenKeyboardOpen={!extraKeysSticky}
       />
       {/* The keyboard's room, animated on the UI thread: lifts the row above it. */}
       <Animated.View style={spacer} />

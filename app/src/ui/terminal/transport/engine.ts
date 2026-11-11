@@ -2,7 +2,8 @@
 // (engine/engineTerminal.ts): the view attaches as its one viewer and
 // detaches on close, and the program keeps running. Attach reports the
 // PTY's size, so the replay that the first reads return lands at the size
-// it was drawn at. The view says when it shows the program (focus).
+// it was drawn at. The view says when it shows the program (focus). The
+// runner answers the program's queries (hostAnswers).
 import type { AgentId } from '../../../engine/agents/records';
 import {
   engineTerminalAttach,
@@ -25,6 +26,7 @@ export function engineTransport(agentId: AgentId): PtyTransport {
   }
 
   return {
+    hostAnswers: true,
     async open() {
       try {
         const at = engineTerminalAttach(agentId);

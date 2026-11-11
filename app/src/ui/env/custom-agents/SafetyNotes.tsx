@@ -8,9 +8,9 @@ import { SAFETY_LINES } from '../logic/customAgentText';
 export default function SafetyNotes() {
   const t = useTheme();
   return (
-    <YStack borderWidth={1} borderColor={t.primary} padding="$3" gap="$2" accessibilityRole="summary">
+    <YStack borderWidth={1} borderColor={t.primary} padding="3" gap="2" accessibilityRole="summary">
       {SAFETY_LINES.map((line) => (
-        <XStack key={line} gap="$2">
+        <XStack key={line} gap="2">
           <Text fontSize={14} color={t.primary}>
             !
           </Text>

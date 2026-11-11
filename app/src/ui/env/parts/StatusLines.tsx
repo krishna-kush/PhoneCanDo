@@ -8,9 +8,9 @@ export default function StatusLines({ lines }: { lines: readonly string[] }) {
   const t = useTheme();
   if (lines.length === 0) return null;
   return (
-    <YStack gap="$1">
+    <YStack gap="1">
       {lines.map((line, i) => (
-        <Text key={i} fontFamily="$mono" fontSize={12} color={t.dim} numberOfLines={1}>
+        <Text key={i} fontFamily="mono" fontSize={12} color={t.dim} numberOfLines={1}>
           {line}
         </Text>
       ))}

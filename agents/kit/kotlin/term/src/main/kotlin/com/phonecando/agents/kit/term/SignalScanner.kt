@@ -4,8 +4,10 @@ import java.io.ByteArrayOutputStream
 
 // A terminal program's output, byte by byte, to the Signals in it: bells,
 // window titles, OSC 9 / 9;4 / 777 notices, OSC 7501 status reports and
-// queries (ProgramStatus), full clears, resets and DEC private modes (the
-// alternate screen among them). It parses the escape sequences xterm.js
+// queries (ProgramStatus), full clears, resets, DEC private modes (the
+// alternate screen among them) and the queries a terminal answers about
+// itself (colours, theme, device attributes, status: TermReplies). It
+// parses the escape sequences xterm.js
 // does (ESC, CSI, OSC, DCS/APC/PM/SOS strings) far enough to know where
 // each one ends, so a sequence split across reads is still one sequence
 // and a BEL that ends an OSC is no bell. 8-bit C1 codes are text: in UTF-8
@@ -160,6 +162,10 @@ class SignalScanner {
         out(Signal.Modes(modes, set))
       }
       !privateMarker && final == 'J' && text == "2" -> out(Signal.FullClear)
+      privateMarker && final == 'n' && text == THEME_QUERY -> out(Signal.ThemeQuery)
+      // `CSI > c` and `CSI = c` keep their marker in the params: other queries.
+      !privateMarker && final == 'c' && (text == "" || text == "0") -> out(Signal.DeviceAttributesQuery)
+      !privateMarker && final == 'n' && text == "5" -> out(Signal.OperatingStatusQuery)
     }
   }
 
@@ -175,7 +181,9 @@ class SignalScanner {
     val semi = text.indexOf(';')
     if (semi < 0) return
     val body = text.substring(semi + 1)
-    val signal = when (text.substring(0, semi)) {
+    val command = text.substring(0, semi)
+    if (command in COLOR_COMMANDS) return colorQueries(command.toInt(), body, bel, out)
+    val signal = when (command) {
       "0", "2" -> Signal.Title(body)
       "9" -> if (body.startsWith("4;")) Signal.Progress(body.substring(2)) else Signal.Osc9(body)
       "777" -> body.takeIf { it.startsWith(NOTIFY) }?.let { Signal.Osc777(it.substring(NOTIFY.length)) }
@@ -188,6 +196,23 @@ class SignalScanner {
       else -> null
     }
     signal?.let(out)
+  }
+
+  // The `?` fields of an OSC 4 (index;spec pairs) or OSC 10-12 (one field
+  // per command from this one up: `10;?;?` asks for 10 and 11); the
+  // fields that set a colour say nothing.
+  private fun colorQueries(osc: Int, body: String, bel: Boolean, out: (Signal) -> Unit) {
+    val fields = body.split(';')
+    if (osc == TermTheme.OSC_PALETTE) {
+      for (i in 0 until fields.size - 1 step 2) {
+        val index = fields[i].toIntOrNull() ?: continue
+        if (fields[i + 1] == "?") out(Signal.ColorQuery(osc, index, bel))
+      }
+      return
+    }
+    fields.forEachIndexed { i, field ->
+      if (field == "?" && osc + i <= TermTheme.OSC_CURSOR) out(Signal.ColorQuery(osc + i, null, bel))
+    }
   }
 
   companion object {
@@ -204,5 +229,9 @@ class SignalScanner {
 
     /** The DEC private modes that switch to the alternate screen. */
     val ALT_SCREEN_MODES = setOf(47, 1047, 1049)
+
+    // The OSC commands whose `?` asks for a colour (TermTheme.answer).
+    private val COLOR_COMMANDS = setOf("4", "10", "11", "12")
+    private const val THEME_QUERY = "996"
   }
 }

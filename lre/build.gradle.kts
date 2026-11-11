@@ -6,8 +6,8 @@
 // for CI (lre-compat.yml), which nothing else depends on. No android.*, no
 // org.json anywhere here.
 plugins {
-    kotlin("jvm") version "2.1.20" apply false
-    kotlin("plugin.serialization") version "2.1.20" apply false
+    kotlin("jvm") version "2.2.10" apply false
+    kotlin("plugin.serialization") version "2.2.10" apply false
 }
 
 allprojects {

@@ -46,14 +46,15 @@ export default function AppCard({
   return (
     <XStack
       alignItems="center"
-      gap="$3"
+      gap="3"
       borderWidth={1}
       borderColor={selected ? t.primary : t.line}
       borderRadius={0}
-      padding="$3"
+      padding="3"
       minHeight={72}
       backgroundColor={t.panel}
-      pressStyle={onPress ? { opacity: 0.9, scale: 0.99 } : undefined}
+      opacity={onPress ? 'press:0.9' : undefined}
+      scale={onPress ? 'press:0.99' : undefined}
       onPress={onPress}
       onLongPress={onLongPress}
     >
@@ -68,7 +69,7 @@ export default function AppCard({
       >
         {icon ?? (
           <Text
-            fontFamily="$mono"
+            fontFamily="mono"
             fontSize={18}
             fontWeight="600"
             color={selected ? t.primary : t.secondaryInk}
@@ -77,13 +78,13 @@ export default function AppCard({
           </Text>
         )}
       </YStack>
-      <YStack flex={1} minWidth={0} gap="$1" justifyContent="center">
+      <YStack flex={1} minWidth={0} gap="1" justifyContent="center">
         <Text fontSize={16} fontWeight="600" numberOfLines={1} ellipsizeMode="tail">
           {selected ? `✓ ${title}` : title}
         </Text>
         {subtitle ? (
           <Text
-            fontFamily="$mono"
+            fontFamily="mono"
             fontSize={12}
             color={t.dim}
             numberOfLines={2}
@@ -97,7 +98,7 @@ export default function AppCard({
       {menu && menu.length > 0 ? (
         <CardMenu items={menu} label={menuLabel ?? `Actions for ${title}`} />
       ) : showChevron ? (
-        <YStack flexShrink={0} paddingRight="$1" opacity={0.5}>
+        <YStack flexShrink={0} paddingRight="1" opacity={0.5}>
           <ArrowIcon dir="right" size={18} />
         </YStack>
       ) : null}

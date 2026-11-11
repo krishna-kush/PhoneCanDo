@@ -27,7 +27,7 @@ pnpm android:full      # default: full phone control + self-update
 ```
 
 Channels are Gradle product flavors; `pnpm android:<channel>` re-applies the
-config plugins with `--no-clean` (seconds; Expo CLI 57 would otherwise
+config plugins with `--no-clean` (seconds; Expo CLI would otherwise
 regenerate `app/android`) and builds the `<channel>Debug` variant, so
 switching channels is one command and compiled outputs are reused. Add
 `--clean` to start from scratch.

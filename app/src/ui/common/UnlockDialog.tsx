@@ -70,39 +70,39 @@ export default function UnlockDialog() {
         backgroundColor="rgba(0,0,0,0.6)"
         alignItems="center"
         justifyContent="center"
-        padding="$5"
+        padding="5"
       >
         <YStack
           backgroundColor={t.panel}
           borderWidth={1}
           borderColor={t.lineStrong}
           borderRadius={0}
-          padding="$4"
-          gap="$3"
+          padding="4"
+          gap="3"
           width="100%"
           maxWidth={360}
         >
           <Text fontSize={19} fontWeight="700">
             {prompt ? askerTitle(prompt) : 'Permission required'}
           </Text>
-          <Text fontSize={15} color="$color10">
+          <Text fontSize={15} color="color10">
             PhoneCanDo needs permission to perform automated actions on this device. Unlock with
             biometrics or your device PIN to continue.
           </Text>
-          <Text fontSize={13} color="$color10">
+          <Text fontSize={13} color="color10">
             The AI cannot unlock this; only you can.
           </Text>
           {note ? (
-            <Text fontSize={13} color="$color10">
+            <Text fontSize={13} color="color10">
               {note}
             </Text>
           ) : null}
           {msg ? (
-            <Text fontSize={13} color="$color10">
+            <Text fontSize={13} color="color10">
               {msg}
             </Text>
           ) : null}
-          <XStack gap="$2" marginTop="$2">
+          <XStack gap="2" marginTop="2">
             <AppButton variant="secondary" flex={1} onPress={close} disabled={busy}>
               Not now
             </AppButton>

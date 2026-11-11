@@ -62,17 +62,17 @@ export default function EngineSection({ agent, image, linux }: Props) {
 
   return (
     <>
-      <XStack alignItems="baseline" gap="$2" flexWrap="wrap">
+      <XStack alignItems="baseline" gap="2" flexWrap="wrap">
         <Text fontSize={16} fontWeight="600">
           {engineStateWord(status?.state)}
         </Text>
-        <Text fontFamily="$mono" fontSize={11} letterSpacing={1.2} color={t.dim} textTransform="uppercase">
+        <Text fontFamily="mono" fontSize={11} letterSpacing={1.2} color={t.dim} textTransform="uppercase">
           {status?.port && up ? `port ${status.port} · ${moodLine(moodOf(status.state))}` : moodLine(moodOf(status?.state))}
         </Text>
       </XStack>
       {error ? <Note tone="error">{error}</Note> : null}
       {!error && status?.error && (status.state === 'failed' || status.state === 'died') ? (
-        <Text fontFamily="$mono" fontSize={12} color={t.dim} selectable>
+        <Text fontFamily="mono" fontSize={12} color={t.dim} userSelect="text">
           {status.error}
         </Text>
       ) : null}
@@ -92,7 +92,7 @@ export default function EngineSection({ agent, image, linux }: Props) {
           {`Open ${kind.label} home`}
         </AppButton>
       ) : (
-        <XStack gap="$2">
+        <XStack gap="2">
           <AppButton flex={1} variant="secondary" disabled={!ready} onPress={() => follow(goHome)}>
             Open chat
           </AppButton>

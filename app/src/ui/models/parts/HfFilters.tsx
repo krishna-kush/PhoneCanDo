@@ -24,8 +24,8 @@ export default function HfFilters({
   const on = activeFilters(filters).length;
 
   return (
-    <YStack gap="$2">
-      <XStack gap="$2" alignItems="stretch">
+    <YStack gap="2">
+      <XStack gap="2" alignItems="stretch">
         <YStack flex={1} flexBasis={0} minWidth={0}>
           <FilterPicker
             text={sortText(filters.sort)}

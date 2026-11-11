@@ -4,12 +4,19 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <!--XTERM_CSS-->
+<script>
+  // The theme rides on the URL (terminal.js): its background from the
+  // first paint, so a light terminal never flashes the dark default.
+  try {
+    document.documentElement.style.setProperty('--bg', JSON.parse(decodeURIComponent(location.hash.slice(1))).background);
+  } catch (e) {}
+</script>
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; overflow: hidden; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg, #0a0a0a); overflow: hidden; }
   /* Center the xterm viewport so the fit remainder (< 1 cell each axis)
      splits evenly: otherwise left/top show bare padding while right/bottom
      show padding + remainder, reading as asymmetric borders. */
-  #term { height: 100%; width: 100%; padding: 8px; box-sizing: border-box; background: #0a0a0a; display: flex; align-items: center; justify-content: center; }
+  #term { height: 100%; width: 100%; padding: 8px; box-sizing: border-box; background: var(--bg, #0a0a0a); display: flex; align-items: center; justify-content: center; }
   #term .xterm { flex: none; }
 </style>
 </head>

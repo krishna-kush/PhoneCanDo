@@ -38,10 +38,10 @@ type Props = {
 // re-renders them: with Reanimated's fast path the values on screen are
 // written straight to the native view, while React's props for it keep the
 // ones it mounted with (opacity 0 and a quarter to the right, for a page
-// that slid in) until Reanimated syncs them back a second or so after the
-// motion settles, and a React commit mounts the animated values of its own
-// moment over newer ones written straight to the view (Reanimated 4.5;
-// 4.7.1 writes them again after the mount). What changes with a layer's
+// that slid in) until Reanimated syncs them back after the motion settles.
+// Since 4.7.1 Reanimated writes the newest values again after each React
+// mount (4.5 showed the stale ones for a frame); a render we skip is still
+// work saved mid-motion. What changes with a layer's
 // part (touches, focus) lives in LayerBody. Layers below the top stay
 // mounted and laid out, only invisible: a web UI or a terminal under a page
 // keeps its state and its size.

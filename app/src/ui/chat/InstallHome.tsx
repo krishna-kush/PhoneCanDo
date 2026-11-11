@@ -16,8 +16,8 @@ export default function InstallHome({ agent }: { agent: Agent }) {
   const running = useInstallRun(agent.id)?.status === 'running';
   const label = agentKind(agent.kind).label;
   return (
-    <YStack flex={1} backgroundColor={t.bg} padding="$4" gap="$3" justifyContent="center">
-      <Text color={t.fg} fontFamily="$mono">
+    <YStack flex={1} backgroundColor={t.bg} padding="4" gap="3" justifyContent="center">
+      <Text color={t.fg} fontFamily="mono">
         {running ? `Installing ${label} in its machine…` : `${label} isn't installed in its machine yet`}
       </Text>
       <InstallStatus agent={agent} image={image} />

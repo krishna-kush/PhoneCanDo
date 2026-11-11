@@ -74,9 +74,9 @@ lists every agent with its engine state and makes the tapped one active
   Nothing above the stack re-renders for a transition: App does not
   subscribe to the stack, and Home reads whether it is in front from
   `ui/nav/homeInFront.ts`.
-- Under that flag (Reanimated 4.5) an animated view's React props keep its
-  mount-time values, and a React commit can put them back over newer ones.
-  So which layer plays which part is UI-thread state (`progress.ts`,
+- Under that flag an animated view's React props keep its mount-time
+  values; Reanimated 4.5 let a React commit show them for a frame (4.7.1
+  writes the newest again after each mount). So which layer plays which part is UI-thread state (`progress.ts`,
   `motion.ts` `roleOf`), `PageLayer` renders once, and only `LayerBody`
   re-renders with a part change; it is never flattened, so a part change
   never moves a page or Home's web view to a new native parent.

@@ -21,12 +21,12 @@ export default function FilterButton({ text, changed, label, ...box }: Props) {
       flexGrow={1}
       minHeight={HIT.minTouch}
       alignItems="center"
-      gap="$2"
-      paddingHorizontal="$3"
-      paddingVertical="$2"
+      gap="2"
+      paddingHorizontal="3"
+      paddingVertical="2"
       borderWidth={1}
       borderColor={changed ? t.fg : t.lineStrong}
-      pressStyle={{ opacity: 0.8 }}
+      opacity="press:0.8"
       accessibilityRole="button"
       accessibilityLabel={label}
       {...box}
@@ -34,7 +34,7 @@ export default function FilterButton({ text, changed, label, ...box }: Props) {
       <Text
         flex={1}
         minWidth={0}
-        fontFamily="$mono"
+        fontFamily="mono"
         fontSize={12}
         letterSpacing={0.8}
         textTransform="uppercase"

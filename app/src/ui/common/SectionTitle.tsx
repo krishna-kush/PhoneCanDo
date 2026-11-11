@@ -6,10 +6,10 @@ import { useTheme } from './globals';
 export default function SectionTitle({ children }: { children: string }) {
   const t = useTheme();
   return (
-    <XStack alignItems="center" gap="$2" marginTop="$3">
+    <XStack alignItems="center" gap="2" marginTop="3">
       <YStack width={6} height={6} backgroundColor={t.primary} flexShrink={0} />
       <Text
-        fontFamily="$mono"
+        fontFamily="mono"
         fontSize={11}
         fontWeight="600"
         letterSpacing={1.6}

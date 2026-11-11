@@ -1,10 +1,12 @@
 package com.phonecando.runner.engine
 
+import com.phonecando.agents.kit.term.TermTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
-// JVM checks for the engine environment's layers and the agent tag.
+// JVM checks for the engine environment's layers, the agent tag and a TUI's
+// terminal values.
 class EngineEnvTest {
   private val base = mapOf("PATH" to "/system/bin", "HOME" to "/data/app-home", "PHONECANDO_BRIDGE_TOKEN" to "stale")
 
@@ -33,6 +35,16 @@ class EngineEnvTest {
     assertEquals("/img/home/.phonecando/events", tui["PHONECANDO_EVENTS"])
     val server = EngineEnv.build(stale, emptyMap(), emptyMap(), null, "tok", "full", "a1")
     assertFalse(server.containsKey("PHONECANDO_EVENTS"))
+  }
+
+  @Test fun aTuiLearnsTheThemeOnlyOnceTheAppToldIt() {
+    assertFalse(EngineEnv.terminal(null).containsKey("COLORFGBG"))
+    val ansi = List(16) { "#000000" }
+    val dark = checkNotNull(TermTheme.of(true, "#e6e6e6", "#0a0a0a", "#00ff00", ansi))
+    val light = checkNotNull(TermTheme.of(false, "#1a1a1a", "#ffffff", "#1a7f37", ansi))
+    assertEquals("15;0", EngineEnv.terminal(dark)["COLORFGBG"])
+    assertEquals("0;15", EngineEnv.terminal(light)["COLORFGBG"])
+    assertEquals("xterm-256color", EngineEnv.terminal(light)["TERM"])
   }
 
   @Test fun noBridgeMeansNoBridgeValues() {

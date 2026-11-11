@@ -18,14 +18,3 @@ export function useScheme(): Scheme {
 export function useTheme(): Theme {
   return tokens[useScheme()];
 }
-
-// The terminal is the TUI's own canvas (opencode/xterm pick its colours), so
-// its chrome stays dark in both schemes — the app never paints over it with
-// theme colours. `primary` still comes from the shared palette.
-export const TUI = {
-  bg: '#0a0a0a',
-  panel: '#111111',
-  line: '#222222',
-  fg: '#888888',
-  primary: tokens.dark.primary,
-} as const;

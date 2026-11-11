@@ -81,7 +81,7 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
   return (
     <>
       {env?.state === 'downloading' ? (
-        <YStack gap="$2">
+        <YStack gap="2">
           <ProgressBar
             label={progress ? progressLine(progress.step, progress.done, progress.total) : 'Downloading'}
             fraction={progress ? stepFraction(progress.step, progress.done, progress.total) : null}
@@ -95,7 +95,7 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
       ) : null}
 
       {env?.state === 'failed' ? (
-        <YStack gap="$2">
+        <YStack gap="2">
           <Note tone="error">{`The download stopped.${failedWhy ? ` ${failedWhy}` : ''}`}</Note>
           {canRetry ? (
             <AppButton variant="secondary" loading={busy === 'retry'} onPress={retry}>
@@ -116,33 +116,33 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
           </YStack>
         ))}
         {makingFirst && rows.length === 0 ? (
-          <YStack padding="$3">
+          <YStack padding="3">
             <ProgressBar label="Making its first agent" fraction={null} />
           </YStack>
         ) : null}
         {rows.length === 0 && !makingFirst ? (
-          <YStack padding="$3">
+          <YStack padding="3">
             <Note>{canAddAgent ? 'No agents here yet.' : 'No agents here.'}</Note>
           </YStack>
         ) : null}
         {canAddAgent ? (
           <XStack
             alignItems="center"
-            gap="$3"
+            gap="3"
             minHeight={HIT.buttonH}
-            paddingHorizontal="$3"
+            paddingHorizontal="3"
             borderTopWidth={rows.length > 0 || makingFirst ? 1 : 0}
             borderColor={t.line}
-            pressStyle={{ backgroundColor: t.panel2 }}
+            backgroundColor={`press:${t.panel2}`}
             opacity={newAgentHere.busy ? 0.5 : 1}
             onPress={newAgentHere.busy ? undefined : newAgent}
             accessibilityRole="button"
             accessibilityLabel="New agent here"
           >
-            <Text fontFamily="$mono" fontSize={18} color={t.primary} width={25} textAlign="center">
+            <Text fontFamily="mono" fontSize={18} color={t.primary} width={25} textAlign="center">
               +
             </Text>
-            <Text fontFamily="$mono" fontSize={12} letterSpacing={1.2} textTransform="uppercase">
+            <Text fontFamily="mono" fontSize={12} letterSpacing={1.2} textTransform="uppercase">
               {newAgentHere.busy ? 'Making a new agent…' : 'New agent here'}
             </Text>
           </XStack>

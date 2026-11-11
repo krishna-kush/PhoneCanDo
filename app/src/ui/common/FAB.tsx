@@ -15,17 +15,18 @@ export default function FAB({ label = '+', onPress, accessibilityLabel }: Props)
   return (
     <Button
       position="absolute"
-      bottom="$5"
-      right="$4"
+      bottom="5"
+      right="4"
       width={HIT.fabSize}
       height={HIT.fabSize}
       borderRadius={0}
       paddingHorizontal={0}
       justifyContent="center"
       alignItems="center"
+      opacity="press:0.9"
+      scale="press:0.96"
       onPress={onPress}
       accessibilityLabel={accessibilityLabel ?? label}
-      pressStyle={{ opacity: 0.9, scale: 0.96 }}
     >
       <PlusIcon />
     </Button>

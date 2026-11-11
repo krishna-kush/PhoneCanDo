@@ -5,6 +5,7 @@ import { localTransport } from './transport/local';
 import { useOpenTuiChat } from './useOpenTuiChat';
 import type { TerminalSession } from '../../state/app';
 import { track } from '../../engine/telemetry';
+import { useScheme } from '../common/globals';
 
 // One terminal session (its page is keyed by session id): the agent's TUI
 // client or a shell in its Linux image, each on a PTY of its own that
@@ -13,6 +14,8 @@ import { track } from '../../engine/telemetry';
 export default function TerminalScreen({ session, active }: { session: TerminalSession; active: boolean }) {
   // What the program titles its terminal: an agent TUI names its chat there.
   const [termTitle, setTermTitle] = useState('');
+  // The scheme when the PTY opens: its program starts knowing it (COLORFGBG).
+  const scheme = useScheme();
   useOpenTuiChat(session.kind === 'tui' ? session.agentId : null, termTitle);
 
   // One per terminal opened (the screen is keyed by session).
@@ -22,7 +25,7 @@ export default function TerminalScreen({ session, active }: { session: TerminalS
 
   return (
     <TerminalView
-      transport={() => localTransport(() => sessionRecipe(session))}
+      transport={() => localTransport(() => sessionRecipe(session, scheme))}
       active={active}
       name={session.kind === 'linux' ? 'sh' : 'tui'}
       initialInput={session.kind === 'linux' ? session.initialInput : undefined}

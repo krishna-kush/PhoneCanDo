@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+# Tamagui's compiler evaluates the config and components in Node from the
+# app root, so every tamagui package has to be reachable from there.
+publicHoistPattern:
+  - '*tamagui*'
+  - '@tamagui/*'

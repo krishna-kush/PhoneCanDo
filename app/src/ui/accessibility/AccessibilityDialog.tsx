@@ -70,15 +70,15 @@ export default function AccessibilityDialog() {
         backgroundColor="rgba(0,0,0,0.6)"
         alignItems="center"
         justifyContent="center"
-        padding="$5"
+        padding="5"
       >
         <YStack
           backgroundColor={t.panel}
           borderWidth={1}
           borderColor={t.lineStrong}
           borderRadius={0}
-          padding="$4"
-          gap="$3"
+          padding="4"
+          gap="3"
           width="100%"
           maxWidth={360}
         >
@@ -92,25 +92,25 @@ export default function AccessibilityDialog() {
               {askerTitle(prompt)}
             </Text>
           ) : null}
-          <Text fontSize={15} color="$color10">
+          <Text fontSize={15} color="color10">
             {COPY.dialogNeed}
             {steps.guided ? COPY.dialogGuided : COPY.dialogPlain}
           </Text>
           {steps.guided ? <StepList step={steps.step} note={steps.note} /> : null}
-          <Text fontSize={13} color="$color10">
+          <Text fontSize={13} color="color10">
             {COPY.dialogOnlyYou}
           </Text>
           {waiting ? (
-            <Text fontSize={13} color="$color10">
+            <Text fontSize={13} color="color10">
               {waiting}
             </Text>
           ) : null}
           {msg ? (
-            <Text fontSize={13} color="$color10">
+            <Text fontSize={13} color="color10">
               {msg}
             </Text>
           ) : null}
-          <XStack gap="$2" marginTop="$2">
+          <XStack gap="2" marginTop="2">
             <AppButton variant="secondary" flex={1} onPress={close}>
               Not now
             </AppButton>

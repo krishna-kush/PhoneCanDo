@@ -18,7 +18,7 @@ export default class RootError extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <YStack flex={1} backgroundColor="#300" padding="$3" gap="$2">
+        <YStack flex={1} backgroundColor="#300" padding="3" gap="2">
           <Text color="#fff" fontWeight="bold">
             Render crashed:
           </Text>

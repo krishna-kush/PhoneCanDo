@@ -11,7 +11,7 @@ cd lre && LRE_LIVE=1 ./gradlew :oci:test  # adds the live Docker Hub test (spend
 ```
 
 The wrapper is Gradle 9.3.1. Every module builds with a JDK 17 toolchain
-(its `build.gradle.kts`) and Kotlin 2.1.20 (`lre/build.gradle.kts`).
+(its `build.gradle.kts`) and Kotlin 2.2.10 (`lre/build.gradle.kts`).
 
 ## Launcher
 

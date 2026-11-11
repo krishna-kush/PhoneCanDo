@@ -13,14 +13,15 @@ import LogoMark from '../common/LogoMark';
 import { useScheme } from '../common/globals';
 import PhoneControlSection from './PhoneControlSection';
 import PrivacySection from './PrivacySection';
+import TerminalSection from './TerminalSection';
 import UpdateSection from './UpdateSection';
 
 const runnerAvailable = runner.isRunnerAvailable();
 const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark'];
 
-// App-wide options only: about and licences, updates, theme, phone control,
-// privacy. Each agent's engine, reset and delete live on its page (the
-// drawer's › beside it).
+// App-wide options only: about and licences, updates, theme, the terminal's
+// extra keys, phone control, privacy. Each agent's engine, reset and delete
+// live on its page (the drawer's › beside it).
 export default function SettingsScreen() {
   const scheme = useScheme();
   const themeMode = useAppStore((s) => s.themeMode);
@@ -60,7 +61,7 @@ export default function SettingsScreen() {
       <UpdateSection channel={channel} />
 
       <SectionTitle>Appearance</SectionTitle>
-      <XStack gap="$2">
+      <XStack gap="2">
         {THEME_MODES.map((mode) => (
           <AppButton
             key={mode}
@@ -73,6 +74,8 @@ export default function SettingsScreen() {
           </AppButton>
         ))}
       </XStack>
+
+      <TerminalSection />
 
       {channel !== 'lite' ? <PhoneControlSection channel={channel} /> : null}
 

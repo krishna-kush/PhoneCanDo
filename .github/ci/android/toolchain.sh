@@ -10,6 +10,8 @@
 #    it); the runner image ships other versions.
 #  - CMake 3.22.1: the AGP default the JNI modules build with; the image ships
 #    3.31 and 4.x only.
+#  - The SDK platform and build tools React Native's catalog compiles with,
+#    so a new compileSdk never waits for AGP to download them mid-build.
 set -euo pipefail
 
 gradle_home=${GRADLE_USER_HOME:-$HOME/.gradle}
@@ -29,13 +31,20 @@ if [ -z "$ndk" ]; then
   exit 1
 fi
 cmake=3.22.1
+compile=$(sed -n 's/^compileSdk *= *"\([^"]*\)".*/\1/p' "$catalog")
+tools=$(sed -n 's/^buildTools *= *"\([^"]*\)".*/\1/p' "$catalog")
+if [ -z "$compile" ] || [ -z "$tools" ]; then
+  echo "::error title=SDK version::no compileSdk or buildTools in $catalog"
+  exit 1
+fi
 
 sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 log="${RUNNER_TEMP:-/tmp}/sdkmanager.log"
-echo "[toolchain] installing ndk;$ndk cmake;$cmake"
-if ! "$sdkmanager" --install "ndk;$ndk" "cmake;$cmake" >"$log" 2>&1; then
+packages=("ndk;$ndk" "cmake;$cmake" "platforms;android-$compile" "build-tools;$tools")
+echo "[toolchain] installing ${packages[*]}"
+if ! "$sdkmanager" --install "${packages[@]}" >"$log" 2>&1; then
   tail -n 40 "$log"
-  echo "::error title=sdkmanager::could not install ndk;$ndk cmake;$cmake"
+  echo "::error title=sdkmanager::could not install ${packages[*]}"
   exit 1
 fi
 test -d "$ANDROID_HOME/ndk/$ndk" && test -x "$ANDROID_HOME/cmake/$cmake/bin/cmake"

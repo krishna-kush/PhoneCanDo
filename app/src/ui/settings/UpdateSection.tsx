@@ -28,7 +28,7 @@ export default function UpdateSection({ channel }: { channel: string }) {
           chevron={false}
           icon={<Thumb up={false} />}
         />
-        <Text fontSize={14} color="$color10">
+        <Text fontSize={14} color="color10">
           Right now the agent can think but not act. It cannot see your screen, tap a button or
           type a word, so every "open WhatsApp and reply" ends in a polite shrug. The full build
           fixes that in one tap: it installs over this one, keeps your data, and gives the agent
@@ -38,7 +38,7 @@ export default function UpdateSection({ channel }: { channel: string }) {
         <AppButton variant="secondary" onPress={() => void setUpdatePromptMuted(!updatePromptMuted)}>
           {updatePromptMuted ? 'Ask again on launch' : "Don't ask on launch"}
         </AppButton>
-        <Text fontSize={13} color="$color10">
+        <Text fontSize={13} color="color10">
           {updatePromptMuted
             ? 'The full-build offer stays quiet at launch. This button brings it back.'
             : 'The full-build offer opens every launch until you install it or silence it here.'}

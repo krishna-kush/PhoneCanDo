@@ -3,6 +3,7 @@ package com.phonecando.runner.engine.tui
 import com.phonecando.agents.kit.term.ScreenRing
 import com.phonecando.agents.kit.term.Signal
 import com.phonecando.agents.kit.term.TermReplies
+import com.phonecando.agents.kit.term.TermTheme
 import com.phonecando.terminal.host.HostedPty
 import com.phonecando.terminal.host.PtySink
 import java.util.concurrent.CountDownLatch
@@ -21,8 +22,10 @@ import java.util.concurrent.CountDownLatch
 // resizes run outside the lock: a write may block up to a second while the
 // program does not read, and output must keep draining meanwhile.
 // It also answers the program as a terminal would (kit-term TermReplies):
-// the Program Status Protocol's support query, and focus reports while the
-// program asked for them. The terminal is focused while its viewer says it
+// the Program Status Protocol's support query, focus reports while the
+// program asked for them, device attributes and the operating status, and,
+// from the app's theme (theme(), TerminalThemes), colour and theme queries
+// and theme reports. The terminal is focused while its viewer says it
 // shows the program (focus), so with no viewer, or one off screen, it is
 // not: a TUI that notifies only while unfocused does so whenever nobody
 // looks. Answers due before the PTY is bound go out at bind.
@@ -163,6 +166,11 @@ internal class EngineTerminal(
       if (!holds(viewerId)) return
       answer(replies.focus(shown))
     }
+  }
+
+  /** The terminal's theme (TerminalThemes): what it answers colour and theme queries from; a program that asked for theme reports hears a change. */
+  fun theme(theme: TermTheme) {
+    synchronized(answerLock) { answer(replies.theme(theme)) }
   }
 
   /** The engine keeps running, unfocused; a viewer that was already replaced changes nothing. */

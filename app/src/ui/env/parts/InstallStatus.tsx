@@ -25,7 +25,7 @@ export default function InstallStatus({ agent, image }: Props) {
 
   if (run?.status === 'running') {
     return (
-      <YStack gap="$2">
+      <YStack gap="2">
         <ProgressBar label={installLine(run, label)} fraction={run.fraction} />
         <StatusLines lines={installActivityLines(run)} />
         <LogTail lines={run.tail} />
@@ -34,7 +34,7 @@ export default function InstallStatus({ agent, image }: Props) {
   }
   if (run?.status === 'failed') {
     return (
-      <YStack gap="$2">
+      <YStack gap="2">
         <Note tone="error">{installFailureText(run, label)}</Note>
         <LogTail lines={run.tail} />
         <AppButton variant="secondary" onPress={() => void installAgent(agent.id, run.mode)}>
@@ -46,7 +46,7 @@ export default function InstallStatus({ agent, image }: Props) {
   if (run?.status === 'done' && !agent.needsInstall) return <Note>{installDoneLine(run, label)}</Note>;
   if (!agent.needsInstall) return null;
   return (
-    <YStack gap="$2">
+    <YStack gap="2">
       <Note>{ready ? 'Not installed yet.' : 'It installs once its machine is ready.'}</Note>
       <AppButton disabled={!ready} onPress={() => void installAgent(agent.id)}>
         {`Install ${label}`}

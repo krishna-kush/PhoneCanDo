@@ -20,6 +20,7 @@ import com.phonecando.runner.engine.image.OsNote
 import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.spawn.ServerSpawner
 import com.phonecando.runner.engine.spawn.TuiSpawner
+import com.phonecando.runner.engine.tui.TerminalThemes
 import java.io.File
 
 /** What one launch of an agent's engine needs; kept for a relaunch on a fresh port. */
@@ -114,7 +115,7 @@ internal class EngineLauncher(private val context: Context) {
     val kitHome = kitHome(plan)
     val env = EngineEnv.build(
       base = System.getenv(),
-      image = if (tui) plan.imageEnv + EngineEnv.TERMINAL + browser(plan, kitHome) else plan.imageEnv,
+      image = if (tui) plan.imageEnv + EngineEnv.terminal(TerminalThemes.current) + browser(plan, kitHome) else plan.imageEnv,
       kind = spec.env,
       bridgeUrl = bridgeUrl,
       bridgeToken = plan.record.bridgeToken,

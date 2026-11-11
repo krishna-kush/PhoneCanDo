@@ -122,8 +122,8 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
 
   if (error) {
     return (
-      <YStack flex={1} backgroundColor={t.bg} padding="$4" gap="$3" justifyContent="center">
-        <Text color={t.primary} fontFamily="$mono">
+      <YStack flex={1} backgroundColor={t.bg} padding="4" gap="3" justifyContent="center">
+        <Text color={t.primary} fontFamily="mono">
           Web UI error: {error}
         </Text>
         <AppButton
@@ -145,13 +145,13 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
       <YStack
         flex={1}
         backgroundColor={t.bg}
-        padding="$3"
-        gap="$4"
+        padding="3"
+        gap="4"
         alignItems="center"
         justifyContent="center"
       >
         <LogoLoader size={24} />
-        <Text color={t.fg} fontFamily="$mono">
+        <Text color={t.fg} fontFamily="mono">
           Loading web UI…
         </Text>
         <WakingLine />

@@ -15,7 +15,7 @@ type Props = {
 // and a new agent's Model step.
 export default function ModelPicker({ models, selected, disabled = false, onSelect }: Props) {
   return (
-    <YStack gap="$2" accessibilityRole="radiogroup">
+    <YStack gap="2" accessibilityRole="radiogroup">
       {modelChoices(models, selected).map((c) => (
         <ChoiceRow
           key={c.id ?? 'own'}

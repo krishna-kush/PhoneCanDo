@@ -74,6 +74,7 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 
 ## Planning
 
+- `planning/todo.md` — open app work (R8 for release builds).
 - `planning/automation.md` — automation phases, non-goals and cross-product
   roadmap.
 - `research/` — background notes and open questions.

@@ -110,4 +110,32 @@ class SignalScannerTest {
     assertEquals(8L, s.position)
     assertTrue(s.atBoundary)
   }
+
+  @Test fun colourQueries() {
+    assertEquals(listOf(Signal.ColorQuery(11, null, bel = false)), scan("\u001b]11;?\u001b\\"))
+    assertEquals(listOf(Signal.ColorQuery(11, null, bel = true)), scan("\u001b]11;?\u0007"))
+    // One OSC 10 asks for 10 and 11; a field that sets a colour asks nothing.
+    assertEquals(
+      listOf(Signal.ColorQuery(10, null, true), Signal.ColorQuery(11, null, true)),
+      scan("\u001b]10;?;?\u0007"),
+    )
+    assertEquals(listOf(Signal.ColorQuery(12, null, true)), scan("\u001b]10;#ffffff;rgb:0/0/0;?\u0007"))
+    assertEquals(listOf(Signal.ColorQuery(12, null, true)), scan("\u001b]12;?\u0007"))
+    assertEquals(
+      listOf(Signal.ColorQuery(4, 1, false), Signal.ColorQuery(4, 200, false)),
+      scan("\u001b]4;1;?;2;#00ff00;200;?\u001b\\"),
+    )
+    // Past 12 (pointer and highlight colours), and plain sets: none.
+    assertEquals(emptyList(), scan("\u001b]11;#000000\u0007\u001b]17;?\u0007\u001b]4;x;?\u0007"))
+    assertSplitSafe("a\u001b]11;?\u001b\\b", listOf(Signal.ColorQuery(11, null, false)))
+  }
+
+  @Test fun themeDeviceAndStatusQueries() {
+    assertEquals(listOf(Signal.ThemeQuery), scan("\u001b[?996n"))
+    assertEquals(listOf(Signal.DeviceAttributesQuery, Signal.DeviceAttributesQuery), scan("\u001b[c\u001b[0c"))
+    assertEquals(listOf(Signal.OperatingStatusQuery), scan("\u001b[5n"))
+    // Secondary and tertiary attributes, the cursor report and other DSRs are not these.
+    assertEquals(emptyList(), scan("\u001b[>c\u001b[>0c\u001b[=c\u001b[6n\u001b[?6n\u001b[996n\u001b[?5n"))
+    assertEquals(listOf(Signal.Modes(listOf(2031), true)), scan("\u001b[?2031h"))
+  }
 }

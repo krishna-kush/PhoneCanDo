@@ -1,6 +1,7 @@
 package com.phonecando.runner.engine.spawn
 
 import com.phonecando.runner.engine.tui.EngineTerminal
+import com.phonecando.runner.engine.tui.TerminalThemes
 import com.phonecando.terminal.host.PtyHost
 import com.phonecando.terminal.host.PtySpawnSpec
 import java.io.File
@@ -13,7 +14,8 @@ import java.io.File
 // carriage return (device-checked with top). [handOver]: the program hands
 // the terminal on (our Linux
 // launcher, to the guest program). Its output drains into an
-// EngineTerminal from the first byte, whether or not anyone watches.
+// EngineTerminal from the first byte, whether or not anyone watches, which
+// answers from the app's terminal theme from that byte on (TerminalThemes).
 internal object TuiSpawner {
   /** The size a TUI starts at; the first viewer resizes it. */
   const val ROWS = 24
@@ -21,6 +23,7 @@ internal object TuiSpawner {
 
   fun spawn(argv: List<String>, env: Map<String, String>, cwd: File, handOver: Boolean): TuiProcess {
     val terminal = EngineTerminal(ROWS, COLS)
+    TerminalThemes.follow(terminal)
     val spec = PtySpawnSpec(argv, env.map { (k, v) -> "$k=$v" }, cwd.path, ROWS, COLS, raw = false, handOver = handOver)
     val pty = PtyHost.spawn(spec, terminal)
     terminal.bind(pty)

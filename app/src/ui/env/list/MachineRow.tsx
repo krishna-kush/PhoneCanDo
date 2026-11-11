@@ -36,26 +36,26 @@ export default function MachineRow({ image, agent, onOpen }: Props) {
 
   return (
     <YStack
-      paddingHorizontal="$3"
-      paddingVertical="$2"
-      gap="$2"
-      pressStyle={agent ? { backgroundColor: t.panel2 } : undefined}
+      paddingHorizontal="3"
+      paddingVertical="2"
+      gap="2"
+      backgroundColor={agent ? `press:${t.panel2}` : undefined}
       onPress={agent ? () => onOpen(agent.id) : undefined}
       accessibilityRole={agent ? 'button' : undefined}
       accessibilityLabel={agent ? `${agent.name}, ${sub}` : undefined}
     >
-      <XStack alignItems="center" gap="$3" minHeight={40}>
+      <XStack alignItems="center" gap="3" minHeight={40}>
         {agent ? <RowFace agentId={agent.id} /> : <YStack width={25} height={25} borderWidth={1} borderColor={t.faint} />}
         <YStack flex={1} minWidth={0} gap={2}>
           <Text fontSize={16} fontWeight="600" numberOfLines={1} ellipsizeMode="tail">
             {agent?.name ?? 'No agent'}
           </Text>
-          <Text fontFamily="$mono" fontSize={12} color={t.dim} numberOfLines={1}>
+          <Text fontFamily="mono" fontSize={12} color={t.dim} numberOfLines={1}>
             {sub}
           </Text>
         </YStack>
         {agent ? (
-          <YStack flexShrink={0} paddingRight="$1" opacity={0.5}>
+          <YStack flexShrink={0} paddingRight="1" opacity={0.5}>
             <ArrowIcon dir="right" size={18} />
           </YStack>
         ) : image ? (

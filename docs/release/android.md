@@ -161,7 +161,7 @@ The script:
 4. Bumps `app/app.json` (`expo.version`, `android.versionCode`) and
    `app/package.json`, and sets the repo in `app/src/engine/updates.ts`.
 5. Runs `expo prebuild -p android --no-install --no-clean` once (the
-   channels are flavors of one project; without `--no-clean` Expo CLI 57
+   channels are flavors of one project; without `--no-clean` Expo CLI
    regenerates `app/android`, which `--clean` asks for explicitly), then
    builds both flavors in one
    Gradle run, `assembleFullRelease assembleLiteRelease` (arm64 only), with

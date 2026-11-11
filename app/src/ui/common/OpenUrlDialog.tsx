@@ -52,37 +52,37 @@ export default function OpenUrlDialog() {
 
   return (
     <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={close}>
-      <YStack flex={1} backgroundColor="rgba(0,0,0,0.6)" alignItems="center" justifyContent="center" padding="$5">
+      <YStack flex={1} backgroundColor="rgba(0,0,0,0.6)" alignItems="center" justifyContent="center" padding="5">
         <YStack
           backgroundColor={t.panel}
           borderWidth={1}
           borderColor={t.lineStrong}
           borderRadius={0}
-          padding="$4"
-          gap="$3"
+          padding="4"
+          gap="3"
           width="100%"
           maxWidth={360}
         >
           <Text fontSize={19} fontWeight="700">
             {prompt ? openUrlTitle(prompt) : 'Open a link'}
           </Text>
-          <Text fontFamily="$mono" fontSize={12} color={t.dim} numberOfLines={6} selectable>
+          <Text fontFamily="mono" fontSize={12} color={t.dim} numberOfLines={6} userSelect="text">
             {url}
           </Text>
-          <Text fontSize={13} color="$color10">
+          <Text fontSize={13} color="color10">
             Open it only if you expect it, for example a sign-in you started with this agent.
           </Text>
           {note ? (
-            <Text fontSize={13} color="$color10">
+            <Text fontSize={13} color="color10">
               {note}
             </Text>
           ) : null}
           {msg ? (
-            <Text fontSize={13} color="$color10">
+            <Text fontSize={13} color="color10">
               {msg}
             </Text>
           ) : null}
-          <XStack gap="$2" marginTop="$2">
+          <XStack gap="2" marginTop="2">
             <AppButton variant="secondary" flex={1} onPress={close}>
               Not now
             </AppButton>

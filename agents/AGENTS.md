@@ -14,7 +14,7 @@ agents/
 │   ├── kotlin/api/     kit-api: AgentKind, KindHooks, LaunchContext/Spec, AgentConfig, HttpProbe, EngineEvent
 │   ├── kotlin/manifest/ kit-manifest: the manifest model the phone reads + ManifestDecoder (strict types, user rules)
 │   ├── kotlin/render/  kit-render: ManifestKind, templates, launch/client rendering, KindView
-│   ├── kotlin/term/    kit-term: a TUI's output stream: SignalScanner, SignalRules, ScreenRing, ProgramStatus; TermReplies
+│   ├── kotlin/term/    kit-term: a TUI's output stream: SignalScanner, SignalRules, ScreenRing, ProgramStatus; TermReplies, TermTheme
 │   ├── kotlin/cli/     kit-cli: render-install, render-model for CI (a leaf; ships nowhere)
 │   ├── ts/contract/    the TS view types the app reads (KindView, web adapter, PTY recipe; import type only)
 │   ├── ts/manifest/    manifest types, rules + validate.ts (pure, zero imports; the one full validator),
@@ -125,7 +125,11 @@ phonecando-linux <- kit-api   (ProjectDir only: the machine's shell starts in th
     support query (`OSC 7501 ; ?`, so a TUI that waits for the answer
     reports too) and, once the TUI turns on focus reports (DECSET 1004),
     its focus: in only while a view shows it, out with no view, one off
-    screen or the app in the background.
+    screen or the app in the background. It also tells the TUI the app's
+    scheme (`TermTheme`): `COLORFGBG` at start, colour queries (OSC 4 /
+    10 / 11 / 12), `CSI ? 996 n`, and, while the TUI has DEC mode 2031
+    on, a theme report on every change; device attributes and the status
+    (`CSI c`, `CSI 5 n`) are always answered.
   - `surfaces.chatTitle`: a regex whose group 1 is the chat title in the
     window title (OSC 0/2); it names the TUI's one chat in the service
     notification.

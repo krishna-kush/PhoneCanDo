@@ -17,8 +17,8 @@ export default function AppInput(props: Props) {
       borderColor={t.lineStrong}
       backgroundColor={t.panel}
       color={t.fg}
-      placeholderTextColor="$color10"
-      paddingHorizontal="$4"
+      placeholderTextColor="color10"
+      paddingHorizontal="4"
       autoCapitalize="none"
       {...props}
     />

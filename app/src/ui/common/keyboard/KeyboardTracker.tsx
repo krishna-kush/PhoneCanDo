@@ -1,6 +1,7 @@
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import { runOnJS, useSharedValue } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useKeyboardStore } from '../../../state/keyboard';
 import { KB_BREATHE, spacerPad } from '../../terminal/sizing';
 import { keyboardRoom } from './room';
@@ -31,7 +32,7 @@ export default function KeyboardTracker() {
         keyboardRoom.value = room;
         if (room > 0 !== open.value) {
           open.value = room > 0;
-          runOnJS(setOpen)(room > 0);
+          scheduleOnRN(setOpen, room > 0);
         }
       },
       onEnd: (e) => {
@@ -39,8 +40,8 @@ export default function KeyboardTracker() {
         const room = e.height > 0 ? spacerPad(e.height, insetBottom, KB_BREATHE) : 0;
         keyboardRoom.value = room;
         open.value = room > 0;
-        runOnJS(setOpen)(room > 0);
-        runOnJS(logSettled)(Math.round(e.height), Math.round(room));
+        scheduleOnRN(setOpen, room > 0);
+        scheduleOnRN(logSettled, Math.round(e.height), Math.round(room));
       },
     },
     [insetBottom],

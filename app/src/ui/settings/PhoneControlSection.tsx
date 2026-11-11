@@ -75,7 +75,7 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
     return (
       <>
         <SectionTitle>Phone control</SectionTitle>
-        <Text fontSize={14} color="$color10">
+        <Text fontSize={14} color="color10">
           This {channel} build has no screen automation. Notifications, clipboard, and opening
           links still work.
         </Text>
@@ -87,13 +87,13 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
     <>
       <SectionTitle>Phone control</SectionTitle>
       {switchedOn ? null : (
-        <Text fontSize={14} color="$color10">
+        <Text fontSize={14} color="color10">
           {COPY.why}
         </Text>
       )}
       <AccessibilitySetup a11y={a11y} />
       {switchedOn ? null : (
-        <Text fontSize={13} color="$color10">
+        <Text fontSize={13} color="color10">
           {COPY.api}
         </Text>
       )}
@@ -111,12 +111,12 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
         {unlocked ? 'Lock phone control' : 'Unlock with biometrics'}
       </AppButton>
       {trustMsg ? (
-        <Text fontSize={13} color="$color10">
+        <Text fontSize={13} color="color10">
           {trustMsg}
         </Text>
       ) : null}
       {unlocked ? null : (
-        <Text fontSize={13} color="$color10">
+        <Text fontSize={13} color="color10">
           {UNLOCK_WHY}
         </Text>
       )}

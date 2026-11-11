@@ -41,9 +41,6 @@ android {
       res.srcDirs += 'src/uiauto/res'
     }
   }
-  lintOptions {
-    abortOnError false
-  }
   testOptions {
     unitTests.all {
       // The kinds' manifests, the runtime plugins and the phone tools'

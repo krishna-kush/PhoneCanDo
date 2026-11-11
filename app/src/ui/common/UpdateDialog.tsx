@@ -203,15 +203,15 @@ export default function UpdateDialog() {
         backgroundColor="rgba(0,0,0,0.6)"
         alignItems="center"
         justifyContent="center"
-        padding="$5"
+        padding="5"
       >
         <YStack
           backgroundColor={t.panel}
           borderWidth={1}
           borderColor={t.lineStrong}
           borderRadius={0}
-          padding="$4"
-          gap="$3"
+          padding="4"
+          gap="3"
           width="100%"
           maxWidth={360}
         >
@@ -220,20 +220,20 @@ export default function UpdateDialog() {
               <Text fontSize={19} fontWeight="700">
                 Give it hands
               </Text>
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 This starter build is a brain in a jar: it chats and runs a terminal, but it
                 cannot touch your phone. Ask it to open WhatsApp and it shrugs.
               </Text>
-              <Text fontSize={14} color="$color10">
+              <Text fontSize={14} color="color10">
                 The full build adds eyes and hands: it reads the screen, taps, types and scrolls,
                 behind your fingerprint. It installs over this one. Nothing is lost.
               </Text>
-              <Text fontSize={13} color="$color10">
+              <Text fontSize={13} color="color10">
                 {manifest
                   ? `Full build ${manifest.version}${manifest.size ? ` · ${mb(manifest.size)}` : ''}. Android asks once to allow installs from PhoneCanDo, then confirms.`
                   : 'Fetching the latest release…'}
               </Text>
-              <XStack gap="$2" marginTop="$2">
+              <XStack gap="2" marginTop="2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Later
                 </AppButton>
@@ -249,22 +249,22 @@ export default function UpdateDialog() {
               <Text fontSize={19} fontWeight="700">
                 {manifest ? 'Update available' : 'Checking for updates'}
               </Text>
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 {manifest
                   ? `PhoneCanDo ${current.version} → ${manifest.version}${manifest.size ? ` · ${mb(manifest.size)}` : ''}`
                   : `Asking GitHub for anything newer than ${current.version}…`}
               </Text>
               {manifest?.notes ? (
-                <Text fontSize={14} color="$color10">
+                <Text fontSize={14} color="color10">
                   {manifest.notes}
                 </Text>
               ) : null}
               {manifest ? (
-                <Text fontSize={13} color="$color10">
+                <Text fontSize={13} color="color10">
                   Android will ask you to confirm the install. Your data is kept.
                 </Text>
               ) : null}
-              <XStack gap="$2" marginTop="$2">
+              <XStack gap="2" marginTop="2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Later
                 </AppButton>
@@ -280,10 +280,10 @@ export default function UpdateDialog() {
               <Text fontSize={19} fontWeight="700">
                 Up to date
               </Text>
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 PhoneCanDo {current.version} is the latest release.
               </Text>
-              <XStack gap="$2" marginTop="$2">
+              <XStack gap="2" marginTop="2">
                 <AppButton flex={1} onPress={close}>
                   Close
                 </AppButton>
@@ -296,16 +296,16 @@ export default function UpdateDialog() {
               <Text fontSize={19} fontWeight="700">
                 Downloading {lite ? 'the full build' : 'update'}
               </Text>
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 {pct}%{progress.total > 0 ? ` · ${mb(progress.written)} of ${mb(progress.total)}` : ''}
               </Text>
               <YStack height={6} backgroundColor={t.line} width="100%">
                 <YStack height={6} backgroundColor={t.primary} width={`${pct}%`} />
               </YStack>
-              <Text fontSize={13} color="$color10">
+              <Text fontSize={13} color="color10">
                 Keep the app open. The install starts when the download finishes.
               </Text>
-              <XStack gap="$2" marginTop="$2">
+              <XStack gap="2" marginTop="2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Cancel
                 </AppButton>
@@ -318,12 +318,12 @@ export default function UpdateDialog() {
               <Text fontSize={19} fontWeight="700">
                 One quick OK from Android
               </Text>
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 Android asks before any app installs something, even its own update. Tap Open
                 settings, switch on "Allow from this source" for PhoneCanDo, then come back. The
                 install starts by itself.
               </Text>
-              <XStack gap="$2" marginTop="$2">
+              <XStack gap="2" marginTop="2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Later
                 </AppButton>
@@ -339,7 +339,7 @@ export default function UpdateDialog() {
               <Text fontSize={19} fontWeight="700">
                 Opening installer
               </Text>
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 Confirm the install in Android's dialog. When it says "App installed", tap Open.
                 If you miss it, a notification brings you back.
               </Text>
@@ -351,10 +351,10 @@ export default function UpdateDialog() {
               <Text fontSize={19} fontWeight="700">
                 Ready to install
               </Text>
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 The download is done. If you dismissed Android's installer, try again below.
               </Text>
-              <XStack gap="$2" marginTop="$2">
+              <XStack gap="2" marginTop="2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Later
                 </AppButton>
@@ -370,7 +370,7 @@ export default function UpdateDialog() {
               <Text fontSize={19} fontWeight="700">
                 {manifest ? 'Install failed' : 'Check failed'}
               </Text>
-              <Text fontSize={15} color="$color10">
+              <Text fontSize={15} color="color10">
                 {error}
               </Text>
               {manifest ? (
@@ -378,7 +378,7 @@ export default function UpdateDialog() {
                   Open install settings
                 </AppButton>
               ) : null}
-              <XStack gap="$2" marginTop="$2">
+              <XStack gap="2" marginTop="2">
                 <AppButton variant="secondary" flex={1} onPress={close}>
                   Close
                 </AppButton>

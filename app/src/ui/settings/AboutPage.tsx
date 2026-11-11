@@ -30,7 +30,7 @@ export default function AboutPage() {
   return (
     <Screen>
       <PageHeader kicker="fig. 00 · about" title="PhoneCanDo" />
-      <XStack alignItems="center" gap="$4" paddingVertical="$3">
+      <XStack alignItems="center" gap="4" paddingVertical="3">
         <YStack
           onPress={() => setBoops((n) => n + 1)}
           accessibilityRole="button"
@@ -40,10 +40,10 @@ export default function AboutPage() {
           <AgentFace mood="awake" size={48} hop={boops} />
         </YStack>
         <YStack flex={1} gap={4}>
-          <Text fontFamily="$mono" fontSize={11} letterSpacing={1.4} color={t.dim} textTransform="uppercase">
+          <Text fontFamily="mono" fontSize={11} letterSpacing={1.4} color={t.dim} textTransform="uppercase">
             {`A-01 · ${boops > 0 ? boopLine(boops - 1) : 'on duty'}`}
           </Text>
-          <Text fontFamily="$mono" fontSize={13} color={t.muted}>
+          <Text fontFamily="mono" fontSize={13} color={t.muted}>
             {`v${version.version} (${version.versionCode}) · ${channel()}`}
           </Text>
         </YStack>
@@ -53,7 +53,7 @@ export default function AboutPage() {
         its name up top for every agent, a new one, the models and settings; its ⋮ menu opens its terminal UI in
         any folder of its Linux home, or a shell in its machine.
       </Text>
-      <YStack paddingVertical="$3">
+      <YStack paddingVertical="3">
         <Barcode text={`PCD ${version.version}`} />
       </YStack>
       <AppButton variant="secondary" onPress={() => setLicensesOpen(true)}>

@@ -21,7 +21,7 @@ export default function StepLinks({ links }: { links: StepLink[] }) {
           accessibilityRole="button"
           hitSlop={{ left: 8, right: 8 }}
           paddingVertical={6}
-          pressStyle={{ opacity: 0.6 }}
+          opacity="press:0.6"
         >
           <Text fontSize={13} color={t.primary} textDecorationLine="underline" textAlign="center">
             {link.label}

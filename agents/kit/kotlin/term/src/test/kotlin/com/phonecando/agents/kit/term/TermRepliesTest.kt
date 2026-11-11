@@ -51,4 +51,41 @@ class TermRepliesTest {
     // The focus moved meanwhile: the next request hears the latest.
     assertEquals("\u001b[O", r.onSignal(Signal.Modes(listOf(1004), true)).text())
   }
+
+  private fun theme(dark: Boolean) = TermThemeTest.theme(dark)
+
+  @Test fun noThemeNoColourAnswers() {
+    val r = TermReplies()
+    assertNull(r.onSignal(Signal.ColorQuery(11, null, true)))
+    assertNull(r.onSignal(Signal.ThemeQuery))
+    // The fences are answered all the same.
+    assertEquals("\u001b[?1;2c", r.onSignal(Signal.DeviceAttributesQuery).text())
+    assertEquals("\u001b[0n", r.onSignal(Signal.OperatingStatusQuery).text())
+  }
+
+  @Test fun answersColoursAndTheThemeFromTheTheme() {
+    val r = TermReplies()
+    assertNull(r.theme(theme(dark = true)), "no reports asked for")
+    assertEquals("\u001b]11;rgb:0a0a/0a0a/0a0a\u0007", r.onSignal(Signal.ColorQuery(11, null, bel = true)).text())
+    assertEquals("\u001b[?997;1n", r.onSignal(Signal.ThemeQuery).text())
+    r.theme(theme(dark = false))
+    assertEquals("\u001b]11;rgb:ffff/ffff/ffff\u001b\\", r.onSignal(Signal.ColorQuery(11, null, bel = false)).text())
+    assertEquals("\u001b[?997;2n", r.onSignal(Signal.ThemeQuery).text())
+  }
+
+  @Test fun themeReportsOnlyWhileAskedAndOnlyOnAChange() {
+    val r = TermReplies()
+    r.theme(theme(dark = true))
+    assertNull(r.onSignal(Signal.Modes(listOf(2031), true)), "turning them on reports nothing")
+    assertTrue(r.themeReports)
+    assertNull(r.theme(theme(dark = true)), "same theme")
+    assertEquals("\u001b[?997;2n", r.theme(theme(dark = false)).text())
+    assertEquals("\u001b[?997;1n", r.theme(theme(dark = true)).text())
+    r.onSignal(Signal.Modes(listOf(2031), false))
+    assertNull(r.theme(theme(dark = false)))
+    r.onSignal(Signal.Modes(listOf(1004, 2031), true))
+    assertNull(r.onSignal(Signal.Reset))
+    assertFalse(r.themeReports)
+    assertNull(r.theme(theme(dark = true)))
+  }
 }

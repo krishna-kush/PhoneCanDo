@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const { withTamagui } = require('@tamagui/cli/metro');
 const path = require('node:path');
 
 /** @type {import('expo/metro-config').MetroConfig} */
@@ -11,4 +12,12 @@ config.watchFolders = [...config.watchFolders, path.resolve(__dirname, '..')];
 // Bundle the xterm terminal page + its JS/CSS as file assets for offline use.
 config.resolver.assetExts.push('html');
 
-module.exports = config;
+// Tamagui's compiler (v3 dropped its Babel plugin for this Metro wrapper).
+// It runs the components in Node first; Popper's native build imports
+// react-dom's flushSync, which only runs on press and which pnpm does not
+// hoist to the app's node_modules, so evaluation skips it.
+module.exports = withTamagui(config, {
+  components: ['tamagui'],
+  config: './tamagui.config.ts',
+  dangerouslyIgnoreStaticEvaluationModules: ['react-dom'],
+});
