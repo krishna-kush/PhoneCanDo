@@ -13,7 +13,7 @@ import com.phonecando.lme.catalog.hub.HubTime
 import com.phonecando.lme.catalog.hub.HubUrls
 import com.phonecando.lme.catalog.hub.OriginJson
 import com.phonecando.lme.catalog.hub.RevisionJson
-import com.phonecando.lme.catalog.hub.TreeEntryJson
+import com.phonecando.lme.catalog.hub.SiblingJson
 import com.phonecando.lme.catalog.origin.Origins
 import com.phonecando.lme.catalog.parameters.CheckpointSizes
 import kotlinx.serialization.json.JsonPrimitive
@@ -21,16 +21,19 @@ import kotlinx.serialization.json.booleanOrNull
 
 /**
  * Hugging Face's model catalog through [http]: search GGUF repositories,
- * pin one to a commit, list its files and the models in them, and name the
+ * pin one to a commit with its files, list the models in them, and name the
  * URL each file downloads from. Blocking; call from a background thread.
  *
  * [token] is the user's own access token (gated and private repositories),
  * sent as `Authorization: Bearer` to huggingface.co only and never put in a
  * message or a log. Without it the Hub answers 401 for a repository that is
  * gated, private or missing alike ([LmeException.AccessDenied]).
+ *
+ * Every answer updates [callsLeft]; pass the same one to every catalog in a
+ * process, so a caller can hold back a request it can do without.
  */
-class HfCatalog(http: HttpPort, token: String? = null) {
-    private val calls = HubCalls(http, token)
+class HfCatalog(http: HttpPort, token: String? = null, val callsLeft: HubCallsLeft = HubCallsLeft()) {
+    private val calls = HubCalls(http, token, callsLeft)
 
     /**
      * The first page of GGUF repositories matching [query] (all of them when
@@ -54,7 +57,11 @@ class HfCatalog(http: HttpPort, token: String? = null) {
         return page(cursor, cancel)
     }
 
-    /** [repo] at [ref] (a branch, tag or commit), resolved to its commit sha, with its original model. */
+    /**
+     * [repo] at [ref] (a branch, tag or commit), resolved to its commit sha,
+     * with its original model and every file in it, subfolders' included, in
+     * one request. Files with an unsafe path are left out.
+     */
     fun revision(repo: String, ref: String = "main", cancel: CancelSignal = CancelSignal.NEVER): RepoRevision {
         val name = HubNames.repo(repo)
         val what = "repository $name"
@@ -62,7 +69,7 @@ class HfCatalog(http: HttpPort, token: String? = null) {
         val sha = doc.sha.takeIf { HubNames.isSha(it) } ?: throw LmeException.BadAnswer("$what: no commit sha")
         val gated = (doc.gated as? JsonPrimitive)?.let { it.booleanOrNull ?: it.isString } ?: false
         val origin = Origins.fromCard(name, doc.cardData?.baseModel, doc.cardData?.baseModelRelation, doc.tags)
-        return RepoRevision(name, sha, gated, origin, HubTime.day(doc.createdAt))
+        return RepoRevision(name, sha, gated, origin, HubTime.day(doc.createdAt), doc.siblings.mapNotNull(::fileOf))
     }
 
     /**
@@ -74,25 +81,6 @@ class HfCatalog(http: HttpPort, token: String? = null) {
         val name = HubNames.repo(repo)
         val (doc, _) = calls.get(HubUrls.origin(name), "repository $name", cancel) { HubCalls.JSON.decodeFromString<OriginJson>(it) }
         return OriginFacts(HubTime.day(doc.createdAt), CheckpointSizes.of(doc.safetensors))
-    }
-
-    /**
-     * Every file of [repo] at commit [sha], subfolders included, following
-     * the listing's pages. Entries with an unsafe path are left out.
-     */
-    fun files(repo: String, sha: String, cancel: CancelSignal = CancelSignal.NEVER): List<RepoFile> {
-        val name = HubNames.repo(repo)
-        val what = "files of $name"
-        val files = ArrayList<RepoFile>()
-        var url: String? = HubUrls.tree(name, HubNames.sha(sha))
-        var pages = 0
-        while (url != null) {
-            if (++pages > MAX_TREE_PAGES) throw LmeException.BadAnswer("$what: over $MAX_TREE_PAGES pages")
-            val (entries, next) = calls.get(url, what, cancel) { HubCalls.JSON.decodeFromString<List<TreeEntryJson>>(it) }
-            entries.mapNotNullTo(files, ::fileOf)
-            url = next
-        }
-        return files
     }
 
     /** The models one can download from [files] (see [Variants]). */
@@ -113,16 +101,15 @@ class HfCatalog(http: HttpPort, token: String? = null) {
         )
     }
 
-    private fun fileOf(entry: TreeEntryJson): RepoFile? {
-        if (entry.type != "file" || entry.size < 0 || !HubNames.isPlainPath(entry.path)) return null
-        val lfs = entry.lfs
-        val sha256 = lfs?.oid?.takeIf { SHA256.matches(it) && lfs.size == entry.size }
-        return RepoFile(entry.path, entry.size, sha256)
+    private fun fileOf(file: SiblingJson): RepoFile? {
+        if (file.size < 0 || !HubNames.isPlainPath(file.rfilename)) return null
+        val lfs = file.lfs
+        val sha256 = lfs?.sha256?.takeIf { SHA256.matches(it) && lfs.size == file.size }
+        return RepoFile(file.rfilename, file.size, sha256)
     }
 
     companion object {
         const val MAX_LIMIT = 100
-        private const val MAX_TREE_PAGES = 50
         private val SHA256 = Regex("[0-9a-f]{64}")
     }
 }

@@ -16,7 +16,6 @@ object Fixtures {
     const val QWEN_4B = "unsloth/Qwen3.5-4B-GGUF"
     const val QWEN_4B_SHA = "e87f176479d0855a907a41277aca2f8ee7a09523"
     const val GEMMA_E2B = "unsloth/gemma-4-E2B-it-GGUF"
-    const val GEMMA_E2B_SHA = "0314792d7f1f7e229411f620751375812bb9faf2"
     const val QWEN_122B = "unsloth/Qwen3.5-122B-A10B-GGUF"
     const val QWEN_122B_SHA = "51eab4d59d53f573fb9206cb3ce613f1d0aa392b"
 }

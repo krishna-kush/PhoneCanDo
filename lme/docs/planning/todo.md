@@ -57,6 +57,11 @@ slot.
 - [x] Device checks: the Model step, the reading line on a cold prompt,
       the size filter, row sizes and the Filters sheet.
 - [ ] Device check: the Filters sheet at the largest font size.
+- [ ] Device check: the Hugging Face list's download sizes ("1.6–61.1 GB")
+      fill in as rows scroll into view and only then (logcat or a proxy:
+      one `revision/main?blobs=true` per repository, none for rows never
+      reached); opening a sized repository and starting a download from it
+      ask the Hub nothing more; split models list every part with its size.
 - [ ] Device check: the Context slider in the scroll view, and a save that
       restarts a running agent.
 

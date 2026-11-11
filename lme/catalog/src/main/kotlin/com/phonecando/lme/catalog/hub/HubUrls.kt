@@ -29,14 +29,16 @@ internal object HubUrls {
     /** The Hub's tag for chat models; it leaves out speech, video and most embedding models. */
     private const val CHAT_TAG = "conversational"
 
-    /** `expand[]` keeps the answer to the fields we read (brackets encoded: java.net.URI refuses them raw). */
+    /**
+     * A repository at a ref with every file in it, in one answer: `blobs=true`
+     * gives each file its size and LFS sha256. `expand[]` keeps the answer to
+     * the fields we read (brackets encoded: java.net.URI refuses them raw).
+     */
     fun revision(repo: String, ref: String): String =
-        "$MODELS/$repo/revision/${encode(ref)}?" + expand("sha", "gated", "cardData", "tags", "createdAt")
+        "$MODELS/$repo/revision/${encode(ref)}?blobs=true&" + expand("sha", "gated", "cardData", "tags", "createdAt", "siblings")
 
     /** An original model's creation time and checkpoint size alone, for its dates and its size. */
     fun origin(repo: String): String = "$MODELS/$repo?" + expand("createdAt", "safetensors")
-
-    fun tree(repo: String, sha: String): String = "$MODELS/$repo/tree/$sha?recursive=true"
 
     fun resolve(repo: String, sha: String, path: String): String =
         "$HUB/$repo/resolve/$sha/" + path.split('/').joinToString("/") { encode(it) }

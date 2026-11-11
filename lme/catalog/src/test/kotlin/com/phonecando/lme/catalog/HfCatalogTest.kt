@@ -1,6 +1,5 @@
 package com.phonecando.lme.catalog
 
-import com.phonecando.lme.api.CancelSignal
 import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.testkit.FakePort
 import com.phonecando.lme.api.testkit.reply
@@ -10,7 +9,6 @@ import com.phonecando.lme.catalog.filters.ModelSize
 import com.phonecando.lme.catalog.filters.ModelSort
 import com.phonecando.lme.catalog.support.Fixtures
 import com.phonecando.lme.catalog.support.Fixtures.GEMMA_E2B
-import com.phonecando.lme.catalog.support.Fixtures.GEMMA_E2B_SHA
 import com.phonecando.lme.catalog.support.Fixtures.QWEN_122B
 import com.phonecando.lme.catalog.support.Fixtures.QWEN_122B_SHA
 import com.phonecando.lme.catalog.support.Fixtures.QWEN_4B
@@ -28,9 +26,9 @@ class HfCatalogTest {
     private val api = "https://huggingface.co/api/models"
     private val searchUrl = "$api?filter=gguf&sort=downloads&direction=-1&limit=5&search=qwen3.5-4b"
     private val everyModel = ModelFilters(chatOnly = false)
-    private fun treeUrl(repo: String, sha: String) = "$api/$repo/tree/$sha?recursive=true"
     private fun revisionUrl(repo: String) =
-        "$api/$repo/revision/main?expand%5B%5D=sha&expand%5B%5D=gated&expand%5B%5D=cardData&expand%5B%5D=tags&expand%5B%5D=createdAt"
+        "$api/$repo/revision/main?blobs=true&expand%5B%5D=sha&expand%5B%5D=gated&expand%5B%5D=cardData&expand%5B%5D=tags" +
+            "&expand%5B%5D=createdAt&expand%5B%5D=siblings"
 
     @Test
     fun `search lists repositories, most downloaded first, with the next cursor`() {
@@ -159,8 +157,8 @@ class HfCatalogTest {
     fun `a revision resolves to its commit and says whether it is gated`() {
         fake.on(revisionUrl(QWEN_4B), { reply(200, Fixtures.text("revision-qwen35-4b.json")) })
         assertEquals(
-            RepoRevision(QWEN_4B, QWEN_4B_SHA, gated = false, origin = "Qwen/Qwen3.5-4B", createdAt = LocalDate.of(2026, 3, 2)),
-            HfCatalog(fake).revision(QWEN_4B),
+            RepoRevision(QWEN_4B, QWEN_4B_SHA, gated = false, origin = "Qwen/Qwen3.5-4B", createdAt = LocalDate.of(2026, 3, 2), files = emptyList()),
+            HfCatalog(fake).revision(QWEN_4B).copy(files = emptyList()),
         )
 
         val gatedRepo = "meta-llama/Llama-3.2-1B-Instruct"
@@ -235,16 +233,17 @@ class HfCatalogTest {
     fun `names are checked before any request`() {
         val catalog = HfCatalog(fake)
         assertThrows<LmeException.InvalidName> { catalog.revision("../../etc") }
-        assertThrows<LmeException.InvalidName> { catalog.files(QWEN_4B, "main") }
+        assertThrows<LmeException.InvalidName> { catalog.downloadUrl(QWEN_4B, "main", RepoFile("a.gguf", 1, null)) }
         assertThrows<LmeException.Cancelled> { catalog.revision(QWEN_4B, cancel = { true }) }
         assertEquals(0, fake.requests.size)
     }
 
     @Test
-    fun `files list sizes and LFS sha256s, and the variants skip companions`() {
-        fake.on(treeUrl(QWEN_4B, QWEN_4B_SHA), { reply(200, Fixtures.text("tree-qwen35-4b.json")) })
+    fun `a revision lists its files with sizes and LFS sha256s in the same request, and the variants skip companions`() {
+        fake.on(revisionUrl(QWEN_4B), { reply(200, Fixtures.text("revision-qwen35-4b.json")) })
         val catalog = HfCatalog(fake)
-        val files = catalog.files(QWEN_4B, QWEN_4B_SHA)
+        val files = catalog.revision(QWEN_4B).files
+        assertEquals(1, fake.requests.size)
 
         assertEquals(8, files.size)
         val q4 = files.single { it.path == "Qwen3.5-4B-Q4_K_M.gguf" }
@@ -262,9 +261,9 @@ class HfCatalogTest {
 
     @Test
     fun `subfolders are listed and companion GGUF files are not models`() {
-        fake.on(treeUrl(GEMMA_E2B, GEMMA_E2B_SHA), { reply(200, Fixtures.text("tree-gemma4-e2b.json")) })
+        fake.on(revisionUrl(GEMMA_E2B), { reply(200, Fixtures.text("revision-gemma4-e2b.json")) })
         val catalog = HfCatalog(fake)
-        val files = catalog.files(GEMMA_E2B, GEMMA_E2B_SHA)
+        val files = catalog.revision(GEMMA_E2B).files
         assertTrue(files.any { it.path == "MTP/mtp-gemma-4-E2B-it-Q8_0.gguf" })
         assertTrue(files.none { it.path == "MTP" })
         assertEquals(listOf("gemma-4-E2B-it-Q4_K_M.gguf", "gemma-4-E2B-it-Q8_0.gguf"), catalog.variants(files).map { it.entry.path })
@@ -272,9 +271,9 @@ class HfCatalogTest {
 
     @Test
     fun `a split model is one variant of every part, in order, and an incomplete one is dropped`() {
-        fake.on(treeUrl(QWEN_122B, QWEN_122B_SHA), { reply(200, Fixtures.text("tree-qwen35-122b.json")) })
+        fake.on(revisionUrl(QWEN_122B), { reply(200, Fixtures.text("revision-qwen35-122b.json")) })
         val catalog = HfCatalog(fake)
-        val variants = catalog.variants(catalog.files(QWEN_122B, QWEN_122B_SHA))
+        val variants = catalog.variants(catalog.revision(QWEN_122B).files)
 
         val q4 = variants.single()
         assertEquals("Q4_K_M", q4.quant)
@@ -287,40 +286,38 @@ class HfCatalogTest {
     }
 
     @Test
-    fun `listing pages are followed on the Hub only, and unsafe entries dropped`() {
-        val first = treeUrl("acme/m", QWEN_4B_SHA)
-        val second = "$api/acme/m/tree/$QWEN_4B_SHA?recursive=true&cursor=2"
-        val lfs = """"lfs":{"oid":"${"a".repeat(64)}","size":5}"""
-        fake.on(first, { reply(200, """[{"type":"file","path":"a.gguf","size":5,$lfs}]""", mapOf("Link" to "<$second>; rel=\"next\"")) })
-        fake.on(
-            second,
-            {
-                reply(
-                    200,
-                    """[{"type":"file","path":"../b.gguf","size":5},{"type":"file","path":"c/./d","size":1},""" +
-                        """{"type":"file","path":"e.gguf","size":6,$lfs},{"type":"file","path":"f","size":-1}]""",
-                    mapOf("Link" to "<https://evil.example/next>; rel=\"next\""),
-                )
-            },
+    fun `a file keeps a safe path with a size, and a sha256 only when LFS lists one of the same size`() {
+        val sha = "a".repeat(64)
+        val siblings = listOf(
+            """{"rfilename":"a.gguf","size":5,"lfs":{"sha256":"$sha","size":5}}""",
+            """{"rfilename":"../b.gguf","size":5}""",
+            """{"rfilename":"c/./d","size":1}""",
+            """{"rfilename":"e.gguf","size":6,"lfs":{"sha256":"$sha","size":7}}""",
+            """{"rfilename":"f"}""",
+            """{"rfilename":"g.gguf","size":3,"lfs":{"sha256":"nope","size":3}}""",
         )
-        val files = HfCatalog(fake, token = "hf_x").files("acme/m", QWEN_4B_SHA)
-        assertEquals(listOf(RepoFile("a.gguf", 5, "a".repeat(64)), RepoFile("e.gguf", 6, null)), files)
-        assertEquals(2, fake.requests.size)
+        fake.on(revisionUrl("acme/m"), { reply(200, """{"sha":"$QWEN_4B_SHA","siblings":[${siblings.joinToString(",")}]}""") })
+        assertEquals(
+            listOf(RepoFile("a.gguf", 5, sha), RepoFile("e.gguf", 6, null), RepoFile("g.gguf", 3, null)),
+            HfCatalog(fake).revision("acme/m").files,
+        )
     }
 
     @Test
-    fun `a listing that never ends is cut off`() {
-        val url = treeUrl("acme/m", QWEN_4B_SHA)
-        fake.onPrefix(url) { reply(200, "[]", mapOf("Link" to "<$url&cursor=again>; rel=\"next\"")) }
-        assertThrows<LmeException.BadAnswer> { HfCatalog(fake).files("acme/m", QWEN_4B_SHA) }
-    }
-
-    @Test
-    fun `cancel stops between pages`() {
-        val url = treeUrl("acme/m", QWEN_4B_SHA)
-        fake.onPrefix(url) { reply(200, "[]", mapOf("Link" to "<$url&cursor=again>; rel=\"next\"")) }
-        var calls = 0
-        assertThrows<LmeException.Cancelled> { HfCatalog(fake).files("acme/m", QWEN_4B_SHA, CancelSignal { ++calls > 2 }) }
-        assertEquals(2, fake.requests.size)
+    fun `every answer, a refusal's too, tells callsLeft what the Hub has left`() {
+        val url = revisionUrl("acme/m")
+        val body = """{"sha":"$QWEN_4B_SHA"}"""
+        fake.on(
+            url,
+            { reply(200, body, mapOf("RateLimit" to "\"api\";r=3;t=60")) },
+            { reply(429, "{}", mapOf("RateLimit" to "\"api\";r=0;t=60")) },
+        )
+        val catalog = HfCatalog(fake)
+        assertTrue(catalog.callsLeft.atLeast(100))
+        catalog.revision("acme/m")
+        assertTrue(catalog.callsLeft.atLeast(3))
+        assertFalse(catalog.callsLeft.atLeast(4))
+        assertThrows<LmeException.RateLimited> { catalog.revision("acme/m") }
+        assertFalse(catalog.callsLeft.atLeast(1))
     }
 }

@@ -15,7 +15,7 @@ internal data class HitJson(
     val tags: List<String> = emptyList(),
 )
 
-/** `GET /api/models/{repo}/revision/{ref}`; `gated` is false or "auto" / "manual". */
+/** `GET /api/models/{repo}/revision/{ref}?blobs=true`; `gated` is false or "auto" / "manual". */
 @Serializable
 internal data class RevisionJson(
     val id: String = "",
@@ -24,6 +24,7 @@ internal data class RevisionJson(
     val cardData: CardDataJson? = null,
     val tags: List<String> = emptyList(),
     val createdAt: String? = null,
+    val siblings: List<SiblingJson> = emptyList(),
 )
 
 /**
@@ -46,15 +47,10 @@ internal data class CardDataJson(
 @Serializable
 internal data class OriginJson(val id: String = "", val createdAt: String? = null, val safetensors: JsonElement? = null)
 
-/** One item of `GET /api/models/{repo}/tree/{sha}`. */
+/** One file of a revision, subfolders' included (`blobs=true` adds its size and, kept in LFS, its [lfs]). */
 @Serializable
-internal data class TreeEntryJson(
-    val type: String = "",
-    val path: String = "",
-    val size: Long = -1,
-    val lfs: LfsJson? = null,
-)
+internal data class SiblingJson(val rfilename: String = "", val size: Long = -1, val lfs: LfsJson? = null)
 
-/** LFS metadata of a file: `oid` is its sha256. */
+/** LFS metadata of a file. */
 @Serializable
-internal data class LfsJson(val oid: String = "", val size: Long = -1)
+internal data class LfsJson(val sha256: String = "", val size: Long = -1)

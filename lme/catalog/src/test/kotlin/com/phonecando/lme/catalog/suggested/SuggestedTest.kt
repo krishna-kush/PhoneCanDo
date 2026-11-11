@@ -54,10 +54,10 @@ class SuggestedTest {
     fun `suggestions match the recorded listings`() {
         val fake = FakePort()
         val catalog = HfCatalog(fake)
-        for ((fixture, title) in listOf("tree-qwen35-4b.json" to "Qwen3.5 4B", "tree-gemma4-e2b.json" to "Gemma 4 E2B")) {
+        for ((fixture, title) in listOf("revision-qwen35-4b.json" to "Qwen3.5 4B", "revision-gemma4-e2b.json" to "Gemma 4 E2B")) {
             val m = Suggested.MODELS.single { it.title == title }
-            fake.on("https://huggingface.co/api/models/${m.repo}/tree/${m.revision}?recursive=true", { reply(200, Fixtures.text(fixture)) })
-            assertTrue(m.file in catalog.files(m.repo, m.revision), title)
+            fake.onPrefix("https://huggingface.co/api/models/${m.repo}/revision/${m.revision}?") { reply(200, Fixtures.text(fixture)) }
+            assertTrue(m.file in catalog.revision(m.repo, m.revision).files, title)
         }
     }
 

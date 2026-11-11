@@ -27,11 +27,18 @@ data class OriginFacts(val createdAt: LocalDate?, val parameters: Long?)
 data class SearchPage(val hits: List<ModelHit>, val next: String?)
 
 /**
- * A repository pinned to one commit. [gated] repositories need a token from
- * an account that accepted the model's terms on huggingface.co. [origin]
- * and [createdAt] are as on [ModelHit].
+ * A repository pinned to one commit, with every file in it. [gated]
+ * repositories need a token from an account that accepted the model's
+ * terms on huggingface.co. [origin] and [createdAt] are as on [ModelHit].
  */
-data class RepoRevision(val repo: String, val sha: String, val gated: Boolean, val origin: String, val createdAt: LocalDate?)
+data class RepoRevision(
+    val repo: String,
+    val sha: String,
+    val gated: Boolean,
+    val origin: String,
+    val createdAt: LocalDate?,
+    val files: List<RepoFile>,
+)
 
 /**
  * One file in a repository at a commit: its path, size and, for files kept
