@@ -4,21 +4,23 @@ import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent } from '../../state/agents';
 import { useAppStore } from '../../state/app';
-import ArrowIcon from '../common/ArrowIcon';
 import CardMenu, { type CardMenuItem } from '../common/CardMenu';
+import ChevronIcon from '../common/ChevronIcon';
 import AgentFace from '../common/face/AgentFace';
 import { useAgentLook } from '../common/face/useAgentLook';
 import { HIT, useTheme } from '../common/globals';
 import LogoMark from '../common/LogoMark';
 import { useHomeInFront } from '../nav/homeInFront';
+import MenuHead from './MenuHead';
 import ReadingChip from '../models/parts/ReadingChip';
 import { webGoHome } from './webNavigation';
 
 // Home's 60dp bar. The left side is the active agent's chip, its face, name
-// and a ▾: a tap opens the drawer (the agents, New agent and the app's other
+// and a ⌄: a tap opens the drawer (the agents, New agent and the app's other
 // places). It is `flex={1} minWidth={0}` so a long name truncates instead
 // of pushing the ⋮ menu off-screen. The ⋮ menu leads into the agent by what
-// its home shows (agentItems) and to its page. While the agent's local model
+// its home shows (agentItems) and to its page; the agent's face heads it
+// (MenuHead) and each row has a shell-ish hint (`cd ~`, `>_`). While the agent's local model
 // reads a prompt, a short line says so beside the name (ReadingChip),
 // never changing the bar's height.
 export default function HomeHeader() {
@@ -35,11 +37,11 @@ export default function HomeHeader() {
     agent && kind
       ? [
           ...agentItems(agent, kind, { goHome, openFolderPicker, openLinuxTerminal }),
-          { label: 'Agent settings', onSelect: () => push({ name: 'agent', agentId: agent.id }) },
+          { label: 'Agent settings', hint: '--config', onSelect: () => push({ name: 'agent', agentId: agent.id }) },
         ]
       : [
-          { label: 'Settings', onSelect: () => push({ name: 'settings' }) },
-          { label: 'About', onSelect: () => push({ name: 'about' }) },
+          { label: 'Settings', hint: '--prefs', onSelect: () => push({ name: 'settings' }) },
+          { label: 'About', hint: '-v', onSelect: () => push({ name: 'about' }) },
         ];
 
   return (
@@ -77,11 +79,11 @@ export default function HomeHeader() {
         >
           {agent?.name ?? 'PhoneCanDo'}
         </Text>
-        <ArrowIcon dir="down" size={10} color={t.dim} />
+        <ChevronIcon dir="down" size={12} color={t.dim} />
       </XStack>
 
       <ReadingChip agentId={agent?.id ?? null} />
-      <CardMenu items={menuItems} label="Menu" offset={-24} />
+      <CardMenu items={menuItems} label="Menu" offset={-24} head={<MenuHead agentId={agent?.id ?? null} />} />
     </XStack>
   );
 }
@@ -107,13 +109,14 @@ type MenuActions = {
 function agentItems(agent: Agent, kind: KindView, act: MenuActions): CardMenuItem[] {
   const home: CardMenuItem = {
     label: `${kind.label} home`,
+    hint: 'cd ~',
     onSelect: () => {
       act.goHome();
       if (kind.home === 'web') webGoHome();
     },
   };
   if (kind.home === 'tui') {
-    return [home, { label: 'Open Linux shell', onSelect: () => act.openLinuxTerminal(agent.id) }];
+    return [home, { label: 'Open Linux shell', hint: '$ sh', onSelect: () => act.openLinuxTerminal(agent.id) }];
   }
-  return [home, { label: 'Open terminal UI', onSelect: act.openFolderPicker }];
+  return [home, { label: 'Open terminal UI', hint: '>_', onSelect: act.openFolderPicker }];
 }

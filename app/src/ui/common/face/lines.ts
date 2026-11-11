@@ -28,6 +28,13 @@ export function wakingLine(seed: number): string {
   return WAKING[Math.abs(Math.floor(seed)) % WAKING.length];
 }
 
+/** Atop Home's ⋮ menu as it opens; one per opening. */
+export const MENU = ['where to?', 'pick a door', 'at your service', 'what now, boss?', 'shortcuts!', 'take me somewhere'];
+
+export function menuLine(seed: number): string {
+  return MENU[Math.abs(Math.floor(seed)) % MENU.length];
+}
+
 /** The drawer's head: "3 agents · 1 awake". */
 export function crewLine(total: number, awake: number): string {
   const agents = total === 1 ? '1 agent' : `${total} agents`;
