@@ -49,17 +49,23 @@ native module, manifest or dependency changes need another
   staged), an Android image. A failure says why, with Retry and, on the
   Linux path, Continue without Linux.
 - When more than one agent kind can be made, Choose agent comes first (the
-  default kind preselected), here and wherever the Env tab makes an agent.
-  It also offers Add your own agent; the Env tab's Custom agents lists,
-  edits, shares and deletes those.
+  default kind preselected), here and wherever an agent is made. It also
+  offers Add your own agent; the drawer's Custom agents lists, edits,
+  shares and deletes those.
 - Home is the active agent's own UI: opencode's web UI (paired with a fresh
   code per mount), or the TUI of a kind like Claude Code or Gemini CLI,
-  once its install finishes. The header title switches agents.
+  once its install finishes. Tapping the agent's name in the header opens
+  the drawer: the agents (a tap switches, its › opens its page) and every
+  other place.
+- Every other place is a page over Home; there are no back arrows:
+  Android's Back (the gesture or the key) goes back.
 - The header menu opens a terminal: opencode's TUI in a folder you pick, or
   a Linux shell in the agent's machine.
-- The Env tab lists envs and their machines (one image + its agent each) and
-  adds new ones. An agent's page holds its engine (state, Start/Stop), the
-  ways in (chat, terminal UI, Linux shell), its machine, Reset and Delete.
+- New agent asks which agent first, then where it runs: Default, a system
+  you already have, or another Linux to download. Systems lists the envs;
+  a system's page holds its facts and its agents, and Add system downloads
+  a Linux with its first agent. An agent's page holds its engine, the ways
+  in, its settings (Model, Machine, Install), Reset and Delete.
 - Settings holds app-wide options only; ports and passwords stay native.
 
 ## Checks

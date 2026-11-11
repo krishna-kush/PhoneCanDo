@@ -3,7 +3,7 @@
 // badges a card shows and the line over the cards.
 import { offerEnvOf, type Offer, type OfferBlock, type OfferEnv } from '../../../engine/agents/offers.ts';
 import type { Env } from '../../../engine/linux/types';
-import type { NewAgentTarget } from './routes';
+import type { NewAgentTarget } from '../../../state/app/routes';
 import { envTitle } from './titles.ts';
 
 type EnvLike = Pick<Env, 'id' | 'source' | 'state' | 'os'>;
@@ -47,6 +47,15 @@ export function targetOfferEnv(target: NewAgentTarget, envs: readonly EnvLike[])
     case 'own':
       return { kind: 'linux', family: null, ready: true };
   }
+}
+
+/**
+ * New agent's first step, before the place is picked: judged against the
+ * best place this build has (any Linux env, ready, any package family), so
+ * only what no place could run is blocked; the place step judges each one.
+ */
+export function anyPlaceOfferEnv(linuxAvailable: boolean): OfferEnv {
+  return linuxAvailable ? { kind: 'linux', family: null, ready: true } : { kind: 'android', family: null, ready: true };
 }
 
 /** First launch's env: the Default env on the Linux path, else Android's own shell. */

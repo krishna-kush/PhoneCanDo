@@ -21,8 +21,8 @@ export type { PtyExit, PtySignal };
 
 /**
  * What a terminal is hosted in: a gesture that starts on it stays with it
- * while it moves up or down, and goes to its parents (the tab pager) when it
- * moves sideways first. A plain View without the native module.
+ * while it moves up or down, and goes to its parents when it moves sideways
+ * first. A plain View without the native module.
  */
 export const TerminalGestureHost: ComponentType<ViewProps> = DirectionLockView ?? View;
 

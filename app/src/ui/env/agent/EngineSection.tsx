@@ -6,8 +6,8 @@ import type { Image } from '../../../engine/linux/types';
 import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
 import AppButton from '../../common/AppButton';
-import SectionTitle from '../../common/SectionTitle';
-import EngineDot from '../../common/agent-switcher/EngineDot';
+import { moodLine } from '../../common/face/lines';
+import { moodOf } from '../../common/face/mood';
 import { useTheme } from '../../common/globals';
 import { engineIsUp, engineStateWord } from '../logic/engineState';
 import { startFailureCode, startFailureText } from '../logic/errorText';
@@ -15,19 +15,19 @@ import Note from '../parts/Note';
 
 type Props = { agent: Agent; image: Image | undefined; linux: boolean };
 
-// The agent's engine (state, Start/Stop) and the ways into it: chat and the
-// terminal UI (a web-home kind), or its own TUI on the Home tab (a tui-home
-// kind, which has no client to attach), and a shell in its machine. All need
-// the machine ready; all but the shell need the agent installed in it (a
-// kind with an install, see InstallSection).
+// The agent's engine (state in words, Start/Stop) and the ways into it:
+// chat and the terminal UI (a web-home kind), or its own TUI on Home (a
+// tui-home kind, which has no client to attach), and a shell in its
+// machine. All need the machine ready; all but the shell need the agent
+// installed in it (a kind with an install, see InstallSection).
 export default function EngineSection({ agent, image, linux }: Props) {
   const t = useTheme();
   const status = useAgentsStore((s) => s.statuses[agent.id]);
   const startAgent = useAgentsStore((s) => s.startAgent);
   const stopAgent = useAgentsStore((s) => s.stopAgent);
   const setActiveAgent = useAgentsStore((s) => s.setActiveAgent);
-  const setFooterTab = useAppStore((s) => s.setFooterTab);
-  const setFolderPickerOpen = useAppStore((s) => s.setFolderPickerOpen);
+  const goHome = useAppStore((s) => s.goHome);
+  const openFolderPicker = useAppStore((s) => s.openFolderPicker);
   const openLinuxTerminal = useAppStore((s) => s.openLinuxTerminal);
   const [busy, setBusy] = useState<'start' | 'stop' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,17 +62,13 @@ export default function EngineSection({ agent, image, linux }: Props) {
 
   return (
     <>
-      <SectionTitle>Agent</SectionTitle>
-      <XStack alignItems="center" gap="$2">
-        <EngineDot state={status?.state} size={10} />
+      <XStack alignItems="baseline" gap="$2" flexWrap="wrap">
         <Text fontSize={16} fontWeight="600">
           {engineStateWord(status?.state)}
         </Text>
-        {status?.port && up ? (
-          <Text fontFamily="$mono" fontSize={12} color={t.dim}>
-            {`port ${status.port}`}
-          </Text>
-        ) : null}
+        <Text fontFamily="$mono" fontSize={11} letterSpacing={1.2} color={t.dim} textTransform="uppercase">
+          {status?.port && up ? `port ${status.port} · ${moodLine(moodOf(status.state))}` : moodLine(moodOf(status?.state))}
+        </Text>
       </XStack>
       {error ? <Note tone="error">{error}</Note> : null}
       {!error && status?.error && (status.state === 'failed' || status.state === 'died') ? (
@@ -92,19 +88,19 @@ export default function EngineSection({ agent, image, linux }: Props) {
         </AppButton>
       )}
       {kind.home === 'tui' ? (
-        <AppButton variant="secondary" disabled={!ready} onPress={() => follow(() => setFooterTab('home'))}>
+        <AppButton variant="secondary" disabled={!ready} onPress={() => follow(goHome)}>
           {`Open ${kind.label} home`}
         </AppButton>
       ) : (
         <XStack gap="$2">
-          <AppButton flex={1} variant="secondary" disabled={!ready} onPress={() => follow(() => setFooterTab('home'))}>
+          <AppButton flex={1} variant="secondary" disabled={!ready} onPress={() => follow(goHome)}>
             Open chat
           </AppButton>
           <AppButton
             flex={1}
             variant="secondary"
             disabled={!ready}
-            onPress={() => follow(() => setFolderPickerOpen(true))}
+            onPress={() => follow(openFolderPicker)}
           >
             Open TUI
           </AppButton>

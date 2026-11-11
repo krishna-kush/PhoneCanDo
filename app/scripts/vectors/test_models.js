@@ -2,8 +2,8 @@
 // a new agent's Model step (src/state/flows/logic/modelStep.ts), the Models
 // page's words and lines, a prompt being read, its error sentences, the
 // model choices, a model's dates line, the Hugging Face list's filters and
-// a model's context and its slider (src/ui/models/logic/), the start failure text for
-// model_unavailable and the Models routes (src/ui/env/logic/). Imports the
+// a model's context and its slider (src/ui/models/logic/) and the start
+// failure text for model_unavailable (src/ui/env/logic/). Imports the
 // real pure modules (Node 22.18+ strips their types), so these cannot drift.
 // Run: node test_models.js (or pnpm check:vectors)
 'use strict';
@@ -268,7 +268,7 @@ const model = (over) => ({
   ]);
   t('a query or any filter is another list', keys.size, 6);
 
-  // --- ui/env/logic: start failure text, routes ---------------------------------
+  // --- ui/env/logic: start failure text ------------------------------------------
   const { startFailureText, startFailureCode } = await import(src('ui/env/logic', 'errorText.ts'));
   t(
     'model_unavailable says why',
@@ -286,11 +286,6 @@ const model = (over) => ({
     "This agent's local model can't run right now. Its model (qwen) is no longer on this phone.",
   );
   t('a Linux code still reads as before', linuxFailureText({ code: 'no_space', message: 'x' }), 'Your phone is out of space. Free some up and try again.');
-
-  const { parentRoute } = await import(src('ui/env/logic', 'routes.ts'));
-  t('models back to the list', parentRoute({ name: 'models' }), { name: 'list' });
-  t('models back to its agent', parentRoute({ name: 'models', agentId: 'a1' }), { name: 'agent', agentId: 'a1' });
-  t('repo back to models', parentRoute({ name: 'model-repo', repo: 'a/b', agentId: 'a1' }), { name: 'models', agentId: 'a1' });
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

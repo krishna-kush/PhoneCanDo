@@ -206,7 +206,7 @@ are in `engine/spawn/`.
 A kind with `engine.style: "tui"` runs its own TUI as its engine, on a PTY
 of the terminal module's process-wide `PtyHost` (`terminal.md`), so it
 keeps running when you leave the tab or the app (the foreground service
-holds it like any engine) and survives a JS reload. The Home tab shows it.
+holds it like any engine) and survives a JS reload. Home shows it.
 
 - **Launch** (`TuiSpawner`): a cooked tty, as a terminal emulator gives (a
   raw start drops every carriage return), 24×80 until a viewer resizes it,
@@ -235,7 +235,7 @@ holds it like any engine) and survives a JS reload. The Home tab shows it.
   the terminal and sets the modes in effect where the ring starts (the
   alternate screen, cursor visibility, application cursor keys, bracketed
   paste, mouse reporting) and the window title, then the ring; then live
-  output. A viewer that stops reading (the Home tab paused off screen) is
+  output. A viewer that stops reading (Home paused under a page) is
   bounded: past 2 MiB queued, its queue becomes a fresh replay. After the
   engine stops or dies, a viewer reads what is left, then `ended`. Writes
   and resizes from a viewer that is not the current one do nothing; a
@@ -381,8 +381,10 @@ holds its "come back to me" notice, the `/app` return notice or an alert
 9300-9363. The engine service (4101) and the update notice (4202) are
 untagged.
 
-- **Where a tap lands.** A `LaunchTarget` is a footer tab plus, when the
-  reason is one agent, that agent. Every agent notification's tap, the
+- **Where a tap lands.** A `LaunchTarget` names a place (`home`, `env` or
+  `settings`: Home, the agent's page or the systems list, Settings; an open
+  terminal stays on top of any) plus, when the reason is one agent, that
+  agent. Every agent notification's tap, the
   single-agent engine notification and the bridge's own launch start
   `notify/OpenTargetActivity` (non-exported, `Theme.NoDisplay`,
   `noHistory`) with the target in its intent; it hands the target over
@@ -414,7 +416,7 @@ untagged.
   `session.execution.interrupted`) or a deleted session leaves; a
   subagent's child session shows only while it waits for an answer. The
   chat on screen is left out: the app reports it (`setOpenChat`, from
-  `useOpenChat.ts`: the web UI on a chat, Home tab with nothing over it,
+  `useOpenChat.ts`: the web UI on a chat, Home with nothing over it,
   app in the foreground; null otherwise), a run that ends while it is open
   counts as seen, and opening a done or error chat sees it. An agent TUI in
   front reports its chat by the title it gives the terminal

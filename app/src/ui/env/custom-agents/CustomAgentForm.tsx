@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { DEFAULT_VERSION_PATTERN, FORM_FAMILIES } from '../../../engine/agents/user/form';
+import { useAppStore } from '../../../state/app';
 import AppButton from '../../common/AppButton';
+import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import SectionTitle from '../../common/SectionTitle';
 import {
@@ -10,10 +12,7 @@ import {
   PHONE_TOOLS_OFF,
   PHONE_TOOLS_ON,
 } from '../logic/customAgentText';
-import type { NewAgentTarget } from '../logic/routes';
-import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
-import PageHeader from '../parts/PageHeader';
 import FormField from './FormField';
 import FormScreen from './FormScreen';
 import KindReviewView from './KindReviewView';
@@ -22,14 +21,15 @@ import SafetyNotes from './SafetyNotes';
 import { useKindForm } from './useKindForm';
 import { useStepBack } from './useStepBack';
 
-type Props = { kindId: string | null; target: NewAgentTarget | null };
+type Props = { kindId: string | null; forNewAgent: boolean };
 
 // A custom agent kind of the user's own: its fields, then a review of what
-// it runs (the install script among it) before it is saved. Saved from the
-// Choose agent step, it goes back there with the new kind picked.
-export default function CustomAgentForm({ kindId, target }: Props) {
-  const open = useEnvNav((s) => s.open);
-  const back = useEnvNav((s) => s.back);
+// it runs (the install script among it) before it is saved. Saved from New
+// agent's Choose agent step, it goes back there with the new kind picked;
+// else back to where it was opened.
+export default function CustomAgentForm({ kindId, forNewAgent }: Props) {
+  const back = useAppStore((s) => s.back);
+  const returnWithKind = useAppStore((s) => s.returnWithKind);
   const k = useKindForm(kindId);
   const [perOs, setPerOs] = useState(() => Object.keys(k.form.familyPackages).length > 0);
   useStepBack(k.ready != null, k.edit);
@@ -37,7 +37,7 @@ export default function CustomAgentForm({ kindId, target }: Props) {
   if (k.missing) {
     return (
       <Screen>
-        <PageHeader title="Custom agent" onBack={back} />
+        <PageHeader kicker="custom agents" title="Custom agent" />
         <Note>This agent kind is gone, or it can't be read.</Note>
       </Screen>
     );
@@ -49,11 +49,12 @@ export default function CustomAgentForm({ kindId, target }: Props) {
     const save = () => {
       const id = k.save();
       if (!id) return;
-      open(target ? { name: 'new-agent', target, picked: id } : { name: 'custom-agents' });
+      if (forNewAgent) returnWithKind(id);
+      else back();
     };
     return (
       <Screen>
-        <PageHeader title="Before you save" onBack={k.edit} />
+        <PageHeader kicker="custom agents · review" title="Before you save" />
         <Note>This is everything the agent runs on your phone.</Note>
         <KindReviewView review={k.ready.review} />
         <SafetyNotes />
@@ -71,7 +72,7 @@ export default function CustomAgentForm({ kindId, target }: Props) {
 
   return (
     <FormScreen>
-      <PageHeader title={title} onBack={back} />
+      <PageHeader kicker="custom agents" title={title} />
       <Note>
         Any agent with a terminal UI. It gets its own machine like the others, and Home shows its terminal.
       </Note>

@@ -1,4 +1,4 @@
-// The Env tab's row buttons: Retry resumes a machine's failed setup step
+// The systems list's row buttons: Retry resumes a machine's failed setup step
 // (every step is idempotent; the store shows the progress from there), and
 // Delete env. A download's Retry is retryOwnEnv (createOwnEnv.ts).
 import { deleteEnv, retryImage } from '../../engine/linux/native';

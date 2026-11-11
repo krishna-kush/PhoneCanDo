@@ -10,7 +10,7 @@ import { agentById, setOpenChat } from '../../engine/engines';
 // it out. The TUI never says which session it is on, only the title it
 // gives the terminal, so the chat goes by title (the runner matches it to
 // that agent's chats). `agentId` is the agent whose TUI is in front: its
-// TUI client in a terminal, or a TUI engine on the Home tab; null for a
+// TUI client in a terminal, or a TUI engine on Home; null for a
 // Linux shell or a TUI off screen. A title naming no chat or the app in
 // the background reports none.
 export function useOpenTuiChat(agentId: AgentId | null, terminalTitle: string) {

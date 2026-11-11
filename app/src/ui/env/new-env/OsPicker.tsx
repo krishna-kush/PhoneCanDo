@@ -5,22 +5,24 @@ import type { CatalogImage } from '../../../engine/linux/types';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
 import AppInput from '../../common/AppInput';
+import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import SectionTitle from '../../common/SectionTitle';
+import { useAppStore } from '../../../state/app';
+import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { linuxFailureText } from '../logic/errorText';
 import { formatCount } from '../logic/format';
 import { imageRefProblem, parseImageRef } from '../logic/imageRef';
-import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
-import PageHeader from '../parts/PageHeader';
 import ProgressBar from '../parts/ProgressBar';
 
-// Own env, step 2: which OS. The free name field sits first (any image on a
-// registry: with a tag, or from another registry, it skips the version
-// list), then the official OS list, live from Docker Hub.
-export default function OsPicker() {
-  const open = useEnvNav((s) => s.open);
-  const back = useEnvNav((s) => s.back);
+// Download a Linux, step 1: which OS, for the agent New agent picked
+// (`pick`; Add system picks it after the last look). The free name field
+// sits first (any image on a registry: with a tag, or
+// from another registry, it skips the version list), then the official OS
+// list, live from Docker Hub.
+export default function OsPicker({ pick }: { pick?: AgentPick }) {
+  const push = useAppStore((s) => s.push);
   const [name, setName] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [list, setList] = useState<CatalogImage[] | null>(null);
@@ -45,20 +47,21 @@ export default function OsPicker() {
     setProblem(null);
     // Only Docker Hub lists versions; elsewhere the typed tag, else latest.
     if (ref.tag || !ref.hub) {
-      open({
+      push({
         name: 'new-env-confirm',
         repo: ref.repo,
         tag: { name: ref.tag ?? 'latest', sizeArm64: null, lastUpdated: null },
         typed: true,
+        pick,
       });
     } else {
-      open({ name: 'new-env-tags', repo: ref.repo });
+      push({ name: 'new-env-tags', repo: ref.repo, pick });
     }
   };
 
   return (
     <Screen>
-      <PageHeader title="Own env" onBack={back} />
+      <PageHeader kicker={pick ? 'new agent · download' : 'add system'} title="Which Linux?" />
       <SectionTitle>Any image</SectionTitle>
       <AppInput
         value={name}
@@ -104,7 +107,7 @@ export default function OsPicker() {
                 />
               ) : undefined
             }
-            onPress={() => open({ name: 'new-env-tags', repo: os.name })}
+            onPress={() => push({ name: 'new-env-tags', repo: os.name, pick })}
           />
         ))
       )}

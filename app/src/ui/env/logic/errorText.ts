@@ -1,4 +1,4 @@
-// Error codes as plain sentences. Pure (zero RN imports). The Env tab and
+// Error codes as plain sentences. Pure (zero RN imports). The agent pages and
 // first launch both say failures through here, so one cause reads the same
 // everywhere. Only `internal` adds the native line: it is the one case
 // where the code alone tells nobody anything.
@@ -77,7 +77,7 @@ const START_TEXT: Record<EngineStartError, string> = {
   engine_missing: "This build doesn't include the agent's program.",
   port_unavailable: "We couldn't find a free port to start on. Try again.",
   start_failed: "The agent didn't start. Try again.",
-  agent_not_installed: "This agent isn't installed in its machine yet. Install it on its page in the Env tab.",
+  agent_not_installed: "This agent isn't installed in its machine yet. Install it on its page: tap its name up top, then its ›.",
   model_unavailable: "This agent's local model can't run right now.",
 };
 

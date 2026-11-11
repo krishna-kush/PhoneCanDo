@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { UserKindFile } from '../../../engine/agents/user/native';
 import { useAgentsStore } from '../../../state/agents';
+import { useAppStore } from '../../../state/app';
 import { copyKind, deleteKind, shareKind } from '../../../state/flows/userKinds';
 import { useKindsStore } from '../../../state/kinds';
 import AppButton from '../../common/AppButton';
 import AppCard, { type CardMenuItem } from '../../common/AppCard';
 import ConfirmDialog from '../../common/ConfirmDialog';
+import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import { inUseText, kindLine } from '../logic/customAgentText';
-import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
-import PageHeader from '../parts/PageHeader';
 
 const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
@@ -18,8 +18,7 @@ const errorText = (e: unknown): string => (e instanceof Error ? e.message : Stri
 // why it does not load. Tap to edit; ⋮ copies or shares its JSON, or
 // deletes it (not while an agent is of it). Add one, or import one.
 export default function CustomAgentList() {
-  const open = useEnvNav((s) => s.open);
-  const back = useEnvNav((s) => s.back);
+  const push = useAppStore((s) => s.push);
   const kinds = useKindsStore((s) => s.userKinds);
   const agents = useAgentsStore((s) => s.agents);
   const [doomed, setDoomed] = useState<UserKindFile | null>(null);
@@ -30,7 +29,7 @@ export default function CustomAgentList() {
   }, []);
 
   const labelOf = (k: UserKindFile) => k.label ?? k.id;
-  const edit = (k: UserKindFile) => open({ name: 'custom-agent', kindId: k.id, target: null });
+  const edit = (k: UserKindFile) => push({ name: 'custom-agent', kindId: k.id });
 
   const copy = (k: UserKindFile) => {
     const copied = copyKind(k.id);
@@ -63,7 +62,7 @@ export default function CustomAgentList() {
 
   return (
     <Screen>
-      <PageHeader title="Custom agents" onBack={back} />
+      <PageHeader kicker="agents of your own" title="Custom agents" />
       <Note>
         Agents you describe yourself: any terminal UI, installed by your own script into each machine made with it.
       </Note>
@@ -79,8 +78,8 @@ export default function CustomAgentList() {
       ))}
       {kinds.length === 0 ? <Note>None yet.</Note> : null}
       {note ? <Note tone={note.error ? 'error' : 'muted'}>{note.text}</Note> : null}
-      <AppButton onPress={() => open({ name: 'custom-agent', kindId: null, target: null })}>Add your own agent</AppButton>
-      <AppButton variant="secondary" onPress={() => open({ name: 'custom-agent-import' })}>
+      <AppButton onPress={() => push({ name: 'custom-agent', kindId: null })}>Add your own agent</AppButton>
+      <AppButton variant="secondary" onPress={() => push({ name: 'custom-agent-import' })}>
         Import
       </AppButton>
       <Note>To use one, make a new agent in an env and pick it.</Note>

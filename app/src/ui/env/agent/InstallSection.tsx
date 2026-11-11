@@ -5,7 +5,6 @@ import type { Image } from '../../../engine/linux/types';
 import { installAgent } from '../../../state/flows/installAgent';
 import { useInstallRun } from '../../../state/flows/installRuns';
 import AppButton from '../../common/AppButton';
-import SectionTitle from '../../common/SectionTitle';
 import { useTheme } from '../../common/globals';
 import { versionLine } from '../logic/installText';
 import InstallStatus from '../parts/InstallStatus';
@@ -13,10 +12,11 @@ import Note from '../parts/Note';
 
 type Props = { agent: Agent; image: Image | undefined };
 
-// A kind with an install: the agent installed inside its own machine (its
-// runtimes, packages and itself). The version it recorded, the run in
-// progress or how it stopped (Retry), Install when it never finished, and
-// Update agent once installed. Nothing for a kind without an install.
+// The agent's install page body, for a kind with an install: the agent
+// installed inside its own machine (its runtimes, packages and itself). The
+// version it recorded, the run in progress or how it stopped (Retry),
+// Install when it never finished, and Update agent once installed. Nothing
+// for a kind without an install.
 export default function InstallSection({ agent, image }: Props) {
   const t = useTheme();
   const run = useInstallRun(agent.id);
@@ -28,7 +28,6 @@ export default function InstallSection({ agent, image }: Props) {
 
   return (
     <>
-      <SectionTitle>Install</SectionTitle>
       {installed ? (
         <Text fontFamily="$mono" fontSize={13} color={t.dim} selectable>
           {versionLine(agent.installedVersion ?? '')}

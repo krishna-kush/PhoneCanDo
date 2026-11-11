@@ -20,9 +20,9 @@ separate Gradle products.
 
 | Area | Path | Doc |
 |---|---|---|
-| Home / chat and the agent switcher | `app/src/ui/chat/`, `app/src/ui/common/agent-switcher/` | `../../app/docs/modules/chat.md` |
+| Home / chat, its header and navigation (page stack, drawer, Back) | `app/src/ui/chat/`, `app/src/ui/nav/`, `app/src/ui/drawer/`, `app/src/state/app/` | `../../app/docs/modules/chat.md` |
 | Terminal (agent TUI or image shell) | `app/src/ui/terminal/` | `../../app/docs/modules/terminal.md` |
-| Env: envs, machines, agent pages, New env | `app/src/ui/env/` (pure parts in `logic/`) | `architecture.md` → Linux runtime |
+| Agent pages, New agent, Systems (envs, machines) | `app/src/ui/env/` (pure parts in `logic/`) | `architecture.md` → Linux runtime |
 | First launch | `app/src/ui/setup/` | `../../app/docs/guides/quickstart.md` |
 | Settings (app-wide options) | `app/src/ui/settings/` | screens are self-contained |
 | Shared UI, bridge prompt queue | `app/src/ui/common/` | theme/tokens, common components, `../../app/docs/modules/bridge.md` |

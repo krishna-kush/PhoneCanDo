@@ -1,74 +1,52 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { getBuildChannel } from '../../../engine/runner';
 import { useAgentsStore } from '../../../state/agents';
+import { useAppStore } from '../../../state/app';
 import { useLinuxStore } from '../../../state/linux';
 import { useModelsStore } from '../../../state/models';
 import AppButton from '../../common/AppButton';
+import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
-import SectionTitle from '../../common/SectionTitle';
 import { buildEnvSections } from '../logic/sections';
-import { useNewAgent } from '../new-agent/useNewAgent';
-import { useEnvNav } from '../nav';
+import { useAddSystem } from '../new-env/useAddSystem';
 import Note from '../parts/Note';
-import EnvSection from './EnvSection';
+import SystemCard from './SystemCard';
 
-// The Env tab's home: every env with the agents whose machines come from it.
-// New env and Custom agents only where Linux runs (never on play);
-// elsewhere New agent makes one with Android's own shell (after Choose
-// agent when there is a choice). Models on every channel, where the phone
-// can run local models at all.
+// Systems, from the drawer: every env (system) as one card with its OS,
+// size and how many agents run on it (a download shows its bar); a tap
+// opens the system's page with its agents. Add system where Linux runs.
+// Showing it re-reads everything: sizes and states move while it is away.
 export default function EnvList() {
   const envs = useLinuxStore((s) => s.envs);
   const images = useLinuxStore((s) => s.images);
   const linuxAvailable = useLinuxStore((s) => s.status.available);
   const agents = useAgentsStore((s) => s.agents);
-  const open = useEnvNav((s) => s.open);
-  const modelsOffered = useModelsStore((s) => s.device.supported);
+  const push = useAppStore((s) => s.push);
+  const addSystem = useAddSystem();
   const sections = useMemo(() => buildEnvSections(envs, images, agents), [envs, images, agents]);
   const play = getBuildChannel() === 'play';
-  const newAgent = useNewAgent();
 
-  const openAgent = (agentId: string) => open({ name: 'agent', agentId });
+  useEffect(() => {
+    useLinuxStore.getState().refreshLinux();
+    useAgentsStore.getState().refreshAgents();
+    useModelsStore.getState().refreshModels();
+  }, []);
 
   return (
     <Screen>
-      <SectionTitle>Envs and agents</SectionTitle>
+      <PageHeader kicker="envs · machines" title="Systems" />
       <Note>
         {play
           ? 'Each agent has its own space for its projects and chats.'
-          : 'An env is a base system. Each agent gets its own machine made from one, and what it installs stays in that machine.'}
+          : 'A system is a base OS. Each agent gets its own machine made from one, and what it installs stays in that machine.'}
       </Note>
+      {!linuxAvailable && !play ? <Note>Linux isn't available in this build, so agents use Android's own shell.</Note> : null}
       {sections.map((s) => (
-        <EnvSection
-          key={s.key}
-          env={s.env}
-          rows={s.rows}
-          linuxAvailable={linuxAvailable}
-          onOpenAgent={openAgent}
-        />
+        <SystemCard key={s.key} env={s.env} rows={s.rows} onOpen={() => push({ name: 'system', envId: s.env?.id ?? null })} />
       ))}
       {sections.length === 0 ? <Note>Nothing here yet.</Note> : null}
-      {linuxAvailable ? (
-        <>
-          <AppButton onPress={() => open({ name: 'new-env' })}>New env</AppButton>
-          <AppButton variant="secondary" onPress={() => open({ name: 'custom-agents' })}>
-            Custom agents
-          </AppButton>
-        </>
-      ) : (
-        <>
-          {!play ? <Note>Linux isn't available in this build, so agents use Android's own shell.</Note> : null}
-          <AppButton loading={newAgent.busy} onPress={() => newAgent.start({ kind: 'android' })}>
-            New agent
-          </AppButton>
-          {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
-        </>
-      )}
-      {modelsOffered ? (
-        <AppButton variant="secondary" onPress={() => open({ name: 'models' })}>
-          Models
-        </AppButton>
-      ) : null}
+      {linuxAvailable ? <AppButton onPress={addSystem}>Add system</AppButton> : null}
+      {linuxAvailable ? <Note>A new system comes with its first agent: you pick it before the download starts.</Note> : null}
     </Screen>
   );
 }

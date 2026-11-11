@@ -8,8 +8,8 @@ import { folderExists, listSubfolders } from '../../engine/files';
 import { isRunnerAvailable } from '../../engine/runner';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
+import PageHeader from '../common/PageHeader';
 import Screen from '../common/Screen';
-import SectionTitle from '../common/SectionTitle';
 import { useTheme } from '../common/globals';
 
 // TUI entry point: pick which folder the active agent's terminal UI attaches
@@ -22,7 +22,7 @@ export default function FolderPicker() {
   const t = useTheme();
   const agent = useActiveAgent();
   const openTerminalDir = useAppStore((s) => s.openTerminalDir);
-  const setFolderPickerOpen = useAppStore((s) => s.setFolderPickerOpen);
+  const back = useAppStore((s) => s.back);
   const [root, setRoot] = useState<string | null>(null);
   const [cwd, setCwd] = useState<string | null>(null);
   const [entries, setEntries] = useState<string[]>([]);
@@ -61,7 +61,7 @@ export default function FolderPicker() {
 
   return (
     <Screen scroll={false}>
-      <SectionTitle>Terminal folder</SectionTitle>
+      <PageHeader kicker={agent ? `terminal UI · ${agent.name}` : 'terminal UI'} title="Pick a folder" />
       {error ? (
         <Text fontSize={15} color={t.primary}>
           {error}
@@ -96,7 +96,7 @@ export default function FolderPicker() {
       <AppButton onPress={() => cwd != null && openTerminalDir(cwd)} disabled={cwd == null}>
         Open terminal UI here
       </AppButton>
-      <AppButton variant="secondary" onPress={() => setFolderPickerOpen(false)}>
+      <AppButton variant="secondary" onPress={back}>
         Cancel
       </AppButton>
     </Screen>

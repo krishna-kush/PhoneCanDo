@@ -4,10 +4,9 @@ import type { ModelDates, RepoModels } from '../../engine/models/types';
 import { download } from '../../state/flows/modelActions';
 import { useModelsStore } from '../../state/models';
 import AppButton from '../common/AppButton';
+import PageHeader from '../common/PageHeader';
 import Screen from '../common/Screen';
-import { useEnvNav } from '../env/nav';
 import Note from '../env/parts/Note';
-import PageHeader from '../env/parts/PageHeader';
 import ProgressBar from '../env/parts/ProgressBar';
 import { modelErrorText } from './logic/errorText';
 import { variantLine, variantTitle } from './logic/modelText';
@@ -20,7 +19,6 @@ import { useAction } from './useAction';
 // memory is known once it is on the phone), under the original model's
 // dates. Download pins that commit and keeps the dates with the model.
 export default function RepoPage({ repo }: { repo: string }) {
-  const back = useEnvNav((s) => s.back);
   const [models, setModels] = useState<RepoModels | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Re-read on a change, so a started download shows as one.
@@ -40,7 +38,7 @@ export default function RepoPage({ repo }: { repo: string }) {
 
   return (
     <Screen>
-      <PageHeader title={repo} onBack={back} />
+      <PageHeader kicker="models · hugging face" title={repo} />
       {error ? (
         <>
           <Note tone="error">{error}</Note>

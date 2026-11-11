@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { cancelJob } from '../../../engine/linux/native';
 import type { Env, Image } from '../../../engine/linux/types';
@@ -8,13 +8,13 @@ import { useOwnEnvRun } from '../../../state/flows/ownEnvRuns';
 import { removeEnv } from '../../../state/flows/rowActions';
 import { useTargetProgress } from '../../../state/linux';
 import AppButton from '../../common/AppButton';
-import AppCard, { type CardMenuItem } from '../../common/AppCard';
 import ConfirmDialog from '../../common/ConfirmDialog';
+import SectionTitle from '../../common/SectionTitle';
+import { HIT, useTheme } from '../../common/globals';
 import { linuxFailureText, recordErrorText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
 import type { EnvRow } from '../logic/sections';
 import { progressLine, stepFraction } from '../logic/steps';
-import { envTitle, osLine } from '../logic/titles';
 import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
@@ -26,15 +26,9 @@ type Props = {
   /** False on play and in builds without Linux: no new Linux machines. */
   linuxAvailable: boolean;
   onOpenAgent: (agentId: string) => void;
+  /** The env was deleted: its page closes. */
+  onDeleted: () => void;
 };
-
-function envSubtitle(env: Env): string {
-  if (env.state === 'downloading') return 'Downloading';
-  if (env.state === 'failed') return 'Download stopped';
-  const os = env.source.kind === 'android' ? "Android's own shell" : osLine(env.os);
-  const size = env.sizeBytes > 0 ? formatBytes(env.sizeBytes) : null;
-  return [os, size].filter(Boolean).join(' · ');
-}
 
 function deleteMessage(env: Env): string {
   switch (env.source.kind) {
@@ -49,9 +43,12 @@ function deleteMessage(env: Env): string {
   }
 }
 
-// One env: its card (name, OS, size, ⋮ actions), its download state, then
-// its machines. Delete env is offered only once no machine comes from it.
-export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent }: Props) {
+// One system's page body: its download (progress and Cancel, or why it
+// stopped and Retry), the agents on it (each machine a row of one group,
+// with New agent here as its last row), then Delete system, offered only
+// once no machine comes from it.
+export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onDeleted }: Props) {
+  const t = useTheme();
   const progress = useTargetProgress(env ? { kind: 'env', id: env.id } : null);
   const [busy, setBusy] = useState<'retry' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,29 +75,11 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent }: P
   // A failed download has no machines yet: once it is done, the first agent is made like New env does.
   const retry = () =>
     env && run('retry', () => new Promise<void>((resolve, reject) => void retryOwnEnv(env.id, resolve).catch(reject)));
-
-  const menu: CardMenuItem[] = [];
-  if (env) {
-    if (canAddAgent) menu.push({ label: 'New agent here', onSelect: newAgent });
-    if (canRetry) menu.push({ label: 'Retry download', onSelect: retry });
-    if (machines === 0) menu.push({ label: 'Delete env', danger: true, onSelect: () => setConfirmDelete(true) });
-  }
   const failedWhy = env?.state === 'failed' ? recordErrorText(env) : null;
+  const agents = rows.filter((r) => r.agent != null).length;
 
   return (
-    <YStack gap="$2">
-      {env ? (
-        <AppCard
-          title={envTitle(env.source)}
-          subtitle={envSubtitle(env)}
-          menu={menu}
-          menuLabel={`Actions for ${envTitle(env.source)}`}
-          chevron={false}
-        />
-      ) : (
-        <AppCard title="Machines we can't place" subtitle="Their env or machine is missing" chevron={false} />
-      )}
-
+    <>
       {env?.state === 'downloading' ? (
         <YStack gap="$2">
           <ProgressBar
@@ -129,33 +108,65 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent }: P
       {error ? <Note tone="error">{error}</Note> : null}
       {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
 
-      {rows.map((r) => (
-        <MachineRow key={r.key} image={r.image} agent={r.agent} onOpen={onOpenAgent} />
-      ))}
+      <SectionTitle>{agents === 1 ? '1 agent on it' : `${agents} agents on it`}</SectionTitle>
+      <YStack borderWidth={1} borderColor={t.line} backgroundColor={t.panel}>
+        {rows.map((r, i) => (
+          <YStack key={r.key} borderTopWidth={i > 0 ? 1 : 0} borderColor={t.line}>
+            <MachineRow image={r.image} agent={r.agent} onOpen={onOpenAgent} />
+          </YStack>
+        ))}
+        {makingFirst && rows.length === 0 ? (
+          <YStack padding="$3">
+            <ProgressBar label="Making its first agent" fraction={null} />
+          </YStack>
+        ) : null}
+        {rows.length === 0 && !makingFirst ? (
+          <YStack padding="$3">
+            <Note>{canAddAgent ? 'No agents here yet.' : 'No agents here.'}</Note>
+          </YStack>
+        ) : null}
+        {canAddAgent ? (
+          <XStack
+            alignItems="center"
+            gap="$3"
+            minHeight={HIT.buttonH}
+            paddingHorizontal="$3"
+            borderTopWidth={rows.length > 0 || makingFirst ? 1 : 0}
+            borderColor={t.line}
+            pressStyle={{ backgroundColor: t.panel2 }}
+            opacity={newAgentHere.busy ? 0.5 : 1}
+            onPress={newAgentHere.busy ? undefined : newAgent}
+            accessibilityRole="button"
+            accessibilityLabel="New agent here"
+          >
+            <Text fontFamily="$mono" fontSize={18} color={t.primary} width={25} textAlign="center">
+              +
+            </Text>
+            <Text fontFamily="$mono" fontSize={12} letterSpacing={1.2} textTransform="uppercase">
+              {newAgentHere.busy ? 'Making a new agent…' : 'New agent here'}
+            </Text>
+          </XStack>
+        ) : null}
+      </YStack>
 
-      {makingFirst && rows.length === 0 ? <ProgressBar label="Making its first agent" fraction={null} /> : null}
-
-      {canAddAgent && rows.length === 0 && !makingFirst ? (
-        <YStack gap="$2">
-          <Note>No agents here yet.</Note>
-          <AppButton variant="secondary" loading={newAgentHere.busy} onPress={newAgent}>
-            New agent here
+      {env && machines === 0 ? (
+        <>
+          <SectionTitle>Delete</SectionTitle>
+          <AppButton variant="danger" loading={busy === 'delete'} onPress={() => setConfirmDelete(true)}>
+            Delete system
           </AppButton>
-        </YStack>
+          <ConfirmDialog
+            open={confirmDelete}
+            onClose={() => setConfirmDelete(false)}
+            title="Delete this system?"
+            message={deleteMessage(env)}
+            onConfirm={() => {
+              setConfirmDelete(false);
+              run('delete', () => removeEnv(env.id).then(onDeleted));
+            }}
+          />
+        </>
       ) : null}
-
-      {env ? (
-        <ConfirmDialog
-          open={confirmDelete}
-          onClose={() => setConfirmDelete(false)}
-          title="Delete this env?"
-          message={deleteMessage(env)}
-          onConfirm={() => {
-            setConfirmDelete(false);
-            run('delete', () => removeEnv(env.id));
-          }}
-        />
-      ) : null}
-    </YStack>
+    </>
   );
 }

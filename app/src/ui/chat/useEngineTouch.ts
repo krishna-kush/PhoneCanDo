@@ -2,18 +2,18 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import type { AgentId } from '../../engine/agents/records';
 import { dismissAgentAlert, touchEngine } from '../../engine/engines';
-import { useAppStore } from '../../state/app';
+import { useHomeInFront } from '../nav/homeInFront';
 
 const TOUCH_EVERY_MS = 2 * 60 * 1000;
 
-// While the chat is in front (Home tab, no terminal or folder picker over
-// it, app in the foreground), marks the agent's engine used: on showing and
+// While the chat is in front (Home, no page over it, app in the
+// foreground), marks the agent's engine used: on showing and
 // every couple of minutes. At the running-engine cap the service stops the
 // least recently used idle engine, and that must never be the one on screen.
 // Showing the chat also takes down the agent's alert (finished, failed,
 // waiting for your answer) or return notice: the user is looking at it.
 export function useEngineTouch(agentId: AgentId | null) {
-  const inFront = useAppStore((s) => s.footerTab === 'home' && s.terminal == null && !s.folderPickerOpen);
+  const inFront = useHomeInFront();
 
   useEffect(() => {
     if (!agentId || !inFront) return;

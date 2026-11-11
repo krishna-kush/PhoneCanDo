@@ -8,10 +8,10 @@ import type { Image, MissingTools } from '../../../engine/linux/types';
 // that its ready Linux machine lacks, and the line that installs them; null
 // while unknown, for a machine without Linux, or a kind that names none.
 // Checked again once an install of the agent records a new version.
-export function useMissingTools(agent: Agent, image: Image | undefined, linux: boolean): MissingTools | null {
-  const kind = agentKind(agent.kind);
+export function useMissingTools(agent: Agent | undefined, image: Image | undefined, linux: boolean): MissingTools | null {
+  const kind = agent ? agentKind(agent.kind) : null;
   // One string, so a fresh array with the same commands does not re-check.
-  const commands = (Array.isArray(kind.commands) ? kind.commands : []).join(' ');
+  const commands = (kind && Array.isArray(kind.commands) ? kind.commands : []).join(' ');
   const imageId = linux && image?.state === 'ready' ? image.id : null;
   const [tools, setTools] = useState<MissingTools | null>(null);
 
@@ -30,7 +30,7 @@ export function useMissingTools(agent: Agent, image: Image | undefined, linux: b
     return () => {
       live = false;
     };
-  }, [imageId, commands, agent.installedVersion]);
+  }, [imageId, commands, agent?.installedVersion]);
 
   return tools;
 }

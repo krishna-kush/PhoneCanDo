@@ -107,7 +107,7 @@ const ui = (p) => src('ui/env/logic', p);
   t('internal keeps the line', installErrorText({ code: 'internal', message: 'boom' }), 'Something went wrong on our side. (boom)');
   t('not installed start code', startFailureCode('start-failed:agent_not_installed'), 'agent_not_installed');
   t('not installed text', startErrorText('agent_not_installed'),
-    "This agent isn't installed in its machine yet. Install it on its page in the Env tab.");
+    "This agent isn't installed in its machine yet. Install it on its page: tap its name up top, then its ›.");
 
   const { agentReinstallLine } = await import(ui('hints.ts'));
   t('reinstall line', agentReinstallLine('gemini'),

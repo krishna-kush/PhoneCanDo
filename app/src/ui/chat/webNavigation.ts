@@ -1,5 +1,5 @@
 // Seam between the web view (which owns its history/home URL) and the app
-// chrome (header back button, Android back, footer Home). No RN imports.
+// chrome (Android Back, the header menu's Home). No RN imports.
 type Handler = () => boolean;
 
 let backHandler: Handler | null = null;

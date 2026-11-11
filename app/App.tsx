@@ -1,18 +1,16 @@
 import { useEffect } from 'react';
-import { AppState, Keyboard, StatusBar } from 'react-native';
+import { AppState, Keyboard, StatusBar, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { TamaguiProvider } from 'tamagui';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import AppHeader from './src/ui/common/AppHeader';
-import FooterTabs from './src/ui/common/FooterTabs';
-import TabPager, { TAB_ORDER } from './src/ui/common/TabPager';
-import { useAndroidBack } from './src/ui/common/useAndroidBack';
+import { initialWindowMetrics, SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { YStack } from 'tamagui';
+import HomeHeader from './src/ui/chat/HomeHeader';
 import HomeScreen from './src/ui/chat/HomeScreen';
-import TerminalScreen from './src/ui/terminal/TerminalScreen';
-import FolderPicker from './src/ui/terminal/FolderPicker';
-import EnvScreen from './src/ui/env/EnvScreen';
-import SettingsScreen from './src/ui/settings/SettingsScreen';
+import AppDrawer from './src/ui/drawer/AppDrawer';
+import PageStack from './src/ui/nav/PageStack';
+import { useBackChain } from './src/ui/nav/useBackChain';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
@@ -22,6 +20,8 @@ import UpdateDialog from './src/ui/common/UpdateDialog';
 import KeyboardTracker from './src/ui/common/keyboard/KeyboardTracker';
 import { useAgentsStore } from './src/state/agents';
 import { useAppStore } from './src/state/app';
+import { useLinuxStore } from './src/state/linux';
+import { useModelsStore } from './src/state/models';
 import {
   consumeLaunchTarget,
   isRunnerAvailable,
@@ -42,30 +42,34 @@ export default function App() {
     'GeistMono-Bold': require('./assets/fonts/GeistMono-Bold.ttf'),
   });
   const hydrate = useAppStore((s) => s.hydrate);
-  const footerTab = useAppStore((s) => s.footerTab);
-  const setFooterTab = useAppStore((s) => s.setFooterTab);
-  const terminal = useAppStore((s) => s.terminal);
-  const folderPickerOpen = useAppStore((s) => s.folderPickerOpen);
   const agentsHydrated = useAgentsStore((s) => s.hydrated);
   const hasAgents = useAgentsStore((s) => s.agents.length > 0);
 
-  // Android system back walks chat -> project -> home tab before exiting.
-  useAndroidBack();
+  // Android Back walks what the screen shows: a step inside a page, the
+  // drawer, the top page, the web UI's history, then leaves the app.
+  useBackChain();
 
   useEffect(() => {
     // Where to land when the app opens for a reason: a tap on an agent's
     // notification (its alert, its own post, its prompt, its return notice)
-    // or an agent bringing the app back (mobile_return). The target names a
-    // tab and, when the reason is one agent, that agent, which becomes the
-    // active one. The event covers the app in front; the pref covers a cold
-    // or resumed start. Until the agents are read, a switch would be undone
-    // by the stored pick, so the target waits for hydration.
+    // or an agent bringing the app back (mobile_return). The target names
+    // Home, the agent's page ('env') or Settings and, when the reason is one
+    // agent, that agent, which becomes the active one. An open terminal
+    // stays on top whatever the target (stack.ts towardHome). The event
+    // covers the app in front; the pref covers a cold or resumed start.
+    // Until the agents are read, a switch would be undone by the stored
+    // pick, so the target waits for hydration.
     const applyLaunchTarget = (target: LaunchTarget | null) => {
       if (!target) return;
       Keyboard.dismiss();
       const agents = useAgentsStore.getState();
       if (target.agentId && target.agentId !== agents.activeAgentId) void agents.setActiveAgent(target.agentId);
-      setFooterTab(target.tab);
+      const app = useAppStore.getState();
+      app.showHome();
+      if (target.tab === 'settings') app.push({ name: 'settings' });
+      if (target.tab === 'env') {
+        app.push(target.agentId ? { name: 'agent', agentId: target.agentId } : { name: 'systems' });
+      }
     };
     const takeLaunchTarget = () => {
       if (useAgentsStore.getState().hydrated) applyLaunchTarget(consumeLaunchTarget());
@@ -91,6 +95,9 @@ export default function App() {
       const { activeAgentId, startAgent } = useAgentsStore.getState();
       if (activeAgentId) void startAgent(activeAgentId);
     };
+    // The drawer, the systems and the agent pages read these.
+    useLinuxStore.getState().hydrateLinux();
+    useModelsStore.getState().hydrateModels();
     void Promise.allSettled([hydrate(), useAgentsStore.getState().hydrateAgents()]).finally(() => {
       takeLaunchTarget();
       // Usage stats: deferred and fire-and-forget, never on the boot path.
@@ -113,50 +120,49 @@ export default function App() {
       launchSub.remove();
       sub.remove();
     };
-  }, [hydrate, setFooterTab]);
+  }, [hydrate]);
 
   // Keep the first frame blank rather than flash the system font (if loading
   // fails, render anyway: the fallback is the old sans, not a dead app) or
-  // the tabs before we know whether any agent exists.
+  // Home before we know whether any agent exists.
   if ((!fontsLoaded && !fontError) || !agentsHydrated) return null;
 
   return (
     <RootError>
+      {/* Gestures that run on the UI thread (the drawer's swipe) need this root. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <TamaguiProvider config={tamaguiConfig} defaultTheme={scheme}>
         <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
         <KeyboardProvider>
-        <SafeAreaProvider>
+        {/* The window's insets from the first frame: without them the
+            header drew under the status bar until they arrived. */}
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <KeyboardTracker />
           <SafeAreaView
             style={{ flex: 1, backgroundColor: t.panel }}
             edges={['top', 'bottom', 'left', 'right']}
           >
             {!hasAgents ? (
-              // No agent yet: setup creates the first one, then the tabs show.
+              // No agent yet: setup creates the first one, then Home shows.
               <FirstLaunchScreen />
             ) : (
-              <>
-                <AppHeader />
-                {terminal ? (
-                  <TerminalScreen key={terminal.id} session={terminal} />
-                ) : folderPickerOpen ? (
-                  <FolderPicker />
-                ) : (
-                  // Home IS the active agent's own UI: its pair-loaded web UI
-                  // (projects and sessions live there, no app-side project/chat
-                  // creation) or the TUI its engine runs. Terminals open above
-                  // via the header menu.
-                  <TabPager
-                    pages={[<HomeScreen key="home" />, <EnvScreen key="env" />, <SettingsScreen key="settings" />]}
-                    index={TAB_ORDER.indexOf(footerTab)}
-                    onIndexChange={(i) => setFooterTab(TAB_ORDER[i])}
-                  />
-                )}
-                {/* It stays put while the keyboard opens over it (the keyboard
-                    draws over the app); a terminal above it leaves the
-                    keyboard's room less the footer's (terminal/sizing.ts). */}
-                {terminal == null && !folderPickerOpen && <FooterTabs />}
-              </>
+              // One box inside the safe area: the pages and the drawer are
+              // absolute layers, which the SafeAreaView's padding would not hold.
+              <View style={{ flex: 1 }}>
+                {/* Home IS the active agent's own UI: its pair-loaded web UI
+                    (projects and sessions live there, no app-side project/chat
+                    creation) or the TUI its engine runs. Every other place is a
+                    page over it; the drawer leads to them. */}
+                <PageStack
+                  home={
+                    <YStack flex={1}>
+                      <HomeHeader />
+                      <HomeScreen />
+                    </YStack>
+                  }
+                />
+                <AppDrawer />
+              </View>
             )}
           </SafeAreaView>
           <UnlockDialog />
@@ -166,6 +172,7 @@ export default function App() {
         </SafeAreaProvider>
         </KeyboardProvider>
       </TamaguiProvider>
+      </GestureHandlerRootView>
     </RootError>
   );
 }

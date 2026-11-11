@@ -1,7 +1,7 @@
 // The Choose agent step: which kinds a creation path offers for a channel
 // and an env (src/engine/agents/offers.ts: hidden, blocked, order, the
 // preselection and when the step is skipped), then its words, its env per
-// target and where Back goes (src/ui/env/logic/agentChoice.ts, routes.ts)
+// target and before any place (src/ui/env/logic/agentChoice.ts)
 // and first launch's line over it (src/ui/setup/copy.ts). Imports the real
 // pure modules (Node 22.18+ strips their types), so these cannot drift.
 // Run: node test_agent_offers.js (or pnpm check:vectors)
@@ -144,22 +144,17 @@ const blocks = (offers) => Object.fromEntries(offers.map((o) => [o.id, o.blocked
   t('all blocked text', noOfferText([{ blocked: 'needs_linux' }]), 'None of these agents can run here.');
   t('something to pick', noOfferText([{ blocked: null }, { blocked: 'family' }]), null);
 
-  // --- Back from the step -------------------------------------------------
-  const { parentRoute } = await import(src('ui/env/logic/routes.ts'));
-  const tag = { name: '3.22', sizeArm64: null, lastUpdated: null };
-  t('back from Default pick', parentRoute({ name: 'new-agent', target: { kind: 'default' } }), { name: 'new-env' });
-  t('back from Own pick', parentRoute({ name: 'new-agent', target: { kind: 'own', repo: 'alpine', tag, typed: true } }), {
-    name: 'new-env-confirm', repo: 'alpine', tag, typed: true,
-  });
-  t('back from New agent here', parentRoute({ name: 'new-agent', target: { kind: 'env', envId: 'e' } }), { name: 'list' });
-  t('back from Android pick', parentRoute({ name: 'new-agent', target: { kind: 'android' } }), { name: 'list' });
+  // --- New agent before a place (the drawer's New agent) --------------------
+  const { anyPlaceOfferEnv } = await import(src('ui/env/logic/agentChoice.ts'));
+  t('with Linux: judged against any ready Linux', anyPlaceOfferEnv(true), { kind: 'linux', family: null, ready: true });
+  t('without Linux: Android only', anyPlaceOfferEnv(false), { kind: 'android', family: null, ready: true });
 
   // --- first launch -------------------------------------------------------
   const { CHOOSE_TITLE, chooseNote } = await import(src('ui/setup/copy.ts'));
   t('setup choose title', CHOOSE_TITLE, 'Choose your agent');
   t('play never says Linux', /Linux/.test(chooseNote({ path: 'android', play: true, noLinux: 'unavailable' })), false);
   t('Android says what cannot run', chooseNote({ path: 'android', play: false, noLinux: 'skipped' }),
-    "Pick the agent to set up first; you can add more in the Env tab. It uses Android's own shell, so agents that need Linux can't run.");
+    "Pick the agent to set up first; you can add more from the menu (tap the name up top). It uses Android's own shell, so agents that need Linux can't run.");
 
   console.log(`\nRESULT: ${pass} pass, ${fail} fail`);
   process.exit(fail ? 1 : 0);

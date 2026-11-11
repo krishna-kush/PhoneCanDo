@@ -121,11 +121,9 @@ The IME contract is load-bearing:
   inset, plus air), a Reanimated value on the UI thread
   (`keyboard/room.ts`; React state would lag it by frames). JS only hears
   open/closed (`src/state/keyboard.ts`). A terminal's spacer is an
-  `Animated.View` that follows the room every frame. The footer stays and
-  the keyboard draws over it (hiding the footer would make a TUI resize
-  twice), so a terminal above the footer leaves the room less the footer's
-  measured height (`terminalPad`); one in the overlay (no footer) leaves
-  the whole room. Vectors: `scripts/vectors/test_keyboard_room.js`.
+  `Animated.View` that follows the room every frame. Nothing sits below a
+  terminal, so the spacer is the whole room.
+  Vectors: `scripts/vectors/test_keyboard_room.js`.
 - The invisible input is an absolute 1x1 overlay: Android enforces a
   min-height on multiline fields, so an in-flow field eats a layout row.
 - Fold every text-inserting path (extra keys such as `|` and `~`, a
@@ -140,26 +138,25 @@ Pure logic stays pure: `keys.ts`, `reconcile.ts`, `sizing.ts`; hooks are
 every terminal, over a transport (`transport/`): `local.ts`, a PTY of its
 own, or `engine.ts`, a TUI engine's hosted PTY (see Engine terminal). Its
 `active` prop gates autofocus, tap-to-focus and the output pump, because
-`TabPager` keeps every page mounted.
-
-- `TabPager` never takes a tap from its pages
-  (`keyboardShouldPersistTaps="always"`): with RN's default, the first tap
-  while the keyboard is up only closes it.
+the page stack keeps every page mounted under the top one: a terminal page
+is active only while it is the page in front (`ui/nav/pageActive.ts`), a
+TUI home only while no page is over Home. A terminal opens as a page
+(`TerminalPage.tsx`: what it is attached to, a ⋮ menu; Back closes it),
+one at a time.
 - The WebView sits in `DirectionLockView` (`TerminalGestureHost` from
   `src/engine/terminal.ts`): on touch-down it asks every parent not to
   intercept; past the touch slop it keeps that for a mostly vertical move
   and gives it back for a sideways one. So a vertical swipe scrolls the
-  terminal all the way, and a sideways swipe still changes tabs (the page
+  terminal all the way, and a sideways one goes to the parent (the page
   reads the takeover as `touchcancel`).
 
 ## Sessions
 
-A terminal session (`TerminalSession` in `src/state/app/navigation.ts`) is
+A terminal session (`TerminalSession` in `src/state/app/routes.ts`) is
 one of two kinds. Only the recipe differs: `TerminalScreen.tsx` hands it to
 a `TerminalView` on the local transport, through the same generic PTY seam
-(`src/engine/terminal.ts`), and the PTY closes with the screen. App keys the
-screen by session id, so every open remounts it; closing returns to the tab
-underneath.
+(`src/engine/terminal.ts`), and the PTY closes with the screen. Every open is
+a new page, so it mounts afresh; closing returns to the page underneath.
 
 - `tui`: the agent kind's terminal UI attached to that agent's engine, in a
   folder of the agent's HOME (its image's `home/`). The header ⋮ menu opens
@@ -189,8 +186,8 @@ underneath.
   `/system/bin/sh -l` in its `home/projects/`. Both open on a cooked tty
   (`raw: false` in `sessionRecipe.ts`). The image gets its per-start
   preparation first (`prepareAgentImage`, as for its engine, so the
-  image's `launch.conf` never changes between the two). The Env tab's
-  agent page opens it, optionally with a suggested command
+  image's `launch.conf` never changes between the two). The agent's page
+  and its Machine page open it, optionally with a suggested command
   (`initialInput`: the line that installs missing tools, or the packages
   to reinstall after a reset).
 
@@ -205,9 +202,9 @@ like typed text. It is skipped once the user has typed.
 ## Engine terminal (TUI home)
 
 A kind with `engine.style: "tui"` runs its program in a PTY the runner's
-foreground service owns (`runner.md`), and its Home tab shows it
+foreground service owns (`runner.md`), and Home shows it
 (`../../src/ui/chat/tui/AgentTuiHome.tsx`, a `TerminalView` on the engine
-transport). The program keeps running when the tab, a terminal over it or
+transport). The program keeps running when a page over Home, a terminal or
 the app goes away.
 
 - The view attaches as the PTY's one viewer
@@ -223,7 +220,7 @@ the app goes away.
 - A read that says `ended` (the program stopped or died) shows "top
   stopped" (the kind's label) with Restart, which starts the engine again
   and attaches a fresh view; a new start from elsewhere (the app's
-  foreground start, the Env tab's Start) does the same by itself.
+  foreground start, the agent page's Start) does the same by itself.
   `detached` (another viewer took over) only stops the pump.
 - The title the program sets reaches `useOpenTuiChat.ts` as for a TUI
   client, through the kind's `chatTitle`.
@@ -255,4 +252,4 @@ the app goes away.
 - A session around it: `../../src/ui/terminal/TerminalScreen.tsx`
 - What a session runs: `../../src/ui/terminal/sessionRecipe.ts`
 - Dev loop and bundle command: `../guides/development.md`
-- Home tab (web UI or TUI home): `chat.md`
+- Home (web UI or TUI home) and the navigation around it: `chat.md`

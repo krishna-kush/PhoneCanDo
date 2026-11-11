@@ -1,0 +1,25 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.phonecando.backgesture'
+version = '0.1.0'
+
+android {
+  namespace "com.phonecando.backgesture"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // OnBackPressedCallback's progress callbacks (BackEventCompat) arrived in
+  // activity 1.8.0; React Native's appcompat already brings it, this only
+  // makes it visible here. Gradle keeps the newest version in the graph.
+  implementation 'androidx.activity:activity:1.8.0'
+}

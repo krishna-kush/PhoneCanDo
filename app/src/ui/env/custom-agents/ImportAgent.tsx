@@ -1,8 +1,8 @@
+import { useAppStore } from '../../../state/app';
 import AppButton from '../../common/AppButton';
+import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
-import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
-import PageHeader from '../parts/PageHeader';
 import FormField from './FormField';
 import FormScreen from './FormScreen';
 import KindReviewView from './KindReviewView';
@@ -13,18 +13,17 @@ import { useStepBack } from './useStepBack';
 // Import a custom agent: paste its JSON (someone's export), then read what
 // it runs, install script first, before adding it.
 export default function ImportAgent() {
-  const open = useEnvNav((s) => s.open);
-  const back = useEnvNav((s) => s.back);
+  const back = useAppStore((s) => s.back);
   const im = useImport();
   useStepBack(im.ready != null, im.edit);
 
   if (im.ready) {
     const add = () => {
-      if (im.save()) open({ name: 'custom-agents' });
+      if (im.save()) back();
     };
     return (
       <Screen>
-        <PageHeader title={`Import ${im.ready.review.label}`} onBack={im.edit} />
+        <PageHeader kicker="custom agents · review" title={`Import ${im.ready.review.label}`} />
         <Note>This is everything the agent runs on your phone. Read it before you add it.</Note>
         <KindReviewView review={im.ready.review} />
         <SafetyNotes />
@@ -42,7 +41,7 @@ export default function ImportAgent() {
 
   return (
     <FormScreen>
-      <PageHeader title="Import an agent" onBack={back} />
+      <PageHeader kicker="custom agents" title="Import an agent" />
       <Note>Paste an agent exported from PhoneCanDo: its whole JSON, from the first brace to the last.</Note>
       <AppButton variant="secondary" onPress={im.paste}>
         Paste from clipboard

@@ -7,7 +7,7 @@ import InstallHome from './InstallHome';
 import AgentTuiHome from './tui/AgentTuiHome';
 import { useEngineTouch } from './useEngineTouch';
 
-// Home tab: the active agent's own UI, as its kind's manifest says
+// Home: the active agent's own UI, as its kind's manifest says
 // (KindView `home`): its web UI, or the TUI its engine runs. The view is
 // keyed by agent: a switch mounts a fresh one. A web view pairs with that
 // agent's engine where it listens now (an engine can come back on another
@@ -23,7 +23,7 @@ export default function HomeScreen() {
     return (
       <YStack flex={1} backgroundColor={t.bg} padding="$4" justifyContent="center">
         <Text color={t.muted} fontFamily="$mono">
-          No agent yet. Add one on the Env tab.
+          No agent yet. Tap the name up top to add one.
         </Text>
       </YStack>
     );

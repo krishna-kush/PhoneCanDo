@@ -4,7 +4,6 @@ import { Text } from 'tamagui';
 import { confirmUser } from '../../engine/auth';
 import * as runner from '../../engine/runner';
 import { track } from '../../engine/telemetry';
-import { useAppStore } from '../../state/app';
 import AccessibilitySetup from '../accessibility/AccessibilitySetup';
 import { COPY } from '../accessibility/guide';
 import { useAccessibilitySteps } from '../accessibility/useAccessibilitySteps';
@@ -12,6 +11,7 @@ import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
 import SectionTitle from '../common/SectionTitle';
 import ThumbIcon from '../common/ThumbIcon';
+import { usePageActive } from '../nav/pageActive';
 
 const runnerAvailable = runner.isRunnerAvailable();
 
@@ -25,7 +25,7 @@ const UNLOCK_WHY =
 // is on, the unlock reason once unlocked. Lite and play: what the build
 // cannot do.
 export default function PhoneControlSection({ channel }: { channel: string }) {
-  const footerTab = useAppStore((s) => s.footerTab);
+  const inFront = usePageActive();
   const a11y = useAccessibilitySteps();
   const switchedOn = a11y.enabled;
   const [unlocked, setUnlocked] = useState(false);
@@ -41,11 +41,11 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
     return () => sub.remove();
   }, []);
 
-  // The in-chat unlock modal can flip the gate while Settings stays mounted;
-  // re-read when the tab becomes visible.
+  // The in-chat unlock modal can flip the gate while Settings stays mounted
+  // under another page; re-read when it is in front again.
   useEffect(() => {
-    if (runnerAvailable && footerTab === 'settings') setUnlocked(runner.isAutomationEnabled());
-  }, [footerTab]);
+    if (runnerAvailable && inFront) setUnlocked(runner.isAutomationEnabled());
+  }, [inFront]);
 
   async function toggleLock() {
     if (!runnerAvailable) return;

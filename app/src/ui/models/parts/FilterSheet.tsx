@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { BackHandler, Keyboard, useWindowDimensions } from 'react-native';
+import { Keyboard, useWindowDimensions } from 'react-native';
 import { Sheet, YStack } from 'tamagui';
 import type { ModelFilters } from '../../../engine/models/types';
 import AppButton from '../../common/AppButton';
 import MenuItem from '../../common/MenuItem';
 import SectionTitle from '../../common/SectionTitle';
 import { useTheme } from '../../common/globals';
+import { useBackInterceptor } from '../../nav/interceptors';
 import { type FilterOption, KIND_OPTIONS, LICENSE_OPTIONS, SIZE_OPTIONS, type SheetFilters } from '../logic/filters';
 
 // The share of the screen the choices may take before they scroll (a small
@@ -31,16 +32,11 @@ export default function FilterSheet({
   const { height } = useWindowDimensions();
 
   // The search field may hold the keyboard, which would cover the sheet.
-  // Back closes the sheet first (registered last, so asked first).
+  // Back closes the sheet first, before the page (ui/nav/interceptors.ts).
   useEffect(() => {
-    if (!open) return;
-    Keyboard.dismiss();
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      onClose();
-      return true;
-    });
-    return () => sub.remove();
-  }, [open, onClose]);
+    if (open) Keyboard.dismiss();
+  }, [open]);
+  useBackInterceptor(open, onClose);
 
   return (
     <Sheet

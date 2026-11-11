@@ -7,19 +7,21 @@ import { createOwnEnv } from '../../../state/flows/createOwnEnv';
 import { offersForEnv } from '../../../state/flows/kindOffers';
 import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { asksForModel } from '../../../state/flows/newAgent';
+import { useAppStore, type NewAgentTarget } from '../../../state/app';
 import { useLinuxStore } from '../../../state/linux';
 import { targetOfferEnv } from '../logic/agentChoice';
 import { linuxFailureText } from '../logic/errorText';
-import type { NewAgentTarget } from '../logic/routes';
-import { useEnvNav } from '../nav';
 
-// A new agent from any creation path. `start` makes it at once when only one
-// kind can be made there and there is no model to ask about (the Model
-// step), else opens the Choose agent step; `make` makes the pick, then opens
-// the agent's page. An Own env starts its download instead and moves to its
-// progress page; the run makes the agent after.
+// A new agent for a place already known (New agent here, Android only, a
+// place or a download picked). `start` makes it at once when only one kind
+// can be made there and there is no model to ask about (the Model step),
+// else opens the Choose agent step for that place; `make` makes the pick,
+// then opens the agent's page in place of the run's steps. An Own env
+// starts its download instead and moves to its progress page; the run
+// makes the agent after.
 export function useNewAgent() {
-  const open = useEnvNav((s) => s.open);
+  const push = useAppStore((s) => s.push);
+  const finishCreation = useAppStore((s) => s.finishCreation);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +34,7 @@ export function useNewAgent() {
       let started = false;
       createOwnEnv({ image: target.repo, tag: target.tag.name }, pick, ({ envId }) => {
         started = true;
-        open({ name: 'new-env-pull', repo: target.repo, tag: target.tag.name, envId });
+        finishCreation({ name: 'new-env-pull', repo: target.repo, tag: target.tag.name, envId });
       })
         .catch((e: unknown) => {
           if (!started) setError(linuxFailureText(e));
@@ -43,7 +45,7 @@ export function useNewAgent() {
       return;
     }
     agentFor(target, pick)
-      .then((agent) => open({ name: 'agent', agentId: agent.id }))
+      .then((agent) => finishCreation({ name: 'agent', agentId: agent.id, fresh: true }))
       .catch((e: unknown) => setError(linuxFailureText(e)))
       .finally(() => setBusy(false));
   };
@@ -58,10 +60,13 @@ export function useNewAgent() {
     if (busy) return;
     const kindId = soleKind(target);
     if (kindId) make(target, { kindId, modelId: null });
-    else open({ name: 'new-agent', target });
+    else push({ name: 'new-agent', target });
   };
 
-  return { busy, error, start, make, asks: (target: NewAgentTarget) => soleKind(target) == null };
+  /** Whether `start` would ask (Choose agent) rather than make it at once. */
+  const asks = (target: NewAgentTarget) => soleKind(target) == null;
+
+  return { busy, error, start, make, asks };
 }
 
 function agentFor(target: Exclude<NewAgentTarget, { kind: 'own' }>, pick: AgentPick): Promise<Agent> {

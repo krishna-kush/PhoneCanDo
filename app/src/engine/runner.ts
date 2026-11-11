@@ -153,9 +153,9 @@ export function isAutomationEnabled(): boolean {
   }
 }
 
-// Where the app should land: a footer tab and, when the reason is one agent
-// (a tap on its notification or alert, its return after phone control, its
-// prompt), that agent. Native binds it when the app opens, so each
+// Where the app should land: Home, the agent's page or Settings and, when
+// the reason is one agent (a tap on its notification or alert, its return
+// after phone control, its prompt), that agent. Native binds it when the app opens, so each
 // notification opens its own agent.
 export type LaunchTarget = { tab: NativeLaunchTarget['tab']; agentId: AgentId | null };
 

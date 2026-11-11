@@ -1,6 +1,6 @@
 // A new agent of the chosen kind on an env: a fresh image made from the env,
 // and the agent on it right away (newAgent.ts: named "opencode 2" and so on,
-// on the model picked for it), so the Env tab can show it by name while its
+// on the model picked for it), so the agent pages can show it by name while its
 // machine is still being set up. The agent's engine refuses to start
 // (image_not_ready) until the image is ready, and, for a kind with an
 // install, until the install that starts right away (installAgent.ts) has

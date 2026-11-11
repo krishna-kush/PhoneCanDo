@@ -47,6 +47,8 @@ on:
       - 'tce/core/**'
       # App colours and icons (app/tamagui.config.ts, app/src/globals/theme.ts).
       - 'theme/**'
+      # The About page's barcode encoder, shared with the site (app/src/ui/settings/Barcode.tsx).
+      - 'web/src/lib/code128.ts'
       - '.github/workflows/android.yml'
       - '.github/ci/android/**'
       # Agent kinds: the Kotlin the runner builds against (included by
@@ -117,6 +119,8 @@ on:
       - 'tce/core/**'
       # App colours and icons (app/tamagui.config.ts, app/src/globals/theme.ts).
       - 'theme/**'
+      # The About page's barcode encoder, shared with the site (app/src/ui/settings/Barcode.tsx).
+      - 'web/src/lib/code128.ts'
       - '.github/workflows/android.yml'
       - '.github/ci/android/**'
       # Agent kinds: the Kotlin the runner builds against (included by

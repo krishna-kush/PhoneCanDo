@@ -16,6 +16,7 @@ import { pairWebUi } from '../../engine/engines';
 import { isRunnerAvailable } from '../../engine/runner';
 import { track } from '../../engine/telemetry';
 import AppButton from '../common/AppButton';
+import WakingLine from '../common/face/WakingLine';
 import LogoLoader from '../common/LogoLoader';
 import { useTheme } from '../common/globals';
 
@@ -23,10 +24,10 @@ import { useTheme } from '../common/globals';
 // URL per mount (the runner pairs as the kind's manifest says). HomeScreen mounts one per
 // active agent of a web-home kind, so a switch pairs again, lands on the web
 // home (projects and sessions live there; no app-side chats) and then
-// returns to the page that agent was last on (lastPage.ts). App chrome adds
-// a web-history back arrow and a Home action so a session never strands the
-// user; the TUI (`TerminalScreen`) is untouched — the header menu switches
-// views. Theme and embed scripts come from the kind's web adapter
+// returns to the page that agent was last on (lastPage.ts). Android Back
+// walks the web history and the header menu has a Home action, so a session
+// never strands the user; the TUI (`TerminalScreen`) is untouched — the
+// header menu switches views. Theme and embed scripts come from the kind's web adapter
 // (webAdapter.ts).
 export default function AgentWebView({ agent }: { agent: Agent }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -45,7 +46,6 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   const canGoBackRef = useRef(false);
   const currentUrlRef = useRef('');
   const homeUrlRef = useRef<string | null>(null);
-  const setWebCanGoBack = useAppStore((s) => s.setWebCanGoBack);
   const themeMode = useAppStore((s) => s.themeMode);
   const t = useTheme();
   const kind = agentKind(agent.kind);
@@ -54,8 +54,8 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   useOpenChat(agent.id, chatId);
 
   // The web UI owns its history and its project-list home. Chrome calls these
-  // handlers so Android back, the header back arrow, and the Home menu item
-  // never strand the user in a session. Back works on every page but the
+  // handlers so Android Back and the Home menu item never strand the user in
+  // a session. Back works on every page but the
   // home: through the web history when it has an entry, else straight home.
   // Chromium hides entries the user never touched (the home a restore passes
   // through), so a restored page has no history to go back to.
@@ -81,9 +81,8 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
       if (last && webUi && !webUi.isAuthUrl(last)) rememberPage(agent.id, last);
       setWebBackHandler(null);
       setWebHomeHandler(null);
-      setWebCanGoBack(false);
     };
-  }, [setWebCanGoBack, agent.id, webUi]);
+  }, [agent.id, webUi]);
 
   // The web app stays mounted across app theme changes; re-assert the scheme
   // in place so the session/scroll state survives the switch.
@@ -155,6 +154,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
         <Text color={t.fg} fontFamily="$mono">
           Loading web UI…
         </Text>
+        <WakingLine />
       </YStack>
     );
   }
@@ -200,7 +200,6 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
               homeUrlRef.current = nav.url;
             }
             canGoBackRef.current = nav.canGoBack;
-            setWebCanGoBack(homeUrlRef.current != null && homeUrlRef.current !== nav.url);
           }}
           injectedJavaScript={webUi.embedScript}
           onHttpError={(e) => {

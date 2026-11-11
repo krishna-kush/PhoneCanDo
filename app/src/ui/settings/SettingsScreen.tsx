@@ -6,6 +6,7 @@ import { installedVersion } from '../../engine/updates';
 import AppButton from '../common/AppButton';
 import AppCard from '../common/AppCard';
 import LicensesDialog from '../common/LicensesDialog';
+import PageHeader from '../common/PageHeader';
 import Screen from '../common/Screen';
 import SectionTitle from '../common/SectionTitle';
 import LogoMark from '../common/LogoMark';
@@ -18,7 +19,8 @@ const runnerAvailable = runner.isRunnerAvailable();
 const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark'];
 
 // App-wide options only: about and licences, updates, theme, phone control,
-// privacy. Each agent's engine, reset and delete live on its page in Env.
+// privacy. Each agent's engine, reset and delete live on its page (the
+// drawer's › beside it).
 export default function SettingsScreen() {
   const scheme = useScheme();
   const themeMode = useAppStore((s) => s.themeMode);
@@ -38,6 +40,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
+      <PageHeader kicker="app-wide" title="Settings" />
       <SectionTitle>About</SectionTitle>
       <AppCard
         title="PhoneCanDo on-device agent"

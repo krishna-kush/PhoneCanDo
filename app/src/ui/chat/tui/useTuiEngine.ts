@@ -10,7 +10,7 @@ import { tuiPhase, type TuiStart } from './tuiPhase';
 // the engine's state, which the runner's events keep fresh, says when the
 // terminal can attach. A terminal that ends shows the stopped state until
 // Restart or until something else starts the engine again (the app's
-// foreground start, the Env tab's Start).
+// foreground start, the agent page's Start).
 export function useTuiEngine(agentId: AgentId) {
   const state = useAgentsStore((s) => s.statuses[agentId]?.state);
   const stateError = useAgentsStore((s) => s.statuses[agentId]?.error ?? null);

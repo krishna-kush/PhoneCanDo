@@ -1,6 +1,7 @@
 // Env/agent decisions: error codes, agent names, orphan images, the progress
-// fold and when a job counts as over (src/state/flows/logic/), then the Env
-// tab's words and lists (src/ui/env/logic/, src/ui/setup/copy.ts). Imports
+// fold and when a job counts as over (src/state/flows/logic/), then the
+// agent and system pages' words and lists and New agent's place step
+// (src/ui/env/logic/, src/ui/setup/copy.ts). Imports
 // the real pure modules (Node 22.18+ strips their types), so these cannot
 // drift.
 // Run: node test_env_flows.js (or pnpm check:vectors)
@@ -180,11 +181,43 @@ const ui = (p) => src('ui/env/logic', p);
   t('rows under env', secs[1].rows.map((r) => [r.image?.id, r.agent?.id]), [['i1', 'a1']]);
   t('lost rows', secs[4].rows.map((r) => r.key), ['i2', 'agent:a2']);
 
-  const { parentRoute } = await import(ui('routes.ts'));
-  t('back from agent', parentRoute({ name: 'agent', agentId: 'a' }), { name: 'list' });
-  t('back from typed confirm', parentRoute({ name: 'new-env-confirm', repo: 'x', tag: { name: 'latest' }, typed: true }), { name: 'new-env-os' });
-  t('back from picked confirm', parentRoute({ name: 'new-env-confirm', repo: 'x', tag: { name: 'latest' }, typed: false }), { name: 'new-env-tags', repo: 'x' });
-  t('list has no parent', parentRoute({ name: 'list' }), null);
+  const { envSubtitle, DEFAULT_ENV_TITLE } = await import(ui('titles.ts'));
+  t('downloading env line', envSubtitle({ state: 'downloading', source: { kind: 'registry' }, os: null, sizeBytes: 0 }), 'Downloading');
+  t('android env line', envSubtitle({ state: 'ready', source: { kind: 'android' }, os: null, sizeBytes: 0 }), "Android's own shell");
+  t('default title', DEFAULT_ENV_TITLE, 'Debian-based (Default)');
+
+  // --- New agent's place step (ui/env/logic/places.ts) ---------------------
+  const { placesFor } = await import(ui('places.ts'));
+  const penv = (id, kind, state, createdAt) => ({ id, source: { kind, image: id, tag: 'latest' }, state, os: null, sizeBytes: 0, createdAt });
+  const placeEnvs = [penv('and', 'android', 'ready', 1), penv('own2', 'registry', 'ready', 3), penv('own1', 'registry', 'downloading', 2)];
+  const places = placesFor(placeEnvs, true);
+  t('place order: Default, Own oldest first, Android, download', places.map((p) => p.key), ['default', 'own1', 'own2', 'and', 'download']);
+  t('Default is recommended', places.filter((p) => p.recommended).map((p) => p.key), ['default']);
+  t('a downloading env is not ready to judge', places[1].env.ready, false);
+  t('download has no target yet', places[places.length - 1].target, null);
+  t('without Linux: only Android places', placesFor(placeEnvs, false).map((p) => p.key), ['and']);
+
+  // --- a system's page (ui/env/logic/systemFacts.ts) -----------------------
+  const { systemFacts } = await import(ui('systemFacts.ts'));
+  const DAY = 24 * 60 * 60 * 1000;
+  const at = 100 * DAY;
+  const ownSys = {
+    source: { kind: 'registry', image: 'alpine', tag: '3.22', digest: 'sha256:0123456789abcdef0123' },
+    state: 'ready', os: { id: 'alpine', versionId: '3.22.1', idLike: [], prettyName: 'Alpine Linux v3.22', family: 'apk', shell: '/bin/sh' },
+    sizeBytes: 3_500_000, createdAt: at - 3 * DAY,
+  };
+  t('own system facts', systemFacts(ownSys, at).map((f) => `${f.label}=${f.value}`), [
+    'Kind=Own · downloaded', 'Image=alpine:3.22', 'Digest=sha256:0123456789ab', 'OS=Alpine Linux v3.22', 'Packages=apk', 'Size=3.5 MB', 'Added=3 days ago',
+  ]);
+  const baked = { source: { kind: 'default', version: '1' }, state: 'ready', os: null, sizeBytes: 0, createdAt: at };
+  t('default system facts', systemFacts(baked, at).map((f) => `${f.label}=${f.value}`), [
+    'Kind=Default · in the app', 'OS=not detected yet', 'Packages=—', 'Size=part of the app', 'Added=today',
+  ]);
+  const pulling = { ...ownSys, state: 'downloading', os: null, sizeBytes: 0, source: { ...ownSys.source, tag: '', digest: '' } };
+  t('a download in progress', systemFacts(pulling, at).map((f) => `${f.label}=${f.value}`), [
+    'Kind=Own · downloaded', 'Image=alpine:latest', 'OS=known once downloaded', 'Packages=—', 'Added=3 days ago',
+  ]);
+  t('android has no OS rows', systemFacts({ source: { kind: 'android' }, state: 'ready', os: null, sizeBytes: 0, createdAt: at }, at).map((f) => f.label), ['Kind', 'Added']);
 
   const { engineStateWord, engineIsUp } = await import(ui('engineState.ts'));
   t('state word', engineStateWord('died'), 'Stopped unexpectedly');

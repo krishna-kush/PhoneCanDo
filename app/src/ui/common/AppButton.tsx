@@ -19,6 +19,8 @@ type Props = {
 
 // The site's `.btn`: square, mono uppercase, 2px hard amber offset. Keeps
 // the 52dp target and 17sp input text — only the surface language changed.
+// A press sinks the button into its shadow (the site's :active), so it
+// clicks like a key; a ghost button only dims.
 export default function AppButton({
   children,
   onPress,
@@ -55,7 +57,7 @@ export default function AppButton({
       elevation={0}
       boxShadow={variant === 'ghost' ? undefined : `2px 2px 0 ${t.secondary}`}
       opacity={disabled && !loading ? 0.5 : 1}
-      pressStyle={{ opacity: 0.85, scale: 0.98 }}
+      pressStyle={variant === 'ghost' ? { opacity: 0.7 } : { x: 2, y: 2, boxShadow: `0px 0px 0 ${t.secondary}` }}
       {...style}
     >
       {children}

@@ -3,12 +3,12 @@ import type { Agent } from '../../../engine/agents/records';
 import { imageSize } from '../../../engine/linux/native';
 import type { Image } from '../../../engine/linux/types';
 import { useAgentsStore } from '../../../state/agents';
+import { useAppStore } from '../../../state/app';
 import { deleteAgentAndImage } from '../../../state/flows/deleteAgentAndImage';
 import AppButton from '../../common/AppButton';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import { linuxFailureText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
-import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
 
 type Size = { kind: 'measuring' } | { kind: 'known'; bytes: number } | { kind: 'unknown' };
@@ -16,7 +16,7 @@ type Size = { kind: 'measuring' } | { kind: 'known'; bytes: number } | { kind: '
 // Delete: the agent and its machine, for good. The confirm measures the
 // machine first, so it says how much space comes back.
 export default function DeleteBlock({ agent, image }: { agent: Agent; image: Image | undefined }) {
-  const open = useEnvNav((s) => s.open);
+  const leaveAgent = useAppStore((s) => s.leaveAgent);
   const onlyAgent = useAgentsStore((s) => s.agents.length === 1);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -37,7 +37,7 @@ export default function DeleteBlock({ agent, image }: { agent: Agent; image: Ima
     setBusy(true);
     setError(null);
     deleteAgentAndImage(agent.id)
-      .then(() => open({ name: 'list' }))
+      .then(() => leaveAgent(agent.id))
       .catch((e: unknown) => setError(linuxFailureText(e)))
       .finally(() => setBusy(false));
   };

@@ -1,0 +1,13 @@
+{
+  "name": "phonecando-back-gesture",
+  "version": "0.1.0",
+  "description": "PhoneCanDo back gesture: Android's predictive back progress for the app's own pages.",
+  "main": "src/PhoneCanDoBackGestureModule.ts",
+  "types": "src/PhoneCanDoBackGestureModule.ts",
+  "license": "SEE LICENSE IN ../../../LICENSE",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

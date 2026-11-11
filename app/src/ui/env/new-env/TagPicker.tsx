@@ -4,25 +4,25 @@ import type { CatalogTag } from '../../../engine/linux/types';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
 import AppInput from '../../common/AppInput';
+import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
+import { useAppStore } from '../../../state/app';
+import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { linuxErrorText, linuxFailureText } from '../logic/errorText';
 import { formatAgo, formatBytes } from '../logic/format';
 import { EMPTY_PAGES_TO_SKIP, mergeTags, rankTags } from '../logic/tags';
-import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
-import PageHeader from '../parts/PageHeader';
 import ProgressBar from '../parts/ProgressBar';
 
 const SEARCH_DELAY_MS = 400;
 
-// Own env, step 3: which version. Native lists only tags with an arm64
+// Download another Linux, step 2: which version. Native lists only tags with an arm64
 // build (the rest would fail on this phone); the usual ones (latest, plain
 // version numbers) come first. The search box asks the registry, not just
 // the loaded pages. A page can hold no arm64 tag at all, so a few such pages
 // are read on our own before "Load more".
-export default function TagPicker({ repo }: { repo: string }) {
-  const open = useEnvNav((s) => s.open);
-  const back = useEnvNav((s) => s.back);
+export default function TagPicker({ repo, pick }: { repo: string; pick?: AgentPick }) {
+  const push = useAppStore((s) => s.push);
   const [query, setQuery] = useState('');
   const [tags, setTags] = useState<CatalogTag[]>([]);
   const [next, setNext] = useState<number | null>(null);
@@ -73,7 +73,7 @@ export default function TagPicker({ repo }: { repo: string }) {
 
   return (
     <Screen>
-      <PageHeader title={repo} onBack={back} />
+      <PageHeader kicker={pick ? 'new agent · version' : 'add system · version'} title={repo} />
       <AppInput
         value={query}
         onChangeText={setQuery}
@@ -89,11 +89,12 @@ export default function TagPicker({ repo }: { repo: string }) {
             .filter(Boolean)
             .join(' · ')}
           onPress={() =>
-            open({
+            push({
               name: 'new-env-confirm',
               repo,
               tag: { name: tag.name, sizeArm64: tag.sizeArm64, lastUpdated: tag.lastUpdated },
               typed: false,
+              pick,
             })
           }
         />

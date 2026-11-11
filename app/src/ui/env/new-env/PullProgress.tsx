@@ -1,29 +1,29 @@
 import { useEffect, useState } from 'react';
 import { cancelJob } from '../../../engine/linux/native';
 import { useAgentsStore } from '../../../state/agents';
+import { useAppStore } from '../../../state/app';
 import { retryOwnEnv } from '../../../state/flows/createOwnEnv';
 import { useOwnEnvRun } from '../../../state/flows/ownEnvRuns';
 import { removeEnv } from '../../../state/flows/rowActions';
 import { useLinuxStore, useTargetProgress } from '../../../state/linux';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
+import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import { failureText, linuxFailureText, recordErrorText } from '../logic/errorText';
 import { progressLine, stepFraction } from '../logic/steps';
 import { useNewAgent } from '../new-agent/useNewAgent';
-import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
-import PageHeader from '../parts/PageHeader';
 import ProgressBar from '../parts/ProgressBar';
 
-// Own env, the download. Leaving keeps it going (the list shows it too).
-// The run started on the confirm page makes the first agent once the
-// download is done; this page then opens that agent. A failed download
-// offers Retry or deleting the env; a failed agent (or none made: a Retry
-// after a restart with a choice of agent), New agent here.
+// Own env, the download. Leaving keeps it going (the drawer and the
+// systems list show it too). The run started on the confirm page makes the
+// agent once the download is done; this page then opens that agent in its
+// place. A failed download offers Retry or deleting the env; a failed agent
+// (or none made: a Retry after a restart with a choice of agent), New agent
+// here.
 export default function PullProgress({ repo, tag, envId }: { repo: string; tag: string; envId: string }) {
-  const open = useEnvNav((s) => s.open);
-  const back = useEnvNav((s) => s.back);
+  const finishCreation = useAppStore((s) => s.finishCreation);
   const env = useLinuxStore((s) => s.envs.find((e) => e.id === envId));
   const hasMachine = useLinuxStore((s) => s.images.some((i) => i.envId === envId));
   const progress = useTargetProgress({ kind: 'env', id: envId });
@@ -36,8 +36,8 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
   const madeAgentId = run?.phase === 'done' ? run.agentId : null;
   const madeAgentExists = useAgentsStore((s) => madeAgentId != null && s.agents.some((a) => a.id === madeAgentId));
   useEffect(() => {
-    if (madeAgentId && madeAgentExists) open({ name: 'agent', agentId: madeAgentId });
-  }, [madeAgentId, madeAgentExists, open]);
+    if (madeAgentId && madeAgentExists) finishCreation({ name: 'agent', agentId: madeAgentId, fresh: true });
+  }, [madeAgentId, madeAgentExists, finishCreation]);
 
   const act = (what: 'retry' | 'delete', job: () => Promise<unknown>) => {
     if (busy) return;
@@ -51,7 +51,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
   // Busy only until the download restarts; from then on the run and the record say how it goes.
   const retry = () =>
     act('retry', () => new Promise<void>((resolve, reject) => void retryOwnEnv(envId, resolve).catch(reject)));
-  const remove = () => act('delete', () => removeEnv(envId).then(() => open({ name: 'list' })));
+  const remove = () => act('delete', () => removeEnv(envId).then(() => finishCreation({ name: 'systems' })));
 
   // The run moves on a moment after the record reads ready.
   const making = env?.state === 'ready' && (run?.phase === 'downloading' || run?.phase === 'making-agent');
@@ -62,7 +62,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
 
   return (
     <Screen>
-      <PageHeader title="Downloading" onBack={back} />
+      <PageHeader kicker="new agent · download" title="Downloading" />
       <AppCard title={`${repo}:${tag}`} subtitle="Own env" chevron={false} />
 
       {!env ? <Note>This download is gone.</Note> : null}
@@ -73,7 +73,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
             label={progress ? progressLine(progress.step, progress.done, progress.total) : 'Starting'}
             fraction={progress ? stepFraction(progress.step, progress.done, progress.total) : null}
           />
-          <Note>You can leave this page; the download keeps going and the Env list shows it.</Note>
+          <Note>You can leave this page; the download keeps going, and the menu and the systems list show it.</Note>
           {progress ? (
             <AppButton variant="secondary" onPress={() => cancelJob(progress.jobId)}>
               Cancel download
@@ -95,7 +95,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
         </>
       ) : null}
 
-      {env?.state === 'ready' && hasMachine && !making ? <Note>Downloaded. Its agents are in the Env list.</Note> : null}
+      {env?.state === 'ready' && hasMachine && !making ? <Note>Downloaded. Its agents are in the menu.</Note> : null}
 
       {env?.state === 'failed' ? (
         <>
@@ -111,8 +111,8 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
 
       {error ? <Note tone="error">{error}</Note> : null}
       {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
-      <AppButton variant="ghost" onPress={() => open({ name: 'list' })}>
-        Back to the list
+      <AppButton variant="ghost" onPress={() => finishCreation({ name: 'system', envId })}>
+        See this system
       </AppButton>
     </Screen>
   );

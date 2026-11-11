@@ -3,25 +3,27 @@ import { freeDiskBytes } from '../../../engine/files';
 import { catalogTags } from '../../../engine/linux/native';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
+import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
+import type { NewAgentTarget, PickedTag } from '../../../state/app';
+import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { formatAgo, formatBytes } from '../logic/format';
 import { isHubRepo } from '../logic/imageRef';
-import type { NewAgentTarget, PickedTag } from '../logic/routes';
 import { useNewAgent } from '../new-agent/useNewAgent';
-import { useEnvNav } from '../nav';
 import Note from '../parts/Note';
-import PageHeader from '../parts/PageHeader';
 
 // We keep the download (compressed) and unpack it into each machine: about
 // this many times the download in all, before anything is installed.
 const ROOM_FACTOR = 3;
 
-// Own env, last look before the download: what, how big (looked up when the
-// tag was typed), how much room the phone has. Download starts the env and
-// moves to its progress page; once it is done the first agent is made on it.
-// When there is a choice of agent, Choose agent comes first and starts it.
-export default function ConfirmPull({ repo, tag, typed }: { repo: string; tag: PickedTag; typed: boolean }) {
-  const back = useEnvNav((s) => s.back);
+// Download a Linux, last look: what, how big (looked up when the tag was
+// typed), how much room the phone has. Download starts the env for the
+// agent New agent picked (`pick`) and moves to its progress page; once it
+// is done that agent is made on it. From Add system (no pick yet), Choose
+// agent comes first when there is a choice and starts it.
+type Props = { repo: string; tag: PickedTag; typed: boolean; pick?: AgentPick };
+
+export default function ConfirmPull({ repo, tag, typed, pick }: Props) {
   const [size, setSize] = useState<number | null>(tag.sizeArm64);
   const newAgent = useNewAgent();
   const [free] = useState(freeDiskBytes);
@@ -50,7 +52,7 @@ export default function ConfirmPull({ repo, tag, typed }: { repo: string; tag: P
 
   return (
     <Screen>
-      <PageHeader title="Download" onBack={back} />
+      <PageHeader kicker={pick ? 'new agent · last look' : 'add system · last look'} title="Download" />
       <AppCard
         title={`${repo}:${tag.name}`}
         subtitle={[size != null ? `${formatBytes(size)} download` : 'Download size unknown', updated]
@@ -68,8 +70,8 @@ export default function ConfirmPull({ repo, tag, typed }: { repo: string; tag: P
       {typed ? <Note>We check the name with the registry when the download starts.</Note> : null}
       <Note>You can leave the download page any time; the download keeps going.</Note>
       {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
-      <AppButton loading={newAgent.busy} onPress={() => newAgent.start(target)}>
-        {newAgent.asks(target) ? 'Choose agent' : 'Download'}
+      <AppButton loading={newAgent.busy} onPress={() => (pick ? newAgent.make(target, pick) : newAgent.start(target))}>
+        {!pick && newAgent.asks(target) ? 'Choose agent' : 'Download'}
       </AppButton>
     </Screen>
   );

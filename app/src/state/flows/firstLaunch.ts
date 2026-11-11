@@ -47,7 +47,7 @@ export async function continueWithoutLinux(
     try {
       await deleteImage(failedImageId);
     } catch {
-      // Left behind as an unused machine; the Env tab can delete it.
+      // Left behind as an unused machine; the systems list can delete it.
     }
   }
   return setUpFirstAgent('android', pick, hooks);

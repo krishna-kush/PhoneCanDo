@@ -10,12 +10,10 @@ import { useInitialInput } from './useInitialInput';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useKeyboardStore } from '../../state/keyboard';
 import { keyboardRoom } from '../common/keyboard/room';
-import { useAppStore } from '../../state/app';
-import { terminalPad } from './sizing';
 import { arrowSeq, wheelSeq } from './keys';
 import type { PtyEnd, PtyTransport } from './transport/types';
 import LogoLoader from '../common/LogoLoader';
-import { HIT, TUI } from '../common/globals';
+import { TUI } from '../common/globals';
 import { isTerminalAvailable, TerminalGestureHost } from '../../engine/terminal';
 
 type PageMsg =
@@ -102,16 +100,11 @@ export default function TerminalView({ transport, active, name, initialInput, on
 
   // Keyboard spacer: the room the keyboard takes, every frame on the UI
   // thread, settle included (common/keyboard/room.ts), not the one-shot
-  // keyboardDidShow, which understates Gboard; above the footer, less the
-  // footer's own height (sizing.ts terminalPad). A terminal that mounts
-  // with the keyboard up has it at once.
-  const footerBelow = useAppStore((s) => s.terminal == null && !s.folderPickerOpen);
-  const footerRoom = useKeyboardStore((s) => s.footerRoom) ?? HIT.footerRoom;
+  // keyboardDidShow, which understates Gboard. Nothing sits below a
+  // terminal (no footer), so the room is the spacer as is. A terminal that
+  // mounts with the keyboard up has it at once.
   const keyboardOpen = useKeyboardStore((s) => s.open);
-  const spacer = useAnimatedStyle(
-    () => ({ height: terminalPad(keyboardRoom.value, footerRoom, footerBelow) }),
-    [footerRoom, footerBelow],
-  );
+  const spacer = useAnimatedStyle(() => ({ height: keyboardRoom.value }));
 
   useEffect(() => {
     let cancelled = false;
@@ -221,8 +214,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
           the keyboard while the user is just trying to read back. */}
       <YStack flex={1} backgroundColor={TUI.bg}>
         {/* Up/down gestures stay with the terminal wherever it is hosted;
-            sideways ones go to its parents, so a TUI home's tab pager still
-            swipes (engine/terminal.ts). WebView<object>: react-native-webview
+            sideways ones go to its parents (engine/terminal.ts). WebView<object>: react-native-webview
             13.16.2 defaults its extra-props type to `undefined`, which leaves
             no prop valid; object types the same on every version. */}
         <TerminalGestureHost style={{ flex: 1 }}>
@@ -258,7 +250,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
           reconciled to terminal keystrokes (see reconcile.ts). Absolute 1x1
           overlay: Android enforces a ~45px min-height on multiline fields,
           so an in-flow "height:1" still eats a full row of layout between
-          the terminal and the footer. Absolute keeps it mounted+focusable
+          the terminal and what sits below it. Absolute keeps it mounted+focusable
           (IME commits; never height:0/offscreen) with zero flow footprint. */}
       <TextInput
         ref={inputRef}

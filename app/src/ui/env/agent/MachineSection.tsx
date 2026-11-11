@@ -3,7 +3,6 @@ import type { Env, Image } from '../../../engine/linux/types';
 import { useAppStore } from '../../../state/app';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
-import SectionTitle from '../../common/SectionTitle';
 import { formatBytes } from '../logic/format';
 import { missingToolsLine } from '../logic/hints';
 import { envTitle, osLine } from '../logic/titles';
@@ -13,21 +12,18 @@ import { useMissingTools } from './useMissingTools';
 
 type Props = { agent: Agent; image: Image | undefined; env: Env | undefined; linux: boolean };
 
-// The agent's machine: which env it comes from, the detected OS, its size,
-// its setup state, commands the agent's kind needs but the machine lacks
-// (checked when the page shows it, with the install command typed into a
-// terminal, not run), and the plain truths:
-// not a sandbox, no systemd.
+// The agent's machine page body: which env it comes from, the detected OS,
+// its size, its setup state, commands the agent's kind needs but the
+// machine lacks (checked when the page shows it, with the install command
+// typed into a terminal, not run), and the plain truths: not a sandbox, no
+// systemd.
 export default function MachineSection({ agent, image, env, linux }: Props) {
   const openLinuxTerminal = useAppStore((s) => s.openLinuxTerminal);
   const tools = useMissingTools(agent, image, linux);
 
   if (!image) {
     return (
-      <>
-        <SectionTitle>Machine</SectionTitle>
-        <Note tone="error">Its machine is missing. Delete this agent and make a new one.</Note>
-      </>
+      <Note tone="error">Its machine is missing. Delete this agent and make a new one.</Note>
     );
   }
 
@@ -38,7 +34,6 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
 
   return (
     <>
-      <SectionTitle>Machine</SectionTitle>
       <AppCard
         title={env ? envTitle(env.source) : 'Unknown env'}
         subtitle={[os, size].filter(Boolean).join(' · ') || undefined}

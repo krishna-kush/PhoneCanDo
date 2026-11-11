@@ -7,8 +7,10 @@ import { deleteUnusedImage } from '../../../state/flows/deleteAgentAndImage';
 import ArrowIcon from '../../common/ArrowIcon';
 import CardMenu from '../../common/CardMenu';
 import ConfirmDialog from '../../common/ConfirmDialog';
-import EngineDot from '../../common/agent-switcher/EngineDot';
+import AgentFace from '../../common/face/AgentFace';
+import { useAgentLook } from '../../common/face/useAgentLook';
 import { useTheme } from '../../common/globals';
+import { usePageActive } from '../../nav/pageActive';
 import { engineStateWord } from '../logic/engineState';
 import { linuxFailureText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
@@ -17,9 +19,10 @@ import Note from '../parts/Note';
 
 type Props = { image: Image | null; agent: Agent | null; onOpen: (agentId: string) => void };
 
-// One machine under its env: the agent's name, its engine's dot and word,
-// and the image's setup state while it is not ready. Tap opens the agent
-// page. A machine without an agent (a setup cut short) can only be deleted.
+// One machine in its system's agent list: the agent's face, name and
+// engine's word, and the image's setup state while it is not ready. A row
+// of the list's group (no box of its own). Tap opens the agent page. A
+// machine without an agent (a setup cut short) can only be deleted.
 export default function MachineRow({ image, agent, onOpen }: Props) {
   const t = useTheme();
   const status = useAgentsStore((s) => (agent ? s.statuses[agent.id] : undefined));
@@ -33,18 +36,16 @@ export default function MachineRow({ image, agent, onOpen }: Props) {
 
   return (
     <YStack
-      borderWidth={1}
-      borderColor={t.line}
-      backgroundColor={t.panel}
-      padding="$3"
+      paddingHorizontal="$3"
+      paddingVertical="$2"
       gap="$2"
-      pressStyle={agent ? { opacity: 0.9, scale: 0.99 } : undefined}
+      pressStyle={agent ? { backgroundColor: t.panel2 } : undefined}
       onPress={agent ? () => onOpen(agent.id) : undefined}
       accessibilityRole={agent ? 'button' : undefined}
       accessibilityLabel={agent ? `${agent.name}, ${sub}` : undefined}
     >
       <XStack alignItems="center" gap="$3" minHeight={40}>
-        <EngineDot state={agent && image ? status?.state : undefined} size={10} />
+        {agent ? <RowFace agentId={agent.id} /> : <YStack width={25} height={25} borderWidth={1} borderColor={t.faint} />}
         <YStack flex={1} minWidth={0} gap={2}>
           <Text fontSize={16} fontWeight="600" numberOfLines={1} ellipsizeMode="tail">
             {agent?.name ?? 'No agent'}
@@ -81,4 +82,11 @@ export default function MachineRow({ image, agent, onOpen }: Props) {
       ) : null}
     </YStack>
   );
+}
+
+// Still while another page covers this one.
+function RowFace({ agentId }: { agentId: string }) {
+  const look = useAgentLook(agentId);
+  const active = usePageActive();
+  return <AgentFace mood={look.mood} pose={look.pose} size={18} still={!active} />;
 }

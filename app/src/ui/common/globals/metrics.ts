@@ -6,8 +6,5 @@ export const HIT = {
   buttonH: 52,
   inputH: 52,
   headerH: 60,
-  tabH: 56,
-  /** The footer tab strip with its top border: the room it takes at the bottom. */
-  footerRoom: 57,
   fabSize: 64,
 } as const;

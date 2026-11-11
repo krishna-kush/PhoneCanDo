@@ -16,7 +16,7 @@ const BUSY_WORDS: Partial<Record<Image['state'], string>> = {
 };
 
 // A machine's setup state where it matters: progress while a job runs, the
-// failed step with Retry, nothing once it is ready. Shared by the Env list
+// failed step with Retry, nothing once it is ready. Shared by the systems list
 // rows and the agent page.
 export default function ImageStatus({ image }: { image: Image }) {
   const progress = useTargetProgress({ kind: 'image', id: image.id });

@@ -1,5 +1,6 @@
 import { Text, YStack } from 'tamagui';
 import AppButton from '../../common/AppButton';
+import WakingLine from '../../common/face/WakingLine';
 import LogoLoader from '../../common/LogoLoader';
 import { useTheme } from '../../common/globals';
 import type { TuiPhase } from './tuiPhase';
@@ -27,6 +28,7 @@ export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
         <Text color={t.fg} fontFamily="$mono">
           Starting {label}…
         </Text>
+        <WakingLine />
       </YStack>
     );
   }

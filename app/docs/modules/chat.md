@@ -1,14 +1,14 @@
-# Chat (the Home tab)
+# Chat (Home)
 
-The Home/chat tab is the active agent's own UI, as its kind's manifest says
-(KindView `home`): its web UI in a WebView (opencode v2's today), or, for a
-kind whose engine is a TUI, that TUI (see TUI home below). It is not a
-native chat implementation: the agent's UI owns projects and sessions end to
-end, and there is no app-side chat or project creation. The header title is
-the active agent's name; tapping it opens the agent switcher
-(`ui/common/agent-switcher/`), which lists every agent with its engine state
-and makes the tapped one active (`src/state/agents.ts`). Creating and
-deleting agents lives on the Env tab.
+Home is the active agent's own UI, as its kind's manifest says (KindView
+`home`): its web UI in a WebView (opencode v2's today), or, for a kind whose
+engine is a TUI, that TUI (see TUI home below). It is not a native chat
+implementation: the agent's UI owns projects and sessions end to end, and
+there is no app-side chat or project creation. Home's header
+(`HomeHeader.tsx`) shows the active agent's face (A-01, `ui/common/face/`)
+and name; tapping them opens the drawer (see Navigation below), which
+lists every agent with its engine state and makes the tapped one active
+(`src/state/agents.ts`). Creating and deleting agents starts there too.
 
 ## Pairing and loading
 
@@ -42,20 +42,59 @@ deleting agents lives on the Env tab.
   too, while `onLoadEnd` comes only when a document finishes. Going back to
   an in-page entry would leave the cover up.
 - The embedded web shell renders its own titlebar; the app hides it in-page
-  because `AppHeader` already provides app chrome.
+  because `HomeHeader` already provides app chrome.
 
 ## Chrome and navigation
 
-- Android back and the header back arrow work on every page but the home:
-  they walk the web UI history when it has an entry, else load the home.
-  Chromium hides history entries the user never touched (the home a
-  restore passes through), so a restored page has no entry to go back to.
-  At the home, Android back falls through to the app.
-- Footer Home (while already on Home) and ⋮ → **opencode home** (the
-  kind's label) load the captured web home URL, so a session never strands
-  the user.
+- Android Back on Home walks the web UI history when it has an entry, else
+  loads the home. Chromium hides history entries the user never touched
+  (the home a restore passes through), so a restored page has no entry to
+  go back to. At the home, Back falls through and the app goes.
+- ⋮ → **opencode home** (the kind's label) loads the captured web home URL,
+  so a session never strands the user.
 - The terminal is a separate view of the same agent's engine; use the
   header menu to switch. See `terminal.md`.
+
+## Navigation: pages over Home, the drawer, Back
+
+- No tabs and no on-screen back arrows. Home stays mounted at the bottom;
+  every other place is a page on a stack over it (`src/state/app/`).
+  Layers under the top stay mounted and laid out, only invisible, so a web
+  UI or a terminal under a page keeps its state and its size.
+- Motion (`ui/nav/motion.ts`) follows Android 14+: a page slides in from a
+  quarter of the width while it fades in; Back shrinks it to 90%, then it
+  slides off to the right. Transform and opacity only: Reanimated's
+  `ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS` (app/package.json, a native build
+  flag) applies them without a layout commit; without it every frame
+  re-lays out the whole app.
+- The motion follows the stack by a store subscription
+  (`ui/nav/transitionStore.ts`), not a React effect, so Back starts its
+  slide on the UI thread before any render. A new page slides two frames
+  after it commits, so its first draw does not eat the slide's start.
+  Nothing above the stack re-renders for a transition: App does not
+  subscribe to the stack, and Home reads whether it is in front from
+  `ui/nav/homeInFront.ts`.
+- Under that flag (Reanimated 4.5) an animated view's React props keep its
+  mount-time values, and a React commit can put them back over newer ones.
+  So which layer plays which part is UI-thread state (`progress.ts`,
+  `motion.ts` `roleOf`), `PageLayer` renders once, and only `LayerBody`
+  re-renders with a part change; it is never flattened, so a part change
+  never moves a page or Home's web view to a new native parent.
+- The drawer (`ui/drawer/`) opens from the header's agent chip, never from
+  the screen's left edge (on gesture navigation that edge is Back). Its
+  content mounts on the first open and stays; its faces hold still while
+  it is shut.
+- Back is one chain (`ui/nav/useBackChain.ts`): a step inside a page
+  (`interceptors.ts`), the drawer, the top page, then the web UI's history.
+  While a page or the drawer is open, `phonecando-back-gesture` runs
+  `ui/nav/backWorklet.ts` on the UI thread for each step of the gesture, so
+  the page or the drawer follows the thumb while JS is busy; JS hears only
+  the commit. Without it (Home, a back key, older Android) Back arrives
+  through React Native's BackHandler and runs the same chain.
+- When New agent's run ends, the agent's page takes the place of its
+  steps, so Back returns to where the run began. A deleted agent's pages
+  close. A notification tap brings its place to the front, but an open
+  terminal stays on top.
 
 ## TUI home
 

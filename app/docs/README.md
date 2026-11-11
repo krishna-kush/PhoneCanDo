@@ -20,7 +20,7 @@ limits) stay in the repo-root `docs/` tree.
 - [`modules/terminal.md`](modules/terminal.md) — JNI PTY, xterm renderer,
   input/sizing contract and terminal sessions (agent TUI or image shell).
 - [`modules/chat.md`](modules/chat.md) — Home: the active agent's web UI or
-  TUI, and the agent switcher.
+  TUI, and the navigation around it (page stack, drawer, Back).
 - [`modules/models.md`](modules/models.md) — local models: files, Hugging
   Face, downloads and imports, RAM verdicts, context and the token.
 - [`modules/bridge.md`](modules/bridge.md) — loopback bridge, per-agent tokens,

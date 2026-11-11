@@ -17,7 +17,7 @@ type Props = { agent: Agent; image: Image | undefined };
 // doing (a retry, a download, the time so far) and last log lines while it
 // runs; where it stopped, why, its lines and Retry when it
 // failed; a word when it just finished; Install when it needs one and none
-// ran since the app started. Shared by the agent page and the Home tab.
+// ran since the app started. Shared by the agent page, its Install page and Home.
 export default function InstallStatus({ agent, image }: Props) {
   const run = useInstallRun(agent.id);
   const label = agentKind(agent.kind).label;

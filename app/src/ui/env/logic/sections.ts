@@ -1,4 +1,4 @@
-// The Env tab's list: each env with its machines (image + its agent) as rows.
+// The systems list: each env with its machines (image + its agent) as rows.
 // Default first, then Own envs oldest first, Android last. Anything whose env
 // or image we cannot find still gets a row (in a last group without an env),
 // so it can be opened and deleted. Pure (zero RN imports).

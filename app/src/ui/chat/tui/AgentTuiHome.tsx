@@ -4,7 +4,7 @@ import { YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { agentKind } from '../../../engine/agents/registry';
 import { track } from '../../../engine/telemetry';
-import { useAppStore } from '../../../state/app';
+import { useHomeInFront } from '../../nav/homeInFront';
 import TerminalView from '../../terminal/TerminalView';
 import { engineTransport } from '../../terminal/transport/engine';
 import { useOpenTuiChat } from '../../terminal/useOpenTuiChat';
@@ -13,8 +13,8 @@ import { useTuiEngine } from './useTuiEngine';
 
 // Home of an agent whose kind's home is its TUI (KindView home 'tui'): the
 // engine runs the program in a PTY the runner's service owns, and this view
-// attaches to it as its one viewer. The program keeps running when the tab,
-// a terminal over it or the app goes away; coming back attaches again and
+// attaches to it as its one viewer. The program keeps running when a page
+// over Home, a terminal or the app goes away; coming back attaches again and
 // the replay restores its screen. A program that ends while shown keeps
 // its last screen on view, read-only, under the stopped notice: it often
 // says why it stopped. HomeScreen mounts one per active agent. Nothing else
@@ -22,8 +22,8 @@ import { useTuiEngine } from './useTuiEngine';
 export default function AgentTuiHome({ agent }: { agent: Agent }) {
   const kind = agentKind(agent.kind);
   const { phase, run, restart, onEnd } = useTuiEngine(agent.id);
-  // In front: the Home tab with no terminal or folder picker over it.
-  const inFront = useAppStore((s) => s.footerTab === 'home' && s.terminal == null && !s.folderPickerOpen);
+  // In front: Home with no page over it.
+  const inFront = useHomeInFront();
   const attached = phase.name === 'attached';
   // Nothing takes input once the program is gone: its keyboard goes too
   // (the terminal's own blur covers a screen kept on view; not one that

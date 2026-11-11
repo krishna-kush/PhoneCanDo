@@ -1,5 +1,5 @@
 // Each agent's last install or update run (installAgent.ts), by agent id,
-// so the agent page and the Home tab follow a run they did not start; and
+// so the agent page and Home follow a run they did not start; and
 // which installed agents a machine reset left without their system
 // packages, so the agent page offers "Reinstall <agent>". In memory only:
 // after a restart the agent's record says enough (needsInstall, its

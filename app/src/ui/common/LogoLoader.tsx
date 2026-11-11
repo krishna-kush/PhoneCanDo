@@ -1,8 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing } from 'react-native';
+import { useEffect } from 'react';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import logo from '../../../../theme/logo.json';
+import { usePageActive } from '../nav/pageActive';
 import { useTheme } from './globals';
 import LogoMark, { logoOffset } from './LogoMark';
+import { useReduceMotion } from './useReduceMotion';
 
 const { loader, shadow } = logo;
 const POSES = loader.poses;
@@ -16,150 +28,93 @@ const SWAP_EASE = Easing.bezier(SX1, SY1, SX2, SY2);
 const INPUT = POSES.map((_, i) => i);
 const MAX = Math.max(...POSES.map((p) => Math.max(p.w, p.h)));
 const START_SWAP = POSES[0].swap ? 1 : 0;
+const LAST = POSES.length - 1;
 
 // Logo-derived loading mark. The spec lives in theme/logo.json; the web reads
 // the same file through web/src/lib/logoLoaderCss.ts. The red and amber layers
 // physically trade places: amber rises from the shadow into the front while
-// red recedes into the shadow; the stack flips where they exactly overlap.
-// Core Animated because width, height and position animate on the JS driver.
+// red recedes into the shadow; they trade inks where they exactly overlap.
+// Reanimated on the UI thread, by transform only (each ink is a square of
+// `size`, scaled to the pose and moved into place), so a frame never needs JS
+// or a layout pass; it holds still while its page is not in front.
 export default function LogoLoader({ size = 22 }: { size?: number }) {
   const t = useTheme();
-  const progress = useRef(new Animated.Value(0)).current;
-  const role = useRef(new Animated.Value(START_SWAP)).current;
-  const [reduce, setReduce] = useState(false);
+  const reduce = useReduceMotion();
+  const active = usePageActive();
+  const progress = useSharedValue(0);
+  const role = useSharedValue(START_SWAP);
+  const still = reduce || !active;
 
   useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((on) => {
-      if (alive) setReduce(on);
-    });
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
-    return () => {
-      alive = false;
-      sub.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (reduce) return;
-    progress.setValue(0);
-    role.setValue(START_SWAP);
-    // Shape and colour run as two parallel clocks: the shape keeps its snappy
-    // ease, while the layer swap uses the symmetric ease that lets the stack
-    // flip exactly where the two squares coincide.
-    const shapeSteps: Animated.CompositeAnimation[] = [
-      // The last pose equals pose 0, so this zero-time reset is invisible but
-      // makes every loop start the same 0 -> 1 direction as the first one.
-      Animated.timing(progress, { toValue: 0, duration: 0, useNativeDriver: false }),
-      Animated.delay(HOLD),
-    ];
-    const swapSteps: Animated.CompositeAnimation[] = [
-      Animated.timing(role, {
-        toValue: START_SWAP,
-        duration: 0,
-        useNativeDriver: false,
-      }),
-      Animated.delay(HOLD),
-    ];
-    for (let i = 1; i < POSES.length; i++) {
-      shapeSteps.push(
-        Animated.timing(progress, {
-          toValue: i,
-          duration: MORPH,
-          easing: EASE,
-          useNativeDriver: false,
-        })
-      );
+    if (still) return;
+    progress.value = 0;
+    role.value = START_SWAP;
+    // Shape and colour run as two clocks of the same length: the shape keeps
+    // its snappy ease, while the swap uses the symmetric ease that lets the
+    // stack flip exactly where the two squares coincide. The last pose
+    // equals pose 0, so each loop restarts from 0 with no visible jump.
+    const shape = [];
+    const swap = [];
+    for (let i = 1; i <= LAST; i++) {
+      shape.push(withDelay(HOLD, withTiming(i, { duration: MORPH, easing: EASE })));
       // Share the shape's fast ease when both move, so the stack flips while
       // the shape is halfway instead of after it has visually settled.
       const morphs = POSES[i].w !== POSES[i - 1].w || POSES[i].h !== POSES[i - 1].h;
-      swapSteps.push(
-        Animated.timing(role, {
-          toValue: POSES[i].swap ? 1 : 0,
-          duration: MORPH,
-          easing: morphs ? EASE : SWAP_EASE,
-          useNativeDriver: false,
-        })
+      swap.push(
+        withDelay(HOLD, withTiming(POSES[i].swap ? 1 : 0, { duration: MORPH, easing: morphs ? EASE : SWAP_EASE })),
       );
-      shapeSteps.push(Animated.delay(HOLD));
-      swapSteps.push(Animated.delay(HOLD));
     }
-    // The last pose equals pose 0, so this also lengthens the square pause at
-    // the loop seam.
-    shapeSteps.push(Animated.delay(END_HOLD));
-    swapSteps.push(Animated.delay(END_HOLD));
-    // The last pose is pose 0; resetting would flash a frame at the seam.
-    const loop = Animated.loop(
-      Animated.parallel([Animated.sequence(shapeSteps), Animated.sequence(swapSteps)]),
-      { resetBeforeIteration: false }
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [progress, role, reduce]);
-
-  if (reduce) return <LogoMark size={size} />;
+    // The square pause at the loop seam.
+    shape.push(withDelay(HOLD + END_HOLD, withTiming(LAST, { duration: 0 })));
+    swap.push(withDelay(HOLD + END_HOLD, withTiming(POSES[LAST].swap ? 1 : 0, { duration: 0 })));
+    progress.value = withRepeat(withSequence(...shape), -1, false);
+    role.value = withRepeat(withSequence(...swap), -1, false);
+    return () => {
+      cancelAnimation(progress);
+      cancelAnimation(role);
+    };
+  }, [still, progress, role]);
 
   const off = logoOffset(size);
   const offsets = POSES.map((p) => off + (p.w > 1 || p.h > 1 ? shadow.stretchPx : 0));
   const widths = POSES.map((p) => size * p.w);
   const heights = POSES.map((p) => size * p.h);
   const box = size * MAX + off + shadow.stretchPx;
-  const width = progress.interpolate({ inputRange: INPUT, outputRange: widths });
-  const height = progress.interpolate({ inputRange: INPUT, outputRange: heights });
-  const shadowOffset = progress.interpolate({ inputRange: INPUT, outputRange: offsets });
-  const frontLeft = progress.interpolate({
-    inputRange: INPUT,
-    outputRange: widths.map((w, i) => (box - w - offsets[i]) / 2),
-  });
-  const frontTop = progress.interpolate({
-    inputRange: INPUT,
-    outputRange: heights.map((h, i) => (box - h - offsets[i]) / 2),
-  });
-  const redLeft = Animated.add(frontLeft, Animated.multiply(shadowOffset, role));
-  const redTop = Animated.add(frontTop, Animated.multiply(shadowOffset, role));
-  const rest = Animated.subtract(1, role);
-  const yellowLeft = Animated.add(frontLeft, Animated.multiply(shadowOffset, rest));
-  const yellowTop = Animated.add(frontTop, Animated.multiply(shadowOffset, rest));
-  // The layers are coincident at role 0.5, so this step is invisible.
-  const redZ = role.interpolate({
-    inputRange: [0, 0.5, 0.5001, 1],
-    outputRange: [1, 1, 0, 0],
-    extrapolate: 'clamp',
-  });
-  const yellowZ = role.interpolate({
-    inputRange: [0, 0.4999, 0.5, 1],
-    outputRange: [0, 0, 1, 1],
-    extrapolate: 'clamp',
-  });
+  const lefts = widths.map((w, i) => (box - w - offsets[i]) / 2);
+  const tops = heights.map((h, i) => (box - h - offsets[i]) / 2);
 
+  // One ink: `back` the layer behind. The front one sits at the smaller
+  // offset; at role 0.5 both coincide, which is where the inks swap.
+  const ink = (back: boolean) => {
+    'worklet';
+    const p = progress.value;
+    const r = role.value;
+    const w = interpolate(p, INPUT, widths);
+    const h = interpolate(p, INPUT, heights);
+    const shift = interpolate(p, INPUT, offsets) * (back ? Math.max(r, 1 - r) : Math.min(r, 1 - r));
+    const left = interpolate(p, INPUT, lefts) + shift;
+    const top = interpolate(p, INPUT, tops) + shift;
+    const redInFront = r < 0.5;
+    return {
+      backgroundColor: back === redInFront ? t.secondary : t.primary,
+      transform: [
+        { translateX: left - size / 2 + w / 2 },
+        { translateY: top - size / 2 + h / 2 },
+        { scaleX: w / size },
+        { scaleY: h / size },
+      ],
+    };
+  };
+  const behind = useAnimatedStyle(() => ink(true), [size, t.primary, t.secondary]);
+  const front = useAnimatedStyle(() => ink(false), [size, t.primary, t.secondary]);
+
+  if (reduce) return <LogoMark size={size} />;
+
+  const square = { position: 'absolute' as const, left: 0, top: 0, width: size, height: size };
   return (
-    <Animated.View
-      style={{ width: box, height: box }}
-      accessibilityRole="progressbar"
-      accessibilityLabel="Loading"
-    >
-      <Animated.View
-        style={{
-          position: 'absolute',
-          left: redLeft,
-          top: redTop,
-          width,
-          height,
-          backgroundColor: t.primary,
-          zIndex: redZ,
-        }}
-      />
-      <Animated.View
-        style={{
-          position: 'absolute',
-          left: yellowLeft,
-          top: yellowTop,
-          width,
-          height,
-          backgroundColor: t.secondary,
-          zIndex: yellowZ,
-        }}
-      />
+    <Animated.View style={{ width: box, height: box }} accessibilityRole="progressbar" accessibilityLabel="Loading">
+      <Animated.View style={[square, behind]} />
+      <Animated.View style={[square, front]} />
     </Animated.View>
   );
 }

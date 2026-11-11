@@ -2,7 +2,8 @@
 // kind (src/engine/agents/user/build.ts, with words.ts, steps.ts, ids.ts
 // and form.ts), what the review step reads out of one (review.ts), a pasted
 // import (imports.ts), the pages' words (src/ui/env/logic/customAgentText.ts)
-// and where Back goes from them (routes.ts). Every manifest built here must
+// and the way back to New agent once one is saved there (state/app/stack.ts).
+// Every manifest built here must
 // pass the kit's validator for origin user. Imports the real pure modules
 // (Node 22.18+ strips their types), so these cannot drift.
 // Run: node test_user_manifest.js (or pnpm check:vectors)
@@ -31,7 +32,7 @@ const user = (p) => src('engine/agents/user', p);
   const { parseImport } = await import(user('imports.ts'));
   const { validate } = await import(kit('validate.ts'));
   const text = await import(src('ui/env/logic/customAgentText.ts'));
-  const { parentRoute } = await import(src('ui/env/logic/routes.ts'));
+  const stack = await import(src('state/app/stack.ts'));
 
   // --- words -------------------------------------------------------------
   t('blanks split words', splitWords('  aider  --model x '), { ok: true, words: ['aider', '--model', 'x'] });
@@ -195,12 +196,16 @@ const user = (p) => src('engine/agents/user', p);
   const probs = [{ field: 'name', text: 'a' }, { field: null, text: 'b' }, { field: 'name', text: 'c' }];
   t('problems by field', [text.fieldProblems(probs, 'name'), text.otherProblems(probs)], [['a', 'c'], ['b']]);
 
-  // --- Back --------------------------------------------------------------
+  // --- Saved from New agent: back to Choose agent with it picked ------------
   const env = { kind: 'env', envId: 'e1' };
-  t('Back from the list', parentRoute({ name: 'custom-agents' }), { name: 'list' });
-  t('Back from a form opened in the list', parentRoute({ name: 'custom-agent', kindId: 'user.x', target: null }), { name: 'custom-agents' });
-  t('Back from a form opened in Choose agent', parentRoute({ name: 'custom-agent', kindId: null, target: env }), { name: 'new-agent', target: env });
-  t('Back from an import', parentRoute({ name: 'custom-agent-import' }), { name: 'custom-agents' });
+  const fromNew = [
+    { key: 1, route: { name: 'new-agent', target: env } },
+    { key: 2, route: { name: 'custom-agent', kindId: null, forNewAgent: true } },
+  ];
+  t('saved kind picked on the step', stack.returnWithKind(fromNew, 'user.x', 9), [{ key: 9, route: { name: 'new-agent', target: env, picked: 'user.x' } }]);
+  t('a form from New agent is part of the run', stack.isCreationRoute(fromNew[1].route), true);
+  t('a form from the list is not', stack.isCreationRoute({ name: 'custom-agent', kindId: 'user.x' }), false);
+  t('no step below: unchanged', stack.returnWithKind([{ key: 1, route: { name: 'custom-agents' } }], 'user.x', 9), [{ key: 1, route: { name: 'custom-agents' } }]);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

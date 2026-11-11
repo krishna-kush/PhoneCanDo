@@ -40,16 +40,15 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
 - In full and lite an agent's image can be VM-like Linux through proot:
   the Default env (a Debian-based image baked into the APK), Own envs from
   container registries, and the Android env (no Linux, the only one in
-  play). The Env tab lists envs and their machines and holds each agent's
-  page (engine, machine, reset, delete); first launch makes the first agent
-  and its machine.
+  play). Each agent has its page, Systems lists the envs, and first launch
+  makes the first agent and its machine.
 - Device-proven 2026-11-06 (Moto G96, full debug build): proot with its
   unbundled loader runs from the engine's own process, the launcher runs by
   its own name and through a symlinked shim, an Alpine image works as fake
   root with `apk`, the engine's secrets are scrubbed, and there are no exec
   denials. The hardened PTY passed on the same phone.
-- Not yet proven on a device: several engines at once, the Env tab and first
-  launch end to end, the dead-engine relaunch, and the baked Default image.
+- Not yet proven on a device: several engines at once, the agent pages, New
+  agent and first launch end to end, the dead-engine relaunch, and the baked Default image.
 - `lre/images/default/lock.json` locks no image yet, so builds carry the
   Default image only when one is staged locally (`./manage image stage
   --local`, debug builds); release builds refuse to ship without one unless

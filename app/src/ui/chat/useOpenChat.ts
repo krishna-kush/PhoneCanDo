@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import type { AgentId } from '../../engine/agents/records';
 import { setOpenChat } from '../../engine/engines';
-import { useAppStore } from '../../state/app';
+import { useHomeInFront } from '../nav/homeInFront';
 
 // Tells the runner which chat is on screen, so the service notification
 // leaves it out: you are in it. On screen means the web UI shows that chat,
-// the Home tab is up with no terminal or folder picker over it, and the app
-// is in the foreground. Anything else, and unmounting, reports none.
+// Home is up with no page over it, and the app is in the foreground.
+// Anything else, and unmounting, reports none.
 export function useOpenChat(agentId: AgentId, sessionId: string | null) {
-  const inFront = useAppStore((s) => s.footerTab === 'home' && s.terminal == null && !s.folderPickerOpen);
+  const inFront = useHomeInFront();
   const [active, setActive] = useState(AppState.currentState === 'active');
 
   useEffect(() => {

@@ -11,9 +11,10 @@ run over our JNI PTY, rendered by xterm.js in a WebView.
 
 ```
 RN shell (Expo / Tamagui / Zustand)
-  ├─ Home tab ── web UI (pair code) | TUI (engine's PTY) ── active agent
-  ├─ Terminal ── xterm.js WebView ── JNI PTY ── agent TUI client | image shell
-  ├─ Env tab (envs, machines, agents) / Settings (app-wide)
+  ├─ Home ── web UI (pair code) | TUI (engine's PTY) ── active agent
+  │    └─ drawer (agents, New agent, Models, Systems, Settings) → pages over Home
+  ├─ Terminal (a page) ── xterm.js WebView ── JNI PTY ── agent TUI client | image shell
+  ├─ Agent pages, Systems (envs, machines) / Settings (app-wide)
   └─ engine seam (app/src/engine)
         │
         ├─ phonecando-runner ── foreground service ── engines (≤ 3, one per agent)
@@ -148,8 +149,8 @@ builds, tests, limits): `../../lre/docs/README.md`.
   lite. JS reaches it only through `app/src/engine/linux/`;
   `app/src/state/linux.ts` mirrors its records, `app/src/state/flows/`
   composes the multi-step actions (first launch, new agent, Own env, reset,
-  delete), and the screens are the Env tab (`app/src/ui/env/`) and first
-  launch (`app/src/ui/setup/`). The runner reads only the image files an
+  delete), and the screens are the agent and system pages
+  (`app/src/ui/env/`) and first launch (`app/src/ui/setup/`). The runner reads only the image files an
   engine needs and never depends on `lre/`.
 
 ## Boundaries

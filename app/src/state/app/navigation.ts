@@ -1,67 +1,103 @@
-// What the app shows: the footer tab, the folder picker and the terminal
-// above the tabs. A terminal is bound to one agent when it opens: the terminal
-// UI attaches to that agent's engine, the Linux terminal is a shell in its
-// image. Switching the active agent later never moves an open terminal.
+// What the app shows: Home (the active agent's own UI) under a stack of
+// pages (routes.ts, stack.ts), and the side drawer. A terminal is a page
+// bound to one agent when it opens: the terminal UI attaches to that
+// agent's engine, the Linux terminal is a shell in its image. Switching the
+// active agent later never moves an open terminal.
 import type { StateCreator } from 'zustand';
 import type { AgentId } from '../../engine/agents/records';
 import type { AppState } from '../app';
 import { useAgentsStore } from '../agents';
-
-export type FooterTab = 'home' | 'env' | 'settings';
-
-export type TerminalSession =
-  /** The agent kind's terminal UI attached to a folder in the agent's HOME. */
-  | { id: number; kind: 'tui'; agentId: AgentId; dir: string }
-  /** A shell in the agent's Linux image; `initialInput` is typed in without Enter. */
-  | { id: number; kind: 'linux'; agentId: AgentId; initialInput?: string };
+import type { Route } from './routes';
+import {
+  afterCreation,
+  popPage,
+  pushPage,
+  replaceTop,
+  returnWithKind,
+  terminalOf,
+  towardHome,
+  withoutAgent,
+  withoutTerminal,
+  withTerminal,
+  type Page,
+} from './stack';
 
 export type NavigationSlice = {
-  footerTab: FooterTab;
-  /** The open terminal; null = closed. A new `id` per open remounts it. */
-  terminal: TerminalSession | null;
-  /** Folder picker overlay (terminal UI entry point, rooted at the active agent). */
-  folderPickerOpen: boolean;
-  /** Web view can go back to the web UI's home/project list. */
-  webCanGoBack: boolean;
+  /** The pages above Home, bottom first; empty: Home is in front. */
+  pages: Page[];
+  /** The side drawer (agents, New agent, Models, Systems, Settings) over Home. */
+  drawerOpen: boolean;
 
-  setFooterTab: (tab: FooterTab) => void;
-  setWebCanGoBack: (canGoBack: boolean) => void;
+  push: (route: Route) => void;
+  /** One page down; false on Home. */
+  back: () => boolean;
+  replaceTop: (route: Route) => void;
+  /** Home in front: every page and the drawer close. */
   goHome: () => void;
-  /** The active agent's terminal UI in `dir`. */
+  /** Home in front for a reason from outside; an open terminal stays on top (stack.ts towardHome). */
+  showHome: () => void;
+  /** A New agent run is over: its steps close and `route` opens in their place. */
+  finishCreation: (route: Route) => void;
+  /** An agent was deleted: its pages close. */
+  leaveAgent: (agentId: AgentId) => void;
+  /** A custom agent saved from New agent: back to its first step with the kind picked. */
+  returnWithKind: (kindId: string) => void;
+  setDrawerOpen: (open: boolean) => void;
+  /** The folder picker for the active agent's terminal UI. */
+  openFolderPicker: () => void;
+  /** The active agent's terminal UI in `dir` (in place of the folder picker). */
   openTerminalDir: (dir: string) => void;
   openLinuxTerminal: (agentId: AgentId, initialInput?: string) => void;
   closeTerminal: () => void;
-  setFolderPickerOpen: (open: boolean) => void;
 };
 
+let nextKey = 1;
 let nextTerminalId = 1;
 
-export const createNavigationSlice: StateCreator<AppState, [], [], NavigationSlice> = (set) => ({
-  footerTab: 'home',
-  terminal: null,
-  folderPickerOpen: false,
-  webCanGoBack: false,
+const page = (route: Route): Page => ({ key: nextKey++, route });
 
-  setFooterTab: (footerTab) => set({ footerTab }),
+/** The open terminal, if any. */
+export const selectTerminal = (s: Pick<NavigationSlice, 'pages'>) => terminalOf(s.pages);
 
-  setWebCanGoBack: (webCanGoBack) => set({ webCanGoBack }),
+export const createNavigationSlice: StateCreator<AppState, [], [], NavigationSlice> = (set, get) => ({
+  pages: [],
+  drawerOpen: false,
 
-  goHome: () => set({ footerTab: 'home' }),
+  push: (route) => set((s) => ({ pages: pushPage(s.pages, page(route)), drawerOpen: false })),
+
+  back: () => {
+    if (get().pages.length === 0) return false;
+    set((s) => ({ pages: popPage(s.pages) }));
+    return true;
+  },
+
+  replaceTop: (route) => set((s) => ({ pages: replaceTop(s.pages, page(route)) })),
+
+  goHome: () => set({ pages: [], drawerOpen: false }),
+
+  showHome: () => set((s) => ({ pages: towardHome(s.pages), drawerOpen: false })),
+
+  finishCreation: (route) => set((s) => ({ pages: afterCreation(s.pages, page(route)), drawerOpen: false })),
+
+  leaveAgent: (agentId) => set((s) => ({ pages: withoutAgent(s.pages, agentId) })),
+
+  returnWithKind: (kindId) => set((s) => ({ pages: returnWithKind(s.pages, kindId, nextKey++) })),
+
+  setDrawerOpen: (drawerOpen) => set({ drawerOpen }),
+
+  openFolderPicker: () => set((s) => ({ pages: pushPage(s.pages, page({ name: 'folder-picker' })), drawerOpen: false })),
 
   openTerminalDir: (dir) => {
     const agentId = useAgentsStore.getState().activeAgentId;
     if (!agentId) return;
-    set({ terminal: { id: nextTerminalId++, kind: 'tui', agentId, dir }, folderPickerOpen: false });
+    const session = { id: nextTerminalId++, kind: 'tui' as const, agentId, dir };
+    set((s) => ({ pages: withTerminal(s.pages, page({ name: 'terminal', session })), drawerOpen: false }));
   },
 
   openLinuxTerminal: (agentId, initialInput) => {
-    set({
-      terminal: { id: nextTerminalId++, kind: 'linux', agentId, initialInput },
-      folderPickerOpen: false,
-    });
+    const session = { id: nextTerminalId++, kind: 'linux' as const, agentId, initialInput };
+    set((s) => ({ pages: withTerminal(s.pages, page({ name: 'terminal', session })), drawerOpen: false }));
   },
 
-  closeTerminal: () => set({ terminal: null }),
-
-  setFolderPickerOpen: (folderPickerOpen) => set({ folderPickerOpen }),
+  closeTerminal: () => set((s) => ({ pages: withoutTerminal(s.pages) })),
 });

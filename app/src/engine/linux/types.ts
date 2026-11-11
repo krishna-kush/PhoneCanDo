@@ -1,5 +1,5 @@
 // Linux runtime contract (envs and images), shared by the engine seam, the
-// stores and the Env tab. The native side (phonecando-linux over lre/) owns
+// stores and the agent and system pages. The native side (phonecando-linux over lre/) owns
 // the records; JS only reads them and asks for changes.
 //
 // Env:   a fixed base OS, never modified: the Default env baked into this APK,

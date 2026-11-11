@@ -19,29 +19,34 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{chat,terminal,env,setup,settings,accessibility,models,common}/` —
-  feature screens. `models/` is the Models page (Env → Models) and a
-  repository's variants; an agent's Model section is in `env/agent/`.
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,common}/` —
+  feature screens. Navigation: Home (the active agent) with a stack of
+  pages over it and a side drawer, no tabs and no back arrows. The stack
+  is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
+  the one Back handler (`useBackChain.ts`). `drawer/` is the side menu,
+  opened from Home's header. `common/face/` is A-01, the site's mascot, as
+  each agent's face. `models/` is the Models page; an agent's Model page is
+  in `env/agent/`.
   `accessibility/` is the whole Accessibility setup guide: `guide.ts`
   (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
   hook, the step list, the Settings block and the agent's dialog.
   Terminal split: `TerminalScreen.tsx` (session shell) + `TerminalView.tsx`
-  (the IME, mirror, sizing and spacer; used by the terminal tab and by a
+  (the IME, mirror, sizing and spacer; used by a terminal page and by a
   TUI-home agent's Home) + `transport/` (local PTY or the engine's hosted
   PTY) + `keys.ts`, `reconcile.ts`, `sizing.ts` (pure, zero RN imports) +
   `usePtySession.ts`, `useMirrorInput.ts`, `useInitialInput.ts`,
   `useViewFocus.ts` (hooks) + `sessionRecipe.ts` (agent TUI client or
   image shell) + `ExtraKeysBar.tsx`, `FolderPicker.tsx`. Home (`chat/HomeScreen.tsx`) is the kind's web UI or,
   for a TUI-style kind, its TUI (`chat/tui/`).
-  `env/` is the Env tab: envs (fixed base OS) → machines (one image + its
-  agent) → the agent's page, plus New env and Custom agents
-  (`custom-agents/`: the user's own kinds); pure parts in `env/logic/`.
-  `setup/` is first launch (the first agent and its machine). The header
-  agent switcher is `common/agent-switcher/`; Settings is app-wide only.
+  `env/` holds the agent pages (`agent/`), New agent (`new-agent/`;
+  `new-env/` downloads a Linux), Systems (`list/`) and Custom agents
+  (`custom-agents/`); pure parts in `env/logic/`. `setup/` is first
+  launch (the first agent and its machine). Settings and About are
+  app-wide only.
 - `app/src/engine/` — the ONLY importer of native modules (`terminal.ts`
   PTY transport, `runner.ts` engine host, `linux/native.ts` Linux runtime,
   `models/native.ts` local models, `files.ts` file system, `auth.ts`
-  biometrics). Agents and engines:
+  biometrics, `backGesture.ts` the back gesture's progress). Agents and engines:
   `engines.ts`, `ensureEngine.ts`, `connection.ts`; agent kinds through
   `agents/registry.ts` (each kind's `KindView`, from the runner's
   `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
@@ -58,11 +63,11 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   telemetry slices in `app/`), `agents.ts` (agents, engine states, the
   active agent), `linux.ts` (envs, images, job progress), `models.ts`
   (local models, downloads, job progress), `kinds.ts` (the user's own
-  kinds), `keyboard.ts` (keyboard open, the footer's height; the per-frame
-  room is a UI-thread value in `ui/common/keyboard/room.ts`); multi-step
+  kinds), `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
+  value in `ui/common/keyboard/room.ts`); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
-- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models}/` —
+- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models,phonecando-back-gesture}/` —
   own Expo modules (Kotlin + TS shims, clean-room). The PTY's plain POSIX
   core is `phonecando-terminal/android/src/main/cpp/pty/` (`forkpty.c` is the
   JNI glue). `phonecando-linux` is the Linux runtime's Android host (env and
@@ -75,7 +80,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   download and import jobs, the HF token in Keystore) and packages
   `libllama-server.so` on every channel (staged by `lme/llamacpp/stage.sh`);
   the runner's model slot (`runner/models/`, `LocalModelBinding.kt` the one
-  join) serves a model to an agent. Never Termux code in our own
+  join) serves a model to an agent. `phonecando-back-gesture` runs the
+  back gesture's steps on the UI thread while a page or the drawer is open
+  and tells JS the commit (optional: without it Back still works). Never Termux code in our own
   modules; programs we ship as-is (opencode, proot from the termux fork) are
   third-party payloads with their own licenses, built from pinned sources.
   The runner packages every agent kind from `agents/` (`agents.gradle`:
