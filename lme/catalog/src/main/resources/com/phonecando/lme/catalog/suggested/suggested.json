@@ -1,0 +1,51 @@
+{
+  "$comment": "Our suggested models, best first: the one list the app (lme Suggested.MODELS) and the website (web/src/data/cartridges.ts) read. Repository, commit, size and sha256 as huggingface.co listed them on 2026-11-09; context and KV cache from each file's header (lme/gguf); origin is a KnownModels repo. phoneRam is the smallest marketed phone RAM (GB) the RAM gate runs a model on (runsFromGb) and runs it on with no warning (runsWellFromGb); the top-level phoneRam is the gate's own floor, for any model. SuggestedRamTest recomputes every phoneRam from host's RamRules and fails when this file drifts.",
+  "phoneRam": { "runsFromGb": 6, "runsWellFromGb": 8 },
+  "models": [
+    {
+      "title": "Qwen3.5 4B",
+      "note": "Balanced: our default pick",
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "origin": "Qwen/Qwen3.5-4B",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+      "file": {
+        "path": "Qwen3.5-4B-Q4_K_M.gguf",
+        "sizeBytes": 2740937888,
+        "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4"
+      },
+      "contextLength": 262144,
+      "kvCache": { "fullPerToken": 16384, "windowPerToken": 0, "slidingWindow": null },
+      "phoneRam": { "runsFromGb": 8, "runsWellFromGb": 8 }
+    },
+    {
+      "title": "Gemma 4 E2B",
+      "note": "Fastest",
+      "repo": "unsloth/gemma-4-E2B-it-GGUF",
+      "origin": "google/gemma-4-E2B-it",
+      "revision": "0314792d7f1f7e229411f620751375812bb9faf2",
+      "file": {
+        "path": "gemma-4-E2B-it-Q4_K_M.gguf",
+        "sizeBytes": 3106738272,
+        "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8"
+      },
+      "contextLength": 131072,
+      "kvCache": { "fullPerToken": 3072, "windowPerToken": 6144, "slidingWindow": 512 },
+      "phoneRam": { "runsFromGb": 8, "runsWellFromGb": 8 }
+    },
+    {
+      "title": "Qwen3.5 9B",
+      "note": "Strongest; needs the most RAM",
+      "repo": "unsloth/Qwen3.5-9B-GGUF",
+      "origin": "Qwen/Qwen3.5-9B",
+      "revision": "3885219b6810b007914f3a7950a8d1b469d598a5",
+      "file": {
+        "path": "Qwen3.5-9B-Q4_K_M.gguf",
+        "sizeBytes": 5680522464,
+        "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8"
+      },
+      "contextLength": 262144,
+      "kvCache": { "fullPerToken": 16384, "windowPerToken": 0, "slidingWindow": null },
+      "phoneRam": { "runsFromGb": 16, "runsWellFromGb": 16 }
+    }
+  ]
+}

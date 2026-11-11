@@ -40,7 +40,9 @@ DeviceInfo ───────────────────────
   (`parameters/ModelSizes`, `filters/ListFill`) and date them from
   `known/KnownModels` and `origin/`; the rules are in
   `app/docs/modules/models.md` → Model dates, Model sizes.
-  `Suggested.MODELS` pins our three suggestions.
+  `Suggested.MODELS` pins our suggestions, best first, from
+  `suggested/suggested.json`, which the website reads too, with the phone
+  sizes each runs on (`SuggestedRamTest` checks them against the RAM gate).
 - `store`: `ModelStore` keeps `models.json` (atomic writes) and the files
   under `<id>/`. Downloads resume a `.part` with `Range` and are verified
   by size and sha256 before the rename; imports check the magic first and

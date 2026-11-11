@@ -35,6 +35,8 @@ api <- host
 gguf + host <- cli         (a leaf for CI: nothing depends on it, never published)
 ```
 
+- `catalog`'s tests also use `host`: `SuggestedRamTest` checks the phone
+  sizes in `suggested.json` against the RAM gate. Its main code never does.
 - Pure JVM (Kotlin, JDK 17 toolchain): no `android.*`, no `org.json`, no
   app types. kotlinx-serialization-json stays `implementation` in
   `catalog`, `store` and `cli`.
@@ -68,6 +70,9 @@ gguf + host <- cli         (a leaf for CI: nothing depends on it, never publishe
   the strings the plan relies on; a pin bump rechecks the flags against
   the new `--help`.
 - The RAM numbers live in `RamRules` only; `RamGateTest` pins the table.
+  `suggested.json` (catalog, read by the app and the website) holds the
+  phone sizes each suggestion runs on, worked out from them;
+  `SuggestedRamTest` fails when the file drifts.
 
 ## 5. Payload (`lme/llamacpp/`)
 
