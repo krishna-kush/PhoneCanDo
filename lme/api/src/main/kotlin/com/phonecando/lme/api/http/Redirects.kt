@@ -15,13 +15,19 @@ object Redirects {
     private val REDIRECT_STATUSES = setOf(301, 302, 303, 307, 308)
     private val CREDENTIAL_HEADERS = setOf("authorization", "proxy-authorization", "cookie", "x-api-key")
 
-    /** GETs [url], following redirects. A broken redirect throws [IOException], like a port. */
+    /**
+     * GETs [url], following redirects; the answer is marked [HttpResponse.redirectedAway] when it
+     * came from another origin. A broken redirect throws [IOException], like a port.
+     */
     fun get(port: HttpPort, url: String, headers: Map<String, String>): HttpResponse {
-        var current = parse(url)
+        val first = parse(url)
+        var current = first
         var sent = headers
         repeat(MAX_HOPS + 1) {
             val response = port.get(current.toString(), sent)
-            if (response.status !in REDIRECT_STATUSES) return response
+            if (response.status !in REDIRECT_STATUSES) {
+                return if (sameOrigin(first, current)) response else response.redirected()
+            }
             val location = response.header("location")
             response.close()
             val next = resolve(current, location ?: throw IOException("redirect without a location"))

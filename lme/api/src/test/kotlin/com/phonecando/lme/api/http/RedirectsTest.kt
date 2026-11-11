@@ -6,7 +6,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.IOException
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class RedirectsTest {
     private val fake = FakePort()
@@ -24,6 +26,7 @@ class RedirectsTest {
         val response = Redirects.get(fake, start, mapOf("Authorization" to "Bearer hf_x", "Range" to "bytes=5-"))
 
         assertEquals(206, response.status)
+        assertTrue(response.redirectedAway)
         assertEquals("Bearer hf_x", fake.requests[1].header("authorization"))
         assertNull(fake.requests[2].header("authorization"))
         assertEquals("bytes=5-", fake.requests[2].header("range"))
@@ -35,10 +38,19 @@ class RedirectsTest {
         fake.on("https://cdn.example/a", { reply(302, headers = mapOf("Location" to "https://huggingface.co/b")) })
         fake.on("https://huggingface.co/b", { reply(200, "ok") })
 
-        Redirects.get(fake, start, mapOf("Authorization" to "Bearer hf_x", "X-Api-Key" to "k"))
+        val response = Redirects.get(fake, start, mapOf("Authorization" to "Bearer hf_x", "X-Api-Key" to "k"))
 
         assertNull(fake.requests[2].header("authorization"))
         assertNull(fake.requests[2].header("x-api-key"))
+        // Back on the origin asked: the answer is the Hub's own.
+        assertFalse(response.redirectedAway)
+    }
+
+    @Test
+    fun `an answer from the origin asked is not marked`() {
+        fake.on(start, { reply(302, headers = mapOf("Location" to "/api/resolve-cache/m.gguf")) })
+        fake.on("https://huggingface.co/api/resolve-cache/m.gguf", { reply(403) })
+        assertFalse(Redirects.get(fake, start, emptyMap()).redirectedAway)
     }
 
     @Test

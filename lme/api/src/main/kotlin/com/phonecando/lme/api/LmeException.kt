@@ -32,7 +32,8 @@ sealed class LmeException(message: String, cause: Throwable? = null) : Exception
     class Network(val url: String, val status: Int?, cause: Throwable? = null) :
         LmeException("network error on $url${status?.let { " (http $it)" } ?: ""}", cause)
 
-    class RateLimited(val url: String) : LmeException("rate limited on $url")
+    /** HTTP 429; [retryAfterSeconds] when the server said how long to wait. */
+    class RateLimited(val url: String, val retryAfterSeconds: Long? = null) : LmeException("rate limited on $url")
 
     class NotFound(val what: String) : LmeException("$what not found")
 

@@ -4,6 +4,7 @@ import com.phonecando.lme.api.CancelSignal
 import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.Progress
 import com.phonecando.lme.api.ProgressSink
+import com.phonecando.lme.api.http.HttpResponse
 import com.phonecando.lme.api.testkit.FakePort
 import com.phonecando.lme.api.testkit.reply
 import com.phonecando.lme.store.support.Served
@@ -11,6 +12,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -30,8 +35,11 @@ class FileDownloaderTest {
 
     private fun file(served: Served, size: Long = data.size.toLong()) = RemoteFile("m.gguf", url, size, served.sha256)
 
+    private val checkpoints = HashCheckpoints()
+
     private fun run(served: Served, file: RemoteFile = file(served), cancel: CancelSignal = CancelSignal.NEVER) =
-        FileDownloader(fake, mapOf("X-Test" to "1")).download(file, part, target, 100, 100 + data.size.toLong(), ProgressSink { reports += it }, cancel)
+        FileDownloader(fake, mapOf("X-Test" to "1"), checkpoints)
+            .download(file, part, target, 100, 100 + data.size.toLong(), ProgressSink { reports += it }, cancel)
 
     @Test
     fun `a fresh download is verified, then renamed`() {
@@ -69,6 +77,69 @@ class FileDownloaderTest {
         run(good)
         assertContentEquals(data, target.readBytes())
         assertEquals("bytes=3000-", fake.requests.last().header("range"))
+    }
+
+    @Test
+    fun `the next try in this process goes on from its checkpoint without reading the partial back`() {
+        val broken = Served(data, breakAfter = 3000)
+        fake.on(url, broken::answer)
+        assertThrows<LmeException.Network> { run(broken) }
+        reports.clear()
+
+        val good = Served(data)
+        fake.on(url, good::answer)
+        run(good)
+        assertContentEquals(data, target.readBytes())
+        assertEquals("bytes=3000-", fake.requests.last().header("range"))
+        assertFalse(reports.any { it.step == "verify" })
+    }
+
+    @Test
+    fun `a partial that changed since its checkpoint is read back again`() {
+        val broken = Served(data, breakAfter = 3000)
+        fake.on(url, broken::answer)
+        assertThrows<LmeException.Network> { run(broken) }
+        part.writeBytes(data.copyOf(2000))
+        reports.clear()
+
+        val good = Served(data)
+        fake.on(url, good::answer)
+        run(good)
+        assertContentEquals(data, target.readBytes())
+        assertEquals("bytes=2000-", fake.requests.last().header("range"))
+        assertTrue(reports.any { it.step == "verify" })
+    }
+
+    @Test
+    fun `a 206 without Content-Range counts only when it is exactly the rest`() {
+        val served = Served(data)
+        part.writeBytes(data.copyOf(1000))
+        val rest = data.copyOfRange(1000, data.size)
+        fake.on(url, { reply(206, rest) }, { reply(206, rest, mapOf("Content-Length" to "${rest.size}")) })
+        // One we cannot place keeps the partial for the next try.
+        assertThrows<LmeException.Network> { run(served) }
+        assertEquals(1000, part.length())
+        run(served)
+        assertContentEquals(data, target.readBytes())
+    }
+
+    @Test
+    fun `a cancel cuts a read that hangs instead of waiting for the timeout`() {
+        val served = Served(data)
+        part.writeBytes(data.copyOf(100))
+        val released = CountDownLatch(1)
+        val hanging = object : InputStream() {
+            override fun read(): Int {
+                released.await(30, TimeUnit.SECONDS)
+                throw IOException("socket closed")
+            }
+        }
+        fake.on(url, { HttpResponse(206, mapOf("Content-Range" to listOf("bytes 100-4999/5000")), hanging, onAbort = released::countDown) })
+        val cancelAt = System.nanoTime() + 300_000_000
+        val started = System.nanoTime()
+        assertThrows<LmeException.Cancelled> { run(served, cancel = CancelSignal { System.nanoTime() > cancelAt }) }
+        assertTrue(System.nanoTime() - started < 5_000_000_000, "the cancel waited for the read")
+        assertEquals(100, part.length())
     }
 
     @Test

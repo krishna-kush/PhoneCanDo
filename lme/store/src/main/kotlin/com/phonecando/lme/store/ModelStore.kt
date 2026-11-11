@@ -11,6 +11,7 @@ import com.phonecando.lme.api.model.ModelSource
 import com.phonecando.lme.store.check.HeaderCheck
 import com.phonecando.lme.store.download.DownloadRequest
 import com.phonecando.lme.store.download.FileDownloader
+import com.phonecando.lme.store.download.HashCheckpoints
 import com.phonecando.lme.store.download.PendingDownload
 import com.phonecando.lme.store.ids.IdMaker
 import com.phonecando.lme.store.imports.ModelImport
@@ -44,6 +45,9 @@ class ModelStore(
 
     // Downloads running in this process: the space they still need is spoken for.
     private val running: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    // How far each partial was hashed when its last try stopped, for the next try.
+    private val checkpoints = HashCheckpoints()
 
     fun models(): List<ModelRecord> = registry.read().models
 
@@ -116,7 +120,7 @@ class ModelStore(
             val target = layout.file(id, file.name)
             // A file under its final name was verified before the rename.
             if (!(target.isFile && target.length() == file.sizeBytes)) {
-                FileDownloader(http, headersFor(file.url, token)).download(file, layout.part(id, file.name), target, base, total, sink, cancel)
+                FileDownloader(http, headersFor(file.url, token), checkpoints).download(file, layout.part(id, file.name), target, base, total, sink, cancel)
             }
             base += file.sizeBytes
         }

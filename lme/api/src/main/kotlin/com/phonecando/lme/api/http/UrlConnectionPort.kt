@@ -55,7 +55,8 @@ class UrlConnectionPort(
                 }
             }
         }
-        return HttpResponse(status, responseHeaders, body)
+        // disconnect() from another thread closes the socket under a blocked read (JDK and Android's OkHttp).
+        return HttpResponse(status, responseHeaders, body, onAbort = connection::disconnect)
     }
 
     private fun open(url: String): URLConnection = try {

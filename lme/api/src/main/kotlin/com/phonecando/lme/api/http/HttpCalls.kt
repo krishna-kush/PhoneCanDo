@@ -33,10 +33,17 @@ fun HttpResponse.readCapped(limit: Long, url: String, what: String): ByteArray =
     out.toByteArray()
 }
 
-/** The typed error for an HTTP status we did not accept; [what] names the thing asked for. */
-fun errorFor(status: Int, url: String, what: String): LmeException = when (status) {
-    401, 403 -> LmeException.AccessDenied(what)
-    404 -> LmeException.NotFound(what)
-    429 -> LmeException.RateLimited(redactUrl(url))
-    else -> LmeException.Network(redactUrl(url), status)
+/**
+ * The typed error for a [response] to [url] we did not accept; [what] names the thing asked for.
+ * A 401 or 403 from a host a redirect took us to (the CDN behind a Hugging Face download) says
+ * nothing about access to [what]: it is a network error, and the next try gets a fresh signed URL.
+ */
+fun errorFor(response: HttpResponse, url: String, what: String): LmeException = when (response.status) {
+    401, 403 -> if (response.redirectedAway) LmeException.Network(redactUrl(url), response.status) else LmeException.AccessDenied(what)
+    404, 410 -> LmeException.NotFound(what)
+    429 -> LmeException.RateLimited(redactUrl(url), retryAfterSeconds(response.header("retry-after")))
+    else -> LmeException.Network(redactUrl(url), response.status)
 }
+
+/** `Retry-After` in seconds; null for none or an HTTP date (we then wait our own time). */
+internal fun retryAfterSeconds(value: String?): Long? = value?.trim()?.toLongOrNull()?.takeIf { it >= 0 }
