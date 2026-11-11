@@ -19,6 +19,7 @@ import {
 import { ensureEngine, type EnsureResult } from '../engine/ensureEngine';
 import { prepareImageForStart } from '../engine/linux/native';
 import { isAutomationEnabled, isRunnerAvailable } from '../engine/runner';
+import { keepUnchangedList, keepUnchangedMap } from './logic/keepUnchanged';
 
 const ACTIVE_AGENT_KEY = 'phonecando.activeAgent.v1';
 
@@ -129,7 +130,11 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
     },
 
     refreshAgents: () => {
-      const { agents, statuses } = readNative();
+      const read = readNative();
+      // Unchanged records stay the same objects, so the header, the drawer's
+      // rows and the faces skip the render this re-read would cost them.
+      const agents = keepUnchangedList(get().agents, read.agents);
+      const statuses = keepUnchangedMap(get().statuses, read.statuses);
       const prev = get().activeAgentId;
       // A deleted active agent hands over to the first one left.
       const activeAgentId = pickActive(agents, prev);

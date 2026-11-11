@@ -1,4 +1,5 @@
-// Env/agent decisions: error codes, agent names, orphan images, the progress
+// Env/agent decisions: re-read records kept when unchanged
+// (src/state/logic/), error codes, agent names, orphan images, the progress
 // fold and when a job counts as over (src/state/flows/logic/), then the
 // agent and system pages' words and lists and New agent's place step
 // (src/ui/env/logic/, src/ui/setup/copy.ts). Imports
@@ -21,6 +22,22 @@ const flows = (p) => src('state/flows/logic', p);
 const ui = (p) => src('ui/env/logic', p);
 
 (async () => {
+  // --- state/logic -------------------------------------------------------
+  const { sameValue, keepUnchangedList, keepUnchangedMap } = await import(src('state/logic/keepUnchanged.ts'));
+  t('same nested value', sameValue({ a: [1, { b: null }] }, { a: [1, { b: null }] }), true);
+  t('changed nested value', sameValue({ a: [1, { b: 1 }] }, { a: [1, { b: 2 }] }), false);
+  t('extra key differs', sameValue({ a: 1 }, { a: 1, b: undefined }), false);
+  const a1 = { id: 'a', name: 'one' }, b1 = { id: 'b', name: 'two' };
+  const prevList = [a1, b1];
+  t('unchanged list is the old list', keepUnchangedList(prevList, [{ id: 'a', name: 'one' }, { id: 'b', name: 'two' }]) === prevList, true);
+  const changed = keepUnchangedList(prevList, [{ id: 'a', name: 'one' }, { id: 'b', name: 'TWO' }]);
+  t('changed list keeps equal records', [changed === prevList, changed[0] === a1, changed[1] === b1], [false, true, false]);
+  t('a removed record changes the list', keepUnchangedList(prevList, [{ id: 'a', name: 'one' }]) === prevList, false);
+  const prevMap = { a: { state: 'ready' } };
+  t('unchanged map is the old map', keepUnchangedMap(prevMap, { a: { state: 'ready' } }) === prevMap, true);
+  t('changed map is new', keepUnchangedMap(prevMap, { a: { state: 'stopped' } }) === prevMap, false);
+  t('a new key changes the map', keepUnchangedMap(prevMap, { a: { state: 'ready' }, b: { state: 'ready' } }) === prevMap, false);
+
   // --- flows/logic -------------------------------------------------------
   const { failureOf, linuxErrorCode, isLinuxErrorCode, failureOfError } = await import(flows('errors.ts'));
   t('record failure', failureOf('12 MB free', 'no_space'), { code: 'no_space', message: '12 MB free' });
@@ -148,6 +165,19 @@ const ui = (p) => src('ui/env/logic', p);
   t('bad name refused', parseImageRef('Bad Name'), { ok: false, reason: 'invalid' });
   t('hub repo', isHubRepo('kalilinux/kali-rolling'), true);
   t('not hub repo', isHubRepo('ghcr.io/owner/tool'), false);
+
+  const { hubName, logoKeys, pickLogo } = await import(ui('osLogo.ts'));
+  const os = (id) => ({ id, versionId: null, idLike: [], prettyName: null, family: null, shell: null });
+  const reg = (image) => ({ kind: 'registry', image, tag: 'latest', digest: 'sha256:x' });
+  t('hub name strips host and library', hubName('docker.io/library/Debian'), 'debian');
+  t('hub name keeps a namespace', hubName('kalilinux/kali-rolling'), 'kalilinux/kali-rolling');
+  t('logo keys: image, then os id', logoKeys({ source: reg('arm64v8/ubuntu'), os: os('ubuntu') }), ['arm64v8/ubuntu', 'ubuntu']);
+  t('logo keys once', logoKeys({ source: reg('library/ubuntu'), os: os('ubuntu') }), ['ubuntu']);
+  t('logo keys before detection', logoKeys({ source: reg('kalilinux/kali-rolling'), os: null }), ['kalilinux/kali-rolling']);
+  t('default system is debian', logoKeys({ source: { kind: 'default', version: '1' }, os: null }), ['debian']);
+  t('android has no logo', logoKeys({ source: { kind: 'android' }, os: null }), []);
+  t('pick logo falls through', pickLogo(['acme/os', 'alpine'], { alpine: 'https://a' }), 'https://a');
+  t('pick logo none', pickLogo(['acme/os'], {}), null);
 
   const { rankTags, mergeTags } = await import(ui('tags.ts'));
   const tag = (name) => ({ name });
