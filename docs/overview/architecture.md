@@ -21,6 +21,8 @@ RN shell (Expo / Tamagui / Zustand)
         │       └─ loopback bridge ── mobile_* tools, MCP (one token per agent)
         ├─ phonecando-linux ── lre/ ── images in files/images/<id>/
         │       └─ shims ── launcher ── proot ── guest commands
+        ├─ phonecando-models ── lme/ ── models in files/models/
+        │       (lme/ and lre/ both download through network/)
         └─ phonecando-terminal ── libphonecando_pty.so, hosted PTYs
 ```
 

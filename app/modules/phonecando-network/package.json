@@ -1,0 +1,11 @@
+{
+  "name": "phonecando-network",
+  "version": "0.1.0",
+  "description": "PhoneCanDo network state on Android: whether the phone is online, for the models and Linux modules' downloads.",
+  "license": "SEE LICENSE IN ../../../LICENSE",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

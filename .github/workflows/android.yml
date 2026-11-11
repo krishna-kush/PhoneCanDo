@@ -49,6 +49,7 @@ on:
       - 'theme/**'
       # The About page's barcode encoder, shared with the site (app/src/ui/settings/Barcode.tsx).
       - 'web/src/lib/code128.ts'
+      - 'network/**'
       - '.github/workflows/android.yml'
       - '.github/ci/android/**'
       # Agent kinds: the Kotlin the runner builds against (included by
@@ -121,6 +122,7 @@ on:
       - 'theme/**'
       # The About page's barcode encoder, shared with the site (app/src/ui/settings/Barcode.tsx).
       - 'web/src/lib/code128.ts'
+      - 'network/**'
       - '.github/workflows/android.yml'
       - '.github/ci/android/**'
       # Agent kinds: the Kotlin the runner builds against (included by

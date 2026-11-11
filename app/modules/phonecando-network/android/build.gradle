@@ -1,0 +1,17 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.phonecando.network.android'
+version = '0.1.0'
+
+// No JS module: Android code the models and linux modules share (their
+// downloads ask whether the phone is online).
+android {
+  namespace "com.phonecando.network.android"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}

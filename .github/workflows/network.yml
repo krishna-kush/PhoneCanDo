@@ -1,0 +1,88 @@
+name: Network
+
+# Our shared network code (network/). `kotlin` builds and tests the pure-JVM
+# modules (http: the port, our redirect, error and rate-limit rules; download:
+# resumable verified downloads; retry: when to try again and for how long)
+# over recorded responses. lme.yml and lre.yml also run on network/ changes,
+# since both engines build on it. Runs on changes, weekly, on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - 'network/**'
+      - '.github/workflows/network.yml'
+  pull_request:
+    paths:
+      - 'network/**'
+      - '.github/workflows/network.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '47 5 * * 1'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  kotlin:
+    name: Network modules (JVM tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: network
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Build and test every module
+        run: ./gradlew build --console=plain
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Network modules (network/)'
+            echo
+            for f in */build/test-results/test/*.xml; do
+              [ -f "$f" ] || continue
+              grep -o 'testsuite name="[^"]*" tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' "$f"
+            done | sed 's/^/- /'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  network-ok:
+    # The one network check to require in branch protection: green only when
+    # every job above succeeded (a skipped or cancelled job counts as a
+    # failure).
+    name: network-ok
+    if: always()
+    needs: [kotlin]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every blocking network job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=network-ok::not green: $failed"
+            exit 1
+          fi
