@@ -61,7 +61,8 @@ export default function AgentFace({ mood, size = 24, pose = 'square', hop = 0, s
   const gap = Math.max(1, Math.round(size * 0.08));
   const eyesLeft = Math.round((bodyW - eyeW * 2 - gap) / 2);
   const eyeTop = Math.round(bodyH * 0.29);
-  const pupil = size >= 18 ? Math.max(1, Math.round(size * 0.125)) : 0;
+  // Down to the header's 16 (a 2dp pupil in a 4dp eye); below that, eyes only.
+  const pupil = size >= 14 ? Math.max(2, Math.round(size * 0.125)) : 0;
   const markSize = Math.max(8, Math.round(size * 0.5));
 
   // The lid for the mood; awake blinks every few seconds.
