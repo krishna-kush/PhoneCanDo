@@ -98,9 +98,10 @@ gguf + host <- cli         (a leaf for CI: nothing depends on it, never publishe
 
 ## 7. CI and workflow
 
-- `lme.yml` builds the JVM modules, `llamacpp.yml` the payload; both run
-  only for the `paths:` they list. A new input to either gets its path in
-  the same change.
+- `lme.yml` builds the JVM modules, `llamacpp.yml` the payload, and
+  `suggested-models.yml` checks weekly that every file `suggested.json`
+  pins is still on the Hub as pinned; each runs only for the `paths:` it
+  lists. A new input to any of them gets its path in the same change.
 - Never run git commands; the user owns git.
 - One concern per change. Update `docs/planning/todo.md` when scope or
   status moves. The smallest complete change wins.

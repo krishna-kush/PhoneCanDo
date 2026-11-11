@@ -49,6 +49,7 @@ everything. The `*-ok` job is the one check to require for each.
 | `lme.yml` | `lme-ok` | the `lme/` Gradle build and tests: GGUF reader, catalog over recorded responses, model store, launch plan, RAM gate |
 | `llamacpp.yml` | `llamacpp-ok` | the pinned llama-server for arm64 Android, ELF-checked and built twice to the same bytes |
 | `local-models.yml` | `local-models-ok` | every agent kind with a `models` block, installed in an x86_64 container as the phone installs it, runs its one-shot mode against our llama-server (the same pins built for Linux, started from lme's launch plan) once per test model (one per chat template). A run passes on exit 0, output on stdout and at least one answer the server finished: it proves the wiring, not the model. Weekly (Mondays) against each kind's newest release |
+| `suggested-models.yml` | `suggested-models-ok` | every file in lme's `suggested.json` is still on the Hugging Face Hub as pinned: its repository, commit, size and sha256 from one HEAD request each (no download, no token). Weekly (Mondays) too, so a repository gone, gated or rewritten shows before a phone finds it |
 | `pce.yml`, `tce.yml`, `web.yml` | `pce-ok`, `tce-ok`, `web-ok` | their own trees |
 
 ## Automation test layers

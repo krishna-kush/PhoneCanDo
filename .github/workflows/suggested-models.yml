@@ -1,0 +1,92 @@
+name: Suggested models
+
+# Our suggested models (lme catalog's suggested.json, the one list the app
+# and the website read) are still on the Hugging Face Hub as pinned: each
+# file's repository, commit, size and sha256, from one HEAD request per file
+# (.github/ci/suggested-models/check-pins.sh; no download, no token). A
+# repository gone, gated or rewritten turns this red before a phone finds
+# out. Runs when the list or the check changes, weekly (Mondays, beside
+# lme.yml's run), on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - 'lme/catalog/src/main/resources/com/phonecando/lme/catalog/suggested/suggested.json'
+      - '.github/ci/suggested-models/**'
+      - '.github/workflows/suggested-models.yml'
+  pull_request:
+    paths:
+      - 'lme/catalog/src/main/resources/com/phonecando/lme/catalog/suggested/suggested.json'
+      - '.github/ci/suggested-models/**'
+      - '.github/workflows/suggested-models.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '53 5 * * 1'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Explicit bash runs steps with -eo pipefail, so a `check-pins.sh | tee` step
+# fails when the check does.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  pins:
+    name: Pinned files on the Hub
+    runs-on: ubuntu-latest
+    # A 429 waits as long as the Hub asks (at most 5 minutes, three times).
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/ci/suggested-models
+            lme/catalog/src/main/resources/com/phonecando/lme/catalog/suggested
+
+      - name: Check (.github/ci/suggested-models/check-pins.sh)
+        run: bash .github/ci/suggested-models/check-pins.sh | tee "$RUNNER_TEMP/pins.txt"
+
+      - name: Summary
+        if: always()
+        run: |
+          [ -f "$RUNNER_TEMP/pins.txt" ] || exit 0
+          sed -n 's/^FAIL /::error title=Suggested model::/p' "$RUNNER_TEMP/pins.txt"
+          {
+            echo '### Suggested models on the Hub (suggested.json)'
+            echo
+            sed 's/^/- /' "$RUNNER_TEMP/pins.txt"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  suggested-models-ok:
+    # The one suggested-models check to require in branch protection: green
+    # only when every job above succeeded (a skipped or cancelled job counts
+    # as a failure).
+    name: suggested-models-ok
+    if: always()
+    needs: [pins]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every suggested-models job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          if [[ -n "$failed" ]]; then
+            echo "::error title=suggested-models-ok::not green: $failed"
+            exit 1
+          fi

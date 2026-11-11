@@ -230,8 +230,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
    quality gates.
 11. CI path filters: `android.yml`, `tce.yml`, `web.yml`, `pce.yml`,
    `agents.yml`, `agent-payload.yml`, `lre.yml`, `proot.yml`, `lre-image.yml`,
-   `lre-compat.yml`, `lme.yml`, `llamacpp.yml` and `local-models.yml` run
-   only for the `paths:` they list. When a change gives a build or check a
+   `lre-compat.yml`, `lme.yml`, `llamacpp.yml`, `local-models.yml` and
+   `suggested-models.yml` run only for the `paths:` they list. When a change gives a build or check a
    new input (the app importing a new folder, a CI script
    reading a new file, a new packaged asset), add that path to the matching
    lists in the same change. `ci`, `lint`, `security` and `codeql` run on
