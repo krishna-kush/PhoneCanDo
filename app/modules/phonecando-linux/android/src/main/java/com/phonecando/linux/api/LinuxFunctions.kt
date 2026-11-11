@@ -112,6 +112,16 @@ internal fun ModuleDefinitionBuilder.linuxFunctions(host: () -> LinuxHost) {
     runAsync(h, promise) { h.catalog.officialOs().map { it.toMap() } }
   }
 
+  AsyncFunction("catalogCommunityOs") { promise: Promise ->
+    val h = host()
+    runAsync(h, promise) { h.catalog.communityOs().map { it.toMap() } }
+  }
+
+  AsyncFunction("catalogUnofficialOs") { page: Int, promise: Promise ->
+    val h = host()
+    runAsync(h, promise) { h.catalog.unofficialOs(page).toMap() }
+  }
+
   AsyncFunction("catalogTags") { params: Map<String, Any>, promise: Promise ->
     val h = host()
     runAsync(h, promise) {

@@ -2,10 +2,11 @@ package com.phonecando.linux.catalog
 
 import com.phonecando.lre.oci.catalog.CatalogImage
 import com.phonecando.lre.oci.catalog.CatalogTag
+import com.phonecando.lre.oci.catalog.ImagePage
 import com.phonecando.lre.oci.catalog.TagPage
 
 // Docker Hub catalog rows as the JS types see them (CatalogImage,
-// CatalogTag, TagPage in app/src/engine/linux/types.ts). Pure.
+// CatalogTag, TagPage, CatalogImagePage in app/src/engine/linux/types.ts). Pure.
 
 fun CatalogImage.toMap(): Map<String, Any?> = mapOf(
   "name" to name,
@@ -22,3 +23,5 @@ fun CatalogTag.toMap(): Map<String, Any?> = mapOf(
 )
 
 fun TagPage.toMap(): Map<String, Any?> = mapOf("tags" to tags.map { it.toMap() }, "next" to next)
+
+fun ImagePage.toMap(): Map<String, Any?> = mapOf("images" to images.map { it.toMap() }, "next" to next)

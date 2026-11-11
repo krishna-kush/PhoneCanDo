@@ -21,6 +21,7 @@
 import type { LinuxStatus } from '../../../modules/phonecando-linux/src/PhoneCanDoLinux.types';
 import type {
   CatalogImage,
+  CatalogImagePage,
   Env,
   EnvId,
   GuestCommandResult,
@@ -62,6 +63,8 @@ type LinuxModule = {
   clearReinstallList(imageId: ImageId): void;
   terminalRecipe(imageId: ImageId): TerminalRecipe;
   catalogOs(): Promise<CatalogImage[]>;
+  catalogCommunityOs(): Promise<CatalogImage[]>;
+  catalogUnofficialOs(page: number): Promise<CatalogImagePage>;
   catalogTags(params: { repo: string; page: number; query?: string }): Promise<TagPage>;
   cancelJob(jobId: string): boolean;
   addListener(name: string, listener: (e: never) => void): Sub;
@@ -310,6 +313,16 @@ export function terminalRecipe(imageId: ImageId): TerminalRecipe {
 /** Docker Hub's official operating systems with an arm64 build, most relevant first. */
 export function catalogOs(): Promise<CatalogImage[]> {
   return callAsync((m) => m.catalogOs());
+}
+
+/** Community operating systems (a short hand-kept list, each with an arm64 build), in that list's order. */
+export function catalogCommunityOs(): Promise<CatalogImage[]> {
+  return callAsync((m) => m.catalogCommunityOs());
+}
+
+/** One page (from 1) of every other unofficial OS on Docker Hub with an arm64 build, most pulled first. */
+export function catalogUnofficialOs(page = 1): Promise<CatalogImagePage> {
+  return callAsync((m) => m.catalogUnofficialOs(page));
 }
 
 /** One page (from 1) of a Docker Hub repository's arm64 tags; `query` filters by name. */

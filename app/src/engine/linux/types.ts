@@ -168,6 +168,9 @@ export type CatalogTag = {
   digest: string | null;
 };
 
+/** One page of repositories; `next` is the page to ask for next, null on the last page. */
+export type CatalogImagePage = { images: CatalogImage[]; next: number | null };
+
 /** One page of tags; `next` is the page to ask for next, null on the last page. */
 export type TagPage = { tags: CatalogTag[]; next: number | null };
 
