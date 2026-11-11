@@ -1,6 +1,6 @@
 import { Pressable } from 'react-native';
 import { XStack } from 'tamagui';
-import ArrowIcon from './ArrowIcon';
+import ChevronIcon from './ChevronIcon';
 import { HIT, useTheme } from './globals';
 import PlainText from './PlainText';
 
@@ -52,7 +52,7 @@ export default function LinkRow({ label, detail, alert = false, onPress, reach }
             </PlainText>
           ) : null}
         </XStack>
-        <ArrowIcon dir="right" size={14} color={t.faint} />
+        <ChevronIcon size={14} color={t.faint} />
       </XStack>
     </Pressable>
   );

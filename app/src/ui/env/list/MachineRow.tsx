@@ -4,7 +4,7 @@ import type { Agent } from '../../../engine/agents/records';
 import type { Image } from '../../../engine/linux/types';
 import { useAgentsStore } from '../../../state/agents';
 import { deleteUnusedImage } from '../../../state/flows/deleteAgentAndImage';
-import ArrowIcon from '../../common/ArrowIcon';
+import ChevronIcon from '../../common/ChevronIcon';
 import CardMenu from '../../common/CardMenu';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import AgentFace from '../../common/face/AgentFace';
@@ -55,7 +55,7 @@ export default function MachineRow({ image, agent, onOpen }: Props) {
         </YStack>
         {agent ? (
           <YStack flexShrink={0} paddingRight="1" opacity={0.5}>
-            <ArrowIcon dir="right" size={18} />
+            <ChevronIcon size={18} />
           </YStack>
         ) : image ? (
           <CardMenu

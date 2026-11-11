@@ -2,7 +2,7 @@ import { Button, XStack, YStack } from 'tamagui';
 import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { useAgentsStore } from '../../state/agents';
-import ArrowIcon from '../common/ArrowIcon';
+import ChevronIcon from '../common/ChevronIcon';
 import AgentFace from '../common/face/AgentFace';
 import { useAgentLook } from '../common/face/useAgentLook';
 import { HIT, useTheme } from '../common/globals';
@@ -74,7 +74,7 @@ export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Pro
         onPress={onOpen}
         accessibilityLabel={`Open ${agent.name}'s page`}
       >
-        <ArrowIcon dir="right" size={16} color={t.dim} />
+        <ChevronIcon size={16} color={t.dim} />
       </Button>
     </XStack>
   );

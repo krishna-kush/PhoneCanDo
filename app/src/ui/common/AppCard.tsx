@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
-import ArrowIcon from './ArrowIcon';
+import ChevronIcon from './ChevronIcon';
 import CardMenu, { type CardMenuItem } from './CardMenu';
 import PlainText from './PlainText';
 
@@ -98,7 +98,7 @@ export default function AppCard({
         <CardMenu items={menu} label={menuLabel ?? `Actions for ${title}`} />
       ) : showChevron ? (
         <YStack flexShrink={0} paddingRight="1" opacity={0.5}>
-          <ArrowIcon dir="right" size={18} />
+          <ChevronIcon size={18} />
         </YStack>
       ) : null}
     </XStack>
