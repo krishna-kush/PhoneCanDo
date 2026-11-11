@@ -1,16 +1,20 @@
 ---
-// The booster pack: every agent kind is a trading card. Tear a pack and
-// three fly out, the three agents a phone runs at once; the binder fills
-// as they come, a pack of new cards at a time until the set is full. The cartridge pushed into the
-// phone is the brain of every card that takes a local model, one at a time,
-// as in the app. lib/booster/ wires it; the cards are printed here, face
-// down and hidden, so no manifest reaches the browser.
+// The booster pack: every agent kind is a trading card. Tear a pack and a
+// few fly out (lib/booster/draw.ts); the binder fills as they come, a pack
+// of new cards at a time until the set is full. The cartridge pushed into
+// the phone is the brain of every card that takes a local model, and the
+// house rules' RAM cell (Models.astro) shows the phone it needs.
+// lib/booster/ wires it; the cards are printed here, face down and hidden,
+// so no manifest reaches the browser.
 import AgentCard from "./AgentCard.astro";
 import Bot from "./Bot.astro";
 import LogoMark from "../../LogoMark.astro";
-import { cards, cartridges, firstCartridge, firstPull } from "../../../data/agentCards";
+import { cards, firstPull } from "../../../data/agentCards";
+import { cartridges, firstCartridge } from "../../../data/cartridges";
+import { PACK } from "../../../lib/booster/draw";
 
 const loaded = cartridges.find((c) => c.id === firstCartridge) ?? cartridges[0];
+const builtIn = cards.filter((c) => c.builtIn).length;
 ---
 
 <figure class="booster" data-booster data-state="sealed" data-first={firstPull}>
@@ -27,15 +31,15 @@ const loaded = cartridges.find((c) => c.id === firstCartridge) ?? cartridges[0];
         <ul class="hand">
             {cards.map((card) => <AgentCard card={card} brain={loaded.name} />)}
         </ul>
-        <button class="pack" type="button" data-pack aria-label="Tear open a pack of three agent cards">
+        <button class="pack" type="button" data-pack aria-label={`Tear open a pack of ${PACK} agent cards`}>
             <span class="pack-crimp pack-top" aria-hidden="true"></span>
             <span class="pack-body" aria-hidden="true">
                 <span class="pack-tear">✂ tear here</span>
                 <span class="pack-label">
                     <LogoMark size={20} />
                     <span class="pack-title">Agents</span>
-                    <span class="pack-sub">Series 01 · 3 cards</span>
-                    <span class="pack-odds">Collect them all · 1 built in</span>
+                    <span class="pack-sub">Series 01 · {PACK} cards</span>
+                    <span class="pack-odds">Collect them all · {builtIn} built in</span>
                 </span>
             </span>
             <span class="pack-crimp pack-bottom" aria-hidden="true"></span>
@@ -45,7 +49,7 @@ const loaded = cartridges.find((c) => c.id === firstCartridge) ?? cartridges[0];
     <div class="carts">
         <p class="booster-label">
             <b>The phone's brain</b>
-            <span>One cartridge in at a time · every card that takes a local model runs on it</span>
+            <span>Push one in · every card that takes a local model can run on it</span>
         </p>
         <div class="carts-row" role="group" aria-label="Local model in the phone">
             {cartridges.map((c) => (
@@ -78,8 +82,8 @@ const loaded = cartridges.find((c) => c.id === firstCartridge) ?? cartridges[0];
 
     <p class="sr" data-live aria-live="polite"></p>
     <figcaption class="booster-foot">
-        <span>3 cards a pack · 3 agents run at once</span>
-        <span class="right">1 brain in the phone · shared</span>
+        <span>{PACK} cards a pack · {cards.length} in the set</span>
+        <span class="right">Each brain shared by the agents on it</span>
     </figcaption>
 </figure>
 

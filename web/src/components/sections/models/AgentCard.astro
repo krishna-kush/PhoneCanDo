@@ -17,7 +17,9 @@ const { card, brain } = Astro.props;
 const no = String(card.no).padStart(2, "0");
 const rarity = card.builtIn ? "Built in" : card.stable ? "Stable" : "Preview";
 const flavour = card.builtIn
-    ? "Comes with the app: no machine to set up, and at home on the phone's own brain."
+    ? card.local
+      ? "Comes with the app: no machine to set up, and at home on the phone's own brain."
+      : "Comes with the app: no machine to set up."
     : card.local
       ? "Moves into a Linux machine of its own. Brings its own brain, or borrows the phone's."
       : "Moves into a Linux machine of its own and signs in to its own provider.";

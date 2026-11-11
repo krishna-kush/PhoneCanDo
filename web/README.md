@@ -30,7 +30,7 @@ Astro is pinned to 7.3.0 (7.4 needs Node ≥ 22.23.4); bump the two together.
 | What the mascot says (per section, when you scroll too fast, when you play with a toy) | `src/data/mascot.ts`; 17 characters a line at most. Toys cue it through `src/lib/mascotCue.ts` |
 | Section copy · order | `src/components/sections/*.astro` · `src/pages/index.astro` |
 | Demo cards | `src/data/demos.ts` |
-| Models booster pack: agent cards, brain cartridges | the agents: nothing, read from `agents/*/*/agent.json` at build time; their creatures and the cartridges: `src/data/agentCards.ts`; the pack's rules and wiring: `src/lib/booster/` |
+| Models booster pack: agent cards, brain cartridges | the agents (names, counts, built in, default, stable): nothing, read from `agents/*/*/agent.json` at build time; their creatures and the kinds the lead names: `src/data/agentCards.ts`; the cartridges and the RAM each needs: nothing, read from lme's `suggested.json` (`src/data/cartridges.ts`); the pack's rules and wiring: `src/lib/booster/` |
 | Colours (shared with the app) | `theme/tokens.json` |
 | A section's or component's look | the `<style is:global>` at the bottom of its `.astro` file |
 | Shared pieces: vars, reset, labels, buttons, section scaffolding | `src/styles/` (`global.css` lists them) |

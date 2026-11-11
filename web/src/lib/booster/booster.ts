@@ -1,8 +1,9 @@
 // The booster pack's wiring (components/sections/models/Booster.astro).
-// Tear a pack: its strip flies off, three agent cards fly out face down and
+// Tear a pack: its strip flies off, its agent cards fly out face down and
 // turn over one by one, and the binder files every new one. The cartridge
 // pushed into the phone becomes the brain of every card that takes a local
-// model, all at once. Which cards come is draw.ts; the lean under the
+// model, all at once, and the root says so with CARTRIDGE_EVENT (the house
+// rules' RAM cell listens). Which cards come is draw.ts; the lean under the
 // pointer, tilt.ts. The root's data-state drives the CSS: sealed, tearing,
 // open, clearing.
 
@@ -12,6 +13,9 @@ import { cueMascot } from '../mascotCue';
 import { toyLines } from '../../data/mascot';
 
 type State = 'sealed' | 'tearing' | 'open' | 'clearing';
+
+/** Bubbles from the booster's root when a cartridge goes in; its detail is the cartridge's id. */
+export const CARTRIDGE_EVENT = 'booster:cartridge';
 
 /** When the cards fly out after the tear, how far apart, and how long they fly (ms). */
 const DEAL_AT = 260;
@@ -142,6 +146,7 @@ export function mountBooster(root: HTMLElement) {
     cart.addEventListener('click', () => {
       if (cart.getAttribute('aria-pressed') === 'true') return;
       for (const c of carts) c.setAttribute('aria-pressed', String(c === cart));
+      root.dispatchEvent(new CustomEvent(CARTRIDGE_EVENT, { detail: cart.dataset.cart ?? '', bubbles: true }));
       const name = cart.dataset.name ?? '';
       for (const chip of chips) {
         chip.textContent = name;

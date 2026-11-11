@@ -1,6 +1,6 @@
 // Which cards a pack holds. Pure; [random] has Math.random's shape.
 
-/** Cards a pack holds: the three agents a phone runs at once. */
+/** Cards a pack holds. */
 export const PACK = 3;
 
 /**

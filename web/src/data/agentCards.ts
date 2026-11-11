@@ -1,6 +1,8 @@
-// The Models section's booster pack (components/sections/models/). Build time
-// only: the page prints every card, and the pack's script reads them back
-// from the DOM, so no manifest ever reaches the browser.
+// The Models section's agent cards (components/sections/models/), and every
+// kind its copy names or counts: built in, default, stable, local. Build
+// time only: the page prints every card, and the pack's script reads them
+// back from the DOM, so no manifest ever reaches the browser. The
+// cartridges are cartridges.ts.
 
 /** The fields of an agent kind's agent.json a card shows. */
 type Manifest = {
@@ -9,6 +11,8 @@ type Manifest = {
   type: 'native' | 'image';
   channels: string[];
   stability: string;
+  /** The kind a fresh install starts with (at most one; agents/kit checks it). */
+  default?: boolean;
   signIn?: { method: string }[];
   models?: Record<string, unknown>;
 };
@@ -34,7 +38,10 @@ export type AgentCard = {
   id: string;
   label: string;
   no: number;
+  /** Built into the app (a native kind), not installed into a machine. */
   builtIn: boolean;
+  /** The kind a fresh install starts with: the first card the first pack deals. */
+  isDefault: boolean;
   stable: boolean;
   /** How it signs in, in a few words each. */
   signIn: string[];
@@ -54,8 +61,9 @@ const SIGN_IN: Record<string, string> = {
 const POSES = ['square', 'wide', 'tall'] as const;
 const EYES = ['dot', 'look', 'wide', 'sleepy'] as const;
 
-// Built in first, then by name. The first card wears the brand mark's own
-// look; the rest step through the poses, eyes and swaps, so no two match.
+// The default kind first, then the built-in ones, then by name. The first
+// card wears the brand mark's own look; the rest step through the poses,
+// eyes and swaps, so no two match.
 const look = (i: number): BotLook => ({
   pose: POSES[i % 3],
   swap: Math.floor(i / 3) % 2 === 1,
@@ -63,49 +71,35 @@ const look = (i: number): BotLook => ({
   antenna: i % 4 === 2,
 });
 
+const rank = (m: Manifest) => (m.default ? 0 : m.type === 'native' ? 1 : 2);
+
 /** The kinds in the build the site hands out (full). */
 export const cards: AgentCard[] = Object.values(manifests)
   .filter((m) => m.channels.includes('full'))
-  .sort((a, b) => (a.type === b.type ? a.label.localeCompare(b.label, 'en', { sensitivity: 'base' }) : a.type === 'native' ? -1 : 1))
+  .sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label, 'en', { sensitivity: 'base' }))
   .map((m, i) => ({
     id: m.id,
     label: m.label,
     no: i + 1,
     builtIn: m.type === 'native',
+    isDefault: m.default === true,
     stable: m.stability === 'stable',
     signIn: (m.signIn ?? []).map((s) => SIGN_IN[s.method] ?? s.method),
     local: Boolean(m.models),
     look: look(i),
   }));
 
-/**
- * How many agents the page promises: a floor, so the copy stays true while
- * kinds come and go. The build fails if the set ever drops below it.
- */
-const PROMISED = 13;
-if (cards.length < PROMISED) {
-  throw new Error(`The Models section promises ${PROMISED}+ agents, but agents/ has ${cards.length} kinds in the full build.`);
-}
-export const agentsClaim = `${PROMISED}+`;
+/** The kind a fresh install starts with; null if no manifest says. */
+export const defaultCard = cards.find((c) => c.isDefault) ?? null;
 
-/** The card every first pack holds: the one built into the app. */
-export const firstPull = cards.find((c) => c.builtIn)?.id ?? '';
-
-export type Cartridge = { id: string; name: string; note: string };
-
-/** The cartridge in the phone when the page opens: any GGUF, not one of our picks. */
-export const firstCartridge = 'gguf';
-
-const gb = (bytes: number) => `${(bytes / 1e9).toFixed(1)} GB`;
+/** The card every first pack holds: the default kind, else the first built in. */
+export const firstPull = (defaultCard ?? cards.find((c) => c.builtIn) ?? cards[0])?.id ?? '';
 
 /**
- * The brains a card can run on, one in the phone at a time. The three
- * models are our suggestions, best first, with their file sizes, as
- * lme/catalog's Suggested.MODELS pins them; change them together.
+ * The kinds the lead names: the default, then these when agents/ has them
+ * (the page never names a kind it does not have), four at most.
  */
-export const cartridges: Cartridge[] = [
-  { id: 'qwen35-4b', name: 'Qwen3.5 4B', note: `${gb(2_740_937_888)} · our pick` },
-  { id: 'gemma4-e2b', name: 'Gemma 4 E2B', note: `${gb(3_106_738_272)} · fastest` },
-  { id: 'qwen35-9b', name: 'Qwen3.5 9B', note: `${gb(5_680_522_464)} · strongest` },
-  { id: 'gguf', name: 'Any GGUF', note: 'Hugging Face or a file' },
-];
+const NAMED = ['claude-code', 'codex', 'gemini-cli'];
+export const leadCards = [defaultCard, ...NAMED.map((id) => cards.find((c) => c.id === id))]
+  .filter((c, i, all): c is AgentCard => c != null && all.indexOf(c) === i)
+  .slice(0, 4);

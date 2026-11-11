@@ -1,8 +1,28 @@
 ---
 import Booster from "./models/Booster.astro";
-import { agentsClaim, cards } from "../../data/agentCards";
+import { cards, leadCards, type AgentCard } from "../../data/agentCards";
+import { cartridges, firstCartridge } from "../../data/cartridges";
+import { joinNames } from "../../lib/joinNames";
 
+// Every name and count below comes from the agent manifests and lme's
+// suggested models, so the copy moves with them.
+const names = (list: AgentCard[]) => joinNames(list.map((c) => c.label));
+const others = cards.length > leadCards.length ? ["more"] : [];
+const lead = joinNames([...leadCards.map((c) => c.label), ...others]);
+const builtIn = cards.filter((c) => c.builtIn);
+const builtInLine =
+    builtIn.length === 0
+        ? "Each installs into its own machine."
+        : `${names(builtIn)} ${builtIn.length === 1 ? "comes" : "come"} built in${builtIn.length < cards.length ? "; the rest install into their machine" : ""}.`;
+const stable = cards.filter((c) => c.stable);
+const stability =
+    stable.length === cards.length
+        ? "all are stable"
+        : stable.length === 0
+          ? "all are previews"
+          : `${names(stable)} ${stable.length === 1 ? "is" : "are"} stable, the others are previews`;
 const localKinds = cards.filter((c) => c.local).length;
+const picks = cartridges.filter((c) => !c.any).length;
 ---
 
 <section class="section models" id="models">
@@ -14,10 +34,10 @@ const localKinds = cards.filter((c) => c.local).length;
         <div class="sec-body">
             <h2>Collect your crew. Pick its brain.</h2>
             <p class="lead">
-                Choose from {agentsClaim} coding agents — opencode, Claude
-                Code, Codex, Gemini CLI and more — each in a machine of its
-                own, three at a time. Each signs in to its own provider, or
-                runs on a model right on the phone:{" "}
+                Choose from {cards.length} coding agents — {lead} — each in a
+                machine of its own, as many at once as the phone has room
+                for. Each signs in to its own provider, or runs on a model
+                right on the phone:{" "}
                 <em>the prompt never leaves the device.</em>
             </p>
         </div>
@@ -28,28 +48,47 @@ const localKinds = cards.filter((c) => c.local).length;
     <dl class="house-rules">
         <div>
             <dt>Agents</dt>
-            <dd><b>{agentsClaim}</b> kinds to pick from. opencode comes built in; the rest install into their machine. Or add your own.</dd>
+            <dd><b>{cards.length}<span class="inf"> + ∞</span></b> kinds ready to go, and room for as many more as you write: add any agent as your own kind. {builtInLine}</dd>
         </div>
         <div>
             <dt>At once</dt>
-            <dd><b>3</b> agents run together. A fourth takes the seat of one that has sat idle a minute.</dd>
+            <dd><b>No cap</b> unless you set one. Near the RAM peak the app warns and lists who's running; stop none, and it stops the sleepiest itself after a short countdown.</dd>
         </div>
         <div>
-            <dt>On the phone</dt>
-            <dd><b>1</b> model loaded at a time, shared by every agent on it.</dd>
+            <dt>Local models</dt>
+            <dd><b>{picks}<span class="inf"> + ∞</span></b> Our picks, plus any GGUF from Hugging Face or a file. {localKinds} of the agents run on one. Load several as RAM allows, each shared by the agents on it; stopping one stops them first.</dd>
         </div>
-        <div>
+        <div data-ram aria-live="polite">
             <dt>RAM</dt>
-            <dd><b>6 GB</b> to run a model, 8 GB to run it well. The app checks the fit before you download.</dd>
+            {cartridges.map((c) => (
+                <dd data-ram-for={c.id} hidden={c.id !== firstCartridge}>
+                    <b>{c.ram.runsFromGb} GB</b>{" "}
+                    {c.any
+                        ? `to run a small model, ${c.ram.runsWellFromGb} GB to run it well; bigger files need more.`
+                        : c.ram.runsFromGb === c.ram.runsWellFromGb
+                          ? `to run ${c.name} well.`
+                          : `to run ${c.name}, ${c.ram.runsWellFromGb} GB to run it well.`}{" "}
+                    The app checks the fit before you download.
+                </dd>
+            ))}
         </div>
     </dl>
 
     <p class="model-foot">
-        {localKinds} of them take a local model ·
-        opencode is stable, the others are previews · weights from Hugging
-        Face or a GGUF file on the phone
+        {stability} · every model runs on the phone, on llama.cpp
     </p>
 </section>
+
+<script>
+    import { CARTRIDGE_EVENT } from "../../lib/booster/booster";
+
+    // The RAM cell follows the cartridge in the phone.
+    const ram = document.querySelector<HTMLElement>("[data-ram]");
+    ram?.closest("section")?.addEventListener(CARTRIDGE_EVENT, (e) => {
+        const id = (e as CustomEvent<string>).detail;
+        for (const dd of ram.querySelectorAll<HTMLElement>("[data-ram-for]")) dd.hidden = dd.dataset.ramFor !== id;
+    });
+</script>
 
 <style is:global>
     /* The operator's card: the board's house rules, one numbered cell each. */
@@ -95,6 +134,13 @@ const localKinds = cards.filter((c) => c.local).length;
       color: var(--fg);
     }
     .house-rules div:nth-child(2) b { color: var(--red); }
+    /* "+ ∞": the set we ship, and the open end past it. */
+    .house-rules b .inf {
+      margin-left: 2px;
+      font-size: 0.8em;
+      letter-spacing: 0;
+      color: var(--accent-ink);
+    }
     .model-foot {
       margin-top: 14px;
       font: 400 9px/1.6 var(--mono);
