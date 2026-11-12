@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
-import ChevronIcon from './ChevronIcon';
+import { useOpening } from '../nav/opening';
 import CardMenu, { type CardMenuItem } from './CardMenu';
+import OpenMark from './OpenMark';
 import PlainText from './PlainText';
 
 type Props = {
@@ -11,7 +12,7 @@ type Props = {
   onLongPress?: () => void;
   menu?: CardMenuItem[];
   menuLabel?: string;
-  /** Trailing › when the row navigates (default true when onPress set). */
+  /** Trailing › when the row navigates (default true when onPress set); a spinner while it opens. */
   chevron?: boolean;
   /** Check mark for the selected row (Env active row). */
   selected?: boolean;
@@ -41,6 +42,7 @@ export default function AppCard({
 }: Props) {
   const initial = (title.replace(/^\.+/, '').trim().charAt(0) || '•').toUpperCase();
   const showChevron = chevron ?? (onPress != null && menu == null);
+  const open = useOpening(showChevron ? onPress : undefined);
 
   return (
     <XStack
@@ -54,7 +56,7 @@ export default function AppCard({
       backgroundColor="panel"
       opacity={onPress ? 'press:0.9' : undefined}
       scale={onPress ? 'press:0.99' : undefined}
-      onPress={onPress}
+      onPress={showChevron ? open.press : onPress}
       onLongPress={onLongPress}
     >
       <YStack
@@ -98,7 +100,7 @@ export default function AppCard({
         <CardMenu items={menu} label={menuLabel ?? `Actions for ${title}`} />
       ) : showChevron ? (
         <YStack flexShrink={0} paddingRight="1" opacity={0.5}>
-          <ChevronIcon size={18} />
+          <OpenMark opening={open.opening} size={18} />
         </YStack>
       ) : null}
     </XStack>

@@ -1,7 +1,8 @@
 import { Pressable } from 'react-native';
 import { XStack } from 'tamagui';
-import ChevronIcon from './ChevronIcon';
+import { useOpening } from '../nav/opening';
 import { HIT, useTheme } from './globals';
+import OpenMark from './OpenMark';
 import PlainText from './PlainText';
 
 type Props = {
@@ -20,15 +21,16 @@ type Props = {
 };
 
 // A row that opens a page, Android settings style: the name, a mono
-// detail, a ›. The drawer's places and an agent's settings use it. A press
-// is Android's own ripple, spreading across the row from the finger; its
-// ink is the palette's hairline (the text colour at about a tenth), as
-// Material's pressed layer.
+// detail, a › (a spinner while the page opens). The drawer's places and an
+// agent's settings use it. A press is Android's own ripple, spreading
+// across the row from the finger; its ink is the palette's hairline (the
+// text colour at about a tenth), as Material's pressed layer.
 export default function LinkRow({ label, detail, alert = false, onPress, reach }: Props) {
   const t = useTheme();
+  const open = useOpening(onPress);
   return (
     <Pressable
-      onPress={onPress}
+      onPress={open.press}
       android_ripple={{ color: t.line }}
       style={
         reach && {
@@ -52,7 +54,7 @@ export default function LinkRow({ label, detail, alert = false, onPress, reach }
             </PlainText>
           ) : null}
         </XStack>
-        <ChevronIcon size={14} color={t.faint} />
+        <OpenMark opening={open.opening} size={14} color={t.faint} />
       </XStack>
     </Pressable>
   );

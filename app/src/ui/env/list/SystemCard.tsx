@@ -2,9 +2,10 @@ import { XStack, YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import type { Env, Image } from '../../../engine/linux/types';
 import { useTargetProgress } from '../../../state/linux';
-import ChevronIcon from '../../common/ChevronIcon';
 import { useTheme } from '../../common/globals';
+import OpenMark from '../../common/OpenMark';
 import PlainText from '../../common/PlainText';
+import { useOpening } from '../../nav/opening';
 import { logoKeys } from '../logic/osLogo';
 import { agentCountOf, type EnvRow } from '../logic/sections';
 import { downloadLine, stepFraction } from '../logic/steps';
@@ -24,7 +25,8 @@ function agentsLine(rows: EnvRow<Image, Agent>[]): string {
 // One system in the Systems list: a plate with its OS's logo (Docker Hub's,
 // as Which Linux? shows it; else its letter), its name, OS and size, and how
 // many agents run on it; a download in progress shows its bar, a stopped one
-// says so. Tap opens the system's page, where its agents are listed.
+// says so. Tap opens the system's page, where its agents are listed (a
+// spinner for the › until it is in).
 export default function SystemCard({ env, rows, onOpen }: Props) {
   const t = useTheme();
   const progress = useTargetProgress(env ? { kind: 'env', id: env.id } : null);
@@ -32,6 +34,7 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
   const sub = env ? envSubtitle(env) : 'Their system or machine is missing';
   const letter = (env?.os?.id ?? (env?.source.kind === 'android' ? 'android' : env ? title : '?')).charAt(0).toUpperCase();
   const count = agentsLine(rows);
+  const open = useOpening(onOpen);
 
   return (
     <YStack
@@ -40,7 +43,7 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
       backgroundColor="panel press:panel2"
       padding="3"
       gap="3"
-      onPress={onOpen}
+      onPress={open.press}
       accessibilityRole="button"
       accessibilityLabel={`${title}, ${sub}, ${count}`}
     >
@@ -59,7 +62,7 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
             {count}
           </PlainText>
         </YStack>
-        <ChevronIcon size={14} color={t.faint} />
+        <OpenMark opening={open.opening} size={14} color={t.faint} />
       </XStack>
       {env?.state === 'downloading' ? (
         <ProgressBar

@@ -95,6 +95,19 @@ function subscribe(listener: () => void) {
   };
 }
 
+/** Calls `done` once the stack is at rest: right away, or when the slide running now ends. */
+export function whenAtRest(done: () => void) {
+  if (current.anim === null) {
+    done();
+    return;
+  }
+  const unsubscribe = subscribe(() => {
+    if (current.anim !== null) return;
+    unsubscribe();
+    done();
+  });
+}
+
 const read = () => current;
 
 export function useShown(): Shown {

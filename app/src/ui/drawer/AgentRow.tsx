@@ -3,15 +3,16 @@ import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { useAgentsStore } from '../../state/agents';
 import { useUnread } from '../../state/messages';
-import ChevronIcon from '../common/ChevronIcon';
 import AgentFace from '../common/face/AgentFace';
 import { useAgentLook } from '../common/face/useAgentLook';
 import { HIT, useTheme } from '../common/globals';
+import OpenMark from '../common/OpenMark';
 import PlainText from '../common/PlainText';
 import Stamp from '../common/Stamp';
 import { engineStateWord } from '../env/logic/engineState';
 import { unreadLabel } from '../messages/logic/messagesCopy';
 import UnreadMark from '../messages/UnreadMark';
+import { useOpening } from '../nav/opening';
 import PickBox from './select/PickBox';
 
 type Props = {
@@ -30,9 +31,10 @@ type Props = {
 
 // One agent in the drawer: its face, name, serial, kind and engine state in
 // words, and a small count of its messages not read yet. A tap makes it
-// the active agent (Home shows it), the › opens its page, and a long press starts picking agents to stop or delete together.
-// While picking, the highlight marks the picked rows (the stamp still
-// names the active one).
+// the active agent (Home shows it), the › opens its page (a spinner until
+// it is in), and a long press starts picking agents to stop or delete
+// together. While picking, the highlight marks the picked rows (the stamp
+// still names the active one).
 export default function AgentRow({ agent, active, still, picking, picked, onSwitch, onOpen, onPick }: Props) {
   const t = useTheme();
   const look = useAgentLook(agent.id);
@@ -40,6 +42,7 @@ export default function AgentRow({ agent, active, still, picking, picked, onSwit
   const sub = `${look.serial} · ${agentKind(agent.kind).label} · ${engineStateWord(state).toLowerCase()}`;
   const unread = useUnread(agent.id);
   const lit = picking ? picked : active;
+  const open = useOpening(onOpen);
 
   return (
     <XStack
@@ -98,10 +101,10 @@ export default function AgentRow({ agent, active, still, picking, picked, onSwit
           opacity="1 press:1"
           borderRadius={0}
           paddingHorizontal={0}
-          onPress={onOpen}
+          onPress={open.press}
           accessibilityLabel={`Open ${agent.name}'s page`}
         >
-          <ChevronIcon size={16} color={t.dim} />
+          <OpenMark opening={open.opening} size={16} color={t.dim} />
         </Button>
       )}
     </XStack>

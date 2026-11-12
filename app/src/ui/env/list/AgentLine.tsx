@@ -2,10 +2,11 @@ import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { useAgentsStore } from '../../../state/agents';
-import ChevronIcon from '../../common/ChevronIcon';
 import AgentFace from '../../common/face/AgentFace';
 import { useAgentLook } from '../../common/face/useAgentLook';
+import OpenMark from '../../common/OpenMark';
 import PlainText from '../../common/PlainText';
+import { useOpening } from '../../nav/opening';
 import { usePageActive } from '../../nav/pageActive';
 import { activityWord } from '../logic/engineState';
 
@@ -29,18 +30,19 @@ type Props = {
 
 // One agent in a list, as its machine's row or one of a shared machine's
 // agents (Systems, an agent's Machine page): its face, name and engine's
-// word. A tap opens its page.
+// word. A tap opens its page (a spinner for the › until it is in).
 export default function AgentLine({ agent, missing, size, onOpen, label, idle = null, extra, children }: Props) {
   const status = useAgentsStore((s) => s.statuses[agent.id]);
   const state = missing ? 'Its machine is missing' : activityWord(status?.state, idle);
   const sub = [label, state, extra, size, onOpen ? null : 'this agent'].filter(Boolean).join(' · ');
+  const open = useOpening(onOpen ? () => onOpen(agent.id) : undefined);
   return (
     <YStack
       paddingHorizontal="3"
       paddingVertical="2"
       gap="2"
       backgroundColor={onOpen ? 'press:panel2' : undefined}
-      onPress={onOpen ? () => onOpen(agent.id) : undefined}
+      onPress={open.press}
       accessibilityRole={onOpen ? 'button' : undefined}
       accessibilityLabel={`${agent.name}, ${sub}`}
     >
@@ -51,7 +53,7 @@ export default function AgentLine({ agent, missing, size, onOpen, label, idle = 
         trailing={
           onOpen ? (
             <YStack flexShrink={0} paddingRight="1" opacity={0.5}>
-              <ChevronIcon size={18} />
+              <OpenMark opening={open.opening} size={18} />
             </YStack>
           ) : null
         }
