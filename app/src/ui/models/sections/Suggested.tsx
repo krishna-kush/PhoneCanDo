@@ -39,7 +39,7 @@ function SuggestedPanel({ model }: { model: SuggestedModel }) {
       {model.onPhone ? (
         <Note>On this phone.</Note>
       ) : model.downloadId ? (
-        <Note>Downloading: see In progress.</Note>
+        <Note>Downloading: see In progress above.</Note>
       ) : (
         <AppButton
           loading={action.busy}
