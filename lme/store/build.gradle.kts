@@ -15,7 +15,7 @@ dependencies {
     // Resumable verified downloads and sha256 (network/).
     implementation("com.phonecando.network:network-download:0.1.0-dev")
     // models.json only; kept internal to this module. Same version as lre.
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
     testImplementation(testFixtures("com.phonecando.network:network-http:0.1.0-dev"))
     testImplementation(testFixtures("com.phonecando.network:network-download:0.1.0-dev"))
     testImplementation(testFixtures(project(":gguf")))
