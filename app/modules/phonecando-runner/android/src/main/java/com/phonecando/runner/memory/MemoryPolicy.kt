@@ -73,16 +73,21 @@ object MemoryPolicy {
   /** Nothing of ours runs any more: no countdown; the level and the episode stay until the next look. */
   fun idle(state: State): State = state.copy(warnStopAt = null, criticalStopAt = null, settleUntil = null)
 
-  /** An engine starting or ready. [working]: a run is going (its kind's idle rule says it is not idle). */
-  data class Candidate(val agentId: String, val working: Boolean, val lastUsedAt: Long?)
+  /**
+   * An engine starting or ready. [working]: a run is going (its kind's idle
+   * rule says it is not idle); [busy]: it left a job running (a dev server,
+   * a download) or the user keeps it running.
+   */
+  data class Candidate(val agentId: String, val working: Boolean, val lastUsedAt: Long?, val busy: Boolean = false)
 
   /**
    * The agent to stop next: never [keep] (the one open on screen while the
-   * app is in front); agents with no run going first, least recently used
-   * first, then working ones the same way. Null: none may be stopped.
+   * app is in front); agents with no run going first, and of those the ones
+   * with no job left, least recently used first; then working ones the same
+   * way. Null: none may be stopped.
    */
   fun victim(agents: List<Candidate>, keep: String?): String? =
     agents.filter { it.agentId != keep }
-      .minWithOrNull(compareBy<Candidate>({ it.working }, { it.lastUsedAt ?: 0L }, { it.agentId }))
+      .minWithOrNull(compareBy<Candidate>({ it.working }, { it.busy }, { it.lastUsedAt ?: 0L }, { it.agentId }))
       ?.agentId
 }

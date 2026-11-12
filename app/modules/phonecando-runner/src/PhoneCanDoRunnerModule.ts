@@ -90,6 +90,10 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   runLimits(): NativeRunLimits;
   /** Saves the caps (null: none) and returns them as kept. */
   setRunLimits(limits: NativeRunLimits): NativeRunLimits;
+  /** The agent page's Keep running: never stopped for being idle in the background. */
+  keepRunning(agentId: string): boolean;
+  /** Saves Keep running and returns it as kept. */
+  setKeepRunning(agentId: string, on: boolean): boolean;
   memoryStatus(): NativeMemoryStatus;
   isAnyEngineAlive(): boolean;
   touchEngine(agentId: string): void;

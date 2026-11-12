@@ -19,13 +19,15 @@ import AgentHero from './AgentHero';
 import { hasModelSetting, installDetail, machineDetail, modelDetail } from './agentSettings';
 import DangerSection from './DangerSection';
 import EngineSection from './EngineSection';
+import KeepRunningRow from './KeepRunningRow';
 import { useAgentRecords } from './useAgentRecords';
 import { useMachineMates } from './useMachineMates';
 import { useMissingTools } from './useMissingTools';
 
 // One agent: its face and name (Rename), its engine and the ways in, then
 // its settings as rows that open their own pages (Model for a kind that can
-// use one, Machine, Install for a kind with one), then Reset and Delete.
+// use one, Machine, Install for a kind with one) and Keep running, a
+// switch, then Reset and Delete.
 // What needs a look now shows here too: a machine still setting up, an
 // install running or stopped, tools the machine lacks (on the Machine row).
 export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: boolean }) {
@@ -90,6 +92,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
         {kind.hasInstall ? (
           <LinkRow label="Install" {...rowProps(install)} onPress={() => push({ name: 'agent-install', agentId })} />
         ) : null}
+        <KeepRunningRow agentId={agentId} />
       </YStack>
 
       <DangerSection agent={agent} image={image} env={env} linux={linux} />

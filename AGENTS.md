@@ -58,8 +58,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   PTY transport, `runner.ts` engine host, `linux/native.ts` Linux runtime,
   `models/native.ts` local models, `files.ts` file system, `auth.ts`
   biometrics, `backGesture.ts` the back gesture's progress, `memory.ts` the
-  memory guard's reading, `runLimits.ts` the run caps, `splash.ts` the launch
-  splash). Agents and engines:
+  memory guard's reading, `runLimits.ts` the run caps, `keepRunning.ts` an
+  agent's Keep running, `splash.ts` the launch splash). Agents and engines:
   `engines.ts`, `ensureEngine.ts`, `connection.ts`; agent kinds through
   `agents/registry.ts` (each kind's `KindView`, from the runner's
   `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
@@ -105,10 +105,13 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `src/agents/<id>/libs/`) and never names a kind; `KindCatalog` reads
   the packaged manifests and binds `BuiltinHooks`. The runner's `engine/`
   is the supervisor (the user's optional cap with LRU idle stop,
-  tagged-process reaper), `limits/` the run caps, `memory/` the memory
-  guard (pure `MemoryPolicy`, numbers in `MemoryRules`), `jobs/` the jobs
-  anchor (keeps the `specialUse` service up while model and Linux jobs
-  run), `bridge/` the loopback bridge (per-agent tokens, prompts, screen
+  tagged-process reaper; `engine/work/` tells the jobs an agent left
+  running from the agent and stops idle agents with none in the
+  background, pure `AgentWork` and `ReclaimPolicy`), `limits/` the run
+  caps, `memory/` the memory guard (pure `MemoryPolicy`, numbers in
+  `MemoryRules`), `jobs/` the jobs anchor (keeps the `specialUse` service
+  up while model and Linux jobs run), `power/` the wake lock while work
+  runs, `bridge/` the loopback bridge (per-agent tokens, prompts, screen
   lease).
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).

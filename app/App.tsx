@@ -119,12 +119,10 @@ export default function App() {
       setTimeout(startActiveAgent, 500);
     });
     const sub = AppState.addEventListener('change', (state) => {
-      // Engine lifetime follows UI visibility: background stops every idle
-      // engine (stopIdleAgents), foreground return restarts the active
-      // agent's. All branches no-op when there is nothing to do.
-      if (state === 'background') {
-        void useAgentsStore.getState().stopIdleAgents();
-      } else if (state === 'active') {
+      // A foreground return restarts the active agent's engine. In the
+      // background the runner stops each agent idle with no job left by
+      // itself (its work watch), once the app has been away a while.
+      if (state === 'active') {
         takeLaunchTarget();
         useAgentsStore.getState().refreshAgents();
         useMemoryStore.getState().refreshMemory();

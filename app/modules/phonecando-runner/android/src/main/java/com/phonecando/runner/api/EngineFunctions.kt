@@ -96,15 +96,18 @@ internal fun ModuleDefinitionBuilder.engineFunctions(context: () -> Context) {
     Engines.get(context()).statuses().map { it.toMap() }
   }
 
-  // Whether the agent's engine may stop, by its kind's idle rule: no activity
-  // event for idle.quietSec, none since its start counting as idle. An
-  // unknown agent or kind is idle too. JS asks only while it would stop one
-  // (the app went to the background with phone control off).
+  // Whether the agent's engine is idle: by its kind's idle rule (no activity
+  // event for idle.quietSec, none since its start counting as idle; never
+  // with a chat working), with no job left running and not kept running
+  // (engine/work/, a fresh look at its processes). An unknown agent or kind
+  // is idle too. The Machine page shows it; the runner's own idle stop
+  // (WorkWatch) goes by the same rule.
   Function("isEngineIdle") { agentId: String ->
     val ctx = context()
     val record = AgentStores.get(ctx).get(agentId) ?: return@Function true
     val kind = KindCatalogs.get(ctx).get(record.kind) ?: return@Function true
-    Engines.get(ctx).isIdle(agentId, kind)
+    val engines = Engines.get(ctx)
+    engines.isIdle(agentId, kind) && Engines.work()?.busyNow(agentId) != true
   }
 
   // "ok" | "starting" | "http-N" | "error:…": one probe with the kind's

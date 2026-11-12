@@ -60,6 +60,10 @@ internal class EngineTerminal(
   @Volatile var lastOutputAt: Long? = null
     private set
 
+  /** Epoch ms of a viewer's first write (the user's first input); null before it. Job detection reads it (engine/work/). */
+  @Volatile var firstInputAt: Long? = null
+    private set
+
   /** The window title the program last set (OSC 0/2); null before it set one. */
   @Volatile var windowTitle: String? = null
     private set
@@ -141,6 +145,7 @@ internal class EngineTerminal(
   fun write(viewerId: String, bytes: ByteArray) {
     val target = synchronized(lock) {
       if (viewer != viewerId || ended) return
+      if (firstInputAt == null) firstInputAt = clock()
       pty
     }
     target?.write(bytes)

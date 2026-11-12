@@ -179,6 +179,16 @@ class MemoryPolicyTest {
     assertEquals("never", MemoryPolicy.victim(agents + Candidate("never", false, null), null))
   }
 
+  @Test fun agentsWithAJobLeftGoAfterThoseWithNothing() {
+    val agents = listOf(
+      Candidate("server-old", working = false, lastUsedAt = 100, busy = true),
+      Candidate("nothing-new", working = false, lastUsedAt = 900),
+      Candidate("working", working = true, lastUsedAt = 50),
+    )
+    assertEquals("nothing-new", MemoryPolicy.victim(agents, null))
+    assertEquals("server-old", MemoryPolicy.victim(agents.filter { it.agentId != "nothing-new" }, null))
+  }
+
   @Test fun theAgentOnScreenIsNeverStopped() {
     val agents = listOf(Candidate("open", false, 1), Candidate("other", true, 999))
     assertEquals("other", MemoryPolicy.victim(agents, keep = "open"))

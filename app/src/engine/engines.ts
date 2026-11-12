@@ -183,7 +183,11 @@ export function clientRecipe(agentId: AgentId, projectDir: string, sessionId: st
   return nativeRunner().clientRecipe(agentId, projectDir, sessionId);
 }
 
-/** No activity on the agent's engine for its kind's quiet time (an engine with none since its start is idle). */
+/**
+ * No activity on the agent's engine for its kind's quiet time (an engine
+ * with none since its start is idle), no chat working, no job it started
+ * still running and not kept running.
+ */
 export function isEngineIdle(agentId: AgentId): boolean {
   return nativeRunner().isEngineIdle(agentId);
 }

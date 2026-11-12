@@ -23,9 +23,21 @@ These are not scheduled work unless they are also listed in
   it is null until the service sees one and can lag a dialog/window transition.
   `mobile_wait` polls; it compares `eventSeq` when present and falls back to
   the node signature. The staged eventSeq comparison lands with the next APK.
-- `mobile_home` backgrounds PhoneCanDo. With phone control enabled the host
-  vetoes the JS idle shutdown; with phone control off the idle shutdown still
-  applies.
+- `mobile_home` backgrounds PhoneCanDo. While an agent drives the screen
+  (a screen call now or in the last 30 s) the runner's idle stop stops
+  nothing.
+- With the app in the background an idle agent stops once nothing it
+  started still runs (`app/docs/modules/runner.md` → Jobs and the idle
+  stop). The rule tells jobs from the agent's own helpers by when they
+  started and what their stdin is, so a job started before the user's
+  first message (a startup hook) can still be stopped with its agent, and
+  a helper started later with no stdin pipe (a build daemon) keeps its
+  agent up; the notification names what keeps an agent up, with Stop.
+  Keep running on the agent page keeps it either way.
+- The CPU stays awake (a wake lock) while a chat works, a model or Linux
+  job runs, or an agent's job did something in the last minute. A job that
+  waits quietly (a dev server between requests) lets the phone sleep, and
+  then it answers only once the phone wakes.
 - Shizuku is optional WIP and not in the v1 router. The granted path and
   `newProcess` → `UserService` migration await work.
 - The vision backend is not implemented.

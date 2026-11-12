@@ -30,7 +30,8 @@ the config it seeds into each engine's HOME.
   give the prompt a model server reads now.
 - `api/EngineFunctions.kt`: `startEngine(agentId)`, `stopEngine`,
   `stopAllEngines`, `isAnyEngineAlive`, `touchEngine`, `engineStatus`,
-  `engineStatuses`, `isEngineIdle` (the kind's idle rule) and
+  `engineStatuses`, `isEngineIdle` (the kind's idle rule, no job left
+  running and not kept running; see Jobs and the idle stop) and
   `engineHealth` (`ok|starting|http-N|error:…`, one probe; a TUI engine
   answers by its state). Every change is the `phonecandoEngineState` event
   (`EngineStatus`). `startEngine` resolves `{port}` (null for a TUI engine)
@@ -71,6 +72,8 @@ the config it seeds into each engine's HOME.
 - `api/MemoryFunctions.kt` (see Memory guard): `memoryStatus()`, the
   guard's reading now with each running agent's and model server's bytes;
   changes come as the `phonecandoMemory` event (same shape).
+- `api/KeepRunningFunctions.kt` (see Jobs and the idle stop), synchronous:
+  `keepRunning(agentId)` and `setKeepRunning(agentId, on)` → as kept.
 - `PhoneCanDoRunnerModule.kt`: `getPrefix`, `getBuildChannel`, the
   phone-control switch, the `phonecandoLaunchTarget` event, the bridge
   prompts (`pendingPrompts`, `resolveUnlock`, `resolveAccessibility`, event
@@ -97,9 +100,13 @@ the config it seeds into each engine's HOME.
   held is free at once.
 - `engine/`: the engine supervisor and what it uses (below);
   `engine/image/` reads the image files an engine needs, `engine/proc/`
-  finds and ends an agent's processes, `engine/spawn/` starts an engine by
-  its style, `engine/ready/` says when it is ready, `engine/tui/` is a TUI
-  engine's terminal and viewers.
+  finds, reads and ends an agent's processes, `engine/spawn/` starts an
+  engine by its style, `engine/ready/` says when it is ready, `engine/tui/`
+  is a TUI engine's terminal and viewers, `engine/work/` tells the jobs an
+  agent left running from the agent and stops idle agents (see Jobs and
+  the idle stop).
+- `power/`: the wake lock that keeps the CPU awake while work runs (see
+  Jobs and the idle stop).
 - `models/`: the local model servers (see Local model servers).
 - `jobs/`: the jobs anchor, which keeps the service up while model and
   Linux jobs run (see Foreground service and lifetime).
@@ -111,7 +118,7 @@ the config it seeds into each engine's HOME.
 - `PackageReplacedReceiver.kt`: brings the app back after a self-update
   (see Self-update install).
 - `AndroidManifest.xml`: service, receiver and `OpenTargetActivity`
-  declarations plus `FOREGROUND_SERVICE*` permissions (merged at build);
+  declarations plus `FOREGROUND_SERVICE*` and `WAKE_LOCK` permissions (merged at build);
   the service's `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` is the reason Play
   reviews.
 
@@ -422,7 +429,10 @@ themselves, the runner stops one after a countdown. Every number is in
   ok the episode ends and the next starts with the full minute.
 - **Who goes.** Never the agent on screen while the app is in front (the
   one `setOpenChat` names); agents with no run going (their kind's idle
-  rule) first, least recently used first, then working ones the same way.
+  rule) first, and of those the ones with no job left running and not kept
+  running (Jobs and the idle stop) first, least recently used first, then
+  working ones the same way. The notice names the jobs that went with an
+  agent ("Claude Code (with npm run dev)").
   With nothing it may stop it keeps warning with no countdown. A stop is a
   user's stop (`stopped`, error `low_memory: stopped to free memory`), so
   a model server goes with its last holder.
@@ -445,6 +455,79 @@ themselves, the runner stops one after a countdown. Every number is in
   warning nothing came of goes once memory is back or nothing of ours
   runs. A tap opens Home.
 
+## Jobs and the idle stop
+
+An agent's turn can end while something it started keeps running: a dev
+server, `nohup … &`, opencode's "move to background", Claude Code's
+`run_in_background`. Like a PC, that keeps running with the app in the
+background, and the agent with it; an agent idle with nothing left stops
+to free its memory. `engine/work/` does this for every kind, with no
+per-kind code; every number is in `WorkRules.kt`.
+
+- **Which processes are jobs** (`AgentWork.kt`, pure). An agent's
+  processes are those tagged with its id (`PHONECANDO_AGENT`), or untagged
+  and traced by its tagged proot (a guest that cleared its env). What ran
+  when the user first spoke to the agent in this engine life (a viewer's
+  first write to its TUI, `EngineTerminal.firstInputAt`, or its first
+  activity event, `EngineSupervisor.firstInputAt`) is the agent itself:
+  its program, a wrapper shell, the MCP servers it started up front.
+  Anything born later and older than 10 s is a job, unless it is a stdio
+  helper: not a shell, not started by a job, and its stdin a pipe the agent
+  (or another helper) writes (`/proc/<pid>/fd` and `fdinfo`), or a socket
+  from such a parent. That is how MCP stdio servers and language servers
+  run, while commands get `/dev/null`, a terminal or a file. A shell, a
+  command of the agent's own shell, an orphan or daemon (its parent gone)
+  and whatever a job starts are jobs. In doubt it is a job: a wrong job
+  keeps an agent up (the notification names it, with Stop), a wrong helper
+  kills one. No spawn-shape rule works for every kind: `bash -c 'cmd'`
+  execs the shell away, pi starts MCP servers detached, Codex runs each
+  command in its own session.
+- **Reading** (`engine/proc/DetailScanner.kt`, `ProcDetail.kt`): our
+  processes' `stat` (parent, start in clock ticks since boot, CPU),
+  `status` (tracer, name), `environ`, `cmdline`, the `fd/0` link and `io`.
+  Starts become epoch ms through `elapsedRealtime`; `WorkWatches` logs the
+  gap between the two clocks once at install. `/proc/net` is closed to
+  apps, so the rule never asks what is on a socket's other end.
+- **The watch** (`WorkWatch.kt`). While an engine runs it looks every
+  30 s (at once when one starts): judges each agent's processes, names its
+  jobs (`WorkNames.kt`: the program and two words, stopping at anything
+  that may carry a value), and measures whether they do something
+  (`WorkMeter.kt`: CPU or bytes read and written since the last look; a
+  dev server waiting for requests does not; a process is known by pid and
+  kernel start ticks). Each process's verdict is logged once decided and
+  whenever it changes, `[phonecando-work] <agent> <pid> <verdict> <name>
+  (<why>)` on tag `PhoneCanDoWork`.
+- **The idle stop** (`ReclaimPolicy.kt`, pure). With the app in the
+  background, an agent stops (as a user stop: it and all it started) once
+  it is ready, idle by its kind's rule (`isIdle`: no activity for
+  `quietSec`, never with a chat working), has no job, is not kept running,
+  the app has been away for its quiet time (a look at the agent's dev
+  server in the browser stops nothing) and its last job ended that long
+  ago. Nothing stops while an agent drives the screen (the bridge's screen
+  lease, `Bridge.screenInUse`: it may just have put PhoneCanDo in the
+  background), nor once the app is back in front.
+- **Keep running** (`KeepRunning.kt`, the runner's prefs; the agent page's
+  switch through `keepRunningFunctions`): the idle stop leaves the agent,
+  and the memory guard stops it after the agents with nothing to do. A
+  deleted agent leaves the set.
+- **Notification.** An agent kept up between chats has a line, "Claude
+  Code · running npm run dev" or "… · kept running", and a Stop button
+  (`ACTION_STOP_AGENT`) that ends it and its jobs.
+- **Wake lock** (`power/WorkLock.kt`). The service keeps the process
+  alive, not the CPU: screen off, the phone sleeps under a running agent
+  and it crawls. A partial wake lock is held while a chat works, a model
+  server reads a prompt, a model or Linux job runs, or an agent's job did
+  something in the last minute; never for an idle agent. Each hold lasts
+  10 minutes and is renewed on every change and every look, so one nobody
+  renews ends by itself.
+- **Device-checked** (Android 16, 2026-11-12): `fd/0`, `fdinfo`, `io`,
+  `TracerPid` and `environ` of proot's guests read fine, a guest's
+  `cmdline` is its own (not proot's loader), and a start in `/proc` is
+  within 0.1 s of `elapsedRealtime`. A nohup'd server kept its agent up
+  with the app away, the notification's Stop ended both, and an agent
+  whose `sleep 120` ended stopped a minute later. Still owed: that the
+  wake lock holds in deep Doze (hours, screen off, unplugged).
+
 ## Foreground service and lifetime
 
 `PhoneCanDoServeService` anchors the engines while the app is in the
@@ -452,11 +535,15 @@ background, and the process while a job runs: a model download or import,
 or a Linux job (an env download, a machine's setup or reset, an agent
 install). It runs the start requests, holds for jobs (`ACTION_HOLD` from
 `jobs/JobsAnchor.kt`; `models.md` → Jobs), shows one notification that
-lists the chats the agents are busy with, the model server reading a
-prompt, the model jobs and the Linux jobs with their share done
+lists the chats the agents are busy with, the agents kept up by a job they
+left running or by Keep running (`WorkLines.kt`, each with a Stop:
+`ACTION_STOP_AGENT`), the model server reading a prompt, the model jobs
+and the Linux jobs with their share done
 (`notify/ServiceNotification.kt`, `ReadingLines.kt`, `TransferLines.kt`,
-`LinuxJobLines.kt`, channel `phonecando-engine`; see Notifications) and
-stops itself once neither an engine nor a job has run for 10 s. The wait
+`LinuxJobLines.kt`, channel `phonecando-engine`; see Notifications), keeps
+the CPU awake while any of that works (`power/WorkLock.kt`; see Jobs and
+the idle stop) and stops itself once neither an engine nor a job has run
+for 10 s. The wait
 matters: work often follows at once (an agent's install starts as its
 machine's setup ends), by then the app may be in the background, and there
 Android refuses a new start of the service, so the next job would run
@@ -484,14 +571,9 @@ Lifetime is quiet-when-idle and follows the UI. `App.tsx` starts the active
 agent's engine on launch and on every return to the foreground
 (`src/state/agents.ts` `startAgent`: prepare its image, then
 `ensureEngine`); the web UI and the terminal start it when they open; other
-agents' engines start only when something uses them. When the app goes to
-the background, `stopIdleAgents` stops each running engine that is idle by
-its kind's rule (`isEngineIdle`, the manifest's `idle`: no activity event
-for `quietSec`, 60 s for opencode; an engine with none since its start is
-idle; never one with a chat working, since a long tool call sends no events
-for minutes, `EngineSupervisor.isIdle`); it does nothing while an agent is
-driving the screen (a screen call running or one in the last 30 s,
-`isPhoneInUse`), so an agent driving another app is not cut off. A start, a chat in front (`useEngineTouch`,
+agents' engines start only when something uses them. With the app in the
+background the runner stops an agent once it is idle and nothing it
+started still runs (see Jobs and the idle stop). A start, a chat in front (`useEngineTouch`,
 every two minutes), each bridge call and each engine event mark an engine
 used, so it is not the one stopped to make room (under the user's cap) or
 to free memory (the memory guard).

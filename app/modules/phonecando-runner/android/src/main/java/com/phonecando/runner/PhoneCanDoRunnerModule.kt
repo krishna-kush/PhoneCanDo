@@ -9,6 +9,7 @@ import com.phonecando.runner.api.clipboardFunctions
 import com.phonecando.runner.api.engineFunctions
 import com.phonecando.runner.api.engineTerminalFunctions
 import com.phonecando.runner.api.installFunctions
+import com.phonecando.runner.api.keepRunningFunctions
 import com.phonecando.runner.api.kindFunctions
 import com.phonecando.runner.api.memoryFunctions
 import com.phonecando.runner.api.notifyFunctions
@@ -127,6 +128,7 @@ class PhoneCanDoRunnerModule : Module() {
     phoneControlFunctions { context() }
     runLimitFunctions { context() }
     memoryFunctions { context() }
+    keepRunningFunctions { context() }
 
     Function("getPrefix") {
       appFilesDir().absolutePath

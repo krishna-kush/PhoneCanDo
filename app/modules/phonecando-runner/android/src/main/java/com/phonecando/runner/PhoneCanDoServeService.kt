@@ -2,6 +2,7 @@ package com.phonecando.runner
 
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -20,11 +21,14 @@ import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.models.prompt.PromptReading
+import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.LinuxJobLines
 import com.phonecando.runner.notify.ReadingLines
 import com.phonecando.runner.notify.ServiceNotification
 import com.phonecando.runner.notify.TimeLimitNotice
 import com.phonecando.runner.notify.TransferLines
+import com.phonecando.runner.notify.WorkLines
+import com.phonecando.runner.power.WorkLock
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
@@ -38,8 +42,10 @@ import java.util.concurrent.RejectedExecutionException
 // Linux modules' hosts; this service is their anchor: it runs start
 // requests (ACTION_START from the module's startEngine, one at a time on
 // its own thread), holds for jobs (ACTION_HOLD, jobs/JobsAnchor), shows
-// one notification listing the running agents' chats, the model server
-// reading a prompt and the jobs, and stops itself once nothing has run for
+// one notification listing the running agents' chats, the agents kept up
+// by what they left running (with Stop: ACTION_STOP_AGENT), the model
+// server reading a prompt and the jobs, keeps the CPU awake while any of
+// that works (power/WorkLock), and stops itself once nothing has run for
 // 10 s (stopIfIdle).
 // Nothing restarts it: every command answers START_NOT_STICKY, and a
 // null-intent restart starts nothing (the app ensures its engines again
@@ -48,6 +54,7 @@ class PhoneCanDoServeService : Service() {
   private val main = Handler(Looper.getMainLooper())
   private lateinit var starts: ExecutorService
   private lateinit var notification: ServiceNotification
+  private lateinit var workLock: WorkLock
 
   // Main thread only. A stop is stopSelf(lastStartId): a newer
   // startForegroundService() may already be queued, and stopping under it
@@ -78,6 +85,11 @@ class PhoneCanDoServeService : Service() {
     override fun onPrompt(reading: PromptReading?) {
       main.post { render() }
     }
+
+    // Every look renews the wake lock; a change also redraws.
+    override fun onWork(changed: Boolean) {
+      main.post { if (changed) render() else holdCpu() }
+    }
   }
 
   // Jobs begin, end and move on (at most every 2 s each).
@@ -96,6 +108,7 @@ class PhoneCanDoServeService : Service() {
     // (idempotent) so engine counters never depend on it.
     TelemetryRecorder.install(applicationContext)
     notification = ServiceNotification(this).also { it.createChannel() }
+    workLock = WorkLock(this)
     starts = Executors.newSingleThreadExecutor { r ->
       Thread(r, "phonecando-engine-start").apply { isDaemon = true }
     }
@@ -119,6 +132,9 @@ class PhoneCanDoServeService : Service() {
         runStart(agentId, requestId, requestedAt(intent))
         return START_NOT_STICKY
       }
+    }
+    if (intent?.action == ACTION_STOP_AGENT) {
+      intent.getStringExtra(EXTRA_AGENT_ID)?.takeIf { it.isNotEmpty() }?.let(::runStop)
     }
     // ACTION_HOLD (a job runs), a null-intent restart or nothing to
     // do: start nothing; stay while a job runs.
@@ -149,6 +165,23 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
+  // The notification's Stop on an agent kept up: it and its jobs end, on
+  // their own thread (up to 3 s); the engine's status tells the app.
+  private fun runStop(agentId: String) {
+    Log.i(TAG, "stop from the notification: $agentId")
+    Thread({ Engines.get(this).stop(agentId) }, "phonecando-engine-stop").apply {
+      isDaemon = true
+      start()
+    }
+  }
+
+  private fun stopIntent(agentId: String): PendingIntent = PendingIntent.getService(
+    this,
+    agentId.hashCode(),
+    Intent(this, PhoneCanDoServeService::class.java).setAction(ACTION_STOP_AGENT).putExtra(EXTRA_AGENT_ID, agentId),
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+  )
+
   // The module stamps start intents with the JS request time, so boot time
   // includes the service's own start. Missing or implausible (another boot,
   // clock skew) means now.
@@ -177,6 +210,7 @@ class PhoneCanDoServeService : Service() {
   override fun onDestroy() {
     Engines.removeListener(engineListener)
     JobsAnchor.removeListener(jobsListener)
+    workLock.release()
     // Jobs still running (the system ended the service): the next job
     // event asks for the service again.
     JobsAnchor.service(up = false)
@@ -203,6 +237,7 @@ class PhoneCanDoServeService : Service() {
   override fun onTimeout(startId: Int, fgsType: Int) {
     Log.w(TAG, "foreground service time limit reached (type $fgsType), stopping")
     timedOut = true
+    workLock.release()
     stopForeground(STOP_FOREGROUND_REMOVE)
     stopSelf()
     Engines.peek()?.takeIf { it.anyLive() }?.let {
@@ -227,6 +262,7 @@ class PhoneCanDoServeService : Service() {
 
   private fun render() {
     if (timedOut) return
+    holdCpu()
     try {
       getSystemService(NotificationManager::class.java)
         .notify(ServiceNotification.NOTIFICATION_ID, content())
@@ -235,13 +271,29 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
+  // The CPU stays awake while a chat works, a model server reads a prompt,
+  // a job runs or an agent's job does something (power/WorkLock).
+  private fun holdCpu() {
+    if (timedOut) return
+    val supervisor = Engines.peek()
+    val need = JobsAnchor.anyRunning() ||
+      supervisor?.chats()?.any { it.state == ChatBoard.State.WORKING } == true ||
+      supervisor?.promptReading() != null ||
+      Engines.work()?.states()?.values?.any { it.active } == true
+    workLock.hold(need)
+  }
+
   // The chats the engines are busy with, each with its agent's name, the
-  // prompt a model server reads, the model jobs and the Linux jobs.
+  // agents kept up by their jobs, the prompt a model server reads, the
+  // model jobs and the Linux jobs.
   private fun content(): Notification {
     val supervisor = Engines.peek()
     val agents = AgentStores.get(this).all()
     val names = agents.associate { it.id to it.name }
     val running = supervisor?.statuses()?.filter { it.state.live }?.map { it.agentId }.orEmpty()
+    val chats = supervisor?.chats().orEmpty()
+    val working = chats.filter { it.state == ChatBoard.State.WORKING }.mapTo(HashSet()) { it.agentId }
+    val work = WorkLines.of(Engines.work()?.states()?.values.orEmpty(), working, names)
     val transfers = JobsAnchor.modelJobs().map {
       TransferLines.of(it.label, it.target.kind == JobTarget.Kind.IMPORT, it.done, it.total)
     }
@@ -249,7 +301,7 @@ class PhoneCanDoServeService : Service() {
       agents.firstOrNull { it.imageId == image }?.name
     }
     val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read) }
-    return notification.build(supervisor?.chats().orEmpty(), names, running, transfers, reading, linux)
+    return notification.build(chats, names, running, transfers, reading, linux, work, ::stopIntent)
   }
 
   private fun failure(detail: String): Result<Int> =
@@ -259,6 +311,9 @@ class PhoneCanDoServeService : Service() {
     const val TAG = "PhoneCanDoServeService"
     const val ACTION_START = "com.phonecando.runner.START_ENGINE"
     const val ACTION_HOLD = "com.phonecando.runner.HOLD_FOR_JOBS"
+
+    // The notification's Stop on an agent kept up by its jobs (EXTRA_AGENT_ID).
+    const val ACTION_STOP_AGENT = "com.phonecando.runner.STOP_AGENT"
 
     // A time-limit stop's reason on the engines' statuses (onTimeout), like
     // the memory guard's MemoryRules.STOPPED_REASON.

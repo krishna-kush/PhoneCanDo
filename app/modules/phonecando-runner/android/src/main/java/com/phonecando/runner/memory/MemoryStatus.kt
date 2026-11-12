@@ -4,13 +4,19 @@ package com.phonecando.runner.memory
 // phonecandoMemory event; PhoneCanDoRunner.types.ts NativeMemoryStatus and
 // its parts). Byte counts and times cross the bridge as numbers. Pure.
 
-/** A running engine (starting or ready) and what its processes take; [bytes] null when unread. */
+/**
+ * A running engine (starting or ready) and what its processes take; [bytes]
+ * null when unread. [busy]: it left a job running or the user keeps it
+ * running (engine/work/), so it goes after the agents with nothing to do;
+ * the guard's own, not sent to JS.
+ */
 data class MemoryAgent(
   val agentId: String,
   val bytes: Long?,
   val working: Boolean,
   val lastUsedAt: Long?,
   val modelId: String?,
+  val busy: Boolean = false,
 ) {
   fun toMap(): Map<String, Any?> = mapOf(
     "agentId" to agentId,

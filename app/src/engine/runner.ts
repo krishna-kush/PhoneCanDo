@@ -42,6 +42,9 @@ export type RunnerModule = {
   runLimits?(): NativeRunLimits;
   setRunLimits?(limits: NativeRunLimits): NativeRunLimits;
   memoryStatus?(): NativeMemoryStatus;
+  /** Absent from native builds older than Keep running. */
+  keepRunning?(agentId: string): boolean;
+  setKeepRunning?(agentId: string, on: boolean): boolean;
   promptReading(): NativePromptReading | null;
   startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;

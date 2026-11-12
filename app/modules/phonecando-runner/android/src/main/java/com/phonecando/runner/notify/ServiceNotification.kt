@@ -8,9 +8,11 @@ import android.content.Context
 
 // The foreground service's one notification: the chats the agents are busy
 // with, one line each, the chat, then its agent, then its state
-// (ChatBoard), then a model server reading a prompt (ReadingLines), then
+// (ChatBoard), then the agents kept up by a job they left running or by
+// Keep running (WorkLines, each with a Stop button for the first
+// MAX_STOPS), then a model server reading a prompt (ReadingLines), then
 // the model downloads and imports running (TransferLines), then the Linux
-// jobs (LinuxJobLines). Engines themselves never show. Chat titles and
+// jobs (LinuxJobLines). Engines themselves never show. Chat titles, jobs and
 // model, system and agent names stay off the lock screen: the public
 // version only counts. Tapping opens the app; on that
 // agent's Home when every chat listed belongs to one agent (or, with none,
@@ -26,7 +28,8 @@ internal class ServiceNotification(private val context: Context) {
    * [names]: agent id → name; [running]: agents whose engine is live;
    * [transfers]: TransferLines of the model jobs; [reading]: the ReadingLines
    * line while a model server reads a prompt; [linuxJobs]: LinuxJobLines of
-   * the Linux jobs.
+   * the Linux jobs; [work]: WorkLines of the agents kept up; [stop]: the
+   * intent that stops one of those agents.
    */
   fun build(
     chats: List<ChatBoard.Chat>,
@@ -35,14 +38,22 @@ internal class ServiceNotification(private val context: Context) {
     transfers: List<String> = emptyList(),
     reading: String? = null,
     linuxJobs: List<String> = emptyList(),
+    work: List<WorkLines.Line> = emptyList(),
+    stop: (String) -> PendingIntent? = { null },
   ): Notification {
     val agent = chats.map { it.agentId }.distinct().singleOrNull()
       ?: running.singleOrNull()?.takeIf { chats.isEmpty() }
     val tap = agent?.let { LaunchTargets.tap(context, LaunchTarget("home", it)) } ?: launchIntent()
-    val counts = listOf(summary(chats), if (reading != null) READING else "", transferCount(transfers), linuxCount(linuxJobs))
+    val counts = listOf(
+      summary(chats), WorkLines.count(work), if (reading != null) READING else "", transferCount(transfers), linuxCount(linuxJobs),
+    )
     val summary = counts.filter { it.isNotEmpty() }.joinToString(" · ")
-    val extra = listOfNotNull(reading) + transfers + linuxJobs
+    val extra = work.map { it.text } + listOfNotNull(reading) + transfers + linuxJobs
     val builder = base(tap)
+    for (line in work.take(MAX_STOPS)) {
+      val intent = stop(line.agentId) ?: continue
+      builder.addAction(Notification.Action.Builder(null, "Stop ${line.name}", intent).build())
+    }
     when {
       chats.isEmpty() && extra.size <= 1 ->
         builder.setContentTitle("PhoneCanDo").setContentText(extra.firstOrNull() ?: NO_CHATS)
@@ -116,5 +127,8 @@ internal class ServiceNotification(private val context: Context) {
 
     // InboxStyle shows about five lines; the rest are counted.
     private const val MAX_LINES = 5
+
+    // Stop buttons for the agents kept up; Android shows three actions at most.
+    private const val MAX_STOPS = 2
   }
 }

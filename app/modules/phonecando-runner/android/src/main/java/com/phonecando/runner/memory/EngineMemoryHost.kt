@@ -6,25 +6,34 @@ import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.EngineSupervisor
+import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.notify.AppForeground
+import java.util.concurrent.ConcurrentHashMap
 
 // The memory guard's view of the engine supervisor: the engines starting or
 // ready, each working or not by its kind's idle rule (as isEngineIdle
-// answers JS) and on the model whose server it holds; the model servers
-// loading or ready; the agent on screen; and a stop as the user's, with why
-// on its status.
+// answers JS), busy or not by the work watch's last look (a job left
+// running, or Keep running) and on the model whose server it holds; the
+// model servers loading or ready; the agent on screen; and a stop as the
+// user's, with why on its status. A stopped agent's name says which jobs
+// went with it.
 internal class EngineMemoryHost(private val context: Context, private val engines: EngineSupervisor) : MemoryGuard.Host {
   private val store = AgentStores.get(context)
+
+  // Agent id → the jobs it had when we stopped it, for its name in the notice.
+  private val stoppedJobs = ConcurrentHashMap<String, List<String>>()
 
   override fun agents(): List<MemoryAgent> {
     val modelOf = engines.loadedModels().flatMap { m -> m.holders.map { it to m.model.id } }.toMap()
     val catalog = KindCatalogs.get(context)
+    val work = Engines.work()?.states().orEmpty()
     return engines.statuses()
       .filter { it.state == EngineState.STARTING || it.state == EngineState.READY }
       .map { status ->
         val kind = store.get(status.agentId)?.let { catalog.get(it.kind) }
         val working = kind != null && !engines.isIdle(status.agentId, kind)
-        MemoryAgent(status.agentId, null, working, status.lastUsedAt, modelOf[status.agentId])
+        val busy = work[status.agentId]?.let { it.busy || it.kept } == true
+        MemoryAgent(status.agentId, null, working, status.lastUsedAt, modelOf[status.agentId], busy)
       }
   }
 
@@ -40,10 +49,17 @@ internal class EngineMemoryHost(private val context: Context, private val engine
 
   override fun stop(agentId: String) {
     Log.i(TAG, "memory is short, stopping $agentId")
+    val jobs = Engines.work()?.states()?.get(agentId)?.jobs.orEmpty()
+    if (jobs.isEmpty()) stoppedJobs.remove(agentId) else stoppedJobs[agentId] = jobs
     engines.stopForMemory(agentId)
   }
 
-  override fun name(agentId: String): String? = store.get(agentId)?.name
+  // "Claude Code (with npm run dev)" when it had jobs.
+  override fun name(agentId: String): String? {
+    val name = store.get(agentId)?.name ?: return null
+    val jobs = stoppedJobs[agentId] ?: return name
+    return "$name (with ${jobs.joinToString(", ")})"
+  }
 
   private companion object {
     const val TAG = "PhoneCanDoMemory"

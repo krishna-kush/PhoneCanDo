@@ -3,6 +3,8 @@ package com.phonecando.runner.engine
 import android.content.Context
 import android.util.Log
 import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.engine.work.WorkWatch
+import com.phonecando.runner.engine.work.WorkWatches
 import com.phonecando.runner.limits.RunLimitStore
 import com.phonecando.runner.memory.MemoryGuard
 import com.phonecando.runner.memory.MemoryGuards
@@ -12,9 +14,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 
-// The process's one EngineSupervisor with its memory guard (memory/), and
-// who hears about them: the foreground service (notification, stop when
-// idle) and the native module (the phonecandoEngineState,
+// The process's one EngineSupervisor with its memory guard (memory/) and
+// work watch (work/: the jobs agents left running, the idle stop), and
+// who hears about them: the foreground service (notification, wake lock,
+// stop when idle) and the native module (the phonecandoEngineState,
 // phonecandoPromptReading and phonecandoMemory events). The supervisor
 // holds to the user's run limits (RunLimitStore). Listeners run on the
 // thread that changed the engine, never the main thread by default.
@@ -33,11 +36,15 @@ internal object Engines {
 
     /** The memory guard's reading changed, or is not ok (MemoryGuard). */
     fun onMemory(status: MemoryStatus) {}
+
+    /** The work watch looked (WorkWatch, every POLL_MS while an engine runs); [changed]: an agent's jobs did. */
+    fun onWork(changed: Boolean) {}
   }
 
   private val listeners = CopyOnWriteArrayList<Listener>()
   @Volatile private var supervisor: EngineSupervisor? = null
   @Volatile private var guard: MemoryGuard? = null
+  @Volatile private var workWatch: WorkWatch? = null
 
   fun get(context: Context): EngineSupervisor = supervisor ?: synchronized(this) {
     supervisor ?: create(context.applicationContext ?: context).also { supervisor = it }
@@ -52,10 +59,14 @@ internal object Engines {
     return checkNotNull(guard)
   }
 
+  /** The work watch, made with the supervisor; null before anything created it. */
+  fun work(): WorkWatch? = workWatch
+
   private fun create(app: Context): EngineSupervisor {
     val limits = RunLimitStore.get(app)
     val engines = EngineSupervisor(app, AgentStores.get(app), relay, limits = limits::read)
     guard = MemoryGuards.install(app, engines) { relay.onMemory(it) }
+    workWatch = WorkWatches.install(app, engines) { relay.onWork(it) }
     return engines
   }
 
@@ -77,6 +88,8 @@ internal object Engines {
     override fun onPrompt(reading: PromptReading?) = each { it.onPrompt(reading) }
 
     override fun onMemory(status: MemoryStatus) = each { it.onMemory(status) }
+
+    override fun onWork(changed: Boolean) = each { it.onWork(changed) }
 
     private inline fun each(block: (Listener) -> Unit) {
       for (l in listeners) {

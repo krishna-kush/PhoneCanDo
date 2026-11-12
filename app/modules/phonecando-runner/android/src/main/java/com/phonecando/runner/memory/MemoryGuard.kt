@@ -149,7 +149,7 @@ internal class MemoryGuard(
     val agents = host.agents()
     val foreground = host.foreground()
     val keep = if (foreground) host.openAgent() else null
-    val victim = MemoryPolicy.victim(agents.map { MemoryPolicy.Candidate(it.agentId, it.working, it.lastUsedAt) }, keep)
+    val victim = MemoryPolicy.victim(agents.map(::candidate), keep)
     val step = MemoryPolicy.step(state, level, victim != null, now)
     state = step.state
     if (step.stop && victim != null) {
@@ -200,6 +200,8 @@ internal class MemoryGuard(
     onChange(status)
   }
 
+  private fun candidate(a: MemoryAgent) = MemoryPolicy.Candidate(a.agentId, a.working, a.lastUsedAt, a.busy)
+
   private fun build(
     reading: MemoryReading?,
     level: MemoryLevel,
@@ -215,7 +217,7 @@ internal class MemoryGuard(
       stopAt == null -> null
       victim != null -> victim
       else -> MemoryPolicy.victim(
-        agents.map { MemoryPolicy.Candidate(it.agentId, it.working, it.lastUsedAt) },
+        agents.map(::candidate),
         if (host.foreground()) host.openAgent() else null,
       )
     }

@@ -22,6 +22,9 @@ internal class EngineSlot(val agentId: String) {
   /** Epoch ms of this engine life's last activity event (EngineStreams); null since its start. Idle reads it. */
   @Volatile var lastEventAt: Long? = null
 
+  /** Epoch ms of this engine life's first activity event; null since its start. Job detection reads it (engine/work/). */
+  @Volatile var firstEventAt: Long? = null
+
   /** The launched process; null until it runs, and while a server engine moves to a fresh port. */
   var process: EngineProcess? = null
   var watch: EngineWatch? = null

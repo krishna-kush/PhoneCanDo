@@ -15,6 +15,9 @@
   </queries>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <!-- power/WorkLock: the CPU stays awake while a chat works or a job runs,
+       screen off; the service alone keeps the process, not the CPU. -->
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
   <!-- Runtime-requested on launch (Android 13+ drops plain posts without the
        grant; the app never asked, so appops sat at `ignore`). -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

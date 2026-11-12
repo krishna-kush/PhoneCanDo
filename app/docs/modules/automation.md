@@ -45,10 +45,10 @@ republish, without adding an Android type to `pce/api`. The service also exposes
 monotonic `eventSeq`; the bridge snapshot includes it and `mobile_wait` compares
 it (falling back to the node signature) so a change that reverts between polls is
 still noticed. Every authenticated bridge call marks the calling agent's
-engine used, so it is not the one stopped to make room, and the JS
-background stop (`stopIdleAgents` in `src/state/agents.ts`) does nothing
-while phone control is unlocked, so `mobile_home` does not strand the next
-tool call. The screen routes take the screen lease: with several agents
+engine used, so it is not the one stopped to make room, and the runner's
+idle stop (`engine/work/`, `runner.md` → Jobs and the idle stop) stops
+nothing while an agent drives the screen (`Bridge.screenInUse`), so
+`mobile_home` does not strand the next tool call. The screen routes take the screen lease: with several agents
 running, one drives the screen at a time and the others get 409
 `control_busy` (`bridge.md`). Device-verified 2026-10-31: `activityName` and `eventSeq`
 work; the staged `mobile_wait` eventSeq comparison lands with the next APK
@@ -93,9 +93,10 @@ The PCE-backed slice is live; the rest of the API tree is the target surface.
   present and falls back to the node signature. Device-verified 2026-10-31:
   `activityName` and `eventSeq`; the staged eventSeq comparison lands with the
   next APK because the generated asset was stale.
-- Cross-app lifecycle: with phone control enabled, the background stop
-  (`stopIdleAgents`) leaves every engine running when PhoneCanDo is
-  backgrounded, and each bridge call marks the calling agent's engine used.
+- Cross-app lifecycle: while an agent drives the screen, the runner's idle
+  stop (`engine/work/WorkWatch`) leaves every engine running when
+  PhoneCanDo is backgrounded, and each bridge call marks the calling
+  agent's engine used.
   `mobile_home` therefore does not strand the next tool call. The JS veto was
   verified on-device with Metro in the single-engine build; the multi-agent
   store keeps the same check.

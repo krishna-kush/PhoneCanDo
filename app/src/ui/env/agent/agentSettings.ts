@@ -42,6 +42,15 @@ export function machineDetail(
   return { text: text || 'ready', alert: false };
 }
 
+export const KEEP_RUNNING_TITLE = 'Keep running';
+
+/** The line under Keep running: what the runner does with the agent now. */
+export function keepRunningNote(on: boolean): string {
+  return on
+    ? 'Never stopped for being idle in the background, only to free memory.'
+    : 'Stops once idle in the background with nothing it started still running.';
+}
+
 export function installDetail(agent: Agent, run: InstallRun | undefined): RowDetail {
   if (run?.status === 'running') return { text: 'installing…', alert: false };
   if (run?.status === 'failed') return { text: 'install stopped', alert: true };

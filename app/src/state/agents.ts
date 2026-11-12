@@ -3,7 +3,6 @@
 // it. Records and engines stay native (engine/engines.ts): this mirrors
 // them for screens and keeps engine states fresh from the runner's events.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState } from 'react-native';
 import { create } from 'zustand';
 import { guestUnset } from '../engine/agents/guestEnv';
 import type { Agent, AgentId, EngineStatus } from '../engine/agents/records';
@@ -11,7 +10,6 @@ import {
   agentById,
   engineStatus,
   engineStatuses,
-  isEngineIdle,
   listAgents,
   onEngineState,
   stopEngine,
@@ -19,7 +17,7 @@ import {
 import { ensureEngine, type EnsureResult } from '../engine/ensureEngine';
 import { prepareImageForStart } from '../engine/linux/native';
 import type { ImageId } from '../engine/linux/types';
-import { isPhoneInUse, isRunnerAvailable } from '../engine/runner';
+import { isRunnerAvailable } from '../engine/runner';
 import { agentsOn } from './flows/logic/machineTenants';
 import { keepUnchangedList, keepUnchangedMap } from './logic/keepUnchanged';
 
@@ -42,8 +40,6 @@ interface AgentsState {
   /** Prepares the agent's image, then starts its engine or finds it running. */
   startAgent: (id: AgentId) => Promise<EnsureResult>;
   stopAgent: (id: AgentId) => Promise<void>;
-  /** The app went to the background: stops every running engine that is idle. */
-  stopIdleAgents: () => Promise<void>;
 }
 
 let subscribed = false;
@@ -166,38 +162,6 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
         // already down
       }
       syncStatus(id);
-    },
-
-    // Quiet-when-idle stop: runs ONLY when the app UI goes away. Each running
-    // engine the runner calls idle (no event or touch for its kind's
-    // idle.quietSec: opencode, a minute) stops; one it cannot judge stops too.
-    stopIdleAgents: async () => {
-      // An agent driving the phone (a screen call now or in the last 30 s)
-      // may have just put PhoneCanDo in the background with
-      // mobile_home/launch; stopping its engine here strands the turn
-      // before the next tool call.
-      if (isPhoneInUse()) return;
-      const { agents, statuses } = readNative();
-      const running = agents.filter((a) => {
-        const state = statuses[a.id]?.state;
-        return state === 'ready' || state === 'starting';
-      });
-      await Promise.all(
-        running.map(async (agent) => {
-          let idle: boolean;
-          try {
-            idle = isEngineIdle(agent.id);
-          } catch {
-            idle = true;
-          }
-          // If the user is back by now, the foreground has already
-          // re-ensured the active engine, so leave them (a stop now races
-          // the service's foreground start:
-          // ForegroundServiceDidNotStartInTimeException).
-          if (!idle || AppState.currentState === 'active') return;
-          await get().stopAgent(agent.id);
-        }),
-      );
     },
   };
 });

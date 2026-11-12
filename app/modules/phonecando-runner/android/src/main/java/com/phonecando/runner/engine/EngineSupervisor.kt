@@ -20,6 +20,7 @@ import com.phonecando.runner.engine.ready.TuiReady
 import com.phonecando.runner.engine.spawn.TuiProcess
 import com.phonecando.runner.engine.tui.TerminalViewException
 import com.phonecando.runner.engine.tui.TerminalViewers
+import com.phonecando.runner.engine.work.KeepRunning
 import com.phonecando.runner.limits.RunLimits
 import com.phonecando.runner.memory.MemoryRules
 import com.phonecando.runner.models.ModelServer
@@ -163,6 +164,16 @@ internal class EngineSupervisor(
     return kind.isIdle(slot?.lastEventAt, slot?.terminal?.lastOutputAt, System.currentTimeMillis())
   }
 
+  /**
+   * Epoch ms of the user's first input in the engine's life: a viewer's
+   * first write to its TUI, or its first activity event; null before. What
+   * the agent ran by then is the agent itself (engine/work/AgentWork).
+   */
+  fun firstInputAt(agentId: String): Long? {
+    val slot = slots[agentId] ?: return null
+    return listOfNotNull(slot.firstEventAt, slot.terminal?.firstInputAt).minOrNull()
+  }
+
   /** A new viewer of the agent's TUI engine's terminal; throws not_running when it has none. */
   fun attachTerminal(agentId: String): TerminalViewers.Attached {
     val terminal = lock.withLock {
@@ -177,6 +188,7 @@ internal class EngineSupervisor(
     val now = System.currentTimeMillis()
     slot.lastUsedAt = now
     slot.lastEventAt = now
+    if (slot.firstEventAt == null) slot.firstEventAt = now
   }
 
   // ---- start -------------------------------------------------------------
@@ -262,6 +274,7 @@ internal class EngineSupervisor(
             slot.squatRelaunches = 0
             slot.lastUsedAt = System.currentTimeMillis()
             slot.lastEventAt = null
+            slot.firstEventAt = null
             started = slot.gen to slot.status()
           }
           is EnginePolicy.Admission.Evict -> evict = decision.agentId
@@ -575,8 +588,9 @@ internal class EngineSupervisor(
     }
   }
 
-  /** Drops a deleted agent's slot; stop it first. */
+  /** Drops a deleted agent's slot and its Keep running; stop it first. */
   fun forget(agentId: String) {
+    KeepRunning.get(context).forget(agentId)
     lock.withLock {
       val slot = slots[agentId] ?: return
       if (!slot.state.live) slots.remove(agentId)
