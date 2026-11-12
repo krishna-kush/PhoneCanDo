@@ -16,7 +16,7 @@ dependencies {
     implementation(project(":gguf"))
     implementation(project(":host"))
     // JSON output only (JsonObject builders, no compiler plugin); same version as :catalog.
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
     testImplementation(testFixtures(project(":gguf")))
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
