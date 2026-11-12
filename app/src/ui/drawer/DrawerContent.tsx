@@ -43,8 +43,8 @@ function channel(): string {
 // What the drawer holds: every agent (tap to switch, › for its page, a long
 // press or Select to pick several, with the selection's bar pinned below),
 // Own envs still downloading, New agent, then the app's other places:
-// Messages (once agents can talk to each other), Models, Systems, Custom
-// agents, Settings, About. Memoised: the drawer's own renders (open, shut)
+// Models, Systems, Custom agents, Messages (once agents can talk to each
+// other), Settings, About. Memoised: the drawer's own renders (open, shut)
 // pass the same `still` until its slide ends. Mounting it starts the
 // unread counts (each row's mark), which the runner keeps current.
 function DrawerContent({ still }: { still: boolean }) {
@@ -113,14 +113,6 @@ function DrawerContent({ still }: { still: boolean }) {
 
         <YStack height={1} backgroundColor="line" marginVertical="3" />
 
-        {messaging ? (
-          <LinkRow
-            label="Messages"
-            detail={unreadText(unread) || undefined}
-            onPress={() => push({ name: 'messages' })}
-            reach={PLACE_REACH}
-          />
-        ) : null}
         {modelsOffered ? (
           <LinkRow
             label="Models"
@@ -137,6 +129,14 @@ function DrawerContent({ still }: { still: boolean }) {
         />
         {linuxAvailable ? (
           <LinkRow label="Custom agents" onPress={() => push({ name: 'custom-agents' })} reach={PLACE_REACH} />
+        ) : null}
+        {messaging ? (
+          <LinkRow
+            label="Messages"
+            detail={unreadText(unread) || undefined}
+            onPress={() => push({ name: 'messages' })}
+            reach={PLACE_REACH}
+          />
         ) : null}
         <LinkRow label="Settings" onPress={() => push({ name: 'settings' })} reach={PLACE_REACH} />
         <LinkRow label="About" onPress={() => push({ name: 'about' })} reach={PLACE_REACH} />
