@@ -25,7 +25,9 @@ import java.io.File
 // chat title pattern are read here. An image kind's program runs inside its
 // image and sees only guest paths (ImageLaunch), with the runtimes it needs
 // first on PATH, once its install (InstallRenderer) has put them and the
-// kind there. of() refuses a kind this build cannot run (KindChecks throws
+// kind there. An agent given a state folder of its own keeps its state
+// there (StateSeam), and its instructions file and config move with it.
+// of() refuses a kind this build cannot run (KindChecks throws
 // KindException), so the catalog never holds one.
 class ManifestKind private constructor(
   val manifest: Manifest,
@@ -72,25 +74,54 @@ class ManifestKind private constructor(
   val guestUnset: List<String> = GuestEnvPolicy.unset(manifest)
 
   override val config: AgentConfig? = manifest.config?.let {
-    AgentConfig(KindAssets.config(manifest.id), it.into, it.keep.toSet(), it.instructions)
+    AgentConfig(KindAssets.config(manifest.id), it.into, it.keep.toSet())
   }
+
+  override val ownStateSupported: Boolean get() = manifest.state != null
+
+  override fun instructionsFile(home: File, stateDir: File?): File? {
+    val file = manifest.instructions ?: return null
+    // KindChecks: a state block names the instructions file of a kind that has one.
+    return ownState(stateDir)?.let { File(stateDir, it.instructions!!) } ?: File(home, file)
+  }
+
+  override fun configDir(home: File, stateDir: File?): File? {
+    val config = manifest.config ?: return null
+    return ownState(stateDir)?.config?.let { File(stateDir, it) } ?: File(home, config.into)
+  }
+
+  override fun userStatePaths(home: File): List<File> = manifest.userState.map { File(home, it) }
 
   private val auth = manifest.engine?.auth
 
   override fun launch(ctx: LaunchContext): LaunchSpec {
-    if (manifest.type != TYPE_IMAGE) return withModel(LaunchRenderer.engine(launchCommand, ctx, manifest.engine?.resume), ctx)
-    // Everything the program sees is the guest's: {{home}}, {{tmp}} and
-    // {{projectDir}}, its runtimes' paths, HOME, TMPDIR and its cwd, which
-    // the image's sh enters (ImageLaunch); the process starts in HOME.
+    val state = ownState(ctx.stateDir)
+    if (manifest.type != TYPE_IMAGE) {
+      val spec = LaunchRenderer.engine(launchCommand, ctx, manifest.engine?.resume)
+      return withModel(state?.let { StateSeam.apply(spec, it, ctx.stateDir!!.path) } ?: spec, ctx)
+    }
+    // Everything the program sees is the guest's: {{home}}, {{tmp}},
+    // {{projectDir}} and {{stateDir}}, its runtimes' paths, HOME, TMPDIR and
+    // its cwd, which the image's sh enters (ImageLaunch); the process starts
+    // in HOME.
     val guest = ctx.copy(home = File(ImageLaunch.GUEST_HOME), tmp = File(ImageLaunch.GUEST_TMP))
-    val spec = withModel(LaunchRenderer.engine(launchCommand, guest, manifest.engine?.resume), ctx)
+    val rendered = LaunchRenderer.engine(launchCommand, guest, manifest.engine?.resume)
+    val own = state?.let { StateSeam.apply(rendered, it, StateSeam.guestPath(ctx.stateDir!!, ctx.home)) }
+    val spec = withModel(own ?: rendered, ctx)
     val image = ctx.image ?: throw KindException("$id: an image kind runs in its image, and none was given")
     val paths = RuntimeBinding.paths(runtimes, ImageLaunch.GUEST_HOME)
     return LaunchSpec(
-      argv = ImageLaunch.wrap(spec.argv, image, paths, cwd = spec.cwd ?: ImageLaunch.GUEST_HOME),
+      argv = ImageLaunch.wrap(spec.argv, image, paths, cwd = spec.cwd ?: ImageLaunch.GUEST_HOME, carry = ctx.carry),
       env = spec.env + ImageLaunch.GUEST_DIRS,
       cwd = null,
     )
+  }
+
+  // The kind's state block when the agent has a state folder of its own
+  // ([stateDir]); null when it has none. A kind that keeps no state per
+  // agent cannot take one: its agents would share their state unknowingly.
+  private fun ownState(stateDir: File?) = stateDir?.let {
+    manifest.state ?: throw KindException("$id keeps no state per agent, so its agents cannot have a state folder of their own")
   }
 
   /** The API this kind would use a model server serving [served] with; null: it can use none. */
@@ -145,9 +176,17 @@ class ManifestKind private constructor(
 
   override fun passwordForms(password: String): List<String> = SecretForms.of(auth, password)
 
-  /** The kind's TUI attached to its running engine; null when it has none. */
-  fun clientRecipe(ctx: ClientContext): ClientRecipe? =
-    manifest.surfaces?.terminal?.client?.let { LaunchRenderer.client(it, ctx) }
+  /**
+   * The kind's TUI attached to its running engine; null when it has none.
+   * An agent with a state folder of its own has its client read that too:
+   * the state env comes after the client's own.
+   */
+  fun clientRecipe(ctx: ClientContext): ClientRecipe? {
+    val client = manifest.surfaces?.terminal?.client ?: return null
+    val recipe = LaunchRenderer.client(client, ctx)
+    val state = ownState(ctx.stateDir?.let(::File)) ?: return recipe
+    return recipe.copy(env = recipe.env + StateSeam.env(state, ctx.stateDir!!))
+  }
 
   /** The request that mints a one-time web UI sign-in; null when the kind has no web pairing. */
   fun pairRequest(port: String, password: String): HttpProbe? = manifest.surfaces?.web?.pair?.let {
@@ -200,7 +239,9 @@ class ManifestKind private constructor(
      * engine style or Home surface needs, one that style cannot have, a
      * pattern that does not compile, more than one event stream, a hook the
      * manifest names that [hooks] lacks, an install without a version
-     * check, or a runtime [runtimes] lacks or provides too old.
+     * check, a state block that does not fit the kind, a userState path
+     * the machine's agents share, or a runtime [runtimes] lacks or
+     * provides too old.
      */
     fun of(manifest: Manifest, hooks: KindHooks?, runtimes: Map<String, RuntimePlugin> = emptyMap()): ManifestKind {
       KindChecks.engine(manifest)
@@ -215,6 +256,8 @@ class ManifestKind private constructor(
       }
       KindChecks.web(manifest)
       KindChecks.install(manifest)
+      KindChecks.state(manifest)
+      KindChecks.userState(manifest)
       val stream = KindChecks.hooks(manifest, hooks)
       val bound = RuntimeBinding.bind(manifest, runtimes)
       return ManifestKind(manifest, bound, engine.launch!!, readiness, stream?.first, stream?.second)

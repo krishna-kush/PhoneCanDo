@@ -36,6 +36,30 @@ class GuestEnvPolicyTest {
     assertEquals(listOf("PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "A", "B"), GuestEnvPolicy.unset(m))
   }
 
+  @Test fun aSharedImageUnsetsEveryKindsNames() {
+    val opencode = ManifestDecoder.decode(File(fixtures, "valid/opencode.json").readText())
+    val claude = ManifestDecoder.decode(File(fixtures, "valid/claude-code.json").readText())
+    val other = ManifestDecoder.decode(
+      """{"schema":1,"id":"n","label":"N","version":"1","type":"native","channels":["full"],"stability":"stable",
+         "engine":{"style":"tui","launch":{"argv":["x"],"env":{"A":"{{password}}"}}}}""",
+    )
+    val all = listOf("PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "OPENCODE_SERVER_PASSWORD", "LOCAL_MODEL_KEY", "A")
+    assertEquals(all, GuestEnvPolicy.union(listOf(claude, opencode, other, opencode)))
+    assertEquals(emptyList(), GuestEnvPolicy.union(listOf(claude)))
+    assertEquals(emptyList(), GuestEnvPolicy.union(emptyList()))
+  }
+
+  @Test fun anImageKindCarriesWhatTheImageUnsets() {
+    val env = listOf("HOME", "PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "LOCAL_MODEL_KEY", "LD_X", "BROWSER")
+    assertEquals(
+      setOf("PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "LOCAL_MODEL_KEY"),
+      GuestEnvPolicy.carry(env, listOf("PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "OPENCODE_SERVER_PASSWORD", "LOCAL_MODEL_KEY")),
+    )
+    // A trailing * is a prefix, as lre's launch.conf reads it.
+    assertEquals(setOf("LD_X"), GuestEnvPolicy.carry(env, listOf("LD_*")))
+    assertEquals(emptySet(), GuestEnvPolicy.carry(env, emptyList()))
+  }
+
   @Test fun parsesTheVersion() {
     assertEquals("2.1.3", VersionParse.parse("Claude Code 2.1.3 (x)\n", "(\\d+\\.\\d+\\.\\d+)"))
     assertEquals("v22", VersionParse.parse("  v22  ", "^(.+)$"))

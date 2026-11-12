@@ -41,6 +41,7 @@
     "argv": ["/root/.local/bin/aider", "--version"],
     "pattern": "aider (\\d+\\.\\d+\\.\\d+)"
   },
+  "userState": [".aider"],
   "engine": {
     "style": "tui",
     "launch": {

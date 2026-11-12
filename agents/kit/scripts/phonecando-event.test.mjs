@@ -80,16 +80,23 @@ for (const shell of shells) {
       assert.equal(run(shell, SCRIPT, ['a.b_c:d-1'], { env: { PHONECANDO_EVENTS: events } }).code, 0);
     });
 
-    it('falls back to $HOME/.phonecando/events, making the folder', (t) => {
+    it('makes the folder of the agent\'s events file', (t) => {
       const { home } = scratch(t);
-      assert.equal(run(shell, SCRIPT, ['Stop'], { env: { HOME: home } }).code, 0);
-      assert.deepEqual(lines(join(home, '.phonecando/events')), ['Stop\t\t']);
+      const events = join(home, '.phonecando/events-a2');
+      assert.equal(run(shell, SCRIPT, ['Stop'], { env: { PHONECANDO_EVENTS: events } }).code, 0);
+      assert.deepEqual(lines(events), ['Stop\t\t']);
     });
 
-    it('fails with 1 when it has nowhere to write', () => {
-      const r = run(shell, SCRIPT, ['Stop'], { env: {} });
-      assert.equal(r.code, 1);
-      assert.match(r.stderr, /neither PHONECANDO_EVENTS nor HOME/);
+    it('does nothing, and succeeds, when no agent listens', (t) => {
+      const { home } = scratch(t);
+      for (const env of [{ HOME: home }, { HOME: home, PHONECANDO_EVENTS: '' }, {}]) {
+        const r = run(shell, SCRIPT, ['Stop', 'hi'], { env, input: '{"session_id":"s"}' });
+        assert.equal(r.code, 0, JSON.stringify(env));
+        assert.equal(r.stderr, '');
+      }
+      assert.equal(existsSync(join(home, '.phonecando')), false);
+      // A bad call is still one.
+      assert.equal(run(shell, SCRIPT, ['bad name'], { env: { HOME: home } }).code, 64);
     });
   });
 }

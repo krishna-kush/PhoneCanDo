@@ -35,6 +35,12 @@ data class Manifest(
   /** What reads the installed version; an install always has one. */
   val versionCheck: VersionCheck?,
   val config: Config?,
+  /** The kind's global instructions file, relative to HOME (`instructions`); null when it has none. */
+  val instructions: String?,
+  /** How an agent of the kind keeps its state in a folder of its own (`state`); null: it cannot. */
+  val state: StateFolder?,
+  /** Where the kind keeps a user's state by default, relative to HOME (`userState`); empty for none. */
+  val userState: List<String> = emptyList(),
   val engine: Engine?,
   val events: List<EventSource>,
   val chats: Chats?,
@@ -88,8 +94,23 @@ data class Config(
   val into: String,
   /** Seeded only when absent, so user edits survive. */
   val keep: List<String>,
-  /** The global instructions file the image's OS note goes into, relative to [into]. */
+)
+
+/**
+ * How one agent of a kind keeps its sign-in, settings, chats and global
+ * instructions in a state folder of its own, so a second agent of the kind
+ * can share a machine with the first: [env] (templates whose `{{stateDir}}`
+ * is that folder) moves the kind's state there; [instructions] is the
+ * instructions file and [config] the folder `config.into` becomes, both
+ * relative to the state folder. The first agent of a kind keeps its defaults.
+ */
+data class StateFolder(
+  /** In manifest order. */
+  val env: Map<String, String>,
+  /** Set exactly when the kind has instructions. */
   val instructions: String?,
+  /** Only when `config.into` holds the agent's own state. */
+  val config: String?,
 )
 
 enum class EngineStyle(val wire: String) {

@@ -46,6 +46,12 @@
     "argv": ["/root/.local/bin/qwen", "--version"],
     "pattern": "(?:^|\\n)(\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".qwen/QWEN.md",
+  "state": {
+    "env": { "QWEN_HOME": "{{stateDir}}/qwen", "QWEN_CODE_FORCE_FILE_STORAGE": "true" },
+    "instructions": "qwen/QWEN.md"
+  },
+  "userState": [".qwen"],
   "engine": {
     "style": "tui",
     "launch": {

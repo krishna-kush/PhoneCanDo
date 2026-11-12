@@ -57,9 +57,9 @@
     ],
     "required": [
       "opencode.json"
-    ],
-    "instructions": "AGENTS.md"
+    ]
   },
+  "instructions": ".config/opencode/AGENTS.md",
   "requires": {
     "linux": "optional",
     "commands": [

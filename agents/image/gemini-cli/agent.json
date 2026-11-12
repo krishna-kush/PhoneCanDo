@@ -46,6 +46,12 @@
     "argv": ["/root/.local/bin/gemini", "--version"],
     "pattern": "(?:^|\\n)(\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".gemini/GEMINI.md",
+  "state": {
+    "env": { "GEMINI_CLI_HOME": "{{stateDir}}/gemini", "GEMINI_FORCE_FILE_STORAGE": "true" },
+    "instructions": "gemini/.gemini/GEMINI.md"
+  },
+  "userState": [".gemini"],
   "engine": {
     "style": "tui",
     "launch": {

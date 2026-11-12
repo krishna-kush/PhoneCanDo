@@ -18,6 +18,33 @@ interface AgentKind {
   /** The config this kind seeds into the engine HOME, or null for none. */
   val config: AgentConfig?
 
+  /**
+   * The kind can keep each agent's sign-in, settings, chats and global
+   * instructions in a state folder of the agent's own, so a second agent of
+   * it can share a machine with the first.
+   */
+  val ownStateSupported: Boolean get() = false
+
+  /**
+   * The agent's global instructions file, where the host writes the image's
+   * OS note and who else is on the machine: in [stateDir], the agent's own
+   * state folder, or in [home] when it has none (null: the kind's default
+   * dirs). Host paths. Null when the kind has no instructions file.
+   */
+  fun instructionsFile(home: File, stateDir: File?): File? = null
+
+  /** Where [config] is seeded for that agent, the same way; null when the kind has none. */
+  fun configDir(home: File, stateDir: File?): File? = config?.let { File(home, it.homeDir) }
+
+  /**
+   * Where the kind keeps a user's sign-in, settings and chats by default,
+   * in [home] (host path): what the host deletes, never following links,
+   * when an agent that used the defaults leaves a machine that stays, so
+   * the next agent of the kind there starts clean. Never anything the
+   * machine's other agents share. Empty for none.
+   */
+  fun userStatePaths(home: File): List<File> = emptyList()
+
   /** The kind's own argv, env and cwd; the host adds the image env and the bridge, and runs it there (HOME when no cwd). */
   fun launch(ctx: LaunchContext): LaunchSpec
 
@@ -57,6 +84,14 @@ data class LaunchContext(
   val model: ModelEndpoint? = null,
   /** The phone-tools bridge's base URL; "" when the kind gets no bridge. Its token stays in the env. */
   val bridgeUrl: String = "",
+  /** The agent's own state folder (host path), for a kind that supports one; null: the kind's default dirs. */
+  val stateDir: File? = null,
+  /**
+   * Image kinds: the env names the image's launch.conf unsets (for its other
+   * agents) that this engine still needs. The host passes each as
+   * PHONECANDO_CARRY_<NAME>, and the image's sh restores it before the program.
+   */
+  val carry: Set<String> = emptySet(),
 )
 
 /** The kind's part of a launch: argv[0] is the engine binary; [cwd] null means HOME. */
@@ -64,14 +99,12 @@ data class LaunchSpec(val argv: List<String>, val env: Map<String, String>, val 
 
 /**
  * A kind's config: an APK assets folder copied into a folder under the engine
- * HOME on every start. Files in [keepIfPresent] are seeded only when absent,
- * so user edits and keys in them survive. [instructionsFile] (relative to
- * [homeDir]) is the agent's global instructions, where the image's OS note
- * goes; null for a kind without one.
+ * HOME ([homeDir]; an agent with a state folder of its own: AgentKind.configDir)
+ * on every start. Files in [keepIfPresent] are seeded only when absent, so
+ * user edits and keys in them survive.
  */
 data class AgentConfig(
   val assetDir: String,
   val homeDir: String,
   val keepIfPresent: Set<String>,
-  val instructionsFile: String? = null,
 )

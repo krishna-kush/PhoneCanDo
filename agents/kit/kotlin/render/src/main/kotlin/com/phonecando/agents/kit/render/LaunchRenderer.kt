@@ -18,6 +18,8 @@ data class ClientContext(
   val projectDir: String,
   /** The chat to continue; null or empty lets the client pick by folder. */
   val sessionId: String?,
+  /** The agent's own state folder, as the client sees it; null: the kind's default dirs (ManifestKind.clientRecipe). */
+  val stateDir: String? = null,
 )
 
 /** A process for our PTY: argv, environment (in order) and working directory. */

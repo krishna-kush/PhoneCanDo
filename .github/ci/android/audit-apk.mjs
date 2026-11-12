@@ -20,7 +20,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, write
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
-import { loadManifests } from '../../../agents/kit/cli/manifests.mjs';
+import { configInstructions, loadManifests } from '../../../agents/kit/cli/manifests.mjs';
 import { auditChannel, checkSigner, payloadLibs, payloadProblems } from '../../../scripts/apk-audit.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -316,7 +316,7 @@ function agentAssets(kind) {
       full: join(kind.dir, c.dir),
       overlay: c.overlay ? join(kind.dir, c.overlay) : null,
       required: c.required ?? [],
-      instructions: c.instructions ?? null,
+      instructions: configInstructions(kind.manifest),
       fullOnly: [...folders(c.fullOnly ?? []), ...kind.parts.flatMap((p) => folders(p.fullOnly, `${p.into}/`))],
     },
   };

@@ -75,6 +75,26 @@ internal object KindChecks {
     compiles(id, check.pattern)
   }
 
+  // A state block moves something, and the instructions file moves with it
+  // exactly when the kind has one; config.into moves only when there is one.
+  fun state(manifest: Manifest) {
+    val id = manifest.id
+    val state = manifest.state ?: return
+    if (state.env.isEmpty()) throw KindException("$id: state.env moves nothing")
+    if ((state.instructions == null) != (manifest.instructions == null)) {
+      throw KindException("$id: state.instructions goes with instructions, and only with them")
+    }
+    if (state.config != null && manifest.config == null) throw KindException("$id: state.config needs a config block")
+  }
+
+  // The host deletes these, so each is a plain path in HOME and nothing
+  // the machine's other agents share (UserStatePaths).
+  fun userState(manifest: Manifest) {
+    for (path in manifest.userState) {
+      UserStatePaths.problem(path)?.let { throw KindException("${manifest.id}: userState $path $it") }
+    }
+  }
+
   fun web(manifest: Manifest) {
     val web = manifest.surfaces?.web
     if (manifest.surfaces?.home == HomeSurface.WEB && (web?.pair == null || web.adapter == null)) {

@@ -45,6 +45,12 @@
     "argv": ["/root/.local/bin/pi", "--version"],
     "pattern": "(?:^|\\n)(\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".pi/agent/AGENTS.md",
+  "state": {
+    "env": { "PI_CODING_AGENT_DIR": "{{stateDir}}/pi" },
+    "instructions": "pi/AGENTS.md"
+  },
+  "userState": [".pi/agent"],
   "engine": {
     "style": "tui",
     "launch": {

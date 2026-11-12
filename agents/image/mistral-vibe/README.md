@@ -23,6 +23,14 @@ run as a TUI in the agent's machine. Shared image-kind rules:
   `- Action Required`, `- Task Complete`); `surfaces.chatTitle` takes the
   title without them and skips the default.
 
+## State
+
+- Global instructions: `~/.vibe/AGENTS.md`.
+- A second Vibe agent on the machine keeps its state in its own folder
+  (`VIBE_HOME`). The machine has no keyring, so its keys go to
+  `$VIBE_HOME/.env`.
+- `userState`: `~/.vibe`.
+
 ## Events
 
 No hooks: Vibe loads them only from `~/.vibe/hooks.toml`, a trusted

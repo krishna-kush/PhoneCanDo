@@ -430,6 +430,48 @@
         "path": "/default",
         "code": "forbidden"
       }
+    ],
+    "instructions-absolute.json": [
+      {
+        "path": "/instructions",
+        "code": "pattern"
+      }
+    ],
+    "state-env-empty.json": [
+      {
+        "path": "/state/env",
+        "code": "length"
+      }
+    ],
+    "state-env-home.json": [
+      {
+        "path": "/state/env/HOME",
+        "code": "reserved"
+      }
+    ],
+    "state-without-instructions.json": [
+      {
+        "path": "/state/instructions",
+        "code": "required"
+      }
+    ],
+    "state-config-without-config.json": [
+      {
+        "path": "/state/config",
+        "code": "forbidden"
+      }
+    ],
+    "state-dir-outside-state.json": [
+      {
+        "path": "/engine/launch/env/CODEX_HOME",
+        "code": "forbidden"
+      }
+    ],
+    "user-state-shared.json": [
+      {
+        "path": "/userState/1",
+        "code": "forbidden"
+      }
     ]
   }
 }

@@ -15,6 +15,8 @@ object Templates {
     "libDir", "home", "tmp", "port", "serverUrl", "bridgeUrl", "password", "projectDir", "sessionId", "code",
     // A local model's (ModelSeam), in a kind's `models` block only.
     "baseUrl", "model", "contextWindow", "modelKey",
+    // The agent's own state folder (StateSeam), in a kind's `state.env` only.
+    "stateDir",
   )
 
   private val PLACEHOLDER = Regex("""\{\{([^{}]*)\}\}""")

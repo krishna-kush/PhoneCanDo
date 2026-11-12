@@ -14,3 +14,8 @@ TODO before this kind ships:
   step runs again (`install.retries`, default 2 more times), so each must
   be safe to run more than once; `update` and `versionCheck` beside it.
 - `engine`: how its TUI starts.
+- `instructions`: its global instructions file in HOME, if it has one;
+  `state` when it can keep an agent's sign-in, settings, chats and
+  instructions in a folder of its own, so a second agent of it can share
+  a machine; `userState`, where it keeps them by default, never its
+  install (`agents/AGENTS.md` §4).

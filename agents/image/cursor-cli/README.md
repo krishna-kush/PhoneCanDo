@@ -17,6 +17,13 @@ musl).
   run only, so `~/.cursor/` stays yours.
 - Cursor has no switch to turn its own updates off.
 
+## State
+
+- No global instructions file we can write to.
+- One Cursor CLI agent per machine: its sign-in moves only with
+  `XDG_CONFIG_HOME`, which we keep for the machine.
+- `userState`: `~/.cursor` and `~/.config/cursor`.
+
 ## Events
 
 The plugin's `hooks/hooks.json`: `beforeSubmitPrompt` working, `stop`

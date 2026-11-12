@@ -40,6 +40,7 @@
     "argv": ["/root/.local/bin/cline", "--version"],
     "pattern": "(\\d+\\.\\d+\\.\\d+)"
   },
+  "userState": [".cline"],
   "engine": {
     "style": "tui",
     "launch": {

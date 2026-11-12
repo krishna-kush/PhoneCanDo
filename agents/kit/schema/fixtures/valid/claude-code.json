@@ -91,6 +91,17 @@
     ],
     "pattern": "^(\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".claude/CLAUDE.md",
+  "state": {
+    "env": {
+      "CLAUDE_CONFIG_DIR": "{{stateDir}}/claude"
+    },
+    "instructions": "claude/CLAUDE.md"
+  },
+  "userState": [
+    ".claude",
+    ".claude.json"
+  ],
   "engine": {
     "style": "tui",
     "launch": {

@@ -46,6 +46,8 @@
     "argv": ["/root/.local/bin/crush", "--version"],
     "pattern": "version v?(\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".config/crush/CRUSH.md",
+  "userState": [".config/crush", ".local/share/crush"],
   "engine": {
     "style": "tui",
     "launch": {

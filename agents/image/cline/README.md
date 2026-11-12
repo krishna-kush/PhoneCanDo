@@ -17,6 +17,13 @@ glibc-only, so no Alpine.
 - The window title is `Cline`, then `> <your prompt>` once a task runs;
   `surfaces.chatTitle` takes the prompt.
 
+## State
+
+- No single global instructions file (its rules are a folder of files).
+- One Cline agent per machine: each would need a hub port of its own, and
+  the hub outlives the agent.
+- `userState`: `~/.cline`.
+
 ## Events
 
 None. Cline runs hooks (files named after the event, such as

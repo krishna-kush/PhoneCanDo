@@ -56,6 +56,32 @@ export const MODEL_APIS = ['openai-chat', 'openai-responses', 'anthropic'];
 export const MODEL_PLACEHOLDERS = ['baseUrl', 'model', 'contextWindow', 'modelKey'];
 export const MODEL_SECRET_PLACEHOLDER = 'modelKey';
 
+// An agent's own state folder (`state`): its env names the folder as
+// {{stateDir}}, the one placeholder it knows, which no other template may use.
+export const STATE_PLACEHOLDER = 'stateDir';
+
+// What every agent on a machine shares in HOME, which `userState` (deleted
+// when an agent that kept the kind's defaults leaves a machine that stays)
+// may never name, hold or lie in: the work folder, our own files, keys,
+// installs (runtimes, npm and uv tools, ~/.local/bin), git config and shell
+// files.
+// kit-render's UserStatePaths says the same (state.test.ts compares them).
+export const SHARED_HOME = [
+  'projects',
+  '.phonecando',
+  '.ssh',
+  '.gitconfig',
+  '.config/git',
+  '.local/bin',
+  '.local/lib',
+  '.local/opt',
+  '.local/share/uv',
+  '.profile',
+  '.bashrc',
+];
+/** Folders a kind keeps its state inside, never the whole of. */
+export const SHARED_HOME_PARENTS = ['.local', '.local/share', '.local/state', '.config', '.cache'];
+
 // Ids that would shadow `./manage agent <verb>`, or whose assets
 // (assets/agents/<id>/) would collide with the kit's scripts, the runtimes'
 // or the shared parts'; prefixes that would collide with our own libraries
@@ -93,6 +119,8 @@ export const PATTERNS = {
   modelEnvTemplate: templateOf(MODEL_PLACEHOLDERS),
   /** What runs in the guest (install steps, version checks, runtime paths): {{home}} only. */
   guestTemplate: templateOf(GUEST_PLACEHOLDERS),
+  /** A state env value: {{stateDir}} only. */
+  stateTemplate: templateOf([STATE_PLACEHOLDER]),
   httpPath: '^/\\S*$',
   jsonPointer: '^(?:/(?:[^~/]|~[01])*)+$',
   envName: '^[A-Za-z_][A-Za-z0-9_]*$',
@@ -166,4 +194,15 @@ export const INSTALL_FIELDS = ['install', 'update', 'versionCheck'];
 export const RUNTIME_FIELDS = ['engine', 'events', 'chats', 'idle', 'surfaces', 'phoneTools', 'hooks', 'signIn'];
 /** How a local model is wired into the kind (models.ts checks it). */
 export const MODEL_FIELDS = ['models'];
-export const FIELDS = [...REQUIRED, ...DEFAULT_FIELDS, ...PACKAGING_FIELDS, ...NEEDS_FIELDS, ...RUNTIME_FIELDS, ...INSTALL_FIELDS, ...MODEL_FIELDS];
+/** The agent's global instructions, its own state folder and the kind's default state (state.ts checks these). */
+export const STATE_FIELDS = ['instructions', 'state', 'userState'];
+export const FIELDS = [
+  ...REQUIRED,
+  ...DEFAULT_FIELDS,
+  ...PACKAGING_FIELDS,
+  ...NEEDS_FIELDS,
+  ...RUNTIME_FIELDS,
+  ...INSTALL_FIELDS,
+  ...MODEL_FIELDS,
+  ...STATE_FIELDS,
+];

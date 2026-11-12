@@ -1,5 +1,5 @@
-// phonecando-open: the @open line, what it refuses, and its fallback file,
-// with every POSIX shell on the host.
+// phonecando-open: the @open line, what it refuses, and what it does with
+// no agent's events file, with every POSIX shell on the host.
 //   node --test agents/kit/scripts/phonecando-open.test.mjs
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -62,14 +62,21 @@ for (const shell of shells) {
       assert.equal(existsSync(events), false);
     });
 
-    it('falls back to $HOME/.phonecando/events, making the folder', (t) => {
+    it('makes the folder of the agent\'s events file', (t) => {
       const { home } = scratch(t);
-      assert.equal(run(shell, SCRIPT, ['https://a.com'], { env: { HOME: home } }).code, 0);
-      assert.deepEqual(lines(join(home, '.phonecando/events')), ['@open\thttps://a.com']);
+      const events = join(home, '.phonecando/events-a2');
+      assert.equal(run(shell, SCRIPT, ['https://a.com'], { env: { PHONECANDO_EVENTS: events } }).code, 0);
+      assert.deepEqual(lines(events), ['@open\thttps://a.com']);
     });
 
-    it('fails with 1 when it has nowhere to write', () => {
-      assert.equal(run(shell, SCRIPT, ['https://a.com'], { env: {} }).code, 1);
+    it('fails with 1, writing nothing, when no agent listens', (t) => {
+      const { home } = scratch(t);
+      for (const env of [{ HOME: home }, { HOME: home, PHONECANDO_EVENTS: '' }, {}]) {
+        const r = run(shell, SCRIPT, ['https://a.com'], { env });
+        assert.equal(r.code, 1, JSON.stringify(env));
+        assert.match(r.stderr, /PHONECANDO_EVENTS is not set/);
+      }
+      assert.equal(existsSync(join(home, '.phonecando')), false);
     });
   });
 }

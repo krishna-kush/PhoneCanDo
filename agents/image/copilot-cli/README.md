@@ -19,6 +19,14 @@ the agent's machine. Shared image-kind rules: `agents/AGENTS.md` §4.
   GitHub Copilot`, or `GitHub Copilot`, and we have not seen a signed-in
   one.
 
+## State
+
+- Global instructions: `~/.copilot/copilot-instructions.md`.
+- A second Copilot CLI agent on the machine keeps its state in its own
+  folder (`COPILOT_HOME`); the runner seeds our hooks into its
+  `copilot/hooks`.
+- `userState`: `~/.copilot`.
+
 ## Events
 
 - Hooks: the runner seeds `config/phonecando.json` into `~/.copilot/hooks/`

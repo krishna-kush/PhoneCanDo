@@ -44,4 +44,7 @@ export type KindView = {
   payloadPresent: boolean;
   /** The wire APIs it can use a local model with, in the order it prefers them; empty: none. */
   models: ('openai-chat' | 'openai-responses' | 'anthropic')[];
+  /** An agent of it can keep its sign-in, settings, chats and instructions in a state folder of its own
+      (the manifest's `state`), so a second agent of it can share a machine with the first. */
+  stateFolder: boolean;
 };

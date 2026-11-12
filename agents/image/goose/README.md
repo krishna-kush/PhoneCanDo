@@ -18,7 +18,9 @@ glibc or musl, so Alpine works (with `libgcc`).
 - An `sh -c` wrapper: goose exits at once with "No provider configured"
   when there is none, so the wrapper first runs `goose configure` (goose's
   own setup, in the same terminal) when neither `GOOSE_PROVIDER` is set
-  nor `~/.config/goose/config.yaml` names a provider.
+  nor the agent's config file (`~/.config/goose/config.yaml`, or
+  `$GOOSE_PATH_ROOT/config/config.yaml` for an agent with its own state
+  folder) names a provider.
 - `GOOSE_ADDITIONAL_CONFIG_FILES` names our seeded `config/config.yaml`.
   goose reads it after `/etc/goose/config.yaml` and before your own
   `config.yaml`, which wins, and never writes to it.
@@ -27,6 +29,15 @@ glibc or musl, so Alpine works (with `libgcc`).
 - `resume` adds `-r` (the newest session). With none goose exits 1, and
   the runner's resume fallback starts it without.
 - No `chatTitle`: the window title is `🪿 <folder>`.
+
+## State
+
+- Global instructions: `~/.config/goose/.goosehints`.
+- A second goose agent on the machine keeps its config, data and state in
+  its own folder (`GOOSE_PATH_ROOT`), its keys in its config file
+  (`GOOSE_DISABLE_KEYRING=1`). The wrapper then looks for a provider in
+  `$GOOSE_PATH_ROOT/config/config.yaml`.
+- `userState`: `~/.config/goose` and `~/.local/share/goose`.
 
 ## Events
 

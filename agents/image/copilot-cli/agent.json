@@ -48,6 +48,13 @@
     "argv": ["/root/.local/bin/copilot", "--version"],
     "pattern": "Copilot CLI (\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".copilot/copilot-instructions.md",
+  "state": {
+    "env": { "COPILOT_HOME": "{{stateDir}}/copilot" },
+    "instructions": "copilot/copilot-instructions.md",
+    "config": "copilot/hooks"
+  },
+  "userState": [".copilot"],
   "engine": {
     "style": "tui",
     "launch": {

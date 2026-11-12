@@ -4,7 +4,15 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
-import { forChannel, loadManifests, matchesGlob, nativeManifests, REPO_ROOT, scanManifests } from './manifests.mjs';
+import {
+  configInstructions,
+  forChannel,
+  loadManifests,
+  matchesGlob,
+  nativeManifests,
+  REPO_ROOT,
+  scanManifests,
+} from './manifests.mjs';
 
 // opencode's manifest as a base for test kinds, less its default flag.
 const { default: _, ...OPENCODE } = JSON.parse(readFileSync(join(REPO_ROOT, 'agents/native/opencode/agent.json'), 'utf8'));
@@ -111,11 +119,25 @@ describe('folder rules', () => {
     delete kind['agents/native/alpha/config/opencode.json'];
     const got = codes(makeRoot({ ...kind, 'agents/native/alpha/config-lite/.keep': '' }));
     assert.deepEqual(got.sort(), [
-      'agents/native/alpha/agent.json /config/instructions missing',
       'agents/native/alpha/agent.json /config/required missing',
+      'agents/native/alpha/agent.json /instructions missing',
       'agents/native/alpha/agent.json /licence/notice missing',
       'agents/shared/phone-tools/part.json  missing',
     ]);
+  });
+
+  it('finds the instructions file in the packaged config only when config.into holds it', () => {
+    const config = { dir: 'config', into: '.config/opencode' };
+    assert.equal(configInstructions({ config, instructions: '.config/opencode/AGENTS.md' }), 'AGENTS.md');
+    assert.equal(configInstructions({ config, instructions: '.config/opencode/rules/AGENTS.md' }), 'rules/AGENTS.md');
+    assert.equal(configInstructions({ config, instructions: '.config/opencode.md' }), null);
+    assert.equal(configInstructions({ config: { into: '.config/opencode' }, instructions: '.config/opencode/AGENTS.md' }), null);
+    assert.equal(configInstructions({ config }), null);
+    assert.equal(configInstructions({ instructions: '.claude/CLAUDE.md' }), null);
+    // Elsewhere in HOME, nothing of ours needs to be packaged.
+    const kind = nativeKind('alpha', 'al', { instructions: '.alpha/AGENTS.md' });
+    delete kind['agents/native/alpha/config/AGENTS.md'];
+    assert.deepEqual(codes(makeRoot({ ...kind, ...PHONE_TOOLS })), []);
   });
 
   it('checks a shared part.json', () => {

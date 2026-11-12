@@ -36,6 +36,15 @@ project ones, and `mcpServers` and `hooks` merge across them, so
   one.
 - No `chatTitle`: the window title is only the state and the folder.
 
+## State
+
+- Global instructions: `~/.gemini/GEMINI.md`.
+- A second Gemini CLI agent on the machine keeps its `.gemini` in its own
+  folder (`GEMINI_CLI_HOME`), with `GEMINI_FORCE_FILE_STORAGE=true` so its
+  sign-in is a file there, not a keychain entry. Our system settings
+  (`GEMINI_CLI_SYSTEM_SETTINGS_PATH`) stay one file for both.
+- `userState`: `~/.gemini`.
+
 ## Events
 
 Hooks: `BeforeAgent` working, `Notification` (a tool waits for your

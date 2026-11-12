@@ -27,6 +27,17 @@ Every setting is a flag, so `~/.codex/config.toml` stays yours.
 - `resume` puts `resume --last` before the flags; with no saved chat
   Codex starts a new one.
 
+## State
+
+- Global instructions: `~/.codex/AGENTS.md`.
+- A second Codex agent on the machine keeps its state in its own folder
+  (`CODEX_HOME`).
+- `userState` names files and folders in `~/.codex` (sign-in, config,
+  history, sessions, archived sessions, instructions, memories, logs),
+  never the folder itself: the installer keeps Codex in
+  `~/.codex/packages/standalone`, which `~/.local/bin/codex` links to.
+  Codex's SQLite state and log databases are not named yet.
+
 ## Events
 
 - OSC 7501, unprompted, with the usual map.

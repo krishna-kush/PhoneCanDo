@@ -5,7 +5,8 @@
 // on Node, the app on Hermes. Folder rules (folder name = id, prefixes unique
 // across kinds, files that must exist) need the tree and live in
 // agents/kit/cli/manifests.mjs. The runtime blocks are in runtime.ts, the
-// install blocks in install.ts, the rules per type and origin in kinds.ts. A
+// install blocks in install.ts, the instructions file and the agent's own
+// state folder in state.ts, the rules per type and origin in kinds.ts. A
 // runtime plugin's manifest has its own validator (runtime-plugin.ts).
 import {
   fields,
@@ -42,11 +43,12 @@ import {
 } from './rules.ts';
 import { checkModels } from './models.ts';
 import { checkRuntime } from './runtime.ts';
+import { checkState } from './state.ts';
 import type { Problem, ValidateOptions, ValidationResult } from './types.ts';
 
 const LICENCE_FIELDS = ['spdx', 'redistributed', 'notice', 'terms', 'source'];
 const LIB_FIELDS = ['name', 'from', 'role', 'linkage'];
-const CONFIG_FIELDS = ['dir', 'overlay', 'fullOnly', 'shared', 'into', 'keep', 'required', 'instructions', 'files'];
+const CONFIG_FIELDS = ['dir', 'overlay', 'fullOnly', 'shared', 'into', 'keep', 'required', 'files'];
 
 export function validate(json: unknown, options: ValidateOptions): ValidationResult {
   const problems: Problem[] = [];
@@ -83,6 +85,7 @@ export function validate(json: unknown, options: ValidateOptions): ValidationRes
   checkInstall(add, json);
   checkRuntime(add, json);
   if ('models' in json) checkModels(add, json.models);
+  checkState(add, json);
 
   checkType(add, json);
   if (user) checkUser(add, json);
@@ -163,7 +166,7 @@ function checkBuild(add: Add, build: unknown) {
 function checkConfig(add: Add, config: unknown) {
   if (!fields(add, '/config', config, CONFIG_FIELDS, ['into'])) return;
   const c = config as Json;
-  for (const key of ['dir', 'overlay', 'into', 'instructions']) {
+  for (const key of ['dir', 'overlay', 'into']) {
     if (key in c) relPath(add, `/config/${key}`, c[key]);
   }
   for (const key of ['fullOnly', 'keep', 'required']) {

@@ -41,6 +41,12 @@
     "argv": ["/root/.local/bin/kimi", "--version"],
     "pattern": "(?:^|\\n)(\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".kimi-code/AGENTS.md",
+  "state": {
+    "env": { "KIMI_CODE_HOME": "{{stateDir}}/kimi-code" },
+    "instructions": "kimi-code/AGENTS.md"
+  },
+  "userState": [".kimi-code"],
   "engine": {
     "style": "tui",
     "launch": {

@@ -189,15 +189,65 @@ URL uses `{{bridgeUrl}}` in a `when: bridgeUrl` item, so it drops out with
 no bridge. The token is only ever an env reference that the agent expands
 itself, never in argv or on disk.
 
+### Instructions and an agent's own state
+
+Agents share a machine like apps on one PC: its system, `~/.local`,
+`~/projects`, git config and background processes. Each keeps its own
+engine, password, bridge token, events file and engine log.
+
+- `instructions`: the kind's global instructions file, relative to HOME
+  (`.claude/CLAUDE.md`). The runner writes the image's OS note and the
+  machine's other agents into it on every start. One in `config.into` is
+  shipped in the kind's config (opencode's `AGENTS.md`;
+  `kit/cli/manifests.mjs` `configInstructions` checks it).
+- Two agents of the same kind share a machine only when the kind has a
+  `state` block, which keeps each agent's sign-in, settings, chats and
+  instructions in a folder of its own. The first agent of a kind keeps
+  the kind's defaults; a second one gets `.phonecando/agents/<agentId>` in
+  HOME:
+  - `state.env` moves the kind's state there. `{{stateDir}}` is that
+    folder as the program sees it (`/root/.phonecando/agents/<agentId>`
+    for an image kind, the host path for a native one): this env's one
+    placeholder, and no other template's. Never HOME; prefer the kind's
+    own variable over `XDG_*`.
+  - `state.instructions`: the instructions file in that folder, set
+    exactly when `instructions` is.
+  - `state.config`: the folder `config.into` becomes, only when it holds
+    the agent's state (settings, keys). An instructions file in
+    `config.into` moves with it, to the same place in `state.config`.
+  - kit-api `AgentKind.instructionsFile` and `configDir(home, stateDir)`
+    say where the files go for an agent; KindView `stateFolder` tells the
+    app whether a second agent of the kind can join a machine.
+- `userState`: where the kind keeps a user's sign-in, settings and chats
+  by default, relative to HOME (`.claude`, `.claude.json`). When an agent
+  that used the defaults leaves a machine that stays, the runner deletes
+  these (never following links; kit-api `AgentKind.userStatePaths`), so
+  the next agent of the kind there starts clean. Every kind we ship names
+  them. Never anything the machine's agents share: the work folder,
+  `.phonecando`, keys, installs (`~/.local/bin`, `lib`, `opt`, uv's
+  tools), git config or shell files, nor `.local`, `.local/share`,
+  `.local/state`, `.config` or `.cache` whole (kit-render
+  `UserStatePaths`, `validate.ts`). Name files, not the folder, where a
+  folder also holds the kind's install (Codex's `~/.codex/packages`) or
+  what its other agents still use (opencode's data and state folders).
+- One `launch.conf` serves the machine, so it unsets what every agent on
+  it keeps from its guests (kit-render `GuestEnvPolicy.union`). An image
+  kind's engine starts through that launcher too, so the host passes what
+  of that the engine still needs (`GuestEnvPolicy.carry`: the bridge for
+  its phone tools, say) as `PHONECANDO_CARRY_<NAME>`, and the image's sh
+  puts each back under its own name before the program starts
+  (`ImageLaunch`).
+
 ### Image kinds
 
 - `type: "image"` needs `requires.linux: "required"`. Its argv[0] is a
   guest command or an absolute guest path, run inside the agent's image as
-  `<image>/shims/sh -c 'cd <cwd> || exit; [PATH=<runtime paths>:$PATH;
-  export PATH;] exec "$0" "$@"' <argv…>` (kit-render `ImageLaunch`), with
-  guest paths only:
-  `{{home}}` is `/root`, `{{projectDir}}` `/root/projects` and `{{tmp}}`
-  `/tmp`.
+  `<image>/shims/sh -c 'cd <cwd> || exit; [NAME="$PHONECANDO_CARRY_NAME";
+  export NAME; unset PHONECANDO_CARRY_NAME; …] [PATH=<runtime
+  paths>:$PATH; export PATH;] exec "$0" "$@"' <argv…>` (kit-render
+  `ImageLaunch`), with guest paths only: `{{home}}` is `/root`,
+  `{{projectDir}}` `/root/projects`, `{{tmp}}` `/tmp` and `{{stateDir}}`
+  `/root/.phonecando/agents/<agentId>`.
 - `install` puts it in the agent's machine before the agent starts
   (kit-render `InstallRenderer`, one `sh -s` script per package family),
   in this order:
@@ -221,8 +271,9 @@ itself, never in argv or on disk.
 What every image kind we ship has in common (its README covers only the
 rest):
 
-- Our files: the runner seeds a kind's `config/` into `config.into` on
-  every start. We never write into the agent's own config files, so a
+- Our files: the runner seeds a kind's `config/` into `config.into` (an
+  agent with a state folder of its own: `state.config`) on every start.
+  We never write into the agent's own config files, so a
   kind that loads hooks or MCP servers only from those, with no flag or
   variable for one more file, gets no hooks or no phone tools.
 - Updates: the agent's own update check or self-update is off wherever
@@ -240,8 +291,9 @@ rest):
 Origin `user`, stored at `files/state/agent-kinds/user/<id>.json` on the
 phone (at most 64 KiB): an image kind with a `tui` engine and a
 `user.<name>` id, with no hooks, payload, packaged config (`config.dir`,
-`overlay`, `shared`) or web surface, no `PATH` in its env, install and
-update steps of at most 32 KiB each, and maybe no `licence`. The runner
+`overlay`, `shared`) or web surface, no `PATH` in its launch or state
+env, install and update steps of at most 32 KiB each, and maybe no
+`licence`. The runner
 checks this itself (kit-manifest `UserRules`, runner `agents/user/`) and
 leaves out, and logs, a kind that breaks it.
 

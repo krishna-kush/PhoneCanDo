@@ -38,6 +38,9 @@ object ManifestDecoder {
       update = m.optObj("update")?.let(InstallDecoder::update),
       versionCheck = m.optObj("versionCheck")?.let(InstallDecoder::versionCheck),
       config = m.optObj("config")?.let(::config),
+      instructions = m.optString("instructions"),
+      state = m.optObj("state")?.let(::state),
+      userState = m.optStrings("userState"),
       engine = m.optObj("engine")?.let(::engine),
       events = m.optArray("events")?.let { events(m.at("events"), it) }.orEmpty(),
       chats = m.optObj("chats")?.let(::chats),
@@ -67,8 +70,13 @@ object ManifestDecoder {
   private fun config(c: JsonFields) = Config(
     into = c.string("into"),
     keep = c.optStrings("keep"),
-    instructions = c.optString("instructions"),
   )
+
+  // `env` is required: a state block that moves nothing keeps nothing apart.
+  private fun state(s: JsonFields): StateFolder {
+    s.obj("env")
+    return StateFolder(s.stringMap("env"), s.optString("instructions"), s.optString("config"))
+  }
 
   private fun engine(e: JsonFields) = Engine(
     style = enumOf(e, "style", EngineStyle.entries) { it.wire },

@@ -21,6 +21,13 @@ in the agent's machine. Shared image-kind rules: `agents/AGENTS.md` §4.
 - `resume` adds `--restore-chat-history`, which reloads
   `.aider.chat.history.md`; with none Aider starts fresh.
 
+## State
+
+- No global instructions file (only `--read`).
+- One Aider agent per machine: it always merges `~/.aider.conf.yml` and
+  `~/.env`.
+- `userState`: `~/.aider`.
+
 ## Events
 
 `--notifications-command` runs `phonecando-event Ready` instead of the

@@ -9,9 +9,10 @@
 #
 # The runner asks you before it opens anything. <url> is http(s), at most
 # 2 KiB, with no spaces or control characters. The file is
-# $PHONECANDO_EVENTS, else $HOME/.phonecando/events. We never block.
+# $PHONECANDO_EVENTS, the agent's own. We never block.
 #
-# Exit 0 when written, 64 for a bad call, 1 when the file can't be written.
+# Exit 0 when written, 64 for a bad call, 1 when the file can't be written
+# or none is set (no agent to ask, so the tool can show the link itself).
 
 # Bytes, not characters, for every length and pattern below.
 export LC_ALL=C
@@ -33,9 +34,9 @@ case "$url" in
   *[[:space:][:cntrl:]]*) usage ;;
 esac
 
-events="${PHONECANDO_EVENTS:-${HOME:+$HOME/.phonecando/events}}"
+events="${PHONECANDO_EVENTS-}"
 if [ -z "$events" ]; then
-  echo "phonecando-open: neither PHONECANDO_EVENTS nor HOME is set" >&2
+  echo "phonecando-open: PHONECANDO_EVENTS is not set: no agent to open it for" >&2
   exit 1
 fi
 mkdir -p "$(dirname "$events")" 2>/dev/null

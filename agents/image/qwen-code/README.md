@@ -25,6 +25,15 @@ from system settings whatever the folder's trust.
   the name, with a state glyph in front, padded to 80 columns;
   `surfaces.chatTitle` takes the name and skips the default.
 
+## State
+
+- Global instructions: `~/.qwen/QWEN.md`.
+- A second Qwen Code agent on the machine keeps its state in its own
+  folder (`QWEN_HOME`), its sign-in in a file there
+  (`QWEN_CODE_FORCE_FILE_STORAGE=true`). Our system settings stay one file
+  for both.
+- `userState`: `~/.qwen`.
+
 ## Events
 
 - Hooks (Claude Code's names): `UserPromptSubmit` working (it fires before

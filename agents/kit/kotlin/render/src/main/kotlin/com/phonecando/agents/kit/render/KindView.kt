@@ -18,8 +18,9 @@ import kotlinx.serialization.json.put
 // install supports with its runtimes' (null: any), the runtimes it
 // installs, whether it is installed at all before its agent starts, and
 // whether this build has its payload (a native kind's libs, as [libExists]
-// finds them; always true for an image kind), and the APIs it can use a
-// local model with. Never a template or a
+// finds them; always true for an image kind), the APIs it can use a local
+// model with, and whether an agent of it can keep its state in a folder of
+// its own (so a second one can share a machine). Never a template or a
 // secret: launches, requests and the TUI client are rendered natively.
 object KindView {
   fun of(kind: ManifestKind, isDefault: Boolean, libExists: (String) -> Boolean): JsonObject {
@@ -44,6 +45,7 @@ object KindView {
       put("hasInstall", kind.hasInstall)
       put("payloadPresent", payloadPresent(manifest, libExists))
       put("models", JsonArray(manifest.models.map { JsonPrimitive(it.api) }))
+      put("stateFolder", kind.ownStateSupported)
     }
   }
 

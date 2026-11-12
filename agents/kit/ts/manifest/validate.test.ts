@@ -166,6 +166,9 @@ describe('validator and schema agree', () => {
     assert.equal(props.install.properties.packages.additionalProperties.items.pattern, PATTERNS.package);
     assert.equal(props.events.items.properties.hook.properties.map.propertyNames.pattern, PATTERNS.eventName);
     assert.equal(defs.guestTemplate.pattern, PATTERNS.guestTemplate);
+    assert.equal(defs.stateTemplate.pattern, PATTERNS.stateTemplate);
+    assert.equal(props.state.properties.env.propertyNames.pattern, PATTERNS.envName);
+    assert.equal(props.state.properties.env.propertyNames.not.pattern, PATTERNS.envReserved);
     assert.equal(defs.versionCheck.properties.argv.prefixItems[0].allOf[1].pattern, PATTERNS.guestTool);
   });
 

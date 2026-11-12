@@ -5,9 +5,10 @@ package com.phonecando.agents.kit.manifest
 // origin user): an `user.` id, an image kind whose engine is its own TUI and
 // which needs Linux and is never the default; no code hooks, no native
 // payload, no config packaged from assets (`config.dir`, `overlay`,
-// `shared`) and no web surface; no env name the host sets (RESERVED_ENV);
-// install steps and update steps of at most MAX_SCRIPT_BYTES each. Each
-// break throws ManifestException at the JSON pointer of the offending value.
+// `shared`) and no web surface; no env name the host sets (RESERVED_ENV)
+// in its launch or its state folder's env; install steps and update steps
+// of at most MAX_SCRIPT_BYTES each. Each break throws ManifestException at
+// the JSON pointer of the offending value.
 internal object UserRules {
   const val ID_PREFIX = "user."
 
@@ -33,12 +34,15 @@ internal object UserRules {
       if (s.has("web")) fail(s.at("web"), "a user kind has no web surface")
       if (manifest.surfaces?.home != HomeSurface.TUI) fail(s.at("home"), "a user kind's Home is its TUI (tui)")
     }
-    val env = engine.optObj("launch")?.optObj("env")
-    manifest.engine?.launch?.env?.keys?.firstOrNull(RESERVED_ENV::matches)?.let { name ->
-      fail(env!!.at(name), "$name is the host's to set")
-    }
+    reservedEnv(engine.optObj("launch")?.optObj("env"))
+    reservedEnv(m.optObj("state")?.optObj("env"))
     script(m, "install", manifest.install?.steps)
     script(m, "update", manifest.update?.steps)
+  }
+
+  private fun reservedEnv(env: JsonFields?) {
+    val name = env?.tree?.keys?.firstOrNull(RESERVED_ENV::matches) ?: return
+    fail(env.at(name), "$name is the host's to set")
   }
 
   private fun script(m: JsonFields, block: String, steps: List<String>?) {

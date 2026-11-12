@@ -31,6 +31,24 @@
       "ndk"
     ]
   },
+  "instructions": ".codex/AGENTS.md",
+  "state": {
+    "env": {
+      "CODEX_HOME": "{{stateDir}}/codex"
+    },
+    "instructions": "codex/AGENTS.md"
+  },
+  "userState": [
+    ".codex/auth.json",
+    ".codex/config.toml",
+    ".codex/history.jsonl",
+    ".codex/sessions",
+    ".codex/archived_sessions",
+    ".codex/AGENTS.md",
+    ".codex/AGENTS.override.md",
+    ".codex/memories",
+    ".codex/log"
+  ],
   "engine": {
     "style": "tui",
     "launch": {

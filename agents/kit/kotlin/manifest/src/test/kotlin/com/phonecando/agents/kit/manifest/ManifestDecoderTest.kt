@@ -18,7 +18,10 @@ class ManifestDecoderTest {
       "channels": ["full", "lite"], "stability": "preview",
       "licence": { "spdx": "MIT", "redistributed": true, "notice": "NOTICE.md", "source": "https://x" },
       "payload": { "libs": [] },
-      "config": { "dir": "config", "into": ".config/demo", "keep": ["demo.json"], "instructions": "AGENTS.md" },
+      "config": { "dir": "config", "into": ".config/demo", "keep": ["demo.json"] },
+      "instructions": ".config/demo/AGENTS.md",
+      "userState": [".config/demo", ".local/share/demo"],
+      "state": { "env": { "DEMO_HOME": "{{stateDir}}/demo", "DEMO_CONFIG": "{{stateDir}}/config" }, "instructions": "config/AGENTS.md", "config": "config" },
       "engine": {
         "style": "server",
         "launch": {
@@ -48,7 +51,13 @@ class ManifestDecoderTest {
     val m = ManifestDecoder.decode(full)
     assertEquals("demo", m.id)
     assertEquals(listOf("full", "lite"), m.channels)
-    assertEquals(Config(".config/demo", listOf("demo.json"), "AGENTS.md"), m.config)
+    assertEquals(Config(".config/demo", listOf("demo.json")), m.config)
+    assertEquals(".config/demo/AGENTS.md", m.instructions)
+    assertEquals(listOf(".config/demo", ".local/share/demo"), m.userState)
+    // The state env in manifest order.
+    val state = m.state!!
+    assertEquals(listOf("DEMO_HOME" to "{{stateDir}}/demo", "DEMO_CONFIG" to "{{stateDir}}/config"), state.env.toList())
+    assertEquals(StateFolder(state.env, "config/AGENTS.md", "config"), state)
     val engine = m.engine!!
     assertEquals(EngineStyle.SERVER, engine.style)
     assertEquals(
@@ -79,6 +88,9 @@ class ManifestDecoderTest {
       """{"schema":1,"id":"user.htop","label":"htop","version":"1","type":"image","channels":["full"],"stability":"preview"}""",
     )
     assertNull(m.config)
+    assertNull(m.instructions)
+    assertNull(m.state)
+    assertTrue(m.userState.isEmpty())
     assertNull(m.engine)
     assertNull(m.surfaces)
     assertTrue(m.events.isEmpty())
@@ -178,6 +190,10 @@ class ManifestDecoderTest {
       "/engine/launch/env/LD_PRELOAD: LD_PRELOAD is the host's to set",
       userProblem { it.replace("[\"top\"]}", "[\"top\"],\"env\":{\"LD_PRELOAD\":\"/x.so\"}}") },
     )
+    assertEquals(
+      "/state/env/HOME: HOME is the host's to set",
+      userProblem { it.replace("\"stability\"", "\"state\":{\"env\":{\"TOP_DIR\":\"{{stateDir}}\",\"HOME\":\"{{stateDir}}\"}},\"stability\"") },
+    )
     // A bundled kind is not held to them.
     assertEquals("top", ManifestDecoder.decode(user.replace("user.top", "top")).id)
   }
@@ -255,6 +271,11 @@ class ManifestDecoderTest {
     assertEquals("/install: must be an object, not 3", problem(with("\"install\":3")))
     assertEquals("/engine/readiness/alive/ms: must be an integer", problem(with("\"engine\":{\"style\":\"tui\",\"readiness\":{\"alive\":{\"ms\":\"1\"}}}")))
     assertEquals("/surfaces/home: is required", problem(with("\"surfaces\":{}")))
+    assertEquals("/instructions: must be a string, not an object", problem(with("\"instructions\":{}")))
+    assertEquals("/userState/0: must be a string, not 1", problem(with("\"userState\":[1]")))
+    assertEquals("/state/env: is required", problem(with("\"state\":{\"instructions\":\"a.md\"}")))
+    assertEquals("/state/env/A: must be a string, not 1", problem(with("\"state\":{\"env\":{\"A\":1}}")))
+    assertEquals("/state/config: must be a string, not true", problem(with("\"state\":{\"env\":{},\"config\":true}")))
     assertEquals("/chats/title/http: is required", problem(with("\"chats\":{\"title\":{}}")))
     assertEquals("/idle/from/0: must be one of events, output, not pty", problem(with("\"idle\":{\"from\":[\"pty\"],\"quietSec\":60}")))
     val web = "\"surfaces\":{\"home\":\"web\",\"web\":"

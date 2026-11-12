@@ -20,6 +20,13 @@ is archived.
 - The window title is the chat's title (cut to 32 characters) or `Kimi
   Code`; `surfaces.chatTitle` skips the default.
 
+## State
+
+- Global instructions: `~/.kimi-code/AGENTS.md`.
+- A second Kimi Code agent on the machine keeps its state in its own
+  folder (`KIMI_CODE_HOME`).
+- `userState`: `~/.kimi-code`.
+
 ## Events
 
 No hooks (see Phone tools). Kimi sends the OSC 7501 support query and

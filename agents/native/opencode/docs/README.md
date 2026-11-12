@@ -26,3 +26,18 @@ through `OPENCODE_CONFIG_CONTENT`, its key from `LOCAL_MODEL_KEY`. CI's
 local-model check runs `run --standalone` (a private server, not the
 background service; `../one-shot.json`) with upstream's Linux build of our
 pinned tag (`../ci/host-engine.sh`).
+
+## State
+
+- Global instructions: `~/.config/opencode/AGENTS.md`, shipped in our
+  config (`config/AGENTS.md`, `config-lite/` on lite and play).
+- A second opencode agent on the machine gets its own config folder
+  (`OPENCODE_CONFIG_DIR`, which replaces `~/.config/opencode`; the runner
+  seeds our config there) and its own database (`OPENCODE_DB`: sign-in,
+  chats and settings). Still shared with the first: `~/.local/state/opencode`
+  (the TUI's prompt history, model choice and last chat; the persistent
+  terminals' daemon; locks) and the rest of `~/.local/share/opencode`
+  (logs, worktrees, repos).
+- `userState`: `~/.config/opencode`, the database files and the TUI's
+  state files, not those two folders whole: the other agent still uses
+  them, and the data folder holds worktrees.

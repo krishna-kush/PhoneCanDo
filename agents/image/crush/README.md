@@ -21,6 +21,13 @@ the same download in Node.
 - `resume` adds `--continue`, the newest chat.
 - No `chatTitle`: the window title is `crush <folder>`.
 
+## State
+
+- Global instructions: `~/.config/crush/CRUSH.md`.
+- One Crush agent per machine: its per-project `.crush` lock would need a
+  data folder per agent, which we cannot template.
+- `userState`: `~/.config/crush` and `~/.local/share/crush`.
+
 ## Events
 
 No hooks (see Phone tools). OSC 7501, unprompted, with the usual map. Its

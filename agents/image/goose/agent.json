@@ -48,13 +48,19 @@
     "argv": ["/root/.local/bin/goose", "--version"],
     "pattern": "(\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".config/goose/.goosehints",
+  "state": {
+    "env": { "GOOSE_PATH_ROOT": "{{stateDir}}/goose", "GOOSE_DISABLE_KEYRING": "1" },
+    "instructions": "goose/config/.goosehints"
+  },
+  "userState": [".config/goose", ".local/share/goose"],
   "engine": {
     "style": "tui",
     "launch": {
       "argv": [
         "sh",
         "-c",
-        "if [ -z \"${GOOSE_PROVIDER:-}\" ] && ! grep -qsE '^(active_provider|GOOSE_PROVIDER):' \"$HOME/.config/goose/config.yaml\"; then /root/.local/bin/goose configure || exit; fi; exec /root/.local/bin/goose session \"$@\"",
+        "if [ -n \"${GOOSE_PATH_ROOT:-}\" ]; then cfg=\"$GOOSE_PATH_ROOT/config/config.yaml\"; else cfg=\"$HOME/.config/goose/config.yaml\"; fi; if [ -z \"${GOOSE_PROVIDER:-}\" ] && ! grep -qsE '^(active_provider|GOOSE_PROVIDER):' \"$cfg\"; then /root/.local/bin/goose configure || exit; fi; exec /root/.local/bin/goose session \"$@\"",
         "goose"
       ],
       "env": {

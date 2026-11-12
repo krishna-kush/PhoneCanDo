@@ -23,6 +23,13 @@ extension of ours, `config/phonecando.ts`. Shared image-kind rules:
 - The window title is `π - <folder>`, or `π - <chat name> - <folder>` once
   the chat has a name (`/name`); `surfaces.chatTitle` takes the name.
 
+## State
+
+- Global instructions: `~/.pi/agent/AGENTS.md`.
+- A second pi agent on the machine keeps its state in its own folder
+  (`PI_CODING_AGENT_DIR`); our extension stays in `~/.phonecando/pi`.
+- `userState`: `~/.pi/agent`.
+
 ## Events
 
 - The extension, through `phonecando-event`: `agent_start` raises

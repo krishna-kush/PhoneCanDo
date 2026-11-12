@@ -28,10 +28,26 @@
     "shared": ["phone-tools"],
     "into": ".config/opencode",
     "keep": ["opencode.json"],
-    "required": ["opencode.json"],
-    "instructions": "AGENTS.md"
+    "required": ["opencode.json"]
   },
+  "instructions": ".config/opencode/AGENTS.md",
   "requires": { "linux": "optional", "commands": ["bash", "git", "rg"] },
+  "state": {
+    "env": { "OPENCODE_CONFIG_DIR": "{{stateDir}}/opencode", "OPENCODE_DB": "{{stateDir}}/opencode/opencode.db" },
+    "instructions": "opencode/AGENTS.md",
+    "config": "opencode"
+  },
+  "userState": [
+    ".config/opencode",
+    ".local/share/opencode/opencode-android-phonecando.db",
+    ".local/share/opencode/opencode-android-phonecando.db-wal",
+    ".local/share/opencode/opencode-android-phonecando.db-shm",
+    ".local/state/opencode/model.json",
+    ".local/state/opencode/session.json",
+    ".local/state/opencode/prompt-history.jsonl",
+    ".local/state/opencode/prompt-stash.jsonl",
+    ".local/state/opencode/frecency.jsonl"
+  ],
   "engine": {
     "style": "server",
     "launch": {

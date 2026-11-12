@@ -19,6 +19,15 @@ image-kind rules: `agents/AGENTS.md` §4.
   `Claude Code` until the chat has a title; `surfaces.chatTitle` skips
   that default.
 
+## State
+
+- Global instructions: `~/.claude/CLAUDE.md`.
+- A second Claude Code agent on the machine keeps its sign-in, settings,
+  chats, `.claude.json` and `CLAUDE.md` in its own folder
+  (`CLAUDE_CONFIG_DIR`).
+- `userState`: `~/.claude` and `~/.claude.json`. The install
+  (`~/.local/share/claude`, `~/.local/bin/claude`) is not in them.
+
 ## Events
 
 `--settings` adds our hooks; Claude Code merges them with your settings

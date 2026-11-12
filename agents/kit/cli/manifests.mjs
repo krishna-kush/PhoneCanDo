@@ -12,9 +12,10 @@
 //   - ids and prefixes are unique across all kinds, and at most one kind is
 //     the default (`default: true`: the kind a fresh install starts with);
 //   - the files a manifest names exist: the notice, the config folder and
-//     its overlay, the required files (in the overlay too when full-only),
-//     every shared part, agents/shared/<name>/ with its part.json, and every
-//     runtime's install scripts;
+//     its overlay, the required files and an instructions file in
+//     config.into (configInstructions; each in the overlay too when
+//     full-only), every shared part, agents/shared/<name>/ with its
+//     part.json, and every runtime's install scripts;
 //   - every runtime a kind needs exists and provides the major version it
 //     needs; the families the kind names are ones each of its runtimes
 //     installs on, at least one family is left that they all do, and its
@@ -88,6 +89,18 @@ export function formatProblem(p) {
   return `${p.file}${p.path ? ` ${p.path}` : ''}: ${p.code}: ${p.detail}`;
 }
 
+/**
+ * The kind's instructions file as a file of its packaged config (relative
+ * to config.dir) when it lies in config.into, so the config seeds it; null
+ * when the kind has no config folder or keeps its instructions elsewhere.
+ */
+export function configInstructions(manifest) {
+  const config = manifest.config;
+  const file = manifest.instructions;
+  if (!config?.dir || typeof file !== 'string' || !file.startsWith(`${config.into}/`)) return null;
+  return file.slice(config.into.length + 1);
+}
+
 /** Ant-style glob as Gradle reads config.fullOnly: ** spans folders, * stays in one. */
 export function matchesGlob(path, glob) {
   const g = glob.endsWith('/') ? `${glob}**` : glob;
@@ -132,12 +145,13 @@ function loadOne(root, folder, name, dir, problems) {
   const parts = [];
   if (config?.dir && has('/config/dir', config.dir, 'dir')) {
     const overlay = config.overlay && has('/config/overlay', config.overlay, 'dir');
-    for (const [key, rel] of [...(config.required ?? []).map((f) => ['required', f]), ['instructions', config.instructions]]) {
+    const files = [...(config.required ?? []).map((f) => ['/config/required', f]), ['/instructions', configInstructions(manifest)]];
+    for (const [path, rel] of files) {
       if (!rel) continue;
-      has(`/config/${key}`, join(config.dir, rel), 'file');
+      has(path, join(config.dir, rel), 'file');
       const fullOnly = (config.fullOnly ?? []).some((g) => matchesGlob(rel, g));
-      if (fullOnly && overlay) has(`/config/${key}`, join(config.overlay, rel), 'file');
-      if (fullOnly && !config.overlay) add(`/config/${key}`, 'missing', `${rel} is full-only and no overlay replaces it`);
+      if (fullOnly && overlay) has(path, join(config.overlay, rel), 'file');
+      if (fullOnly && !config.overlay) add(path, 'missing', `${rel} is full-only and no overlay replaces it`);
     }
     for (const part of config.shared ?? []) {
       const loaded = loadPart(root, part, add);

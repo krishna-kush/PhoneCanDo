@@ -42,6 +42,12 @@
     "argv": ["/root/.local/bin/vibe", "--version"],
     "pattern": "vibe (\\d+\\.\\d+\\.\\d+)"
   },
+  "instructions": ".vibe/AGENTS.md",
+  "state": {
+    "env": { "VIBE_HOME": "{{stateDir}}/vibe" },
+    "instructions": "vibe/AGENTS.md"
+  },
+  "userState": [".vibe"],
   "engine": {
     "style": "tui",
     "launch": {

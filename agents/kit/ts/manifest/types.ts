@@ -70,9 +70,21 @@ export interface ConfigAsset {
   keep?: string[];
   /** Files the APK audit requires in the packaged config. */
   required?: string[];
-  /** The global instructions file the image's OS note goes into. */
-  instructions?: string;
   files?: unknown[];
+}
+
+/**
+ * How one agent of the kind keeps its sign-in, settings, chats and global
+ * instructions in a state folder of its own, so a second agent of the kind
+ * can share a machine with the first (which keeps the kind's defaults).
+ */
+export interface AgentState {
+  /** Moves the kind's state into the folder; each value a template with {{stateDir}}, the folder, its one placeholder. */
+  env: Record<string, string>;
+  /** The instructions file, relative to the state folder; set exactly when the kind has `instructions`. */
+  instructions?: string;
+  /** The folder `config.into` becomes, relative to the state folder; only when config.into holds the agent's state. */
+  config?: string;
 }
 
 // --- templates --------------------------------------------------------------
@@ -263,6 +275,16 @@ export interface Manifest {
   payload?: { libs: PayloadLib[] };
   build?: { toolchains: Toolchain[] };
   config?: ConfigAsset;
+  /** The kind's global instructions file, relative to HOME: where the runner writes the OS note and who else is on the machine. */
+  instructions?: string;
+  state?: AgentState;
+  /**
+   * Where the kind keeps a user's sign-in, settings and chats by default,
+   * relative to HOME: deleted when an agent that used them leaves a machine
+   * that stays, so the next agent of the kind there starts clean. Never
+   * what the machine's other agents share (SHARED_HOME in rules.ts).
+   */
+  userState?: string[];
   engine?: Engine;
   events?: EventSource[];
   chats?: Chats;

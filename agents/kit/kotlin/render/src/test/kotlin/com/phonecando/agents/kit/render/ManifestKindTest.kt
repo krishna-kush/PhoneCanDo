@@ -110,7 +110,7 @@ class ManifestKindTest {
   @Test fun launchAndConfig() {
     val k = kind()
     assertEquals("Demo", k.displayName)
-    assertEquals(AgentConfig("agents/demo/config", ".demo", setOf("a.json", "b.json"), null), k.config)
+    assertEquals(AgentConfig("agents/demo/config", ".demo", setOf("a.json", "b.json")), k.config)
     val spec = k.launch(LaunchContext("/lib", File("/h"), File("/t"), "4100", "pw"))
     assertEquals(listOf("/h/bin/demo", "--port", "4100", "--tmp", "/t"), spec.argv)
     assertEquals(mapOf("URL" to "http://127.0.0.1:4100"), spec.env)
@@ -186,10 +186,11 @@ class ManifestKindTest {
         """"web":{"adapter":{"cssVars":{"--z":"bg","--a":"fg"},"authUrl":"/in/","x":[1]}},""" +
         """"chatTitle":"^T (.+)$",""" +
         """"signIn":[{"method":"in-ui","note":"n"}],"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,""" +
-        """"payloadPresent":true,"models":[]},""" +
+        """"payloadPresent":true,"models":[],"stateFolder":false},""" +
         """{"id":"demo","label":"Demo","version":"1","type":"native","channels":["full"],"stability":"preview",""" +
         """"origin":"bundled","isDefault":true,"home":"tui","web":null,"chatTitle":null,"signIn":[],""" +
-        """"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,"payloadPresent":true,"models":[]}]""",
+        """"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,"payloadPresent":true,"models":[],""" +
+        """"stateFolder":false}]""",
       KindView.list(listOf(web, tui), "demo", libs::contains),
     )
     assertEquals("false", KindView.of(tui, false, libs::contains)["isDefault"].toString())
@@ -376,7 +377,8 @@ class ManifestKindTest {
       "sse-parser-not-hooked", "tui-readiness-http", "tui-with-server-blocks", "web-home-no-adapter", "image-linux-optional",
       "image-argv-host-path", "user-config-dir", "user-hooks", "user-id-without-prefix", "user-native", "user-no-engine", "user-web",
       "hook-events-on-server", "hook-event-unknown", "install-no-version-check", "install-family-unknown", "runtimes-without-install",
-      "update-without-install", "install-retries-range",
+      "update-without-install", "install-retries-range", "state-env-empty", "state-without-instructions",
+      "state-config-without-config", "user-state-shared",
     )
     for (name in refused) {
       val e = runCatching { fixture(File(fixtures, "invalid/$name.json")) }.exceptionOrNull()
