@@ -23,6 +23,7 @@ import com.phonecando.runner.engine.image.AgentFiles
 import com.phonecando.runner.engine.image.ImageDir
 import com.phonecando.runner.engine.image.MachineNotes
 import com.phonecando.runner.engine.image.OsNote
+import com.phonecando.runner.engine.image.PhoneCanDoNote
 import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.spawn.ServerSpawner
 import com.phonecando.runner.engine.spawn.TuiSpawner
@@ -60,8 +61,8 @@ internal data class LaunchPlan(
 // an image kind's guest sees it at /root/projects, so its `cd` there cannot
 // fail) and, for an agent that keeps its own state, its state folder with
 // the kind's folders in it (AgentFiles); seeds the kind's config into its
-// config dir (ConfigSeeder, then the image's OS note into the kind's
-// instructions file), for a TUI engine the kit scripts and the agent's
+// config dir (ConfigSeeder, then the note on PhoneCanDo, PhoneCanDoNote,
+// and the image's OS note into the kind's instructions file), for a TUI engine the kit scripts and the agent's
 // empty events file (KitFiles), the agent's inbox folder with its
 // undelivered messages for a kind with an `inbox` block (messages/), and
 // the machine-mates note into every instructions file on the machine
@@ -100,7 +101,14 @@ internal class EngineLauncher(private val context: Context) {
     File(env.getValue("TMPDIR")).mkdirs()
     image.logs.mkdirs()
     val stateDir = AgentFiles.ownState(home, record)?.also { makeState(kind, home, it) }
-    seedConfig(kind, home, stateDir, image)
+    val note = PhoneCanDoNote.Facts(
+      name = record.name,
+      kind = kind.displayName,
+      linux = LINUX_IMAGE in env,
+      full = channel == "full",
+      phoneTools = BridgeAccess.granted(kind.manifest),
+    )
+    seedConfig(kind, home, stateDir, image, note)
     if (kind.style == EngineStyle.TUI) seedKit(home, record.id)
     prepareInbox(record.id)
     refreshMachineNotes(record.imageId, home)
@@ -188,9 +196,10 @@ internal class EngineLauncher(private val context: Context) {
 
   // The kind's assets folder (packaged per variant by the module's Gradle
   // syncAgentConfig task) into its config dir (under HOME, or in the
-  // agent's [stateDir]), pruning files we no longer ship; then the OS note
+  // agent's [stateDir]), pruning files we no longer ship; then the note on
+  // PhoneCanDo ([note]'s parts from the packaged assets) and the OS note
   // into its instructions file. A failure here never blocks a start.
-  private fun seedConfig(kind: AgentKind, home: File, stateDir: File?, image: ImageDir) {
+  private fun seedConfig(kind: AgentKind, home: File, stateDir: File?, image: ImageDir, note: PhoneCanDoNote.Facts) {
     try {
       val config = kind.config
       val dir = kind.configDir(home, stateDir)
@@ -200,10 +209,18 @@ internal class EngineLauncher(private val context: Context) {
     }
     try {
       val instructions = kind.instructionsFile(home, stateDir) ?: return
+      PhoneCanDoNote.apply(instructions, PhoneCanDoNote.body(note, ::notePart))
       OsNote.apply(instructions, image.osNote)
     } catch (e: Exception) {
-      Log.w(TAG, "os note not written", e)
+      Log.w(TAG, "instructions notes not written", e)
     }
+  }
+
+  // One part of the note on PhoneCanDo; null when it is not packaged.
+  private fun notePart(name: String): String? = try {
+    assets.open("${PhoneCanDoNote.ASSET_DIR}/$name").use { it.readBytes().toString(Charsets.UTF_8) }
+  } catch (_: Exception) {
+    null
   }
 
   // The agent's state folder and what the kind keeps in it (AgentFiles);
@@ -266,5 +283,8 @@ internal class EngineLauncher(private val context: Context) {
     const val TAG = "PhoneCanDoEngine"
     const val TYPE_IMAGE = "image"
     const val BROWSER = "BROWSER"
+
+    // engine.env names it only for a Linux image (ImageLayout).
+    const val LINUX_IMAGE = "PHONECANDO_IMAGE"
   }
 }

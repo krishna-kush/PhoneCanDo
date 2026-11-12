@@ -169,6 +169,23 @@ check('agent config', () => {
   }
   return notes.join('; ');
 });
+// The note on PhoneCanDo every agent's instructions get (agents.gradle):
+// each part byte for byte, phone control on full only.
+check('phonecando note', () => {
+  const dir = join(ROOT, 'agents/shared/phonecando-note');
+  const parts = readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
+  const shipped = [];
+  for (const part of parts) {
+    const asset = `assets/agents/shared/phonecando-note/${part}`;
+    if (part === 'phone-control.md' && channel !== 'full') {
+      if (entries.has(asset)) throw new Error(`${channel} ships ${asset}`);
+      continue;
+    }
+    sameBytes(asset, join(dir, part));
+    shipped.push(part);
+  }
+  return shipped.join(', ');
+});
 check('signer', () => {
   if (build === 'debug') {
     const certs = run(tools.apksigner, ['verify', '--print-certs', apk]);

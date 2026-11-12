@@ -22,6 +22,10 @@
 //   agents/shared/phone-tools/tools.json
 //                         the MCP tool table the bridge serves, on every
 //                         channel (each tool names its own channel)
+//   agents/shared/phonecando-note/*.md
+//                         the note on PhoneCanDo an engine start writes into
+//                         every agent's instructions (PhoneCanDoNote), on
+//                         every channel; phone-control.md on full only
 // A native kind's libs (bionic executables named lib*.so) are staged, not
 // committed, at src/agents/<id>/libs/<abi>/ and packaged as jniLibs of each
 // flavor it lists: executed from nativeLibraryDir, the only place SELinux
@@ -79,6 +83,7 @@ def runtimes = (new File(agentsRoot, "runtimes").listFiles()?.findAll { new File
 def kitScriptsDir = new File(agentsRoot, "kit/scripts")
 def kitScripts = ["phonecando-event", "phonecando-open", "phonecando-inbox"]
 def phoneToolsTable = new File(agentsRoot, "shared/phone-tools/tools.json")
+def phonecandoNote = new File(agentsRoot, "shared/phonecando-note")
 
 linuxChannels.each { channel ->
   if (android.productFlavors.findByName(channel) == null) {
@@ -155,6 +160,11 @@ androidComponents {
       from(phoneToolsTable) {
         into "agents/shared/phone-tools"
       }
+      from(phonecandoNote) {
+        include "*.md"
+        if (channel != "full") exclude "phone-control.md"
+        into "agents/shared/phonecando-note"
+      }
       doFirst {
         if (channel in linuxChannels) {
           runtimes.each { rt ->
@@ -167,6 +177,9 @@ androidComponents {
           if (!new File(kitScriptsDir, name).isFile()) {
             throw new GradleException("Missing kit script agents/kit/scripts/${name}")
           }
+        }
+        if (!new File(phonecandoNote, "about.md").isFile()) {
+          throw new GradleException("Missing ${phonecandoNote}/about.md")
         }
         if (!phoneToolsTable.isFile()) {
           throw new GradleException("Missing ${phoneToolsTable}: run node agents/shared/phone-tools/gen-tools-json.mjs")

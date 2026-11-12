@@ -83,7 +83,10 @@ engine's HOME.
 - `PhoneCanDoRunnerModule.kt`: `getPrefix`, `getBuildChannel`, the
   phone-control switch, the `phonecandoLaunchTarget` event, the bridge
   prompts (`pendingPrompts`, `resolveUnlock`, `resolveAccessibility`, event
-  `phonecandoBridgePrompt`; see `bridge.md`), the accessibility guide calls,
+  `phonecandoBridgePrompt`; see `bridge.md`), the `phonecandoRunFinished`
+  event (`{agentId, sessionId}`: a top-level run that finished well, from
+  `AgentAlerts`, in front or not; the app's "Having fun?" card counts
+  them), the accessibility guide calls,
   `canRequestPackageInstalls`, `markSelfUpdatePending`,
   `requestNotificationPermission` and telemetry. `pendingPrompts` also
   lists the agents' links to open, which `resolveOpenUrl` ends (see
@@ -932,7 +935,17 @@ between two marker lines in the kind's instructions file (the manifest's
 `instructions`, `AgentKind.instructionsFile`; opencode: the global
 `AGENTS.md`), replaced where it is on every start (`OsNote`, over the
 shared `MarkedBlock`), and the machine-mates note after it (see Shared
-machines). A failed seed never blocks a start.
+machines). Before it goes the note on PhoneCanDo (`PhoneCanDoNote`, its own
+marked block): what PhoneCanDo is, that the agent runs inside it on a
+phone (short replies, limited memory, the idle stop, `~/projects`, what the
+user can do in the app), its machine (Linux, read from `PHONECANDO_IMAGE` in
+`engine.env`, or Android) and, for a kind with the phone tools, the
+phone-control rules on full (the basic tools on lite and play) and how to
+talk to the other agents. Its parts are `agents/shared/phonecando-note/*.md`
+(packaged by `agents.gradle`, `phone-control.md` on full only), with the
+agent's name and kind filled in, so every kind with an instructions file
+gets the same text; opencode's own `AGENTS.md` is only a header. A failed
+seed never blocks a start.
 
 ## Build channels
 

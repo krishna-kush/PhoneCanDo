@@ -50,7 +50,9 @@ pinned tag (`../ci/host-engine.sh`).
 ## State
 
 - Global instructions: `~/.config/opencode/AGENTS.md`, shipped in our
-  config (`config/AGENTS.md`, `config-lite/` on lite and play).
+  config (`config/AGENTS.md`, `config-lite/` on lite and play) as a header
+  only; the runner adds the note on PhoneCanDo every kind gets (phone
+  control, other agents: `agents/shared/phonecando-note/`) on every start.
 - A second opencode agent on the machine gets its own config folder
   (`OPENCODE_CONFIG_DIR`, which replaces `~/.config/opencode`; the runner
   seeds our config there) and its own database (`OPENCODE_DB`: sign-in,

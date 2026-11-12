@@ -24,7 +24,8 @@ agents/
 │   ├── native/         stage.mjs (stage a payload by its manifest), verify-elf.sh
 │   └── cli/            check, list (CI matrices), new (scaffolds), manifests loader, check-deps
 ├── builtin/        the ONLY place code hooks are registered (Kotlin BuiltinHooks)
-├── shared/         kind-neutral code packaged into kinds (phone-tools/ + part.json)
+├── shared/         kind-neutral code packaged into kinds (phone-tools/ + part.json), and
+│                   phonecando-note/: the note on PhoneCanDo the runner writes into every agent's instructions
 ├── runtimes/<id>/  runtime plugins (runtime.json + install scripts): installed only into a machine whose agent needs them
 ├── native/<id>/    built by us for Android, staged into the APK lib dir, runs outside proot
 └── image/<id>/     installed into its machine's image when the agent is made, runs in proot; data only
