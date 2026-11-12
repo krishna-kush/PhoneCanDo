@@ -34,11 +34,20 @@ class AgentStore(
     return all().firstOrNull { MessageDigest.isEqual(it.bridgeToken.toByteArray(Charsets.UTF_8), want) }
   }
 
-  /** A new agent with a fresh id, password and bridge token. */
-  fun create(kind: String, name: String, imageId: String): AgentRecord = synchronized(lock) {
+  /**
+   * A new agent with a fresh id, password and bridge token. A machine takes
+   * any number of agents; one that joins an agent of its own kind there
+   * keeps its own state (ownState) and starts with the kind's install as
+   * that agent has it (installedVersion: one install per kind and
+   * machine). Throws KindCannotShare when the kind cannot keep its own
+   * state ([ownStateSupported] false).
+   */
+  fun create(kind: String, name: String, imageId: String, ownStateSupported: Boolean = false): AgentRecord = synchronized(lock) {
     require(kind.isNotBlank()) { "agent kind is empty" }
     require(isValidImageId(imageId)) { "invalid image id" }
     val list = loaded()
+    val mate = list.firstOrNull { it.kind == kind && it.imageId == imageId }
+    if (mate != null && !ownStateSupported) throw KindCannotShare(kind)
     val record = AgentRecord(
       id = unique(list.map { it.id }.toSet(), ID_BYTES),
       kind = kind,
@@ -48,6 +57,8 @@ class AgentStore(
       password = hex(SECRET_BYTES),
       bridgeToken = unique(list.map { it.bridgeToken }.toSet(), SECRET_BYTES),
       createdAt = clock(),
+      installedVersion = mate?.installedVersion,
+      ownState = mate != null,
     )
     save(list + record)
     record
@@ -82,8 +93,18 @@ class AgentStore(
     }
   }
 
-  /** What the kind's install put in the agent's image, read back by its version check. */
-  fun setInstalledVersion(id: String, version: String): AgentRecord = update(id) { it.copy(installedVersion = version) }
+  /**
+   * What the kind's install put in the agent's image, read back by its
+   * version check. The install is one copy on the machine, so every agent
+   * of that kind there gets it; returns the agent's own record.
+   */
+  fun setInstalledVersion(id: String, version: String): AgentRecord = synchronized(lock) {
+    val list = loaded()
+    val target = requireNotNull(list.firstOrNull { it.id == id }) { "unknown agent" }
+    val changed = list.map { if (it.kind == target.kind && it.imageId == target.imageId) it.copy(installedVersion = version) else it }
+    save(changed)
+    changed.first { it.id == id }
+  }
 
   /** The local model the agent runs on; null: its own setup. */
   fun setModel(id: String, model: String?): AgentRecord = update(id) { it.copy(model = model) }
@@ -183,6 +204,7 @@ class AgentStore(
           ranBefore = o.optBoolean("ranBefore", false),
           installedVersion = if (o.isNull("installedVersion")) null else o.optString("installedVersion", "").ifEmpty { null },
           model = if (o.isNull("model")) null else o.optString("model", "").ifEmpty { null },
+          ownState = o.optBoolean("ownState", false),
         )
       }
       return out
@@ -203,7 +225,8 @@ class AgentStore(
             .put("createdAt", a.createdAt)
             .put("ranBefore", a.ranBefore)
             .put("installedVersion", a.installedVersion ?: JSONObject.NULL)
-            .put("model", a.model ?: JSONObject.NULL),
+            .put("model", a.model ?: JSONObject.NULL)
+            .put("ownState", a.ownState),
         )
       }
       return JSONObject().put("agents", array).toString(2)

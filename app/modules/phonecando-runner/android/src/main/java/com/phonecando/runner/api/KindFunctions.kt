@@ -10,6 +10,7 @@ import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.WebPairing
+import com.phonecando.runner.engine.image.AgentFiles
 import com.phonecando.runner.engine.image.ImageDir
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
@@ -55,7 +56,10 @@ internal fun ModuleDefinitionBuilder.kindFunctions(context: () -> Context) {
 
   // { cmd, env, cwd }: the kind's TUI client attached to this agent's engine
   // (its port, or its last one) in [projectDir]; [sessionId] continues that chat.
+  // An agent with its own state folder (AgentFiles) hands it on, so the
+  // client reads the same settings as its engine.
   Function("clientRecipe") { agentId: String, projectDir: String, sessionId: String? ->
+
     val ctx = context()
     val (record, kind) = agentAndKind(ctx, agentId)
     val image = ImageDir.of(ctx.filesDir, record.imageId)
@@ -69,6 +73,7 @@ internal fun ModuleDefinitionBuilder.kindFunctions(context: () -> Context) {
         password = record.password,
         projectDir = projectDir,
         sessionId = sessionId,
+        stateDir = AgentFiles.ownState(image.home, record)?.path,
       ),
     ) ?: throw IllegalArgumentException("${kind.displayName} has no terminal client")
     mapOf("cmd" to recipe.cmd, "env" to recipe.env, "cwd" to recipe.cwd)

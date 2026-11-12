@@ -291,7 +291,7 @@ class PathRedactorTest {
   private val window = 16 * 1024
   private val cap = 2048
 
-  // What EngineWatch.stderrTail does with engine.log, minus the file.
+  // What EngineWatch.stderrTail does with the engine log, minus the file.
   private fun tailOf(log: String, windowBytes: Int = window): String? {
     val bytes = log.toByteArray(Charsets.UTF_8)
     val start = maxOf(0, bytes.size - windowBytes)

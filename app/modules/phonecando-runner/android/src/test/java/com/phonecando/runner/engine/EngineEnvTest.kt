@@ -1,12 +1,15 @@
 package com.phonecando.runner.engine
 
+import com.phonecando.agents.kit.render.GuestEnvPolicy
+import com.phonecando.agents.kit.render.ImageLaunch
 import com.phonecando.agents.kit.term.TermTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
-// JVM checks for the engine environment's layers, the agent tag and a TUI's
-// terminal values.
+// JVM checks for the engine environment's layers, the agent tag, a TUI's
+// terminal values and what an image kind's engine carries past its
+// machine's launch.conf.
 class EngineEnvTest {
   private val base = mapOf("PATH" to "/system/bin", "HOME" to "/data/app-home", "PHONECANDO_BRIDGE_TOKEN" to "stale")
 
@@ -45,6 +48,34 @@ class EngineEnvTest {
     assertEquals("15;0", EngineEnv.terminal(dark)["COLORFGBG"])
     assertEquals("0;15", EngineEnv.terminal(light)["COLORFGBG"])
     assertEquals("xterm-256color", EngineEnv.terminal(light)["TERM"])
+  }
+
+  @Test fun anImageKindCarriesWhatItsMachineUnsets() {
+    val env = EngineEnv.build(
+      base = base + ("${ImageLaunch.CARRY_PREFIX}STALE" to "old"),
+      image = mapOf("HOME" to "/img/home"),
+      kind = mapOf("ANTHROPIC_AUTH_TOKEN" to "key", "HOME" to "/root"),
+      bridgeUrl = "http://127.0.0.1:5000",
+      bridgeToken = "tok",
+      channel = "full",
+      agentId = "a1",
+    )
+    // The machine's union: another agent's native kind keeps these from guests.
+    val unset = listOf("PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "OPENCODE_SERVER_PASSWORD", "ANTHROPIC_AUTH_TOKEN")
+    val carry = GuestEnvPolicy.carry(env.keys, unset)
+    assertEquals(setOf("PHONECANDO_BRIDGE_URL", "PHONECANDO_BRIDGE_TOKEN", "ANTHROPIC_AUTH_TOKEN"), carry)
+    val carried = EngineEnv.carry(env, carry)
+    for (name in carry) assertFalse(name, carried.containsKey(name))
+    assertEquals("http://127.0.0.1:5000", carried["${ImageLaunch.CARRY_PREFIX}PHONECANDO_BRIDGE_URL"])
+    assertEquals("tok", carried["${ImageLaunch.CARRY_PREFIX}PHONECANDO_BRIDGE_TOKEN"])
+    assertEquals("key", carried["${ImageLaunch.CARRY_PREFIX}ANTHROPIC_AUTH_TOKEN"])
+    assertFalse(carried.containsKey("${ImageLaunch.CARRY_PREFIX}OPENCODE_SERVER_PASSWORD"))
+    // Only this launch sets carry names; the rest stays as it was.
+    assertFalse(carried.containsKey("${ImageLaunch.CARRY_PREFIX}STALE"))
+    assertEquals("a1", carried["PHONECANDO_AGENT"])
+    assertEquals("/root", carried["HOME"])
+    // Nothing to carry: the env as it was, less any stale carry name.
+    assertEquals(env - "${ImageLaunch.CARRY_PREFIX}STALE", EngineEnv.carry(env, emptySet()))
   }
 
   @Test fun noBridgeMeansNoBridgeValues() {

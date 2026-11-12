@@ -1,8 +1,9 @@
 package com.phonecando.runner.agents
 
 /**
- * One agent: a running instance of a kind with its own image, port, password
- * and bridge token. Created and deleted together with its image. The token
+ * One agent: a running instance of a kind with its own port, password and
+ * bridge token, on a machine (an image) it may share with other agents, as
+ * apps share a PC. JS deletes the machine with its last agent. The token
  * never leaves native code; the password reaches JS only inside the TUI
  * client's recipe (clientRecipe), which JS hands straight to the PTY.
  */
@@ -20,13 +21,22 @@ data class AgentRecord(
     val createdAt: Long,
     /** Its engine was ready at least once: a relaunch adds the kind's resume args. */
     val ranBefore: Boolean = false,
-    /** The version its kind's install put in its image (recordInstall); null before that. */
+    /**
+     * The version its kind's install put in its image (recordInstall); null
+     * before that. One install serves every agent of the kind on a machine.
+     */
     val installedVersion: String? = null,
     /**
      * The local model it runs on (a model id in files/models/); null: the
      * agent's own setup. Only a kind with a `models` block gets one.
      */
     val model: String? = null,
+    /**
+     * It keeps its sign-in, settings, chats and global instructions in its
+     * own folder on the machine (engine/image/AgentFiles), not where its
+     * kind keeps them: it was made while another agent of its kind was there.
+     */
+    val ownState: Boolean = false,
 )
 
 /** Read access to the agents, for the bridge (caller identity) and redaction. */
@@ -37,4 +47,7 @@ interface AgentDirectory {
 
     /** The agent a bridge request comes from; null for an unknown token. */
     fun byBridgeToken(token: String): AgentRecord?
+
+    /** The agents on the machine [imageId], oldest first. */
+    fun onMachine(imageId: String): List<AgentRecord> = all().filter { it.imageId == imageId }
 }

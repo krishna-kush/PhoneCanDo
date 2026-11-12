@@ -113,8 +113,9 @@ object TelemetryRecorder {
   }
 
   // The engine stderr tail for engineDied: the last ≤ STDERR_TAIL_BYTES of
-  // `window` (the end of the image's logs/engine.log; `midFile` when it does not start at the
-  // file's first byte), redacted with this app's dirs and `secrets`.
+  // `window` (the end of the agent's logs/engine-<agentId>.log; `midFile`
+  // when it does not start at the file's first byte), redacted with this
+  // app's dirs and `secrets`.
   fun redactedTail(window: ByteArray, midFile: Boolean, secrets: Collection<String>): String? =
     redactor.tail(window, midFile, STDERR_TAIL_BYTES, secrets)
 

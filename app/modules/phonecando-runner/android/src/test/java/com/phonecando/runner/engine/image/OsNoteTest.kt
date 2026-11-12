@@ -71,7 +71,8 @@ class OsNoteTest {
     assertEquals(block("Fedora 42"), agents.readText())
   }
 
-  @Test fun textAfterTheBlockSurvives() {
-    assertEquals("a\n\nb\n\n" + block("n"), OsNote.merge("a\n\n" + block("old") + "b\n", "n"))
+  @Test fun textAfterTheBlockSurvivesAndTheBlockKeepsItsPlace() {
+    assertEquals("a\n\n" + block("n") + "b\n", OsNote.merge("a\n\n" + block("old") + "b\n", "n"))
+    assertEquals("a\n\nb\n", OsNote.merge("a\n\n" + block("old") + "b\n", null))
   }
 }

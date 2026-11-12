@@ -33,7 +33,7 @@ class ConfigSeederTest {
     File(assets, "kind-config/$rel").apply { parentFile.mkdirs() }.writeText(text)
   }
 
-  private fun seed() = ConfigSeeder(tree).seed(config, home)
+  private fun seed() = ConfigSeeder(tree).seed(config, dest)
 
   @After fun cleanup() {
     root.deleteRecursively()

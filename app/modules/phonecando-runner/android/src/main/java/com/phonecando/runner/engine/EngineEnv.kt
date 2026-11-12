@@ -1,5 +1,6 @@
 package com.phonecando.runner.engine
 
+import com.phonecando.agents.kit.render.ImageLaunch
 import com.phonecando.agents.kit.term.TermTheme
 
 // One engine's environment, in layers: our own process env, then the
@@ -12,7 +13,11 @@ import com.phonecando.agents.kit.term.TermTheme
 // starts, which is how a stop finds every process of an agent (proc/). It
 // is set last, so no image or kind can change it. A local model server
 // carries AGENT=model-server and MODEL=<model id> (models/ModelServer).
-// Pure.
+// An image kind's engine is a guest of its machine, whose launch.conf
+// unsets what any agent's kind there keeps from guests (kit GuestEnvPolicy:
+// the machine's union); carry() renames the ones it still needs
+// (GuestEnvPolicy.carry) past the launcher (kit ImageLaunch.CARRY_PREFIX +
+// name), and its launch script puts them back. Pure.
 object EngineEnv {
   const val AGENT = "PHONECANDO_AGENT"
 
@@ -63,4 +68,12 @@ object EngineEnv {
     env[AGENT] = agentId
     return env
   }
+
+  /**
+   * [env] with each of [names] renamed to its carry name (kit
+   * ImageLaunch.carried). Carry names are never inherited or taken from a
+   * file: only this launch sets them.
+   */
+  fun carry(env: Map<String, String>, names: Set<String>): Map<String, String> =
+    ImageLaunch.carried(env.filterKeys { !it.startsWith(ImageLaunch.CARRY_PREFIX) }, names)
 }

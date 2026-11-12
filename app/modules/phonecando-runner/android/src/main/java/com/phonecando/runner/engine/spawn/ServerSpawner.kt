@@ -4,7 +4,8 @@ import java.io.File
 
 // A server engine: a plain process from the native-library dir, in [cwd]
 // (its launch cwd, else HOME), with exactly the environment given and its
-// stdout and stderr in <image>/logs/engine.log.
+// stdout and stderr in its agent's log, <image>/logs/engine-<agentId>.log
+// (LaunchPlan.logFile).
 internal object ServerSpawner {
   fun spawn(argv: List<String>, env: Map<String, String>, cwd: File, logFile: File): ServerProcess {
     val pb = ProcessBuilder(argv)

@@ -3,16 +3,18 @@ package com.phonecando.runner.agents
 import com.phonecando.agents.kit.AgentConfig
 import java.io.File
 
-// Copies a kind's config from the assets into the engine HOME on every start.
-// A manifest of the files it copied lets the next start delete the ones we no
-// longer ship (a renamed plugin folder would otherwise register its tools
-// twice). Only files listed in that manifest are ever deleted: user files and
-// the keep-if-present ones are never touched. Pure Kotlin.
+// Copies a kind's config from the assets into its config dir on every start
+// (kit AgentKind.configDir: under the engine HOME, or in the agent's own
+// state folder). A manifest of the files it copied lets the next start
+// delete the ones we no longer ship (a renamed plugin folder would otherwise
+// register its tools twice). Only files listed in that manifest are ever
+// deleted: user files and the keep-if-present ones are never touched. Pure
+// Kotlin.
 class ConfigSeeder(private val assets: AssetTree) {
-  fun seed(config: AgentConfig, home: File) {
+  fun seed(config: AgentConfig, dest: File) {
     val top = assets.list(config.assetDir).orEmpty()
     if (top.isEmpty()) return // dev build without staged config: skip silently
-    val dest = File(home, config.homeDir).apply { mkdirs() }
+    dest.mkdirs()
     val seeded = sortedSetOf<String>()
     for (name in top) copy("${config.assetDir}/$name", name, dest, config.keepIfPresent, seeded)
     prune(dest, readManifest(dest) - seeded - config.keepIfPresent)

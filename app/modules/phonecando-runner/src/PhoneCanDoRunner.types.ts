@@ -19,6 +19,8 @@ export type NativeAgent = {
   needsInstall: boolean;
   /** The local model it runs on (a model id of the models module); null: its own setup. */
   model: string | null;
+  /** It keeps its sign-in, settings and chats in its own folder: it joined an agent of its kind on its machine. */
+  ownState: boolean;
 };
 
 /** An install or update script rendered for one agent and package family; it prints `@phase <name>` before each of `phases`. */

@@ -2,6 +2,7 @@ package com.phonecando.runner.agents.install
 
 import com.phonecando.agents.kit.render.KindView
 import com.phonecando.runner.agents.KindCatalog
+import com.phonecando.runner.agents.TestKinds
 import com.phonecando.runner.engine.EngineStartError
 import com.phonecando.runner.engine.EngineStartException
 import kotlinx.serialization.json.Json
@@ -103,6 +104,36 @@ class AgentInstallsTest {
 
   @Test fun anImageKindKeepsItsEnvInTheImage() {
     assertEquals(emptyList<String>(), installs.guestUnset(demo.id))
+  }
+
+  @Test fun theMachineUnsetsWhatAnyOfItsAgentsKindKeeps() {
+    // The repo's kinds: opencode is native and keeps its bridge and
+    // secrets from guests; an image kind keeps nothing.
+    val repo = AgentInstalls(fx.store, TestKinds.catalog)
+    val opencode = TestKinds.catalog.get("opencode")!!.guestUnset
+    assertTrue(opencode.isNotEmpty())
+    val image = TestKinds.catalog.all().first { it.manifest.type == "image" }
+    val guest = fx.store.create(image.id, "Guest", "m1")
+    assertEquals(emptyList<String>(), repo.guestUnset(guest.id))
+    val oc = fx.store.create("opencode", "Oc", "m1")
+    val oc2 = fx.store.create("opencode", "Oc 2", "m1", ownStateSupported = true)
+    // The same list whichever agent asks, each name once.
+    assertEquals(opencode, repo.guestUnset(guest.id))
+    assertEquals(opencode, repo.guestUnset(oc.id))
+    assertEquals(opencode, repo.guestUnset(oc2.id))
+    // Another machine, and a kind this build lacks (demo here), add nothing.
+    assertEquals(emptyList<String>(), repo.machineUnset("img1"))
+    assertEquals(emptyList<String>(), repo.guestUnset(fx.store.create(image.id, "Apart", "m2").id))
+  }
+
+  @Test fun anInstallServesEveryAgentOfTheKindOnTheMachine() {
+    val mate = fx.store.create("demo", "Demo 2", "img1", ownStateSupported = true)
+    assertTrue(mate.ownState)
+    installs.recordInstall(mate.id, "demo 2.0.0\n")
+    assertEquals("2.0.0", fx.store.get(demo.id)!!.installedVersion)
+    InstallGate.check(kinds.get("demo")!!, fx.store.get(demo.id)!!)
+    // A third agent there starts installed.
+    assertEquals("2.0.0", fx.store.create("demo", "Demo 3", "img1", ownStateSupported = true).installedVersion)
   }
 
   @Test fun kindsBindToTheRuntimesTheyNeed() {

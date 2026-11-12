@@ -7,13 +7,18 @@ import java.io.File
 // The part of an image the engine host knows (lre ImageLayout, read here
 // directly so this module never depends on lre): `<filesDir>/images/<id>/`
 // with home/, tmp/, logs/ and run/engine.env, plus the optional
-// run/os-note.md. The Linux module creates and fills it; we only read.
+// run/os-note.md. The Linux module creates and fills it; we only read, and
+// write each engine's log into logs/ (one per agent: a machine may run
+// several).
 class ImageDir(val root: File) {
   val home: File get() = File(root, "home")
   val tmp: File get() = File(root, "tmp")
   val logs: File get() = File(root, "logs")
   val engineEnv: File get() = File(File(root, "run"), "engine.env")
   val osNote: File get() = File(File(root, "run"), "os-note.md")
+
+  /** A server engine's stdout and stderr (ServerSpawner); read back for telemetry's log tail. */
+  fun engineLog(agentId: String) = File(logs, "engine-$agentId.log")
 
   /**
    * The engine's environment for this image (engine.env), with HOME and

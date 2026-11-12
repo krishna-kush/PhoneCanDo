@@ -12,7 +12,6 @@ import com.phonecando.runner.agents.install.InstallGate
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.bridge.Bridge
 import com.phonecando.runner.bridge.BridgeHandle
-import com.phonecando.runner.engine.events.KitFiles
 import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.proc.OsSignals
 import com.phonecando.runner.engine.proc.ProcessReaper
@@ -678,7 +677,7 @@ internal class EngineSupervisor(
     val terminal = slot.terminal
     slot.events = try {
       if (terminal != null) {
-        streams.openTui(slot.agentId, plan.kind, terminal, KitFiles.events(plan.home))
+        streams.openTui(slot.agentId, plan.kind, terminal, plan.eventsFile)
       } else {
         streams.open(slot.agentId, plan.kind, slot.port ?: return, plan.record.password)
       }

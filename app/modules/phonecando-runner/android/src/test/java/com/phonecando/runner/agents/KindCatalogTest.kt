@@ -1,7 +1,6 @@
 package com.phonecando.runner.agents
 
 import com.phonecando.agents.builtin.BuiltinHooks
-import com.phonecando.agents.kit.AgentConfig
 import com.phonecando.agents.kit.manifest.Origin
 import com.phonecando.agents.kit.render.KindView
 import com.phonecando.runner.agents.user.UserKindRules
@@ -34,7 +33,13 @@ class KindCatalogTest {
     // Every repo kind loads, with the repo's runtimes.
     assertEquals(TestKinds.assets.list("agents")!!.filter { it !in KindCatalog.NOT_KINDS }, catalog.all().map { it.id })
     // What ConfigSeeder got from the old OpencodeKind, so HOME stays as it was.
-    assertEquals(AgentConfig("agents/opencode/config", ".config/opencode", setOf("opencode.json"), "AGENTS.md"), opencode.config)
+    val config = checkNotNull(opencode.config)
+    assertEquals("agents/opencode/config", config.assetDir)
+    assertEquals(".config/opencode", config.homeDir)
+    assertEquals(setOf("opencode.json"), config.keepIfPresent)
+    val home = File(root, "home")
+    assertEquals(File(home, ".config/opencode"), opencode.configDir(home, null))
+    assertEquals(File(home, ".config/opencode/AGENTS.md"), opencode.instructionsFile(home, null))
     assertNull(catalog.get("nope"))
   }
 

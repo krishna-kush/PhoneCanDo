@@ -8,14 +8,20 @@ import com.phonecando.agents.kit.LaunchContext
 import com.phonecando.agents.kit.ModelEndpoint
 import com.phonecando.agents.kit.ProjectDir
 import com.phonecando.agents.kit.manifest.EngineStyle
+import com.phonecando.agents.kit.render.GuestEnvPolicy
 import com.phonecando.agents.kit.render.ImageLaunch
 import com.phonecando.agents.kit.render.ManifestKind
 import com.phonecando.runner.TelemetryRecorder
 import com.phonecando.runner.agents.AgentRecord
+import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.AssetManagerTree
 import com.phonecando.runner.agents.ConfigSeeder
+import com.phonecando.runner.agents.KindCatalogs
+import com.phonecando.runner.agents.install.AgentInstalls
 import com.phonecando.runner.engine.events.KitFiles
+import com.phonecando.runner.engine.image.AgentFiles
 import com.phonecando.runner.engine.image.ImageDir
+import com.phonecando.runner.engine.image.MachineNotes
 import com.phonecando.runner.engine.image.OsNote
 import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.spawn.ServerSpawner
@@ -37,24 +43,34 @@ internal data class LaunchPlan(
   val resume: Boolean = record.ranBefore,
   /** The local model server the agent runs on (LocalModelBinding); null: its own setup. Holds the server's key. */
   val model: ModelEndpoint? = null,
+  /** The agent's own state folder (AgentFiles), made; null: it keeps its state where its kind does. */
+  val stateDir: File? = null,
 ) {
-  val logFile: File get() = File(image.logs, "engine.log")
+  /** A server engine's output; per agent, as a machine may run several engines. */
+  val logFile: File get() = image.engineLog(record.id)
+
+  /** A TUI engine's events file, host path (KitFiles). */
+  val eventsFile: File get() = KitFiles.events(home, record.id)
 }
 
 // Turns an agent into a running engine process. plan() reads the image
 // (engine.env), makes the work folder in HOME ({{projectDir}}, ProjectDir;
 // an image kind's guest sees it at /root/projects, so its `cd` there cannot
-// fail), seeds the kind's config into the image HOME (ConfigSeeder,
-// then the image's OS note into the kind's instructions file) and, for a
-// TUI engine, the kit scripts and an empty events file (KitFiles); spawn()
-// renders the kind's launch (its resume args when the agent ran before, its
-// local model's wiring when it has one; an image kind through its image's
-// shell) and starts it in its cwd (HOME when it names none; an image kind's
-// guest sh changes dir itself) with the layered environment (EngineEnv) by
-// the kind's engine style: a server from the native-library dir, the only
+// fail) and, for an agent that keeps its own state, its state folder with
+// the kind's folders in it (AgentFiles); seeds the kind's config into its
+// config dir (ConfigSeeder, then the image's OS note into the kind's
+// instructions file), for a TUI engine the kit scripts and the agent's
+// empty events file (KitFiles), and the machine-mates note into every
+// instructions file on the machine (MachineNotes). spawn() renders the kind's launch (its resume args when
+// the agent ran before, its local model's wiring when it has one, its
+// state folder; an image kind through its image's shell, carrying what
+// the machine's launch.conf would take from it: EngineEnv.carry) and
+// starts it in its cwd (HOME when it names none; an image kind's guest sh
+// changes dir itself) with the layered environment (EngineEnv) by the
+// kind's engine style: a server from the native-library dir, the only
 // place Android lets us exec, with stdout + stderr in
-// <image>/logs/engine.log (ServerSpawner); a TUI on a PTY of its own, with
-// what a terminal program needs in its env (TuiSpawner).
+// <image>/logs/engine-<agentId>.log (ServerSpawner); a TUI on a PTY of its
+// own, with what a terminal program needs in its env (TuiSpawner).
 internal class EngineLauncher(private val context: Context) {
   private val libDir: String = context.applicationInfo.nativeLibraryDir
   private val assets by lazy { AssetManagerTree(context.assets) }
@@ -79,9 +95,11 @@ internal class EngineLauncher(private val context: Context) {
     ProjectDir.of(home).mkdirs()
     File(env.getValue("TMPDIR")).mkdirs()
     image.logs.mkdirs()
-    seedConfig(kind, home, image)
-    if (kind.style == EngineStyle.TUI) seedKit(home)
-    return LaunchPlan(record, kind, image, home, env, requestedAt)
+    val stateDir = AgentFiles.ownState(home, record)?.also { makeState(kind, home, it) }
+    seedConfig(kind, home, stateDir, image)
+    if (kind.style == EngineStyle.TUI) seedKit(home, record.id)
+    refreshMachineNotes(record.imageId, home)
+    return LaunchPlan(record, kind, image, home, env, requestedAt, stateDir = stateDir)
   }
 
   /**
@@ -102,8 +120,28 @@ internal class EngineLauncher(private val context: Context) {
       resume = plan.resume,
       model = plan.model,
       bridgeUrl = bridgeUrl.orEmpty(),
+      stateDir = plan.stateDir,
     )
-    val spec = plan.kind.launch(ctx)
+    val first = plan.kind.launch(ctx)
+    val tui = plan.kind.style == EngineStyle.TUI
+    val kitHome = kitHome(plan)
+    val built = EngineEnv.build(
+      base = System.getenv(),
+      image = if (tui) plan.imageEnv + EngineEnv.terminal(TerminalThemes.current) + browser(plan, kitHome) else plan.imageEnv,
+      kind = first.env,
+      bridgeUrl = bridgeUrl,
+      bridgeToken = plan.record.bridgeToken,
+      channel = channel,
+      agentId = plan.record.id,
+      eventsFile = if (tui) KitFiles.events(kitHome, plan.record.id).path else null,
+    )
+    // An image kind's engine is a guest of its machine: what launch.conf
+    // unsets there (for another agent's kind) and this engine needs goes
+    // in under its carry name, and the launch, rendered again with it,
+    // puts it back.
+    val carry = if (plan.kind.manifest.type == TYPE_IMAGE) GuestEnvPolicy.carry(built.keys, machineUnset(plan.record.imageId)) else emptySet()
+    val spec = if (carry.isEmpty()) first else plan.kind.launch(ctx.copy(carry = carry))
+    val env = EngineEnv.carry(built, carry)
     if (counted) TelemetryRecorder.engineStartRequested()
     val binary = File(spec.argv.first())
     if (!binary.exists()) {
@@ -111,18 +149,6 @@ internal class EngineLauncher(private val context: Context) {
       throw missing(plan.kind)
     }
     if (!binary.canExecute()) binary.setExecutable(true)
-    val tui = plan.kind.style == EngineStyle.TUI
-    val kitHome = kitHome(plan)
-    val env = EngineEnv.build(
-      base = System.getenv(),
-      image = if (tui) plan.imageEnv + EngineEnv.terminal(TerminalThemes.current) + browser(plan, kitHome) else plan.imageEnv,
-      kind = spec.env,
-      bridgeUrl = bridgeUrl,
-      bridgeToken = plan.record.bridgeToken,
-      channel = channel,
-      agentId = plan.record.id,
-      eventsFile = if (tui) KitFiles.events(kitHome).path else null,
-    )
     val cwd = spec.cwd?.let(::File) ?: plan.home
     return try {
       if (tui) {
@@ -155,31 +181,68 @@ internal class EngineLauncher(private val context: Context) {
   }
 
   // The kind's assets folder (packaged per variant by the module's Gradle
-  // syncAgentConfig task) into its config dir under HOME, pruning files we
-  // no longer ship; then the OS note. A failure here never blocks a start.
-  private fun seedConfig(kind: AgentKind, home: File, image: ImageDir) {
-    val config = kind.config ?: return
+  // syncAgentConfig task) into its config dir (under HOME, or in the
+  // agent's [stateDir]), pruning files we no longer ship; then the OS note
+  // into its instructions file. A failure here never blocks a start.
+  private fun seedConfig(kind: AgentKind, home: File, stateDir: File?, image: ImageDir) {
     try {
-      seeder.seed(config, home)
+      val config = kind.config
+      val dir = kind.configDir(home, stateDir)
+      if (config != null && dir != null) seeder.seed(config, dir)
     } catch (e: Exception) {
       Log.w(TAG, "agent config seed failed", e)
     }
-    val instructions = config.instructionsFile ?: return
     try {
-      OsNote.apply(File(File(home, config.homeDir), instructions), image.osNote)
+      val instructions = kind.instructionsFile(home, stateDir) ?: return
+      OsNote.apply(instructions, image.osNote)
     } catch (e: Exception) {
       Log.w(TAG, "os note not written", e)
     }
   }
 
-  // The kit scripts and an empty events file (KitFiles); a TUI that cannot
-  // raise events still runs, so a failure here never blocks a start.
-  private fun seedKit(home: File) {
+  // The agent's state folder and what the kind keeps in it (AgentFiles);
+  // a kind that cannot take one fails its launch with the reason, so a
+  // failure here never blocks a start.
+  private fun makeState(kind: AgentKind, home: File, stateDir: File) {
     try {
-      KitFiles.prepare(assets, home)
+      AgentFiles.makeState(kind, home, stateDir)
+    } catch (e: Exception) {
+      Log.w(TAG, "state folder not made", e)
+    }
+  }
+
+  // The kit scripts and the agent's empty events file (KitFiles); a TUI
+  // that cannot raise events still runs, so a failure here never blocks a
+  // start.
+  private fun seedKit(home: File, agentId: String) {
+    try {
+      KitFiles.prepare(assets, home, agentId)
     } catch (e: Exception) {
       Log.w(TAG, "kit scripts not seeded", e)
     }
+  }
+
+  // Who else is on the machine, in every agent's instructions there; a
+  // note that cannot be written never blocks a start.
+  private fun refreshMachineNotes(imageId: String, home: File) {
+    try {
+      MachineNotes(AgentStores.get(context), KindCatalogs.get(context)::get).refresh(imageId, home) { agent, e ->
+        Log.w(TAG, "machine note for ${agent.id} not written", e)
+      }
+    } catch (e: Exception) {
+      Log.w(TAG, "machine notes not written", e)
+    }
+  }
+
+  // What the machine's launch.conf unsets for its guests (JS writes it
+  // before each start of any agent there), read on every spawn so a
+  // relaunch sees an agent that joined since; carrying a name it does not
+  // unset is harmless. Nothing to carry when it cannot be read.
+  private fun machineUnset(imageId: String): List<String> = try {
+    AgentInstalls(AgentStores.get(context), KindCatalogs.get(context)).machineUnset(imageId)
+  } catch (e: Exception) {
+    Log.w(TAG, "guest unset not read", e)
+    emptyList()
   }
 
   private companion object {

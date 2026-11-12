@@ -77,6 +77,7 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   openAppInfoSettings(): string;
   requestNotificationPermission(): string;
   listAgents(): NativeAgent[];
+  /** Throws kind_cannot_share when the machine has an agent of a kind that cannot keep a second agent's state apart. */
   createAgent(params: { kind: string; name: string; imageId: string }): NativeAgent;
   renameAgent(id: string, name: string): NativeAgent;
   deleteAgent(id: string): Promise<boolean>;
@@ -106,6 +107,7 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   pairWebUi(agentId: string): Promise<string>;
   clientRecipe(agentId: string, projectDir: string, sessionId: string | null): NativeClientRecipe;
   isEngineIdle(agentId: string): boolean;
+  /** What the agent's machine keeps from its guests: the same for every agent on it. */
   guestUnset(agentId: string): string[];
   installPlan(agentId: string, family: string): NativeInstallPlan | null;
   updatePlan(agentId: string, family: string): NativeInstallPlan | null;

@@ -149,4 +149,63 @@ class AgentStoreTest {
     s.create("opencode", "A", "i1")
     assertEquals(1, store().all().size)
   }
+
+  @Test fun aSecondAgentOfAKindKeepsItsOwnState() {
+    val s = store()
+    val first = s.create("user.claude", "One", "m1", ownStateSupported = true)
+    assertFalse(first.ownState)
+    // Another kind on the machine, or the kind on another machine, shares nothing.
+    assertFalse(s.create("opencode", "Other", "m1").ownState)
+    assertFalse(s.create("user.claude", "Elsewhere", "m2", ownStateSupported = true).ownState)
+    val second = s.create("user.claude", "Two", "m1", ownStateSupported = true)
+    assertTrue(second.ownState)
+    assertTrue(store().get(second.id)!!.ownState)
+    assertFalse(store().get(first.id)!!.ownState)
+    assertEquals(listOf(first.id, s.all()[1].id, second.id), s.onMachine("m1").map { it.id })
+    // A record without the field keeps the kind's state.
+    val old = JSONObject(file.readText())
+    old.getJSONArray("agents").getJSONObject(3).remove("ownState")
+    file.writeText(old.toString())
+    assertFalse(store().get(second.id)!!.ownState)
+  }
+
+  @Test fun aKindThatCannotKeepItsOwnStateIsRefusedASecondAgent() {
+    val s = store()
+    s.create("user.top", "One", "m1")
+    try {
+      s.create("user.top", "Two", "m1")
+      fail("a second agent of a kind that cannot share was made")
+    } catch (e: KindCannotShare) {
+      assertEquals("user.top", e.kind)
+      assertTrue(e.message!!.startsWith("kind_cannot_share: "))
+    }
+    assertEquals(1, store().all().size)
+    // Its own machine, or a kind that can, is fine.
+    s.create("user.top", "Two", "m2")
+    s.create("opencode", "Three", "m1")
+    assertEquals(3, store().all().size)
+  }
+
+  @Test fun theKindsInstallIsOnePerMachine() {
+    val s = store()
+    val a = s.create("user.claude", "A", "m1", ownStateSupported = true)
+    val elsewhere = s.create("user.claude", "Elsewhere", "m2", ownStateSupported = true)
+    val other = s.create("user.gemini", "Other", "m1")
+    assertEquals("1.0.0", s.setInstalledVersion(a.id, "1.0.0").installedVersion)
+    // A second agent there starts with the install the first has.
+    val b = s.create("user.claude", "B", "m1", ownStateSupported = true)
+    assertEquals("1.0.0", b.installedVersion)
+    // An update by either reaches both, and no other kind or machine.
+    assertEquals("1.1.0", s.setInstalledVersion(b.id, "1.1.0").installedVersion)
+    val again = store()
+    assertEquals("1.1.0", again.get(a.id)!!.installedVersion)
+    assertEquals("1.1.0", again.get(b.id)!!.installedVersion)
+    assertNull(again.get(elsewhere.id)!!.installedVersion)
+    assertNull(again.get(other.id)!!.installedVersion)
+    try {
+      s.setInstalledVersion("nope", "1")
+      fail("an unknown agent got a version")
+    } catch (_: IllegalArgumentException) {
+    }
+  }
 }

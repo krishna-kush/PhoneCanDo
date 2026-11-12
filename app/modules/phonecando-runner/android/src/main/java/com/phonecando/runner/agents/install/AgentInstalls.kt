@@ -1,6 +1,7 @@
 package com.phonecando.runner.agents.install
 
 import com.phonecando.agents.kit.manifest.VersionCheck
+import com.phonecando.agents.kit.render.GuestEnvPolicy
 import com.phonecando.agents.kit.render.ImageLaunch
 import com.phonecando.agents.kit.render.InstallPlan
 import com.phonecando.agents.kit.render.ManifestKind
@@ -19,8 +20,19 @@ import com.phonecando.runner.agents.KindCatalog
 // image binds its home and the HOME phonecando-linux runs guest commands
 // with. A refusal is an InstallException (no_recipe, verify_failed). Pure.
 internal class AgentInstalls(private val agents: AgentStore, private val kinds: KindCatalog) {
-  /** The env names the agent's image keeps from its guests (kit-render GuestEnvPolicy). */
-  fun guestUnset(agentId: String): List<String> = target(agentId).second.guestUnset
+  /**
+   * The env names the agent's machine keeps from its guests: [machineUnset]
+   * of its image, so its launch.conf is the same whichever agent there asks.
+   */
+  fun guestUnset(agentId: String): List<String> = machineUnset(target(agentId).first.imageId)
+
+  /**
+   * What the agents on the machine [imageId] keep from guests, together
+   * (kit-render GuestEnvPolicy.union over their kinds, oldest agent first;
+   * a kind this build lacks adds none).
+   */
+  fun machineUnset(imageId: String): List<String> =
+    GuestEnvPolicy.union(agents.onMachine(imageId).mapNotNull { kinds.get(it.kind)?.manifest })
 
   /** The kind's install for the image's [family]; null when the kind has none. */
   fun installPlan(agentId: String, family: String): InstallPlan? = render(agentId) { it.installPlan(family) }
@@ -46,7 +58,9 @@ internal class AgentInstalls(private val agents: AgentStore, private val kinds: 
 
   /**
    * Reads the version from the check's [output] (group 1 of its pattern)
-   * and keeps it on the agent, whose engine may start from then on; a kind
+   * and keeps it on the agent and every other agent of its kind on its
+   * machine (AgentStore.setInstalledVersion), whose engines may start from
+   * then on; a kind
    * without a check records NO_CHECK. Throws verify_failed when the output
    * names no version.
    */
