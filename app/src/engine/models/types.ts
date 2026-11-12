@@ -180,7 +180,8 @@ export type ModelProgress = {
   done: number;
   total: number | null;
   rateBytesPerSec: number | null;
-  retry: { attempt: number; max: number; delaySec: number } | null;
+  /** The wait before the next try; `reason` says what failed: Hugging Face's limit (a 429), or the network. */
+  retry: { attempt: number; max: number; delaySec: number; reason: 'rate_limited' | 'network' } | null;
   finished: boolean;
   ok?: boolean;
   error: string | null;

@@ -48,6 +48,8 @@ class HubOrigins(private val executor: ExecutorService) {
   }
 
   private fun fetch(hub: HfCatalog, origins: List<String>) {
+    // In a cooldown the Hub refuses every call: its models show without them until it ends.
+    if (hub.callsLeft.cooldownSeconds() != null) return
     val missing = origins.distinct().filter { !facts.containsKey(it) }
     for (chunk in missing.chunked(PARALLEL)) {
       chunk.map { origin -> executor.submit { lookup(hub, origin) } }.forEach { future ->

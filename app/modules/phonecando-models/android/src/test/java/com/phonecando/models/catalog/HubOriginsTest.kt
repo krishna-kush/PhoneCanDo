@@ -1,13 +1,14 @@
 package com.phonecando.models.catalog
 
-import com.phonecando.lme.api.http.HttpPort
-import com.phonecando.lme.api.http.HttpResponse
 import com.phonecando.lme.api.model.ModelDates
 import com.phonecando.lme.catalog.HfCatalog
+import com.phonecando.lme.catalog.HubCallsLeft
 import com.phonecando.lme.catalog.ModelHit
 import com.phonecando.lme.catalog.RepoRevision
 import com.phonecando.lme.catalog.known.KnownModels
 import com.phonecando.lme.catalog.parameters.ParameterCount
+import com.phonecando.network.http.HttpPort
+import com.phonecando.network.http.HttpResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -84,6 +85,21 @@ class HubOriginsTest {
     down = false
     origins.lookUp(HfCatalog(flaky), hits)
     assertEquals(ModelDates.OnHub(LocalDate.of(2024, 9, 18)), origins.dates(hits[0]))
+  }
+
+  @Test
+  fun `in the Hub's cooldown no original is asked for, and once it ends they are`() {
+    val callsLeft = HubCallsLeft().apply { note("\"api\";r=0;t=300") }
+    val hits = listOf(hit("bartowski/Llama-3.2-1B-Instruct-GGUF", "meta-llama/Llama-3.2-1B-Instruct"))
+    val origins = HubOrigins(executor)
+    origins.lookUp(HfCatalog(port, callsLeft = callsLeft), hits)
+    assertNull(origins.dates(hits[0]))
+    assertEquals(0, asked.size)
+
+    callsLeft.forget()
+    origins.lookUp(HfCatalog(port, callsLeft = callsLeft), hits)
+    assertEquals(ModelDates.OnHub(LocalDate.of(2024, 9, 18)), origins.dates(hits[0]))
+    assertEquals(1, asked.size)
   }
 
   @Test

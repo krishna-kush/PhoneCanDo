@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { nextModelsPage, searchModels, toModelError } from '../../engine/models/native';
+import { nextModelsPage, searchModels } from '../../engine/models/native';
 import type { ModelFilters, ModelHit } from '../../engine/models/types';
-import { modelErrorText } from './logic/errorText';
+import { hubFailure } from './hubFailure';
 import { DEFAULT_FILTERS, listKey } from './logic/filters';
 
 // The Hugging Face list on the Models page: the most downloaded chat models
@@ -19,6 +19,8 @@ interface SearchState {
   /** The listKey a request is loading (a first page or More); null when idle. */
   loading: string | null;
   error: string | null;
+  /** When Try again may go after Hugging Face's limit (ms since the epoch); null for now. */
+  retryAt: number | null;
   setQuery: (query: string) => void;
   setFilters: (change: Partial<ModelFilters>) => void;
   /** The first page for the query and filters as they are now. */
@@ -29,11 +31,6 @@ interface SearchState {
 // Only the newest request may write: typing fast starts several.
 let latest = 0;
 
-function errorText(e: unknown): string {
-  const err = toModelError(e);
-  return modelErrorText(err.code, err.message);
-}
-
 export const useSearch = create<SearchState>((set, get) => ({
   query: '',
   filters: DEFAULT_FILTERS,
@@ -42,6 +39,7 @@ export const useSearch = create<SearchState>((set, get) => ({
   listed: null,
   loading: null,
   error: null,
+  retryAt: null,
 
   setQuery: (query) => set({ query }),
 
@@ -51,13 +49,13 @@ export const useSearch = create<SearchState>((set, get) => ({
     const mine = ++latest;
     const { query, filters } = get();
     const key = listKey(query, filters);
-    set({ loading: key, error: null });
+    set({ loading: key, error: null, retryAt: null });
     try {
       const page = await searchModels(query.trim(), filters);
       if (mine !== latest) return;
       set({ hits: page.hits, next: page.next, listed: key, loading: null });
     } catch (e) {
-      if (mine === latest) set({ loading: null, error: errorText(e) });
+      if (mine === latest) set({ loading: null, ...hubFailure(e, 'list') });
     }
   },
 
@@ -65,13 +63,13 @@ export const useSearch = create<SearchState>((set, get) => ({
     const { next, loading, listed } = get();
     if (!next || loading != null || listed == null) return;
     const mine = ++latest;
-    set({ loading: listed, error: null });
+    set({ loading: listed, error: null, retryAt: null });
     try {
       const page = await nextModelsPage(next);
       if (mine !== latest) return;
       set((s) => ({ hits: [...(s.hits ?? []), ...page.hits], next: page.next, loading: null }));
     } catch (e) {
-      if (mine === latest) set({ loading: null, error: errorText(e) });
+      if (mine === latest) set({ loading: null, ...hubFailure(e, 'list') });
     }
   },
 }));

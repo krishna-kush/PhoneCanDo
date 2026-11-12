@@ -1,7 +1,9 @@
 package com.phonecando.lme.catalog
 
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class HubCallsLeftTest {
@@ -27,5 +29,30 @@ class HubCallsLeftTest {
         assertFalse(left.atLeast(100))
         now += 1
         assertTrue(left.atLeast(100))
+    }
+
+    @Test
+    fun `a cooldown lasts while none are left, in whole seconds rounded up`() {
+        assertNull(left.cooldownSeconds())
+        left.note("\"api\";r=1;t=60")
+        assertNull(left.cooldownSeconds())
+        left.note("\"api\";r=0;t=90")
+        assertEquals(90, left.cooldownSeconds())
+        assertFalse(left.atLeast(1))
+        now += 500
+        assertEquals(90, left.cooldownSeconds())
+        now += 88_600
+        assertEquals(1, left.cooldownSeconds())
+        now += 900
+        assertNull(left.cooldownSeconds())
+        assertTrue(left.atLeast(1))
+    }
+
+    @Test
+    fun `forget clears what the Hub said`() {
+        left.note("\"api\";r=0;t=90")
+        left.forget()
+        assertNull(left.cooldownSeconds())
+        assertTrue(left.atLeast(Int.MAX_VALUE))
     }
 }

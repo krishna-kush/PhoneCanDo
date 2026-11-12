@@ -123,7 +123,8 @@ export function fraction(done: number, total: number | null): number | null {
 export function jobLine(p: ModelProgress | undefined, paused: ModelDownload | null): string {
   if (p && !p.finished) {
     if (p.step === 'retry' && p.retry) {
-      return `Connection lost: trying again in ${p.retry.delaySec} s (try ${p.retry.attempt} of ${p.retry.max})`;
+      const why = p.retry.reason === 'rate_limited' ? 'Hugging Face is limiting downloads' : 'Connection lost';
+      return `${why}: trying again in ${p.retry.delaySec} s (try ${p.retry.attempt} of ${p.retry.max})`;
     }
     if (p.step === 'offline') return `No network: it goes on by itself when one is back (${formatBytes(p.done)} here)`;
     if (p.step === 'verify') return `Checking what is already here: ${formatBytes(p.done)}`;

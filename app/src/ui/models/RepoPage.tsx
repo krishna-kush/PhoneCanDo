@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { repoModels, toModelError } from '../../engine/models/native';
+import { repoModels } from '../../engine/models/native';
 import type { ModelDates, RepoModels } from '../../engine/models/types';
 import { download } from '../../state/flows/modelActions';
 import { useModelsStore } from '../../state/models';
 import AppButton from '../common/AppButton';
 import PageHeader from '../common/PageHeader';
 import Screen from '../common/Screen';
+import { useUntil } from '../common/useUntil';
 import Note from '../env/parts/Note';
 import { useSlidInList } from '../nav/slidIn';
 import ProgressBar from '../env/parts/ProgressBar';
-import { modelErrorText } from './logic/errorText';
+import { type HubFailure, hubFailure } from './hubFailure';
 import { variantFiles, variantLine, variantTitle } from './logic/modelText';
 import DatesLine from './parts/DatesLine';
 import ModelPanel from './parts/ModelPanel';
@@ -24,18 +25,17 @@ const FIRST_SCREEN_PANELS = 3;
 // dates. Download pins that commit and keeps the dates with the model.
 export default function RepoPage({ repo }: { repo: string }) {
   const [models, setModels] = useState<RepoModels | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  // Re-read on a change, so a started download shows as one.
+  const [failure, setFailure] = useState<HubFailure | null>(null);
+  const waiting = useUntil(failure?.retryAt ?? null);
+  const error = failure?.error ?? null;
+  // Re-read on a change, so a started download shows as one (native keeps the repository: no Hub request).
   const changes = useModelsStore((s) => s.downloads.length + s.models.length);
 
   const load = useCallback(() => {
-    setError(null);
+    setFailure(null);
     repoModels(repo)
       .then(setModels)
-      .catch((e: unknown) => {
-        const err = toModelError(e);
-        setError(modelErrorText(err.code, err.message));
-      });
+      .catch((e: unknown) => setFailure(hubFailure(e, 'repo')));
   }, [repo]);
 
   useEffect(load, [load, changes]);
@@ -47,7 +47,7 @@ export default function RepoPage({ repo }: { repo: string }) {
       {error ? (
         <>
           <Note tone="error">{error}</Note>
-          <AppButton variant="secondary" onPress={load}>
+          <AppButton variant="secondary" disabled={waiting} onPress={load}>
             Try again
           </AppButton>
         </>

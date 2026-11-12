@@ -1,5 +1,6 @@
 package com.phonecando.models.catalog
 
+import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.model.ModelDates
 import com.phonecando.lme.catalog.HfCatalog
 import com.phonecando.lme.catalog.ModelVariant
@@ -53,17 +54,36 @@ class CatalogOps(private val host: ModelsHost) {
    */
   fun search(query: String, filters: ModelFilters, limit: Int): Map<String, Any?> {
     val hub = host.hub()
-    return pageMap(hub, kept.get(KeptPages.First(query, filters, limit)) { pages.first(hub, query, filters, limit) })
+    val page = kept.get(KeptPages.First(query, filters, limit)) {
+      beforeRequest()
+      pages.first(hub, query, filters, limit)
+    }
+    return pageMap(hub, page)
   }
 
   /** The page after one whose `next` is [cursor] (a [ListCursor]), under the same filters. */
   fun nextPage(cursor: String): Map<String, Any?> {
     val hub = host.hub()
-    return pageMap(hub, kept.get(KeptPages.Next(cursor)) { pages.next(hub, cursor) })
+    val page = kept.get(KeptPages.Next(cursor)) {
+      beforeRequest()
+      pages.next(hub, cursor)
+    }
+    return pageMap(hub, page)
   }
 
-  /** Forgets the kept pages: the token changed, and with it what the Hub may list. */
-  fun tokenChanged() = kept.clear()
+  /** Forgets the kept pages and the Hub's limit: the token changed, and with it what the Hub lists and allows. */
+  fun tokenChanged() {
+    kept.clear()
+    host.callsLeft.forget()
+  }
+
+  /** Whole seconds until Hugging Face takes calls again after saying none are left (a 429); null while it does. */
+  fun cooldownSeconds(): Long? = host.callsLeft.cooldownSeconds()
+
+  /** In the Hub's cooldown, fails at once as the Hub would, instead of sending it a request it refuses. */
+  private fun beforeRequest() {
+    cooldownSeconds()?.let { throw LmeException.RateLimited(HUB, it) }
+  }
 
   /**
    * The size range of each of [repos] (search hits' names) that we have
@@ -84,7 +104,10 @@ class CatalogOps(private val host: ModelsHost) {
    */
   fun repo(repo: String): Map<String, Any?> {
     val hub = host.hub()
-    val revision = listings.get(hub, repo)
+    val revision = listings.kept(repo) ?: run {
+      beforeRequest()
+      listings.get(hub, repo)
+    }
     val variants = hub.variants(revision.files)
     val device = host.device.read()
     val local = local()
@@ -162,5 +185,7 @@ class CatalogOps(private val host: ModelsHost) {
   private companion object {
     /** A list page's worth: JS asks for the rows that come into view together. */
     const val MAX_SIZES = 30
+
+    const val HUB = "https://huggingface.co"
   }
 }

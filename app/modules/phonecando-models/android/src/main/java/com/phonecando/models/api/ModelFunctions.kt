@@ -85,6 +85,9 @@ internal fun ModuleDefinitionBuilder.modelFunctions(host: () -> ModelsHost, pick
     runAsync(h, promise) { h.catalog.repoSizes(repos) }
   }
 
+  // Seconds until Hugging Face takes calls again after a rate_limited answer; null while it does.
+  Function("hubCooldown") { coded { host().catalog.cooldownSeconds()?.toDouble() } }
+
   // A variant as repoModels or suggestedModels listed it: files [{ path, sizeBytes, sha256 }], dates or null.
   // Each object is its own typed argument: Expo converts a null held by a Map<String, Any?> value, but
   // not one inside an object or array held by Any ("Value is null, expected an Object"), such as a

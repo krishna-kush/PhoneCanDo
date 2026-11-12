@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import AppButton from '../../common/AppButton';
 import AppInput from '../../common/AppInput';
 import SectionTitle from '../../common/SectionTitle';
+import { useUntil } from '../../common/useUntil';
 import Note from '../../env/parts/Note';
 import { useSlidInList } from '../../nav/slidIn';
 import ProgressBar from '../../env/parts/ProgressBar';
@@ -22,7 +23,8 @@ const SEARCH_DELAY_MS = 400;
 // opens its repository's models. When it is in the first screen,
 // `firstScreen` rows draw as the page opens (ModelsPage.tsx).
 export default function Search({ firstScreen, onOpen }: { firstScreen: number; onOpen: (repo: string) => void }) {
-  const { query, filters, hits, next, listed, loading, error, setQuery, setFilters, load, more } = useSearch();
+  const { query, filters, hits, next, listed, loading, error, retryAt, setQuery, setFilters, load, more } = useSearch();
+  const waiting = useUntil(retryAt);
   const rows = useSlidInList(hits ?? [], firstScreen);
   const words = query.trim();
   const key = listKey(query, filters);
@@ -62,7 +64,7 @@ export default function Search({ firstScreen, onOpen }: { firstScreen: number; o
       {error ? (
         <>
           <Note tone="error">{error}</Note>
-          <AppButton variant="secondary" onPress={() => void (current ? more() : load())}>
+          <AppButton variant="secondary" disabled={waiting} onPress={() => void (current ? more() : load())}>
             Try again
           </AppButton>
         </>

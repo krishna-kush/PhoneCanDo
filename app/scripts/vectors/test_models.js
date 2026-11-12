@@ -168,8 +168,13 @@ const model = (over) => ({
   t('job line, no rate yet', mt.jobLine(event({ rateBytesPerSec: null }), null), '1.2 GB of 2.7 GB');
   t(
     'job line, retry',
-    mt.jobLine(event({ step: 'retry', retry: { attempt: 2, max: 6, delaySec: 5 } }), null),
+    mt.jobLine(event({ step: 'retry', retry: { attempt: 2, max: 6, delaySec: 5, reason: 'network' } }), null),
     'Connection lost: trying again in 5 s (try 2 of 6)',
+  );
+  t(
+    "job line, retry after Hugging Face's limit",
+    mt.jobLine(event({ step: 'retry', retry: { attempt: 1, max: 6, delaySec: 42, reason: 'rate_limited' } }), null),
+    'Hugging Face is limiting downloads: trying again in 42 s (try 1 of 6)',
   );
   t('job line, verify', mt.jobLine(event({ step: 'verify' }), null), 'Checking what is already here: 1.2 GB');
   t(
@@ -252,6 +257,25 @@ const model = (over) => ({
   t('prototype key is no code', modelErrorText('toString', ''), 'Something went wrong on our side.');
   t('in use by one', modelErrorText('in_use', 'Main'), 'Main runs on it. Pick another model for them first.');
   t('in use by two', modelErrorText('in_use', 'Main, Work'), 'Main, Work run on it. Pick another model for them first.');
+
+  const { hubErrorText, waitText } = await import(src('ui/models/logic', 'errorText.ts'));
+  t('wait under a minute', [waitText(40), waitText(0.2), waitText(59)], ['40 s', '1 s', '59 s']);
+  t('a wait that rounds up to a minute', waitText(59.5), 'about 1 min');
+  t('wait in minutes, rounded up', [waitText(60), waitText(61), waitText(284)], ['about 1 min', 'about 2 min', 'about 5 min']);
+  t('a limit says how long', hubErrorText('rate_limited', 'x', 125, 'list'), 'Hugging Face is limiting requests: try again in about 3 min.');
+  t('a limit on a repository too', hubErrorText('rate_limited', 'x', 30, 'repo'), 'Hugging Face is limiting requests: try again in 30 s.');
+  t('a limit the Hub gave no time for', hubErrorText('rate_limited', 'x', null, 'list'), 'Hugging Face is limiting requests right now. Try again later.');
+  t(
+    'a refused list is the Hub refusing, not a gated model',
+    hubErrorText('access_denied', 'x', null, 'list'),
+    'Hugging Face refused the request: it may be blocking this network or account for a while. Try again later, or on another network.',
+  );
+  t(
+    'a refused repository is gated or private',
+    hubErrorText('access_denied', 'x', null, 'repo'),
+    'This model is gated or private. Accept its terms on huggingface.co, then add a token from that account below.',
+  );
+  t('other codes read as before', hubErrorText('network', 'x', null, 'list'), "We couldn't reach Hugging Face. Check your connection and try again.");
 
   // --- ui/models/logic/choices ------------------------------------------------
   const { modelChoices, OWN_SETUP_NOTE } = await import(src('ui/models/logic', 'choices.ts'));

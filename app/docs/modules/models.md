@@ -38,7 +38,11 @@ Typed in `src/engine/models/native.ts` (the seam) and
   smallest first). A repository costs one Hub request, kept for the
   process: repoSizes and repoModels share it, a hit carries `sizes` once it
   is kept, and repoSizes holds back while the Hub's `RateLimit` header says
-  fewer than 100 calls are left. Every entry carries `ram`, and
+  fewer than 100 calls are left. After a 429 (the header says none are
+  left) nothing goes to the Hub until its window ends: what is kept still
+  answers, the rest rejects `rate_limited` at once, and `hubCooldown()`
+  (sync) gives the seconds left so the page can say how long and hold Try
+  again. Saving or clearing the token forgets that. Every entry carries `ram`, and
   `onPhone` or `downloadId` when it is already here (matched by sha256);
   suggestions, results, a repository and a model on the phone carry
   `dates`.
@@ -133,14 +137,16 @@ thread shared by every module), at most one per download or import
 
 - **Download** (`jobs/DownloadOps.kt`): registered in `models.json` first;
   lme fetches each file into its `.part` with `Range` resume, renames it
-  only after size and sha256 match, and checks the GGUF header last.
-  Network trouble, server errors, rate limits (as long as `Retry-After`
-  asks) and a 401/403 from the CDN retry by themselves; with no network a
-  download waits for one without using up its tries (`RetryPolicy`,
-  `RetryLoop`). A retry goes on from where its hash got to; a Pause cuts
-  even a hanging read and keeps what arrived. A download the process or a
-  long outage stopped runs again on the next start (`jobs/ResumeList.kt`);
-  one the user paused waits for Resume.
+  only after size and sha256 match, and checks the GGUF header last; the
+  fetching, retrying and resuming are our shared `network/` code, the same
+  for Linux images. Network trouble, server errors, rate limits (as long as
+  `RateLimit`/`Retry-After` ask) and a 401/403 from the CDN retry by
+  themselves; with no network a download waits for one without using up
+  its tries (network's `RetryPolicy`, `RetryLoop`; online from
+  `phonecando-network`'s `NetworkState`). A retry goes on from where its
+  hash got to; a Pause cuts even a hanging read and keeps what arrived. A
+  download the process or a long outage stopped runs again on the next
+  start (network's `ResumeList`); one the user paused waits for Resume.
 - **Import** (`jobs/ImportOps.kt`): the picked `content://` file is copied
   in (llama.cpp needs a real path); magic checked on the first bytes, the
   header after the copy; on any failure nothing of it stays.

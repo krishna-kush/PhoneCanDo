@@ -43,6 +43,7 @@ type ModelsModule = {
   nextModelsPage(cursor: string): Promise<SearchPage>;
   repoModels(repo: string): Promise<RepoModels>;
   repoSizes(repos: string[]): Promise<Record<string, RepoSizes>>;
+  hubCooldown(): number | null;
   startDownload(
     repo: string,
     revision: string,
@@ -222,6 +223,14 @@ export function repoModels(repo: string): Promise<RepoModels> {
  */
 export function repoSizes(repos: string[]): Promise<Record<string, RepoSizes>> {
   return callAsync((m) => m.repoSizes(repos));
+}
+
+/**
+ * Seconds until Hugging Face takes calls again after a `rate_limited` answer (its `RateLimit` header said none
+ * are left in its 5-minute window); null while it takes them, or when the Hub didn't say.
+ */
+export function hubCooldown(): number | null {
+  return load() ? sync((m) => m.hubCooldown()) : null;
 }
 
 // --- Jobs ---------------------------------------------------------------------

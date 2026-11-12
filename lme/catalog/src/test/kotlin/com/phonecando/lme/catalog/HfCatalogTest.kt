@@ -1,8 +1,6 @@
 package com.phonecando.lme.catalog
 
 import com.phonecando.lme.api.LmeException
-import com.phonecando.lme.api.testkit.FakePort
-import com.phonecando.lme.api.testkit.reply
 import com.phonecando.lme.catalog.filters.ModelFilters
 import com.phonecando.lme.catalog.filters.ModelLicense
 import com.phonecando.lme.catalog.filters.ModelSize
@@ -13,6 +11,8 @@ import com.phonecando.lme.catalog.support.Fixtures.QWEN_122B
 import com.phonecando.lme.catalog.support.Fixtures.QWEN_122B_SHA
 import com.phonecando.lme.catalog.support.Fixtures.QWEN_4B
 import com.phonecando.lme.catalog.support.Fixtures.QWEN_4B_SHA
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.LocalDate
@@ -317,7 +317,10 @@ class HfCatalogTest {
         catalog.revision("acme/m")
         assertTrue(catalog.callsLeft.atLeast(3))
         assertFalse(catalog.callsLeft.atLeast(4))
-        assertThrows<LmeException.RateLimited> { catalog.revision("acme/m") }
+        val limited = assertThrows<LmeException.RateLimited> { catalog.revision("acme/m") }
         assertFalse(catalog.callsLeft.atLeast(1))
+        // The 429's own header says how long: the error carries it, and the cooldown lasts that long.
+        assertEquals(60L, limited.retryAfterSeconds)
+        assertTrue(catalog.callsLeft.cooldownSeconds() in 59L..60L)
     }
 }

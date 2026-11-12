@@ -1,24 +1,24 @@
 package com.phonecando.models
 
 import android.content.Context
-import com.phonecando.lme.api.http.UrlConnectionPort
 import com.phonecando.lme.catalog.HfCatalog
 import com.phonecando.lme.catalog.HubCallsLeft
 import com.phonecando.lme.store.ModelStore
 import com.phonecando.lme.store.layout.ModelLayout
 import com.phonecando.models.catalog.CatalogOps
 import com.phonecando.models.device.DeviceReader
-import com.phonecando.models.device.NetworkState
 import com.phonecando.models.errors.ModelErrorCode
 import com.phonecando.models.jobs.DownloadOps
 import com.phonecando.models.jobs.ImportOps
 import com.phonecando.models.jobs.JobReporter
 import com.phonecando.models.jobs.ModelJob
 import com.phonecando.models.jobs.ModelJobs
-import com.phonecando.models.jobs.ResumeList
 import com.phonecando.models.serving.ServingSource
 import com.phonecando.models.store.ModelPaths
 import com.phonecando.models.token.HfTokenVault
+import com.phonecando.network.android.NetworkState
+import com.phonecando.network.http.UrlConnectionPort
+import com.phonecando.network.retry.ResumeList
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -45,7 +45,7 @@ class ModelsHost private constructor(context: Context) {
 
   private val listeners = CopyOnWriteArrayList<Listener>()
   private val app: Context = context.applicationContext ?: context
-  private val http = UrlConnectionPort()
+  private val http = UrlConnectionPort(userAgent = "phonecando-lme")
 
   val device = DeviceReader(app)
   val store = ModelStore(ModelLayout(ModelPaths.models(app.filesDir)), http)
@@ -77,7 +77,7 @@ class ModelsHost private constructor(context: Context) {
   }
 
   /** What the Hub's last answer said is left of its API calls, kept across every [hub]. */
-  private val callsLeft = HubCallsLeft()
+  val callsLeft = HubCallsLeft()
 
   /** The Hub, with the user's token when one is kept. */
   fun hub(): HfCatalog = HfCatalog(http, tokens.read(), callsLeft)
