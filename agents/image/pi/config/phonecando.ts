@@ -9,7 +9,9 @@
 //   session, when the runner gave this engine the bridge. The URL comes
 //   from the environment now; pi expands ${PHONECANDO_BRIDGE_TOKEN} in the
 //   header itself, so the token is never written anywhere.
+// - Messages from other agents: messages.ts brings them into the chat.
 import { execFile } from "node:child_process";
+import { agentMessages } from "./messages.ts";
 
 const EVENT = "/root/.phonecando/bin/phonecando-event";
 
@@ -42,4 +44,6 @@ export default function (pi: any): void {
       description: "PhoneCanDo phone tools",
     });
   }
+
+  agentMessages(pi);
 }

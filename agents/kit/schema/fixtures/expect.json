@@ -472,6 +472,30 @@
         "path": "/userState/1",
         "code": "forbidden"
       }
+    ],
+    "inbox-server-on-tui.json": [
+      {
+        "path": "/inbox/server",
+        "code": "forbidden"
+      }
+    ],
+    "inbox-template-no-messages.json": [
+      {
+        "path": "/inbox/hooks/Stop/template",
+        "code": "required"
+      }
+    ],
+    "inbox-wake-unsupported.json": [
+      {
+        "path": "/inbox/reader",
+        "code": "required"
+      }
+    ],
+    "inbox-json-unquoted.json": [
+      {
+        "path": "/inbox/hooks/Stop/template",
+        "code": "mismatch"
+      }
     ]
   }
 }

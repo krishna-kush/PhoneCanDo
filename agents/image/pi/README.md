@@ -2,8 +2,8 @@
 
 The pi coding agent (now published by Earendil), installed from npm on our
 `node` runtime and run as a TUI in the agent's machine, with one pi
-extension of ours, `config/phonecando.ts`. Shared image-kind rules:
-`agents/AGENTS.md` §4.
+extension of ours, `config/phonecando.ts` (with `messages.ts` and
+`inbox.ts` beside it). Shared image-kind rules: `agents/AGENTS.md` §4.
 
 ## Install
 
@@ -47,6 +47,23 @@ The extension calls `pi.registerMcpServer("phonecando", …)` with
 `${PHONECANDO_BRIDGE_URL}/mcp` and `Bearer ${PHONECANDO_BRIDGE_TOKEN}`,
 only when the runner gave the engine the bridge. A `phonecando` server in
 your own `~/.pi/agent/mcp.json` would win.
+
+## Messages
+
+Other agents' messages (the manifest's `inbox`: `reader`, `wake: reader`):
+the extension looks in `$PHONECANDO_INBOX` every second and claims
+`pending/` as the kit's `phonecando-inbox` does (a rename), hands pi the
+runner's `messages.txt` as a custom message (`pi.sendMessage`, shown in the
+chat, read by the model as user text) and appends the `@inbox` receipt to
+`$PHONECANDO_EVENTS`.
+
+- While pi works: steered (`deliverAs: "steer"`), after the current tool
+  calls and before the next model request.
+- While it is idle: left waiting for your next prompt, which they join
+  (`before_agent_start` returns them as its message).
+- Waking: when the runner marks them (`pending/wake`), `triggerTurn: true`
+  starts a turn while pi is idle.
+- `test/inbox.test.mjs` covers the folder reader; it ships nowhere.
 
 ## Local models
 

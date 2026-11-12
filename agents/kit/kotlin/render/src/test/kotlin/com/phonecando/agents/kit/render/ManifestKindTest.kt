@@ -186,11 +186,11 @@ class ManifestKindTest {
         """"web":{"adapter":{"cssVars":{"--z":"bg","--a":"fg"},"authUrl":"/in/","x":[1]}},""" +
         """"chatTitle":"^T (.+)$",""" +
         """"signIn":[{"method":"in-ui","note":"n"}],"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,""" +
-        """"payloadPresent":true,"models":[],"stateFolder":false},""" +
+        """"payloadPresent":true,"models":[],"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none"},""" +
         """{"id":"demo","label":"Demo","version":"1","type":"native","channels":["full"],"stability":"preview",""" +
         """"origin":"bundled","isDefault":true,"home":"tui","web":null,"chatTitle":null,"signIn":[],""" +
         """"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,"payloadPresent":true,"models":[],""" +
-        """"stateFolder":false}]""",
+        """"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none"}]""",
       KindView.list(listOf(web, tui), "demo", libs::contains),
     )
     assertEquals("false", KindView.of(tui, false, libs::contains)["isDefault"].toString())
@@ -378,7 +378,8 @@ class ManifestKindTest {
       "image-argv-host-path", "user-config-dir", "user-hooks", "user-id-without-prefix", "user-native", "user-no-engine", "user-web",
       "hook-events-on-server", "hook-event-unknown", "install-no-version-check", "install-family-unknown", "runtimes-without-install",
       "update-without-install", "install-retries-range", "state-env-empty", "state-without-instructions",
-      "state-config-without-config", "user-state-shared",
+      "state-config-without-config", "user-state-shared", "inbox-server-on-tui", "inbox-template-no-messages",
+      "inbox-wake-unsupported", "inbox-json-unquoted",
     )
     for (name in refused) {
       val e = runCatching { fixture(File(fixtures, "invalid/$name.json")) }.exceptionOrNull()

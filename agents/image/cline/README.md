@@ -38,6 +38,12 @@ None. Its MCP servers live in `~/.cline/data/settings/cline_mcp_settings.json`
 (`CLINE_MCP_SETTINGS_PATH` moves it) with no variable expansion, so the
 bridge token would have to be written to disk.
 
+## Messages
+
+None: with no phone tools (above) it can neither read nor send other
+agents' messages, so a message to it is refused with that reason, and the
+app shows it as "can't read messages".
+
 ## Local models
 
 None: Cline takes a model server only from its own config.

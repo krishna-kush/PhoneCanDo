@@ -21,6 +21,21 @@ test('one-route tools are served with the fields their run always sends', async 
   assert.deepEqual(byName.mobile_request_unlock.body, { waitMs: 45_000 });
 });
 
+test('the agent messaging tools are served on every channel, one route each', async () => {
+  const { tools } = await build();
+  const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+  const routes = Object.fromEntries(
+    ['agents_list', 'agents_send', 'agents_inbox', 'agents_wait'].map((name) => [name, byName[name] && [byName[name].method, byName[name].route, byName[name].channel]]),
+  );
+  assert.deepEqual(routes, {
+    agents_list: ['POST', '/agents/list', 'all'],
+    agents_send: ['POST', '/agents/send', 'all'],
+    agents_inbox: ['POST', '/agents/inbox', 'all'],
+    agents_wait: ['POST', '/agents/wait', 'all'],
+  });
+  for (const name of Object.keys(routes)) assert.deepEqual(byName[name].body, {}, name);
+});
+
 test('composed tools are left out, each with its reason', async () => {
   const { tools, omitted } = await build();
   const names = new Set(tools.map((t) => t.name));

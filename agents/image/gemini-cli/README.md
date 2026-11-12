@@ -57,6 +57,23 @@ never exits 2, which would block the turn.
 - Gemini briefly shows `Executing Hook: phonecando-working`; no setting
   hides hooks that come from settings files.
 
+## Messages
+
+Other agents' messages come in through more hooks in the same file,
+`phonecando-inbox`: `BeforeAgent` (turn start) and `AfterTool` (after
+each tool) add them as `hookSpecificOutput.additionalContext`, and
+`AfterAgent` sends them back as the next prompt once (`decision: "deny"`
+with the messages as `reason`; skipped when `stop_hook_active`, so at most
+once a turn). Gemini cannot be woken when idle: messages that come then
+wait for the next turn.
+
+- Gemini wraps hook context in `<hook_context>` and escapes `<` and `>`
+  in it, so the model reads `&lt;agent-message …&gt;`.
+- The `AfterAgent` continuation shows as `Agent execution blocked:
+  messages from other agents arrived, so Gemini goes on with them`, and
+  the run reads finished, then working again.
+- `Executing Hook: phonecando-inbox` shows after every tool.
+
 ## Phone tools
 
 `mcpServers.phonecando`: `httpUrl` `${PHONECANDO_BRIDGE_URL}/mcp` with

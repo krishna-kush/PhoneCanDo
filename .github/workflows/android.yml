@@ -80,6 +80,7 @@ on:
       - 'agents/runtimes/*/install/**'
       - 'agents/kit/scripts/phonecando-event'
       - 'agents/kit/scripts/phonecando-open'
+      - 'agents/kit/scripts/phonecando-inbox'
   pull_request:
     # Only what goes into the APK; the nightly run builds everything anyway.
     # Order matters: the .md exclusion comes after the includes, and the
@@ -153,6 +154,7 @@ on:
       - 'agents/runtimes/*/install/**'
       - 'agents/kit/scripts/phonecando-event'
       - 'agents/kit/scripts/phonecando-open'
+      - 'agents/kit/scripts/phonecando-inbox'
   schedule:
     - cron: '37 2 * * *'
   workflow_dispatch:

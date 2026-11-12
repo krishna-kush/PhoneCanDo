@@ -11,16 +11,16 @@ preference.
 ```
 agents/
 ├── kit/            the SDK every kind builds on
-│   ├── kotlin/api/     kit-api: AgentKind, KindHooks, LaunchContext/Spec, AgentConfig, HttpProbe, EngineEvent
+│   ├── kotlin/api/     kit-api: AgentKind, KindHooks, LaunchContext/Spec, AgentConfig, HttpProbe, InboxRequest, EngineEvent
 │   ├── kotlin/manifest/ kit-manifest: the manifest model the phone reads + ManifestDecoder (strict types, user rules)
-│   ├── kotlin/render/  kit-render: ManifestKind, templates, launch/client rendering, KindView
+│   ├── kotlin/render/  kit-render: ManifestKind, templates, launch/client rendering, InboxSeam, KindView
 │   ├── kotlin/term/    kit-term: a TUI's output stream: SignalScanner, SignalRules, ScreenRing, ProgramStatus; TermReplies, TermTheme
 │   ├── kotlin/cli/     kit-cli: render-install, render-model for CI (a leaf; ships nowhere)
 │   ├── ts/contract/    the TS view types the app reads (KindView, web adapter, PTY recipe; import type only)
 │   ├── ts/manifest/    manifest types, rules + validate.ts (pure, zero imports; the one full validator),
 │   │                   runtime-plugin.ts (the runtime.json validator), one-shot.ts (one-shot.json)
 │   ├── schema/         agent.schema.json, runtime.schema.json + valid/invalid fixtures
-│   ├── scripts/        phonecando-event, phonecando-open: POSIX sh a kind's hooks call in the guest
+│   ├── scripts/        phonecando-event, phonecando-open, phonecando-inbox: POSIX sh a kind's hooks call in the guest
 │   ├── native/         stage.mjs (stage a payload by its manifest), verify-elf.sh
 │   └── cli/            check, list (CI matrices), new (scaffolds), manifests loader, check-deps
 ├── builtin/        the ONLY place code hooks are registered (Kotlin BuiltinHooks)
@@ -188,6 +188,86 @@ we ship names it (`./manage agent check` requires it). Argv that needs the
 URL uses `{{bridgeUrl}}` in a `when: bridgeUrl` item, so it drops out with
 no bridge. The token is only ever an env reference that the agent expands
 itself, never in argv or on disk.
+
+The same bridge serves the agent tools (`shared/phone-tools/agents.ts`:
+`agents_list`, `agents_send`, `agents_inbox`, `agents_wait`), on every
+channel and outside the phone-control lock, so a kind with no bridge
+cannot message other agents either.
+
+### Messages from other agents
+
+Agents on the phone message each other with the agent tools. A message
+reaches a running agent as its kind's `inbox` says. A kind with no block
+only pulls: the agent calls `agents_inbox`, and every MCP result tells it
+when it has unread messages (KindView `inbox: "pull"`).
+
+What a kind has makes its level (kit-api `MessagingLevel`, KindView
+`messaging`, shown in the app and in `agents_list`): `wakes` (an `inbox`
+block with `wake`), `delivered` (an `inbox` block), `inbox` (phone tools
+but no block: it pulls) and `none` (no phone tools: it can neither read
+nor send, and the runner refuses messages to it). A kind whose settings
+live only in a home folder the user also uses (Kimi, Vibe) runs its agent
+with a home folder of our own, so we can add our tools and hooks without
+writing the user's config.
+
+The runner keeps an agent's undelivered messages in its inbox folder:
+`.phonecando/inbox-<agentId>/` in HOME, given as `PHONECANDO_INBOX` (the
+guest path for an image kind). While there are any it keeps `pending/`
+there, replacing it whole:
+- `ids`, one per line
+- `messages.jsonl`
+- `<Event>.out`, what to print for each hook event in `inbox.hooks`
+- `<Event>.exit`, that event's exit code when not 0
+- `wake`, present when these messages may wake an idle agent
+
+The block (kit-render `InboxChecks`, `validate.ts` → `inbox.ts`) has at
+least one way in:
+- `hooks`: per hook event of the kind, `{format, template, exit?}`.
+  - The kind's own hook config runs `sh <bin>/phonecando-inbox <Event>`.
+  - The event name is 1 to 64 of `A-Za-z0-9._:-`, starting with a letter
+    or digit.
+  - `template` is a string, or with format `json` an object, and its
+    strings hold `{{messages}}` (the rendered messages), its one
+    placeholder.
+  - For `json`, the runner escapes the messages as a JSON string's
+    content in a string template; a string template must be JSON once
+    filled, with the messages inside one of its strings. It serialises an
+    object template after filling it (kit-render `InboxSeam`).
+  - `exit` is 0 to 255; on any but 0 the script prints to stderr, where
+    hook runners read a blocking hook's message.
+- `server`: a server engine only. `deliver` is used while the agent works,
+  or when it may not be woken; `wake` when it is idle and may be. Each is
+  `{method: "POST", path, body}`:
+  - `path` may name `{{sessionId}}` (the agent's chat, URL-encoded).
+  - The JSON `body`'s strings hold `{{messages}}` and may name
+    `{{sessionId}}`.
+  - The request carries the kind's `engine.auth`, as its health probe
+    does. A call that names the chat is not made while the agent has none.
+- `reader: true`: the kind's own extension or plugin reads the folder
+  (`pending/messages.jsonl`, `pending/wake`), claims it as the script does
+  and writes the receipt itself.
+- `wake`: how an idle agent of the kind can be woken: `hook`, `server`
+  or `reader`. The block must have that part (`hook` needs `hooks`,
+  `server` needs `server.wake`, `reader` needs `reader: true`). Absent:
+  it cannot be woken, and messages wait for its next turn. KindView
+  `canWake` says it.
+
+`kit/scripts/phonecando-inbox` (installed beside `phonecando-event`):
+- `<Event>`: exits 0 with no output while there is nothing for that event
+  (it runs after every tool call, so it is cheap).
+  - It claims `pending/` by renaming it, so of hooks that run at once one
+    gets it.
+  - It prints `<Event>.out`, appends `@inbox<TAB><ids>` to
+    `PHONECANDO_EVENTS` (the runner marks those read), removes what it
+    claimed and exits with `<Event>.exit`.
+- `--wait <Event> <timeoutSec>`: for a wake hook that waits (Claude Code's
+  Stop hook with asyncRewake). It checks every second for `pending/wake`
+  and then delivers as above, or exits 0 silently after the timeout.
+  - The newest waiter wins: each writes its pid to the folder's `waiter`
+    file and exits once the file names another or none.
+- `--cancel`: removes `waiter`, so a waiter left running exits (from a
+  session-end hook).
+- With no `PHONECANDO_INBOX`, every call exits 0 and does nothing.
 
 ### Instructions and an agent's own state
 

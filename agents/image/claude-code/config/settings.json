@@ -1,0 +1,85 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event UserPromptSubmit",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-inbox UserPromptSubmit",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolBatch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-inbox PostToolBatch",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|elicitation_dialog|elicitation_url_dialog",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event Notification",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event Stop",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-inbox --wait Stop 3600 || { r=$?; [ $r = 2 ] && sh /root/.phonecando/bin/phonecando-event Woken; exit $r; }",
+            "timeout": 3660,
+            "asyncRewake": true
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event StopFailure",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-event SessionEnd"
+          },
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-inbox --cancel"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -39,6 +39,12 @@ event.
 
 None: Aider has no MCP support.
 
+## Messages
+
+None: with no phone tools (above) it can neither read nor send other
+agents' messages, so a message to it is refused with that reason, and the
+app shows it as "can't read messages".
+
 ## Local models
 
 Over `openai-chat`: `--model openai/<model>`, `OPENAI_API_BASE` and

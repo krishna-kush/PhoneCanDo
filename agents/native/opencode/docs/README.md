@@ -17,7 +17,27 @@ embedded web UI and pair API the Home tab needs.
 v2 loads `plugins/<id>/index.ts` (`@opencode/plugin`, `Plugin.define` +
 `ctx.tool.transform`) from the global config dir and from
 `<project>/.opencode/plugins/`; v1 `tools/*.ts` and `@opencode-ai/plugin`
-do not load. Our phone tools ship as such plugins (`../config/plugins/`).
+do not load. Our phone tools ship as such plugins (`../config/plugins/`):
+`mobile` (every channel: the basic tools and the `agents_*` tools) and
+`automation` (full only: phone control).
+
+## Messages
+
+Other agents' messages go through opencode's own server (the manifest's
+`inbox.server`, `wake: server`): the runner posts them to the agent's chat
+as synthetic input, `POST /api/session/{id}/synthetic` with
+`{text, description, delivery: "steer", resume}` and the server's basic
+auth. A synthetic input reaches the model as user text; the web UI shows it
+as a notice with its `description`.
+
+- `deliver` (`resume: false`): while a run works, it joins at the next
+  step (after the current tool calls); while idle, it waits in the chat's
+  inbox and joins your next prompt.
+- `wake` (`resume: true`): an idle chat starts a run with it (and with any
+  that waited).
+- Checked at our pin (2.0.26: `packages/core/src/session/session.ts`
+  `synthetic`, `runner/llm.ts` promotion) and against upstream's Linux
+  build of the tag: deliver leaves it in `GET .../inbox`, wake runs both.
 
 ## Local models
 

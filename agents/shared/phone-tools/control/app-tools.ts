@@ -30,7 +30,7 @@ export const appTools: PhoneTool[] = [
   {
     name: "mobile_request_unlock",
     description:
-      "Phone control is locked (automation_off). Show the biometric/PIN prompt over the chat and wait up to 45s for the user. This never unlocks by itself. If the result has unlocked:true, continue the task; if unlocked:false, stop and ask the user to unlock. Depending on the user's setting, an unlock may last only for this task (until you call mobile_return), so a later task may need to ask again. Never retry the locked action or try to bypass the gate.",
+      "Phone control is locked (automation_off). Show the biometric/PIN prompt over the chat and wait up to 45s for the user. This never unlocks by itself. If the result has unlocked:true, continue the task; if unlocked:false, stop and ask the user to unlock. If another agent holds the screen (or it is kept for the next one in line), the call returns at once with your place in line and shows no prompt: that is not a refusal. You will get a message (agents_inbox) when the screen is yours, or see it in agents_list; call this again then, and do other work or end your turn meanwhile. Depending on the user's setting, an unlock may last only for this task (until you call mobile_return), so a later task may need to ask again. Never retry the locked action or try to bypass the gate.",
     input: noArgs,
     channel: "full",
     run: (_args, signal) => call("/unlock", { waitMs: 45_000 }, signal, 50_000),

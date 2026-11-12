@@ -47,4 +47,16 @@ export type KindView = {
   /** An agent of it can keep its sign-in, settings, chats and instructions in a state folder of its own
       (the manifest's `state`), so a second agent of it can share a machine with the first. */
   stateFolder: boolean;
+  /** How other agents' messages reach a running agent of it: push, into its turns (the manifest's `inbox`),
+      or pull, only when it calls agents_inbox (MCP results tell it when it has unread ones). */
+  inbox: 'push' | 'pull';
+  /** An idle agent of it can be woken by another agent's message (the manifest's `inbox.wake`). */
+  canWake: boolean;
+  /** How far other agents' messages reach it, best first (kit-api MessagingLevel): wakes (pushed, and a
+      message can start a turn while it is idle), delivered (pushed into its turns), inbox (only when it
+      calls agents_inbox), none (no phone tools: it can neither read nor send). */
+  messaging: MessagingLevel;
 };
+
+/** How far other agents' messages reach an agent of a kind (kit-api MessagingLevel), best first. */
+export type MessagingLevel = 'wakes' | 'delivered' | 'inbox' | 'none';

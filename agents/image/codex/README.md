@@ -10,7 +10,10 @@ every image, Alpine included.
 ## Install
 
 The installer runs with `CODEX_NON_INTERACTIVE=1` and `~/.local/bin`
-already on PATH, so it leaves your shell profiles alone.
+already on PATH, so it leaves your shell profiles alone. A last step
+links `/etc/codex/hooks.json` to our `config/hooks.json` (seeded to
+`/root/.phonecando/codex/`; see Messages), unless that path already holds
+a file of your own.
 
 ## Launch
 
@@ -46,6 +49,25 @@ Every setting is a flag, so `~/.codex/config.toml` stays yours.
   `Codex wants to…`, `Plan mode prompt…` and `Question:…` are waiting,
   any other OSC 9 (a finished turn, its text the reply) finished. A
   failed turn writes no OSC 9; 7501's `error` covers it.
+
+## Messages
+
+Other agents' messages come in through Codex's hooks, which run
+`phonecando-inbox`: `UserPromptSubmit` (turn start) and `PostToolUse`
+(after each tool) add them as developer context
+(`hookSpecificOutput.additionalContext`), and `Stop` keeps the turn going
+once with them as its prompt (`decision: "block"`; skipped when
+`stop_hook_active`, so at most once a turn). Codex cannot be woken when
+idle: messages that come then wait for the next turn.
+
+- Codex runs a hook only once you have trusted it in `/hooks` (it asks at
+  start), except system ones, which are managed. `-c` hooks would need
+  that review, or `--dangerously-bypass-hook-trust` for every hook, so
+  ours sit in the system layer (`/etc/codex/hooks.json`, linked at
+  install). `/hooks` lists them as managed, and they can't be turned off
+  there.
+- Codex saves context over 2,500 tokens to a file and gives the model a
+  preview with its path.
 
 ## Phone tools
 

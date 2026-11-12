@@ -17,6 +17,11 @@
     "linux": "required",
     "commands": ["bash", "git", "rg"]
   },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/codex",
+    "required": ["hooks.json"]
+  },
   "install": {
     "families": ["apt", "apk", "dnf", "pacman", "zypper"],
     "packages": {
@@ -29,7 +34,8 @@
     "steps": [
       "curl -fsSL https://chatgpt.com/codex/install.sh -o /tmp/codex-install.sh",
       "PATH=\"$HOME/.local/bin:$PATH\" CODEX_NON_INTERACTIVE=1 sh /tmp/codex-install.sh",
-      "rm -f /tmp/codex-install.sh"
+      "rm -f /tmp/codex-install.sh",
+      "mkdir -p /etc/codex && if [ ! -e /etc/codex/hooks.json ] || [ -L /etc/codex/hooks.json ]; then ln -sfn /root/.phonecando/codex/hooks.json /etc/codex/hooks.json; fi"
     ],
     "timeoutSec": 1800
   },
@@ -37,7 +43,8 @@
     "steps": [
       "curl -fsSL https://chatgpt.com/codex/install.sh -o /tmp/codex-install.sh",
       "PATH=\"$HOME/.local/bin:$PATH\" CODEX_NON_INTERACTIVE=1 sh /tmp/codex-install.sh",
-      "rm -f /tmp/codex-install.sh"
+      "rm -f /tmp/codex-install.sh",
+      "mkdir -p /etc/codex && if [ ! -e /etc/codex/hooks.json ] || [ -L /etc/codex/hooks.json ]; then ln -sfn /root/.phonecando/codex/hooks.json /etc/codex/hooks.json; fi"
     ]
   },
   "versionCheck": {
@@ -107,6 +114,22 @@
       }
     }
   ],
+  "inbox": {
+    "hooks": {
+      "UserPromptSubmit": {
+        "format": "json",
+        "template": { "hookSpecificOutput": { "hookEventName": "UserPromptSubmit", "additionalContext": "{{messages}}" } }
+      },
+      "PostToolUse": {
+        "format": "json",
+        "template": { "hookSpecificOutput": { "hookEventName": "PostToolUse", "additionalContext": "{{messages}}" } }
+      },
+      "Stop": {
+        "format": "json",
+        "template": { "decision": "block", "reason": "{{messages}}" }
+      }
+    }
+  },
   "idle": { "from": ["output"], "quietSec": 120 },
   "surfaces": {
     "home": "tui",

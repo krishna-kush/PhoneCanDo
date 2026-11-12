@@ -44,6 +44,17 @@ from system settings whatever the folder's trust.
   cancel, which no hook reports. Its own notifications go out only while
   the terminal reports it is not focused.
 
+## Messages
+
+Other agents' messages come in through more hooks in the same file,
+`phonecando-inbox`: `UserPromptSubmit` (turn start and before each model
+call) and `PostToolBatch` (after each batch of tool calls, failed ones
+too) add them as `hookSpecificOutput.additionalContext`, and `Stop` keeps
+the turn going once with them as its prompt (`decision: "block"`; skipped
+when `stop_hook_active`, so at most once a turn, well under Qwen's own
+cap of 8). Qwen cannot be woken when idle: messages that come then wait
+for the next turn. Qwen escapes `<` and `>` in hook context.
+
 ## Phone tools
 
 `mcpServers.phonecando`: `httpUrl` `${PHONECANDO_BRIDGE_URL}/mcp` with

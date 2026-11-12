@@ -4,7 +4,8 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
 // The parts of an agent.json (schema agents/kit/schema/agent.schema.json)
-// the phone reads at run time, the install blocks (Install.kt) included. Fields only the build, CI or the kit CLI use
+// the phone reads at run time, the install blocks (Install.kt) and the inbox
+// (Inbox.kt) included. Fields only the build, CI or the kit CLI use
 // (build, licence, the payload's sources…) are not modelled. Templates stay
 // unrendered here: kit-render fills their {{placeholders}}. Blocks we only
 // hand on to the app (the web adapter, signIn) stay JSON trees, verbatim.
@@ -54,6 +55,8 @@ data class Manifest(
   val hooks: List<String>,
   /** How it takes a local model (`models`), in the order it prefers the APIs; empty: it does not. */
   val models: List<ModelWiring> = emptyList(),
+  /** How other agents' messages reach a running agent of it (`inbox`, Inbox.kt); null: it only pulls them. */
+  val inbox: InboxSpec? = null,
 )
 
 enum class Origin(val wire: String) {

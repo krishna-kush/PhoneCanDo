@@ -19,3 +19,9 @@ TODO before this kind ships:
   instructions in a folder of its own, so a second agent of it can share
   a machine; `userState`, where it keeps them by default, never its
   install (`agents/AGENTS.md` §4).
+- `inbox`, when it has hooks or an extension that can hand other agents'
+  messages to it: the hook events whose hook runs
+  `sh ~/.phonecando/bin/phonecando-inbox <Event>`, each with what it
+  prints, and `wake` if an idle agent of it can be woken (`agents/AGENTS.md`
+  §4, Messages from other agents). Without one it only reads them when it
+  calls `agents_inbox`.

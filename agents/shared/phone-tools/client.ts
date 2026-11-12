@@ -11,7 +11,8 @@ type Envelope = {
   code?: string
   message?: string
   holder?: string
-  retryAfterMs?: number
+  /** control_busy: the caller's place in the screen queue, 1-based. */
+  place?: number
 }
 
 // One bridge call; the result is always text for the model: the data as
@@ -54,13 +55,15 @@ export async function call(
   }
 }
 
-// `error <code>: <message>`. control_busy (another agent holds the screen)
-// names the holder and how long to wait, so the model waits instead of
-// hammering the bridge.
+// `error <code>: <message>`. control_busy (another agent holds the screen,
+// and the caller joined the queue for it) names the holder and the caller's
+// place in line, and says a message comes when the screen is the caller's,
+// so the model does other work instead of hammering the bridge. Every other
+// code (screen_refused among them) is the bridge's own message.
 export function errorText(e: Envelope, status: number): string {
   if (e.code === "control_busy") {
-    const secs = Math.max(1, Math.ceil((e.retryAfterMs ?? 30_000) / 1000))
-    return `error control_busy: the screen is in use by ${e.holder ?? "another agent"}; try again in about ${secs}s. Wait, then call the tool again; do not loop quickly, and tell the user if it stays busy.`
+    const place = typeof e.place === "number" ? `; you are #${e.place} in line` : ""
+    return `error control_busy: ${e.holder ?? "another agent"} holds the screen${place}. We'll message you (agents_inbox) when it is yours; do other work or end your turn instead of calling again.`
   }
   return `error ${e.code ?? status}: ${e.message ?? "unknown"}`
 }

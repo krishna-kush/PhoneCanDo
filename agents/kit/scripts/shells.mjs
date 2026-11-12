@@ -31,7 +31,30 @@ export function run(shell, script, args, { env = {}, input } = {}) {
     encoding: 'utf8',
     timeout: 10_000,
   });
-  return { code: r.status, stderr: r.stderr };
+  return { code: r.status, stdout: r.stdout, stderr: r.stderr };
+}
+
+/**
+ * Starts a script with `shell` in the background, stdin from /dev/null.
+ * `pid` is the script's $$ (the shell runs it in its own process); `done`
+ * resolves with the exit code, its output and the ms it ran.
+ */
+export function start(shell, script, args, { env = {} } = {}) {
+  const [cmd, ...pre] = shell.argv;
+  const started = Date.now();
+  const child = spawn(cmd, [...pre, scriptPath(script), ...args], { env: envOf(env), stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.setEncoding('utf8').on('data', (d) => (stdout += d));
+  child.stderr.setEncoding('utf8').on('data', (d) => (stderr += d));
+  const guard = setTimeout(() => child.kill('SIGKILL'), 30_000);
+  const done = new Promise((resolve) => {
+    child.on('close', (code) => {
+      clearTimeout(guard);
+      resolve({ code, stdout, stderr, ms: Date.now() - started });
+    });
+  });
+  return { pid: child.pid, done };
 }
 
 /** Runs a script with a stdin pipe nobody writes to or closes; resolves with the exit code and ms taken. */

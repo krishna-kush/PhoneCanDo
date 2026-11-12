@@ -12,6 +12,10 @@ import {
   FIELDS,
   HOMES,
   IDLE_SOURCES,
+  INBOX_FORMATS,
+  INBOX_KEYS,
+  INBOX_METHODS,
+  INBOX_WAKES,
   KIND_TYPES,
   LINKAGES,
   LINUX_NEEDS,
@@ -137,6 +141,10 @@ describe('validator and schema agree', () => {
     assert.deepEqual(props.events.items.properties.hook.properties.map.additionalProperties.enum, PTY_EVENTS);
     assert.deepEqual(defs.family.enum, FAMILIES);
     assert.deepEqual(props.install.properties.packages.propertyNames.enum, [...FAMILIES, ANY_FAMILY]);
+    assert.deepEqual(Object.keys(props.inbox.properties), INBOX_KEYS);
+    assert.deepEqual(props.inbox.properties.wake.enum, INBOX_WAKES);
+    assert.deepEqual(defs.inboxHook.properties.format.enum, INBOX_FORMATS);
+    assert.deepEqual(defs.inboxCall.properties.method.enum, INBOX_METHODS);
   });
 
   it('has the same patterns', () => {
@@ -170,6 +178,17 @@ describe('validator and schema agree', () => {
     assert.equal(props.state.properties.env.propertyNames.pattern, PATTERNS.envName);
     assert.equal(props.state.properties.env.propertyNames.not.pattern, PATTERNS.envReserved);
     assert.equal(defs.versionCheck.properties.argv.prefixItems[0].allOf[1].pattern, PATTERNS.guestTool);
+    assert.equal(props.inbox.properties.hooks.propertyNames.pattern, PATTERNS.eventName);
+    assert.equal(defs.inboxHookText.pattern, PATTERNS.inboxHookTemplate);
+    assert.equal(defs.inboxCall.properties.path.allOf[0].pattern, PATTERNS.httpPath);
+    assert.equal(defs.inboxCall.properties.path.allOf[1].pattern, PATTERNS.inboxPathTemplate);
+    assert.equal(defs.inboxBodyText.pattern, PATTERNS.inboxBodyTemplate);
+  });
+
+  it('has the same inbox limits', () => {
+    assert.equal(defs.inboxHook.properties.exit.maximum, MAX.hookExit);
+    assert.equal(props.inbox.properties.hooks.propertyNames.maxLength, MAX.name);
+    for (const def of [defs.inboxHookText, defs.inboxBodyText, defs.inboxCall.properties.path]) assert.equal(def.maxLength, MAX.template);
   });
 
   it('has the same install rules', () => {

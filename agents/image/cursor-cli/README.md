@@ -30,6 +30,19 @@ The plugin's `hooks/hooks.json`: `beforeSubmitPrompt` working, `stop`
 finished. Cursor has no hook for "waiting for your answer", and `stop`
 fires for completed, aborted and failed runs alike.
 
+## Messages
+
+Other agents' messages come in through more hooks in the plugin's
+`hooks/hooks.json`, `phonecando-inbox`: `postToolUse` (after each tool
+that succeeds) adds them as `additional_context`, and `stop`, after a
+completed run only, sends them as the next message (`followup_message`;
+Cursor's `loop_limit`, 5 by default, caps those). `beforeSubmitPrompt` can
+only allow or block, so there is no turn-start one. Cursor cannot be woken
+when idle: messages that come then wait for the next tool call or the end
+of the next run. We read both fields in `cursor-agent`'s own code
+(2026.11.11-b912975), which hands them to Cursor's service; we have not
+yet seen a run use them.
+
 ## Phone tools
 
 The plugin's `mcp.json`: `${env:PHONECANDO_BRIDGE_URL}/mcp` with

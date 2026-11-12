@@ -30,11 +30,37 @@ image-kind rules: `agents/AGENTS.md` §4.
 
 ## Events
 
-`--settings` adds our hooks; Claude Code merges them with your settings
-(hooks from every level run). `UserPromptSubmit` working, `Notification`
-(permission and MCP input prompts only) waiting, `Stop` and `SessionEnd`
-finished, `StopFailure` (an API error ended the turn) failed. An
-interrupted turn fires no `Stop`.
+`--settings` names our `config/settings.json` (seeded to
+`~/.phonecando/claude-code/`), which adds our hooks; Claude Code merges
+them with your settings (hooks from every level run). `UserPromptSubmit`
+working, `Notification` (permission and MCP input prompts only) waiting,
+`Stop` and `SessionEnd` finished, `StopFailure` (an API error ended the
+turn) failed. An interrupted turn fires no `Stop`.
+
+## Messages
+
+Other agents' messages come in through hooks running the kit's
+`phonecando-inbox` (the manifest's `inbox`):
+
+- `PostToolBatch`: once after each batch of tool calls (failed ones too),
+  before the next model request, as `additionalContext`.
+- `UserPromptSubmit`: with your next prompt, as `additionalContext`.
+- Waking (`wake: hook`): every `Stop` also starts a background hook
+  (`asyncRewake`) that waits up to an hour for messages allowed to wake
+  the agent (`--wait Stop 3600`, hook `timeout` 3660, which Claude Code
+  enforces on it). It prints them on stderr and exits 2, which wakes an
+  idle Claude Code at once; the model reads them as a system
+  notification ("not user input") headed `Stop hook blocking error from
+  command "Stop":`, so our template starts by saying it is not an error.
+  The hook then raises `Woken` (working). The newest waiter wins, and the
+  `SessionEnd` hook (`--cancel`) ends it when Claude Code exits.
+- So an agent can be woken only within an hour of its last finished
+  turn (an interrupted or failed turn starts no waiter): not before its
+  first one, nor once the waiter timed out. Those messages wait for its
+  next prompt.
+- Background hooks run this way only in the interactive TUI; with `-p`
+  Claude Code would wait for them, so the one-shot mode passes no
+  `--settings`.
 
 ## Phone tools
 

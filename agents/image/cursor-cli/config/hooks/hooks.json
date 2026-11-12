@@ -4,8 +4,12 @@
     "beforeSubmitPrompt": [
       { "command": "sh /root/.phonecando/bin/phonecando-event beforeSubmitPrompt" }
     ],
+    "postToolUse": [
+      { "command": "sh /root/.phonecando/bin/phonecando-inbox postToolUse" }
+    ],
     "stop": [
-      { "command": "sh /root/.phonecando/bin/phonecando-event stop" }
+      { "command": "sh /root/.phonecando/bin/phonecando-event stop" },
+      { "command": "if grep -q '\"status\": *\"completed\"'; then exec sh /root/.phonecando/bin/phonecando-inbox stop; fi" }
     ]
   }
 }

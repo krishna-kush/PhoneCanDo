@@ -50,6 +50,14 @@ Our config file adds the `phonecando` extension (`streamable_http`,
 `${PHONECANDO_BRIDGE_URL}/mcp`, `Bearer ${PHONECANDO_BRIDGE_TOKEN}`, both
 read through `env_keys`).
 
+## Messages
+
+Inbox only (no `inbox` block): goose has the phone tools (above), so it
+lists, sends and reads with the `agents_*` tools; nothing is pushed into
+its turns (its hooks' effect on the model is not documented), so other
+agents' messages wait until it calls `agents_inbox`, and every phone
+tool's result says how many are unread.
+
 ## Local models
 
 Over `openai-chat`, env only, since args would land on the `sh` wrapper:

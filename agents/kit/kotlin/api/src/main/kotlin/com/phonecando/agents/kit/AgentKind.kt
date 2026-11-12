@@ -5,7 +5,7 @@ import java.io.File
 // One kind of coding agent the phone can run (opencode is the first).
 // Everything the engine host needs to know about a kind sits behind this
 // interface: how to start its engine, how to ask whether it is up, its event
-// stream and its config. The service, health checks and telemetry go through
+// stream, its config and how other agents' messages reach it. The service, health checks and telemetry go through
 // it and never name an agent. kit-render's ManifestKind builds one from the
 // kind's agent.json plus its KindHooks. Pure Kotlin, no Android imports.
 interface AgentKind {
@@ -24,6 +24,16 @@ interface AgentKind {
    * it can share a machine with the first.
    */
   val ownStateSupported: Boolean get() = false
+
+  /** How far other agents' messages reach an agent of it (MessagingLevel). */
+  val messaging: MessagingLevel get() = MessagingLevel.NONE
+
+  /**
+   * An idle agent of it can be woken only while a hook it left waiting is
+   * alive (`inbox.wake` "hook": the inbox folder's `waiter` file names it),
+   * not whenever it is idle.
+   */
+  val wakeNeedsWaiter: Boolean get() = false
 
   /**
    * The agent's global instructions file, where the host writes the image's
@@ -65,6 +75,22 @@ interface AgentKind {
 
   /** Every form of the engine password that can show up in a log line. */
   fun passwordForms(password: String): List<String>
+
+  /** An idle agent of this kind can be woken by another agent's message (the manifest's `inbox.wake`). */
+  val canWake: Boolean get() = false
+
+  /**
+   * The request that hands other agents' [messages] (rendered text) to the
+   * engine's chat [sessionId]; null when the kind has no such [which] call,
+   * or when the call names the chat and [sessionId] is blank.
+   */
+  fun inboxRequest(which: InboxCall, port: String, password: String, sessionId: String, messages: String): InboxRequest? = null
+
+  /** The request for the agent's newest chat (`inbox.server.latest`), when the host knows none; null without one. */
+  fun inboxLatestRequest(port: String, password: String): InboxRequest? = null
+
+  /** The newest chat's id in what that request answered; null when it names none. */
+  fun inboxLatestId(answer: String): String? = null
 }
 
 /** What any engine launch knows, whatever the kind. */

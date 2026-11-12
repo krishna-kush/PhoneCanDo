@@ -75,6 +75,26 @@
       }
     }
   ],
+  "inbox": {
+    "hooks": {
+      "BeforeAgent": {
+        "format": "json",
+        "template": { "hookSpecificOutput": { "hookEventName": "BeforeAgent", "additionalContext": "{{messages}}" } }
+      },
+      "AfterTool": {
+        "format": "json",
+        "template": { "hookSpecificOutput": { "hookEventName": "AfterTool", "additionalContext": "{{messages}}" } }
+      },
+      "AfterAgent": {
+        "format": "json",
+        "template": {
+          "decision": "deny",
+          "reason": "{{messages}}",
+          "systemMessage": "messages from other agents arrived, so Gemini goes on with them"
+        }
+      }
+    }
+  },
   "idle": { "from": ["output", "events"], "quietSec": 120 },
   "surfaces": {
     "home": "tui",

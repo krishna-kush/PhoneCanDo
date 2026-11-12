@@ -22,6 +22,28 @@
             "timeout": 10000
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "name": "phonecando-inbox",
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-inbox BeforeAgent",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "hooks": [
+          {
+            "name": "phonecando-inbox",
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-inbox AfterTool",
+            "timeout": 10000
+          }
+        ]
       }
     ],
     "Notification": [
@@ -43,6 +65,16 @@
             "name": "phonecando-finished",
             "type": "command",
             "command": "sh /root/.phonecando/bin/phonecando-event AfterAgent",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "name": "phonecando-inbox",
+            "type": "command",
+            "command": "grep -q '\"stop_hook_active\": *true' || sh /root/.phonecando/bin/phonecando-inbox AfterAgent",
             "timeout": 10000
           }
         ]

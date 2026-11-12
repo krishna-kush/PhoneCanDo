@@ -67,5 +67,8 @@
   "surfaces": {
     "home": "tui"
   },
-  "phoneTools": "mcp:config"
+  "phoneTools": "mcp:config",
+  "inbox": {
+    "reader": true
+  }
 }

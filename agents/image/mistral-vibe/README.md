@@ -14,6 +14,9 @@ run as a TUI in the agent's machine. Shared image-kind rules:
 ## Launch
 
 - An `sh -c` wrapper, so it can fill in the phone tools (below).
+- `VIBE_HOME=~/.vibe-agent`: the agent has a Vibe folder of its own, so
+  we can add our hooks without touching yours (`~/.vibe`, which a `vibe`
+  you run by hand in a terminal still uses, with its own sign-in).
 - `VIBE_ENABLE_UPDATE_CHECKS=false` goes through Vibe's `VIBE_*`
   environment layer.
 - `resume` adds `--continue`; with no chat for the folder Vibe starts a
@@ -25,19 +28,30 @@ run as a TUI in the agent's machine. Shared image-kind rules:
 
 ## State
 
-- Global instructions: `~/.vibe/AGENTS.md`.
-- A second Vibe agent on the machine keeps its state in its own folder
-  (`VIBE_HOME`). The machine has no keyring, so its keys go to
-  `$VIBE_HOME/.env`.
-- `userState`: `~/.vibe`.
+- Global instructions: `~/.vibe-agent/AGENTS.md`, seeded when absent.
+- Our config (`config/`: `hooks.toml`, `AGENTS.md`) is seeded into the
+  agent's Vibe folder; a second Vibe agent on the machine gets a folder
+  of its own (`VIBE_HOME` in its state folder, our config seeded there
+  too). The machine has no keyring, so its keys go to `$VIBE_HOME/.env`.
+- `userState`: `~/.vibe-agent`.
 
 ## Events
 
-No hooks: Vibe loads them only from `~/.vibe/hooks.toml`, a trusted
-project's `.vibe/hooks.toml` or a plugin, with no flag or variable for one
-more file. It writes OSC 7501 reports unprompted
+Our `hooks.toml` carries only the message hooks (Messages, below); events
+come from OSC 7501. Vibe writes those reports unprompted
 (`experimental_enable_tab_status`, on by default); the usual map. It also
 sends the support query, and once the runner answers its bell stays off.
+
+## Messages
+
+Delivered (an `inbox` block, no wake), through the hooks in our
+`hooks.toml` (Vibe 3.1 loads them from `$VIBE_HOME/hooks.toml`):
+`pre_agent` adds them to the turn before the model reads it, `post_tool`
+after each tool that ran (`hook_specific_output.additional_context`),
+and `post_agent` sends them as a follow-up once the agent is done
+(`decision: "deny"` with them as `reason`; Vibe allows 3 a turn). With
+none waiting the script prints nothing and Vibe passes through. An idle
+Vibe can't be woken: messages wait for its next turn.
 
 ## Phone tools
 

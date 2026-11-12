@@ -17,6 +17,8 @@ object Templates {
     "baseUrl", "model", "contextWindow", "modelKey",
     // The agent's own state folder (StateSeam), in a kind's `state.env` only.
     "stateDir",
+    // Other agents' messages, rendered (InboxSeam), in a kind's `inbox` only.
+    "messages",
   )
 
   private val PLACEHOLDER = Regex("""\{\{([^{}]*)\}\}""")
@@ -24,6 +26,9 @@ object Templates {
   /** [template] filled from [values]; [escape] turns each value into its form in this text (a URL path component). */
   fun render(template: String, values: Map<String, String>, escape: (String) -> String = { it }): String =
     PLACEHOLDER.replace(template) { escape(value(it.groupValues[1], values)) }
+
+  /** The placeholder names in [template], in order, each as often as it shows. */
+  fun names(template: String): List<String> = PLACEHOLDER.findAll(template).map { it.groupValues[1] }.toList()
 
   fun argv(items: List<ArgvItem>, values: Map<String, String>): List<String> = items.flatMap { item ->
     when (item) {

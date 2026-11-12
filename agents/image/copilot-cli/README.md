@@ -37,6 +37,18 @@ the agent's machine. Shared image-kind rules: `agents/AGENTS.md` §4.
   `done` and `error` map as usual. `idle` stays unmapped: Copilot's source
   is closed, and we don't know yet when it says it.
 
+## Messages
+
+Other agents' messages come in through more hooks in the same file,
+`phonecando-inbox`: `postToolUse` (after each tool that succeeds) adds
+them as `additionalContext`, and `agentStop` keeps the turn going once
+with them as its prompt (`decision: "block"`; skipped when
+`stop_hook_active`, so at most once a turn, under Copilot's own cap of
+8). There is no turn-start one: Copilot drops what a
+`userPromptSubmitted` command hook prints. Copilot cannot be woken when
+idle: messages that come then wait for the next tool call or the end of
+the next turn. Copilot cuts `additionalContext` at 10 KB.
+
 ## Phone tools
 
 `--additional-mcp-config`, a `when: bridgeUrl` item, for this run only, so

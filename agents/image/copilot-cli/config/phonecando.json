@@ -7,8 +7,12 @@
     "permissionRequest": [
       { "type": "command", "bash": "sh /root/.phonecando/bin/phonecando-event permissionRequest", "timeoutSec": 10 }
     ],
+    "postToolUse": [
+      { "type": "command", "bash": "sh /root/.phonecando/bin/phonecando-inbox postToolUse", "timeoutSec": 10 }
+    ],
     "agentStop": [
-      { "type": "command", "bash": "sh /root/.phonecando/bin/phonecando-event agentStop", "timeoutSec": 10 }
+      { "type": "command", "bash": "sh /root/.phonecando/bin/phonecando-event agentStop", "timeoutSec": 10 },
+      { "type": "command", "bash": "grep -q '\"stop_hook_active\": *true' || sh /root/.phonecando/bin/phonecando-inbox agentStop", "timeoutSec": 10 }
     ],
     "errorOccurred": [
       { "type": "command", "bash": "sh /root/.phonecando/bin/phonecando-event errorOccurred", "timeoutSec": 10 }

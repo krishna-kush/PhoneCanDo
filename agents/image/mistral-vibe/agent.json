@@ -4,7 +4,10 @@
   "label": "Mistral Vibe",
   "version": "1",
   "type": "image",
-  "channels": ["full", "lite"],
+  "channels": [
+    "full",
+    "lite"
+  ],
   "stability": "preview",
   "licence": {
     "spdx": "Apache-2.0",
@@ -15,16 +18,58 @@
   },
   "requires": {
     "linux": "required",
-    "commands": ["bash", "git", "rg"],
-    "runtimes": ["python"]
+    "commands": [
+      "bash",
+      "git",
+      "rg"
+    ],
+    "runtimes": [
+      "python"
+    ]
+  },
+  "config": {
+    "dir": "config",
+    "into": ".vibe-agent",
+    "keep": [
+      "AGENTS.md"
+    ],
+    "required": [
+      "hooks.toml",
+      "AGENTS.md"
+    ]
   },
   "install": {
-    "families": ["apt", "dnf", "pacman", "zypper"],
+    "families": [
+      "apt",
+      "dnf",
+      "pacman",
+      "zypper"
+    ],
     "packages": {
-      "apt": ["bash", "ca-certificates", "git", "ripgrep"],
-      "dnf": ["bash", "ca-certificates", "git", "ripgrep"],
-      "pacman": ["bash", "ca-certificates", "git", "ripgrep"],
-      "zypper": ["bash", "ca-certificates", "git", "ripgrep"]
+      "apt": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ],
+      "dnf": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ],
+      "pacman": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ],
+      "zypper": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ]
     },
     "steps": [
       "UV_LINK_MODE=copy uv tool install --force --python 3.12 mistral-vibe@latest",
@@ -39,15 +84,23 @@
     ]
   },
   "versionCheck": {
-    "argv": ["/root/.local/bin/vibe", "--version"],
+    "argv": [
+      "/root/.local/bin/vibe",
+      "--version"
+    ],
     "pattern": "vibe (\\d+\\.\\d+\\.\\d+)"
   },
-  "instructions": ".vibe/AGENTS.md",
+  "instructions": ".vibe-agent/AGENTS.md",
   "state": {
-    "env": { "VIBE_HOME": "{{stateDir}}/vibe" },
-    "instructions": "vibe/AGENTS.md"
+    "env": {
+      "VIBE_HOME": "{{stateDir}}/vibe"
+    },
+    "instructions": "vibe/AGENTS.md",
+    "config": "vibe"
   },
-  "userState": [".vibe"],
+  "userState": [
+    ".vibe-agent"
+  ],
   "engine": {
     "style": "tui",
     "launch": {
@@ -58,35 +111,105 @@
         "vibe"
       ],
       "env": {
-        "VIBE_ENABLE_UPDATE_CHECKS": "false"
+        "VIBE_ENABLE_UPDATE_CHECKS": "false",
+        "VIBE_HOME": "/root/.vibe-agent"
       },
       "cwd": "{{projectDir}}"
     },
-    "readiness": { "output": { "settleMs": 500, "timeoutSec": 180 } },
-    "resume": { "args": ["--continue"] }
+    "readiness": {
+      "output": {
+        "settleMs": 500,
+        "timeoutSec": 180
+      }
+    },
+    "resume": {
+      "args": [
+        "--continue"
+      ]
+    }
   },
   "events": [
     {
       "pty": {
         "rules": [
-          { "on": "osc7501", "match": "^state=working", "event": "working" },
-          { "on": "osc7501", "match": "^state=blocked", "event": "waiting" },
-          { "on": "osc7501", "match": "^state=done", "event": "finished" },
-          { "on": "osc7501", "match": "^state=error", "event": "failed" },
-          { "on": "osc7501", "match": "^state=idle", "event": "stopped" }
+          {
+            "on": "osc7501",
+            "match": "^state=working",
+            "event": "working"
+          },
+          {
+            "on": "osc7501",
+            "match": "^state=blocked",
+            "event": "waiting"
+          },
+          {
+            "on": "osc7501",
+            "match": "^state=done",
+            "event": "finished"
+          },
+          {
+            "on": "osc7501",
+            "match": "^state=error",
+            "event": "failed"
+          },
+          {
+            "on": "osc7501",
+            "match": "^state=idle",
+            "event": "stopped"
+          }
         ]
       }
     }
   ],
-  "idle": { "from": ["output"], "quietSec": 120 },
+  "idle": {
+    "from": [
+      "output"
+    ],
+    "quietSec": 120
+  },
   "surfaces": {
     "home": "tui",
-    "terminal": { "shell": true },
+    "terminal": {
+      "shell": true
+    },
     "chatTitle": "^(?:>> |\\? )?(?!Vibe(?: - |$))(.+?)(?: - (?:Action Required|Task Complete))?$"
   },
   "phoneTools": "mcp:argv",
   "signIn": [
-    { "method": "browser", "note": "On first start pick the browser sign-in: Vibe shows Mistral's link (the machine has no xdg-open); open it and sign in, and Vibe saves the key to ~/.vibe/.env." },
-    { "method": "api-key", "note": "Or paste a Mistral API key from console.mistral.ai at Vibe's setup (or run vibe --setup), or put MISTRAL_API_KEY=<key> in ~/.vibe/.env." }
-  ]
+    {
+      "method": "browser",
+      "note": "On first start pick the browser sign-in: Vibe shows Mistral's link (the machine has no xdg-open); open it and sign in. Vibe keeps the key in the agent's own ~/.vibe-agent."
+    },
+    {
+      "method": "api-key",
+      "note": "Or paste a Mistral API key from console.mistral.ai at Vibe's setup, or put MISTRAL_API_KEY=<key> in ~/.vibe-agent/.env (a vibe you run by hand uses ~/.vibe)."
+    }
+  ],
+  "inbox": {
+    "hooks": {
+      "pre_agent": {
+        "format": "json",
+        "template": {
+          "hook_specific_output": {
+            "additional_context": "{{messages}}"
+          }
+        }
+      },
+      "post_tool": {
+        "format": "json",
+        "template": {
+          "hook_specific_output": {
+            "additional_context": "{{messages}}"
+          }
+        }
+      },
+      "post_agent": {
+        "format": "json",
+        "template": {
+          "decision": "deny",
+          "reason": "{{messages}}"
+        }
+      }
+    }
+  }
 }

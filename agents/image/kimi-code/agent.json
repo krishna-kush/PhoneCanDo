@@ -4,7 +4,10 @@
   "label": "Kimi Code",
   "version": "1",
   "type": "image",
-  "channels": ["full", "lite"],
+  "channels": [
+    "full",
+    "lite"
+  ],
   "stability": "preview",
   "licence": {
     "spdx": "MIT",
@@ -15,17 +18,65 @@
   },
   "requires": {
     "linux": "required",
-    "commands": ["bash", "git", "rg"],
-    "runtimes": ["node>=22"]
+    "commands": [
+      "bash",
+      "git",
+      "rg"
+    ],
+    "runtimes": [
+      "node>=22"
+    ]
+  },
+  "config": {
+    "dir": "config",
+    "into": ".kimi-code-agent",
+    "keep": [
+      "AGENTS.md"
+    ],
+    "required": [
+      "phonecando-mcp.mjs",
+      "AGENTS.md"
+    ]
   },
   "install": {
-    "families": ["apt", "apk", "dnf", "pacman", "zypper"],
+    "families": [
+      "apt",
+      "apk",
+      "dnf",
+      "pacman",
+      "zypper"
+    ],
     "packages": {
-      "apt": ["bash", "ca-certificates", "git", "ripgrep"],
-      "apk": ["bash", "ca-certificates", "git", "ripgrep"],
-      "dnf": ["bash", "ca-certificates", "git", "ripgrep"],
-      "pacman": ["bash", "ca-certificates", "git", "ripgrep"],
-      "zypper": ["bash", "ca-certificates", "git", "ripgrep"]
+      "apt": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ],
+      "apk": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ],
+      "dnf": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ],
+      "pacman": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ],
+      "zypper": [
+        "bash",
+        "ca-certificates",
+        "git",
+        "ripgrep"
+      ]
     },
     "steps": [
       "npm install -g --prefix \"$HOME/.local\" @moonshot-ai/kimi-code@latest"
@@ -38,49 +89,106 @@
     ]
   },
   "versionCheck": {
-    "argv": ["/root/.local/bin/kimi", "--version"],
+    "argv": [
+      "/root/.local/bin/kimi",
+      "--version"
+    ],
     "pattern": "(?:^|\\n)(\\d+\\.\\d+\\.\\d+)"
   },
-  "instructions": ".kimi-code/AGENTS.md",
+  "instructions": ".kimi-code-agent/AGENTS.md",
   "state": {
-    "env": { "KIMI_CODE_HOME": "{{stateDir}}/kimi-code" },
-    "instructions": "kimi-code/AGENTS.md"
+    "env": {
+      "KIMI_CODE_HOME": "{{stateDir}}/kimi-code"
+    },
+    "instructions": "kimi-code/AGENTS.md",
+    "config": "kimi-code"
   },
-  "userState": [".kimi-code"],
+  "userState": [
+    ".kimi-code-agent"
+  ],
   "engine": {
     "style": "tui",
     "launch": {
-      "argv": ["/root/.local/bin/kimi"],
+      "argv": [
+        "sh",
+        "-c",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then node \"$KIMI_CODE_HOME/phonecando-mcp.mjs\" \"$KIMI_CODE_HOME/mcp.json\" \"$PHONECANDO_BRIDGE_URL/mcp\" || true; fi; exec /root/.local/bin/kimi \"$@\"",
+        "kimi"
+      ],
       "env": {
+        "KIMI_CODE_HOME": "/root/.kimi-code-agent",
         "KIMI_CODE_NO_AUTO_UPDATE": "1"
       },
       "cwd": "{{projectDir}}"
     },
-    "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
-    "resume": { "args": ["--continue"], "at": 1 }
+    "readiness": {
+      "output": {
+        "settleMs": 500,
+        "timeoutSec": 120
+      }
+    },
+    "resume": {
+      "args": [
+        "--continue"
+      ]
+    }
   },
   "events": [
     {
       "pty": {
         "rules": [
-          { "on": "osc7501", "match": "^state=working(?!:id=)", "event": "working" },
-          { "on": "osc7501", "match": "^state=blocked", "event": "waiting" },
-          { "on": "osc7501", "match": "^state=done(?!:id=)", "event": "finished" },
-          { "on": "osc7501", "match": "^state=error(?!:id=)", "event": "failed" },
-          { "on": "osc7501", "match": "^state=idle(?!:id=)", "event": "stopped" }
+          {
+            "on": "osc7501",
+            "match": "^state=working(?!:id=)",
+            "event": "working"
+          },
+          {
+            "on": "osc7501",
+            "match": "^state=blocked",
+            "event": "waiting"
+          },
+          {
+            "on": "osc7501",
+            "match": "^state=done(?!:id=)",
+            "event": "finished"
+          },
+          {
+            "on": "osc7501",
+            "match": "^state=error(?!:id=)",
+            "event": "failed"
+          },
+          {
+            "on": "osc7501",
+            "match": "^state=idle(?!:id=)",
+            "event": "stopped"
+          }
         ]
       }
     }
   ],
-  "idle": { "from": ["output"], "quietSec": 120 },
+  "idle": {
+    "from": [
+      "output"
+    ],
+    "quietSec": 120
+  },
   "surfaces": {
     "home": "tui",
-    "terminal": { "shell": true },
+    "terminal": {
+      "shell": true
+    },
     "chatTitle": "^(?!Kimi Code$)(.+)$"
   },
-  "phoneTools": "none",
+  "phoneTools": "mcp:argv",
   "signIn": [
-    { "method": "device-code", "note": "Run /login in Kimi Code: it shows a link and a code; open the link, sign in to your Kimi account and enter the code." }
+    {
+      "method": "device-code",
+      "note": "Run /login in Kimi Code: it shows a link and a code; open the link, sign in to your Kimi account and enter the code."
+    },
+    {
+      "method": "device-code",
+      "note": "The agent keeps its sign-in in its own Kimi folder (~/.kimi-code-agent): a kimi you run by hand in a terminal signs in on its own."
+    }
   ],
   "models": {
     "openai-chat": {

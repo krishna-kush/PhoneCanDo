@@ -192,5 +192,24 @@
       "method": "api-key",
       "note": "An Anthropic API key also works: set ANTHROPIC_API_KEY in the env block of ~/.claude/settings.json in this machine."
     }
-  ]
+  ],
+  "inbox": {
+    "hooks": {
+      "PostToolUse": {
+        "format": "json",
+        "template": {
+          "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": "{{messages}}"
+          }
+        }
+      },
+      "Stop": {
+        "format": "text",
+        "template": "{{messages}}",
+        "exit": 2
+      }
+    },
+    "wake": "hook"
+  }
 }

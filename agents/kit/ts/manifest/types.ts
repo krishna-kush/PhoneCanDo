@@ -300,6 +300,50 @@ export interface Manifest {
   versionCheck?: VersionCheck;
   /** How the kind takes a local model, by wire API in the order it prefers them. */
   models?: Partial<Record<ModelApi, ModelWiring>>;
+  inbox?: Inbox;
+}
+
+/** How a hook event's output is read: as it is, or as JSON (the messages go in as a JSON string's content). */
+export type InboxFormat = 'text' | 'json';
+/** How an idle agent of the kind can be woken: a waiting hook, its server's wake call, or its own reader. */
+export type InboxWake = 'hook' | 'server' | 'reader';
+
+/**
+ * What `phonecando-inbox <Event>` prints for one of the kind's hook events,
+ * and its exit code (default 0; on any other the output goes to stderr).
+ */
+export interface InboxHook {
+  format: InboxFormat;
+  /** A string, or (format json) a JSON object; {{messages}} is the rendered messages, its one placeholder. */
+  template: string | Record<string, unknown>;
+  exit?: number;
+}
+
+/** A call to a server engine: `path` may name {{sessionId}} (the chat), the JSON `body`'s strings {{messages}} and {{sessionId}}. */
+export interface InboxEndpoint {
+  method: 'POST';
+  path: string;
+  body: Record<string, unknown>;
+}
+
+/**
+ * How other agents' messages reach a running agent of the kind; without
+ * one it only pulls them (its agents_inbox tool). At least one way in.
+ */
+export interface Inbox {
+  /** Per hook event of the kind, whose hook runs `phonecando-inbox <Event>`. */
+  hooks?: Record<string, InboxHook>;
+  /** `deliver` queues them for the chat (it works, or may not be woken); `wake` posts them to an idle one. */
+  server?: {
+    deliver: InboxEndpoint;
+    wake?: InboxEndpoint;
+    /** GET `path` answers the agent's chats newest first; `id` points at the newest one's id (when the host knows none). */
+    latest?: { path: string; id: string };
+  };
+  /** The kind's own extension or plugin reads PHONECANDO_INBOX itself. */
+  reader?: boolean;
+  /** Absent: an idle agent of the kind cannot be woken. */
+  wake?: InboxWake;
 }
 
 /** A wire API a model server may serve and a kind may speak. */

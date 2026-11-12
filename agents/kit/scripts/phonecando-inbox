@@ -1,0 +1,159 @@
+#!/bin/sh
+# phonecando-inbox <Event>
+# phonecando-inbox --wait <Event> <timeoutSec>
+# phonecando-inbox --cancel
+#
+# Hands other agents' messages to the agent, from one of its hooks. The
+# runner keeps the agent's undelivered messages in its inbox folder,
+# $PHONECANDO_INBOX, as pending/: `ids` (one per line), `messages.jsonl`,
+# `<Event>.out` (what to print for each hook event the kind's manifest
+# names in `inbox.hooks`), `<Event>.exit` (that event's exit code, when not
+# 0) and `wake` (present when these messages may wake an idle agent).
+#
+# <Event>: with no messages for this event, print nothing and exit 0 (it
+# is cheap, as it runs after every tool call). Otherwise claim them by
+# renaming pending/ (if another hook wins, exit 0), print <Event>.out
+# (to stderr when the exit code is not 0, as hook runners read stderr
+# then), append
+#
+#   @inbox TAB <ids, space-separated>
+#
+# to $PHONECANDO_EVENTS (the agent's events file, so the runner marks them
+# read), and exit with <Event>.exit, else 0.
+#
+# --wait <Event> <timeoutSec>: for a kind whose idle wake is a hook that
+# waits after each turn (its manifest's `inbox.wake` "hook"). Every second, checks for
+# messages that may wake the agent (pending/wake) and, once there, goes on
+# as above; after <timeoutSec> (1 to 86400) exits 0 silently. The newest
+# waiter wins: each writes its pid to $PHONECANDO_INBOX/waiter and exits 0
+# silently once the file names another or none, so waiters left by earlier
+# turns never pile up; it removes the file on its way out while it still
+# names it.
+#
+# --cancel: removes the waiter file, so a waiter left running exits at its
+# next check (from a hook that runs when the agent's session ends).
+#
+# <Event> is 1 to 64 of A-Z a-z 0-9 . _ : -, starting with a letter or
+# digit. With no PHONECANDO_INBOX set, no agent listens: every call exits 0
+# and does nothing. Exit 64 for a bad call.
+
+# Bytes, not characters, for every length and pattern below.
+export LC_ALL=C
+
+usage() {
+  echo "usage: phonecando-inbox <Event> | --wait <Event> <timeoutSec> | --cancel" >&2
+  exit 64
+}
+
+event_name() {
+  case "$1" in
+    '' | [!A-Za-z0-9]* | *[!A-Za-z0-9._:-]*) usage ;;
+  esac
+  [ ${#1} -le 64 ] || usage
+}
+
+mode=once
+case "${1-}" in
+  --wait)
+    [ $# -eq 3 ] || usage
+    mode=wait
+    event="$2"
+    timeout="$3"
+    case "$timeout" in
+      '' | *[!0-9]* | 0*) usage ;;
+    esac
+    [ ${#timeout} -le 5 ] && [ "$timeout" -le 86400 ] || usage
+    ;;
+  --cancel)
+    [ $# -eq 1 ] || usage
+    mode=cancel
+    ;;
+  *)
+    [ $# -eq 1 ] || usage
+    event="$1"
+    ;;
+esac
+[ "$mode" = cancel ] || event_name "$event"
+
+# Outside an agent's engine (a hook run by hand, say) nobody delivers.
+inbox="${PHONECANDO_INBOX-}"
+[ -n "$inbox" ] || exit 0
+pending="$inbox/pending"
+waiter="$inbox/waiter"
+
+if [ "$mode" = cancel ]; then
+  rm -f "$waiter"
+  exit 0
+fi
+
+# Claims what is pending for $event and hands it over; returns 1 when there
+# is nothing for it, or another hook claimed it first.
+deliver() {
+  # A set with no output for this event stays for a hook that has one.
+  [ -f "$pending/$event.out" ] || return 1
+  claimed="$inbox/claimed.$$"
+  rm -rf "$claimed"
+  # A rename is atomic: of hooks that run at once, one gets the set.
+  mv "$pending" "$claimed" 2>/dev/null || return 1
+  code=0
+  if [ -f "$claimed/$event.exit" ]; then
+    read -r code <"$claimed/$event.exit" || true
+    case "$code" in
+      '' | *[!0-9]*) code=0 ;;
+    esac
+    [ ${#code} -le 3 ] && [ "$code" -le 255 ] || code=0
+  fi
+  if [ -f "$claimed/$event.out" ]; then
+    if [ "$code" -eq 0 ]; then
+      cat "$claimed/$event.out"
+    else
+      cat "$claimed/$event.out" >&2
+    fi
+  fi
+  ids=""
+  [ -f "$claimed/ids" ] && ids="$(tr -cs '0-9' ' ' <"$claimed/ids")"
+  # Word splitting trims and joins them with single spaces; digits only.
+  # shellcheck disable=SC2086
+  set -- $ids
+  ids="$*"
+  events="${PHONECANDO_EVENTS-}"
+  if [ -n "$ids" ] && [ -n "$events" ]; then
+    # The whole line in one printf to an O_APPEND file, as phonecando-event.
+    printf '@inbox\t%s\n' "$ids" 2>/dev/null >>"$events"
+  fi
+  rm -rf "$claimed"
+  exit "$code"
+}
+
+if [ "$mode" = once ]; then
+  deliver || exit 0
+fi
+
+# --wait: the newest waiter wins.
+mkdir -p "$inbox" 2>/dev/null
+printf '%s\n' "$$" >"$waiter.$$" && mv -f "$waiter.$$" "$waiter" || exit 0
+
+ours() {
+  owner=""
+  # The file may go between the test and the read (a newer waiter's mv
+  # never leaves it missing, but --cancel and a leaving waiter do).
+  [ -f "$waiter" ] && { read -r owner <"$waiter"; } 2>/dev/null
+  [ "$owner" = "$$" ]
+}
+
+leave() {
+  if ours; then rm -f "$waiter"; fi
+}
+trap leave EXIT
+trap 'exit 0' HUP INT TERM
+
+waited=0
+while :; do
+  ours || exit 0
+  if [ -f "$pending/wake" ]; then
+    deliver
+  fi
+  [ "$waited" -lt "$timeout" ] || exit 0
+  sleep 1
+  waited=$((waited + 1))
+done

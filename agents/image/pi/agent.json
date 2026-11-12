@@ -20,7 +20,7 @@
   "config": {
     "dir": "config",
     "into": ".phonecando/pi",
-    "required": ["phonecando.ts"]
+    "required": ["phonecando.ts", "messages.ts", "inbox.ts"]
   },
   "install": {
     "families": ["apt", "apk", "dnf", "pacman", "zypper"],
@@ -86,6 +86,7 @@
       }
     }
   ],
+  "inbox": { "reader": true, "wake": "reader" },
   "idle": { "from": ["output", "events"], "quietSec": 120 },
   "surfaces": {
     "home": "tui",

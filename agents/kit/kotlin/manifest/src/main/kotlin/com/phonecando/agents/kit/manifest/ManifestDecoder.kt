@@ -50,6 +50,7 @@ object ManifestDecoder {
       signIn = m.optArray("signIn") ?: JsonArray(emptyList()),
       hooks = m.optStrings("hooks"),
       models = m.optObj("models")?.let(::models).orEmpty(),
+      inbox = m.optObj("inbox")?.let(InboxDecoder::inbox),
     )
     if (origin == Origin.USER) UserRules.check(m, manifest)
     return manifest

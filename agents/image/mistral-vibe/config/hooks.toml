@@ -1,0 +1,29 @@
+# Seeded by PhoneCanDo into the agent's own Vibe folder (VIBE_HOME) on every
+# start: messages from other agents on this phone (phonecando-inbox prints
+# them in the shape each hook takes, or nothing when there are none).
+# pre_agent adds them to the turn before the model reads it, post_tool after
+# each tool that ran, post_agent sends them as a follow-up once the agent is
+# done (Vibe caps that at 3 a turn).
+
+[[hooks]]
+name = "phonecando-inbox-turn"
+type = "pre_agent"
+match = "main"
+command = "sh /root/.phonecando/bin/phonecando-inbox pre_agent"
+timeout = 10.0
+description = "Messages from other agents on this phone"
+
+[[hooks]]
+name = "phonecando-inbox-tool"
+type = "post_tool"
+command = "sh /root/.phonecando/bin/phonecando-inbox post_tool"
+timeout = 10.0
+description = "Messages from other agents on this phone"
+
+[[hooks]]
+name = "phonecando-inbox-done"
+type = "post_agent"
+match = "main"
+command = "sh /root/.phonecando/bin/phonecando-inbox post_agent"
+timeout = 10.0
+description = "Messages from other agents on this phone"

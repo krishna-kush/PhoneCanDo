@@ -41,6 +41,12 @@ None: Crush reads its config (`crushrc`, a Bash file with `hook add …` and
 `mcp add …`) only from the working folder and `$XDG_CONFIG_HOME/crush/`,
 with no flag or variable for one more file.
 
+## Messages
+
+None: with no phone tools (above) it can neither read nor send other
+agents' messages, so a message to it is refused with that reason, and the
+app shows it as "can't read messages".
+
 ## Local models
 
 None: Crush takes a custom model server only from its config file

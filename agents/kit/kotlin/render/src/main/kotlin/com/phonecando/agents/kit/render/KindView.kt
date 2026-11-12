@@ -19,8 +19,11 @@ import kotlinx.serialization.json.put
 // installs, whether it is installed at all before its agent starts, and
 // whether this build has its payload (a native kind's libs, as [libExists]
 // finds them; always true for an image kind), the APIs it can use a local
-// model with, and whether an agent of it can keep its state in a folder of
-// its own (so a second one can share a machine). Never a template or a
+// model with, whether an agent of it can keep its state in a folder of its
+// own (so a second one can share a machine), and how other agents' messages
+// reach it: pushed into its turns (an `inbox` block) or only pulled with its
+// agents_inbox tool, whether one can wake it, and the level all that makes
+// (MessagingLevel: wakes, delivered, inbox, none). Never a template or a
 // secret: launches, requests and the TUI client are rendered natively.
 object KindView {
   fun of(kind: ManifestKind, isDefault: Boolean, libExists: (String) -> Boolean): JsonObject {
@@ -46,6 +49,9 @@ object KindView {
       put("payloadPresent", payloadPresent(manifest, libExists))
       put("models", JsonArray(manifest.models.map { JsonPrimitive(it.api) }))
       put("stateFolder", kind.ownStateSupported)
+      put("inbox", if (kind.inbox != null) INBOX_PUSH else INBOX_PULL)
+      put("canWake", kind.canWake)
+      put("messaging", kind.messaging.wire)
     }
   }
 
@@ -57,4 +63,6 @@ object KindView {
     manifest.type != TYPE_NATIVE || manifest.payloadLibs.all(libExists)
 
   private const val TYPE_NATIVE = "native"
+  private const val INBOX_PUSH = "push"
+  private const val INBOX_PULL = "pull"
 }

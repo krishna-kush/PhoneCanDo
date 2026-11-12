@@ -15,6 +15,12 @@ is archived.
 
 ## Launch
 
+- An `sh -c` wrapper: before Kimi starts it runs our
+  `phonecando-mcp.mjs` (below), then execs Kimi with its args.
+- `KIMI_CODE_HOME=~/.kimi-code-agent`: the agent has a Kimi folder of its
+  own, so we can add our MCP server without touching yours
+  (`~/.kimi-code`, which a `kimi` you run by hand in a terminal still uses,
+  with its own sign-in).
 - `resume` adds `--continue`; with no chat for the folder Kimi starts a
   new one.
 - The window title is the chat's title (cut to 32 characters) or `Kimi
@@ -22,24 +28,35 @@ is archived.
 
 ## State
 
-- Global instructions: `~/.kimi-code/AGENTS.md`.
-- A second Kimi Code agent on the machine keeps its state in its own
-  folder (`KIMI_CODE_HOME`).
-- `userState`: `~/.kimi-code`.
+- Global instructions: `~/.kimi-code-agent/AGENTS.md`, seeded when absent.
+- Our config (`config/`: `phonecando-mcp.mjs`, `AGENTS.md`) is seeded into
+  the agent's Kimi folder; a second Kimi Code agent on the machine gets a
+  folder of its own (`KIMI_CODE_HOME` in its state folder, our config
+  seeded there too).
+- `userState`: `~/.kimi-code-agent`.
 
 ## Events
 
-No hooks (see Phone tools). Kimi sends the OSC 7501 support query and
+No hooks of ours (Messages, below). Kimi sends the OSC 7501 support query and
 reports once the runner answers; the usual map. Its subagents report as
 child records (`id=agent-…`); only their `blocked` counts. Its own
 notifications go out only while the terminal reports it is not focused.
 
 ## Phone tools
 
-None: Kimi reads hooks (`config.toml`), MCP servers (`mcp.json`) and
-notification settings (`tui.toml`) only from its home, `~/.kimi-code`,
-with no flag for one more file. `KIMI_CODE_HOME` moves all of it, sign-in
-and chats included.
+`phonecando-mcp.mjs` puts a `phonecando` server into the agent's
+`$KIMI_CODE_HOME/mcp.json` before each start, keeping your other servers:
+Kimi reads no variables in `mcp.json`, so the bridge's URL (its port can
+change) is written each time, while the token stays in the environment,
+named by `bearerTokenEnvVar`.
+
+## Messages
+
+Pull only (no `inbox` block): Kimi's hooks live in the same `config.toml`
+as its sign-in and providers, so we add none; other agents' messages wait
+until Kimi calls `agents_inbox`, which its seeded `AGENTS.md` asks it to
+do when a task starts, and every phone tool's result says how many are
+unread.
 
 ## Local models
 

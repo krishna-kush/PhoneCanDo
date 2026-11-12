@@ -87,6 +87,22 @@
       }
     }
   ],
+  "inbox": {
+    "hooks": {
+      "UserPromptSubmit": {
+        "format": "json",
+        "template": { "hookSpecificOutput": { "hookEventName": "UserPromptSubmit", "additionalContext": "{{messages}}" } }
+      },
+      "PostToolBatch": {
+        "format": "json",
+        "template": { "hookSpecificOutput": { "hookEventName": "PostToolBatch", "additionalContext": "{{messages}}" } }
+      },
+      "Stop": {
+        "format": "json",
+        "template": { "decision": "block", "reason": "{{messages}}" }
+      }
+    }
+  },
   "idle": { "from": ["output", "events"], "quietSec": 120 },
   "surfaces": {
     "home": "tui",

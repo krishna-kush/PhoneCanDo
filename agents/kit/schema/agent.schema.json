@@ -413,6 +413,58 @@
       "minProperties": 1,
       "propertyNames": { "enum": ["openai-chat", "openai-responses", "anthropic"] },
       "additionalProperties": { "$ref": "#/$defs/modelWiring" }
+    },
+    "inbox": {
+      "description": "How other agents' messages reach a running agent; no block: it only pulls them (agents_inbox). hooks: the kind's hook events run phonecando-inbox <Event>, which prints what the runner rendered from the event's template; server: the runner posts them to a server engine's chat; reader: the kind's own extension reads PHONECANDO_INBOX. wake names which of these can wake an idle agent (absent: none). At least one way in.",
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["hooks"] },
+        { "required": ["server"] },
+        { "required": ["reader"], "properties": { "reader": { "const": true } } }
+      ],
+      "properties": {
+        "hooks": {
+          "description": "Per hook event (a file name in the inbox folder): what phonecando-inbox <Event> prints and its exit code.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "maxLength": 64, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+          "additionalProperties": { "$ref": "#/$defs/inboxHook" }
+        },
+        "server": {
+          "description": "deliver queues the messages for the agent's chat (it works, or may not be woken); wake posts them to an idle agent that may be.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["deliver"],
+          "properties": {
+            "deliver": { "$ref": "#/$defs/inboxCall" },
+            "wake": { "$ref": "#/$defs/inboxCall" },
+            "latest": {
+              "description": "GET path answers the agent's chats, newest first; id is the JSON pointer to the newest one's id. Asked when the host knows no chat of the agent's.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "id"],
+              "properties": {
+                "path": { "type": "string", "pattern": "^/\\S*$" },
+                "id": { "type": "string", "pattern": "^(?:/(?:[^~/]|~[01])*)+$" }
+              }
+            }
+          }
+        },
+        "reader": { "type": "boolean" },
+        "wake": { "enum": ["hook", "server", "reader"] }
+      },
+      "allOf": [
+        { "if": { "required": ["wake"], "properties": { "wake": { "const": "hook" } } }, "then": { "required": ["hooks"] } },
+        {
+          "if": { "required": ["wake"], "properties": { "wake": { "const": "server" } } },
+          "then": { "required": ["server"], "properties": { "server": { "required": ["wake"] } } }
+        },
+        {
+          "if": { "required": ["wake"], "properties": { "wake": { "const": "reader" } } },
+          "then": { "required": ["reader"], "properties": { "reader": { "const": true } } }
+        }
+      ]
     }
   },
   "dependentRequired": {
@@ -480,7 +532,8 @@
         "properties": {
           "events": { "items": { "properties": { "sse": false } } },
           "chats": false,
-          "surfaces": { "properties": { "web": false, "terminal": { "properties": { "client": false } } } }
+          "surfaces": { "properties": { "web": false, "terminal": { "properties": { "client": false } } } },
+          "inbox": { "properties": { "server": false } }
         }
       }
     },
@@ -502,6 +555,50 @@
     }
   ],
   "$defs": {
+    "inboxHook": {
+      "description": "What phonecando-inbox <Event> prints: template, a string or (format json) a JSON object, whose strings hold {{messages}} (in a format json string template, inside a JSON string: it goes in escaped); exit, its exit code (on any but 0 the output goes to stderr).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "template"],
+      "properties": {
+        "format": { "enum": ["text", "json"] },
+        "template": {
+          "oneOf": [{ "$ref": "#/$defs/inboxHookText" }, { "type": "object", "additionalProperties": { "$ref": "#/$defs/inboxHookJson" } }]
+        },
+        "exit": { "type": "integer", "minimum": 0, "maximum": 255 }
+      },
+      "if": { "required": ["format"], "properties": { "format": { "const": "text" } } },
+      "then": { "properties": { "template": { "type": "string" } } }
+    },
+    "inboxHookText": { "type": "string", "maxLength": 1024, "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:messages)\\}\\})*$" },
+    "inboxHookJson": {
+      "anyOf": [
+        { "$ref": "#/$defs/inboxHookText" },
+        { "type": ["number", "boolean", "null"] },
+        { "type": "array", "items": { "$ref": "#/$defs/inboxHookJson" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/inboxHookJson" } }
+      ]
+    },
+    "inboxCall": {
+      "description": "method path on the engine, with the kind's auth: path may name {{sessionId}} (the agent's chat, URL-encoded); body's strings hold {{messages}} and may hold {{sessionId}}.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "path", "body"],
+      "properties": {
+        "method": { "enum": ["POST"] },
+        "path": { "type": "string", "maxLength": 1024, "allOf": [{ "pattern": "^/\\S*$" }, { "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:sessionId)\\}\\})*$" }] },
+        "body": { "type": "object", "additionalProperties": { "$ref": "#/$defs/inboxBodyJson" } }
+      }
+    },
+    "inboxBodyText": { "type": "string", "maxLength": 1024, "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:messages|sessionId)\\}\\})*$" },
+    "inboxBodyJson": {
+      "anyOf": [
+        { "$ref": "#/$defs/inboxBodyText" },
+        { "type": ["number", "boolean", "null"] },
+        { "type": "array", "items": { "$ref": "#/$defs/inboxBodyJson" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/inboxBodyJson" } }
+      ]
+    },
     "modelWiring": {
       "type": "object",
       "additionalProperties": false,

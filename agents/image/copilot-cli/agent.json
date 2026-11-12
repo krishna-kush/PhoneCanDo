@@ -96,6 +96,18 @@
       }
     }
   ],
+  "inbox": {
+    "hooks": {
+      "postToolUse": {
+        "format": "json",
+        "template": { "additionalContext": "{{messages}}" }
+      },
+      "agentStop": {
+        "format": "json",
+        "template": { "decision": "block", "reason": "{{messages}}" }
+      }
+    }
+  },
   "idle": { "from": ["output", "events"], "quietSec": 120 },
   "surfaces": {
     "home": "tui",

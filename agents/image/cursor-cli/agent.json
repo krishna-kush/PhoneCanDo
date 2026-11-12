@@ -68,6 +68,18 @@
       }
     }
   ],
+  "inbox": {
+    "hooks": {
+      "postToolUse": {
+        "format": "json",
+        "template": { "additional_context": "{{messages}}" }
+      },
+      "stop": {
+        "format": "json",
+        "template": { "followup_message": "{{messages}}" }
+      }
+    }
+  },
   "idle": { "from": ["output", "events"], "quietSec": 120 },
   "surfaces": {
     "home": "tui",

@@ -17,6 +17,11 @@
     "linux": "required",
     "commands": ["bash", "git", "rg"]
   },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/claude-code",
+    "required": ["settings.json"]
+  },
   "install": {
     "families": ["apt", "apk", "dnf", "pacman", "zypper"],
     "packages": {
@@ -56,7 +61,7 @@
       "argv": [
         "/root/.local/bin/claude",
         "--settings",
-        "{\"hooks\":{\"UserPromptSubmit\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event UserPromptSubmit\",\"timeout\":10}]}],\"Notification\":[{\"matcher\":\"permission_prompt|elicitation_dialog|elicitation_url_dialog\",\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event Notification\",\"timeout\":10}]}],\"Stop\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event Stop\",\"timeout\":10}]}],\"StopFailure\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event StopFailure\",\"timeout\":10}]}],\"SessionEnd\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"sh /root/.phonecando/bin/phonecando-event SessionEnd\"}]}]}}",
+        "/root/.phonecando/claude-code/settings.json",
         "--mcp-config",
         "{\"mcpServers\":{\"phonecando\":{\"type\":\"http\",\"url\":\"${PHONECANDO_BRIDGE_URL}/mcp\",\"headers\":{\"Authorization\":\"Bearer ${PHONECANDO_BRIDGE_TOKEN}\"}}}}"
       ],
@@ -75,6 +80,7 @@
       "hook": {
         "map": {
           "UserPromptSubmit": "working",
+          "Woken": "working",
           "Notification": "waiting",
           "Stop": "finished",
           "StopFailure": "failed",
@@ -83,6 +89,24 @@
       }
     }
   ],
+  "inbox": {
+    "hooks": {
+      "PostToolBatch": {
+        "format": "json",
+        "template": { "hookSpecificOutput": { "hookEventName": "PostToolBatch", "additionalContext": "{{messages}}" } }
+      },
+      "UserPromptSubmit": {
+        "format": "json",
+        "template": { "hookSpecificOutput": { "hookEventName": "UserPromptSubmit", "additionalContext": "{{messages}}" } }
+      },
+      "Stop": {
+        "format": "text",
+        "template": "Not a hook error: messages from other AI agents on this phone arrived while you were idle and woke you.\n\n{{messages}}",
+        "exit": 2
+      }
+    },
+    "wake": "hook"
+  },
   "idle": { "from": ["output", "events"], "quietSec": 120 },
   "surfaces": {
     "home": "tui",

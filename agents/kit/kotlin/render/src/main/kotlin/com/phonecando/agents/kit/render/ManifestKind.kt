@@ -4,13 +4,19 @@ import com.phonecando.agents.kit.AgentConfig
 import com.phonecando.agents.kit.AgentKind
 import com.phonecando.agents.kit.EngineEvent
 import com.phonecando.agents.kit.HttpProbe
+import com.phonecando.agents.kit.InboxCall
+import com.phonecando.agents.kit.InboxRequest
 import com.phonecando.agents.kit.KindHooks
 import com.phonecando.agents.kit.LaunchContext
 import com.phonecando.agents.kit.LaunchSpec
+import com.phonecando.agents.kit.MessagingLevel
 import com.phonecando.agents.kit.manifest.Command
 import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.agents.kit.manifest.EventSource
+import com.phonecando.agents.kit.manifest.InboxSpec
+import com.phonecando.agents.kit.manifest.InboxWake
 import com.phonecando.agents.kit.manifest.Manifest
+import com.phonecando.agents.kit.manifest.PhoneTools
 import com.phonecando.agents.kit.manifest.PtyEvent
 import com.phonecando.agents.kit.manifest.PtyRule
 import com.phonecando.agents.kit.manifest.VersionCheck
@@ -27,6 +33,8 @@ import java.io.File
 // first on PATH, once its install (InstallRenderer) has put them and the
 // kind there. An agent given a state folder of its own keeps its state
 // there (StateSeam), and its instructions file and config move with it.
+// Other agents' messages reach a running agent as its `inbox` says
+// (InboxSeam): its hooks print them, or its server takes them.
 // of() refuses a kind this build cannot run (KindChecks throws
 // KindException), so the catalog never holds one.
 class ManifestKind private constructor(
@@ -176,6 +184,45 @@ class ManifestKind private constructor(
 
   override fun passwordForms(password: String): List<String> = SecretForms.of(auth, password)
 
+  /** How other agents' messages reach a running agent of this kind (`inbox`); null: it only pulls them. */
+  val inbox: InboxSpec? get() = manifest.inbox
+
+  override val canWake: Boolean get() = manifest.inbox?.wake != null
+
+  override val messaging: MessagingLevel
+    get() = MessagingLevel.of(
+      phoneTools = (manifest.phoneTools ?: PhoneTools.NONE) != PhoneTools.NONE,
+      pushed = manifest.inbox != null,
+      wakes = canWake,
+    )
+
+  override val wakeNeedsWaiter: Boolean get() = manifest.inbox?.wake == InboxWake.HOOK
+
+  /**
+   * What `phonecando-inbox <[event]>` prints: the hook's template with
+   * {{messages}} the runner's rendered [messages] (escaped for format json).
+   * Throws KindException for an event the inbox does not name.
+   */
+  fun renderInboxHook(event: String, messages: String): String {
+    val hook = manifest.inbox?.hooks?.get(event) ?: throw KindException("$id: no inbox hook $event")
+    return InboxSeam.hook(hook, messages)
+  }
+
+  override fun inboxRequest(which: InboxCall, port: String, password: String, sessionId: String, messages: String): InboxRequest? {
+    val server = manifest.inbox?.server ?: return null
+    val endpoint = when (which) {
+      InboxCall.DELIVER -> server.deliver
+      InboxCall.WAKE -> server.wake
+    } ?: return null
+    return InboxSeam.request(endpoint, auth, port, password, sessionId, messages)
+  }
+
+  override fun inboxLatestRequest(port: String, password: String): InboxRequest? =
+    manifest.inbox?.server?.latest?.let { InboxSeam.latest(it, auth, port, password) }
+
+  override fun inboxLatestId(answer: String): String? =
+    manifest.inbox?.server?.latest?.let { JsonPointer.text(answer, it.id) }?.takeIf { it.isNotBlank() }
+
   /**
    * The kind's TUI attached to its running engine; null when it has none.
    * An agent with a state folder of its own has its client read that too:
@@ -240,8 +287,8 @@ class ManifestKind private constructor(
      * pattern that does not compile, more than one event stream, a hook the
      * manifest names that [hooks] lacks, an install without a version
      * check, a state block that does not fit the kind, a userState path
-     * the machine's agents share, or a runtime [runtimes] lacks or
-     * provides too old.
+     * the machine's agents share, an inbox it cannot use (InboxChecks), or
+     * a runtime [runtimes] lacks or provides too old.
      */
     fun of(manifest: Manifest, hooks: KindHooks?, runtimes: Map<String, RuntimePlugin> = emptyMap()): ManifestKind {
       KindChecks.engine(manifest)
@@ -258,6 +305,7 @@ class ManifestKind private constructor(
       KindChecks.install(manifest)
       KindChecks.state(manifest)
       KindChecks.userState(manifest)
+      InboxChecks.check(manifest)
       val stream = KindChecks.hooks(manifest, hooks)
       val bound = RuntimeBinding.bind(manifest, runtimes)
       return ManifestKind(manifest, bound, engine.launch!!, readiness, stream?.first, stream?.second)

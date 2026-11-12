@@ -20,6 +20,26 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-inbox UserPromptSubmit",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolBatch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh /root/.phonecando/bin/phonecando-inbox PostToolBatch",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PermissionRequest": [
@@ -40,6 +60,15 @@
           {
             "type": "command",
             "command": "sh /root/.phonecando/bin/phonecando-event Stop",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "grep -q '\"stop_hook_active\": *true' || sh /root/.phonecando/bin/phonecando-inbox Stop",
             "timeout": 10
           }
         ]

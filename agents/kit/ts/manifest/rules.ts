@@ -60,6 +60,18 @@ export const MODEL_SECRET_PLACEHOLDER = 'modelKey';
 // {{stateDir}}, the one placeholder it knows, which no other template may use.
 export const STATE_PLACEHOLDER = 'stateDir';
 
+// How other agents' messages reach a running agent (`inbox`): the kind's
+// hook events print what the runner rendered for them, its server takes
+// them, or its own reader fetches them; `wake` names which of those can
+// wake an idle agent. {{messages}} is the rendered messages, {{sessionId}}
+// the agent's chat (a server call only); no other placeholder, no secret.
+export const INBOX_KEYS = ['hooks', 'server', 'reader', 'wake'];
+export const INBOX_FORMATS = ['text', 'json'];
+export const INBOX_WAKES = ['hook', 'server', 'reader'];
+export const INBOX_METHODS = ['POST'];
+export const INBOX_MESSAGES = 'messages';
+export const INBOX_SESSION = 'sessionId';
+
 // What every agent on a machine shares in HOME, which `userState` (deleted
 // when an agent that kept the kind's defaults leaves a machine that stays)
 // may never name, hold or lie in: the work folder, our own files, keys,
@@ -121,6 +133,12 @@ export const PATTERNS = {
   guestTemplate: templateOf(GUEST_PLACEHOLDERS),
   /** A state env value: {{stateDir}} only. */
   stateTemplate: templateOf([STATE_PLACEHOLDER]),
+  /** An inbox hook template's strings: {{messages}} only. */
+  inboxHookTemplate: templateOf([INBOX_MESSAGES]),
+  /** An inbox server call's path: {{sessionId}} only. */
+  inboxPathTemplate: templateOf([INBOX_SESSION]),
+  /** An inbox server call's body strings: {{messages}} and {{sessionId}}. */
+  inboxBodyTemplate: templateOf([INBOX_MESSAGES, INBOX_SESSION]),
   httpPath: '^/\\S*$',
   jsonPointer: '^(?:/(?:[^~/]|~[01])*)+$',
   envName: '^[A-Za-z_][A-Za-z0-9_]*$',
@@ -177,6 +195,8 @@ export const MAX = {
   installRetries: 5,
   /** The highest major version a runtime names. */
   major: 9999,
+  /** The highest exit code an inbox hook ends with. */
+  hookExit: 255,
 };
 
 /** Config fields that describe the bundled asset folder, so need config.dir. */
@@ -196,6 +216,8 @@ export const RUNTIME_FIELDS = ['engine', 'events', 'chats', 'idle', 'surfaces', 
 export const MODEL_FIELDS = ['models'];
 /** The agent's global instructions, its own state folder and the kind's default state (state.ts checks these). */
 export const STATE_FIELDS = ['instructions', 'state', 'userState'];
+/** How other agents' messages reach a running agent (inbox.ts checks it). */
+export const INBOX_FIELDS = ['inbox'];
 export const FIELDS = [
   ...REQUIRED,
   ...DEFAULT_FIELDS,
@@ -205,4 +227,5 @@ export const FIELDS = [
   ...INSTALL_FIELDS,
   ...MODEL_FIELDS,
   ...STATE_FIELDS,
+  ...INBOX_FIELDS,
 ];

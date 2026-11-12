@@ -34,6 +34,23 @@ version changes. The screen/info/.../wait wrappers now call `/pce/observe` and
 Implementation status, wrapper parity and device proof are in
 `../../app/docs/modules/automation.md`.
 
+## Agent tools
+
+Messages between the AI agents on the phone, on every channel and outside
+the phone-control lock (`agents/shared/phone-tools/agents.ts`; one bridge
+route each, so MCP serves them too):
+
+| Tool | Route | Purpose |
+|---|---|---|
+| `agents_list` | `POST /agents/list` | who is here (`scope` machine or phone), what each does, who holds or waits for the screen |
+| `agents_send` | `POST /agents/send` | a message to an agent by name, `@machine` or `@phone`; `wake: true` (direct only) wakes an idle one |
+| `agents_inbox` | `POST /agents/inbox` | read and mark read the caller's unread messages and notices |
+| `agents_wait` | `POST /agents/wait` | wait up to 30 s for the next message (`from` one agent) |
+
+Every message is labelled as from another AI agent, never the user. Where
+an agent's kind allows, messages also reach it inside its turns (the
+manifest's `inbox`, `../../agents/AGENTS.md` §4).
+
 ## `mobile_describe`
 
 ```json
