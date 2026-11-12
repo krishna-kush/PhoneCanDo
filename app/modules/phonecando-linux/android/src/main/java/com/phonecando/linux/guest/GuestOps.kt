@@ -124,6 +124,10 @@ class GuestOps(private val host: LinuxHost) {
     }
   }
 
+  /** The end of the image's last script log (logs/install.log); null before any script ran there. */
+  fun lastLog(imageId: String): ScriptLogEnd? =
+    ScriptLogEnd.read(File(host.paths.image(host.images.image(imageId).id).logs, ScriptLog.FILE_NAME))
+
   // The image's dir once it can run a guest program: ready, no job on it, Linux allowed and present.
   private fun linuxLayout(imageId: String): ImageLayout {
     if (!host.images.startable(imageId)) {

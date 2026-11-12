@@ -37,6 +37,8 @@ export type Route =
   | { name: 'agent-machine'; agentId: AgentId }
   /** The agent's install inside its machine (a kind with one). */
   | { name: 'agent-install'; agentId: AgentId }
+  /** The end of the agent's last install or update log, read back from its machine. */
+  | { name: 'agent-install-log'; agentId: AgentId }
   /**
    * New agent, step 1: which kind, and its model. With `target` the place is
    * set already (New agent here, Android only) and this step makes it;

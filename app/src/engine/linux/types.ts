@@ -98,7 +98,7 @@ export type LinuxProgress = {
   ok?: boolean;
   /** A guest script job only: the name of its last `@phase <name>` line, null before the first. */
   phase?: string | null;
-  /** A guest script job only: its last 20 output lines, redacted. */
+  /** A guest script job only: its last 100 output lines, redacted. */
   tail?: string[];
   /** A guest script job only: its exit code once it ended by itself (on the last event); null
       while it runs, and when it was stopped (timed out, cancelled). */
@@ -189,6 +189,16 @@ export type ReinstallList = { installCommand: string; packages: string[] };
 /** The commands (an agent's tools) an image lacks, and the line that installs them with its
     package manager: null when none are missing or the package manager is unknown. */
 export type MissingTools = { missingTools: string[]; installCommand: string | null };
+
+/** The end of a machine's last guest script log (an agent's install or update): its `# <label>`
+    line, then what it printed, redacted, in whole lines. */
+export type ScriptLog = {
+  text: string;
+  /** Earlier lines were left out: the log is longer than the part read back. */
+  cut: boolean;
+  /** When it was last written (epoch ms): about when the script ended. */
+  modifiedAt: number;
+};
 
 /** runGuestScript's options: the time limit, and a short name for the log and the error line. */
 export type GuestScriptOptions = { timeoutSec: number; label: string };

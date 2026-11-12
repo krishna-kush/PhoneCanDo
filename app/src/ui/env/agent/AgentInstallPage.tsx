@@ -5,13 +5,14 @@ import AgentGone from './AgentGone';
 import InstallSection from './InstallSection';
 import { useAgentRecords } from './useAgentRecords';
 
-// An agent's install inside its machine: the version, a run, Update.
+// An agent's install inside its machine: the version, a run, Update. The
+// page holds still so a run's log can take the room left (InstallSection).
 export default function AgentInstallPage({ agentId }: { agentId: string }) {
   const { agent, image } = useAgentRecords(agentId);
   const { serial } = useAgentLook(agentId);
   if (!agent) return <AgentGone />;
   return (
-    <Screen>
+    <Screen scroll={false} fabClearance={false}>
       <PageHeader kicker={`${serial} · ${agent.name}`} title="Install" />
       <InstallSection agent={agent} image={image} />
     </Screen>

@@ -53,6 +53,7 @@ internal class ScriptOutput(private val tailLines: Int = TAIL_LINES) {
     ScriptDetail(phase, tail.toList(), exitCode, retry, activity)
 
   companion object {
-    const val TAIL_LINES = 20
+    // Enough to fill a tall phone's Install page (LogPane) with some to scroll back.
+    const val TAIL_LINES = 100
   }
 }

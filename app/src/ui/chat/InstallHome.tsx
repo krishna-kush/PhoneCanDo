@@ -7,18 +7,26 @@ import InstallStatus from '../env/parts/InstallStatus';
 
 // Home of an agent that is not installed in its machine yet (a kind with an
 // install; its engine refuses to start until then): the install run, which
-// starts by itself once the agent is made, with Retry or Install. Once it
-// records a version, HomeScreen shows the agent's own UI instead.
+// starts by itself once the agent is made, with Retry or Install; a run's
+// log fills the screen under it. Once it records a version, HomeScreen
+// shows the agent's own UI instead.
 export default function InstallHome({ agent }: { agent: Agent }) {
   const image = useLinuxStore((s) => s.images.find((i) => i.id === agent.imageId));
-  const running = useInstallRun(agent.id)?.status === 'running';
+  const status = useInstallRun(agent.id)?.status;
+  const running = status === 'running';
   const label = agentKind(agent.kind).label;
   return (
-    <YStack flex={1} backgroundColor="bg" padding="4" gap="3" justifyContent="center">
+    <YStack
+      flex={1}
+      backgroundColor="bg"
+      padding="4"
+      gap="3"
+      justifyContent={running || status === 'failed' ? undefined : 'center'}
+    >
       <Text color="fg" fontFamily="mono">
         {running ? `Installing ${label} in its machine…` : `${label} isn't installed in its machine yet`}
       </Text>
-      <InstallStatus agent={agent} image={image} />
+      <InstallStatus agent={agent} image={image} fill />
     </YStack>
   );
 }

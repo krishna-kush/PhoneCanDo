@@ -33,6 +33,7 @@ import type {
   LinuxProgress,
   MissingTools,
   ReinstallList,
+  ScriptLog,
   TagPage,
   TerminalRecipe,
 } from './types';
@@ -59,6 +60,7 @@ type LinuxModule = {
   checkTools(imageId: ImageId, commands: string[]): Promise<MissingTools>;
   runGuestScript(imageId: ImageId, script: string, opts: GuestScriptOptions): Promise<LinuxJob>;
   runGuestCommand(imageId: ImageId, argv: string[], timeoutSec: number): Promise<GuestCommandResult>;
+  lastScriptLog(imageId: ImageId): Promise<ScriptLog | null>;
   reinstallList(imageId: ImageId): ReinstallList | null;
   clearReinstallList(imageId: ImageId): void;
   terminalRecipe(imageId: ImageId): TerminalRecipe;
@@ -267,7 +269,7 @@ export function checkTools(imageId: ImageId, commands: readonly string[]): Promi
 /** Starts a POSIX sh script in the image (`sh -s`, the script on stdin, HOME=/root) as a job on
     it; await prepareImageForStart first. Its LinuxProgress events (step `script`) carry the
     phase its `@phase <name>` lines name, the retry its `@retry <phase> <n>/<max>` lines announce
-    (until the next phase), its last 20 other lines, redacted, and its time and bytes received so
+    (until the next phase), its last 100 other lines, redacted, and its time and bytes received so
     far, about once a second even while it prints nothing; it logs to the image's
     logs/install.log. The last event has `ok` and `exitCode`: it fails `command_failed` on a
     non-zero exit, `timed_out` past `timeoutSec`, `cancelled` on cancelJob. What it leaves
@@ -290,6 +292,12 @@ export function runGuestCommand(
   timeoutSec: number,
 ): Promise<GuestCommandResult> {
   return callAsync((m) => m.runGuestCommand(imageId, [...argv], timeoutSec));
+}
+
+/** The end of the image's last guest script log (logs/install.log), as the agent's Install page
+    shows it; null before any script ran there. */
+export function lastScriptLog(imageId: ImageId): Promise<ScriptLog | null> {
+  return load() ? callAsync((m) => m.lastScriptLog(imageId)) : Promise.resolve(null);
 }
 
 /** The packages a reset found installed by hand, to offer reinstalling; null when none. */

@@ -79,7 +79,7 @@ const ui = (p) => src('ui/env/logic', p);
   t('script exit without a line', scriptFailure({ ok: false, exitCode: 100, error: null }), { code: 'command_failed', message: 'exit 100' });
 
   // --- words --------------------------------------------------------------
-  const { phaseLabel, installLine, installFailureText, installDoneLine, versionLine } = await import(ui('installText.ts'));
+  const { phaseLabel, installLine, installFailureText, installDoneLine, versionLine, logWrittenLine } = await import(ui('installText.ts'));
   t('runtime phase', phaseLabel('runtime:node', 'gemini'), 'Installing Node.js');
   t('unknown runtime by id', phaseLabel('runtime:deno', 'gemini'), 'Installing deno');
   t('packages phase', phaseLabel('packages', 'gemini'), 'Installing system packages');
@@ -98,6 +98,9 @@ const ui = (p) => src('ui/env/logic', p);
   t('done line', installDoneLine(done, 'gemini'), 'gemini is installed (0.12.0).');
   t('updated line', installDoneLine({ ...done, mode: 'update' }, 'gemini'), 'gemini is up to date (0.12.0).');
   t('nothing to install', installDoneLine({ ...done, version: null }, 'top'), 'top is installed.');
+  const written = new Date(2026, 10, 12, 5, 7).getTime();
+  t('log written line', logWrittenLine(written, false, written + 60_000), 'Written today at 05:07');
+  t('a cut log says so', logWrittenLine(written, true, written + 3 * 24 * 3600_000), 'Written 3 days ago at 05:07 · its start is left out');
   t('version line', versionLine('0.12.0'), 'Version 0.12.0');
 
   const { installErrorText, startErrorText, startFailureCode } = await import(ui('errorText.ts'));

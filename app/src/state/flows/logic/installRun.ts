@@ -72,7 +72,7 @@ export type InstallEvent =
   | { type: 'failed'; failure: InstallFailure };
 
 /** As many log lines as native keeps. */
-export const TAIL_MAX = 20;
+export const TAIL_MAX = 100;
 
 export function startRun(mode: InstallMode): InstallRun {
   return {

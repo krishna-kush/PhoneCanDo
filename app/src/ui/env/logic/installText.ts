@@ -1,10 +1,11 @@
 // An agent's install in plain words: the script's phases (`runtime:<id>`,
 // `packages`, `install` or `update`, `verify`), the run's line over its progress bar,
 // what it is doing under it (a retry, a download, or that it still works),
-// and where and why it stopped. Pure (zero RN imports).
+// and where and why it stopped, and when its saved log was written. Pure
+// (zero RN imports).
 import type { InstallActivity, InstallRetry, InstallRun } from '../../../state/flows/logic/installRun.ts';
 import { installErrorText } from './errorText.ts';
-import { formatBytes, formatDuration, formatRate } from './format.ts';
+import { formatAgo, formatBytes, formatDuration, formatRate } from './format.ts';
 
 // Runtime plugins by id, as people know them; any other id reads as itself.
 const RUNTIME_NAMES: Record<string, string> = { node: 'Node.js', python: 'Python' };
@@ -96,4 +97,12 @@ export function versionLine(version: string): string {
 export function installDoneLine(run: InstallRun, agentLabel: string): string {
   const version = run.version ? ` (${run.version})` : '';
   return run.mode === 'update' ? `${agentLabel} is up to date${version}.` : `${agentLabel} is installed${version}.`;
+}
+
+/** Over the last install log: "Written today at 05:26", and when the log is longer, that its start is left out. */
+export function logWrittenLine(modifiedAt: number, cut: boolean, now: number): string {
+  const at = new Date(modifiedAt);
+  const time = `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+  const written = `Written ${formatAgo(modifiedAt, now)} at ${time}`;
+  return cut ? `${written} · its start is left out` : written;
 }

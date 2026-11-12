@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { Route } from '../../state/app';
+import AgentInstallLogPage from '../env/agent/AgentInstallLogPage';
 import AgentInstallPage from '../env/agent/AgentInstallPage';
 import AgentMachinePage from '../env/agent/AgentMachinePage';
 import AgentModelPage from '../env/agent/AgentModelPage';
@@ -37,6 +38,8 @@ function PageView({ route }: { route: Route }) {
       return <AgentMachinePage agentId={route.agentId} />;
     case 'agent-install':
       return <AgentInstallPage agentId={route.agentId} />;
+    case 'agent-install-log':
+      return <AgentInstallLogPage agentId={route.agentId} />;
     case 'new-agent':
       return <ChooseAgent target={route.target ?? null} picked={route.picked ?? null} />;
     case 'new-agent-place':

@@ -100,6 +100,11 @@ internal fun ModuleDefinitionBuilder.linuxFunctions(host: () -> LinuxHost) {
     runAsync(h, promise) { h.guest.runCommand(imageId, argv, timeoutSec.toLong()).toMap() }
   }
 
+  AsyncFunction("lastScriptLog") { imageId: String, promise: Promise ->
+    val h = host()
+    runAsync(h, promise) { h.guest.lastLog(imageId)?.toMap() }
+  }
+
   Function("reinstallList") { imageId: String -> coded { host().images.reinstallList(imageId)?.toMap() } }
 
   Function("clearReinstallList") { imageId: String -> coded { host().images.clearReinstallList(imageId) } }
