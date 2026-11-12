@@ -27,6 +27,9 @@ export type Agent = {
   /** It has a sign-in and chats folder of its own, because another agent of its kind shares its
       machine; the runner removes that folder with the agent. */
   ownState: boolean;
+  /** "Other agents can wake it" (its agent page; on by default): another agent's message that asks to
+      can start a turn while it is idle, never a start of a stopped engine (engine/messages/). */
+  wakeable: boolean;
 };
 
 export type EngineState = 'stopped' | 'starting' | 'ready' | 'stopping' | 'died' | 'failed';

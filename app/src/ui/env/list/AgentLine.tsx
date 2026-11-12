@@ -21,6 +21,8 @@ type Props = {
   label?: string;
   /** A running engine's activity (Working or Idle instead of Running); null or absent: not known. */
   idle?: boolean | null;
+  /** After its engine's word (its unread messages, on a machine's page); empty or absent: nothing. */
+  extra?: string;
   /** Under its line, inside the tap (its machine's setup state). */
   children?: ReactNode;
 };
@@ -28,10 +30,10 @@ type Props = {
 // One agent in a list, as its machine's row or one of a shared machine's
 // agents (Systems, an agent's Machine page): its face, name and engine's
 // word. A tap opens its page.
-export default function AgentLine({ agent, missing, size, onOpen, label, idle = null, children }: Props) {
+export default function AgentLine({ agent, missing, size, onOpen, label, idle = null, extra, children }: Props) {
   const status = useAgentsStore((s) => s.statuses[agent.id]);
   const state = missing ? 'Its machine is missing' : activityWord(status?.state, idle);
-  const sub = [label, state, size, onOpen ? null : 'this agent'].filter(Boolean).join(' · ');
+  const sub = [label, state, extra, size, onOpen ? null : 'this agent'].filter(Boolean).join(' · ');
   return (
     <YStack
       paddingHorizontal="3"

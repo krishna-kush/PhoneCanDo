@@ -17,6 +17,7 @@ import ConfirmPull from '../env/new-env/ConfirmPull';
 import OsPicker from '../env/new-env/OsPicker';
 import PullProgress from '../env/new-env/PullProgress';
 import TagPicker from '../env/new-env/TagPicker';
+import MessagesPage from '../messages/MessagesPage';
 import ModelsPage from '../models/ModelsPage';
 import RepoPage from '../models/RepoPage';
 import AboutPage from '../settings/AboutPage';
@@ -68,6 +69,8 @@ function PageView({ route }: { route: Route }) {
       return <ModelsPage />;
     case 'model-repo':
       return <RepoPage repo={route.repo} />;
+    case 'messages':
+      return <MessagesPage agentId={route.agentId ?? null} />;
     case 'settings':
       return <SettingsScreen />;
     case 'settings-page':

@@ -6,6 +6,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { useLinuxStore } from '../../state/linux';
+import { useMessagesStore } from '../../state/messages';
 import { useModelsStore } from '../../state/models';
 import { useTheme } from '../common/globals';
 import { CANCEL_MS } from '../nav/motion';
@@ -25,6 +26,7 @@ function refresh() {
   useAgentsStore.getState().refreshAgents();
   useLinuxStore.getState().refreshLinux();
   useModelsStore.getState().refreshModels();
+  useMessagesStore.getState().refreshMessages();
 }
 
 // The side drawer over Home, from the left: the header's agent chip opens
@@ -35,8 +37,9 @@ function refresh() {
 // navigation that edge is Back. Its content mounts shut, off screen, once
 // launch goes quiet (or on an earlier first open) and stays, so even the
 // first open only slides; the faces hold still while it is shut. Once open
-// it re-reads the agents, envs and models, which move while it is away:
-// after the slide, so the reads never cost it a frame. Its slide
+// it re-reads the agents, envs, models and unread messages, which move
+// while it is away: after the slide, so the reads never cost it a frame.
+// Its slide
 // starts the moment the store says open or shut, not after a render: a
 // page picked here is built in the render that closes it, and the drawer
 // must not sit open until that page is ready. Its faces hold still once it

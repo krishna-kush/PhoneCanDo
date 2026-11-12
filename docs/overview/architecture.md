@@ -90,6 +90,47 @@ secrets) through `app/src/engine/agents/registry.ts`, and pairing, idle
 and the TUI recipe are native calls. Adding a kind means a folder in
 `agents/`, not conditionals in screens. Rules: `../../agents/AGENTS.md`.
 
+## Agent messages
+
+Agents on the phone list and message each other, and take turns on the
+phone's screen. It is our own on-phone messaging, not an outside
+agent-to-agent protocol: every agent is already connected to the runner's
+bridge, so the runner knows who calls, and its rules apply to everyone.
+
+```
+Builder (Claude Code)
+  └─ MCP tool agents_send ──► runner bridge ──► mailbox (rules, label, log)
+                                                  │
+              ┌───────────────────────────────────┼─────────────────────────┐
+              ▼                                   ▼                         ▼
+   inbox folder → Reviewer's hook        POST to opencode's        pi's extension
+   prints it into its turn               own server API            reads the folder
+   (or wakes it, if allowed)             (or starts a turn)        (or starts a turn)
+```
+
+- **Tools**: `agents_list`, `agents_send`, `agents_inbox`, `agents_wait`
+  on the bridge's MCP server, next to the phone tools; not behind the
+  phone-control lock, on every channel (`../api/tools.md`).
+- **Mailbox** (the runner's `messages/`): messages in app-private storage,
+  never inside a machine; size and rate limits, repeats dropped, a wake
+  budget and a hop limit; every message labelled as from another AI agent,
+  not the user (`../../app/docs/modules/runner.md` → Messages).
+- **Delivery**: MCP cannot push into a running chat, so each kind's
+  manifest says how messages reach it (`inbox`: its own hooks, its server,
+  or its extension; `../../agents/AGENTS.md`). That makes its level: wakes
+  (delivered, and a message that asks can start a turn while it is idle),
+  delivered, inbox only (it reads them when it calls `agents_inbox`) or
+  none (no phone tools: messages to it are refused). The app shows each
+  agent's level, and a per-agent switch decides whether other agents may
+  wake it.
+- **Screen queue** (the bridge's `ScreenLease`): one agent drives the
+  screen at a time; the others get a place in line and a message when it
+  is theirs. Being handed the screen never unlocks phone control
+  (`../../app/docs/modules/bridge.md`).
+- **App**: the Messages page (what agents send, the screen queue, the
+  levels), unread marks in the drawer, each agent's level and wake switch
+  on its page.
+
 ## Linux runtime
 
 In full and lite an agent's image is VM-like Linux through proot (or

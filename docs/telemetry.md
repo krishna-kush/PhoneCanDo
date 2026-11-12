@@ -172,7 +172,7 @@ The install row keeps `first_version`, `last_version`, `last_version_code`,
 | `batteryOptIgnored` | the app is exempt from battery optimisation |
 | `fgServiceOk` | the engines' foreground service is running: at least one agent's engine is starting, running or stopping |
 | `a11yOn` | the accessibility service is connected (full builds) |
-| `counters` | running totals for this run, ≤ 64 keys of ≤ 64 chars from `[A-Za-z0-9_.:-]`, e.g. `{"tool.pce_act": 4, "session.create": 1}`: phone-control bridge calls per route (`tool.notify`, `tool.pce_act`, `tool.pce_observe`, ...; several `mobile_*` tools share one route), engine sessions created, and engine `engine.starts`, `engine.startFails`, `engine.died`, `engine.portSquats`. Names and counts only, never arguments |
+| `counters` | running totals for this run, ≤ 64 keys of ≤ 64 chars from `[A-Za-z0-9_.:-]`, e.g. `{"tool.pce_act": 4, "session.create": 1}`: bridge calls per route (`tool.notify`, `tool.pce_act`, `tool.pce_observe`, `tool.agents_send`, ...; several `mobile_*` tools share one route), engine sessions created, and engine `engine.starts`, `engine.startFails`, `engine.died`, `engine.portSquats`. Names and counts only, never arguments |
 
 ### Events (`events` table)
 

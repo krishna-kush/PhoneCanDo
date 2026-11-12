@@ -16,6 +16,17 @@ export const PHONE_TOOLS_ON =
 
 export const PHONE_TOOLS_OFF = 'Off: the agent never gets the bridge or its token.';
 
+export const MESSAGE_EVENT_HINT =
+  "One of the agent's own hooks whose output it adds to its turn (after a tool call, or when you prompt it). Empty: other agents' messages wait until it calls agents_inbox.";
+
+export const MESSAGE_JSON_HINT =
+  'If that hook must print JSON: the JSON, with {{messages}} inside one of its strings, e.g. {"additionalContext":"{{messages}}"}. Empty: plain text.';
+
+/** What to set that hook to run, in the agent's own hook settings. */
+export function messageHookCommand(event: string): string {
+  return `In the agent's own hook settings, have its ${event} hook run: sh /root/.phonecando/bin/phonecando-inbox ${event}`;
+}
+
 const FAMILY_NAMES: Record<string, string> = {
   '*': 'Any OS',
   apt: 'apt (Debian, Ubuntu)',

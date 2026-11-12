@@ -1,6 +1,7 @@
 // The custom agent form: what the user types to describe an agent kind of
-// their own, and how each field reads out of a manifest (formOf) for an
-// edit. buildUserManifest (build.ts) writes the fields back. Pure (zero RN
+// their own (other agents' messages included: one hook of the agent's own
+// that hands them over, the kit's `inbox.hooks`), and how each field reads
+// out of a manifest (formOf) for an edit. buildUserManifest (build.ts) writes the fields back. Pure (zero RN
 // imports).
 import { isObject, type Json } from '../../../../../agents/kit/ts/manifest/primitives.ts';
 import { FAMILIES } from '../../../../../agents/kit/ts/manifest/rules.ts';
@@ -30,6 +31,12 @@ export type UserAgentForm = {
   titlePattern: string;
   /** It may use the phone tools: its engine gets the bridge (`phoneTools`, else none). */
   phoneTools: boolean;
+  /** Its own hook that hands it other agents' messages (`inbox.hooks`); empty: it reads them with agents_inbox. */
+  messageEvent: string;
+  /** What that hook prints, as JSON with {{messages}} in one of its strings (format json); empty: plain text. */
+  messageJson: string;
+  /** That hook hands them over by exiting 2 (its tool reads stderr then). */
+  messageExit2: boolean;
 };
 
 /** The families a form may name packages for, in the kit's order. */
@@ -58,6 +65,9 @@ export function emptyForm(): UserAgentForm {
     bellWaits: false,
     titlePattern: '',
     phoneTools: false,
+    messageEvent: '',
+    messageJson: '',
+    messageExit2: false,
   };
 }
 
@@ -95,6 +105,8 @@ export function formOf(manifest: Json): UserAgentForm {
   const runtimes = Array.isArray(requires.runtimes) ? requires.runtimes : [];
   const events = Array.isArray(manifest.events) ? manifest.events : [];
   const surfaces = isObject(manifest.surfaces) ? manifest.surfaces : {};
+  const hooks = isObject(manifest.inbox) && isObject(manifest.inbox.hooks) ? manifest.inbox.hooks : {};
+  const [messageEvent, hook] = Object.entries(hooks)[0] ?? ['', null];
   const familyPackages: Record<string, string> = {};
   for (const family of FORM_FAMILIES) if (family in packages) familyPackages[family] = words(packages[family]);
   return {
@@ -109,7 +121,16 @@ export function formOf(manifest: Json): UserAgentForm {
     bellWaits: events.some((e) => isObject(e) && isObject(e.pty) && Array.isArray(e.pty.rules) && e.pty.rules.some(isBellRule)),
     titlePattern: typeof surfaces.chatTitle === 'string' ? surfaces.chatTitle : '',
     phoneTools: typeof manifest.phoneTools === 'string' && manifest.phoneTools !== 'none',
+    messageEvent,
+    messageJson: isObject(hook) && hook.format === 'json' && typeof hook.template === 'string' ? hook.template : '',
+    messageExit2: isObject(hook) && hook.exit === 2,
   };
+}
+
+/** How far other agents' messages would reach an agent of this form's kind (KindView.messaging). */
+export function formLevel(form: Pick<UserAgentForm, 'phoneTools' | 'messageEvent'>): 'delivered' | 'inbox' | 'none' {
+  if (form.messageEvent.trim() !== '') return 'delivered';
+  return form.phoneTools ? 'inbox' : 'none';
 }
 
 /** Whether the command's words name our bridge (`${PHONECANDO_BRIDGE_TOKEN}` in an MCP config arg). */

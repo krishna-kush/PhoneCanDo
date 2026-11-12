@@ -75,6 +75,8 @@ export type Route =
   | { name: 'models' }
   /** One Hugging Face repository's models. */
   | { name: 'model-repo'; repo: string }
+  /** What the agents say to each other, newest first; with `agentId`, only what is to or from that agent. */
+  | { name: 'messages'; agentId?: AgentId }
   /** Settings: a short hub of rows, each opening one of its pages. */
   | { name: 'settings' }
   | { name: 'settings-page'; page: SettingsPageId }

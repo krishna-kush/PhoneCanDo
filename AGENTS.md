@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,messages,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -34,7 +34,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   each agent's face. `models/` is the Models page; an agent's Model page is
   in `env/agent/`. `memory/` is the RAM warning (sheet, Home chip, pill,
   auto-stop line; pure copy and rows in `memory/logic/`), mounted once
-  over every page.
+  over every page. `messages/` is the Messages page (what agents send each
+  other, the screen queue), the drawer's unread marks and an agent page's
+  Messages and wake rows; pure parts in `messages/logic/`.
   `accessibility/` is the whole Accessibility setup guide: `guide.ts`
   (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
   hook, the step list, the Settings block and the agent's dialog.
@@ -64,7 +66,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `agents/registry.ts` (each kind's `KindView`, from the runner's
   `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
   `agents/user/` (the user's own kinds); `sharing.ts` (clipboard, share
-  sheet). Screens stay dumb.
+  sheet); `messages/` agent messages (the log, unread counts, the screen
+  queue, the wake switch). Screens stay dumb.
 - `theme/tokens.json` — the ONLY palette (dark + light, web-sourced). Web
   (`Base.astro`) and app (`globals/theme.ts`, `tamagui.config.ts`) read it
   directly; never hardcode a theme colour on either side. Brand/favicon
@@ -77,7 +80,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   active agent), `linux.ts` (envs, images, job progress), `models.ts`
   (local models, downloads, job progress), `kinds.ts` (the user's own
   kinds), `memory.ts` (the memory guard's reading, the warning's
-  episode), `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
+  episode), `messages.ts` (unread counts, the message log, the screen
+  queue), `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
   value in `ui/common/keyboard/room.ts`); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
@@ -113,6 +117,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   up while model and Linux jobs run), `power/` the wake lock while work
   runs, `bridge/` the loopback bridge (per-agent tokens, prompts, screen
   lease).
+  `messages/` is agent-to-agent messaging (the `agents_*` tools' routes:
+  who's here, send, inbox, wait; the log in `files/state/`; delivery
+  into each agent's inbox folder or its own server by its manifest's
+  `inbox` block; waking idle agents; the screen queue's notices).
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
 - `docs/README.md` — repo docs map; `app/docs/README.md` — app/engine docs.
@@ -124,7 +132,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `./manage agent new`), `native/<id>/` (built by us for Android, in the
   APK lib dir, outside proot: opencode), `image/<id>/` (installed into a
   machine's image at creation, data only), `builtin/` (the one place code
-  hooks are registered), `shared/phone-tools/`. Each kind's `agent.json`
+  hooks are registered), `shared/phone-tools/` (the `mobile_*` and
+  `agents_*` tools). Each kind's `agent.json`
   drives packaging, CI matrices, the APK audit, the website's agent cards
   and which kind is the default (`"default": true` on at most one bundled
   kind: the app's first agent and the site's built-in card). Pure-JVM Gradle build

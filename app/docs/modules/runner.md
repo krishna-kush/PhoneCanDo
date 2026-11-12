@@ -3,8 +3,9 @@
 `phonecando-runner` (`com.phonecando.runner`) is the Expo module that hosts
 the agents' engines: the agent records, the engine supervisor and its
 foreground service, the memory guard and the user's run limits, the
-loopback bridge (`bridge.md`), agent installs, the local model servers and
-the config it seeds into each engine's HOME.
+loopback bridge (`bridge.md`), the messages between agents, agent
+installs, the local model servers and the config it seeds into each
+engine's HOME.
 
 ## Native API
 
@@ -74,6 +75,11 @@ the config it seeds into each engine's HOME.
   changes come as the `phonecandoMemory` event (same shape).
 - `api/KeepRunningFunctions.kt` (see Jobs and the idle stop), synchronous:
   `keepRunning(agentId)` and `setKeepRunning(agentId, on)` → as kept.
+- `api/MessageFunctions.kt` (see Messages), synchronous:
+  `messageLog(limit)` (`NativeMessage[]`, newest first), `unreadCounts()`
+  (`{agentId: n}`), `screenQueue()` (`{holder, reserved, waiting}`) and
+  `setAgentWakeable(agentId, wakeable)` → the agent as kept; changes come
+  as the `phonecandoMessages` event (`{unread}`).
 - `PhoneCanDoRunnerModule.kt`: `getPrefix`, `getBuildChannel`, the
   phone-control switch, the `phonecandoLaunchTarget` event, the bridge
   prompts (`pendingPrompts`, `resolveUnlock`, `resolveAccessibility`, event
@@ -108,6 +114,7 @@ the config it seeds into each engine's HOME.
 - `power/`: the wake lock that keeps the CPU awake while work runs (see
   Jobs and the idle stop).
 - `models/`: the local model servers (see Local model servers).
+- `messages/`: the messages between agents (see Messages).
 - `jobs/`: the jobs anchor, which keeps the service up while model and
   Linux jobs run (see Foreground service and lifetime).
 - `memory/`: the memory guard (see Memory guard); `limits/`: the user's
@@ -213,7 +220,8 @@ are in `engine/spawn/`.
   `PHONECANDO_IMAGE` and `MAKEFLAGS`), then the kind's launch env, then
   ours on top: `PHONECANDO_BRIDGE_URL` and this agent's
   `PHONECANDO_BRIDGE_TOKEN` (only while the bridge is up), a TUI engine's
-  `PHONECANDO_EVENTS` (see TUI engines), `PHONECANDO_CHANNEL` and, last,
+  `PHONECANDO_EVENTS` (see TUI engines), for a kind with an `inbox` block
+  `PHONECANDO_INBOX` (see Messages), `PHONECANDO_CHANNEL` and, last,
   `PHONECANDO_AGENT=<agentId>`. A server engine runs from the
   native-library dir in its `launch.cwd` (HOME when it names none); its
   stdout and stderr go to `<image>/logs/engine-<agentId>.log`.
@@ -297,7 +305,8 @@ holds it like any engine) and survives a JS reload. Home shows it.
   (OSC 0/2), through `surfaces.chatTitle`, is that chat's title, with or
   without a viewer.
 - **Events file** (`engine/events/`): every start of a TUI engine seeds
-  the kit's two scripts (`agents/kit/scripts/`) into
+  the kit's scripts (`agents/kit/scripts/`: `phonecando-event`,
+  `phonecando-open`, `phonecando-inbox`) into
   `<home>/.phonecando/bin/` (mode 755, replaced whole) and empties the
   agent's own `<home>/.phonecando/events-<agentId>`, whose path the engine
   gets as `PHONECANDO_EVENTS` (`/root/…` for an image kind); without it the
@@ -305,12 +314,13 @@ holds it like any engine) and survives a JS reload. Home shows it.
   gets `BROWSER` = that `phonecando-open` unless its env sets one.
   `phonecando-event <name> [message]` appends
   `<name>\t<session>\t<message>`, `phonecando-open <url>` appends
-  `@open\t<url>`; a line over 4 KiB is dropped whole. While the engine is
+  `@open\t<url>`, `phonecando-inbox` the receipt `@inbox\t<ids>` (see
+  Messages); a line over 4 KiB is dropped whole. While the engine is
   ready, `EventFileTail` reads new whole lines every 500 ms (one thread for
   all engines; a file that got shorter is read from its start).
   `EventSink` maps a name through `events[].hook.map` to an engine event;
   an unmapped name does nothing. An `@open` line becomes an `open_url`
-  prompt (see Notifications).
+  prompt (see Notifications); an `@inbox` line marks those messages read.
 - **Idle**: `idle.from: ["output"]` makes PTY output the activity: no
   output for `quietSec` is idle, and output marks the engine used.
 - **Resume**: a launch with `engine.resume.args` that exits other than 0
@@ -695,6 +705,94 @@ Memory guard) are untagged.
   waits adds nothing; an agent keeps at most four (a new one pushes out
   its oldest), and its links go when its engine stops.
 
+## Messages
+
+Agents talk to each other through the bridge's `agents_*` tools
+(`bridge.md` → Agent messages): any agent may list and message any other
+on the phone. How far a message reaches an agent is its kind's level
+(kit `MessagingLevel`: wakes, delivered, inbox, none; `AgentsView.kindLevel`):
+a message to an agent whose kind has no phone tools (none) is refused,
+and logged so with the reason, never queued for good; a kind that wakes
+through a hook it leaves waiting after a turn (`inbox.wake` "hook") can be
+woken only while that hook's `waiter` file is there (`AgentsView.wakeReady`). The runner keeps the messages and hands each recipient its
+own (`messages/`: pure apart from `Messages`, `LiveAgentsView` and the
+inbox folder's IO).
+
+- **Log** (`MessageStore`, `MessageLog`): `files/state/messages.jsonl`,
+  app-private and never inside a machine: one JSON line per change of a
+  message, the last line of an id wins, compacted on start (the newest
+  500, none older than 7 days, after a `{"seq":N}` line so ids go on when
+  all aged out). A message has its sender (agent id, the name, kind and
+  machine it had then; `runner` for a notice), its target (an agent,
+  `@machine:<imageId>` or `@phone`), text, `replyTo`, `sentAt`, `hop`,
+  `wake`, `notice`, and per recipient a delivery: queued, then delivered
+  (posted to its server, or claimed by its hook before the receipt came),
+  then read (its receipt, `agents_inbox` or `agents_wait`); refused only
+  when dropped unread. Unread is queued. Deleting an agent drops the
+  messages to it; what it sent stays under its name.
+- **Rules** (`MessageRules`, `MessagePolicy`; `MessagePolicyTest` pins
+  them): the text is cleaned (`MessageText`: control, bidi, zero-width and
+  tag characters go) and refused, never cut, over 4000 characters; direct
+  messages 5 a minute and 30 an hour per sender and recipient, broadcasts
+  2 a minute and 10 an hour per sender; the same text to the same target
+  within a minute is dropped; past 50 unread an agent's oldest are dropped,
+  with a notice. A name two agents share is refused with both ids, which
+  always work (`Addressing`).
+- **What a model reads** (`Renderer`): one `<agent-message from="Name
+  (Kind)" where="your machine|another machine" id=".." reply-to="..">`
+  block per message, labelled as another AI agent's and never the user's,
+  a runner notice as `<phonecando-notice>`, then how to answer; a tag
+  inside a text is escaped. One hand-over (`Parcels`) takes the oldest
+  unread that fit about 8 KB (at least one) and ends with "N more agent
+  messages waiting: call agents_inbox." when some wait, as hook runners
+  cut long context and a printed message counts as read.
+- **Delivery** (`Mailbox` over a `Courier`, `delivery/InboxCourier`), as
+  the kind's `inbox` block says (`KindInbox`, over the kit's
+  `ManifestKind.inbox`, `renderInboxHook` and `inboxRequest`), again on
+  every new message, engine start and ready, chat-board change, read and
+  receipt:
+  - hooks or a reader: `<home>/.phonecando/inbox-<agentId>/pending/`
+    (`InboxFolder`; `PHONECANDO_INBOX` names the folder, `/root/…` for an
+    image kind): `ids`, `messages.jsonl` (one item per line, with its
+    rendered `block`), `messages.txt`, `<Event>.out` and `<Event>.exit`
+    per declared hook event, and `wake` when the set may wake the agent;
+    built aside and swapped in whole. `phonecando-inbox <Event>` claims it
+    (a rename), prints it and writes the `@inbox\t<ids>` receipt to the
+    events file, which marks them read. A set claimed before its receipt
+    is read (our `pending/` gone, or its ids in a `claimed.*` folder) is
+    marked delivered and left out of the next. The script's `waiter` file
+    is left alone; an engine start makes the folder, removes `claimed.*`
+    and our half-done folders an earlier life left, and writes the set.
+  - a server: POSTed to the engine's own loopback server with its
+    password, into its working chat, else its latest (`ChatBoard.latest`):
+    the `wake` call when the set may wake it and the kind wakes through its
+    server, else `deliver`. A 2xx is delivered; with no chat yet or a
+    failure they stay queued, tried again on the next chat-board change
+    or start (15 s after a failure).
+  - no block: nothing; the agent pulls with `agents_inbox`, and every MCP
+    result tells it when some wait.
+- **Waking.** A set may wake its agent when one of its messages is direct
+  (or a notice that may wake), asked for it under 10 minutes ago, has hop
+  under 2, and its agent has "Other agents can wake it" on (`wakeable`,
+  `setAgentWakeable`), is of a kind with `inbox.wake`, runs (a stopped
+  engine is never started), has no run going and no question waiting,
+  and was woken under 6 times this hour (the budget is read back from the
+  log on start). The agent was woken when such a set was claimed while it
+  had no run going, or its server took the wake call. From then until
+  that run ends (it leaves the working chats, its engine stops, or no run
+  shows within a minute) it is `startedByAgent` (`WakeTracker`): the screen
+  line refuses it the screen unless the line handed it over, and what it
+  sends carries the cause's hop + 1.
+- **Screen line** (`ScreenMessages`, the bridge's `ScreenNotices`): the
+  holder hears once per waiter that someone waits; the next in line hears
+  the screen is kept for it, which may wake it as above.
+- **Threads.** `Messages` (one per process) is made by the first engine
+  start (`EngineLauncher.plan` writes the agent's set) and hears the
+  engines (`Engines.Listener`); it runs those reactions, receipts and the
+  screen notices on its own thread, a burst of chat-board changes once.
+  Sends and reads run on the bridge's request thread; `agents_wait` holds
+  only its own request's thread, at most 30 s.
+
 ## Agent images (engine side)
 
 Every engine runs in its agent's image, `files/images/<imageId>/`.
@@ -722,12 +820,13 @@ keeps from guests (`guestUnset(agentId)`); a failure there answers
 Several agents may share one image, like apps on one PC: its system, tools
 in `~/.local`, `home/projects/`, VCS and shell config and background
 processes. Each keeps its own engine, port, password, bridge token, events
-file and engine log. A second agent of a kind on one image gets its own
+file, inbox folder and engine log. A second agent of a kind on one image gets its own
 state folder, `home/.phonecando/agents/<agentId>/` (`AgentFiles`,
 `ownState` on its record): the launch adds the kind's `state.env` (kit
 `LaunchContext.stateDir`, e.g. `CLAUDE_CONFIG_DIR`), and its config and
 instructions file go there (`AgentKind.configDir` / `instructionsFile`).
-`deleteAgent` removes that folder, its events file and its engine log; an
+`deleteAgent` removes that folder, its events file, its inbox folder and
+its engine log (and the messages to it, see Messages); an
 agent that used its kind's default folders and leaves a machine that stays
 takes them with it (`AgentKind.userStatePaths`, never following links).
 

@@ -13,18 +13,22 @@ import LogoMark from '../common/LogoMark';
 import { useHomeInFront } from '../nav/homeInFront';
 import MenuHead from './MenuHead';
 import MemoryChip from '../memory/indicators/MemoryChip';
+import NewMessagesChip from '../messages/NewMessagesChip';
 import ReadingChip from '../models/parts/ReadingChip';
 import { webGoHome } from './webNavigation';
 
 // Home's 60dp bar. The left side is the active agent's chip, its face, name
 // and a ⌄: a tap opens the drawer (the agents, New agent and the app's other
-// places). It is `flex={1} minWidth={0}` so a long name truncates instead
-// of pushing the ⋮ menu off-screen. The ⋮ menu leads into the agent by what
+// places). It is `flex={1}` so a long name truncates instead of pushing the
+// ⋮ menu off-screen, down to `minWidth` (the face and a few letters); past
+// that the reading line shortens (the chips can all show at once). The ⋮ menu leads into the agent by what
 // its home shows (agentItems) and to its page; the agent's face heads it
 // (MenuHead) and each row has a shell-ish hint (`cd ~`, `>_`). While the agent's local model
 // reads a prompt, a short line says so beside the name (ReadingChip),
-// never changing the bar's height; so does the RAM warning's countdown
-// while memory is short and the warning is closed (MemoryChip).
+// never changing the bar's height; so do new messages between agents since
+// the user last looked (NewMessagesChip, a tap opens Messages) and the RAM
+// warning's countdown while memory is short and the warning is closed
+// (MemoryChip).
 export default function HomeHeader() {
   const t = useTheme();
   const agent = useActiveAgent();
@@ -61,7 +65,7 @@ export default function HomeHeader() {
         alignItems="center"
         gap={8}
         flex={1}
-        minWidth={0}
+        minWidth={88}
         minHeight={HIT.minTouch}
         opacity="press:0.7"
         onPress={() => setDrawerOpen(true)}
@@ -85,6 +89,7 @@ export default function HomeHeader() {
       </XStack>
 
       <ReadingChip agentId={agent?.id ?? null} />
+      <NewMessagesChip />
       <MemoryChip />
       <CardMenu items={menuItems} label="Menu" offset={-24} head={<MenuHead agentId={agent?.id ?? null} />} />
     </XStack>

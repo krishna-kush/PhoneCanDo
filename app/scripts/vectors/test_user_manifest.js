@@ -26,7 +26,7 @@ const user = (p) => src('engine/agents/user', p);
   const { splitWords, joinWords, splitList } = await import(user('words.ts'));
   const { stepsOf, scriptOf } = await import(user('steps.ts'));
   const { userKindId } = await import(user('ids.ts'));
-  const { emptyForm, formOf } = await import(user('form.ts'));
+  const { emptyForm, formOf, formLevel } = await import(user('form.ts'));
   const { buildUserManifest } = await import(user('build.ts'));
   const { reviewOf } = await import(user('review.ts'));
   const { parseImport } = await import(user('imports.ts'));
@@ -206,6 +206,25 @@ const user = (p) => src('engine/agents/user', p);
   t('a form from New agent is part of the run', stack.isCreationRoute(fromNew[1].route), true);
   t('a form from the list is not', stack.isCreationRoute({ name: 'custom-agent', kindId: 'user.x' }), false);
   t('no step below: unchanged', stack.returnWithKind([{ key: 1, route: { name: 'custom-agents' } }], 'user.x', 9), [{ key: 1, route: { name: 'custom-agents' } }]);
+
+  // --- messages from other agents -----------------------------------------
+  const hooky = { ...emptyForm(), name: 'Hooky', command: 'hooky', phoneTools: true };
+  t('no hook, phone tools: inbox only', formLevel(hooky), 'inbox');
+  t('no hook, no tools: none', formLevel({ ...hooky, phoneTools: false }), 'none');
+  t('a hook: delivered', formLevel({ ...hooky, messageEvent: 'AfterTool' }), 'delivered');
+  const plain = buildUserManifest({ ...hooky, messageEvent: 'AfterTool' }, { base: null, taken: [] });
+  t('a hook makes an inbox block, plain text', plain.ok && plain.manifest.inbox, { hooks: { AfterTool: { format: 'text', template: '{{messages}}' } } });
+  const json = buildUserManifest(
+    { ...hooky, messageEvent: 'Stop', messageJson: '{"additionalContext":"{{messages}}"}', messageExit2: true },
+    { base: null, taken: [] },
+  );
+  t('json output and exit 2', json.ok && json.manifest.inbox.hooks.Stop, { format: 'json', template: '{"additionalContext":"{{messages}}"}', exit: 2 });
+  t('the form reads the hook back', json.ok && [formOf(json.manifest).messageEvent, formOf(json.manifest).messageJson, formOf(json.manifest).messageExit2], ['Stop', '{"additionalContext":"{{messages}}"}', true]);
+  const cleared = buildUserManifest({ ...hooky, messageEvent: '' }, { base: json.manifest, taken: [] });
+  t('an emptied hook drops the block', cleared.ok && 'inbox' in cleared.manifest, false);
+  const bad = buildUserManifest({ ...hooky, messageEvent: 'no spaces allowed' }, { base: null, taken: [] });
+  t('a bad hook name lands on its field', !bad.ok && bad.problems.some((p) => p.field === 'messageEvent'), true);
+  t('the hook command names the event', text.messageHookCommand('AfterTool').endsWith('sh /root/.phonecando/bin/phonecando-inbox AfterTool'), true);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

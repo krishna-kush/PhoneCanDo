@@ -1,11 +1,13 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
+import { messagesAvailable } from '../../engine/messages/native';
 import { getBuildChannel, isRunnerAvailable } from '../../engine/runner';
 import { installedVersion } from '../../engine/updates';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { useLinuxStore } from '../../state/linux';
+import { useMessagesStore } from '../../state/messages';
 import { useModelsStore } from '../../state/models';
 import AppButton from '../common/AppButton';
 import { crewLine } from '../common/face/lines';
@@ -17,6 +19,8 @@ import Note from '../env/parts/Note';
 import AgentRow from './AgentRow';
 import DownloadRow from './DownloadRow';
 import LinkRow from '../common/LinkRow';
+import { unreadText } from '../messages/logic/messagesCopy';
+import { unreadTotal } from '../messages/logic/messageView';
 import PlainText from '../common/PlainText';
 import SelectBar from './select/SelectBar';
 import TextAction from './select/TextAction';
@@ -39,8 +43,10 @@ function channel(): string {
 // What the drawer holds: every agent (tap to switch, › for its page, a long
 // press or Select to pick several, with the selection's bar pinned below),
 // Own envs still downloading, New agent, then the app's other places:
-// Models, Systems, Custom agents, Settings, About. Memoised: the drawer's
-// own renders (open, shut) pass the same `still` until its slide ends.
+// Messages (once agents can talk to each other), Models, Systems, Custom
+// agents, Settings, About. Memoised: the drawer's own renders (open, shut)
+// pass the same `still` until its slide ends. Mounting it starts the
+// unread counts (each row's mark), which the runner keeps current.
 function DrawerContent({ still }: { still: boolean }) {
   const agents = useAgentsStore((s) => s.agents);
   const statuses = useAgentsStore((s) => s.statuses);
@@ -58,6 +64,9 @@ function DrawerContent({ still }: { still: boolean }) {
   const version = installedVersion();
   const order = useMemo(() => agents.map((a) => a.id), [agents]);
   const pick = useAgentSelection(order, still);
+  const unread = useMessagesStore((s) => unreadTotal(s.unread));
+  const messaging = messagesAvailable() && (agents.length > 1 || unread > 0);
+  useEffect(() => useMessagesStore.getState().refreshMessages(), []);
 
   return (
     <YStack flex={1}>
@@ -104,6 +113,14 @@ function DrawerContent({ still }: { still: boolean }) {
 
         <YStack height={1} backgroundColor="line" marginVertical="3" />
 
+        {messaging ? (
+          <LinkRow
+            label="Messages"
+            detail={unreadText(unread) || undefined}
+            onPress={() => push({ name: 'messages' })}
+            reach={PLACE_REACH}
+          />
+        ) : null}
         {modelsOffered ? (
           <LinkRow
             label="Models"

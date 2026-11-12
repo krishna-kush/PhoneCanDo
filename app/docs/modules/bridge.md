@@ -20,11 +20,13 @@ loopback-only, runs in the app process beside the engines
   `not_found`), flavor (full-only routes answer 404 in lite/play), the
   phone-control switch (403 `automation_off`), the accessibility service
   (503 `automation_unavailable`), the JSON body (400), the screen lease (409
-  `control_busy`, full builds only), then the handler. A refused request
-  never takes the lease. `Routes.kt` lists every route with its guards.
+  `control_busy` or `screen_refused`, full builds only), then the handler.
+  A refused request never takes the lease, though it may wait in line
+  (Screen lease below). `Routes.kt` lists every route with its guards.
 - Endpoints: `ping/battery/notify/share/open/clipboard/app/unlock/accessibility`
-  plus the automation `/pce/*` routes, and `/mcp`, the same tools over MCP
-  (below). Bodies over 256 KB return 413. `BridgeServer.kt` only frames
+  plus the automation `/pce/*` routes, the agents' messages
+  `/agents/list|send|inbox|wait` (Agent messages below), and `/mcp`, the
+  same tools over MCP (below). Bodies over 256 KB return 413. `BridgeServer.kt` only frames
   HTTP; `BridgeEntry.kt` checks the token (before the body is even read),
   then hands `/mcp` to the MCP endpoint and every other path to the router.
 - Envelope: `{ok:true,data}` or `{ok:false,code,message}`. Refusals by the
@@ -98,13 +100,76 @@ ids, and a long act holds the PCE lane. The first agent to call a screen
 route (`/pce/observe`, `/pce/act`, `/pce/pack`, `/open`, `/share`, `/app`)
 holds the screen until it has been idle for 30 s, counted from the end of
 its last screen request; its own requests always pass, so observe then act
-cannot be split by another agent. Others get 409 `control_busy` with the
-holder's name and `retryAfterMs`, and the tool tells the model to wait and
-try again rather than loop. The lease ends early when the holder's agent is
-deleted, or when the holder calls `/app` (`mobile_return`, done with the
-phone). `/ping`, `/battery`, `/notify`, `/clipboard`, `/pce/describe` and
-the prompts are not screen routes. Lite and play have no driver, so they
-take no lease.
+cannot be split by another agent. `/ping`, `/battery`, `/notify`,
+`/clipboard`, `/pce/describe` and the prompts are not screen routes. Lite
+and play have no driver, so they take no lease.
+
+The others wait in line, first come first served. A screen request from
+another agent joins the line once and gets 409 `control_busy` with
+`holder`, `retryAfterMs` and its `place` (1-based): "<holder> holds the
+screen; you are #<place> in line; we'll message you when it is yours". The
+holder hears of each new waiter once (`ScreenNotices.waiting`). When the
+holder's lease ends (it calls `/app`, `mobile_return`, done with the phone;
+it has been idle 30 s while someone waits; its engine stops, `forget`, or
+its agent is deleted), the screen is reserved for the first in line for
+30 s and that agent is told it is theirs (`ScreenNotices.yours`, which may
+wake it): only its claim takes the screen, and if it does not come the next
+in line gets the reservation. An idle holder nobody waits for keeps the
+screen until someone claims it. `ScreenTicker` moves the line on every
+second, so a waiter hears even when no agent calls. A reservation is not
+use: `Bridge.screenInUse()` still means a screen request runs or ended
+under 30 s ago. The messages side sends the notices as runner notices and
+reads the line for `agents_list` and the app (`ScreenLease.line()`).
+
+A place in line is never the screen nor an unlock: only an unlocked agent
+gets a ticket, and a locked agent first in line still gets 403
+`automation_off`. While another agent has the screen, a locked agent's
+screen request and its `/unlock` join the line and get the same 409 at
+once instead of a 403 or an unlock dialog over that agent's app. Once the
+screen is its own (holder or reserved), its `/unlock` shows the dialog, and
+its time stands still while the dialog is open; after a yes the 30 s start
+over, after a no or no answer the screen passes on at once. An `/unlock` on
+a free screen reserves it for the asking agent for the dialog's length, so
+nobody drives over it.
+
+A turn another agent's message started (`startedByAgent`, from the
+messages side) never takes a free screen and never joins the line: its
+screen request gets 409 `screen_refused` ("a turn another agent's message
+started can't take the screen; the user or your own earlier request in the
+queue can"). It gets the screen only when the line hands it over: its
+reservation, or a lease that began with one. A hand-over is never a
+phone-control unlock: `ControlLock.unlockedFor` still applies, so in ask
+mode the user's yes is still needed.
+
+## Agent messages
+
+Agents talk to each other through four routes (`AgentRoutes.kt`; the
+messages, rules and delivery are `runner.md` → Messages), each a POST with
+a JSON body, on every channel, neither gated by the phone-control lock nor
+screen routes; the caller is the bearer's agent:
+
+| Route | Body | `data` |
+| --- | --- | --- |
+| `/agents/list` | `{scope?: "machine"\|"phone"}` | `{you:{name, id, kind, machine}, scope, screen:{holder, reserved, waiting:[name], yourPlace}, agents:[{name, id, kind, machine:"yours"\|"other", machineMates, state:"working"\|"waiting"\|"idle"\|"stopped", chat, wakeable, canWake}]}` |
+| `/agents/send` | `{to, text, replyTo?, wake?}` | `{id, results:[{to, status:"delivered"\|"queued"\|"woken"\|"refused", reason?}]}` |
+| `/agents/inbox` | `{limit?}` (default 20, at most 50) | `{messages:[{id, from, kind, machine, sentAt, replyTo, text, notice}], more, note?}`, now read |
+| `/agents/wait` | `{from?, timeoutSec?}` (at most 30) | the first new message as inbox, or `{timeout: true}` |
+
+- `scope` "machine" (the default) lists the other agents on the caller's
+  machine, "phone" every other agent. `kind` is the kind's label; `chat`
+  the working chat's title, else the latest; `canWake` whether a direct
+  message with `wake: true` would start its run now if it is idle.
+- `to` is an agent's name (any case) or id, `@machine` (every other agent
+  on the caller's machine) or `@phone` (every other agent). A name two
+  agents share is refused with both ids. Only a direct message may wake.
+  A refused send (a rate limit, a duplicate, an empty or too long text, a
+  name nobody has) is its result with `id: null`, not an error; `reason`
+  also says when a queued recipient gets it.
+- `note` says the messages are other AI agents', not the user's. A wait
+  that names no known agent is 200 `ok:false` `unknown_agent`; a missing
+  or mistyped argument is 400 `bad_request`.
+- NanoHTTPD runs each connection on its own thread, so a wait (at most
+  30 s) holds only its own request; the TS client gives it 40 s.
 
 ## Agent-side tools
 
@@ -118,6 +183,8 @@ shipped only in full, registers phone control (`phone-tools/control/`),
 `mobile_return` (`/app`), `mobile_request_unlock` (`/unlock`) and
 `mobile_open_accessibility` (`/accessibility`). Both go through
 `plugins/mobile/opencode.ts` (`Plugin.define` + `ctx.tool.transform`).
+The agent messages' tools, `agents_list`, `agents_send`, `agents_inbox` and
+`agents_wait` (`agents.ts`, one route each), are on every channel.
 The client uses a 15 s timeout by default, 50 s for unlock and 255 s for
 accessibility, whose bridge wait is 240 s, and degrades to a message when
 the bridge is absent. `mobile_act` derives its timeout from the call, so a
@@ -158,9 +225,13 @@ GET and DELETE answer 405.
   as absent). The reply becomes one text item worded as `client.ts` words
   it: the data as JSON, or `error <code>: <message>` with `isError: true`,
   the bridge's refusals included (`automation_off`, `control_busy` with the
-  wait, `automation_unavailable`): the model acts on them as it does in the
-  agent's own plugin. An unknown tool, a full-only one on lite/play among
-  them, is JSON-RPC `-32602`.
+  caller's place in line and a message to come, `screen_refused`,
+  `automation_unavailable`): the model acts on them as it does in the
+  agent's own plugin. MCP cannot push into a chat, so when the caller has
+  unread agent messages, every result (refusals too) gets a second text
+  item, `You have N unread agent messages: call agents_inbox.`
+  (`UnreadLine.kt`, counted after the call). An unknown tool, a full-only
+  one on lite/play among them, is JSON-RPC `-32602`.
 - The tool table is `agents/shared/phone-tools/tools.json`, generated from
   the TS tools by `node agents/shared/phone-tools/gen-tools-json.mjs`
   (`--check` fails when it is stale; `pnpm -C agents check` runs it). The
@@ -173,9 +244,10 @@ GET and DELETE answer 405.
   agents.gradle packages the table as the asset of the same path; the
   bridge serves its `channel: "full"` tools only in full builds, and a
   build without the table serves MCP with no tools.
-- Long waits: `mobile_open_accessibility` holds the call up to 240 s and
-  `mobile_request_unlock` up to 45 s. An MCP client with a shorter request
-  timeout gives up first; the prompt itself stays up in the app.
+- Long waits: `mobile_open_accessibility` holds the call up to 240 s,
+  `mobile_request_unlock` up to 45 s and `agents_wait` up to 30 s. An MCP
+  client with a shorter request timeout gives up first; the prompt itself
+  stays up in the app.
 
 ## Trust gate
 

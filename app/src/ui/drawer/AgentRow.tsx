@@ -2,6 +2,7 @@ import { Button, XStack, YStack } from 'tamagui';
 import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { useAgentsStore } from '../../state/agents';
+import { useUnread } from '../../state/messages';
 import ChevronIcon from '../common/ChevronIcon';
 import AgentFace from '../common/face/AgentFace';
 import { useAgentLook } from '../common/face/useAgentLook';
@@ -9,6 +10,8 @@ import { HIT, useTheme } from '../common/globals';
 import PlainText from '../common/PlainText';
 import Stamp from '../common/Stamp';
 import { engineStateWord } from '../env/logic/engineState';
+import { unreadLabel } from '../messages/logic/messagesCopy';
+import UnreadMark from '../messages/UnreadMark';
 import PickBox from './select/PickBox';
 
 type Props = {
@@ -26,8 +29,8 @@ type Props = {
 };
 
 // One agent in the drawer: its face, name, serial, kind and engine state in
-// words. A tap makes it the active agent (Home shows it), the › opens its
-// page, and a long press starts picking agents to stop or delete together.
+// words, and a small count of its messages not read yet. A tap makes it
+// the active agent (Home shows it), the › opens its page, and a long press starts picking agents to stop or delete together.
 // While picking, the highlight marks the picked rows (the stamp still
 // names the active one).
 export default function AgentRow({ agent, active, still, picking, picked, onSwitch, onOpen, onPick }: Props) {
@@ -35,6 +38,7 @@ export default function AgentRow({ agent, active, still, picking, picked, onSwit
   const look = useAgentLook(agent.id);
   const state = useAgentsStore((s) => s.statuses[agent.id]?.state);
   const sub = `${look.serial} · ${agentKind(agent.kind).label} · ${engineStateWord(state).toLowerCase()}`;
+  const unread = useUnread(agent.id);
   const lit = picking ? picked : active;
 
   return (
@@ -57,7 +61,7 @@ export default function AgentRow({ agent, active, still, picking, picked, onSwit
         onLongPress={onPick}
         accessibilityRole={picking ? 'checkbox' : 'button'}
         accessibilityState={picking ? { checked: picked } : { selected: active }}
-        accessibilityLabel={`${agent.name}, ${sub}${active ? ', active' : ''}`}
+        accessibilityLabel={[agent.name, sub, active ? 'active' : '', unreadLabel(unread)].filter(Boolean).join(', ')}
         accessibilityHint={picking ? 'Picks it to stop or delete' : 'Makes it the agent Home shows'}
       >
         <AgentFace mood={look.mood} pose={look.pose} size={22} still={still} />
@@ -67,6 +71,7 @@ export default function AgentRow({ agent, active, still, picking, picked, onSwit
               {agent.name}
             </PlainText>
             {active ? <Stamp>on duty</Stamp> : null}
+            <UnreadMark count={unread} />
           </XStack>
           <PlainText fontFamily="mono" fontSize={11} color="dim" numberOfLines={1}>
             {sub}

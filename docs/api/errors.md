@@ -48,4 +48,5 @@ HTTP status and a lowercase code (`../../app/docs/modules/bridge.md`):
 | `not_found` | 404 | no such route, or a full-only route in lite/play | use what `/ping` reports |
 | `automation_off` | 403 | phone control is locked | `mobile_request_unlock` |
 | `automation_unavailable` | 503 | the accessibility service is not connected | `mobile_open_accessibility` |
-| `control_busy` | 409 | another agent holds the screen; the body adds `holder` (its name) and `retryAfterMs` | wait `retryAfterMs`, then call again; tell the user if it stays busy |
+| `control_busy` | 409 | another agent holds the screen (or has it reserved); the caller is now in line, and the body adds `holder` (its name), `place` (1-based) and `retryAfterMs` | do other work or end the turn; a "the screen is yours" notice arrives with the agent's messages (`agents_inbox`), then call again. `mobile_request_unlock` answers the same way, at once and without a dialog: that is not a refusal |
+| `screen_refused` | 409 | a turn another agent's message started tried to take the screen | tell the user; only a turn the user started, or the caller's own earlier place in line, can take the screen |

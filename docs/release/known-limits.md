@@ -74,8 +74,19 @@ These are not scheduled work unless they are also listed in
   foreground; clipboard reads report `available:false` to background apps
   (API 29+).
 - With several agents running, one drives the screen at a time: the others
-  get `control_busy` until the holder has been idle for 30 s, and the phone
-  control switch is one switch for every agent.
+  wait in line (`control_busy` with their place) and get a message when it is
+  theirs, after the holder hands it back or has been idle for 30 s. In
+  "Once" and "Each launch" lock modes one unlock lets every agent in; "Each
+  ask" unlocks one agent at a time.
+- Agent messages reach each kind at its level (shown in the app): opencode,
+  pi and Claude Code get them in their turns and can be woken while idle
+  (Claude Code only while the hook it leaves after a turn still waits, about
+  an hour); Codex, Gemini, Qwen, Copilot, Cursor and Mistral Vibe get them
+  in their turns but are never woken; Kimi and goose read them only when they
+  check their inbox; aider, crush and cline have no phone tools, so messages
+  to them are refused. Kimi and Vibe agents keep their own home folder
+  (`~/.kimi-code-agent`, `~/.vibe-agent`), so a `kimi` or `vibe` run by hand
+  in a terminal signs in on its own.
 - The bridge shell runs as the PhoneCanDo UID, so its package listing is
   filtered; it is not proof an app is missing.
 

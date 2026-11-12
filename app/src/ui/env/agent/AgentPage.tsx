@@ -9,6 +9,7 @@ import AppButton from '../../common/AppButton';
 import LinkRow from '../../common/LinkRow';
 import PromptDialog from '../../common/PromptDialog';
 import Screen from '../../common/Screen';
+import AgentMessageRows from '../../messages/AgentMessageRows';
 import SectionTitle from '../../common/SectionTitle';
 import { envTitle } from '../logic/titles';
 import ImageStatus from '../parts/ImageStatus';
@@ -93,6 +94,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
           <LinkRow label="Install" {...rowProps(install)} onPress={() => push({ name: 'agent-install', agentId })} />
         ) : null}
         <KeepRunningRow agentId={agentId} />
+        <AgentMessageRows agent={agent} />
       </YStack>
 
       <DangerSection agent={agent} image={image} env={env} linux={linux} />

@@ -65,6 +65,7 @@ const FIELD_OF: [string, FormField][] = [
   ['/requires/runtimes', 'needsNode'],
   ['/surfaces/chatTitle', 'titlePattern'],
   ['/phoneTools', 'phoneTools'],
+  ['/inbox', 'messageEvent'],
 ];
 
 function fieldOf(path: string): FormField | null {
@@ -114,6 +115,7 @@ export function buildUserManifest(form: UserAgentForm, { base, taken }: BuildOpt
   setEvents(m, form.bellWaits);
   if (!('idle' in m)) m.idle = idle();
   setSurfaces(m, form.titlePattern.trim());
+  setInbox(m, form);
   m.phoneTools = !form.phoneTools ? 'none' : namesBridge(argv) ? 'mcp:argv' : 'mcp:config';
   if (base && JSON.stringify(m) !== JSON.stringify(base)) m.version = nextVersion(base.version);
 
@@ -130,6 +132,22 @@ export function buildUserManifest(form: UserAgentForm, { base, taken }: BuildOpt
   }
   if (problems.length > 0) return { ok: false, problems };
   return { ok: true, id: m.id as string, manifest: m, text };
+}
+
+// Other agents' messages: one hook of the agent's own (the kit's
+// phonecando-inbox prints them there), as plain text or the JSON the user
+// gave; none: the agent reads them with agents_inbox. A custom kind is a
+// TUI that is never woken, so the block has hooks only.
+function setInbox(m: Json, form: UserAgentForm) {
+  const event = form.messageEvent.trim();
+  if (event === '') {
+    delete m.inbox;
+    return;
+  }
+  const json = form.messageJson.trim();
+  const hook: Json = json !== '' ? { format: 'json', template: json } : { format: 'text', template: '{{messages}}' };
+  if (form.messageExit2) hook.exit = 2;
+  m.inbox = { hooks: { [event]: hook } };
 }
 
 // Linux, and Node.js 22 or newer when the form asks for it; other runtimes stay.

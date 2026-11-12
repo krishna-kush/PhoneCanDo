@@ -3,9 +3,11 @@ import type { Agent } from '../../../engine/agents/records';
 import { agentKind } from '../../../engine/agents/registry';
 import type { Env, Image } from '../../../engine/linux/types';
 import { useAppStore } from '../../../state/app';
+import { useMessagesStore } from '../../../state/messages';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
 import SectionTitle from '../../common/SectionTitle';
+import { unreadText } from '../../messages/logic/messagesCopy';
 import AgentLine from '../list/AgentLine';
 import SystemLogo from '../list/SystemLogo';
 import { formatBytes } from '../logic/format';
@@ -24,7 +26,7 @@ type Props = { agent: Agent; image: Image | undefined; env: Env | undefined; lin
 // The agent's machine page body: which env it comes from (with its OS's
 // logo, as on Systems), the detected OS, its size, every agent on a machine
 // agents share (this one first, the others open their pages; each says
-// whether it is working now), its setup
+// whether it is working now and its unread messages), its setup
 // state, commands the agent's kind needs but the machine lacks (checked
 // when the page shows it, with the install command typed into a terminal,
 // not run), and the plain truths: not a sandbox, no systemd.
@@ -35,6 +37,7 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
   const mates = useMachineMates(agent);
   const onMachine = [agent, ...mates];
   const idle = useMachineActivity(mates.length > 0 ? onMachine.map((a) => a.id) : []);
+  const unread = useMessagesStore((s) => s.unread);
 
   if (!image) {
     return (
@@ -70,6 +73,7 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
                   size={null}
                   label={agentKind(a.kind).label}
                   idle={idle[a.id] ?? null}
+                  extra={agentKind(a.kind).messaging === 'none' ? "can't read messages" : unreadText(unread[a.id] ?? 0)}
                   onOpen={a.id === agent.id ? null : openAgent}
                 />
               </YStack>

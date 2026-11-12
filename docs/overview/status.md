@@ -18,8 +18,12 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
   the web UI.
 - The loopback bridge (one for all agents, a token per agent), `mobile_*`
   tools, biometric/master-switch gate, per-request prompts, screen lease
-  (one agent drives the screen at a time, 409 `control_busy` for the others)
-  and full/lite/play channel split are live.
+  (one agent drives the screen at a time; the others wait in line and get a
+  message when it is theirs) and full/lite/play channel split are live.
+- Agents list and message each other on the whole phone (`agents_*` tools on
+  the bridge; delivery through each kind's hooks, plugin or server; waking an
+  idle agent behind a per-agent switch) and the app's Messages page shows
+  what they send. Built and unit-tested, not yet tried on a device.
 - The `play` channel builds but is a later feature: nothing is released from
   it and it is untested on a device.
 - The sideload path is device-proven (2026-11-03, Android 16, India): lite

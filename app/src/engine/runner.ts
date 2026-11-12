@@ -13,9 +13,11 @@ import type {
   NativeKindSaved,
   NativeLaunchTarget,
   NativeMemoryStatus,
+  NativeMessage,
   NativeOpenUrlAction,
   NativePromptReading,
   NativeRunLimits,
+  NativeScreenQueue,
   NativeTerminalAttach,
   NativeTerminalTheme,
   NativeUserKind,
@@ -45,6 +47,11 @@ export type RunnerModule = {
   /** Absent from native builds older than Keep running. */
   keepRunning?(agentId: string): boolean;
   setKeepRunning?(agentId: string, on: boolean): boolean;
+  /** Agent messages (engine/messages/, which checks what these return). Absent from native builds older than messaging. */
+  messageLog?(limit: number): NativeMessage[];
+  unreadCounts?(): Record<string, number>;
+  screenQueue?(): NativeScreenQueue;
+  setAgentWakeable?(agentId: string, wakeable: boolean): NativeAgent;
   promptReading(): NativePromptReading | null;
   startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;

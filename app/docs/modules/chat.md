@@ -123,6 +123,27 @@ After an automatic stop a line drops in at the top saying who was stopped.
 Settings → Agents & models sets the caps (`engine/runLimits.ts`, none by
 default) and opens the warning at any level.
 
+## Agent messages
+
+Agents message each other through the runner's bridge tools (`agents_send`
+and friends; the runner keeps the log, see `runner.md`). The app only
+reads it (`engine/messages/`: `native.ts` the calls, `parse.ts` the
+checked shapes) into `state/messages.ts`: each agent's unread count from
+the drawer's first mount, and the log and the screen queue while a
+Messages page is open; the runner's `phonecandoMessages` event and a
+return to the foreground re-read them. The Messages page (`ui/messages/`,
+route `messages`, optional `agentId`) lists them newest first: who to
+whom and when, the text (selectable), the message a reply answers (a tap
+goes to it), each recipient's status (waiting, delivered, read, refused
+with the reason) and whom it woke; runner notices in the secondary ink;
+the screen queue in one line at the top. The drawer marks each agent's
+unread count and, once there are two agents, has a Messages row; an
+agent's Settings block has Messages (filtered to it) and "Other agents
+can wake it" (`wakeable`, on by default) for a kind that can be woken
+(KindView `canWake`), else a line saying it reads them at its next turn.
+Pure parts in `ui/messages/logic/`, checked by
+`scripts/vectors/test_messages.js`.
+
 ## TUI home
 
 For a kind whose `home` is `tui` (its engine runs a program in a PTY the
