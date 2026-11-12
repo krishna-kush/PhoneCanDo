@@ -16,6 +16,8 @@ const OPEN_MS = 300;
 const CLOSE_MS = 220;
 /** How far the back gesture pulls the drawer in before it commits. */
 const PULL = 0.2;
+/** The latest the content is built after launch, idle or not. */
+const PREMOUNT_MS = 3000;
 const EMPHASIZED = Easing.bezier(0.05, 0.7, 0.1, 1);
 const STANDARD = Easing.bezier(0.2, 0, 0, 1);
 
@@ -30,10 +32,11 @@ function refresh() {
 // thumb first, nav/backWorklet.ts) closes it. The swipe follows the finger
 // on the UI thread (react-native-gesture-handler), so a busy JS thread
 // never holds it back. Not from the screen's left edge: on gesture
-// navigation that edge is Back. Its content mounts on the first open and
-// stays (later opens only slide), with the faces still while it is shut.
-// Once open it re-reads the agents, envs and models, which move while it
-// is away: after the slide, so the reads never cost it a frame. Its slide
+// navigation that edge is Back. Its content mounts shut, off screen, once
+// launch goes quiet (or on an earlier first open) and stays, so even the
+// first open only slides; the faces hold still while it is shut. Once open
+// it re-reads the agents, envs and models, which move while it is away:
+// after the slide, so the reads never cost it a frame. Its slide
 // starts the moment the store says open or shut, not after a render: a
 // page picked here is built in the render that closes it, and the drawer
 // must not sit open until that page is ready. Its faces hold still once it
@@ -48,6 +51,13 @@ export default function AppDrawer() {
   const [mounted, setMounted] = useState(open);
   // Its faces move while it is on screen: from the open until the slide shut ends.
   const [awake, setAwake] = useState(open);
+
+  // Built ahead of the first tap: when the JS thread first goes idle after
+  // launch, so it never costs Home's first frames.
+  useEffect(() => {
+    const id = requestIdleCallback(() => setMounted(true), { timeout: PREMOUNT_MS });
+    return () => cancelIdleCallback(id);
+  }, []);
 
   useEffect(() => {
     const slideOpen = () => {
@@ -74,7 +84,7 @@ export default function AppDrawer() {
       }
       // A TUI home keeps the keyboard up for its hidden input.
       Keyboard.dismiss();
-      // The content mounts on the first open and stays.
+      // Already mounted unless the first open beat the idle mount.
       setMounted(true);
       setAwake(true);
       slideOpen();
