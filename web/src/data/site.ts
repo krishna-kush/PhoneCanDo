@@ -68,10 +68,9 @@ export const site = {
   license: 'Source-available',
   // Where people write to us: hi for anything, support for help with the app.
   email: { hi: 'hi@phonecando.app', support: 'support@phonecando.app' },
-  // Hero screen recording. Drop the files in public/ and fill both paths.
-  // loopSeconds is the placeholder's length until then: FIG. 01 comes apart
-  // by itself when the hero loop first loops (lib/apart/autoplay.ts), and a
-  // real clip's loop is read from the clip itself.
+  // Hero screen recording. Drop the files in public/ and fill both paths;
+  // FIG. 01 holds apart while it loads, then plays it whole
+  // (lib/apart/autoplay.ts). loopSeconds only labels the placeholder.
   hero: { video: '', poster: '', loopSeconds: 8 },
   // Gate screen recording: the in-app biometric prompt. Same deal.
   gate: { video: '', poster: '' },

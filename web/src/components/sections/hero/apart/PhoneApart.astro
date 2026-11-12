@@ -12,19 +12,30 @@
 // transform reads those with --gap, --tilt and --turn. Plates.astro
 // draws the layers, Labels.astro the leader lines, Legend.astro the parts
 // list narrow screens name them in, lib/apart/ wires the press and pull,
-// the lean toward the pointer, the labels, and the coming apart by itself
-// when the hero clip first loops.
+// the lean toward the pointer, the labels, and the opening: the page opens
+// with the phone apart while the hero clip loads, then it goes back
+// together and the clip plays (lib/apart/autoplay.ts).
 import Plates from "./Plates.astro";
 import Labels from "./Labels.astro";
 import Legend from "./Legend.astro";
-import { site } from "../../../../data/site";
 ---
 
+<script is:inline>
+    // Apart before the first paint, so it never shows whole first; holding
+    // shows the ring on its screen (PlayCue.astro). Reduced motion starts
+    // whole.
+    (() => {
+        const wrap = document.currentScript?.closest(".phone-wrap");
+        if (!wrap || matchMedia("(prefers-reduced-motion: reduce)").matches)
+            return;
+        for (const name of ["data-apart", "data-settled", "data-holding"])
+            wrap.setAttribute(name, "");
+    })();
+</script>
 <button
     class="apart-toggle"
     type="button"
     data-apart-toggle
-    data-loop-ms={site.hero.loopSeconds * 1000}
     aria-pressed="false"
     aria-label="Take the phone apart"
 ></button>
@@ -45,7 +56,7 @@ import { site } from "../../../../data/site";
     import { wireToggle } from "../../../../lib/apart/toggle";
     import { wireLean } from "../../../../lib/apart/lean";
     import { wireLabels } from "../../../../lib/apart/labels";
-    import { wireAutoApart } from "../../../../lib/apart/autoplay";
+    import { wireAutoplay } from "../../../../lib/apart/autoplay";
     import { cueMascot } from "../../../../lib/mascotCue";
     import { toyLines } from "../../../../data/mascot";
     import type { PartId } from "../../../../data/phoneParts";
@@ -74,14 +85,19 @@ import { site } from "../../../../data/site";
             landed: () => cueMascot({ say: toyLines.together }),
         });
         hint?.addEventListener("click", press.flip);
+        const apart = wrap.hasAttribute("data-apart");
+        lean.set(apart);
+        labels.set(apart);
 
-        // Left alone, it comes apart at the clip's first loop; any press or
-        // drag on the phone or its hint first leaves it to the visitor.
-        const auto = wireAutoApart(
+        // Left alone, it goes back together once the clip is ready; any
+        // press or drag on the phone or its hint first leaves it to the
+        // visitor.
+        const auto = wireAutoplay(
+            wrap,
             figure,
             phone.querySelector("video"),
-            Number(toggle.dataset.loopMs),
-            press.open,
+            phone.querySelector("[data-cue-ring]"),
+            press.close,
         );
         for (const el of [toggle, hint])
             for (const type of ["pointerdown", "click"])

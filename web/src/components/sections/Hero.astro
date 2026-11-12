@@ -3,6 +3,7 @@ import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
 import VerbReel from "./hero/VerbReel.astro";
 import PhoneApart from "./hero/apart/PhoneApart.astro";
+import PlayCue from "./hero/apart/PlayCue.astro";
 import { site } from "../../data/site";
 ---
 
@@ -72,7 +73,7 @@ import { site } from "../../data/site";
                         <video
                             src={site.hero.video}
                             poster={site.hero.poster}
-                            autoplay
+                            preload="none"
                             muted
                             loop
                             playsinline
@@ -85,6 +86,7 @@ import { site } from "../../data/site";
                             label={`Hero loop · 0:${String(site.hero.loopSeconds).padStart(2, "0")}`}
                         />
                     )}
+                    <PlayCue glyph={Boolean(site.hero.video)} />
                     {site.hero.video ? (
                         <div class="media-loader">
                             <LogoLoader size={26} />

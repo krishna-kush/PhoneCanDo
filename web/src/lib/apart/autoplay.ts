@@ -1,76 +1,123 @@
-// Left alone, FIG. 01 comes apart by itself the first time the hero clip
-// loops, so a visitor who only watches the hero still sees the exploded
-// view. It only ever takes the phone apart, once, and never puts it back; a
-// press or drag on the phone first calls it off for good. The clip only
-// counts while the phone is on screen in a visible tab, so a loop nobody saw
-// waits for the next one. Until a clip lands (site.hero.video empty), a
-// timer of the placeholder's length plays the clip's part, paused the same
-// way.
+// FIG. 01 opens the page apart (PhoneApart.astro marks it before the first
+// paint) while the hero clip loads behind its poster, then goes back
+// together and plays the clip from its start. It closes once a short hold
+// has run, so the parts are seen even when the clip is ready at once, and
+// the clip can play through; both count only while the phone is watched
+// (watched.ts), so it never closes off screen. The hold fills the ring round
+// the screen's play glyph (PlayCue.astro); a clip still loading after it
+// shows the loader instead. A press or drag on the phone first leaves it to
+// the visitor: it never closes by itself then, and the clip plays as soon as
+// it can. Reduced motion starts whole and just plays; Save-Data fetches
+// nothing until that press. Until a clip lands (site.hero.video empty), the
+// hold alone decides.
 
-// Share of the phone that has to be on screen to count as watched.
-const SEEN = 0.5;
-// A jump back by more than this is the clip starting over.
-const LOOP_JUMP_S = 0.5;
+import { watchSeen } from './watched';
 
-export function wireAutoApart(figure: HTMLElement, video: HTMLVideoElement | null, loopMs: number, open: () => void) {
-  let done = false;
-  let seen = false;
-  let left = loopMs;
-  let since = 0;
-  let timer = 0;
-  let last = 0;
+const HOLD_MS = 5000;
+// Still not ready this long after the hold, the clip is played where it is
+// and paused at its first frame: some browsers (iOS Safari) only fetch a
+// clip once it plays.
+const STALL_MS = 4000;
+// A longer gap between frames is a tab that was away, not hold time.
+const MAX_FRAME_MS = 100;
 
-  const watching = () => seen && !document.hidden;
-  const fire = () => {
-    if (done || !watching()) return;
-    stop();
-    open();
+type Connection = { saveData?: boolean };
+
+export function wireAutoplay(
+  wrap: HTMLElement,
+  figure: HTMLElement,
+  video: HTMLVideoElement | null,
+  ring: SVGElement | null,
+  close: (then: () => void) => void
+) {
+  const saveData = (navigator as Navigator & { connection?: Connection }).connection?.saveData === true;
+  // Save-Data with a clip to fetch: no hold, the press starts it.
+  const waitForPress = saveData && video !== null;
+  const play = () => {
+    if (video?.paused) void video.play().catch(() => {});
   };
 
-  // No clip yet: a timer stands in for one, running only while watched.
+  // Reduced motion: whole from the start, nothing to hold.
+  if (!wrap.hasAttribute('data-apart')) {
+    if (!saveData) play();
+    return { cancel: play };
+  }
+
+  let done = false;
+  let ready = !video;
+  let held = 0;
+  let last = 0;
+  let frame = 0;
+  let stall = 0;
+
+  const settle = () => {
+    if (done || !ready || held < HOLD_MS || !seen.now()) return;
+    finish();
+    close(play);
+  };
+  const onReady = () => {
+    ready = true;
+    window.clearTimeout(stall);
+    settle();
+  };
+  const onPlaying = () => {
+    if (done) return;
+    video!.pause();
+    onReady();
+  };
+
+  const tick = (now: number) => {
+    held = Math.min(HOLD_MS, held + Math.min(MAX_FRAME_MS, now - last));
+    last = now;
+    ring?.style.setProperty('stroke-dashoffset', String(100 - (100 * held) / HOLD_MS));
+    if (held < HOLD_MS) return void (frame = requestAnimationFrame(tick));
+    frame = 0;
+    // The ring is full: a clip still loading shows the loader now.
+    wrap.removeAttribute('data-holding');
+    if (!ready)
+      stall = window.setTimeout(() => {
+        video!.addEventListener('playing', onPlaying, { once: true });
+        play();
+      }, STALL_MS);
+    settle();
+  };
   const run = () => {
-    if (video || done || timer || !watching()) return;
-    since = performance.now();
-    timer = window.setTimeout(fire, left);
+    if (done || frame || held >= HOLD_MS || waitForPress) return;
+    last = performance.now();
+    frame = requestAnimationFrame(tick);
   };
   const pause = () => {
-    if (!timer) return;
-    window.clearTimeout(timer);
-    timer = 0;
-    left = Math.max(0, left - (performance.now() - since));
-  };
-  const sync = () => (watching() ? run() : pause());
-
-  // A clip set to loop jumps back to its start; that jump is the loop.
-  const onTime = () => {
-    const now = video!.currentTime;
-    if (now + LOOP_JUMP_S < last) fire();
-    last = now;
+    cancelAnimationFrame(frame);
+    frame = 0;
   };
 
-  const io = new IntersectionObserver(
-    ([entry]) => {
-      seen = entry.intersectionRatio >= SEEN;
-      sync();
-    },
-    { threshold: [0, SEEN, 1] }
-  );
-  io.observe(figure);
-  document.addEventListener('visibilitychange', sync);
-  video?.addEventListener('timeupdate', onTime);
+  const seen = watchSeen(figure, (on) => {
+    if (on) run();
+    else pause();
+    settle();
+  });
 
-  function stop() {
+  // The clip is marked preload="none" for Save-Data; everyone else fetches
+  // it now, behind the poster.
+  if (video && !waitForPress) {
+    video.addEventListener('canplaythrough', onReady, { once: true });
+    video.preload = 'auto';
+    if (video.networkState !== HTMLMediaElement.NETWORK_LOADING) video.load();
+  }
+
+  function finish() {
     done = true;
     pause();
-    io.disconnect();
-    document.removeEventListener('visibilitychange', sync);
-    video?.removeEventListener('timeupdate', onTime);
+    window.clearTimeout(stall);
+    seen.stop();
+    wrap.removeAttribute('data-holding');
   }
 
   return {
-    /** The visitor took the phone over: it never opens by itself now. */
+    /** The visitor took the phone over: it never closes by itself now. */
     cancel() {
-      if (!done) stop();
+      if (!done) finish();
+      play();
     },
   };
 }

@@ -1,0 +1,83 @@
+---
+/** The play glyph on FIG. 01's screen while the phone holds apart
+    (lib/apart/autoplay.ts), with a ring round it that fills as the hold
+    runs. Over the slate, whose own glyph sits in the same place, it adds
+    only the ring; over a clip's poster it draws the glyph too. */
+interface Props {
+  glyph?: boolean;
+}
+const { glyph = false } = Astro.props;
+---
+
+<span class="play-cue" aria-hidden="true">
+  <span class="play-cue-box" class:list={{ "play-cue-glyph": glyph }}>
+    <svg class="play-cue-ring" viewBox="0 0 48 48" fill="none">
+      <path class="play-cue-track" d="M24 .5h23v47H.5V.5Z" pathLength="100" />
+      <path class="play-cue-fill" d="M24 .5h23v47H.5V.5Z" pathLength="100" data-cue-ring />
+    </svg>
+    {
+      glyph && (
+        <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
+          <path d="M0 0l10 6-10 6z" />
+        </svg>
+      )
+    }
+  </span>
+</span>
+
+<style is:global>
+  .play-cue {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .phone-wrap[data-holding] .play-cue {
+    opacity: 1;
+  }
+  /* The ring stands in for the loader while it fills. */
+  .phone-wrap[data-holding] .media-loader {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .play-cue-box {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    color: var(--art-fg);
+  }
+  /* Drawn inside, like the slate's border, so the ring sits the same. */
+  .play-cue-glyph {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+    background: color-mix(in srgb, var(--art-bg) 55%, transparent);
+  }
+  .play-cue-ring {
+    position: absolute;
+    inset: -5px;
+    width: calc(100% + 10px);
+    height: calc(100% + 10px);
+  }
+  .play-cue-ring path {
+    stroke-width: 1;
+    stroke-dasharray: 100;
+  }
+  .play-cue-track {
+    stroke: rgba(255, 255, 255, 0.08);
+  }
+  .play-cue-fill {
+    stroke: var(--art-accent);
+    stroke-dashoffset: 100;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .play-cue {
+      transition: none;
+    }
+  }
+</style>

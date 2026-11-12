@@ -2,8 +2,9 @@
 // the hero phone apart or puts it back; a mouse drag scrubs --x on the phone
 // (0 whole, 1 apart) and lets go past halfway. Touch only presses, so a
 // swipe over the phone still scrolls the page. Other presses (the hint under
-// the phone) flip it through the same path with `flip`; `open` takes it
-// apart without a press (lib/apart/autoplay.ts).
+// the phone) flip it through the same path with `flip`; `close` puts it back
+// together without a press (lib/apart/autoplay.ts). It starts in whichever
+// state the wrap is marked with.
 //
 // The figure says where it is through attributes on its wrap: data-apart
 // while apart, data-settled once the layers have stopped springing (hovers
@@ -30,26 +31,32 @@ export function wireToggle(
   phone: HTMLElement,
   still: MediaQueryList,
   on: ApartHooks
-): { flip: () => void; open: () => void } {
-  let apart = false;
+): { flip: () => void; close: (then: () => void) => void } {
+  let apart = wrap.hasAttribute('data-apart');
   let startY: number | null = null;
   let from = 0;
   let dragged = false;
   let timer = 0;
+  // Runs once the close under way has landed.
+  let onLand: (() => void) | undefined;
 
   const at = (y: number) => Math.min(1, Math.max(0, from + ((startY ?? y) - y) / TRAVEL));
   const later = (ms: number, run: () => void) => {
     window.clearTimeout(timer);
     timer = window.setTimeout(run, still.matches ? 0 : ms);
   };
+  const name = () => {
+    toggle.setAttribute('aria-pressed', String(apart));
+    toggle.setAttribute('aria-label', apart ? 'Put the phone back together' : 'Take the phone apart');
+  };
   const set = (next: boolean) => {
     if (next === apart) return;
     apart = next;
+    onLand = undefined;
     wrap.toggleAttribute('data-apart', apart);
     wrap.toggleAttribute('data-closing', !apart);
     wrap.removeAttribute('data-settled');
-    toggle.setAttribute('aria-pressed', String(apart));
-    toggle.setAttribute('aria-label', apart ? 'Put the phone back together' : 'Take the phone apart');
+    name();
     on.changed(apart);
     if (apart) return later(SETTLE_MS, () => wrap.setAttribute('data-settled', ''));
     later(LAND_MS, () => {
@@ -58,8 +65,11 @@ export function wireToggle(
       void wrap.offsetWidth;
       wrap.setAttribute('data-slam', '');
       on.landed();
+      onLand?.();
+      onLand = undefined;
     });
   };
+  name();
 
   // A press with a mouse or finger leaves focus where it was: kept on the
   // phone, a later key (F11, F12, Esc, Shift) would bring up its keyboard
@@ -101,5 +111,12 @@ export function wireToggle(
     set(!apart);
   });
 
-  return { flip: () => set(!apart), open: () => set(true) };
+  return {
+    flip: () => set(!apart),
+    close(then) {
+      if (!apart) return then();
+      set(false);
+      onLand = then;
+    },
+  };
 }
