@@ -69,8 +69,9 @@ export const site = {
   // Where people write to us: hi for anything, support for help with the app.
   email: { hi: 'hi@phonecando.app', support: 'support@phonecando.app' },
   // Hero screen recording. Drop the files in public/ and fill both paths;
-  // FIG. 01 holds apart while it loads, then plays it whole
-  // (lib/apart/autoplay.ts). loopSeconds only labels the placeholder.
+  // FIG. 01 holds apart while it loads, plays it once whole, then comes
+  // apart with it looping (lib/apart/autoplay.ts). loopSeconds is the
+  // placeholder's length until then; a real clip's is read from the clip.
   hero: { video: '', poster: '', loopSeconds: 8 },
   // Gate screen recording: the in-app biometric prompt. Same deal.
   gate: { video: '', poster: '' },

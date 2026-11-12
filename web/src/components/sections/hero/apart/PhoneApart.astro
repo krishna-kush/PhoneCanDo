@@ -14,10 +14,12 @@
 // list narrow screens name them in, lib/apart/ wires the press and pull,
 // the lean toward the pointer, the labels, and the opening: the page opens
 // with the phone apart while the hero clip loads, then it goes back
-// together and the clip plays (lib/apart/autoplay.ts).
+// together and the clip plays, and after one play-through it comes apart
+// again with the clip looping on its screen (lib/apart/autoplay.ts).
 import Plates from "./Plates.astro";
 import Labels from "./Labels.astro";
 import Legend from "./Legend.astro";
+import { site } from "../../../../data/site";
 ---
 
 <script is:inline>
@@ -36,6 +38,7 @@ import Legend from "./Legend.astro";
     class="apart-toggle"
     type="button"
     data-apart-toggle
+    data-loop-ms={site.hero.loopSeconds * 1000}
     aria-pressed="false"
     aria-label="Take the phone apart"
 ></button>
@@ -89,15 +92,16 @@ import Legend from "./Legend.astro";
         lean.set(apart);
         labels.set(apart);
 
-        // Left alone, it goes back together once the clip is ready; any
-        // press or drag on the phone or its hint first leaves it to the
-        // visitor.
+        // Left alone, it goes back together once the clip is ready and
+        // comes apart again after one play-through; any press or drag on the
+        // phone or its hint first leaves it to the visitor.
         const auto = wireAutoplay(
             wrap,
             figure,
             phone.querySelector("video"),
             phone.querySelector("[data-cue-ring]"),
-            press.close,
+            Number(toggle.dataset.loopMs),
+            press,
         );
         for (const el of [toggle, hint])
             for (const type of ["pointerdown", "click"])

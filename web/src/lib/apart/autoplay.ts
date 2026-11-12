@@ -1,6 +1,8 @@
 // FIG. 01 opens the page apart (PhoneApart.astro marks it before the first
 // paint) while the hero clip loads behind its poster, then goes back
-// together and plays the clip from its start. It closes once a short hold
+// together and plays the clip from its start; once the clip has played
+// through (firstLoop.ts) it comes apart again, the clip looping on its
+// screen layer, and is left that way. It closes once a short hold
 // has run, so the parts are seen even when the clip is ready at once, and
 // the clip can play through; both count only while the phone is watched
 // (watched.ts), so it never closes off screen. The hold fills the ring round
@@ -9,8 +11,9 @@
 // the visitor: it never closes by itself then, and the clip plays as soon as
 // it can. Reduced motion starts whole and just plays; Save-Data fetches
 // nothing until that press. Until a clip lands (site.hero.video empty), the
-// hold alone decides.
+// hold alone decides when it closes.
 
+import { afterFirstLoop } from './firstLoop';
 import { watchSeen } from './watched';
 
 const HOLD_MS = 5000;
@@ -28,7 +31,8 @@ export function wireAutoplay(
   figure: HTMLElement,
   video: HTMLVideoElement | null,
   ring: SVGElement | null,
-  close: (then: () => void) => void
+  loopMs: number,
+  press: { open: () => void; close: (then: () => void) => void }
 ) {
   const saveData = (navigator as Navigator & { connection?: Connection }).connection?.saveData === true;
   // Save-Data with a clip to fetch: no hold, the press starts it.
@@ -49,11 +53,15 @@ export function wireAutoplay(
   let last = 0;
   let frame = 0;
   let stall = 0;
+  let loop: { stop: () => void } | undefined;
 
   const settle = () => {
     if (done || !ready || held < HOLD_MS || !seen.now()) return;
     finish();
-    close(play);
+    press.close(() => {
+      play();
+      loop = afterFirstLoop(figure, video, loopMs, press.open);
+    });
   };
   const onReady = () => {
     ready = true;
@@ -114,9 +122,10 @@ export function wireAutoplay(
   }
 
   return {
-    /** The visitor took the phone over: it never closes by itself now. */
+    /** The visitor took the phone over: it never moves by itself now. */
     cancel() {
       if (!done) finish();
+      loop?.stop();
       play();
     },
   };

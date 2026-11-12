@@ -2,8 +2,8 @@
 // the hero phone apart or puts it back; a mouse drag scrubs --x on the phone
 // (0 whole, 1 apart) and lets go past halfway. Touch only presses, so a
 // swipe over the phone still scrolls the page. Other presses (the hint under
-// the phone) flip it through the same path with `flip`; `close` puts it back
-// together without a press (lib/apart/autoplay.ts). It starts in whichever
+// the phone) flip it through the same path with `flip`; `open` and `close`
+// move it without a press (lib/apart/autoplay.ts). It starts in whichever
 // state the wrap is marked with.
 //
 // The figure says where it is through attributes on its wrap: data-apart
@@ -31,7 +31,7 @@ export function wireToggle(
   phone: HTMLElement,
   still: MediaQueryList,
   on: ApartHooks
-): { flip: () => void; close: (then: () => void) => void } {
+): { flip: () => void; open: () => void; close: (then: () => void) => void } {
   let apart = wrap.hasAttribute('data-apart');
   let startY: number | null = null;
   let from = 0;
@@ -113,6 +113,7 @@ export function wireToggle(
 
   return {
     flip: () => set(!apart),
+    open: () => set(true),
     close(then) {
       if (!apart) return then();
       set(false);
