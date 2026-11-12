@@ -28,7 +28,8 @@ class PhoneCanDoTerminalModule : Module() {
     }
 
     // Bytes cross the bridge as base64: universally supported, no typed-array risk.
-    Function("open") { params: Map<String, Any> ->
+    // Map<String, Any?>: a field JS left unset (null, undefined) reads as unset instead of failing the call.
+    Function("open") { params: Map<String, Any?> ->
       @Suppress("UNCHECKED_CAST")
       val cmd = params["cmd"] as? List<String> ?: throw Exception("cmd required")
       @Suppress("UNCHECKED_CAST")

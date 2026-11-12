@@ -40,7 +40,15 @@ export function getLibDir(): string {
 
 export function ptyOpen(opts: PtyOpenOpts): number {
   if (!mod) throw new Error('terminal module unavailable');
-  return mod.open(opts);
+  return mod.open(definedOnly(opts));
+}
+
+// Expo cannot convert a null or undefined inside an object it hands to
+// Kotlin as Any (an env value, a field left unset), so only set values cross.
+function definedOnly(opts: PtyOpenOpts): PtyOpenOpts {
+  const out = Object.fromEntries(Object.entries(opts).filter(([, v]) => v != null)) as PtyOpenOpts;
+  if (opts.env) out.env = Object.fromEntries(Object.entries(opts.env).filter(([, v]) => v != null));
+  return out;
 }
 
 export function ptyRead(fd: number, maxBytes = 8192): string {
