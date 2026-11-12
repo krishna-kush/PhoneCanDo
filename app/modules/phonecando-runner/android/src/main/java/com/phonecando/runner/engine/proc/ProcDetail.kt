@@ -11,7 +11,9 @@ package com.phonecando.runner.engine.proc
  * [ioBytes] the bytes it read and wrote (sockets too), null when unreadable.
  * [startTicks] is its start as the kernel counts it: with the pid, what
  * tells one process from a later one across reads ([startedAt] moves by a
- * ms or two between reads, as the clocks are read again).
+ * ms or two between reads, as the clocks are read again). [exe] is the file
+ * name of the binary it runs (/proc/<pid>/exe): a guest under proot runs
+ * proot's loader, our launcher answers to its command's name in [argv].
  */
 data class ProcDetail(
   val pid: Int,
@@ -25,6 +27,7 @@ data class ProcDetail(
   val cpuMs: Long,
   val ioBytes: Long? = null,
   val startTicks: Long = startedAt,
+  val exe: String? = null,
 )
 
 /** What fd 0 points at; [inode] for a pipe or a socket. */

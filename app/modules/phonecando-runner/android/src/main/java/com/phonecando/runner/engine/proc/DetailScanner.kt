@@ -5,7 +5,7 @@ import java.nio.file.Files
 
 // Reads our own processes in /proc for job detection (engine/work/): for
 // each live process of [myUid] but ours, its parent, start, agent tag,
-// tracer, command line, stdin, CPU and I/O (ProcDetail). Heavier than
+// tracer, command line, binary, stdin, CPU and I/O (ProcDetail). Heavier than
 // ProcScanner, which the reaper polls; this runs every few seconds at
 // most. A process start is clock ticks since boot ([hz] a second); it
 // becomes epoch ms through [sinceBoot] (SystemClock.elapsedRealtime on the
@@ -49,6 +49,7 @@ class DetailScanner(
       cpuMs = stat.cpuTicks * 1000L / hz,
       ioBytes = text(File(dir, "io"))?.let(ProcFields::parseIo),
       startTicks = stat.startTicks,
+      exe = link(File(dir, "exe"))?.substringAfterLast('/'),
     )
   }
 

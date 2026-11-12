@@ -477,7 +477,13 @@ per-kind code; every number is in `WorkRules.kt`.
   from such a parent. That is how MCP stdio servers and language servers
   run, while commands get `/dev/null`, a terminal or a file. A shell, a
   command of the agent's own shell, an orphan or daemon (its parent gone)
-  and whatever a job starts are jobs. In doubt it is a job: a wrong job
+  and whatever a job starts are jobs. Our own runtime is seen through
+  (`WorkRules.RUNTIME_EXES`, by `/proc/<pid>/exe`): a native agent's command
+  reaches the machine as our launcher (named like the command, `bash`
+  too), then proot (which drops its stdin), then the program, so parents
+  are read past the two, and each takes the verdict of what it carries (an
+  MCP server opencode starts mid-session is a helper, a dev server a job).
+  In doubt it is a job: a wrong job
   keeps an agent up (the notification names it, with Stop), a wrong helper
   kills one. No spawn-shape rule works for every kind: `bash -c 'cmd'`
   execs the shell away, pi starts MCP servers detached, Codex runs each

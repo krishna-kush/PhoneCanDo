@@ -29,7 +29,12 @@ class AgentWorkTest {
     stdin: Stdin = nul,
     tag: String? = "a1",
     tracer: Int = 0,
-  ) = ProcDetail(pid, ppid, startedAt, tag, tracer, argv.firstOrNull(), argv.toList(), stdin, 0L)
+    exe: String? = null,
+  ) = ProcDetail(pid, ppid, startedAt, tag, tracer, argv.firstOrNull(), argv.toList(), stdin, 0L, exe = exe)
+
+  private val launcher = "libphonecando_launch.so"
+  private val proot = "libproot.so"
+  private val loader = "libproot-loader.so"
 
   // The agent as it was at the first input: the launcher, proot, claude.
   private val agent = listOf(
@@ -135,11 +140,60 @@ class AgentWorkTest {
     assertEquals(emptyList<ProcDetail>(), AgentWork.jobs(AgentWork.judge(all, input, now, emptyMap())))
   }
 
+  // A native agent (opencode) outside proot, as on the phone.
+  private val native = listOf(p(10, 1, 1_000, "liboc-engine.so", "serve", stdin = pipe(3), exe = "liboc-engine.so"))
+
+  @Test fun anMcpServerStartedLaterThroughOurRuntimeIsAHelper() {
+    // As on the phone: opencode asks the machine's shim for
+    // `bash -c 'exec python3 probe.py'`; the shim (our launcher, named bash)
+    // starts proot, which drops its stdin; the server inside has opencode's
+    // socket as stdin.
+    val all = native +
+      p(20, 10, 150_000, "bash", "-c", "exec python3 -u probe.py", stdin = socket(9), exe = launcher) +
+      p(21, 20, 150_100, "libproot.so", "-L", "--link2symlink", stdin = nul, exe = proot) +
+      p(22, 21, 150_300, "python3", "-u", "probe.py", stdin = socket(9), tracer = 21, exe = loader)
+    val judged = AgentWork.judge(all, input, now, emptyMap())
+    assertEquals(mapOf(20 to Verdict.HELPER, 21 to Verdict.HELPER, 22 to Verdict.HELPER), judged.associate { it.proc.pid to it.verdict }.filterKeys { it >= 20 })
+    assertEquals(emptyList<ProcDetail>(), AgentWork.jobs(judged))
+  }
+
+  @Test fun aPipeServerThroughOurRuntimeIsAHelperWhenTheAgentWritesIt() {
+    val all = native +
+      p(20, 10, 150_000, "bash", "-c", "exec mcp-server", stdin = pipe(5), exe = launcher) +
+      p(21, 20, 150_100, "libproot.so", stdin = nul, exe = proot) +
+      p(22, 21, 150_300, "mcp-server", stdin = pipe(5), tracer = 21, exe = loader)
+    assertEquals(Verdict.HELPER, verdicts(all, mapOf(5L to setOf(10)))[22])
+    assertEquals(Verdict.WORK, verdicts(all, mapOf(5L to emptySet()))[22])
+  }
+
+  @Test fun aCommandThroughOurRuntimeIsWorkAndSoIsItsCarrier() {
+    // opencode's bash tool: stdin ignored, a real shell inside.
+    val all = native +
+      p(20, 10, 150_000, "bash", "-c", "npm test", stdin = nul, exe = launcher) +
+      p(21, 20, 150_100, "libproot.so", stdin = nul, exe = proot) +
+      p(22, 21, 150_300, "bash", "-c", "npm test", stdin = nul, tracer = 21, exe = loader) +
+      p(23, 22, 150_500, "npm", "test", stdin = nul, tracer = 21, exe = loader)
+    val judged = AgentWork.judge(all, input, now, emptyMap())
+    assertEquals(setOf(Verdict.WORK), judged.filter { it.proc.pid >= 20 }.map { it.verdict }.toSet())
+    assertEquals(listOf(23), AgentWork.jobs(judged).map { it.pid })
+  }
+
+  @Test fun ourRuntimeWithNothingUnderItIsNotWork() {
+    val all = native + p(21, 1, 150_000, "libproot.so", stdin = nul, exe = proot)
+    assertEquals(Verdict.HELPER, verdicts(all)[21])
+  }
+
+  @Test fun theLoaderIsNeverSeenThrough() {
+    // Every guest runs proot's loader: a guest shell stays a shell.
+    val all = agent + p(20, 12, 150_000, "bash", stdin = pipe(5), tracer = 11, exe = loader)
+    assertEquals(Verdict.WORK, verdicts(all, mapOf(5L to setOf(12)))[20])
+  }
+
   @Test fun aProotLeftTracingAJobIsWorkButNamedByItsTracee() {
     // As on the phone: opencode's command ended, its proot stays tracing
     // the nohup'd server, both orphans.
-    val all = agent + p(20, 1, 150_000, "libproot.so", "-L", "--link2symlink") +
-      p(21, 1, 151_000, "python3", "-m", "http.server", tracer = 20)
+    val all = agent + p(20, 1, 150_000, "libproot.so", "-L", "--link2symlink", exe = proot) +
+      p(21, 1, 151_000, "python3", "-m", "http.server", tracer = 20, exe = loader)
     val judged = AgentWork.judge(all, input, now, emptyMap())
     assertEquals(mapOf(20 to Verdict.WORK, 21 to Verdict.WORK), judged.associate { it.proc.pid to it.verdict }.filterKeys { it >= 20 })
     assertEquals(listOf(21), AgentWork.jobs(judged).map { it.pid })

@@ -67,8 +67,10 @@ class DetailScannerTest {
     argv: List<String> = listOf("node", "server.js"),
     stdin: String? = "/dev/null",
     fds: Map<Int, Pair<String, Int>> = emptyMap(),
+    exe: String? = null,
   ) {
     val dir = File(proc, "$pid").apply { mkdirs() }
+    if (exe != null) Files.createSymbolicLink(File(dir, "exe").toPath(), Paths.get(exe))
     File(dir, "status").writeText("Name:\t${argv.firstOrNull() ?: "x"}\nState:\t$state\nTracerPid:\t$tracer\nUid:\t$owner\t$owner\t$owner\t$owner\n")
     File(dir, "stat").writeText("$pid (x) S $ppid $pid $pid 0 -1 0 0 0 0 0 $cpuTicks 0 0 0 20 0 1 0 $startTicks 1000 200")
     if (env != null) File(dir, "environ").writeBytes((env + "\u0000").toByteArray())
@@ -83,7 +85,7 @@ class DetailScannerTest {
   }
 
   @Test fun scansOurLiveProcessesWithEpochStarts() {
-    fake(200, startTicks = 5000, cpuTicks = 250, argv = listOf("claude"), stdin = "/dev/pts/0")
+    fake(200, startTicks = 5000, cpuTicks = 250, argv = listOf("claude"), stdin = "/dev/pts/0", exe = "/data/app/x/lib/arm64/libproot-loader.so")
     fake(201, ppid = 200, startTicks = 6000, stdin = "pipe:[77]", tracer = 150)
     fake(202, owner = 10999)
     fake(203, state = "Z (zombie)")
@@ -100,6 +102,10 @@ class DetailScannerTest {
     assertEquals("a1", engine.tag)
     assertEquals(listOf("claude"), engine.argv)
     assertEquals(Stdin.Kind.TTY, engine.stdin.kind)
+    // The binary's file name; none when its link cannot be read.
+    assertEquals("libproot-loader.so", engine.exe)
+    assertEquals(5000L, engine.startTicks)
+    assertNull(found[1].exe)
     val helper = found[1]
     assertEquals(200, helper.ppid)
     assertEquals(150, helper.tracerPid)
