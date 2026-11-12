@@ -86,6 +86,11 @@ dependencies {
   implementation 'com.phonecando.lme:lme-store:0.1.0-dev'
   implementation 'com.phonecando.lme:lme-host:0.1.0-dev'
 
+  // The Linux module's running jobs (LinuxHost's JobRegistry: env downloads,
+  // machine setup, agent installs), which keep our service up like model
+  // jobs (jobs/JobsAnchor.kt).
+  implementation project(':phonecando-linux')
+
   // The app's settings plugin substitutes these coordinates with the included
   // `pce/` build; lite/play never resolve them.
   fullImplementation 'com.phonecando.pce:pce-api:0.1.0-dev'

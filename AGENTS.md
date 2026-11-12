@@ -102,8 +102,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   the packaged manifests and binds `BuiltinHooks`. The runner's `engine/`
   is the supervisor (the user's optional cap with LRU idle stop,
   tagged-process reaper), `limits/` the run caps, `memory/` the memory
-  guard (pure `MemoryPolicy`, numbers in `MemoryRules`),
-  `bridge/` the loopback bridge (per-agent tokens, prompts, screen lease).
+  guard (pure `MemoryPolicy`, numbers in `MemoryRules`), `jobs/` the jobs
+  anchor (keeps the `specialUse` service up while model and Linux jobs
+  run), `bridge/` the loopback bridge (per-agent tokens, prompts, screen
+  lease).
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
 - `docs/README.md` — repo docs map; `app/docs/README.md` — app/engine docs.

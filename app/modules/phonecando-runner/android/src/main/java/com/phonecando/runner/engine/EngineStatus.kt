@@ -26,7 +26,8 @@ data class EngineStatus(
   val port: String?,
   /**
    * Why it failed or died; for a stopped engine only why we stopped it
-   * ourselves (the memory guard: MemoryRules.STOPPED_REASON), else null.
+   * ourselves (the memory guard: MemoryRules.STOPPED_REASON; a service
+   * time limit: PhoneCanDoServeService.TIME_LIMIT_REASON), else null.
    */
   val error: String?,
   /** Epoch ms of the last start, engine event, bridge call or touch. */

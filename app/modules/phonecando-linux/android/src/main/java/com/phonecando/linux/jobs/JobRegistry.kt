@@ -3,6 +3,7 @@ package com.phonecando.linux.jobs
 import com.phonecando.linux.errors.LinuxError
 import com.phonecando.linux.errors.LinuxErrorCode
 import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -30,6 +31,11 @@ class Job(val id: String, val target: JobTarget, val guestScript: Boolean = fals
   val cancel: CancelSignal = CancelSignal { cancelled.get() }
 
   val isCancelled: Boolean get() = cancelled.get()
+
+  /** The last progress it reported (JobReporter): the runner's notification line. */
+  @Volatile
+  var progress: Progress = Progress(JobReporter.START, 0, null)
+    internal set
 
   fun requestCancel() = cancelled.set(true)
 
@@ -69,6 +75,11 @@ class JobRegistry {
   fun live(target: JobTarget): Job? = synchronized(lock) { byTarget[target] }
 
   fun isLive(target: JobTarget): Boolean = live(target) != null
+
+  fun running(): List<Job> = synchronized(lock) { byTarget.values.toList() }
+
+  /** Some job runs: the runner keeps its foreground service up meanwhile. */
+  fun anyRunning(): Boolean = synchronized(lock) { byTarget.isNotEmpty() }
 
   /** Asks job [jobId] to stop; false when no such job runs. The job ends at its next cancel check. */
   fun cancel(jobId: String): Boolean {

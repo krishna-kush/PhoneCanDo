@@ -17,8 +17,8 @@ import com.phonecando.runner.api.userKindFunctions
 import com.phonecando.runner.bridge.BridgePrompts
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.memory.MemoryStatus
-import com.phonecando.runner.models.ModelJobsAnchor
 import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.prompts.OpenUrlPrompts
 import expo.modules.kotlin.modules.Module
@@ -95,8 +95,8 @@ class PhoneCanDoRunnerModule : Module() {
       // manifest that lacks the provider.
       appContext.reactContext?.let { TelemetryRecorder.install(it) }
       Engines.addListener(engineListener)
-      // Model downloads and imports keep the process in the foreground.
-      appContext.reactContext?.let { ModelJobsAnchor.install(it) }
+      // Model jobs and Linux jobs keep the process in the foreground.
+      appContext.reactContext?.let { JobsAnchor.install(it) }
     }
     OnDestroy {
       Engines.removeListener(engineListener)

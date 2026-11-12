@@ -9,9 +9,10 @@ import android.content.Context
 // The foreground service's one notification: the chats the agents are busy
 // with, one line each, the chat, then its agent, then its state
 // (ChatBoard), then a model server reading a prompt (ReadingLines), then
-// the model downloads and imports running (TransferLines). Engines
-// themselves never show. Chat titles and model names stay off the lock
-// screen: the public version only counts. Tapping opens the app; on that
+// the model downloads and imports running (TransferLines), then the Linux
+// jobs (LinuxJobLines). Engines themselves never show. Chat titles and
+// model, system and agent names stay off the lock screen: the public
+// version only counts. Tapping opens the app; on that
 // agent's Home when every chat listed belongs to one agent (or, with none,
 // one engine runs).
 internal class ServiceNotification(private val context: Context) {
@@ -24,7 +25,8 @@ internal class ServiceNotification(private val context: Context) {
   /**
    * [names]: agent id → name; [running]: agents whose engine is live;
    * [transfers]: TransferLines of the model jobs; [reading]: the ReadingLines
-   * line while a model server reads a prompt.
+   * line while a model server reads a prompt; [linuxJobs]: LinuxJobLines of
+   * the Linux jobs.
    */
   fun build(
     chats: List<ChatBoard.Chat>,
@@ -32,14 +34,14 @@ internal class ServiceNotification(private val context: Context) {
     running: List<String>,
     transfers: List<String> = emptyList(),
     reading: String? = null,
+    linuxJobs: List<String> = emptyList(),
   ): Notification {
     val agent = chats.map { it.agentId }.distinct().singleOrNull()
       ?: running.singleOrNull()?.takeIf { chats.isEmpty() }
     val tap = agent?.let { LaunchTargets.tap(context, LaunchTarget("home", it)) } ?: launchIntent()
-    val summary = listOf(summary(chats), if (reading != null) READING else "", transferCount(transfers))
-      .filter { it.isNotEmpty() }
-      .joinToString(" · ")
-    val extra = listOfNotNull(reading) + transfers
+    val counts = listOf(summary(chats), if (reading != null) READING else "", transferCount(transfers), linuxCount(linuxJobs))
+    val summary = counts.filter { it.isNotEmpty() }.joinToString(" · ")
+    val extra = listOfNotNull(reading) + transfers + linuxJobs
     val builder = base(tap)
     when {
       chats.isEmpty() && extra.size <= 1 ->
@@ -70,6 +72,13 @@ internal class ServiceNotification(private val context: Context) {
     0 -> ""
     1 -> "1 model coming in"
     else -> "${transfers.size} models coming in"
+  }
+
+  // "1 Linux job": no names either.
+  private fun linuxCount(jobs: List<String>): String = when (jobs.size) {
+    0 -> ""
+    1 -> "1 Linux job"
+    else -> "${jobs.size} Linux jobs"
   }
 
   private fun base(tap: PendingIntent?): Notification.Builder =

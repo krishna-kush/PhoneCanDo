@@ -74,15 +74,12 @@ These are not scheduled work unless they are also listed in
 - opencode is pinned to the self-built `v2.0.26-android-phonecando.1`
   payload. Bumping it requires re-checking the embedded web UI theme override
   (`--v2-*` variables and `opencode-color-scheme`); a rename fails silently.
-- Boot receiver is not implemented. Android 15+ forbids a dataSync foreground
-  service from `BOOT_COMPLETED`.
-- Android 15+ lets the engine's foreground service (type `dataSync`) run 6
-  hours in any 24 while PhoneCanDo is in the background; opening the app
-  resets the clock. At the limit every engine and the phone bridge stop: the
-  engine notification goes away and agent turns still running end there
-  (the chats are kept). Opening PhoneCanDo starts the active agent's engine
-  again; the others start when something uses them. This bounds unattended
-  background runs, including phone control left unlocked.
+- Boot receiver is not implemented.
+- The engine's foreground service is type `specialUse`, which Android gives
+  no time limit (`dataSync`, which we used before, stops after 6 hours in
+  any 24 in the background on Android 15+). A Play release needs Play's
+  review of that type; what we do if Play refuses it is in
+  `docs/planning/todo.md`.
 - Battery-exemption prompting is not implemented, and a dead engine is not
   restarted by itself: the next start (its chat or terminal opening, or the
   app coming to the foreground for the active agent) launches it again.

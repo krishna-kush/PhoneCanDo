@@ -35,6 +35,7 @@ class JobReporter(
   @Synchronized
   override fun report(progress: Progress) {
     last = progress
+    job.progress = progress
     wait = null
     offline = false
     if (progress.step == DOWNLOAD) mostDone = maxOf(mostDone, progress.done)

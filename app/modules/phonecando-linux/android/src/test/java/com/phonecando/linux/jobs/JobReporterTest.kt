@@ -24,6 +24,13 @@ class JobReporterTest {
     assertEquals(listOf("unpack", "unpack", "detect"), events.map { it.step })
   }
 
+  @Test fun theJobKeepsItsLastProgressEvenWhenTheThrottleHoldsTheEvent() {
+    reporter.report(Progress("download", 10, 50))
+    reporter.report(Progress("download", 20, 50))
+    assertEquals(1, events.size)
+    assertEquals(Progress("download", 20, 50), job.progress)
+  }
+
   @Test fun theFinalEventAlwaysGoesOutWithTheLastProgress() {
     reporter.report(Progress("download", 10, 50))
     reporter.report(Progress("download", 20, 50))

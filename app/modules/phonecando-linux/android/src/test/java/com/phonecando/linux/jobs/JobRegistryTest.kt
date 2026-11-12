@@ -37,6 +37,18 @@ class JobRegistryTest {
     assertTrue(registry.isLive(JobTarget.env("e")))
   }
 
+  @Test fun runningListsTheLiveJobs() {
+    assertFalse(registry.anyRunning())
+    val env = registry.begin(JobTarget.env("e"))
+    val script = registry.begin(JobTarget.image("a"), guestScript = true)
+    assertTrue(registry.anyRunning())
+    assertEquals(setOf(env.id, script.id), registry.running().map { it.id }.toSet())
+    registry.end(env)
+    registry.end(script)
+    assertFalse(registry.anyRunning())
+    assertTrue(registry.running().isEmpty())
+  }
+
   @Test fun cancelSetsTheSignalTheRuntimePolls() {
     val job = registry.begin(JobTarget.image("a"))
     assertFalse(job.cancel.isCancelled())

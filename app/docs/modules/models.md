@@ -154,10 +154,11 @@ thread shared by every module), at most one per download or import
   `download`, `verify` (re-reading a resumed `.part`), `import`, `retry`
   or `offline` (waiting for a network).
 - **Foreground.** A model is gigabytes, and Android ends a background
-  app's process long before such a download is done. The first job starts
-  the runner's foreground service (`ACTION_HOLD`, `models/ModelJobsAnchor.kt`),
-  which lists running jobs in its notification and stops once neither an
-  engine nor a job runs.
+  app's process long before such a download is done. A job running while
+  the runner's foreground service is down starts it (`ACTION_HOLD`, the
+  runner's `jobs/JobsAnchor.kt`, which does the same for Linux jobs); the
+  service lists running jobs in its notification and stops 10 s after
+  neither an engine nor a job runs.
 
 ## The Hugging Face token
 

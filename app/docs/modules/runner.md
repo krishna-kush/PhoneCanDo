@@ -97,15 +97,19 @@ the config it seeds into each engine's HOME.
   its style, `engine/ready/` says when it is ready, `engine/tui/` is a TUI
   engine's terminal and viewers.
 - `models/`: the local model servers (see Local model servers).
+- `jobs/`: the jobs anchor, which keeps the service up while model and
+  Linux jobs run (see Foreground service and lifetime).
 - `memory/`: the memory guard (see Memory guard); `limits/`: the user's
   run limits (see Run limits).
 - `notify/` and `prompts/`: the agents' notifications, alerts and links to
   open, and where a tap opens the app (see Notifications).
-- `PhoneCanDoServeService.kt`: the foreground service (`dataSync` type).
+- `PhoneCanDoServeService.kt`: the foreground service (`specialUse` type).
 - `PackageReplacedReceiver.kt`: brings the app back after a self-update
   (see Self-update install).
 - `AndroidManifest.xml`: service, receiver and `OpenTargetActivity`
-  declarations plus `FOREGROUND_SERVICE*` permissions (merged at build).
+  declarations plus `FOREGROUND_SERVICE*` permissions (merged at build);
+  the service's `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` is the reason Play
+  reviews.
 
 ## Agents
 
@@ -439,15 +443,37 @@ themselves, the runner stops one after a countdown. Every number is in
 ## Foreground service and lifetime
 
 `PhoneCanDoServeService` anchors the engines while the app is in the
-background, and the process while a model download or import runs. It runs
-the start requests, holds for model jobs (`ACTION_HOLD` from
-`models/ModelJobsAnchor.kt` when the first one begins; `models.md` →
-Jobs), shows one notification that lists the chats the agents are busy
-with, the model server reading a prompt and the model jobs with their
-share done (`notify/ServiceNotification.kt`, `ReadingLines.kt`,
-`TransferLines.kt`, channel `phonecando-engine`; see Notifications) and
-stops itself once neither an engine nor a model job runs. Every command
-answers `START_NOT_STICKY` and a null-intent restart starts nothing.
+background, and the process while a job runs: a model download or import,
+or a Linux job (an env download, a machine's setup or reset, an agent
+install). It runs the start requests, holds for jobs (`ACTION_HOLD` from
+`jobs/JobsAnchor.kt`; `models.md` → Jobs), shows one notification that
+lists the chats the agents are busy with, the model server reading a
+prompt, the model jobs and the Linux jobs with their share done
+(`notify/ServiceNotification.kt`, `ReadingLines.kt`, `TransferLines.kt`,
+`LinuxJobLines.kt`, channel `phonecando-engine`; see Notifications) and
+stops itself once neither an engine nor a job has run for 10 s. The wait
+matters: work often follows at once (an agent's install starts as its
+machine's setup ends), by then the app may be in the background, and there
+Android refuses a new start of the service, so the next job would run
+unheld and the process freeze (seen on the phone before the wait). Every
+command answers `START_NOT_STICKY` and a null-intent restart starts
+nothing.
+
+`JobsAnchor` listens to the models module's jobs and to `LinuxHost`'s
+(their begin and end at once, their progress at most every 2 s). When a
+job runs and the service is down it starts the service; the service tells
+it when it starts and ends, so a service gone while jobs still run is
+asked for again on the next job event. A refused start (Android lets a
+background app start none) is tried again only when another job begins
+(`jobs/HoldRule.kt`, pure). A job the service could not hold still runs
+while the process lives and resumes later where it stopped.
+
+The service's type is `specialUse`, which Android gives no time limit.
+`dataSync`, which we used before, gets 6 hours in any 24 on Android 15+
+while the app is in the background; with `dataSync` anywhere in a
+service's types the limit applies (AOSP `ActiveServices`
+`getTimeLimitedFgsType`). Below Android 14, where `specialUse` does not
+exist, the service starts with the manifest's type.
 
 Lifetime is quiet-when-idle and follows the UI. `App.tsx` starts the active
 agent's engine on launch and on every return to the foreground
@@ -463,15 +489,18 @@ every two minutes), each bridge call and each engine event mark an engine
 used, so it is not the one stopped to make room (under the user's cap) or
 to free memory (the memory guard).
 
-Android 15+ lets a `dataSync` foreground service run 6 hours in any 24
-while the app is in the background; bringing the app to the foreground
-resets the clock. At the limit Android calls `onTimeout(startId, fgsType)`
-and crashes the whole process unless the service stops within seconds. The
-service therefore removes its notification, calls `stopSelf()`, then stops
-every engine on its own thread (one 3 s grace for all); the bridge closes
-with the last engine. Nothing restarts them in the background; the app
-starts the active agent's engine again when it next comes to the
-foreground.
+`onTimeout(startId, fgsType)` should therefore never come; it stays for a
+limit a later Android may set. At a limit Android crashes the whole
+process unless the service stops within seconds. The service then stops
+posting its notification (a repost would come back as a plain one nothing
+removes), removes it, calls `stopSelf()` and, when engines run, stops them
+all on their own thread (one 3 s grace) with `TIME_LIMIT_REASON` on their
+statuses, like the memory guard's reason, and posts a notice
+(`notify/TimeLimitNotice.kt`, id 4102 on the agents' channel) that says
+the agents stopped. The bridge closes with the last engine; jobs keep
+running while the process lives. Nothing restarts the engines in the
+background; the app starts the active agent's engine again when it next
+comes to the foreground.
 
 ## Notifications
 
@@ -481,9 +510,10 @@ notification never replaces another's. Per agent, one slot (id 4500)
 holds its "come back to me" notice, the `/app` return notice or an alert
 (below), so there is never more than one; its own posts (`/notify`) take
 4600-8695, one per title, its prompts 9000-9255 and its links to open
-9300-9363. The engine service (4101), the update notice (4202) and the
-memory guard's notice (4301, on the agents' channel; see Memory guard) are
-untagged.
+9300-9363. The engine service (4101), its time-limit notice (4102, on the
+agents' channel; see Foreground service and lifetime), the update notice
+(4202) and the memory guard's notice (4301, on the agents' channel; see
+Memory guard) are untagged.
 
 - **Where a tap lands.** A `LaunchTarget` names a place (`home`, `env` or
   `settings`: Home, the agent's page or the systems list, Settings; an open
@@ -795,7 +825,8 @@ sends later, even from a new process, can still attach it. The shape is
 
 ## Not implemented yet
 
-- Boot receiver (note: Android 15+ forbids dataSync FGS from BOOT_COMPLETED).
+- Boot receiver. Android 15+ forbids a `dataSync` service from
+  `BOOT_COMPLETED`, but not our `specialUse` one.
 - Battery-exemption prompt, and restarting an engine that died by itself
   (the next start relaunches it).
 

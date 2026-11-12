@@ -14,16 +14,22 @@
     </intent>
   </queries>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
   <!-- Runtime-requested on launch (Android 13+ drops plain posts without the
        grant; the app never asked, so appops sat at `ignore`). -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
   <application>
+    <!-- specialUse: Android gives it no time limit (dataSync gets 6 hours in
+         24 on Android 15+). The property is the reason Play reviews. -->
     <service
       android:name="com.phonecando.runner.PhoneCanDoServeService"
       android:exported="false"
-      android:foregroundServiceType="dataSync" />
+      android:foregroundServiceType="specialUse">
+      <property
+        android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+        android:value="PhoneCanDo runs coding agents on the phone. The user starts an agent on a task (and the local model and Linux system it works in), then uses other apps while it works: the agent edits files, runs builds and servers, and may operate other apps for the user. If the system paused or stopped it in the background, the task would be cut off mid-way and its work lost. The service runs only while an agent, a model the user downloads, or a Linux setup the user started is working, shows them in its notification, and stops once nothing runs." />
+    </service>
     <!-- What agent notifications and the bridge's launch open: hands their
          target (tab, agent) to the app, starts it and finishes before it
          draws (notify/OpenTargetActivity.kt). Our own PendingIntents only. -->

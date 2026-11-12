@@ -539,8 +539,11 @@ internal class EngineSupervisor(
   /** [agentIds] within one grace period. Blocks up to ~3 s. */
   fun stop(agentIds: Set<String>) = terminate(agentIds, EngineState.STOPPED, null)
 
-  /** Every engine and every tagged process, within one grace period. Blocks up to ~3 s. */
-  fun stopAll() = terminate(null, EngineState.STOPPED, null)
+  /**
+   * Every engine and every tagged process, within one grace period, with
+   * [reason] on their statuses when we stop them for one. Blocks up to ~3 s.
+   */
+  fun stopAll(reason: String? = null) = terminate(null, EngineState.STOPPED, reason)
 
   /** The memory guard's stop: as a user's, with why on its status (MemoryRules.STOPPED_REASON). Blocks up to ~3 s. */
   fun stopForMemory(agentId: String) = terminate(setOf(agentId), EngineState.STOPPED, MemoryRules.STOPPED_REASON)
@@ -559,8 +562,8 @@ internal class EngineSupervisor(
   }
 
   /** stopAll on its own thread, for the service's main-thread callbacks. */
-  fun stopAllAsync() {
-    Thread({ stopAll() }, "phonecando-engine-stop-all").apply {
+  fun stopAllAsync(reason: String? = null) {
+    Thread({ stopAll(reason) }, "phonecando-engine-stop-all").apply {
       isDaemon = true
       start()
     }
