@@ -4,9 +4,12 @@ name: Web
 # here deploys). Builds once, then checks the built pages: links, release
 # downloads, page weight, browsers × viewports × colour schemes, axe,
 # Lighthouse. Runs when the site, the shared theme, the app version (which
-# the site's download links derive from), an agent kind's manifest (the
-# Models section deals every kind) or lme's suggested models (its
-# cartridges and their RAM) change, and nightly for drift.
+# the site's download links derive from) or minSdk (the oldest Android it
+# names), an agent kind's manifest (the
+# Models section deals every kind), lme's suggested models (its
+# cartridges and their RAM), or the agents_* tools and the runner's message
+# rules (the Crew section names and counts them) change, and nightly for
+# drift.
 
 on:
   push:
@@ -15,9 +18,12 @@ on:
       - web/**
       - theme/**
       - app/app.json
+      - app/plugins/withMinSdk.js
       - agents/native/*/agent.json
       - agents/image/*/agent.json
       - lme/catalog/src/main/resources/com/phonecando/lme/catalog/suggested/suggested.json
+      - agents/shared/phone-tools/agents.ts
+      - app/modules/phonecando-runner/android/src/main/java/com/phonecando/runner/messages/MessageRules.kt
       - .github/workflows/web.yml
       - .github/ci/web/**
   pull_request:
@@ -25,9 +31,12 @@ on:
       - web/**
       - theme/**
       - app/app.json
+      - app/plugins/withMinSdk.js
       - agents/native/*/agent.json
       - agents/image/*/agent.json
       - lme/catalog/src/main/resources/com/phonecando/lme/catalog/suggested/suggested.json
+      - agents/shared/phone-tools/agents.ts
+      - app/modules/phonecando-runner/android/src/main/java/com/phonecando/runner/messages/MessageRules.kt
       - .github/workflows/web.yml
       - .github/ci/web/**
   workflow_dispatch:

@@ -1,4 +1,7 @@
 import app from '../../../app/app.json';
+// The app's minSdk lives in its config plugin, which needs Expo's build tools
+// the site doesn't install, so the site reads the number from its text.
+import minSdkPlugin from '../../../app/plugins/withMinSdk.js?raw';
 // What only a published release knows: repo, date, and the size and SHA-256
 // of both APKs. ./manage release writes the whole file once its uploads
 // succeed (scripts/release-android.mjs); never edit it by hand.
@@ -13,6 +16,30 @@ const repo = `https://github.com/${release.repo}`;
 const releases = `${repo}/releases`;
 const version: string = app.expo.version;
 const apkFile = (channel: 'lite' | 'full') => `phonecando-${version}-${channel}-arm64.apk`;
+
+// The oldest Android the app installs on, by the name people know it: the
+// app's minSdk (an API level) as Android numbers its versions.
+const ANDROID_FOR_API: Record<number, string> = {
+  26: '8.0',
+  27: '8.1',
+  28: '9',
+  29: '10',
+  30: '11',
+  31: '12',
+  32: '12L',
+  33: '13',
+  34: '14',
+  35: '15',
+  36: '16',
+};
+const minSdk = Number(minSdkPlugin.match(/const MIN_SDK = (\d+);/)?.[1]);
+const minAndroid = ANDROID_FOR_API[minSdk];
+if (!minAndroid) {
+  throw new Error(
+    `app/plugins/withMinSdk.js sets no MIN_SDK the site knows (read ${minSdk}); ` +
+      'add its Android version to ANDROID_FOR_API in web/src/data/site.ts.',
+  );
+}
 const apkUrl = (channel: 'lite' | 'full') => `${releases}/download/v${version}/${apkFile(channel)}`;
 
 // release.json must describe the app version above: a page showing one
@@ -61,7 +88,7 @@ export const site = {
   fullSha256: release.full.sha256,
   released: release.released,
   arch: 'arm64',
-  minAndroid: '8.0',
+  minAndroid,
   // The starter (lite) APK, the phone download.
   size: `${Math.round(release.lite.size / 1024 / 1024)} MB`,
   sha256: release.lite.sha256,
