@@ -18,6 +18,7 @@
     "expo-intent-launcher": "~58.0.3",
     "expo-local-authentication": "^58.0.2",
     "expo-secure-store": "~58.0.2",
+    "expo-splash-screen": "~58.0.14",
     "expo-status-bar": "~58.0.4",
     "phonecando-runner": "link:./modules/phonecando-runner",
     "react": "19.3.0",

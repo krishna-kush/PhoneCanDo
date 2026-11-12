@@ -1,18 +1,11 @@
 #!/usr/bin/env node
 // Brand logo generator. Reads the canonical colours from theme/tokens.json and
-// writes the web favicons + Android launcher/splash assets. No dependencies:
+// writes the web favicons + the app's icon/splash images. No dependencies:
 // the mark is two rectangles, so we rasterise them into a minimal PNG encoder.
 //
 //   node scripts/make-logos.mjs   (or: pnpm logos)
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
@@ -35,6 +28,8 @@ function rgba(hex) {
 
 const RED = rgba(tokens.dark.primary);
 const YELLOW = rgba(tokens.dark.secondary);
+const LIGHT_RED = rgba(tokens.light.primary);
+const LIGHT_YELLOW = rgba(tokens.light.secondary);
 const BG = rgba(tokens.dark.bg);
 const WHITE = { r: 255, g: 255, b: 255, a: 255 };
 const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
@@ -109,7 +104,7 @@ function fill(buf, size, x, y, w, h, color) {
 
 // The official mark: a square front with a hard right/bottom shadow. Geometry
 // comes from theme/logo.json, the same spec the web and app render from.
-function mark(size, frontRatio, { bg = null, mono = false } = {}) {
+function mark(size, frontRatio, { bg = null, mono = false, front: frontColor = RED, shadow = YELLOW } = {}) {
   const buf = canvas(size, bg || TRANSPARENT);
   const front = Math.round(size * frontRatio);
   const off = Math.max(ASSET_MIN_SHADOW, Math.round(front * SHADOW_RATIO));
@@ -119,8 +114,8 @@ function mark(size, frontRatio, { bg = null, mono = false } = {}) {
   if (mono) {
     fill(buf, size, x, y, total, total, WHITE);
   } else {
-    fill(buf, size, x + off, y + off, front, front, YELLOW);
-    fill(buf, size, x, y, front, front, RED);
+    fill(buf, size, x + off, y + off, front, front, shadow);
+    fill(buf, size, x, y, front, front, frontColor);
   }
   return png(size, size, buf);
 }
@@ -149,43 +144,20 @@ function markSvg(box, frontRatio) {
 }
 
 // ---------- generated files ----------
-// App assets consumed by app.json.
+// App assets consumed by app.json. Prebuild draws Android's launcher and
+// splash resources from these, so app/android/ (its gitignored output) is
+// never written here: a second copy there broke the build on duplicate
+// resources.
 write('app/assets/icon.png', mark(1024, 0.56, { bg: BG }), 1024);
 write('app/assets/android-icon-background.png', solid(1024, BG), 1024);
 write('app/assets/android-icon-foreground.png', mark(1024, 0.34), 1024);
 write('app/assets/android-icon-monochrome.png', mark(1024, 0.34, { mono: true }), 1024);
+// The launch splash (app/plugins/withSplash.js): dark and light marks, each
+// in its scheme's brand colours. The plugin writes Android's splash drawables
+// from these on prebuild.
 write('app/assets/splash-icon.png', mark(1024, 0.36), 1024);
+write('app/assets/splash-icon-light.png', mark(1024, 0.36, { front: LIGHT_RED, shadow: LIGHT_YELLOW }), 1024);
 write('app/assets/favicon.png', mark(48, 0.5, { bg: BG }), 48);
-
-// Android resource directories. PNG is valid for every mipmap/drawable; stale
-// .webp copies are deleted first so aapt never sees two files for one resource.
-const RES = 'app/android/app/src/main/res';
-const DENSITIES = [
-  ['mdpi', 1],
-  ['hdpi', 1.5],
-  ['xhdpi', 2],
-  ['xxhdpi', 3],
-  ['xxxhdpi', 4],
-];
-for (const [density] of DENSITIES) {
-  const dir = join(ROOT, RES, `mipmap-${density}`);
-  if (!existsSync(dir)) continue;
-  for (const file of readdirSync(dir)) {
-    if (/^ic_launcher.*\.webp$/i.test(file)) unlinkSync(join(dir, file));
-  }
-}
-for (const [density, scale] of DENSITIES) {
-  const legacy = Math.round(48 * scale);
-  const adaptive = Math.round(108 * scale);
-  const splash = Math.round(288 * scale);
-  const base = `${RES}/mipmap-${density}`;
-  write(`${base}/ic_launcher.png`, mark(legacy, 0.5, { bg: BG }), legacy);
-  write(`${base}/ic_launcher_round.png`, mark(legacy, 0.5, { bg: BG }), legacy);
-  write(`${base}/ic_launcher_background.png`, solid(adaptive, BG), adaptive);
-  write(`${base}/ic_launcher_foreground.png`, mark(adaptive, 0.34), adaptive);
-  write(`${base}/ic_launcher_monochrome.png`, mark(adaptive, 0.34, { mono: true }), adaptive);
-  write(`${RES}/drawable-${density}/splashscreen_logo.png`, mark(splash, 0.36), splash);
-}
 
 // Web: inside-page / head / manifest assets.
 write('web/public/favicon.svg', markSvg(32, 0.66));

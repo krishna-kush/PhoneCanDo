@@ -7,10 +7,9 @@
 //   scripts/make-logos.mjs       -> app/assets/*.png, web/public/ icons,
 //                                   logo/favicon SVGs, site.webmanifest
 //
-// make-logos also draws app/android/ launcher icons; app/android/ is the
-// gitignored prebuild output, so those are not compared. PNGs compare by
-// header + inflated pixel stream: a different zlib build (another Node, CPU)
-// may compress the same pixels to other bytes, which only warns.
+// PNGs compare by header + inflated pixel stream: a different zlib build
+// (another Node, CPU) may compress the same pixels to other bytes, which only
+// warns.
 //
 // With app deps installed it also checks the vendored xterm copy
 // (app/assets/xterm/xterm.{js,css}) is the locked @xterm/xterm release, so a
@@ -54,7 +53,7 @@ const GENERATORS = [
     fix: 'pnpm logos',
     script: 'scripts/make-logos.mjs',
     inputs: ['theme/tokens.json', 'theme/logo.json'],
-    ignore: ['app/android/'],
+    ignore: [],
   },
 ];
 

@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.phonecando.app"
@@ -37,6 +32,7 @@
       "./plugins/withBuildPerf.js",
       "./plugins/withMinSdk.js",
       "./plugins/withPceCompositeBuild.js",
+      "./plugins/withNetworkCompositeBuild.js",
       "./plugins/withLreCompositeBuild.js",
       "./plugins/withLmeCompositeBuild.js",
       "./plugins/withAgentsCompositeBuild.js",
@@ -46,7 +42,8 @@
       "./plugins/withReleaseSigning.js",
       "expo-asset",
       "expo-font",
-      "expo-status-bar"
+      "expo-status-bar",
+      "./plugins/withSplash.js"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

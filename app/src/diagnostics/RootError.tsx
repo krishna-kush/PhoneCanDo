@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { Text, YStack } from 'tamagui';
+import { hideSplash } from '../engine/splash';
 
 type Props = { children: ReactNode };
 type State = { error: string | null };
@@ -13,6 +14,8 @@ export default class RootError extends Component<Props, State> {
 
   componentDidCatch(e: unknown) {
     console.log('[PHONECANDO-DBG] root error boundary:', e instanceof Error ? e.stack : e);
+    // A first frame that crashed never lays out App's root: show the error, not the splash.
+    hideSplash();
   }
 
   render() {

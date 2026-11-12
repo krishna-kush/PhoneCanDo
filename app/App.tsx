@@ -32,8 +32,13 @@ import {
   requestNotificationPermission,
   type LaunchTarget,
 } from './src/engine/runner';
+import { hideSplash, holdSplash } from './src/engine/splash';
 import { useScheme, useTheme } from './src/ui/common/globals';
 import tamaguiConfig from './tamagui.config';
+
+// The launch splash stays up until the first real frame lays out (below),
+// not just React Native's first content, which is our blank wait.
+holdSplash();
 
 export default function App() {
   const scheme = useScheme();
@@ -45,6 +50,7 @@ export default function App() {
     'GeistMono-Bold': require('./assets/fonts/GeistMono-Bold.ttf'),
   });
   const hydrate = useAppStore((s) => s.hydrate);
+  const prefsHydrated = useAppStore((s) => s.hydrated);
   const agentsHydrated = useAgentsStore((s) => s.hydrated);
   const hasAgents = useAgentsStore((s) => s.agents.length > 0);
 
@@ -131,10 +137,11 @@ export default function App() {
     };
   }, [hydrate]);
 
-  // Keep the first frame blank rather than flash the system font (if loading
-  // fails, render anyway: the fallback is the old sans, not a dead app) or
+  // Keep the first frame blank, under the splash, rather than flash the
+  // system font (if loading fails, render anyway: the fallback is the old
+  // sans, not a dead app), the other theme before the stored one is read, or
   // Home before we know whether any agent exists.
-  if ((!fontsLoaded && !fontError) || !agentsHydrated) return null;
+  if ((!fontsLoaded && !fontError) || !prefsHydrated || !agentsHydrated) return null;
 
   return (
     <RootError>
@@ -150,6 +157,7 @@ export default function App() {
           <SafeAreaView
             style={{ flex: 1, backgroundColor: t.panel }}
             edges={['top', 'bottom', 'left', 'right']}
+            onLayout={hideSplash}
           >
             {!hasAgents ? (
               // No agent yet: setup creates the first one, then Home shows.

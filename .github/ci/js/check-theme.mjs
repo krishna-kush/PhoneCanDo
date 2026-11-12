@@ -85,7 +85,12 @@ if (tokens) {
         return block ? [...block[1].matchAll(/\[\s*["'](\w+)["']\s*,\s*["'][\w-]+["']\s*\]/g)].map((m) => m[1]) : [];
       },
     },
-    ...['web/src/layouts/Base.astro', 'app/src/ui/common/globals/theme.ts', 'scripts/make-logos.mjs'].map((file) => ({
+    ...[
+      'web/src/layouts/Base.astro',
+      'app/src/ui/common/globals/theme.ts',
+      'app/plugins/withSplash.js',
+      'scripts/make-logos.mjs',
+    ].map((file) => ({
       file,
       // tokens.dark.primary, tokens.light.bg
       roles: (text) => [...text.matchAll(/\btokens\.(?:dark|light)\.(\w+)/g)].map((m) => m[1]),

@@ -54,7 +54,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   PTY transport, `runner.ts` engine host, `linux/native.ts` Linux runtime,
   `models/native.ts` local models, `files.ts` file system, `auth.ts`
   biometrics, `backGesture.ts` the back gesture's progress, `memory.ts` the
-  memory guard's reading, `runLimits.ts` the run caps). Agents and engines:
+  memory guard's reading, `runLimits.ts` the run caps, `splash.ts` the launch
+  splash). Agents and engines:
   `engines.ts`, `ensureEngine.ts`, `connection.ts`; agent kinds through
   `agents/registry.ts` (each kind's `KindView`, from the runner's
   `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
@@ -76,7 +77,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   value in `ui/common/keyboard/room.ts`); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
-- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models,phonecando-back-gesture}/` —
+- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models,phonecando-back-gesture,phonecando-network}/` —
   own Expo modules (Kotlin + TS shims, clean-room). The PTY's plain POSIX
   core is `phonecando-terminal/android/src/main/cpp/pty/` (`forkpty.c` is the
   JNI glue). `phonecando-linux` is the Linux runtime's Android host (env and
@@ -163,6 +164,19 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `libllama-server.so` from pinned sources (`pins.env`) and our
   `patches/`, stages it into `phonecando-models`, and `build-host.sh`
   builds it for Linux for CI's local-model check (`local-models.yml`).
+- `network/` — our one way to the network, shared by every engine that
+  downloads (lme's models, lre's Linux images): pure-JVM Gradle build
+  (`cd network && ./gradlew build`, `network.yml`): `http` (the port, our
+  redirect rules, `errorFor`: a CDN's 401/403 retries, a 429 waits as long
+  as `RateLimit`/`Retry-After` ask), `download` (resumable sha256-verified
+  downloads, hash checkpoints, a pause that cuts a hanging read) and
+  `retry` (when to try again, waiting out no network, `ResumeList`), with
+  http ← download, http ← retry. It throws `NetException`; each engine maps
+  it to its own errors at its edge and keeps it as the cause. No engine
+  types, no android.*. lme and lre include it (`includeBuild("../network")`),
+  the app too (`withNetworkCompositeBuild.js`). Its one Android piece,
+  whether the phone is online, is `app/modules/phonecando-network`
+  (`NetworkState`, no JS). Never copy network code into an engine.
 
 ## Dev loop (physical Android 16 device on adb, Metro :8081)
 
@@ -230,8 +244,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
    quality gates.
 11. CI path filters: `android.yml`, `tce.yml`, `web.yml`, `pce.yml`,
    `agents.yml`, `agent-payload.yml`, `lre.yml`, `proot.yml`, `lre-image.yml`,
-   `lre-compat.yml`, `lme.yml`, `llamacpp.yml`, `local-models.yml` and
-   `suggested-models.yml` run only for the `paths:` they list. When a change gives a build or check a
+   `lre-compat.yml`, `lme.yml`, `llamacpp.yml`, `local-models.yml`,
+   `network.yml` and `suggested-models.yml` run only for the `paths:` they list. When a change gives a build or check a
    new input (the app importing a new folder, a CI script
    reading a new file, a new packaged asset), add that path to the matching
    lists in the same change. `ci`, `lint`, `security` and `codeql` run on

@@ -1,5 +1,11 @@
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@expo/config-plugins@58.0.13'
+  - '@expo/image-utils@0.12.7'
+  - '@expo/plist@0.10.2'
+  - '@expo/require-utils@58.0.6'
+  - expo-splash-screen@58.0.14
 # Tamagui's compiler evaluates the config and components in Node from the
 # app root, so every tamagui package has to be reachable from there.
 publicHoistPattern:

@@ -61,7 +61,14 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
   a11yGuideForced: false,
 
   hydrate: async () => {
-    const stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY]);
+    // The launch splash waits for this (the first frame's theme), so a read
+    // failure still ends in hydrated, on the defaults.
+    let stored: readonly (readonly [string, string | null])[] = [];
+    try {
+      stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY]);
+    } catch {
+      // unreadable: defaults for this run
+    }
     const [theme, sticky, muted, step] = stored.map(([, v]) => v);
     set({
       themeMode: theme === 'light' || theme === 'dark' ? theme : 'system',
