@@ -9,32 +9,41 @@ import { HIT, useTheme } from '../common/globals';
 import PlainText from '../common/PlainText';
 import Stamp from '../common/Stamp';
 import { engineStateWord } from '../env/logic/engineState';
+import PickBox from './select/PickBox';
 
 type Props = {
   agent: Agent;
   active: boolean;
   /** The drawer is shut: the face holds still. */
   still: boolean;
+  /** The drawer is selecting: a tap picks, and the › gives way to a box. */
+  picking: boolean;
+  picked: boolean;
   onSwitch: () => void;
   onOpen: () => void;
+  /** Picks or unpicks it; a long press starts the selection with it. */
+  onPick: () => void;
 };
 
 // One agent in the drawer: its face, name, serial, kind and engine state in
-// words. A tap makes it the active agent (Home shows it); the › opens its
-// page, as a long press does.
-export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Props) {
+// words. A tap makes it the active agent (Home shows it), the › opens its
+// page, and a long press starts picking agents to stop or delete together.
+// While picking, the highlight marks the picked rows (the stamp still
+// names the active one).
+export default function AgentRow({ agent, active, still, picking, picked, onSwitch, onOpen, onPick }: Props) {
   const t = useTheme();
   const look = useAgentLook(agent.id);
   const state = useAgentsStore((s) => s.statuses[agent.id]?.state);
   const sub = `${look.serial} · ${agentKind(agent.kind).label} · ${engineStateWord(state).toLowerCase()}`;
+  const lit = picking ? picked : active;
 
   return (
     <XStack
       alignItems="center"
       minHeight={64}
       borderWidth={1}
-      borderColor={active ? 'primary' : 'transparent'}
-      backgroundColor={active ? 'primarySoft' : 'transparent'}
+      borderColor={lit ? 'primary' : 'transparent'}
+      backgroundColor={lit ? 'primarySoft' : 'transparent'}
     >
       <XStack
         flex={1}
@@ -44,12 +53,12 @@ export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Pro
         paddingVertical="2"
         paddingLeft="2"
         opacity="press:0.7"
-        onPress={onSwitch}
-        onLongPress={onOpen}
-        accessibilityRole="button"
-        accessibilityState={{ selected: active }}
+        onPress={picking ? onPick : onSwitch}
+        onLongPress={onPick}
+        accessibilityRole={picking ? 'checkbox' : 'button'}
+        accessibilityState={picking ? { checked: picked } : { selected: active }}
         accessibilityLabel={`${agent.name}, ${sub}${active ? ', active' : ''}`}
-        accessibilityHint="Makes it the agent Home shows"
+        accessibilityHint={picking ? 'Picks it to stop or delete' : 'Makes it the agent Home shows'}
       >
         <AgentFace mood={look.mood} pose={look.pose} size={22} still={still} />
         <YStack flex={1} minWidth={0} gap={2}>
@@ -64,18 +73,32 @@ export default function AgentRow({ agent, active, still, onSwitch, onOpen }: Pro
           </PlainText>
         </YStack>
       </XStack>
-      <Button
-        width={HIT.minTouch}
-        height={HIT.minTouch}
-        variant="quiet"
-        opacity="1 press:1"
-        borderRadius={0}
-        paddingHorizontal={0}
-        onPress={onOpen}
-        accessibilityLabel={`Open ${agent.name}'s page`}
-      >
-        <ChevronIcon size={16} color={t.dim} />
-      </Button>
+      {picking ? (
+        <XStack
+          width={HIT.minTouch}
+          height={HIT.minTouch}
+          alignItems="center"
+          justifyContent="center"
+          onPress={onPick}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <PickBox picked={picked} />
+        </XStack>
+      ) : (
+        <Button
+          width={HIT.minTouch}
+          height={HIT.minTouch}
+          variant="quiet"
+          opacity="1 press:1"
+          borderRadius={0}
+          paddingHorizontal={0}
+          onPress={onOpen}
+          accessibilityLabel={`Open ${agent.name}'s page`}
+        >
+          <ChevronIcon size={16} color={t.dim} />
+        </Button>
+      )}
     </XStack>
   );
 }
