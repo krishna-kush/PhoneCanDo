@@ -12,6 +12,7 @@ import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.image.AgentFiles
 import com.phonecando.runner.engine.image.ImageDir
 import com.phonecando.runner.engine.image.MachineNotes
+import com.phonecando.runner.messages.Messages
 import com.phonecando.runner.notify.AgentNotices
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.CodedException
@@ -58,8 +59,9 @@ internal fun ModuleDefinitionBuilder.agentFunctions(context: () -> Context) {
 
   // Stops the agent's engine first (up to ~3 s, so off the JS thread),
   // then forgets it and takes down its notifications, whose taps would
-  // name an agent that is gone, and removes what it alone kept on its
-  // machine (AgentFiles: its state folder, events file and engine log;
+  // name an agent that is gone, drops the messages to it (Messages; the log
+  // keeps what it sent), and removes what it alone kept on its machine
+  // (AgentFiles: its state folder, events file, inbox folder and engine log;
   // when it kept its state where its kind does and other agents stay on
   // the machine, its kind's user state there, so the next agent of the
   // kind starts clean). Resolves false for an unknown id. The image always
@@ -73,6 +75,7 @@ internal fun ModuleDefinitionBuilder.agentFunctions(context: () -> Context) {
         engines.stop(id)
         engines.forget(id)
         AgentNotices(ctx).cancelAll(id)
+        Messages.get(ctx).forget(id)
         val store = AgentStores.get(ctx)
         val record = store.get(id)
         val deleted = store.delete(id)
@@ -112,6 +115,7 @@ private const val TAG = "PhoneCanDoAgents"
 // needsInstall: its kind installs into its image and no install is
 // recorded (InstallGate); an agent of a kind this build lacks needs none.
 // ownState: it keeps its state in a folder of its own on its machine.
+// wakeable: other agents' messages may wake it (messages/).
 // projectDir: the work folder in its image's home/ (ProjectDir), host path.
 internal fun agentToJs(context: Context, a: AgentRecord): Map<String, Any?> = mapOf(
   "id" to a.id,
@@ -123,5 +127,6 @@ internal fun agentToJs(context: Context, a: AgentRecord): Map<String, Any?> = ma
   "installedVersion" to a.installedVersion,
   "model" to a.model,
   "ownState" to a.ownState,
+  "wakeable" to a.wakeable,
   "needsInstall" to (KindCatalogs.get(context).get(a.kind)?.let { InstallGate.needsInstall(it, a) } == true),
 )

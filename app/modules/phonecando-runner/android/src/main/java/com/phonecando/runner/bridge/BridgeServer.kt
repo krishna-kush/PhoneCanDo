@@ -20,8 +20,9 @@ class BridgeServer private constructor(
   tools: List<McpTool>,
   serverVersion: String,
   onCall: (agentId: String) -> Unit,
+  unread: (agentId: String) -> Int,
 ) : NanoHTTPD("127.0.0.1", port) {
-  private val entry = BridgeEntry(agents, router, tools, serverVersion, onCall, ::countToolCall)
+  private val entry = BridgeEntry(agents, router, tools, serverVersion, onCall, unread, ::countToolCall)
 
   override fun serve(session: IHTTPSession): Response {
     val method = session.method.name
@@ -95,9 +96,10 @@ class BridgeServer private constructor(
       tools: List<McpTool>,
       serverVersion: String,
       onCall: (agentId: String) -> Unit,
+      unread: (agentId: String) -> Int = { 0 },
     ): BridgeServer? {
       for (port in ports) {
-        val server = BridgeServer(port, agents, router, tools, serverVersion, onCall)
+        val server = BridgeServer(port, agents, router, tools, serverVersion, onCall, unread)
         try {
           server.start(TIMEOUT_MS, false)
           Log.i(TAG, "bridge on 127.0.0.1:${server.listeningPort}")

@@ -27,6 +27,8 @@ import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.spawn.ServerSpawner
 import com.phonecando.runner.engine.spawn.TuiSpawner
 import com.phonecando.runner.engine.tui.TerminalThemes
+import com.phonecando.runner.messages.Messages
+import com.phonecando.runner.messages.delivery.InboxFolder
 import java.io.File
 
 /** What one launch of an agent's engine needs; kept for a relaunch on a fresh port. */
@@ -60,8 +62,10 @@ internal data class LaunchPlan(
 // the kind's folders in it (AgentFiles); seeds the kind's config into its
 // config dir (ConfigSeeder, then the image's OS note into the kind's
 // instructions file), for a TUI engine the kit scripts and the agent's
-// empty events file (KitFiles), and the machine-mates note into every
-// instructions file on the machine (MachineNotes). spawn() renders the kind's launch (its resume args when
+// empty events file (KitFiles), the agent's inbox folder with its
+// undelivered messages for a kind with an `inbox` block (messages/), and
+// the machine-mates note into every instructions file on the machine
+// (MachineNotes). spawn() renders the kind's launch (its resume args when
 // the agent ran before, its local model's wiring when it has one, its
 // state folder; an image kind through its image's shell, carrying what
 // the machine's launch.conf would take from it: EngineEnv.carry) and
@@ -98,6 +102,7 @@ internal class EngineLauncher(private val context: Context) {
     val stateDir = AgentFiles.ownState(home, record)?.also { makeState(kind, home, it) }
     seedConfig(kind, home, stateDir, image)
     if (kind.style == EngineStyle.TUI) seedKit(home, record.id)
+    prepareInbox(record.id)
     refreshMachineNotes(record.imageId, home)
     return LaunchPlan(record, kind, image, home, env, requestedAt, stateDir = stateDir)
   }
@@ -134,6 +139,7 @@ internal class EngineLauncher(private val context: Context) {
       channel = channel,
       agentId = plan.record.id,
       eventsFile = if (tui) KitFiles.events(kitHome, plan.record.id).path else null,
+      inboxDir = if (plan.kind.inbox != null) InboxFolder.dir(kitHome, plan.record.id).path else null,
     )
     // An image kind's engine is a guest of its machine: what launch.conf
     // unsets there (for another agent's kind) and this engine needs goes
@@ -219,6 +225,17 @@ internal class EngineLauncher(private val context: Context) {
       KitFiles.prepare(assets, home, agentId)
     } catch (e: Exception) {
       Log.w(TAG, "kit scripts not seeded", e)
+    }
+  }
+
+  // The agent's inbox folder made and its undelivered messages put in it
+  // (Messages: nothing for a kind without an `inbox` block); a failure here
+  // never blocks a start (the agent can still pull with agents_inbox).
+  private fun prepareInbox(agentId: String) {
+    try {
+      Messages.get(context).engineStarting(agentId)
+    } catch (e: Exception) {
+      Log.w(TAG, "inbox not prepared", e)
     }
   }
 

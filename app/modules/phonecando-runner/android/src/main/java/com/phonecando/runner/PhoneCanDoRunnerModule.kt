@@ -12,6 +12,7 @@ import com.phonecando.runner.api.installFunctions
 import com.phonecando.runner.api.keepRunningFunctions
 import com.phonecando.runner.api.kindFunctions
 import com.phonecando.runner.api.memoryFunctions
+import com.phonecando.runner.api.messageFunctions
 import com.phonecando.runner.api.notifyFunctions
 import com.phonecando.runner.api.phoneControlFunctions
 import com.phonecando.runner.api.runLimitFunctions
@@ -83,7 +84,7 @@ class PhoneCanDoRunnerModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("PhoneCanDoRunner")
-    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory")
+    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory", "phonecandoMessages")
 
     OnCreate {
       instance = this@PhoneCanDoRunnerModule
@@ -129,6 +130,7 @@ class PhoneCanDoRunnerModule : Module() {
     runLimitFunctions { context() }
     memoryFunctions { context() }
     keepRunningFunctions { context() }
+    messageFunctions({ context() }) { sendEvent("phonecandoMessages", it) }
 
     Function("getPrefix") {
       appFilesDir().absolutePath

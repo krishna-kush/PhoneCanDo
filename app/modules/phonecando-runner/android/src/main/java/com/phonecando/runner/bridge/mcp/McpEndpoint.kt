@@ -16,10 +16,13 @@ import org.json.JSONObject
 // open no stream and keep no session. tools/call runs the tool's route
 // through [call], the router every HTTP route goes through, so the
 // channel, the phone-control switch, the service, the screen lease and the
-// prompts apply exactly as they do there. Pure.
+// prompts apply exactly as they do there. Every tool result ends with the
+// caller's unread agent messages, when it has any (UnreadLine). Pure.
 class McpEndpoint(
   private val tools: List<McpTool>,
   private val serverVersion: String,
+  /** The caller's unread agent messages (messages/Mailbox). */
+  private val unread: (agentId: String) -> Int = { 0 },
   private val call: (agent: AgentRecord, route: Route, body: String) -> Reply,
 ) {
   private val byName = tools.associateBy { it.name }
@@ -63,7 +66,7 @@ class McpEndpoint(
       else -> return JsonRpc.error(r.id, JsonRpc.INVALID_PARAMS, "arguments must be an object")
     }
     val reply = call(agent, tool.route, tool.body(arguments).toString())
-    return JsonRpc.result(r.id, ToolResult.of(reply))
+    return JsonRpc.result(r.id, UnreadLine.append(ToolResult.of(reply), unread(agent.id)))
   }
 
   companion object {

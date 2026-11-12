@@ -40,6 +40,14 @@ class EngineEnvTest {
     assertFalse(server.containsKey("PHONECANDO_EVENTS"))
   }
 
+  @Test fun onlyAKindWithAnInboxGetsItsFolder() {
+    val stale = base + ("PHONECANDO_INBOX" to "/elsewhere")
+    val inbox = EngineEnv.build(stale, emptyMap(), mapOf("PHONECANDO_INBOX" to "/kind"), null, "tok", "full", "a1", inboxDir = "/root/.phonecando/inbox-a1")
+    assertEquals("/root/.phonecando/inbox-a1", inbox["PHONECANDO_INBOX"])
+    val none = EngineEnv.build(stale, emptyMap(), mapOf("PHONECANDO_INBOX" to "/kind"), null, "tok", "full", "a1")
+    assertFalse(none.containsKey("PHONECANDO_INBOX"))
+  }
+
   @Test fun aTuiLearnsTheThemeOnlyOnceTheAppToldIt() {
     assertFalse(EngineEnv.terminal(null).containsKey("COLORFGBG"))
     val ansi = List(16) { "#000000" }

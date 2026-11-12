@@ -42,11 +42,15 @@ class McpToolsTest {
   @Test fun replyTextMatchesTheTsClient() {
     val ok = ToolResult.of(Reply.ok(JSONObject().put("p", "</a/b>")))
     assertEquals("""{"p":"</a/b>"}""", ok.getJSONArray("content").getJSONObject(0).getString("text"))
-    val busy = JSONObject().put("code", "control_busy").put("holder", "gemini").put("retryAfterMs", 1_500)
+    val busy = JSONObject().put("code", "control_busy").put("holder", "gemini").put("retryAfterMs", 1_500).put("place", 2)
     assertEquals(
-      "error control_busy: the screen is in use by gemini; try again in about 2s. " +
-        "Wait, then call the tool again; do not loop quickly, and tell the user if it stays busy.",
+      "error control_busy: gemini holds the screen; you are #2 in line. We'll message you (agents_inbox) when it is yours; " +
+        "do other work or end your turn instead of calling again.",
       ToolResult.errorText(busy, 409),
+    )
+    assertEquals(
+      "error screen_refused: no",
+      ToolResult.errorText(JSONObject().put("code", "screen_refused").put("message", "no"), 409),
     )
     assertEquals("error 500: unknown", ToolResult.errorText(JSONObject(), 500))
     val broken = ToolResult.of(Reply(502, "<html>"))

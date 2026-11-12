@@ -39,7 +39,7 @@ class AgentFilesTest {
     assertNull(AgentFiles.ownState(home, agent("a1", ownState = false)))
     assertEquals(File(home, ".phonecando/agents/a1"), AgentFiles.ownState(home, agent("a1", ownState = true)))
     assertEquals(
-      listOf(image.engineLog("a1"), KitFiles.events(home, "a1")),
+      listOf(image.engineLog("a1"), KitFiles.events(home, "a1"), File(home, ".phonecando/inbox-a1")),
       AgentFiles.of(image, agent("a1", ownState = false)),
     )
   }
@@ -50,6 +50,7 @@ class AgentFilesTest {
     for (agent in listOf(a, b)) {
       image.engineLog(agent.id).apply { parentFile.mkdirs() }.writeText("log")
       KitFiles.events(home, agent.id).apply { parentFile.mkdirs() }.writeText("Stop\t\t\n")
+      File(home, ".phonecando/inbox-${agent.id}/pending/ids").apply { parentFile.mkdirs() }.writeText("1\n")
       File(AgentFiles.stateDir(home, agent.id), "settings.json").apply { parentFile.mkdirs() }.writeText("{}")
     }
     // What the agents share, and a link to it in a's state folder.

@@ -7,10 +7,11 @@ import com.phonecando.runner.controllock.unlockedLock
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // The router's checks in order (route, flavor, lock, service, body, lease)
-// and the envelopes they answer with.
+// and the envelopes they answer with, the screen line among them.
 class BridgeRouterTest {
   private class FakeHost : AutomationHost {
     var service = true
@@ -25,18 +26,44 @@ class BridgeRouterTest {
   private var now = 0L
   private val host = FakeHost()
   private val lock = unlockedLock { now }
-  private val dir = FakeDirectory(agent("a1", "opencode"), agent("a2", "opencode 2"))
-  private val lease = ScreenLease(30_000) { now }
+  private val dir = FakeDirectory(agent("a1", "opencode"), agent("a2", "opencode 2"), agent("a3", "claude"))
+  private val yours = mutableListOf<String>()
+  private val notices = object : ScreenNotices {
+    override fun waiting(holderId: String, waiterName: String) = Unit
+
+    override fun yours(agentId: String) {
+      yours += agentId
+    }
+  }
+  private val lease = ScreenLease(30_000, notices) { now }
   private val handled = mutableListOf<String>()
   private val echo: RouteHandler = { call ->
     handled += "${call.agent.id} ${call.route.path}"
     Reply.ok(JSONObject().put("route", call.route.path))
   }
-  private val handlers: Map<Route, RouteHandler> =
-    Route.entries.associateWith { echo } + PceRoutes { host }.table()
 
-  private fun router(full: Boolean = true) =
-    BridgeRouter(full, { if (full) host else null }, lock, lease, { dir.get(it) != null }, handlers)
+  // What the user does while an /unlock dialog is up.
+  private var atDialog: (BridgeCall) -> Unit = {}
+  private val unlock: RouteHandler = { call ->
+    handled += "${call.agent.id} ${call.route.path}"
+    atDialog(call)
+    Reply.ok(JSONObject().put("unlocked", lock.unlockedFor(call.agent.id)))
+  }
+  private val handlers: Map<Route, RouteHandler> =
+    Route.entries.associateWith { echo } + PceRoutes { host }.table() + (Route.UNLOCK to unlock)
+
+  // Agents whose current turn another agent's message started.
+  private val agentTurns = mutableSetOf<String>()
+
+  private fun router(full: Boolean = true) = BridgeRouter(
+    full,
+    { if (full) host else null },
+    lock,
+    lease,
+    { dir.get(it) != null },
+    handlers,
+    startedByAgent = { it in agentTurns },
+  )
 
   private fun json(reply: Reply) = JSONObject(reply.body)
 
@@ -96,7 +123,11 @@ class BridgeRouterTest {
     assertEquals("control_busy", body.getString("code"))
     assertEquals("opencode", body.getString("holder"))
     assertEquals(25_000, body.getLong("retryAfterMs"))
-    assertEquals("the screen is in use by opencode; try again in a moment", body.getString("message"))
+    assertEquals(1, body.getInt("place"))
+    assertEquals(
+      "opencode holds the screen; you are #1 in line; we'll message you when it is yours",
+      body.getString("message"),
+    )
     // Calls that leave the screen alone still pass.
     assertEquals(200, r.handle(dir.records[1], "GET", "/ping", "").status)
     assertEquals(200, r.handle(dir.records[1], "POST", "/clipboard", "{}").status)
@@ -155,5 +186,147 @@ class BridgeRouterTest {
     assertEquals(503, act.status)
     now += 30_000
     assertEquals(200, r.handle(dir.records[1], "POST", "/pce/observe", "{}").status)
+  }
+
+  // The screen line
+
+  @Test fun waitersAreToldTheirPlaceAndTheReturnHandsTheScreenToTheFirst() {
+    val r = router()
+    r.handle(dir.records[0], "POST", "/pce/observe", "{}")
+    assertEquals(1, json(r.handle(dir.records[1], "POST", "/pce/observe", "{}")).getInt("place"))
+    assertEquals(2, json(r.handle(dir.records[2], "POST", "/open", "{}")).getInt("place"))
+    assertEquals(200, r.handle(dir.records[0], "POST", "/app", "{}").status)
+    assertEquals(listOf("a2"), yours)
+    val third = json(r.handle(dir.records[2], "POST", "/pce/observe", "{}"))
+    assertEquals("opencode 2", third.getString("holder"))
+    assertEquals(1, third.getInt("place"))
+    assertEquals(200, r.handle(dir.records[1], "POST", "/pce/observe", "{}").status)
+  }
+
+  @Test fun anAgentTurnGetsScreenRefused() {
+    agentTurns += "a2"
+    val r = router()
+    val refused = r.handle(dir.records[1], "POST", "/pce/observe", "{}")
+    assertEquals(409, refused.status)
+    assertEquals("screen_refused", json(refused).getString("code"))
+    assertEquals(
+      "a turn another agent's message started can't take the screen; the user or your own earlier request in the queue can",
+      json(refused).getString("message"),
+    )
+    assertNull(lease.holderId())
+    // It never joins the line; calls that leave the screen alone still pass.
+    r.handle(dir.records[0], "POST", "/pce/observe", "{}")
+    assertEquals("screen_refused", json(r.handle(dir.records[1], "POST", "/open", "{}")).getString("code"))
+    assertTrue(lease.line().waiting.isEmpty())
+    assertEquals(200, r.handle(dir.records[1], "POST", "/clipboard", "{}").status)
+  }
+
+  @Test fun theReservedAgentPassesInAnAgentTurn() {
+    val r = router()
+    r.handle(dir.records[0], "POST", "/pce/observe", "{}")
+    assertEquals(409, r.handle(dir.records[1], "POST", "/pce/observe", "{}").status)
+    // The "yours" notice started its next turn.
+    agentTurns += "a2"
+    r.handle(dir.records[0], "POST", "/app", "{}")
+    assertEquals(200, r.handle(dir.records[1], "POST", "/pce/observe", "{}").status)
+    assertEquals(200, r.handle(dir.records[1], "POST", "/open", "{}").status)
+  }
+
+  @Test fun askModeALockedAgentWaitsInLineInsteadOfAsking() {
+    lock.setMode(LockMode.ASK)
+    lock.grantAsk("a1")
+    val r = router()
+    assertEquals(200, r.handle(dir.records[0], "POST", "/pce/observe", "{}").status)
+    // Locked, while another drives: its place in line, not a 403...
+    val waits = r.handle(dir.records[1], "POST", "/pce/observe", "{}")
+    assertEquals(409, waits.status)
+    assertEquals(1, json(waits).getInt("place"))
+    // ...and its unlock waits too, at once and with no dialog over a1's app.
+    val asks = r.handle(dir.records[1], "POST", "/unlock", "{}")
+    assertEquals("control_busy", json(asks).getString("code"))
+    assertEquals(1, json(asks).getInt("place"))
+    assertTrue(handled.none { it == "a2 /unlock" })
+    assertEquals("a1", lease.holderId())
+  }
+
+  @Test fun askModeTheFirstInLineStillNeedsItsUnlock() {
+    lock.setMode(LockMode.ASK)
+    lock.grantAsk("a1")
+    val r = router()
+    r.handle(dir.records[0], "POST", "/pce/observe", "{}")
+    r.handle(dir.records[1], "POST", "/pce/observe", "{}")
+    r.handle(dir.records[0], "POST", "/app", "{}")
+    assertEquals(listOf("a2"), yours)
+    // A place in line is never the screen, nor an unlock.
+    assertEquals(403, r.handle(dir.records[1], "POST", "/pce/observe", "{}").status)
+    assertNull(lease.holderId())
+    // The user takes a minute over the fingerprint: the reservation waits.
+    atDialog = {
+      now += 60_000
+      lease.tick { dir.get(it) != null }
+      lock.grantAsk(it.agent.id)
+    }
+    assertEquals(true, json(r.handle(dir.records[1], "POST", "/unlock", "{}")).getJSONObject("data").getBoolean("unlocked"))
+    now += 29_000
+    lease.tick { dir.get(it) != null }
+    assertEquals(200, r.handle(dir.records[1], "POST", "/pce/observe", "{}").status)
+    assertEquals("a2", lease.holderId())
+  }
+
+  @Test fun anIgnoredUnlockDialogPassesTheScreenOn() {
+    lock.setMode(LockMode.ASK)
+    lock.grantAsk("a1")
+    val r = router()
+    r.handle(dir.records[0], "POST", "/pce/observe", "{}")
+    r.handle(dir.records[1], "POST", "/pce/observe", "{}")
+    r.handle(dir.records[2], "POST", "/pce/observe", "{}")
+    r.handle(dir.records[0], "POST", "/app", "{}")
+    // Nobody answers a2's dialog before its wait runs out.
+    atDialog = { now += 45_000 }
+    r.handle(dir.records[1], "POST", "/unlock", "{}")
+    assertEquals(listOf("a2", "a3"), yours)
+    assertEquals(ScreenLease.Seat("a3", "claude"), lease.line().holder)
+  }
+
+  @Test fun anUnlockDialogOnAFreeScreenKeepsOthersOff() {
+    lock.setMode(LockMode.ASK)
+    lock.grantAsk("a2")
+    val r = router()
+    var meanwhile: Reply? = null
+    atDialog = { call ->
+      meanwhile = r.handle(dir.records[1], "POST", "/pce/observe", "{}")
+      lock.grantAsk(call.agent.id)
+    }
+    r.handle(dir.records[0], "POST", "/unlock", "{}")
+    assertEquals(409, meanwhile?.status)
+    assertEquals("opencode", JSONObject(meanwhile!!.body).getString("holder"))
+    assertEquals(200, r.handle(dir.records[0], "POST", "/pce/observe", "{}").status)
+    assertEquals("a1", lease.holderId())
+  }
+
+  @Test fun anUnlockedAgentsUnlockNeverWaits() {
+    val r = router()
+    r.handle(dir.records[0], "POST", "/pce/observe", "{}")
+    // The gate is on for everyone: no dialog, so nothing to wait for.
+    assertEquals(200, r.handle(dir.records[1], "POST", "/unlock", "{}").status)
+    assertTrue(lease.line().waiting.isEmpty())
+  }
+
+  @Test fun anUnlockedAgentsUnlockLeavesTheLineAlone() {
+    lock.setMode(LockMode.ASK)
+    lock.grantAsk("a1")
+    val r = router()
+    // A free screen: no dialog opens, so nothing is reserved for it.
+    r.handle(dir.records[0], "POST", "/unlock", "{}")
+    assertEquals(ScreenLease.Line(null, reserved = false, emptyList()), lease.line())
+    assertEquals(200, r.handle(dir.records[1], "POST", "/app", "{}").status)
+    // Its own idle lease: no pause, so time still passes it on.
+    lock.grantAsk("a2")
+    r.handle(dir.records[1], "POST", "/pce/observe", "{}")
+    r.handle(dir.records[2], "POST", "/app", "{}")
+    atDialog = { now += 60_000 }
+    r.handle(dir.records[1], "POST", "/unlock", "{}")
+    lease.tick { dir.get(it) != null }
+    assertEquals(listOf("a3"), yours)
   }
 }

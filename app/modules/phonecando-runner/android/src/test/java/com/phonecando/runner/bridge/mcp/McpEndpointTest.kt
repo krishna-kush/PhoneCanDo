@@ -116,7 +116,7 @@ class McpEndpointTest {
     assertEquals(200, rig.post(ping, headers = mapOf("mcp-protocol-version" to "2025-11-25")).status)
   }
 
-  @Test fun fullListsEveryOneRouteToolAndLiteTheBasicSix() {
+  @Test fun fullListsEveryOneRouteToolAndLiteTheBasicSixAndTheAgentTools() {
     val names = { r: McpRig ->
       val tools = result(r.post(rpc(1, "tools/list"))).getJSONArray("tools")
       (0 until tools.length()).map { tools.getJSONObject(it) }.onEach {
@@ -124,7 +124,8 @@ class McpEndpointTest {
         assertTrue(it.getString("description").isNotEmpty())
       }.map { it.getString("name") }
     }
-    val basic = listOf("mobile_ping", "mobile_battery", "mobile_notify", "mobile_share", "mobile_open", "mobile_clipboard")
+    val basic = listOf("mobile_ping", "mobile_battery", "mobile_notify", "mobile_share", "mobile_open", "mobile_clipboard") +
+      listOf("agents_list", "agents_send", "agents_inbox", "agents_wait")
     assertEquals(basic, names(McpRig(full = false)))
     val full = names(rig)
     assertTrue(full.containsAll(basic + listOf("mobile_observe", "mobile_act", "mobile_return", "mobile_request_unlock")))
@@ -174,8 +175,30 @@ class McpEndpointTest {
     assertFalse(text(rig.post(call(1, "mobile_observe"), agentAt = 0)).second)
     val (out, isError) = text(rig.post(call(2, "mobile_observe"), agentAt = 1))
     assertTrue(isError)
-    assertTrue(out, out.startsWith("error control_busy: the screen is in use by opencode; try again in about 30s."))
+    assertTrue(out, out.startsWith("error control_busy: opencode holds the screen; you are #1 in line. We'll message you (agents_inbox)"))
     assertEquals("a1", rig.lease.holderId())
+  }
+
+  @Test fun everyResultEndsWithTheCallersUnreadMessages() {
+    var unread = 0
+    val endpoint = McpEndpoint(RepoTools.parse(full = true), "1.2.3", unread = { if (it == "a1") unread else 0 }) { agent, route, body ->
+      rig.router.handle(agent, route.method, route.path, body)
+    }
+    val none = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(1, "mobile_ping"))).getJSONArray("content")
+    assertEquals(1, none.length())
+    unread = 3
+    val some = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(2, "mobile_ping"))).getJSONArray("content")
+    assertEquals(2, some.length())
+    assertEquals("You have 3 unread agent messages: call agents_inbox.", some.getJSONObject(1).getString("text"))
+    // Refusals too; another caller's count is its own.
+    rig.lock.lock()
+    val refused = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(3, "mobile_notify", JSONObject().put("text", "x"))))
+    assertTrue(refused.getBoolean("isError"))
+    assertEquals(2, refused.getJSONArray("content").length())
+    assertEquals(1, result(endpoint.handle(rig.dir.records[1], "POST", emptyMap(), call(4, "mobile_ping"))).getJSONArray("content").length())
+    unread = 1
+    val one = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(5, "mobile_ping"))).getJSONArray("content")
+    assertEquals("You have 1 unread agent message: call agents_inbox.", one.getJSONObject(1).getString("text"))
   }
 
   @Test fun fullOnlyToolsAreUnknownOnLite() {

@@ -3,7 +3,6 @@ package com.phonecando.runner.bridge.mcp
 import com.phonecando.runner.bridge.Reply
 import org.json.JSONArray
 import org.json.JSONObject
-import kotlin.math.ceil
 
 // A route's reply as an MCP tool result: one text item, worded as the TS
 // tools' client.ts words it, so a model reads the same over MCP as through
@@ -26,10 +25,12 @@ object ToolResult {
   fun errorText(e: JSONObject, status: Int): String {
     val code = e.optString("code").ifEmpty { status.toString() }
     if (code == "control_busy") {
-      val secs = maxOf(1, ceil(e.optLong("retryAfterMs", 30_000) / 1000.0).toInt())
+      // Another agent has the screen and the caller waits in line: a
+      // message comes when it is theirs (ScreenNotices), so no retry loop.
       val holder = e.optString("holder").ifEmpty { "another agent" }
-      return "error control_busy: the screen is in use by $holder; try again in about ${secs}s. " +
-        "Wait, then call the tool again; do not loop quickly, and tell the user if it stays busy."
+      val place = (e.opt("place") as? Number)?.let { "; you are #${it.toInt()} in line" }.orEmpty()
+      return "error control_busy: $holder holds the screen$place. We'll message you (agents_inbox) when it is yours; " +
+        "do other work or end your turn instead of calling again."
     }
     return "error $code: ${e.optString("message").ifEmpty { "unknown" }}"
   }

@@ -11,9 +11,11 @@ import type {
   NativeKindSaved,
   NativeLaunchTarget,
   NativeMemoryStatus,
+  NativeMessage,
   NativeOpenUrlAction,
   NativePromptReading,
   NativeRunLimits,
+  NativeScreenQueue,
   NativeTerminalAttach,
   NativeTerminalTheme,
   NativeUserKind,
@@ -27,6 +29,8 @@ export type {
   NativeAutoStop,
   NativeBridgePrompt,
   NativeClientRecipe,
+  NativeDelivery,
+  NativeDeliveryStatus,
   NativeEngineStatus,
   NativeInstallPlan,
   NativeKindDeleted,
@@ -37,9 +41,11 @@ export type {
   NativeMemoryLevel,
   NativeMemoryModel,
   NativeMemoryStatus,
+  NativeMessage,
   NativeOpenUrlAction,
   NativePromptReading,
   NativeRunLimits,
+  NativeScreenQueue,
   NativeTerminalAttach,
   NativeTerminalTheme,
   NativeUserKind,
@@ -52,6 +58,8 @@ type RunnerEvents = {
   phonecandoEngineState(e: NativeEngineStatus): void;
   phonecandoPromptReading(e: { reading: NativePromptReading | null }): void;
   phonecandoMemory(e: NativeMemoryStatus): void;
+  /** The messages between agents changed: a new one, or a delivery moved on; unread per agent id. */
+  phonecandoMessages(e: { unread: Record<string, number> }): void;
 };
 
 declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
@@ -94,6 +102,14 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   keepRunning(agentId: string): boolean;
   /** Saves Keep running and returns it as kept. */
   setKeepRunning(agentId: string, on: boolean): boolean;
+  /** The messages between agents (and the runner's notices to them), newest first; at most 500. */
+  messageLog(limit: number): NativeMessage[];
+  /** Unread (not yet in their turn) messages per agent id, only agents with some. */
+  unreadCounts(): Record<string, number>;
+  /** Who has the screen and who waits for it; empty while no agent with phone tools runs. */
+  screenQueue(): NativeScreenQueue;
+  /** Saves "Other agents can wake it" and returns the agent as kept. */
+  setAgentWakeable(agentId: string, wakeable: boolean): NativeAgent;
   memoryStatus(): NativeMemoryStatus;
   isAnyEngineAlive(): boolean;
   touchEngine(agentId: string): void;

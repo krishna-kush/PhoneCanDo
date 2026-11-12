@@ -19,6 +19,9 @@ import com.phonecando.agents.kit.EngineEvent.Kind
 //   it by id; a TUI only by the title it shows (cut to 37 characters and
 //   "…" past 40), which counts only when exactly one of that agent's chats
 //   has it, so a fresh untitled chat or two alike stay listed.
+// - Each agent's last top-level chat to move (latest) is kept while its
+//   engine runs, whatever the board shows: where other agents' messages go
+//   for a server engine (messages/).
 class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: Int = MAX_CHILDREN) {
   /** In the order the notification lists them. */
   enum class State(val label: String) {
@@ -46,6 +49,9 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
 
   private var open: Open? = null
 
+  // Per agent, its last top-level chat that moved.
+  private val last = HashMap<String, String>()
+
   @Synchronized
   fun onEvent(agentId: String, event: EngineEvent, now: Long): Change {
     val session = event.sessionId ?: return NONE
@@ -59,6 +65,9 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
     val key = key(agentId, session)
     val current = chats[key]
     val child = session in kids
+    if (!child && event.kind != Kind.OTHER) {
+      if (event.kind == Kind.GONE) last.remove(agentId, session) else last[agentId] = session
+    }
     val next = when (event.kind) {
       Kind.WAITING -> State.WAITING
       Kind.WORKING -> if (child) null else State.WORKING
@@ -119,12 +128,21 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
   @Synchronized
   fun drop(agentId: String): Boolean {
     children.remove(agentId)
+    last.remove(agentId)
     return chats.values.removeAll { it.agentId == agentId }
   }
 
   /** The agents with a run going: a working chat, the one on screen included. */
   @Synchronized
   fun working(): Set<String> = chats.values.filter { it.state == State.WORKING }.mapTo(HashSet()) { it.agentId }
+
+  /** The agent's chats, the one on screen included, newest first. */
+  @Synchronized
+  fun of(agentId: String): List<Chat> = chats.values.filter { it.agentId == agentId }.sortedByDescending { it.at }
+
+  /** The agent's last top-level chat to move while its engine runs; null for none. */
+  @Synchronized
+  fun latest(agentId: String): String? = last[agentId]
 
   /** Waiting first, then working, error, done; newest first within each. */
   @Synchronized

@@ -83,6 +83,20 @@ class AgentStoreTest {
     assertTrue(store().get(a.id)!!.ranBefore)
   }
 
+  @Test fun wakeableIsOnUntilSwitchedOffAndKept() {
+    val s = store()
+    val a = s.create("opencode", "A", "i1")
+    assertTrue(a.wakeable)
+    assertFalse(s.setWakeable(a.id, false).wakeable)
+    assertFalse(store().get(a.id)!!.wakeable)
+    assertTrue(s.setWakeable(a.id, true).wakeable)
+    // A record without the field reads as on.
+    val bare = JSONObject(file.readText())
+    bare.getJSONArray("agents").getJSONObject(0).remove("wakeable")
+    file.writeText(bare.toString())
+    assertTrue(store().get(a.id)!!.wakeable)
+  }
+
   @Test fun anInstalledVersionIsKept() {
     val s = store()
     val a = s.create("user.gemini", "Gemini", "i1")

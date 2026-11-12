@@ -8,7 +8,9 @@ import com.phonecando.agents.kit.term.TermTheme
 // renders, UTF-8 and the theme), then the kind's launch env, then ours on top: the
 // bridge URL and this agent's token (only for a kind with phone tools,
 // BridgeAccess; else neither), a TUI engine's events file (where the
-// kit scripts write), the build channel, and the agent tag.
+// kit scripts write), the agent's inbox folder for a kind with an `inbox`
+// block (other agents' messages, messages/), the build channel, and the
+// agent tag.
 // The tag (PHONECANDO_AGENT=<agentId>) is inherited by everything the engine
 // starts, which is how a stop finds every process of an agent (proc/). It
 // is set last, so no image or kind can change it. A local model server
@@ -27,6 +29,7 @@ object EngineEnv {
   const val BRIDGE_TOKEN = "PHONECANDO_BRIDGE_TOKEN"
   const val CHANNEL = "PHONECANDO_CHANNEL"
   const val EVENTS = "PHONECANDO_EVENTS"
+  const val INBOX = "PHONECANDO_INBOX"
 
   /** What a program on our PTY needs to know about it (as the terminal tab's recipes set). */
   val TERMINAL = mapOf("TERM" to "xterm-256color", "COLORTERM" to "truecolor", "LANG" to "C.UTF-8")
@@ -41,7 +44,11 @@ object EngineEnv {
   fun terminal(theme: TermTheme?): Map<String, String> =
     if (theme == null) TERMINAL else TERMINAL + (COLORFGBG to theme.colorFgBg)
 
-  /** [bridgeUrl] null: the bridge is down and the engine gets neither bridge value; [eventsFile] null: a server engine, none. */
+  /**
+   * [bridgeUrl] null: the bridge is down and the engine gets neither bridge
+   * value; [eventsFile] null: a server engine, none; [inboxDir] null: a
+   * kind without an inbox block, none.
+   */
   fun build(
     base: Map<String, String>,
     image: Map<String, String>,
@@ -51,6 +58,7 @@ object EngineEnv {
     channel: String,
     agentId: String,
     eventsFile: String? = null,
+    inboxDir: String? = null,
   ): Map<String, String> {
     val env = LinkedHashMap<String, String>(base)
     env.putAll(image)
@@ -59,11 +67,13 @@ object EngineEnv {
     env.remove(BRIDGE_URL)
     env.remove(BRIDGE_TOKEN)
     env.remove(EVENTS)
+    env.remove(INBOX)
     if (bridgeUrl != null) {
       env[BRIDGE_URL] = bridgeUrl
       env[BRIDGE_TOKEN] = bridgeToken
     }
     if (eventsFile != null) env[EVENTS] = eventsFile
+    if (inboxDir != null) env[INBOX] = inboxDir
     env[CHANNEL] = channel
     env[AGENT] = agentId
     return env

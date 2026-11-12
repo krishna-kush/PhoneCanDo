@@ -33,6 +33,27 @@ class ChatBoardTest {
     assertEquals(ChatBoard.Change(true, "s1"), on("a", Kind.WORKING, "s1"))
   }
 
+  @Test fun eachAgentsLatestChatAndItsChatsForMessages() {
+    on("a", Kind.WORKING, "s1")
+    on("a", Kind.FINISHED, "s2")
+    on("a", Kind.OTHER, "s9")
+    assertEquals("s2", board.latest("a"))
+    // A subagent's child never is.
+    on("a", Kind.WORKING, "kid", child = true)
+    on("a", Kind.WAITING, "kid")
+    assertEquals("s2", board.latest("a"))
+    // The chat on screen still counts for the agent's own list.
+    board.setOpen("a", "s1")
+    assertEquals(listOf("kid", "s2", "s1"), board.of("a").map { it.sessionId })
+    on("a", Kind.GONE, "s2")
+    assertNull(board.latest("a"))
+    on("a", Kind.WORKING, "s1")
+    assertEquals("s1", board.latest("a"))
+    board.drop("a")
+    assertNull(board.latest("a"))
+    assertTrue(board.of("a").isEmpty())
+  }
+
   @Test fun workingCountsTheChatOnScreenToo() {
     on("a", Kind.WORKING, "s1")
     on("b", Kind.WAITING, "s2")

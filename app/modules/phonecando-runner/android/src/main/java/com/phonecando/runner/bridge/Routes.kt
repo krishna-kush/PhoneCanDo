@@ -6,8 +6,10 @@ package com.phonecando.runner.bridge
 //   pce:      needs the accessibility service connected (503 automation_unavailable).
 //   screen:   changes what is on screen, or replaces the PCE's one current
 //             snapshot, so in full builds it takes the screen lease
-//             (ScreenLease; 409 control_busy while another agent holds it).
-//             Lite/play have no driver whose flow it could break.
+//             (ScreenLease; 409 control_busy with a place in line while
+//             another agent has it, 409 screen_refused for a turn another
+//             agent's message started). Lite/play have no driver whose flow
+//             it could break.
 // Screen routes: /pce/observe, /pce/act and /pce/pack (a pack run drives the
 // screen and every pack call shares the PCE lane), /open and /share (they
 // start an activity over whatever is showing) and /app (brings PhoneCanDo
@@ -15,8 +17,14 @@ package com.phonecando.runner.bridge
 // screen routes: /ping, /battery, /notify, /clipboard, /pce/describe, and the
 // prompts /unlock and /accessibility: they only matter while the gate is off
 // or the service is down, when nobody can drive the screen anyway, and the
-// app queues their dialogs. /mcp is not a route: BridgeEntry hands it to the
-// MCP endpoint (mcp/), whose tools call these routes through the router.
+// app queues their dialogs. In ask mode others can drive while one agent is
+// locked, so a locked agent's /unlock waits in line while another agent has
+// the screen, and its dialog stops its time on it (BridgeRouter,
+// ScreenLease). The /agents/* routes (messages between agents,
+// AgentRoutes) exist on every channel and are neither gated nor screen
+// routes: talking to another agent is not phone control. /mcp is not a
+// route: BridgeEntry hands it to the MCP endpoint (mcp/), whose tools call
+// these routes through the router.
 // Pure.
 enum class Route(
   val method: String,
@@ -39,6 +47,10 @@ enum class Route(
   PCE_OBSERVE("POST", "/pce/observe", fullOnly = true, gated = true, pce = true, screen = true),
   PCE_ACT("POST", "/pce/act", fullOnly = true, gated = true, pce = true, screen = true),
   PCE_PACK("POST", "/pce/pack", fullOnly = true, gated = true, pce = true, screen = true),
+  AGENTS_LIST("POST", "/agents/list"),
+  AGENTS_SEND("POST", "/agents/send"),
+  AGENTS_INBOX("POST", "/agents/inbox"),
+  AGENTS_WAIT("POST", "/agents/wait"),
   ;
 
   companion object {

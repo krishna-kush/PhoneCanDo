@@ -29,9 +29,11 @@ class BridgeEntry(
   tools: List<McpTool>,
   serverVersion: String,
   private val onCall: (agentId: String) -> Unit,
+  /** The caller's unread agent messages, for the line MCP results end with. */
+  unread: (agentId: String) -> Int = { 0 },
   private val onRoute: (path: String, status: Int) -> Unit,
 ) {
-  private val mcp = McpEndpoint(tools, serverVersion) { agent, route, body ->
+  private val mcp = McpEndpoint(tools, serverVersion, unread) { agent, route, body ->
     dispatch(agent, route.method, route.path, body)
   }
 

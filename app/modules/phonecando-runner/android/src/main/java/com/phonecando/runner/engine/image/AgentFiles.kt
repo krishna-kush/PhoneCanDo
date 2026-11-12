@@ -3,6 +3,7 @@ package com.phonecando.runner.engine.image
 import com.phonecando.agents.kit.AgentKind
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.engine.events.KitFiles
+import com.phonecando.runner.messages.delivery.InboxFolder
 import java.io.File
 import java.io.IOException
 import java.nio.file.FileVisitResult
@@ -14,8 +15,8 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.PosixFilePermission
 
 // What one agent keeps on its machine apart from the other agents there:
-// its engine log (ImageDir.engineLog), its events file (KitFiles.events)
-// and, for an agent that keeps its own state (AgentRecord.ownState), its
+// its engine log (ImageDir.engineLog), its events file (KitFiles.events),
+// its inbox folder (other agents' messages, InboxFolder) and, for an agent that keeps its own state (AgentRecord.ownState), its
 // state folder `<home>/.phonecando/agents/<agentId>/` (the guest's
 // /root/.phonecando/agents/<agentId>/): its sign-in, settings, chats and
 // global instructions, where the kind's state env points it (kit
@@ -46,8 +47,12 @@ internal object AgentFiles {
   }
 
   /** The files [agent] leaves on its machine [image]. */
-  fun of(image: ImageDir, agent: AgentRecord): List<File> =
-    listOfNotNull(image.engineLog(agent.id), KitFiles.events(image.home, agent.id), ownState(image.home, agent))
+  fun of(image: ImageDir, agent: AgentRecord): List<File> = listOfNotNull(
+    image.engineLog(agent.id),
+    KitFiles.events(image.home, agent.id),
+    InboxFolder.dir(image.home, agent.id),
+    ownState(image.home, agent),
+  )
 
   /**
    * The state [agent] leaves in the shared home: its [kind]'s user state

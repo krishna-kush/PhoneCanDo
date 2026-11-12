@@ -37,6 +37,11 @@ data class AgentRecord(
      * kind keeps them: it was made while another agent of its kind was there.
      */
     val ownState: Boolean = false,
+    /**
+     * "Other agents can wake it": a direct message that asks to may start
+     * its run while it is idle (messages/). On by default.
+     */
+    val wakeable: Boolean = true,
 )
 
 /** Read access to the agents, for the bridge (caller identity) and redaction. */

@@ -55,6 +55,12 @@ internal class ChatTracker(private val onChange: () -> Unit) {
   /** The agents with a run going (ChatBoard.working). */
   fun working(): Set<String> = board.working()
 
+  /** The agent's chats, the one on screen included, newest first (ChatBoard.of). */
+  fun of(agentId: String): List<ChatBoard.Chat> = board.of(agentId)
+
+  /** The agent's last top-level chat to move (ChatBoard.latest). */
+  fun latest(agentId: String): String? = board.latest(agentId)
+
   private fun readTitle(agentId: String, sessionId: String) {
     val source = sources[agentId] ?: return
     reader.execute {

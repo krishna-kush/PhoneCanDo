@@ -8,6 +8,7 @@ import com.phonecando.runner.AutomationHosts
 import com.phonecando.runner.agents.AgentDirectory
 import com.phonecando.runner.bridge.mcp.McpToolAssets
 import com.phonecando.runner.controllock.ControlLocks
+import com.phonecando.runner.messages.Messages
 
 /** A running loopback bridge: engines get [url] at launch, each with its own token. */
 interface BridgeHandle {
@@ -24,7 +25,13 @@ interface BridgeHandle {
 // stops it when the last engine stops. `onCall` gets the calling agent's id
 // on every authenticated request (keeps that engine from being idle-stopped).
 // The port it bound is kept for the next open (BridgePorts). The same
-// routes are also MCP tools at /mcp, from the packaged tool table.
+// routes are also MCP tools at /mcp, from the packaged tool table, whose
+// results end with the caller's unread agent messages. The agents' own
+// messages (/agents/*, AgentRoutes) and the screen line's notices go
+// through the process's Messages; a turn another agent's message started
+// is told apart there (WakeTracker) for the screen line (BridgeRouter).
+// The screen line moves on every second (ScreenTicker), and an agent whose
+// engine is gone leaves it.
 object Bridge {
   private const val TAG = "PhoneCanDoBridge"
   private const val PREFS = "phonecando_bridge"
@@ -40,6 +47,9 @@ object Bridge {
   /** An agent is driving the screen now: a screen call runs or ran within the lease's idle time. */
   fun screenInUse(): Boolean = lease?.inUse() == true
 
+  /** Who holds the screen and who waits for it; null while no bridge is open. */
+  fun screenLine(): ScreenLease.Line? = lease?.line()
+
   fun open(context: Context, agents: AgentDirectory, onCall: (agentId: String) -> Unit): BridgeHandle? {
     val app = context.applicationContext
     val channel = buildChannel(app)
@@ -49,11 +59,13 @@ object Bridge {
     }
     val launcher = AppLauncher(app)
     val lock = ControlLocks.get(app)
+    val messages = Messages.get(app)
     val handlers = DeviceRoutes(app, channel, automation, lock).table() +
       ActivityRoutes(app, launcher).table() +
       PceRoutes(automation).table() +
-      PromptRoutes(app, PromptFlows(BridgePrompts.registry, launcher), automation, lock).table()
-    val screen = ScreenLease(LEASE_IDLE_MS) { SystemClock.elapsedRealtime() }
+      PromptRoutes(app, PromptFlows(BridgePrompts.registry, launcher), automation, lock).table() +
+      AgentRoutes(messages.mailbox, messages.view).table()
+    val screen = ScreenLease(LEASE_IDLE_MS, notices = messages.screenNotices(LEASE_IDLE_MS)) { SystemClock.elapsedRealtime() }
     val router = BridgeRouter(
       full = channel == "full",
       automation = automation,
@@ -62,19 +74,27 @@ object Bridge {
       alive = { agents.get(it) != null },
       handlers = handlers,
       onError = { msg, e -> Log.w(TAG, msg, e) },
+      startedByAgent = messages.mailbox.wakes::startedByAgent,
     )
     val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val ports = BridgePorts.candidates(prefs.getInt(KEY_PORT, 0))
     val tools = McpToolAssets.load(app, full = channel == "full")
-    val server = BridgeServer.start(ports, agents, router, tools, appVersion(app), onCall) ?: return null
+    val server = BridgeServer.start(ports, agents, router, tools, appVersion(app), onCall, messages.mailbox::unread)
+      ?: return null
     prefs.edit().putInt(KEY_PORT, server.listeningPort).apply()
+    val ticker = ScreenTicker(screen, alive = { agents.get(it) != null }).also { it.start() }
     lease = screen
     return object : BridgeHandle {
       override val url = "http://127.0.0.1:${server.listeningPort}"
 
-      override fun agentGone(agentId: String) = lock.endAsk(agentId)
+      override fun agentGone(agentId: String) {
+        lock.endAsk(agentId)
+        // Out of the screen line: it holds nothing and waits for nothing.
+        screen.forget(agentId)
+      }
 
       override fun stop() {
+        ticker.stop()
         server.stop()
         if (lease === screen) lease = null
         // No engine is left to hear the answers: end the waits now, and

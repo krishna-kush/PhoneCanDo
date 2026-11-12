@@ -21,9 +21,10 @@ import java.io.File
 // a server's SSE stream, or a TUI's output signals through its kind's PTY
 // rules (TuiEvents), which also carry its chat title, together with its
 // events file (events/: the kit scripts' lines, through the kind's hook map
-// to the same events, and links to open as open_url prompts, which go when
-// the stream stops); a kind with hooks also has a run that shows nothing
-// for a while end as stopped (TuiEvents.quiet).
+// to the same events, links to open as open_url prompts, which go when
+// the stream stops, and `@inbox` receipts as other agents' messages read,
+// messages/); a kind with hooks also has a run that shows nothing for a
+// while end as stopped (TuiEvents.quiet).
 // Activity (any event the kind maps to something other than OTHER, so not
 // heartbeats or catalog updates) marks the agent used, which keeps a working
 // engine from being stopped to make room for another, whether or not
@@ -39,6 +40,7 @@ internal class EngineStreams(
   private val chats: ChatTracker,
   private val openUrl: (agentId: String, url: String) -> Unit,
   private val dropUrls: (agentId: String) -> Unit,
+  private val inboxRead: (agentId: String, ids: List<Long>) -> Unit = { _, _ -> },
 ) {
   // "<agentId> <sessionId>" already counted; bounded, oldest dropped first.
   private val createdSeen = object : LinkedHashMap<String, Boolean>() {
@@ -67,13 +69,24 @@ internal class EngineStreams(
     }
     terminal.listen(events::onSignals)
     val hooks = HookMap.of(kind)
-    val sink = EventSink(hooks, events::raise) { url ->
-      try {
-        openUrl(agentId, url)
-      } catch (e: Exception) {
-        Log.w(TAG, "link to open not handled", e)
-      }
-    }
+    val sink = EventSink(
+      hooks,
+      events::raise,
+      onOpen = { url ->
+        try {
+          openUrl(agentId, url)
+        } catch (e: Exception) {
+          Log.w(TAG, "link to open not handled", e)
+        }
+      },
+      onInbox = { ids ->
+        try {
+          inboxRead(agentId, ids)
+        } catch (e: Exception) {
+          Log.w(TAG, "inbox receipt not handled", e)
+        }
+      },
+    )
     val tail = EventFileTail(eventsFile, sink::accept).start()
     // Hooks may never say a run ended (an interrupt): a quiet screen does.
     val quiet = if (hooks.isEmpty()) null else EventTimers.every(QUIET_CHECK_MS) { events.quiet(terminal.lastOutputAt) }

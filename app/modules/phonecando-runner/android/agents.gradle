@@ -16,7 +16,7 @@
 //   agents/runtimes/<id>/{runtime.json,install/}
 //                         the runtime plugins image kinds name, on the
 //                         channels that ship Linux (RuntimeCatalog)
-//   agents/kit/scripts/{phonecando-event,phonecando-open}
+//   agents/kit/scripts/{phonecando-event,phonecando-open,phonecando-inbox}
 //                         seeded into an agent's {{home}}/.phonecando/bin/ on
 //                         every engine start, on every channel
 //   agents/shared/phone-tools/tools.json
@@ -77,7 +77,7 @@ def runtimes = (new File(agentsRoot, "runtimes").listFiles()?.findAll { new File
   .sort { it.name }
   .collect { dir -> [id: readAgentJson(new File(dir, "runtime.json")).id, dir: dir] }
 def kitScriptsDir = new File(agentsRoot, "kit/scripts")
-def kitScripts = ["phonecando-event", "phonecando-open"]
+def kitScripts = ["phonecando-event", "phonecando-open", "phonecando-inbox"]
 def phoneToolsTable = new File(agentsRoot, "shared/phone-tools/tools.json")
 
 linuxChannels.each { channel ->

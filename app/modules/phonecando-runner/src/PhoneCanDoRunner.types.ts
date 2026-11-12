@@ -1,6 +1,6 @@
 // Shapes the native module returns (Kotlin: api/AgentFunctions.kt,
 // api/EngineFunctions.kt, api/InstallFunctions.kt, api/UserKindFunctions.kt, bridge/BridgePrompts.kt,
-// prompts/OpenUrlRegistry.kt, notify/LaunchTarget.kt).
+// prompts/OpenUrlRegistry.kt, notify/LaunchTarget.kt, api/MessageFunctions.kt).
 // The app reads them through app/src/engine/, which types them as its own
 // records.
 export type { EngineHealth, NativeCrash, TelemetryNativeSnapshot } from './telemetry.types';
@@ -21,6 +21,8 @@ export type NativeAgent = {
   model: string | null;
   /** It keeps its sign-in, settings and chats in its own folder: it joined an agent of its kind on its machine. */
   ownState: boolean;
+  /** "Other agents can wake it": a direct message that asks to may start its run while it is idle (default true). */
+  wakeable: boolean;
 };
 
 /** An install or update script rendered for one agent and package family; it prints `@phase <name>` before each of `phases`. */
@@ -159,4 +161,47 @@ export type NativeMemoryStatus = {
   models: NativeMemoryModel[];
   /** The last automatic stop in this process, so the UI can say what was stopped. */
   lastAutoStop: NativeAutoStop | null;
+};
+
+/** How far a message got with one recipient (messages/Message.kt Delivery). */
+export type NativeDeliveryStatus = 'queued' | 'delivered' | 'read' | 'refused';
+
+export type NativeDelivery = {
+  agentId: string;
+  /** The recipient's name when it was sent. */
+  name: string;
+  /** queued: not yet in its turn; delivered: posted to its chat or claimed by its hook; read: confirmed; refused: dropped unread. */
+  status: NativeDeliveryStatus;
+  /** Handing it over started the recipient's run. */
+  woke: boolean;
+  /** Why it was refused (dropped unread past the cap). */
+  reason?: string;
+};
+
+/**
+ * One message between agents, or a runner notice to one (the screen
+ * queue), newest first in messageLog. Names are the ones the agents had
+ * when it was sent; the log keeps them after an agent is deleted.
+ */
+export type NativeMessage = {
+  id: number;
+  /** A notice: agentId null, name "PhoneCanDo", kind null; kind is the sender's kind id. */
+  from: { agentId: string | null; name: string; kind: string | null };
+  /** One agent; every other agent on a machine (imageId); every other agent on the phone. */
+  to: { kind: 'agent' | 'machine' | 'phone'; agentId?: string; name?: string | null; imageId?: string };
+  text: string;
+  replyTo: number | null;
+  sentAt: number;
+  /** 0 from a turn the user started; one more for each turn another agent's message started before it. */
+  hop: number;
+  notice: boolean;
+  deliveries: NativeDelivery[];
+};
+
+/** Who drives the screen (or has it kept for them) and who waits for it, in order. */
+export type NativeScreenQueue = {
+  holder: { agentId: string; name: string } | null;
+  /** The holder has it kept for them: the screen passed to it from the line. */
+  reserved: boolean;
+  waiting: { agentId: string; name: string }[];
 };

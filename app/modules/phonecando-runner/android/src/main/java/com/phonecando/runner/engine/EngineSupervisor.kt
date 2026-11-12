@@ -22,6 +22,7 @@ import com.phonecando.runner.engine.tui.TerminalViewException
 import com.phonecando.runner.engine.tui.TerminalViewers
 import com.phonecando.runner.engine.work.KeepRunning
 import com.phonecando.runner.limits.RunLimits
+import com.phonecando.runner.messages.Messages
 import com.phonecando.runner.memory.MemoryRules
 import com.phonecando.runner.models.ModelServer
 import com.phonecando.runner.models.ModelServerKeys
@@ -94,6 +95,7 @@ internal class EngineSupervisor(
     chats = chats,
     openUrl = { agentId, url -> OpenUrlPrompts.raise(context, store, agentId, url) },
     dropUrls = { agentId -> OpenUrlPrompts.end(context, agentId) },
+    inboxRead = { agentId, ids -> Messages.get(context).receipt(agentId, ids) },
   )
 
   /** The viewers of the TUI engines' terminals (the engineTerminal* functions). */
@@ -113,6 +115,15 @@ internal class EngineSupervisor(
 
   /** The chats the running engines are busy with (the service notification). */
   fun chats(): List<ChatBoard.Chat> = chats.chats()
+
+  /** The agent's chats, the one on screen included, newest first (messages/: its state and chat). */
+  fun chatsOf(agentId: String): List<ChatBoard.Chat> = chats.of(agentId)
+
+  /** The agent's last top-level chat to move while it runs (messages/: where a server engine's messages go). */
+  fun latestChat(agentId: String): String? = chats.latest(agentId)
+
+  /** The agents with a run going (ChatBoard.working). */
+  fun working(): Set<String> = chats.working()
 
   /** A model server reading a prompt for a bound agent's run; null when not (or not watched). */
   fun promptReading(): PromptReading? = prompts.current()

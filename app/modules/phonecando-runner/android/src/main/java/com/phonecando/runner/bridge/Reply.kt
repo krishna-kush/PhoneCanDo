@@ -28,13 +28,21 @@ data class Reply(val status: Int, val body: String, val headers: Map<String, Str
     fun automationUnavailable() =
       error(503, "automation_unavailable", "enable PhoneCanDo in Android accessibility settings")
 
-    /** Another agent holds the screen (ScreenLease). */
-    fun busy(holder: String, retryAfterMs: Long) = Reply(
+    /** Another agent has the screen (ScreenLease): the caller waits in line at `place`. */
+    fun busy(holder: String, retryAfterMs: Long, place: Int) = Reply(
       409,
-      errorBody("control_busy", "the screen is in use by $holder; try again in a moment")
+      errorBody("control_busy", "$holder holds the screen; you are #$place in line; we'll message you when it is yours")
         .put("holder", holder)
         .put("retryAfterMs", retryAfterMs)
+        .put("place", place)
         .toString(),
+    )
+
+    /** A turn another agent's message started asked for the screen (ScreenLease). */
+    fun screenRefused() = error(
+      409,
+      "screen_refused",
+      "a turn another agent's message started can't take the screen; the user or your own earlier request in the queue can",
     )
 
     fun errorBody(code: String, message: String): JSONObject =
