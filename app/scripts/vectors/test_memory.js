@@ -173,7 +173,7 @@ const MIN = 60_000;
     version: '1.2.3',
   };
   const hub = h.hubRows(facts);
-  t('hub order: phone control is not a row', hub.map((x) => x.target), ['look', 'agents', 'privacy', 'updates', 'about']);
+  t('hub order: phone control is not a row', hub.map((x) => x.target), ['look', 'agents', 'privacy', 'updates', 'share', 'about']);
   t('every row says what is inside', hub.every((x) => x.line.length > 0 && x.now.length > 0), true);
   t('privacy now', hub[2].now, 'usage stats on');
   t('kickers follow the hub', [h.pageKicker('look'), h.pageKicker('updates')], ['settings · 01', 'settings · 04']);

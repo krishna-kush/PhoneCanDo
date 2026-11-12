@@ -6,9 +6,10 @@ import type { EngineState } from '../../../engine/agents/records';
 /**
  * awake: running · busy: starting, stopping or installing · asleep: stopped ·
  * oops: failed or died · sweaty: A-01 itself while the phone is nearly out
- * of memory (the RAM warning; no engine state maps to it).
+ * of memory (the RAM warning; no engine state maps to it) · happy: A-01
+ * itself, pleased (the "Having fun?" card; no engine state maps to it).
  */
-export type Mood = 'awake' | 'busy' | 'asleep' | 'oops' | 'sweaty';
+export type Mood = 'awake' | 'busy' | 'asleep' | 'oops' | 'sweaty' | 'happy';
 
 /** The loader's poses (theme/logo.json), toned down so a row stays a row. */
 export type Pose = 'square' | 'wide' | 'tall';

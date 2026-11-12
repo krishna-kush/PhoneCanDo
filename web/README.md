@@ -32,6 +32,7 @@ Astro is pinned to 7.3.0 (7.4 needs Node ≥ 22.23.4); bump the two together.
 | Demo cards | `src/data/demos.ts` |
 | Models booster pack: agent cards, brain cartridges | the agents (names, counts, built in, default, stable): nothing, read from `agents/*/*/agent.json` at build time; their creatures and the kinds the lead names: `src/data/agentCards.ts`; the cartridges and the RAM each needs: nothing, read from lme's `suggested.json` (`src/data/cartridges.ts`); the pack's rules and wiring: `src/lib/booster/` |
 | Crew: the floor plan (agent messages), the screen's line, the long shift | who sits where, each kind's messaging level, the `agents_*` tool names, the wake budget and hop limit: nothing, read from the manifests, `agents/shared/phone-tools/agents.ts` and the runner's `MessageRules.kt` (`src/data/crew.ts`); the toys' rules and wiring: `src/lib/crew/` |
+| The backdrop: the world in the margins behind the sheet, one floor per section, and A-07's story down through it (wide screens only) | each floor's name, motto, caption and what its units say when clicked: `src/data/backdrop.ts`; each floor's chapter: `src/lib/backdrop/story/chapters/`; the camera, floors, board and A-07's scroll-driven clock: `src/lib/backdrop/` |
 | Colours (shared with the app) | `theme/tokens.json` |
 | A section's or component's look | the `<style is:global>` at the bottom of its `.astro` file |
 | Shared pieces: vars, reset, labels, buttons, section scaffolding | `src/styles/` (`global.css` lists them) |

@@ -301,6 +301,13 @@ export function onBridgePrompt(listener: (prompt: BridgePrompt) => void): Sub {
   return onRunnerEvent<BridgePrompt>('phonecandoBridgePrompt', listener);
 }
 
+/** An agent's top-level run that finished well (its engine's verdict), heard while JS runs. */
+export type RunFinished = { agentId: AgentId; sessionId: string };
+
+export function onRunFinished(listener: (run: RunFinished) => void): Sub {
+  return onRunnerEvent<RunFinished>('phonecandoRunFinished', listener);
+}
+
 // The user's answer to one unlock prompt (biometrics passed, or "Not now").
 export function resolveUnlock(requestId: string, ok: boolean): boolean {
   try {

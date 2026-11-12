@@ -12,13 +12,15 @@ import PlainText from '../common/PlainText';
 import Screen from '../common/Screen';
 import SectionTitle from '../common/SectionTitle';
 import { usePageActive } from '../nav/pageActive';
+import { shareApp } from '../recommend/share';
 import { hubRows, type HubFacts } from './logic/hub';
 import PhoneControlSection from './PhoneControlSection';
 
 // Settings: Phone control on the page itself, at the top (it gates what
 // agents may do, so it is never a tap away), then a short hub of one row
 // per page (Look & feel, Agents & models, Privacy, Updates, About), each
-// with a line of what is inside and how it is set now. App-wide options
+// with a line of what is inside and how it is set now, and Tell a friend,
+// which opens the share sheet with our link. App-wide options
 // only: each agent's own settings live on its page. The rows re-read what
 // they show whenever Settings is back in front.
 export default function SettingsScreen() {
@@ -74,7 +76,10 @@ export default function SettingsScreen() {
               {String(i + 1).padStart(2, '0')}
             </PlainText>
           }
-          onPress={() => push(row.target === 'about' ? { name: 'about' } : { name: 'settings-page', page: row.target })}
+          onPress={() => {
+            if (row.target === 'share') void shareApp();
+            else push(row.target === 'about' ? { name: 'about' } : { name: 'settings-page', page: row.target });
+          }}
         >
           <PlainText fontFamily="mono" fontSize={11} color="secondaryInk" numberOfLines={1}>
             {row.now}

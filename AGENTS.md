@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,messages,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,messages,recommend,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -38,6 +38,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   over every page. `messages/` is the Messages page (what agents send each
   other, the screen queue), the drawer's unread marks and an agent page's
   Messages and wake rows; pure parts in `messages/logic/`.
+  `recommend/` is telling a friend: the share sheet with our link (Settings'
+  Tell a friend row) and the "Having fun?" card at Home's foot after a run
+  finished in front of you (`copy.ts` pure; when it asks is
+  `state/logic/recommendAsk.ts`).
   `accessibility/` is the whole Accessibility setup guide: `guide.ts`
   (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
   hook, the step list, the Settings block and the agent's dialog.
@@ -83,7 +87,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   kinds), `memory.ts` (the memory guard's reading, the warning's
   episode), `messages.ts` (unread counts, the message log, the screen
   queue), `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
-  value in `ui/common/keyboard/room.ts`); multi-step
+  value in `ui/common/keyboard/room.ts`), `recommend.ts` (the "Having
+  fun?" card's runs, last ask and answer); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
 - `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models,phonecando-back-gesture,phonecando-network}/` —

@@ -4,6 +4,7 @@ import Animated, {
   cancelAnimation,
   Easing,
   interpolate,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -26,26 +27,38 @@ type Props = {
   hop?: number;
   /** Out of sight (a shut drawer, Home under a page): no blinking, looking or drifting. */
   still?: boolean;
+  /** Happy: how many hearts float up, one after another (1 to 3). */
+  hearts?: number;
 };
 
-const LID = { awake: 1, busy: 1, asleep: 0.15, oops: 0.45, sweaty: 1 } as const;
+const LID = { awake: 1, busy: 1, asleep: 0.15, oops: 0.45, sweaty: 1, happy: 1 } as const;
+
+// A pixel heart, row by row (happy), like the logo built from squares.
+const HEART = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
+// One heart's loop, and the part of it spent rising (the rest is a pause).
+const HEART_MS = 2300;
+const HEART_RISE = 0.78;
+// Each heart's sideways place, in heart widths from the first (up to three).
+const HEART_SHIFT = [0, -0.75, -0.35];
 
 // The site's mascot A-01 as an agent's face: the logo's red square on its
 // amber shadow, with two eyes (web/src/components/Mascot.astro, same
 // proportions). Awake it blinks now and then, busy it looks about, asleep
 // its eyes shut under a drifting "z", in trouble it squints under a "?",
 // sweaty (the phone short of memory) it glances about, wide-eyed, while a
-// drop runs down its brow.
+// drop runs down its brow, and happy its eyes close in a smile while a
+// pixel heart floats up (or a few, one after another).
 // Every motion is a Reanimated loop on the UI thread (no JS per step, no
 // re-render), and none runs while it is `still`. Decoration only (hidden
 // from screen readers): rows say the state in words.
-export default function AgentFace({ mood, size = 24, pose = 'square', hop = 0, still = false }: Props) {
+export default function AgentFace({ mood, size = 24, pose = 'square', hop = 0, still = false, hearts = 1 }: Props) {
   const t = useTheme();
   const quiet = useReduceMotion() || still;
   const lid = useSharedValue<number>(LID[mood]);
   const look = useSharedValue(0);
   const lift = useSharedValue(0);
   const drift = useSharedValue(0.5);
+  const beat = useSharedValue(0);
   // Each face keeps its own blink rhythm.
   const [blinkEvery] = useState(() => 2400 + Math.random() * 3600);
 
@@ -106,6 +119,16 @@ export default function AgentFace({ mood, size = 24, pose = 'square', hop = 0, s
     return () => cancelAnimation(drift);
   }, [mood, quiet, drift]);
 
+  // Happy: one steady clock the hearts share, each a step behind the last.
+  // Still, one heart holds halfway up.
+  useEffect(() => {
+    cancelAnimation(beat);
+    beat.value = quiet ? HEART_RISE / 2 : 0;
+    if (quiet || mood !== 'happy') return;
+    beat.value = withRepeat(withTiming(1, { duration: HEART_MS, easing: Easing.linear }), -1, false);
+    return () => cancelAnimation(beat);
+  }, [mood, quiet, beat]);
+
   // A tap: a small hop with a landing bounce.
   useEffect(() => {
     if (!hop || quiet) return;
@@ -134,6 +157,31 @@ export default function AgentFace({ mood, size = 24, pose = 'square', hop = 0, s
     }),
     [markSize],
   );
+
+  // Happy: each eye an upturned bracket, shut in a smile.
+  const line = Math.max(1, Math.round(size * 0.07));
+  const smileEye = (x: number) => (
+    <View
+      style={{
+        position: 'absolute',
+        left: x,
+        top: eyeTop + Math.round(eyeH * 0.2),
+        width: eyeW,
+        height: Math.max(line * 2, Math.round(eyeH * 0.5)),
+        borderColor: t.onPrimary,
+        borderTopWidth: line,
+        borderLeftWidth: line,
+        borderRightWidth: line,
+      }}
+    />
+  );
+
+  // The hearts start low on the head's top-right corner, the later ones a
+  // little further left.
+  const cell = Math.max(1, Math.round(size * 0.07));
+  const heartW = cell * HEART[0].length;
+  const heartH = cell * HEART.length;
+  const heartCount = quiet ? 1 : Math.max(1, Math.min(hearts, HEART_SHIFT.length));
 
   const eye = (x: number) => (
     <Animated.View
@@ -167,8 +215,8 @@ export default function AgentFace({ mood, size = 24, pose = 'square', hop = 0, s
       <Animated.View style={[{ position: 'absolute', left, top }, body]}>
         <View style={{ position: 'absolute', left: off, top: off, width: bodyW, height: bodyH, backgroundColor: t.secondary }} />
         <View style={{ width: bodyW, height: bodyH, backgroundColor: t.primary }}>
-          {eye(eyesLeft)}
-          {eye(eyesLeft + eyeW + gap)}
+          {mood === 'happy' ? smileEye(eyesLeft) : eye(eyesLeft)}
+          {mood === 'happy' ? smileEye(eyesLeft + eyeW + gap) : eye(eyesLeft + eyeW + gap)}
         </View>
       </Animated.View>
       {mood === 'asleep' ? (
@@ -197,11 +245,68 @@ export default function AgentFace({ mood, size = 24, pose = 'square', hop = 0, s
           ]}
         />
       ) : null}
+      {mood === 'happy'
+        ? Array.from({ length: heartCount }, (_, i) => (
+            <FloatingHeart
+              key={i}
+              beat={beat}
+              phase={i / heartCount}
+              left={left + bodyW + off - Math.round(heartW * (0.5 - HEART_SHIFT[i]))}
+              top={top - heartH + cell}
+              cell={cell}
+              color={t.primary}
+            />
+          ))
+        : null}
       {mood === 'oops' ? (
         <Text style={{ position: 'absolute', right: 0, top: 0, fontFamily: 'GeistMono-Bold', fontSize: markSize, color: t.primary }}>
           ?
         </Text>
       ) : null}
     </View>
+  );
+}
+
+// One heart of a happy face: rises off the head and fades, its turn
+// [phase] of the way into the shared loop, then waits out the rest.
+function FloatingHeart({
+  beat,
+  phase,
+  left,
+  top,
+  cell,
+  color,
+}: {
+  beat: SharedValue<number>;
+  phase: number;
+  left: number;
+  top: number;
+  cell: number;
+  color: string;
+}) {
+  const w = cell * HEART[0].length;
+  const h = cell * HEART.length;
+  const style = useAnimatedStyle(() => {
+    const p = (beat.value + phase) % 1;
+    const life = Math.min(1, p / HEART_RISE);
+    const eased = 1 - (1 - life) * (1 - life);
+    return {
+      opacity: p >= HEART_RISE ? 0 : interpolate(life, [0, 0.25, 0.8, 1], [0, 1, 1, 0]),
+      transform: [{ translateY: interpolate(eased, [0, 1], [h * 0.4, -h * 0.8]) }],
+    };
+  }, [phase, h]);
+  return (
+    <Animated.View style={[{ position: 'absolute', left, top, width: w, height: h }, style]}>
+      {HEART.flatMap((row, y) =>
+        [...row].map((c, x) =>
+          c === 'X' ? (
+            <View
+              key={`${x}-${y}`}
+              style={{ position: 'absolute', left: x * cell, top: y * cell, width: cell, height: cell, backgroundColor: color }}
+            />
+          ) : null,
+        ),
+      )}
+    </Animated.View>
   );
 }

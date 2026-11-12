@@ -13,11 +13,15 @@ class AlertRulesTest {
   private var inFront = false
   private var frontAsked = 0
 
-  private fun on(agent: String, kind: Kind, session: String?, child: Boolean = false): Alert? =
+  private fun due(agent: String, kind: Kind, session: String?, child: Boolean = false): AlertRules.Due? =
     rules.onEvent(agent, EngineEvent(kind, session, childCreated = child)) {
       frontAsked++
       inFront
     }
+
+  // What posts.
+  private fun on(agent: String, kind: Kind, session: String?, child: Boolean = false): Alert? =
+    due(agent, kind, session, child)?.takeIf { it.post }?.alert
 
   private fun childCreated(agent: String, session: String) = on(agent, Kind.OTHER, session, child = true)
 
@@ -74,6 +78,12 @@ class AlertRulesTest {
     inFront = false
     assertNull(on("a", Kind.FINISHED, "s1"))
     assertEquals(Alert.WAITING, on("a", Kind.WAITING, "s1"))
+  }
+
+  @Test fun inFrontAFinishedRunIsStillDue() {
+    inFront = true
+    assertEquals(AlertRules.Due(Alert.FINISHED, post = false), due("a", Kind.FINISHED, "s1"))
+    assertNull(due("a", Kind.FINISHED, "s1"))
   }
 
   @Test fun resetForgetsChildrenAndTheLastAlert() {

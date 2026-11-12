@@ -48,6 +48,13 @@ class PhoneCanDoRunnerModule : Module() {
     fun emitBridgePrompt(prompt: Map<String, Any?>) {
       instance?.sendEvent("phonecandoBridgePrompt", prompt)
     }
+
+    // Engine stream -> JS: an agent's top-level run finished well
+    // (notify/AgentAlerts), {agentId, sessionId}. Dropped while JS is not
+    // attached: the app only counts the runs it hears of.
+    fun emitRunFinished(agentId: String, sessionId: String) {
+      instance?.sendEvent("phonecandoRunFinished", mapOf("agentId" to agentId, "sessionId" to sessionId))
+    }
   }
 
   // Every engine change, as the phonecandoEngineState event (EngineStatus.toMap),
@@ -84,7 +91,7 @@ class PhoneCanDoRunnerModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("PhoneCanDoRunner")
-    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory", "phonecandoMessages")
+    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory", "phonecandoMessages", "phonecandoRunFinished")
 
     OnCreate {
       instance = this@PhoneCanDoRunnerModule

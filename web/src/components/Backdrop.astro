@@ -1,0 +1,42 @@
+---
+// The world behind the sheet: the phone cut open, one floor per part of the
+// page, where A-01's cousins act out each part's motto while the camera
+// rides down through it with the scroll (lib/backdrop/). Drawn into the
+// margins on one canvas under the page, so it lives where A-01 does: wide
+// screens only.
+---
+
+<canvas class="backdrop" aria-hidden="true"></canvas>
+
+<script>
+  // Bundled, not inline: the backdrop's modules are its own chunk.
+  import { startBackdrop } from '../lib/backdrop/boot';
+
+  const canvas = document.querySelector<HTMLCanvasElement>('.backdrop');
+  if (canvas) startBackdrop(canvas);
+</script>
+
+<style is:global>
+  .backdrop { display: none; }
+
+  @media (min-width: 1440px) {
+    /* Before .page in the markup and both at z 0, so the sheet lies over it;
+       in the margins nothing does, so it gets the clicks there. */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* The sheet is paper over the world: opaque, lifted off it by a shadow. */
+    .page {
+      background-color: var(--bg);
+      box-shadow: 0 0 90px rgba(0, 0, 0, 0.75);
+    }
+    [data-theme='light'] .page { box-shadow: 0 0 70px rgba(0, 0, 0, 0.14); }
+  }
+</style>

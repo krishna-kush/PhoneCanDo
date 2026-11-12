@@ -20,6 +20,7 @@ import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
 import KeyboardTracker from './src/ui/common/keyboard/KeyboardTracker';
 import MemoryGuard from './src/ui/memory/MemoryGuard';
+import RecommendCard from './src/ui/recommend/RecommendCard';
 import { useAgentsStore } from './src/state/agents';
 import { useAppStore } from './src/state/app';
 import { useLinuxStore } from './src/state/linux';
@@ -173,6 +174,8 @@ export default function App() {
                     <YStack flex={1}>
                       <HomeHeader />
                       <HomeScreen />
+                      {/* Now and then, after a run finished in front of you. */}
+                      <RecommendCard />
                     </YStack>
                   }
                 />

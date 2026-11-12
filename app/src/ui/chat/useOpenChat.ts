@@ -25,7 +25,16 @@ export function useOpenChat(agentId: AgentId, sessionId: string | null) {
   }, [agentId, open]);
 }
 
+// The chat last reported on screen, for readers outside the web view (the
+// "Having fun?" card); null when none is.
+let onScreen: { agentId: AgentId; sessionId: string } | null = null;
+
+export function chatOnScreen(): { agentId: AgentId; sessionId: string } | null {
+  return onScreen;
+}
+
 function report(agentId: AgentId | null, sessionId: string | null) {
+  onScreen = agentId && sessionId ? { agentId, sessionId } : null;
   try {
     setOpenChat(agentId, sessionId);
   } catch {

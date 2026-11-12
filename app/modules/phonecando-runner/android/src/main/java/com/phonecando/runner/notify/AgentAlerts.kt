@@ -2,6 +2,7 @@ package com.phonecando.runner.notify
 
 import android.content.Context
 import com.phonecando.agents.kit.EngineEvent
+import com.phonecando.runner.PhoneCanDoRunnerModule
 import com.phonecando.runner.agents.AgentDirectory
 
 // An agent's alert from its engine's event stream (EngineStreams): finished,
@@ -11,6 +12,8 @@ import com.phonecando.runner.agents.AgentDirectory
 // agent's name: a new alert replaces the last, and after the first sound
 // it updates quietly until the user has seen it. A tap opens that agent's
 // Home; showing the agent's chat takes it down (dismiss).
+// A top-level run that finished also goes to the app, in front or not
+// (phonecandoRunFinished): the app's "Having fun?" card counts them.
 // An agent that asks while it is driving the phone (`drivingScreen`: it
 // holds the screen, which a run's end or /app gives back) also brings PhoneCanDo
 // forward on its Home, so the question is in front of the user instead of
@@ -25,7 +28,10 @@ internal class AgentAlerts(
   private val notices = AgentNotices(context)
 
   fun onEvent(agentId: String, event: EngineEvent) {
-    val alert = rules.onEvent(agentId, event) { AppForeground.isForeground(context) } ?: return
+    val due = rules.onEvent(agentId, event) { AppForeground.isForeground(context) } ?: return
+    val alert = due.alert
+    if (alert == AlertRules.Alert.FINISHED) event.sessionId?.let { PhoneCanDoRunnerModule.emitRunFinished(agentId, it) }
+    if (!due.post) return
     val name = agents.get(agentId)?.name ?: return
     notices.post(AgentNotices.Notice(agentId, AgentNotices.SLOT, name, alert.text, quietUpdate = true))
     if (alert == AlertRules.Alert.WAITING && drivingScreen(agentId)) {

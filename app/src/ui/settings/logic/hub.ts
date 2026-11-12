@@ -1,9 +1,11 @@
 // The Settings hub's rows: each of Settings' pages with a playful line
-// that also says what is inside, and a short line of how it is set now.
+// that also says what is inside, and a short line of how it is set now,
+// plus Tell a friend, which shares our link instead of opening a page.
 // Phone control is not a row: it sits on Settings itself, above them.
 // Pure (zero RN imports).
 import type { RunLimits } from '../../../engine/runLimits';
 import type { SettingsPageId } from '../../../state/app/routes';
+import { ROW_LINE, ROW_NOW, ROW_TITLE } from '../../recommend/copy.ts';
 import { capsLine } from './caps.ts';
 
 export type HubFacts = {
@@ -18,8 +20,8 @@ export type HubFacts = {
 };
 
 export type HubRow = {
-  /** The page it opens: one of Settings' own, or About. */
-  target: SettingsPageId | 'about';
+  /** The page it opens: one of Settings' own, or About; `share` opens the share sheet instead. */
+  target: SettingsPageId | 'about' | 'share';
   title: string;
   /** Playful, and says what is inside. */
   line: string;
@@ -48,6 +50,7 @@ export function hubRows(f: HubFacts): HubRow[] {
       now: f.telemetry == null ? 'usage stats' : `usage stats ${f.telemetry ? 'on' : 'off'}`,
     },
     { target: 'updates', title: 'Updates', line: updatesLine(f.channel), now: `v${f.version} · ${f.channel}` },
+    { target: 'share', title: ROW_TITLE, line: ROW_LINE, now: ROW_NOW },
     { target: 'about', title: 'About', line: 'Version, licences, and a mascot that likes boops', now: `v${f.version}` },
   ];
 }

@@ -25,6 +25,9 @@ function subscribe(listener: () => void) {
 
 const read = () => inFront;
 
+/** Whether Home is in front now, outside React (an event's handler). */
+export const homeInFrontNow = read;
+
 export function useHomeInFront(): boolean {
   return useSyncExternalStore(subscribe, read);
 }

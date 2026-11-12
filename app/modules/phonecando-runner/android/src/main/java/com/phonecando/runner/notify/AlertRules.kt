@@ -14,15 +14,19 @@ import com.phonecando.agents.kit.EngineEvent.Kind
 //   moves again (WORKING), so a verdict seen twice alerts once.
 // - An event without a session never alerts; neither does an interrupted
 //   run (the user stopped it; the kind maps it to OTHER).
-// - Nothing alerts while PhoneCanDo is in front: `inFront` is asked only
+// - Nothing posts while PhoneCanDo is in front: `inFront` is asked only
 //   when an alert is due, and the alert still counts as given, so the same
-//   one does not come later.
+//   one does not come later. It is still due (Due.post false): the app
+//   hears of a finished run either way.
 class AlertRules(private val maxChildren: Int = MAX_CHILDREN) {
   enum class Alert(val text: String) {
     FINISHED("Finished. Tap to see the result."),
     FAILED("Stopped with an error. Tap to see what happened."),
     WAITING("Waiting for your answer."),
   }
+
+  /** An alert an event calls for, and whether it posts (PhoneCanDo is not in front). */
+  data class Due(val alert: Alert, val post: Boolean)
 
   private class AgentState {
     // Oldest first, so the oldest is dropped past the cap.
@@ -32,9 +36,9 @@ class AlertRules(private val maxChildren: Int = MAX_CHILDREN) {
 
   private val agents = HashMap<String, AgentState>()
 
-  /** The alert this event calls for, or null. */
-  fun onEvent(agentId: String, event: EngineEvent, inFront: () -> Boolean): Alert? =
-    due(agentId, event)?.takeUnless { inFront() }
+  /** The alert this event calls for, posted or not, or null. */
+  fun onEvent(agentId: String, event: EngineEvent, inFront: () -> Boolean): Due? =
+    due(agentId, event)?.let { Due(it, post = !inFront()) }
 
   /** A new engine life: what the last one saw no longer applies. */
   @Synchronized
