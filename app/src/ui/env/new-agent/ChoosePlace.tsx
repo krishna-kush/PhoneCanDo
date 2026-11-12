@@ -10,6 +10,7 @@ import AppCard from '../../common/AppCard';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import Stamp from '../../common/Stamp';
+import SystemLogo from '../list/SystemLogo';
 import { blockedText } from '../logic/agentChoice';
 import { placesFor, type Place } from '../logic/places';
 import Note from '../parts/Note';
@@ -18,8 +19,9 @@ import { useNewAgent } from './useNewAgent';
 
 // New agent, step 2: where the picked agent runs (logic/places.ts). A tap
 // on a system makes the agent there; Download another Linux goes on to pick
-// an OS and a version, and the download starts from its last look. A place
-// that cannot run this agent is dimmed and says why.
+// an OS and a version, and the download starts from its last look. A system
+// shows its OS's logo, as the Systems list does. A place that cannot run
+// this agent is dimmed and says why.
 export default function ChoosePlace({ pick }: { pick: AgentPick }) {
   const push = useAppStore((s) => s.push);
   const envs = useLinuxStore((s) => s.envs);
@@ -56,6 +58,11 @@ export default function ChoosePlace({ pick }: { pick: AgentPick }) {
             <AppCard
               title={place.title}
               subtitle={blocked ?? place.subtitle}
+              icon={
+                place.logoKeys.length > 0 ? (
+                  <SystemLogo keys={place.logoKeys} letter={place.title.charAt(0).toUpperCase()} size={32} />
+                ) : undefined
+              }
               onPress={blocked ? undefined : () => choose(place)}
               chevron={!blocked}
             >

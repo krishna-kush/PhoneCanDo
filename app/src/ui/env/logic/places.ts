@@ -3,11 +3,13 @@
 // Own envs oldest first, then Android's own shell where one is set up, then
 // a download of another Linux. Each place carries the env its offers are
 // judged against (agentChoice.ts targetOfferEnv), so a place that cannot run
-// the agent says why instead of failing later.
+// the agent says why instead of failing later. A system's place carries the
+// names its logo is filed under (osLogo.ts).
 import type { OfferEnv } from '../../../engine/agents/offers.ts';
 import type { Env } from '../../../engine/linux/types';
 import type { NewAgentTarget } from '../../../state/app/routes';
 import { targetOfferEnv } from './agentChoice.ts';
+import { DEFAULT_OS_ID, logoKeys } from './osLogo.ts';
 import { DEFAULT_ENV_TITLE, envSubtitle, envTitle } from './titles.ts';
 
 type EnvLike = Pick<Env, 'id' | 'source' | 'state' | 'os' | 'sizeBytes' | 'createdAt'>;
@@ -20,6 +22,8 @@ export type Place = {
   target: NewAgentTarget | null;
   env: OfferEnv;
   recommended: boolean;
+  /** The names its logo may be filed under, best first; empty: its letter. */
+  logoKeys: string[];
 };
 
 const DOWNLOAD: OfferEnv = { kind: 'linux', family: null, ready: true };
@@ -36,6 +40,7 @@ export function placesFor(envs: readonly EnvLike[], linuxAvailable: boolean): Pl
       target,
       env: targetOfferEnv(target, envs),
       recommended: true,
+      logoKeys: base ? logoKeys(base) : [DEFAULT_OS_ID],
     });
   }
   const others = envs
@@ -51,6 +56,7 @@ export function placesFor(envs: readonly EnvLike[], linuxAvailable: boolean): Pl
       target,
       env: targetOfferEnv(target, envs),
       recommended: false,
+      logoKeys: logoKeys(env),
     });
   }
   if (linuxAvailable) {
@@ -61,6 +67,7 @@ export function placesFor(envs: readonly EnvLike[], linuxAvailable: boolean): Pl
       target: null,
       env: DOWNLOAD,
       recommended: false,
+      logoKeys: [],
     });
   }
   return places;

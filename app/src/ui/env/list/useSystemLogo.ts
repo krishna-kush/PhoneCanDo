@@ -1,11 +1,9 @@
-import { useEffect, useMemo } from 'react';
-import type { Env } from '../../../engine/linux/types';
+import { useEffect } from 'react';
 import { useOsLogosStore } from '../../../state/osLogos';
-import { logoKeys, pickLogo } from '../logic/osLogo';
+import { pickLogo } from '../logic/osLogo';
 
-/** A system's Docker Hub logo, as the Which Linux? list shows it; null draws its letter. */
-export function useSystemLogo(env: Env | null): string | null {
-  const keys = useMemo(() => (env ? logoKeys(env) : []), [env]);
+/** A system's Docker Hub logo by its logo keys (logic/osLogo.ts), as the Which Linux? list shows it; null draws its letter. */
+export function useSystemLogo(keys: readonly string[]): string | null {
   const logos = useOsLogosStore((s) => s.logos);
   const hydrated = useOsLogosStore((s) => s.hydrated);
   const logo = pickLogo(keys, logos);

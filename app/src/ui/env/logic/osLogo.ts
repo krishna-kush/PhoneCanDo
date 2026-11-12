@@ -5,6 +5,9 @@ import type { Env } from '../../../engine/linux/types';
 
 const HUB_PREFIXES = ['docker.io/', 'index.docker.io/', 'registry-1.docker.io/'];
 
+/** The Default system's OS before it is set up and detected: it is Debian-based. */
+export const DEFAULT_OS_ID = 'debian';
+
 /** A Docker Hub image as the catalog names it: `docker.io/library/alpine` → `alpine`. */
 export function hubName(image: string): string {
   let name = image.trim().toLowerCase();
@@ -23,7 +26,7 @@ export function logoKeys(env: Pick<Env, 'source' | 'os'>): string[] {
   const osId = env.os?.id.trim().toLowerCase() || null;
   switch (env.source.kind) {
     case 'default':
-      return [osId ?? 'debian'];
+      return [osId ?? DEFAULT_OS_ID];
     case 'registry': {
       const image = hubName(env.source.image);
       return osId && osId !== image ? [image, osId] : [image];

@@ -1,4 +1,3 @@
-import { Image as RNImage } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import type { Env, Image } from '../../../engine/linux/types';
@@ -6,11 +5,12 @@ import { useTargetProgress } from '../../../state/linux';
 import ChevronIcon from '../../common/ChevronIcon';
 import { useTheme } from '../../common/globals';
 import PlainText from '../../common/PlainText';
+import { logoKeys } from '../logic/osLogo';
 import type { EnvRow } from '../logic/sections';
 import { downloadLine, stepFraction } from '../logic/steps';
 import { envSubtitle, envTitle } from '../logic/titles';
 import ProgressBar from '../parts/ProgressBar';
-import { useSystemLogo } from './useSystemLogo';
+import SystemLogo from './SystemLogo';
 
 type Props = { env: Env | null; rows: EnvRow<Image, Agent>[]; onOpen: () => void };
 
@@ -32,7 +32,6 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
   const sub = env ? envSubtitle(env) : 'Their system or machine is missing';
   const letter = (env?.os?.id ?? (env?.source.kind === 'android' ? 'android' : env ? title : '?')).charAt(0).toUpperCase();
   const count = agentsLine(rows);
-  const logo = useSystemLogo(env);
 
   return (
     <YStack
@@ -47,13 +46,7 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
     >
       <XStack alignItems="center" gap="3">
         <YStack width={44} height={44} borderWidth={1} borderColor="lineStrong" alignItems="center" justifyContent="center" flexShrink={0}>
-          {logo ? (
-            <RNImage source={{ uri: logo }} style={{ width: 28, height: 28 }} resizeMode="contain" accessibilityIgnoresInvertColors />
-          ) : (
-            <PlainText fontFamily="mono" fontSize={18} fontWeight="600" color="secondaryInk">
-              {letter}
-            </PlainText>
-          )}
+          <SystemLogo keys={env ? logoKeys(env) : []} letter={letter} size={28} />
         </YStack>
         <YStack flex={1} minWidth={0} gap={2}>
           <PlainText fontSize={16} fontWeight="600" numberOfLines={1}>

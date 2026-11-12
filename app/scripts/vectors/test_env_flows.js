@@ -241,6 +241,7 @@ const ui = (p) => src('ui/env/logic', p);
   const places = placesFor(placeEnvs, true);
   t('place order: Default, Own oldest first, Android, download', places.map((p) => p.key), ['default', 'own1', 'own2', 'and', 'download']);
   t('Default is recommended', places.filter((p) => p.recommended).map((p) => p.key), ['default']);
+  t('place logos: Default is Debian, Android and download have none', places.map((p) => p.logoKeys), [['debian'], ['own1'], ['own2'], [], []]);
   t('a downloading env is not ready to judge', places[1].env.ready, false);
   t('download has no target yet', places[places.length - 1].target, null);
   t('without Linux: only Android places', placesFor(placeEnvs, false).map((p) => p.key), ['and']);
