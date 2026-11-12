@@ -1,0 +1,616 @@
+---
+// FIG. 05: the phone drawn as a floor plan. Each machine is a room, each
+// agent stands in one (a shared room holds two), and the runner sits under
+// them all with the chute every note goes through. Drag a note from one
+// agent to another and it lands by the runner's rules; the shift switch sends
+// you away for the night. lib/crew/plan.ts wires it; every agent, level,
+// tool name and limit comes from data/crew.ts.
+import Seat from "./Seat.astro";
+import { levels, messageTools, noWakeHop, rooms, seatCount, wakesPerHour } from "../../../data/crew";
+import { joinNames } from "../../../lib/joinNames";
+
+const levelTitle = Object.fromEntries(levels.map((l) => [l.level, l.title]));
+const mch = (r: number) => `MCH-${String(r + 1).padStart(2, "0")}`;
+
+// The night sky's sparkles, spread over it the golden-ratio way so they
+// never clump, in three sizes, each twinkling on its own beat.
+const SPARKLES = Array.from({ length: 40 }, (_, i) => ({
+    x: ((i * 0.618034 + 0.05) % 1 * 100).toFixed(1),
+    y: ((i * 0.414214 + 0.11) % 1 * 100).toFixed(1),
+    s: [6, 9, 12][i % 3],
+    d: (-(i * 0.37) % 2.6).toFixed(2),
+}));
+---
+
+<figure class="plan" data-plan data-wakes={wakesPerHour} data-hop={noWakeHop}>
+    <div class="plan-bar">
+        <span>Floor plan · one phone</span>
+        <span class="plan-bar-count">{seatCount} agents · {rooms.length} machines</span>
+        <button
+            class="toy-btn plan-shift"
+            type="button"
+            data-shift
+            aria-pressed="false"
+            data-here="You're here"
+            data-away="You're away"
+        >
+            <span class="shift-icon" aria-hidden="true"></span>
+            <span data-shift-label>You're here</span>
+        </button>
+    </div>
+
+    <div class="plan-stage" data-stage>
+        <div class="plan-pads">
+            <span class="plan-pads-label">For everyone</span>
+            <button class="pad" type="button" data-pad="machine" aria-label="Send to every agent on the sender's machine">
+                @machine <small>its machine</small>
+            </button>
+            <button class="pad" type="button" data-pad="phone" aria-label="Send to every agent on the phone">
+                @phone <small>every agent</small>
+            </button>
+        </div>
+
+        <div class="plan-rooms">
+            {rooms.map((room, r) => (
+                <section
+                    class="room"
+                    data-room={r}
+                    data-shared={room.length > 1 ? "" : undefined}
+                    aria-label={`${mch(r)}: ${joinNames(room.map((s) => s.card.label))}`}
+                >
+                    <p class="room-tag">
+                        <b>{mch(r)}</b>
+                        <span>{room.length > 1 ? `shared · ${room.length} agents` : "its own"}</span>
+                    </p>
+                    {room.length > 1 && (
+                        <p class="room-memo" aria-hidden="true">
+                            <b>In each one's instructions</b>
+                            {joinNames(room.map((s) => s.card.label))} share this machine. Keep out of each other's way.
+                        </p>
+                    )}
+                    <div class="room-seats">
+                        {room.map((seat) => (
+                            <Seat seat={seat} level={levelTitle[seat.card.messaging]} wakesPerHour={wakesPerHour} />
+                        ))}
+                    </div>
+                    {room.length > 1 && (
+                        <p class="room-shared">
+                            <span><b>Shared</b> system · tools · projects</span>
+                            <span><b>Each its own</b> sign-in · settings · chats</span>
+                        </p>
+                    )}
+                    <span class="room-door" aria-hidden="true"></span>
+                </section>
+            ))}
+        </div>
+
+        <div class="plan-runner">
+            <span class="runner-chute" data-chute aria-hidden="true"></span>
+            <p class="runner-name"><b>Runner</b> on this phone · carries every note, marked as from an agent</p>
+            <p class="runner-tools">{messageTools.join(" · ")}</p>
+        </div>
+
+        <svg class="plan-leader" data-leader aria-hidden="true"><line x1="0" y1="0" x2="0" y2="0"></line></svg>
+        <span class="plan-glass" data-glass aria-hidden="true"><b></b><small></small></span>
+        <span class="plan-sky" aria-hidden="true">
+            {SPARKLES.map((p) => <i style={`--x:${p.x}%;--y:${p.y}%;--s:${p.s}px;--d:${p.d}s`}></i>)}
+        </span>
+        <span class="plan-moon" aria-hidden="true"></span>
+        <span class="plan-shoot" aria-hidden="true"></span>
+    </div>
+
+    <figcaption class="plan-foot">
+        <span class="plan-hint" data-hint data-armed="Now press who gets it, or @machine · @phone. Esc puts it down.">
+            Drag a note from one agent to another, or press one, then another
+        </span>
+        <span class="plan-notice-label">Notification</span>
+        <ul class="plan-notice" data-notice aria-label="PhoneCanDo's notification while you're away"></ul>
+    </figcaption>
+    <p class="sr" data-live aria-live="polite"></p>
+</figure>
+
+<script>
+    import { mountFloorPlan } from "../../../lib/crew/plan";
+
+    const root = document.querySelector<HTMLElement>("[data-plan]");
+    if (root) mountFloorPlan(root);
+</script>
+
+<style is:global>
+    .plan {
+      position: relative;
+      margin: 0;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--plate-shadow);
+    }
+    .plan .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .plan-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 16px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--line);
+      font: 500 10px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .plan-bar-count { margin-left: auto; color: var(--dim); }
+    /* A sun that sets into a moon. */
+    .shift-icon {
+      position: relative;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+      transition: box-shadow 0.4s, background 0.4s;
+    }
+    .plan[data-away] .shift-icon {
+      background: transparent;
+      box-shadow: inset -4px -1px 0 0 var(--fg);
+    }
+
+    /* The stage: blueprint paper, rooms up top, the runner below. */
+    .plan-stage {
+      position: relative;
+      display: grid;
+      gap: 18px;
+      /* The hall the rooms open onto; night looks recolour it. */
+      --hall: var(--bg);
+      padding: 16px clamp(14px, 2.4vw, 26px) 18px;
+      background-color: var(--hall);
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 24px 24px;
+      overflow: hidden;
+      isolation: isolate;
+      transition: background-color 0.6s;
+    }
+
+    /* The two pads a note can be dropped on to go to everyone. */
+    .plan-pads {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .plan-pads-label {
+      margin-right: 4px;
+      font: 500 7.5px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .pad {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 7px 10px;
+      border: 1px dashed var(--line-2);
+      background: var(--bg);
+      font: 500 10px/1 var(--mono);
+      letter-spacing: 0.04em;
+      color: var(--fg);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, translate 0.15s;
+    }
+    .pad small {
+      font: 500 7px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .plan[data-dragging] .pad,
+    .plan[data-armed] .pad {
+      border-style: solid;
+      border-color: var(--accent-line);
+      animation: pad-call 1s ease-in-out infinite;
+    }
+    @keyframes pad-call { 50% { translate: 0 -2px; } }
+    .pad[data-over],
+    .plan[data-armed] .pad:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Rooms: double walls, a tag, a door swinging into the hall below. */
+    .plan-rooms {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+    }
+    .room[data-shared] { grid-column: span 2; }
+    .room {
+      position: relative;
+      display: grid;
+      align-content: space-between;
+      gap: 6px;
+      min-height: 270px;
+      padding: 62px 8px 16px;
+      border: 1px solid var(--line-2);
+      background: color-mix(in srgb, var(--panel) 70%, transparent);
+      box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--line);
+      transition: background 0.6s;
+    }
+    .room-tag {
+      position: absolute;
+      top: 9px;
+      left: 11px;
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      font: 500 8px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .room-tag b { color: var(--red); font-weight: 500; }
+    .room-seats {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    /* The note in each one's instructions: pinned to the wall. */
+    .room-memo {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      max-width: 230px;
+      padding: 5px 7px 6px;
+      border: 1px solid var(--line-2);
+      background: var(--bg);
+      font: 400 8.5px/1.35 var(--mono);
+      color: var(--muted);
+      rotate: 1.5deg;
+      box-shadow: 2px 2px 0 var(--accent-soft);
+    }
+    .room-memo::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: 50%;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      translate: -50% 0;
+    }
+    .room-memo b {
+      display: block;
+      margin-bottom: 2px;
+      font: 500 6.5px/1.2 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+    }
+    .room-shared {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px 14px;
+      margin: 0 6px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--line-2);
+      font: 500 7.5px/1.3 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .room-shared b { color: var(--accent-ink); font-weight: 500; }
+    /* The door: a gap in the bottom wall and its swing, the plan's oldest mark. */
+    .room-door {
+      position: absolute;
+      right: 14px;
+      bottom: -1px;
+      width: 26px;
+      height: 26px;
+      border-bottom: 5px solid var(--hall);
+      pointer-events: none;
+    }
+    .room-door::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 26px;
+      height: 26px;
+      border-top: 1px dashed var(--faint);
+      border-right: 1px dashed var(--faint);
+      border-top-right-radius: 100%;
+      opacity: 0.7;
+    }
+
+    /* The runner: the post room under the rooms, and its chute. */
+    .plan-runner {
+      position: relative;
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      padding: 12px 14px 4px;
+      border-top: 1px solid var(--line-2);
+      text-align: center;
+    }
+    .runner-chute {
+      position: absolute;
+      top: -9px;
+      left: 50%;
+      width: 34px;
+      height: 16px;
+      translate: -50% 0;
+      background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--hall);
+      border-bottom: 2px solid var(--accent);
+      clip-path: polygon(0 0, 100% 0, 76% 100%, 24% 100%);
+    }
+    .runner-chute::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent);
+      opacity: 0;
+    }
+    .runner-chute[data-gulp]::after { animation: chute-gulp 0.45s ease-out; }
+    @keyframes chute-gulp { 0% { opacity: 0.9; } 100% { opacity: 0; } }
+    .runner-name {
+      font: 500 9px/1.4 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .runner-name b { color: var(--fg); font-weight: 600; }
+    .runner-tools { font: 400 10px/1.4 var(--mono); color: var(--accent-ink); }
+
+    /* A note: a folded slip, amber-edged; one through the runner wears its red mark. */
+    .plan-note {
+      position: absolute;
+      z-index: 6;
+      top: -8px;
+      left: -11px;
+      width: 22px;
+      height: 16px;
+      border: 1px solid var(--accent-ink);
+      background:
+        linear-gradient(to bottom right, transparent calc(50% - 0.5px), var(--accent-ink) 50%, transparent calc(50% + 0.5px)) left top / 50% 62% no-repeat,
+        linear-gradient(to bottom left, transparent calc(50% - 0.5px), var(--accent-ink) 50%, transparent calc(50% + 0.5px)) right top / 50% 62% no-repeat,
+        var(--bg);
+      box-shadow: 2px 2px 0 var(--accent);
+      pointer-events: none;
+      will-change: transform;
+    }
+    .plan-note[data-marked]::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 7px;
+      height: 7px;
+      background: var(--red);
+    }
+    .plan-note[data-held] { animation: plan-note-held 1.2s ease-in-out infinite; }
+    @keyframes plan-note-held { 50% { margin-top: -4px; } }
+
+    .plan-leader {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+      opacity: 0;
+    }
+    .plan-leader line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 3; }
+    .plan[data-dragging] .plan-leader { opacity: 1; }
+
+    /* The stamp across the glass: for what no one agent gets. */
+    .plan-glass {
+      position: absolute;
+      z-index: 7;
+      top: 42%;
+      left: 50%;
+      display: grid;
+      gap: 4px;
+      padding: 9px 14px 10px;
+      border: 2px solid var(--red);
+      box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--red);
+      background: var(--bg);
+      color: var(--red);
+      text-align: center;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      translate: -50% -50%;
+      rotate: -6deg;
+    }
+    .plan-glass b { font: 700 15px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+    .plan-glass small { font: 500 8px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+    .plan-glass[data-on] { animation: seat-stamp 2.6s cubic-bezier(0.2, 0.9, 0.25, 1.2) forwards; }
+
+    .plan-foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 12px;
+      min-height: 38px;
+      padding: 9px 14px;
+      border-top: 1px solid var(--line);
+      font: 500 9px/1.4 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .plan-hint[data-nudge] { animation: seat-shake 0.42s; color: var(--red); }
+    .plan-notice-label,
+    .plan-notice { display: none; }
+
+    /* ---- Away: night falls on the plan, in both themes. A sky full of
+       stars turns slowly over it, sparkles twinkle, the moon comes up and
+       now and then a star shoots past, faintly through the rooms too. Agents
+       still up work under a lamp, stopped ones fade
+       to their outline, and the notification lists who is kept up, with
+       Stop. On the dark theme the hall goes to night ink. */
+    :root:not([data-theme='light']) .plan[data-away] .plan-stage {
+      --hall: var(--art-bg);
+      --grid: color-mix(in srgb, var(--accent) 5%, transparent);
+    }
+    .plan[data-away] .seat:not([data-state='stopped']) .seat-art::before { opacity: 1; }
+    .plan[data-away] .seat-job { border-style: solid; border-color: var(--accent-line); color: var(--fg); }
+
+    /* The sky: a square wide enough to turn without baring a corner, star
+       dots on tiles of unlike sizes so no pattern shows, and sparkles. It
+       sits behind everything on the stage (the stage isolates it). */
+    .plan-sky {
+      --star: var(--fg);
+      --star-2: var(--accent);
+      --star-3: var(--dim);
+      position: absolute;
+      z-index: -1;
+      top: 50%;
+      left: 50%;
+      width: max(170%, 1300px);
+      aspect-ratio: 1;
+      translate: -50% -50%;
+      background:
+        radial-gradient(circle, var(--star) 0 0.9px, transparent 1.4px) 0 0 / 37px 41px,
+        radial-gradient(circle, var(--star-3) 0 1px, transparent 1.6px) 11px 23px / 59px 53px,
+        radial-gradient(circle, var(--star-2) 0 1.3px, transparent 1.9px) 29px 7px / 83px 97px,
+        radial-gradient(circle, var(--star) 0 1.6px, transparent 2.3px) 51px 61px / 131px 113px;
+      opacity: 0;
+      transition: opacity 0.9s;
+      pointer-events: none;
+      will-change: rotate;
+    }
+    .plan[data-away] .plan-sky { opacity: 1; animation: plan-sky 150s linear infinite; }
+    @keyframes plan-sky { to { rotate: 360deg; } }
+    .plan-sky i {
+      position: absolute;
+      top: var(--y);
+      left: var(--x);
+      width: var(--s);
+      height: var(--s);
+      background: var(--star-2);
+      clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+      animation: plan-twinkle 2.6s ease-in-out infinite;
+      animation-delay: var(--d);
+    }
+    .plan-sky i:nth-child(3n) { background: var(--star); }
+    @keyframes plan-twinkle { 50% { scale: 0.35; opacity: 0.4; } }
+
+    /* The moon: a crescent with a glow, rising as you leave, rocking a little. */
+    .plan-moon {
+      position: absolute;
+      z-index: -1;
+      top: 12px;
+      left: 22px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      box-shadow: inset -10px -3px 0 0 var(--fg), 0 0 30px 8px var(--accent-soft);
+      opacity: 0;
+      translate: 0 18px;
+      transition: opacity 0.6s, translate 1s cubic-bezier(0.3, 1.3, 0.5, 1);
+    }
+    .plan[data-away] .plan-moon { opacity: 1; translate: 0 0; animation: plan-moon 7s ease-in-out 1s infinite; }
+    @keyframes plan-moon { 50% { rotate: -12deg; scale: 1.06; } }
+
+    /* A shooting star, every few seconds. */
+    .plan-shoot {
+      position: absolute;
+      z-index: -1;
+      top: 8%;
+      left: 28%;
+      width: 90px;
+      height: 1.5px;
+      background: linear-gradient(90deg, transparent, var(--fg));
+      opacity: 0;
+      rotate: 18deg;
+      pointer-events: none;
+    }
+    .plan-shoot::after {
+      content: '';
+      position: absolute;
+      top: -1.5px;
+      right: -2px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .plan[data-away] .plan-shoot { animation: plan-shoot 7s ease-in 2s infinite; }
+    @keyframes plan-shoot {
+      0% { opacity: 0; translate: 0 0; }
+      3% { opacity: 1; }
+      12%, 100% { opacity: 0; translate: 250px 81px; }
+    }
+    .plan[data-away] .plan-notice-label,
+    .plan[data-away] .plan-notice { display: flex; }
+    .plan[data-away] .plan-hint { flex-basis: 100%; }
+    .plan-notice-label { align-items: center; gap: 6px; color: var(--dim); }
+    .plan-notice-label::before { content: ''; width: 6px; height: 6px; background: var(--accent); }
+    .plan-notice {
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .plan-notice li {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 4px 4px 8px;
+      border: 1px solid var(--line-2);
+      background: var(--bg);
+      color: var(--fg);
+      text-transform: none;
+      letter-spacing: 0.02em;
+    }
+    .plan-notice button {
+      padding: 3px 6px;
+      border: 1px solid var(--red);
+      background: none;
+      color: var(--red);
+      font: 600 8px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .plan-notice button:hover { background: var(--red); color: var(--on-primary); }
+    .plan-notice[data-empty]::before {
+      content: 'Nothing left running · the service stops itself';
+      color: var(--faint);
+    }
+
+    @media (max-width: 760px) {
+      .plan-rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .room:nth-child(even):last-child { grid-column: span 2; }
+      .room { min-height: 0; padding: 34px 2px 22px; }
+      .room-memo { position: static; max-width: none; margin: 0 8px; rotate: 0deg; }
+      .plan-pads { justify-content: flex-start; }
+      .plan-bar-count { margin-left: 0; }
+      .plan-shift { margin-left: auto; }
+    }
+    @media (max-width: 440px) {
+      .plan-pads-label { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .pad,
+      .plan-note[data-held],
+      .plan-sky,
+      .plan-sky i,
+      .plan-moon { animation: none !important; }
+      .plan-shoot { display: none; }
+      .plan-glass[data-on] { animation: seat-stamp-still 2.6s steps(1) forwards; }
+    }
+</style>

@@ -1,5 +1,7 @@
 ---
 import { site } from "../../data/site";
+import { cards } from "../../data/agentCards";
+import { twinKinds } from "../../data/crew";
 import BorderSeal from "./linux/BorderSeal.astro";
 ---
 
@@ -10,17 +12,21 @@ import BorderSeal from "./linux/BorderSeal.astro";
             <h2>And underneath it, a full Linux.</h2>
             <p>
                 The agent doesn't just run on your phone. It runs
-                inside a full Linux of its own — its own root, its own
+                inside a full Linux machine — its own root, its own
                 packages, its own files. apt, git, ssh, tmux, python:
                 if it runs on Linux, it runs in there.
             </p>
             <p>
-                Start another sandbox and the next agent gets a root
-                of its own. Separate files, separate packages,{" "}
-                <em>nothing shared unless you share it.</em>
+                A new agent gets a machine of its own, as we recommend,
+                or moves in with another, like two apps on one PC: one
+                system, the same tools and projects, and each keeps its
+                own sign-in, settings and chats. Every agent's
+                instructions name its machine-mates,{" "}
+                <em>so they keep out of each other's way.</em>
             </p>
             <p class="fine">
-                On-device · arm64 · one sandbox per agent
+                On-device · arm64 · own machine or shared ·{" "}
+                {twinKinds.length} of {cards.length} kinds can even room with their twin
             </p>
             <p class="linux-cta">
                 <a

@@ -1,0 +1,293 @@
+---
+// FIG. 05B: the one screen and the line for it, a deli counter. One agent
+// drives the phone, the next waits with a ticket, the rest sit it out; one of
+// them was just woken by a note, and a turn a note started can't take the
+// screen. lib/crew/queue.ts wires it; who stands where is data/crew.ts.
+import Bot from "../models/Bot.astro";
+import QueuePhone from "./QueuePhone.astro";
+import { screenLine } from "../../../data/crew";
+import type { AgentCard } from "../../../data/agentCards";
+
+const { holder, waiting, bench, woken } = screenLine;
+const no = (n: number) => String(n).padStart(2, "0");
+const people: { card: AgentCard; at: "screen" | "line" | "bench"; ticket: string }[] = [
+    ...(holder ? [{ card: holder, at: "screen" as const, ticket: no(1) }] : []),
+    ...waiting.map((card, i) => ({ card, at: "line" as const, ticket: no(i + (holder ? 2 : 1)) })),
+    ...bench.map((card) => ({ card, at: "bench" as const, ticket: "" })),
+];
+const at = (where: string) => people.filter((p) => p.at === where);
+const nextTicket = people.filter((p) => p.ticket).length + 1;
+---
+
+<figure class="queue" data-queue data-next={nextTicket}>
+    <div class="queue-bar">
+        <span>The screen · one driver</span>
+        <span class="queue-now">Now serving <b data-now>{holder ? no(1) : "––"}</b></span>
+    </div>
+
+    <div class="queue-stage">
+        <QueuePhone>
+            {at("screen").map((p) => (
+                <span class="qbot" data-qbot data-name={p.card.label} data-ticket={p.ticket}>
+                    <span class="qbot-tab" data-tab>{`No. ${p.ticket}`}</span>
+                    <Bot look={p.card.look} size={24} />
+                    <span class="qbot-name">{p.card.label}</span>
+                    <span class="qbot-no" aria-hidden="true">Refused</span>
+                </span>
+            ))}
+        </QueuePhone>
+
+        <div class="queue-side">
+            <p class="queue-label">In line</p>
+            <div class="queue-line" data-q-line>
+                {at("line").map((p) => (
+                    <span class="qbot" data-qbot data-name={p.card.label} data-ticket={p.ticket}>
+                        <span class="qbot-tab" data-tab>{`No. ${p.ticket}`}</span>
+                        <Bot look={p.card.look} size={24} />
+                        <span class="qbot-name">{p.card.label}</span>
+                        <span class="qbot-no" aria-hidden="true">Refused</span>
+                    </span>
+                ))}
+            </div>
+            <p class="queue-label">Not asking</p>
+            <div class="queue-bench" data-q-bench>
+                {at("bench").map((p) => (
+                    <span
+                        class="qbot"
+                        data-qbot
+                        data-name={p.card.label}
+                        data-ticket=""
+                        data-woken={p.card.id === woken ? "" : undefined}
+                    >
+                        <span class="qbot-tab" data-tab></span>
+                        <Bot look={p.card.look} size={24} />
+                        <span class="qbot-name">{p.card.label}</span>
+                        <span class="qbot-mail" aria-hidden="true">woken by a note</span>
+                        <span class="qbot-no" aria-hidden="true">Refused</span>
+                    </span>
+                ))}
+            </div>
+        </div>
+    </div>
+
+    <ol class="queue-log" data-q-log aria-live="polite">
+        {holder && waiting[0] && (
+            <li><b>To {waiting[0].label}</b> {holder.label} holds the screen; you are #1 in line; we'll message you when it is yours.</li>
+        )}
+    </ol>
+
+    <div class="queue-ctrl">
+        <button class="toy-btn" type="button" data-take>
+            <span class="ticket-icon" aria-hidden="true"></span>
+            Take a number
+        </button>
+        <button class="toy-btn" type="button" data-done>Hand it back</button>
+    </div>
+</figure>
+
+<script>
+    import { mountQueue } from "../../../lib/crew/queue";
+
+    const root = document.querySelector<HTMLElement>("[data-queue]");
+    if (root) mountQueue(root);
+</script>
+
+<style is:global>
+    .queue {
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 6px 6px 0 var(--accent);
+    }
+    .queue-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--line);
+      font: 500 10px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    /* The deli counter's board. */
+    .queue-now { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--dim); }
+    .queue-now b {
+      min-width: 34px;
+      padding: 4px 5px;
+      background: var(--art-bg);
+      color: var(--red);
+      font: 600 15px/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-align: center;
+      box-shadow: inset 0 -50% 0 rgba(255, 255, 255, 0.04), inset 0 0 0 1px var(--line-2);
+    }
+    .queue-now b[data-flip] { animation: queue-flip 0.45s cubic-bezier(0.3, 1.4, 0.5, 1); }
+    @keyframes queue-flip { 0% { transform: rotateX(90deg); } }
+
+    .queue-stage {
+      flex: 1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 18px;
+      padding: 18px 18px 14px;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .queue-side { display: grid; align-content: start; gap: 6px; min-width: 0; }
+    .queue-label {
+      font: 500 7.5px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    /* The line between two posts and a sagging red rope; the bench below. */
+    .queue-line,
+    .queue-bench {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 6px 12px;
+      min-height: 96px;
+      padding: 22px 16px 6px;
+    }
+    .queue-line {
+      background:
+        linear-gradient(var(--fg), var(--fg)) left 2px bottom / 3px 34px no-repeat,
+        linear-gradient(var(--fg), var(--fg)) right 2px bottom / 3px 34px no-repeat,
+        linear-gradient(var(--line-2), var(--line-2)) left bottom / 100% 1px no-repeat;
+    }
+    .queue-line::before {
+      content: '';
+      position: absolute;
+      bottom: 26px;
+      right: 4px;
+      left: 4px;
+      height: 10px;
+      border: 2px solid var(--red);
+      border-top: 0;
+      border-radius: 0 0 50% 50% / 0 0 100% 100%;
+      pointer-events: none;
+    }
+    .queue-bench { margin-bottom: 2px; border-bottom: 3px double var(--line-2); }
+
+    .qbot {
+      --qbot-ink: var(--fg);
+      --bot-line: var(--qbot-ink);
+      position: relative;
+      z-index: 1;
+      display: grid;
+      justify-items: center;
+      gap: 3px;
+      padding-top: 12px;
+    }
+    .qbot-name {
+      font: 500 7.5px/1.1 var(--mono);
+      letter-spacing: 0.06em;
+      color: var(--qbot-ink);
+      white-space: nowrap;
+    }
+    .qbot-tab {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      padding: 2px 4px;
+      background: var(--red);
+      color: var(--on-primary);
+      font: 600 6.5px/1 var(--mono);
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      translate: -50% 0;
+      rotate: -4deg;
+    }
+    .qbot-tab:empty { display: none; }
+    .queue-line .qbot,
+    .queue-screen .qbot { animation: qbot-wait 1.6s ease-in-out infinite; }
+    .queue-line .qbot:nth-child(2n) { animation-delay: -0.6s; }
+    @keyframes qbot-wait { 50% { translate: 0 -2px; } }
+    /* Woken by a note: it holds the note, and the screen won't have it. */
+    .qbot-mail {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      padding: 2px 4px;
+      border: 1px solid var(--accent-ink);
+      background: var(--bg);
+      color: var(--accent-ink);
+      font: 500 6px/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      translate: -50% 0;
+      box-shadow: 2px 2px 0 var(--accent);
+    }
+    .qbot:not([data-woken]) .qbot-mail { display: none; }
+    .qbot-no {
+      position: absolute;
+      z-index: 5;
+      top: 14px;
+      left: 50%;
+      padding: 3px 5px;
+      border: 1px solid var(--red);
+      box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px var(--red);
+      background: var(--bg);
+      color: var(--red);
+      font: 700 9.5px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      translate: -50% 0;
+      rotate: -10deg;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .qbot[data-refused] .qbot-no { animation: seat-stamp 1.6s cubic-bezier(0.2, 0.9, 0.25, 1.2) forwards; }
+    .qbot[data-refused] .bot { animation: seat-shake 0.42s; }
+
+    /* What each agent is told, newest on top. */
+    .queue-log {
+      display: grid;
+      align-content: start;
+      gap: 4px;
+      min-height: 92px;
+      margin: 0;
+      padding: 10px 14px;
+      border-top: 1px solid var(--line);
+      list-style: none;
+      font: 400 10px/1.45 var(--mono);
+      color: var(--muted);
+    }
+    .queue-log li:first-child { animation: queue-line-in 0.35s ease-out; color: var(--fg); }
+    .queue-log li:nth-child(n + 3) { opacity: 0.55; }
+    @keyframes queue-line-in { from { opacity: 0; translate: 0 -6px; } }
+    .queue-log b { margin-right: 4px; color: var(--accent-ink); font-weight: 500; }
+    .queue-ctrl {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: auto;
+      padding: 10px 14px 12px;
+      border-top: 1px solid var(--line);
+    }
+    .queue-ctrl .toy-btn:disabled { opacity: 0.45; cursor: default; translate: none; box-shadow: 2px 2px 0 var(--accent); }
+    /* A deli ticket: a red tab with a notch. */
+    .ticket-icon {
+      width: 14px;
+      height: 9px;
+      background: var(--red);
+      clip-path: polygon(0 0, 100% 0, 100% 35%, 85% 50%, 100% 65%, 100% 100%, 0 100%, 0 65%, 15% 50%, 0 35%);
+    }
+
+    @media (max-width: 420px) {
+      .queue-stage { gap: 12px; padding-inline: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .qbot { animation: none !important; }
+    }
+</style>

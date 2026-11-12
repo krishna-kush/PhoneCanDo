@@ -1,8 +1,9 @@
 // The Models section's agent cards (components/sections/models/), and every
-// kind its copy names or counts: built in, default, stable, local. Build
-// time only: the page prints every card, and the pack's script reads them
-// back from the DOM, so no manifest ever reaches the browser. The
-// cartridges are cartridges.ts.
+// kind its copy names or counts: built in, default, stable, local, how far
+// messages reach it and whether two can share a machine (the Crew and Linux
+// sections; data/crew.ts). Build time only: the page prints every card, and
+// the pack's script reads them back from the DOM, so no manifest ever
+// reaches the browser. The cartridges are cartridges.ts.
 
 /** The fields of an agent kind's agent.json a card shows. */
 type Manifest = {
@@ -15,7 +16,24 @@ type Manifest = {
   default?: boolean;
   signIn?: { method: string }[];
   models?: Record<string, unknown>;
+  /** How it reaches the phone tools; "none" (or left out) means it has none. */
+  phoneTools?: string;
+  /** How other agents' messages are pushed into its turns, and whether one can wake it. */
+  inbox?: { wake?: string };
+  /** Where a second agent of the kind on one machine keeps its own state. */
+  state?: Record<string, unknown>;
 };
+
+/**
+ * How far other agents' messages reach a kind, best first: pushed into its
+ * turns and able to wake it, pushed in only, read only from its inbox, or
+ * not at all. The wire names of agents/kit's MessagingLevel.
+ */
+export type MessagingLevel = 'wakes' | 'delivered' | 'inbox' | 'none';
+
+// The kit's MessagingLevel.of, from the same three facts of the manifest.
+const messaging = (m: Manifest): MessagingLevel =>
+  m.inbox ? (m.inbox.wake ? 'wakes' : 'delivered') : (m.phoneTools ?? 'none') !== 'none' ? 'inbox' : 'none';
 
 // Every agent kind, read from its own manifest, so the set never lists a
 // kind we dropped or misses one we added. A kind with a `models` block can
@@ -47,6 +65,9 @@ export type AgentCard = {
   signIn: string[];
   local: boolean;
   look: BotLook;
+  messaging: MessagingLevel;
+  /** Two of it can share one machine, each with its own state folder. */
+  twins: boolean;
 };
 
 const SIGN_IN: Record<string, string> = {
@@ -87,6 +108,8 @@ export const cards: AgentCard[] = Object.values(manifests)
     signIn: (m.signIn ?? []).map((s) => SIGN_IN[s.method] ?? s.method),
     local: Boolean(m.models),
     look: look(i),
+    messaging: messaging(m),
+    twins: Boolean(m.state),
   }));
 
 /** The kind a fresh install starts with; null if no manifest says. */

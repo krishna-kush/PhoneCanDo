@@ -1,0 +1,317 @@
+---
+// FIG. 05C: the long shift, as a ruler of hours. A dashed ghost of the
+// service type we used before walks to 6 h and is cut off there (Android 15
+// and later give it 6 hours in any 24 in the background); our agent hops the
+// cut and keeps going. Below, what keeps an agent up, what lets it sleep, and
+// what doesn't work yet (docs/release/known-limits.md). CSS only.
+import Bot from "../models/Bot.astro";
+import { screenLine } from "../../../data/crew";
+
+const walker = screenLine.holder;
+const HOURS = [0, 2, 4, 6, 8, 10, 12];
+---
+
+<figure class="shift">
+    <div class="shift-bar">
+        <span>Running in the background</span>
+        <span class="shift-type">No time limit</span>
+    </div>
+
+    <div class="shift-ruler" aria-hidden="true">
+        <div class="ruler-lane ruler-before">
+            <span class="ruler-lane-name">Before</span>
+            <span class="ruler-ghost"><i></i></span>
+        </div>
+        <div class="ruler-lane ruler-now">
+            <span class="ruler-lane-name">Now</span>
+            {walker && (
+                <span class="ruler-walker">
+                    <span class="ruler-cart">npm run dev</span>
+                    <Bot look={walker.look} size={20} />
+                </span>
+            )}
+        </div>
+        <div class="ruler-scale">
+            {HOURS.map((h) => <span style={`--at:${h / 12}`}>{h} h</span>)}
+            <span class="ruler-inf">∞</span>
+        </div>
+        <span class="ruler-cut"><b>✂ 6 h</b></span>
+    </div>
+    <p class="shift-cut-note">
+        <b>6 h</b> in any 24 is all Android 15 and later gives the service
+        type we used before, in the background. Ours has no limit.
+    </p>
+
+    <ul class="shift-facts">
+        <li>
+            <b>Jobs keep it up</b>
+            A dev server, download or build left running keeps its agent up.
+            The notification names each, with a Stop button.
+        </li>
+        <li>
+            <b>Idle ones clock out</b>
+            An idle agent with nothing running stops soon after you leave, so
+            it isn't holding memory. Keep running on its page keeps it up.
+        </li>
+        <li>
+            <b>Awake while it works</b>
+            The processor stays awake while an agent or a download works, or a
+            job was busy in the last minute. A quiet dev server lets the phone
+            sleep and answers once it wakes.
+        </li>
+        <li>
+            <b>Downloads too</b>
+            Local models, Linux systems and agent installs keep going in the
+            background.
+        </li>
+    </ul>
+
+    <figcaption class="shift-caution">
+        <b>Not yet</b>
+        <span>A crashed agent waits until you open it</span>
+        <span>Nothing starts when the phone boots</span>
+        <span>The Play Store build waits on Google's OK for its service type</span>
+    </figcaption>
+</figure>
+
+<style is:global>
+    .shift {
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 6px 6px 0 var(--accent);
+    }
+    .shift-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--line);
+      font: 500 10px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .shift-type { margin-left: auto; color: var(--accent-ink); }
+
+    /* The ruler: two lanes over a scale of hours, and the cut at 6 h. */
+    .shift-ruler {
+      --walk: 9s;
+      position: relative;
+      display: grid;
+      gap: 4px;
+      padding: 18px 24px 8px 56px;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .ruler-lane {
+      position: relative;
+      height: 46px;
+      border-bottom: 1px solid var(--line-2);
+    }
+    .ruler-lane-name {
+      position: absolute;
+      right: calc(100% + 10px);
+      bottom: 4px;
+      font: 500 7.5px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .ruler-before { border-bottom-style: dashed; }
+    /* The service type we used before: a dashed ghost that gets to 6 h and no further. */
+    .ruler-ghost {
+      position: absolute;
+      bottom: 1px;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      border: 1px dashed var(--faint);
+      animation: ruler-ghost var(--walk) linear infinite;
+    }
+    .ruler-ghost i {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      translate: -50% 0;
+      color: var(--red);
+      font: 700 12px/1 var(--mono);
+      font-style: normal;
+      opacity: 0;
+      animation: ruler-ghost-x var(--walk) steps(1) infinite;
+    }
+    .ruler-ghost i::before { content: '✕'; }
+    @keyframes ruler-ghost {
+      0% { left: -10px; opacity: 0; }
+      4% { opacity: 1; }
+      50% { left: calc(44% - 26px); opacity: 1; }
+      56%, 92% { left: calc(44% - 26px); opacity: 0.35; }
+      100% { left: calc(44% - 26px); opacity: 0; }
+    }
+    @keyframes ruler-ghost-x {
+      0% { opacity: 0; }
+      50% { opacity: 1; }
+      96% { opacity: 0; }
+    }
+    /* Ours: hops the cut and keeps walking, its job in tow. */
+    .ruler-walker {
+      position: absolute;
+      bottom: 1px;
+      left: 0;
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      animation: ruler-walk var(--walk) linear infinite;
+    }
+    .ruler-walker .bot { --bot-line: var(--fg); animation: ruler-hop var(--walk) linear infinite; }
+    .ruler-cart {
+      padding: 2px 4px;
+      border: 1px solid var(--accent-line);
+      background: var(--bg);
+      color: var(--muted);
+      font: 400 7.5px/1 var(--mono);
+      white-space: nowrap;
+    }
+    /* At half time the bot (after its cart, 69px in) is over the cut, in the air. */
+    @keyframes ruler-walk {
+      0% { left: 0; opacity: 0; }
+      4% { opacity: 1; }
+      50% { left: calc(44% - 69px); }
+      92% { opacity: 1; }
+      100% { left: calc(100% - 70px); opacity: 0; }
+    }
+    @keyframes ruler-hop {
+      0%, 45% { translate: 0 0; rotate: 0deg; }
+      50% { translate: 0 -24px; rotate: -12deg; }
+      55% { translate: 0 0; rotate: 0deg; scale: 1.14 0.86; }
+      58% { scale: 1; }
+    }
+    .ruler-scale {
+      position: relative;
+      height: 18px;
+      font: 500 7.5px/1 var(--mono);
+      letter-spacing: 0.06em;
+      color: var(--faint);
+    }
+    .ruler-scale span {
+      position: absolute;
+      top: 6px;
+      left: calc(var(--at) * 88%);
+      translate: -50% 0;
+      white-space: nowrap;
+    }
+    .ruler-scale span::before {
+      content: '';
+      position: absolute;
+      bottom: calc(100% + 2px);
+      left: 50%;
+      width: 1px;
+      height: 5px;
+      background: var(--line-2);
+    }
+    .ruler-scale .ruler-inf {
+      left: auto;
+      right: 0;
+      translate: none;
+      font: 400 16px/0.5 var(--serif);
+      color: var(--accent-ink);
+    }
+    .ruler-scale .ruler-inf::before { display: none; }
+    .ruler-cut {
+      position: absolute;
+      top: 8px;
+      bottom: 18px;
+      left: calc(56px + (100% - 80px) * 0.44);
+      border-left: 1px dashed var(--red);
+    }
+    .ruler-cut b {
+      position: absolute;
+      top: -4px;
+      left: 5px;
+      color: var(--red);
+      font: 600 8px/1 var(--mono);
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+    .shift-cut-note {
+      padding: 2px 24px 12px 56px;
+      background: var(--bg);
+      font: 400 10px/1.45 var(--mono);
+      color: var(--dim);
+    }
+    .shift-cut-note b { color: var(--red); font-weight: 600; }
+
+    .shift-facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin: 0;
+      padding: 0;
+      border-top: 1px solid var(--line);
+      list-style: none;
+    }
+    .shift-facts li {
+      padding: 12px 14px 14px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .shift-facts li:nth-child(2n) { border-left: 1px dashed var(--line-2); }
+    .shift-facts li:nth-child(n + 3) { border-top: 1px dashed var(--line-2); }
+    .shift-facts b {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      font: 500 8.5px/1.4 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--fg);
+    }
+    .shift-facts b::before { content: ''; width: 4px; height: 4px; background: var(--accent); }
+
+    /* What doesn't work yet, behind safety tape. */
+    .shift-caution {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 14px;
+      margin-top: auto;
+      padding: 14px 14px 12px;
+      border-top: 1px solid var(--line);
+      background:
+        repeating-linear-gradient(-45deg, var(--accent) 0 7px, transparent 7px 14px) top / 100% 5px no-repeat,
+        var(--panel);
+      font: 400 10px/1.45 var(--mono);
+      color: var(--dim);
+    }
+    .shift-caution b {
+      padding: 2px 6px;
+      background: var(--accent);
+      color: var(--art-bg);
+      font: 600 8.5px/1.3 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .shift-caution span { display: inline-flex; gap: 6px; }
+    .shift-caution span::before { content: '—'; color: var(--accent-ink); }
+
+    @media (max-width: 520px) {
+      .shift-facts { grid-template-columns: 1fr; }
+      .shift-facts li:nth-child(2n) { border-left: 0; }
+      .shift-facts li + li { border-top: 1px dashed var(--line-2); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ruler-ghost,
+      .ruler-ghost i,
+      .ruler-walker,
+      .ruler-walker .bot { animation: none; }
+      .ruler-ghost { left: calc(44% - 26px); opacity: 0.35; }
+      .ruler-ghost i { opacity: 1; }
+      .ruler-walker { left: calc(100% - 80px); }
+    }
+</style>

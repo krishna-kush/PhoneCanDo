@@ -1,0 +1,408 @@
+---
+// One agent on the floor plan: its creature from the booster pack, the
+// notes waiting at its feet, the rubber stamp a note lands with, and under it
+// its name, how far notes reach it, and what keeps it up while you're away.
+// An agent that can be woken has a door sign ("Other agents can wake it")
+// and its wakes this hour. lib/crew/seats.ts reads it; data-state drives the
+// look: working, idle or stopped.
+import Bot from "../models/Bot.astro";
+import type { Seat } from "../../../data/crew";
+
+interface Props {
+    seat: Seat;
+    /** The level's name, as the key under the plan prints it. */
+    level: string;
+    wakesPerHour: number;
+}
+const { seat, level, wakesPerHour } = Astro.props;
+const { card } = seat;
+const wakes = card.messaging === "wakes";
+---
+
+<div
+    class="seat"
+    data-seat={card.id}
+    data-name={card.label}
+    data-level={card.messaging}
+    data-state={seat.working ? "working" : "idle"}
+    data-job={seat.job}
+    data-kept={seat.kept ? "" : undefined}
+    style={`--i:${card.no}`}
+>
+    <div class="seat-art">
+        <span class="seat-zz" aria-hidden="true"><i>z</i><i>z</i><i>z</i></span>
+        <span class="seat-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <button class="seat-bot" type="button" data-bot aria-label={`${card.label}: press to write a note from it`}>
+            <Bot look={card.look} size={34} />
+        </button>
+        {wakes && (
+            <button
+                class="seat-sign"
+                type="button"
+                data-sign
+                aria-pressed="true"
+                aria-label={`Other agents can wake ${card.label}`}
+            >
+                <span class="sign-face sign-on" aria-hidden="true">Wake me</span>
+                <span class="sign-face sign-off" aria-hidden="true">Do not wake</span>
+            </button>
+        )}
+        <span class="seat-pile" data-pile data-n="0" aria-hidden="true">
+            <i></i><i></i><i></i><b data-pile-n>0</b>
+            {card.messaging === "inbox" && <em>inbox</em>}
+        </span>
+        <span class="seat-stamp" data-stamp aria-hidden="true"><b></b><small></small></span>
+    </div>
+    <p class="seat-name">{card.label}</p>
+    <p class="seat-level">{level}</p>
+    {wakes && (
+        <span class="seat-tally" data-tally title={`Wakes this hour: ${wakesPerHour} at most`}>
+            {Array.from({ length: wakesPerHour }, () => <i></i>)}
+        </span>
+    )}
+    {seat.job && <span class="seat-job" data-job-chip>{seat.job}</span>}
+    {seat.kept && <span class="seat-kept">Keep running</span>}
+</div>
+
+<style is:global>
+    /* An agent at its spot on the plan. The bot stands on a floor line; z's
+       rise while it is idle, dots blink while it works; a stopped one is a
+       dashed ghost of itself. */
+    .seat {
+      position: relative;
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: 3px;
+      width: 132px;
+      text-align: center;
+    }
+    .seat-art {
+      position: relative;
+      display: grid;
+      place-items: end center;
+      width: 100%;
+      height: 92px;
+      padding-bottom: 8px;
+    }
+    .seat-art::after {
+      content: '';
+      position: absolute;
+      right: 22%;
+      bottom: 8px;
+      left: 22%;
+      height: 1px;
+      background: var(--line-2);
+    }
+    /* The lamp it works under once you're away. */
+    .seat-art::before {
+      content: '';
+      position: absolute;
+      inset: 4px 6px 0;
+      background: radial-gradient(ellipse at 50% 85%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 62%);
+      opacity: 0;
+      transition: opacity 0.6s;
+      pointer-events: none;
+    }
+    .seat-bot {
+      position: relative;
+      z-index: 2;
+      padding: 8px 8px 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      cursor: grab;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .seat-bot:active { cursor: grabbing; }
+    .seat-bot:focus-visible { outline-offset: 0; }
+    .seat .bot { --bot-line: var(--fg); transition: opacity 0.4s, filter 0.4s; }
+    .seat .bot-eye { transition: transform 0.25s; }
+
+    /* working: it bobs, dots blink over its head */
+    .seat[data-state='working'] .bot { animation: seat-bob 1.1s ease-in-out infinite; animation-delay: calc(var(--i) * -0.23s); }
+    @keyframes seat-bob { 50% { translate: 0 -3px; } }
+    .seat-dots {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      display: flex;
+      gap: 3px;
+      translate: -50% 0;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .seat-dots i {
+      width: 4px;
+      height: 4px;
+      background: var(--accent);
+      animation: blink 0.9s steps(1) infinite;
+    }
+    .seat-dots i:nth-child(2) { animation-delay: 0.3s; }
+    .seat-dots i:nth-child(3) { animation-delay: 0.6s; }
+    .seat[data-state='working'] .seat-dots { opacity: 1; }
+
+    /* idle: heavy lids and rising z's */
+    .seat[data-state='idle'] .bot-eye { transform: scaleY(0.3); }
+    .seat-zz {
+      position: absolute;
+      top: 4px;
+      left: calc(50% + 12px);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+    .seat-zz i {
+      position: absolute;
+      font: italic 400 15px/1 var(--serif);
+      color: var(--dim);
+      animation: seat-z 3s ease-out infinite;
+      opacity: 0;
+    }
+    .seat-zz i:nth-child(2) { animation-delay: 1s; }
+    .seat-zz i:nth-child(3) { animation-delay: 2s; }
+    @keyframes seat-z {
+      0% { opacity: 0; translate: 0 18px; scale: 0.6; }
+      25% { opacity: 1; }
+      100% { opacity: 0; translate: 14px -10px; scale: 1.2; }
+    }
+    .seat[data-state='idle'] .seat-zz { opacity: 1; }
+
+    /* stopped: a dashed ghost, like a part that isn't there */
+    .seat[data-state='stopped'] .bot-ink {
+      background: transparent;
+      outline: 1px dashed var(--faint);
+      outline-offset: -1px;
+    }
+    .seat[data-state='stopped'] .bot-face,
+    .seat[data-state='stopped'] .bot::before,
+    .seat[data-state='stopped'] .bot::after { opacity: 0; }
+    .seat[data-state='stopped'] .seat-name { color: var(--faint); text-decoration: line-through; text-decoration-color: var(--red); }
+
+    /* One-shot moves: woken, refused, reading, writing. */
+    .seat[data-move='jolt'] .bot { animation: seat-jolt 0.7s cubic-bezier(0.3, 1.4, 0.5, 1); }
+    .seat[data-move='jolt'] .bot-eye { transform: scaleY(1.25); }
+    @keyframes seat-jolt {
+      25% { translate: 0 -22px; rotate: -10deg; }
+      50% { translate: 0 0; rotate: 0deg; scale: 1.18 0.82; }
+      72% { scale: 0.94 1.06; }
+    }
+    .seat[data-move='shake'] .bot { animation: seat-shake 0.42s; }
+    @keyframes seat-shake {
+      20%, 60% { translate: -4px 0; }
+      40%, 80% { translate: 4px 0; }
+    }
+    .seat[data-move='gulp'] .bot { animation: seat-gulp 0.4s; }
+    @keyframes seat-gulp { 40% { scale: 1.16; } }
+    .seat[data-writing] .bot { animation: seat-write 0.5s; }
+    @keyframes seat-write { 40% { rotate: 8deg; translate: 3px 0; } }
+
+    /* The drag: the sender lifts, a target under the note is bracketed. */
+    .seat[data-sender] .bot,
+    .seat[data-armed] .bot { translate: 0 -4px; filter: drop-shadow(0 6px 0 color-mix(in srgb, var(--fg) 12%, transparent)); }
+    .seat[data-over] .seat-art,
+    .plan[data-armed] .seat:not([data-armed]):hover .seat-art {
+      background:
+        linear-gradient(var(--accent), var(--accent)) left top / 10px 1px,
+        linear-gradient(var(--accent), var(--accent)) left top / 1px 10px,
+        linear-gradient(var(--accent), var(--accent)) right top / 10px 1px,
+        linear-gradient(var(--accent), var(--accent)) right top / 1px 10px,
+        linear-gradient(var(--accent), var(--accent)) left bottom / 10px 1px,
+        linear-gradient(var(--accent), var(--accent)) left bottom / 1px 10px,
+        linear-gradient(var(--accent), var(--accent)) right bottom / 10px 1px,
+        linear-gradient(var(--accent), var(--accent)) right bottom / 1px 10px;
+      background-repeat: no-repeat;
+    }
+
+    /* The door sign: "Other agents can wake it", hung on a nail, flipped by hand. */
+    .seat-sign {
+      position: absolute;
+      z-index: 3;
+      top: 14px;
+      right: 2px;
+      width: 50px;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: pointer;
+      perspective: 300px;
+      transform-origin: 50% -8px;
+      transition: rotate 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+      rotate: 4deg;
+    }
+    .seat-sign::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      width: 1px;
+      height: 9px;
+      background: var(--faint);
+    }
+    .sign-face {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--accent-line);
+      background: var(--bg);
+      font: 600 6.5px/1.1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      transition: transform 0.5s cubic-bezier(0.3, 1.3, 0.5, 1);
+    }
+    .sign-off {
+      transform: rotateY(180deg);
+      border-color: var(--red);
+      background: var(--red);
+      color: var(--on-primary);
+    }
+    .seat[data-dnd] .seat-sign { rotate: -6deg; }
+    .seat[data-dnd] .sign-on { transform: rotateY(-180deg); }
+    .seat[data-dnd] .sign-off { transform: rotateY(0deg); }
+    @media (hover: hover) {
+      .seat-sign:hover { rotate: -2deg; }
+    }
+
+    /* Notes waiting for its next turn, stacked at its feet. */
+    .seat-pile {
+      position: absolute;
+      z-index: 1;
+      bottom: 10px;
+      left: calc(50% + 24px);
+      width: 22px;
+      height: 16px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .seat-pile i {
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--accent-ink);
+      background: var(--bg);
+      display: none;
+    }
+    .seat-pile i:nth-child(2) { translate: 3px -4px; rotate: 6deg; }
+    .seat-pile i:nth-child(3) { translate: -2px -8px; rotate: -5deg; }
+    .seat-pile[data-n='1'] i:nth-child(1),
+    .seat-pile[data-n='2'] i:nth-child(-n + 2),
+    .seat-pile[data-n='3'] i { display: block; }
+    .seat-pile:not([data-n='0']) { opacity: 1; }
+    .seat-pile b {
+      position: absolute;
+      top: -16px;
+      right: -12px;
+      min-width: 14px;
+      padding: 2px 3px;
+      background: var(--red);
+      color: var(--on-primary);
+      font: 600 8px/1 var(--mono);
+    }
+    .seat-pile[data-n='0'] b { display: none; }
+    /* An inbox-only agent's notes wait in a tray it checks now and then. */
+    .seat[data-level='inbox'] .seat-pile {
+      width: 30px;
+      opacity: 1;
+      border: 1px dashed var(--line-2);
+      border-top: 0;
+    }
+    .seat-pile em {
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 50%;
+      translate: -50% 0;
+      font: 500 6px/1 var(--mono);
+      font-style: normal;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+
+    /* The stamp a note lands with. */
+    .seat-stamp {
+      position: absolute;
+      z-index: 4;
+      top: 18px;
+      left: 50%;
+      display: grid;
+      gap: 2px;
+      padding: 4px 6px 5px;
+      border: 1px solid currentColor;
+      box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px currentColor;
+      background: var(--bg);
+      color: var(--red);
+      text-align: center;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      translate: -50% 0;
+      rotate: -8deg;
+    }
+    .seat-stamp[data-ink='amber'] { color: var(--accent-ink); }
+    .seat-stamp b { font: 700 9.5px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+    .seat-stamp small { font: 500 6.5px/1.1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+    .seat-stamp[data-on] { animation: seat-stamp 2.6s cubic-bezier(0.2, 0.9, 0.25, 1.2) forwards; }
+    @keyframes seat-stamp {
+      0% { opacity: 0; scale: 1.9; rotate: -18deg; }
+      10% { opacity: 1; scale: 0.94; rotate: -8deg; }
+      16%, 82% { opacity: 1; scale: 1; }
+      100% { opacity: 0; scale: 1; }
+    }
+
+    .seat-name {
+      font: 400 17px/1.05 var(--serif);
+      letter-spacing: -0.01em;
+      color: var(--fg);
+    }
+    .seat-level {
+      font: 500 7px/1.2 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .seat[data-level='wakes'] .seat-level { color: var(--red); }
+    .seat[data-level='delivered'] .seat-level { color: var(--accent-ink); }
+
+    /* Wakes this hour: a box each, inked as it goes. */
+    .seat-tally { display: flex; gap: 2px; margin-top: 2px; }
+    .seat-tally i { width: 6px; height: 6px; border: 1px solid var(--line-2); }
+    .seat-tally i[data-used] { border-color: var(--red); background: var(--red); }
+    .seat[data-spent] .seat-tally i { animation: blink 1s steps(1) 3; }
+
+    /* What keeps it up while you're away. */
+    .seat-job,
+    .seat-kept {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 3px;
+      padding: 2px 5px;
+      font: 500 7px/1.3 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .seat-job { border: 1px dashed var(--line-2); color: var(--muted); text-transform: none; letter-spacing: 0.02em; font-size: 8px; }
+    .seat-job::before { content: ''; width: 5px; height: 5px; background: var(--accent); animation: blink 1.6s steps(1) infinite; }
+    .seat-kept { border: 1px solid var(--accent-line); color: var(--accent-ink); }
+    .seat-kept::before { content: '◆'; font-size: 6px; }
+
+    @media (max-width: 760px) {
+      .seat { width: 112px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .seat .bot,
+      .seat-dots i,
+      .seat-zz i,
+      .seat-job::before,
+      .seat-tally i { animation: none !important; }
+      .seat-zz i:first-child { opacity: 1; translate: 6px 0; }
+      .seat-stamp[data-on] { animation: seat-stamp-still 2.6s steps(1) forwards; }
+      @keyframes seat-stamp-still { 0% { opacity: 1; } 100% { opacity: 0; } }
+    }
+</style>

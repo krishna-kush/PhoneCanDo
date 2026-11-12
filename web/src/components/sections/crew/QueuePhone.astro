@@ -1,0 +1,151 @@
+---
+// The one screen in the screen's line (Queue.astro): a small A-01, the
+// hero's phone. Its body is dark in both themes, its screen the page's own
+// paper on the light one. Whoever drives it stands on its screen (the slot)
+// and taps here and there; a dimension line beside it says how many may.
+---
+
+<div class="queue-phone">
+    <span class="queue-phone-dim" aria-hidden="true"><span>One driver</span></span>
+    <div class="queue-screen" data-q-screen>
+        <span class="queue-free" aria-hidden="true">Screen free</span>
+        <span class="queue-tap" aria-hidden="true"></span>
+        <slot />
+    </div>
+</div>
+
+<style is:global>
+    .queue-phone {
+      --screen: var(--art-bg);
+      --screen-ink: var(--art-fg);
+      --screen-dim: var(--art-dim);
+      --screen-grid: color-mix(in srgb, var(--art-fg) 5%, transparent);
+      --key: color-mix(in srgb, var(--art-fg) 18%, var(--art-bg));
+      position: relative;
+      justify-self: center;
+      width: 104px;
+      margin-left: 16px;
+      aspect-ratio: 1080 / 2340;
+      padding: 5px;
+      border: 1px solid var(--line-2);
+      border-radius: 17px;
+      background: var(--art-bg);
+      box-shadow: var(--phone-shadow);
+    }
+    [data-theme='light'] .queue-phone {
+      --screen: var(--bg);
+      --screen-ink: var(--fg);
+      --screen-dim: var(--faint);
+      --screen-grid: var(--grid);
+    }
+    /* Its side keys, as on the hero's A-01. */
+    .queue-phone::before,
+    .queue-phone::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      border-radius: 2px;
+      background: var(--key);
+    }
+    .queue-phone::before { top: 24%; right: -3px; height: 20px; }
+    .queue-phone::after { top: 19%; left: -3px; height: 12px; box-shadow: 0 17px 0 var(--key); }
+
+    .queue-screen {
+      position: relative;
+      display: grid;
+      place-items: end center;
+      height: 100%;
+      padding-bottom: 12px;
+      border-radius: 12px;
+      background-color: var(--screen);
+      background-image:
+        linear-gradient(var(--screen-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--screen-grid) 1px, transparent 1px);
+      background-size: 12px 12px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .queue-screen .qbot { --qbot-ink: var(--screen-ink); z-index: 2; }
+    .queue-free {
+      position: absolute;
+      inset: 0;
+      display: none;
+      place-items: center;
+      font: 500 8px/1 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--screen-dim);
+    }
+    .queue[data-free] .queue-free { display: grid; }
+
+    /* The driver's taps, landing anywhere on the glass. */
+    .queue-tap {
+      position: absolute;
+      z-index: 1;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid var(--red);
+      border-radius: 50%;
+      opacity: 0;
+      translate: -50% -50%;
+      animation: queue-tap 4.8s steps(1) infinite;
+    }
+    .queue-tap::after {
+      content: '';
+      position: absolute;
+      inset: -1.5px;
+      border: inherit;
+      border-radius: inherit;
+      animation: queue-ring 0.6s ease-out infinite;
+    }
+    @keyframes queue-tap {
+      0% { opacity: 1; top: 14%; left: 30%; }
+      12.5% { top: 38%; left: 72%; }
+      25% { top: 22%; left: 58%; }
+      37.5% { top: 54%; left: 24%; }
+      50% { top: 9%; left: 78%; }
+      62.5% { top: 46%; left: 48%; }
+      75% { top: 30%; left: 18%; }
+      87.5% { top: 62%; left: 70%; }
+    }
+    @keyframes queue-ring { to { scale: 2.2; opacity: 0; } }
+    .queue[data-free] .queue-tap { display: none; }
+
+    /* A dimension line beside it, as the hero's has. */
+    .queue-phone-dim {
+      position: absolute;
+      top: 14%;
+      bottom: 14%;
+      left: -16px;
+      border-left: 1px solid var(--accent);
+    }
+    .queue-phone-dim::before,
+    .queue-phone-dim::after {
+      content: '';
+      position: absolute;
+      left: -4px;
+      width: 9px;
+      height: 1px;
+      background: var(--accent);
+    }
+    .queue-phone-dim::before { top: 0; }
+    .queue-phone-dim::after { bottom: 0; }
+    .queue-phone-dim span {
+      position: absolute;
+      top: 50%;
+      right: 5px;
+      writing-mode: vertical-rl;
+      transform: translateY(-50%) rotate(180deg);
+      font: 500 7px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      white-space: nowrap;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .queue-tap,
+      .queue-tap::after { animation: none; }
+      .queue-tap { top: 30%; left: 50%; opacity: 1; }
+    }
+</style>
