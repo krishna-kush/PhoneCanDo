@@ -1,7 +1,7 @@
 package com.phonecando.lre.cli.progress
 
-import com.phonecando.lre.api.Progress
 import com.phonecando.lre.image.setup.SetupStep
+import com.phonecando.network.Progress
 import java.util.Locale
 
 /**
@@ -9,10 +9,11 @@ import java.util.Locale
  * clock comes in.
  *
  * Two kinds of report share step names: ImageSetup's own, one per setup step
- * (`unpack` as step 2 of 6), and the byte counts of lre/oci's `download` and
- * lre/tar's `unpack`. A setup step always prints. Byte counts print at most
- * once per [intervalMillis] (and when complete); a count held back is printed
- * before the next step's line, so every byte step ends on its final count.
+ * (`unpack` as step 2 of 6), and the byte counts of lre/oci's `download`
+ * (and `verify`, re-reading a blob already here) and lre/tar's `unpack`. A
+ * setup step always prints. Byte counts print at most once per
+ * [intervalMillis] (and when complete); a count held back is printed before
+ * the next step's line, so every byte step ends on its final count.
  */
 class ProgressLines(private val intervalMillis: Long = 2_000) {
     private var lastStep: String? = null

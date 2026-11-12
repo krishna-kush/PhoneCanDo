@@ -11,7 +11,12 @@ kotlin {
 
 dependencies {
     api(project(":api"))
+    // Resumable verified blob downloads and the per-host retry rules (network/).
+    implementation("com.phonecando.network:network-download:0.1.0-dev")
+    implementation("com.phonecando.network:network-retry:0.1.0-dev")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    // FakePort and the reply helpers replay recorded responses.
+    testImplementation(testFixtures("com.phonecando.network:network-http:0.1.0-dev"))
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

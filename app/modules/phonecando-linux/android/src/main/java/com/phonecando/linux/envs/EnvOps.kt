@@ -14,20 +14,29 @@ import com.phonecando.linux.records.RecordFile
 import com.phonecando.linux.registry.EnvBase
 import com.phonecando.linux.registry.RegistryRef
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.image.delete.ImageDelete
 import com.phonecando.lre.oci.ref.ImageRef
 import com.phonecando.lre.oci.registry.ResolvedImage
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.retry.RetryLoop
+import com.phonecando.network.retry.RetryPolicy
 
 /**
  * Envs: the Default env (the APK's image), the Android env (no Linux) and
  * registry envs, whose layers we download once, keep compressed and
  * verified, and never modify.
+ *
+ * A registry env's download runs as one job: a dropped connection, a server
+ * error or a rate limit waits and goes on where it stopped by itself, and
+ * with no network it waits for one (RetryLoop). One the process or a long
+ * outage stopped runs again on the next start (the host's resume list,
+ * [resumeInterrupted]).
  */
 class EnvOps(private val host: LinuxHost) {
   private val records get() = host.records
   private val paths get() = host.paths
+  private val retries = RetryLoop(online = host.android.network::online)
 
   fun list(): List<EnvRecord> = records.envs()
 
@@ -108,6 +117,7 @@ class EnvOps(private val host: LinuxHost) {
       removeEnv(envId)
       env
     } ?: return
+    host.envResumes.remove(envId)
     if (removed.source is EnvSource.Registry) ImageDelete().delete(paths.envAsLayout(envId), host.executor)
   }
 
@@ -118,8 +128,35 @@ class EnvOps(private val host: LinuxHost) {
   private fun inUse(envId: String) =
     LinuxError(LinuxErrorCode.ENV_IN_USE, "env $envId has images; delete them first (a reset needs the env's base)")
 
+  /**
+   * Runs, once per process, env download [envId] the last process left on the
+   * resume list (Recovery); one that cannot start fails like any download.
+   */
+  fun resumeInterrupted(envId: String) {
+    try {
+      retry(envId)
+    } catch (e: Exception) {
+      host.envResumes.remove(envId)
+      try {
+        failed(envId, e)
+      } catch (_: Exception) {
+        // Recording it failed (disk); the record says downloading until the next start.
+      }
+    }
+  }
+
   private fun runDownload(job: Job, envId: String, ref: ImageRef) {
-    host.run(job, onError = { e -> failed(envId, e) }) { sink -> download(job, envId, ref, sink) }
+    host.envResumes.add(envId)
+    host.run(job, onError = { e -> failed(envId, e) }) { reporter ->
+      try {
+        retries.run(reporter, job.cancel) { download(job, envId, ref, reporter) }
+        host.envResumes.remove(envId)
+      } catch (e: Throwable) {
+        // It stays on the list only for what a later start can fix: a network that stayed down.
+        if (!RetryPolicy.retryable(e)) host.envResumes.remove(envId)
+        throw e
+      }
+    }
   }
 
   /** Resolve once (saved as base.json, pinning the digest), then every layer into blobs/. */

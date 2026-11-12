@@ -3,8 +3,8 @@ package com.phonecando.linux.guest
 import com.phonecando.linux.images.GuestCommand
 import com.phonecando.linux.images.ImageProcesses
 import com.phonecando.linux.images.ImageReaper
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.ImageLayout
+import com.phonecando.network.CancelSignal
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream

@@ -130,7 +130,7 @@ const ui = (p) => src('ui/env/logic', p);
     "You're at your cap for agents running at once, and none has sat idle long enough to make room. Stop one, or raise the cap in Settings → Agents & models.",
   );
 
-  const { stepLabel, stepFraction, progressLine, setupPhase, setupFraction } = await import(ui('steps.ts'));
+  const { stepLabel, stepFraction, progressLine, downloadLine, setupPhase, setupFraction } = await import(ui('steps.ts'));
   t('known step', stepLabel('detect'), 'Detecting the system');
   t('unknown step readable', stepLabel('fetch_index'), 'Fetch index');
   t('no step', stepLabel(null), 'Getting ready');
@@ -140,6 +140,20 @@ const ui = (p) => src('ui/env/logic', p);
   t('download line', progressLine('download', 120e6, 290e6), 'Downloading · 41% · 120 MB of 290 MB');
   t('unpack line', progressLine('unpack', 1, 2), 'Unpacking · 50%');
   t('plain line', progressLine('seed', 5, 6), 'Setting up');
+  t('verify line', progressLine('verify', 1, 4), 'Checking what is already here · 25%');
+  t('a wait keeps the bar', stepFraction('retry', 1, 4), 0.25);
+  t(
+    'retry line, network',
+    downloadLine({ step: 'retry', done: 1, total: 4, retry: { attempt: 2, max: 6, delaySec: 5, reason: 'network' } }),
+    'Connection lost: trying again in 5 s (try 2 of 6)',
+  );
+  t(
+    'retry line, rate limited',
+    downloadLine({ step: 'retry', done: 1, total: 4, retry: { attempt: 1, max: 6, delaySec: 900, reason: 'rate_limited' } }),
+    'Docker Hub is limiting downloads: trying again in 900 s (try 1 of 6)',
+  );
+  t('offline line', downloadLine({ step: 'offline', done: 1, total: 4 }), 'No network: it goes on by itself when one is back');
+  t('download line passes through', downloadLine({ step: 'download', done: 120e6, total: 290e6 }), 'Downloading · 41% · 120 MB of 290 MB');
   t('phase before unpack', setupPhase('space'), -1);
   t('phase of measure', setupPhase('measure'), 2);
   t('setup starts at 0', setupFraction('start', 0, null), 0);

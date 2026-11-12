@@ -16,7 +16,7 @@ import { useSlidInList } from '../../nav/slidIn';
 import { linuxFailureText, recordErrorText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
 import type { EnvRow } from '../logic/sections';
-import { progressLine, stepFraction } from '../logic/steps';
+import { downloadLine, stepFraction } from '../logic/steps';
 import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
@@ -88,7 +88,7 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
       {env?.state === 'downloading' ? (
         <YStack gap="2">
           <ProgressBar
-            label={progress ? progressLine(progress.step, progress.done, progress.total) : 'Downloading'}
+            label={progress ? downloadLine(progress) : 'Downloading'}
             fraction={progress ? stepFraction(progress.step, progress.done, progress.total) : null}
           />
           {progress ? (

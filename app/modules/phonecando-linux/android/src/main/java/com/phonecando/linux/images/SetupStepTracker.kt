@@ -1,8 +1,8 @@
 package com.phonecando.linux.images
 
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.image.setup.SetupStep
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
 
 /**
  * Passes image setup progress on and remembers the last setup step it saw,

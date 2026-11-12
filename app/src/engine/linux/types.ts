@@ -79,10 +79,13 @@ export type Image = {
 export type LinuxProgress = {
   jobId: string;
   target: { kind: 'env'; id: EnvId } | { kind: 'image'; id: ImageId };
-  /** `start` first; a download `resolve`, `download`; setup the ImageStep ids; a reset
-      `packages`, `unpack`, `swap`; setup and reset end with `measure`; a guest script `script`. */
+  /** `start` first; a download `resolve`, `download` (and `verify` while it re-reads what an
+      earlier try left; `retry` while it waits to try again, `offline` while it waits for a
+      network); setup the ImageStep ids; a reset `packages`, `unpack`, `swap`; setup and reset end
+      with `measure`; a guest script `script`. */
   step: string;
-  /** Progress within the step: bytes for `download` and `unpack`, else 0. */
+  /** Progress within the step: bytes for `download`, `verify` and `unpack` (a download's waits
+      keep its last count), else 0. */
   done: number;
   /** Null while the total is unknown (or the step has none). */
   total: number | null;
@@ -100,9 +103,11 @@ export type LinuxProgress = {
   /** A guest script job only: its exit code once it ended by itself (on the last event); null
       while it runs, and when it was stopped (timed out, cancelled). */
   exitCode?: number | null;
-  /** A guest script job only: its last `@retry <phase> <n>/<max>` line since the phase began (a
-      step failed and runs again: try `attempt` of `max`); null when none came. */
-  retry?: { attempt: number; max: number } | null;
+  /** A guest script job: its last `@retry <phase> <n>/<max>` line since the phase began (a step
+      failed and runs again: try `attempt` of `max`); null when none came. A download waiting to try
+      again (step `retry`): also how long (`delaySec`) and what failed (`reason`: Docker Hub's limit,
+      a 429, or the network). */
+  retry?: { attempt: number; max: number; delaySec?: number; reason?: 'network' | 'rate_limited' } | null;
   /** A guest script job only: whole seconds since it started. Its events come about once a second
       even while it prints nothing. */
   elapsedSec?: number;

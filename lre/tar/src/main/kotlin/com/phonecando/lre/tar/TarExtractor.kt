@@ -1,14 +1,14 @@
 package com.phonecando.lre.tar
 
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.Compression
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.tar.format.TarReader
 import com.phonecando.lre.tar.fs.GuestRoot
 import com.phonecando.lre.tar.layer.LayerWriter
 import com.phonecando.lre.tar.stream.LayerStream
 import com.phonecando.lre.tar.stream.SourceStream
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.ProgressSink
 import java.io.File
 import java.io.InputStream
 import java.nio.file.Files

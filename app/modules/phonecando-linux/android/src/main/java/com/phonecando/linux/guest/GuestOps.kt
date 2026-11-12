@@ -10,10 +10,10 @@ import com.phonecando.linux.jobs.Job
 import com.phonecando.linux.jobs.JobReporter
 import com.phonecando.linux.jobs.JobTarget
 import com.phonecando.linux.records.ImageState
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.ImageLayout
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.api.Progress
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
 import java.io.File
 import java.io.InputStream
 

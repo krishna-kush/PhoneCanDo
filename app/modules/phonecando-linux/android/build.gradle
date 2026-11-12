@@ -86,6 +86,13 @@ dependencies {
   implementation 'com.phonecando.lre:lre-tar:0.1.0-dev'
   implementation 'com.phonecando.lre:lre-oci:0.1.0-dev'
   implementation 'com.phonecando.lre:lre-image:0.1.0-dev'
+  // Our shared network code (network/, withNetworkCompositeBuild.js): the
+  // HTTP port lre pulls through, an env download's retries and the list of
+  // downloads to resume.
+  implementation 'com.phonecando.network:network-http:0.1.0-dev'
+  implementation 'com.phonecando.network:network-retry:0.1.0-dev'
+  // Whether the phone is online.
+  implementation project(':phonecando-network')
   // The agents kit's API (agents/, pure JVM, Kotlin stdlib only;
   // withAgentsCompositeBuild.js): only its ProjectDir, the work folder the
   // machine's shell starts in, as every agent does.

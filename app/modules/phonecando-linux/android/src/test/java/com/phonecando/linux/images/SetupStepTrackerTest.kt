@@ -1,6 +1,6 @@
 package com.phonecando.linux.images
 
-import com.phonecando.lre.api.Progress
+import com.phonecando.network.Progress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

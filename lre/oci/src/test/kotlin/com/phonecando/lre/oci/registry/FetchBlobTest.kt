@@ -1,15 +1,16 @@
 package com.phonecando.lre.oci.registry
 
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.Compression
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.oci.ref.ImageRef
 import com.phonecando.lre.oci.testkit.FakeRegistry
-import com.phonecando.lre.oci.testkit.FakeTransport
 import com.phonecando.lre.oci.testkit.Synthetic
-import com.phonecando.lre.oci.testkit.brokenReply
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.brokenReply
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -23,11 +24,11 @@ class FetchBlobTest {
     @TempDir
     lateinit var dir: File
 
-    private val fake = FakeTransport()
+    private val fake = FakePort()
     private val registry = FakeRegistry(fake, "ghcr.io", "owner/os")
     private val layerBytes = Synthetic.serveImage(registry, "1", Synthetic.bytes(700_000))
     private val sleeps = mutableListOf<Long>()
-    private val client = RegistryClient(fake, Mirrors.NONE, RetryPolicy(sleeper = { sleeps += it }))
+    private val client = RegistryClient(fake, Mirrors.NONE, sleeper = { sleeps += it })
     private val resolved = client.resolve(ImageRef.parse("ghcr.io/owner/os:1"))
     private val layer = resolved.layers.single()
     private val hex = layer.digest.removePrefix("sha256:")
@@ -52,10 +53,13 @@ class FetchBlobTest {
     @Test
     fun `resumes a partial download with Range`() {
         File(dir, "sha256-$hex.part").writeBytes(layerBytes.copyOf(300_000))
-        val file = client.fetchBlob(resolved, layer, dir)
+        val progress = mutableListOf<Progress>()
+        val file = client.fetchBlob(resolved, layer, dir, ProgressSink { progress += it })
 
         assertContentEquals(layerBytes, file.readBytes())
         assertEquals("bytes=300000-", cdnRequests().single().header("Range"))
+        // A partial from an earlier run is read back once before the rest comes.
+        assertEquals(300_000, progress.last { it.step == "verify" }.done)
     }
 
     @Test
@@ -92,7 +96,9 @@ class FetchBlobTest {
         val file = client.fetchBlob(resolved, layer, dir, ProgressSink { progress += it })
         assertContentEquals(layerBytes, file.readBytes())
         assertEquals(requestsBefore, fake.requests.size)
-        assertEquals(Progress("download", 700_000, 700_000), progress.single())
+        assertEquals(Progress("verify", 700_000, 700_000), progress.dropLast(1).last())
+        assertTrue(progress.dropLast(1).all { it.step == "verify" })
+        assertEquals(Progress("download", 700_000, 700_000), progress.last())
     }
 
     @Test
@@ -109,20 +115,32 @@ class FetchBlobTest {
         registry.cdnOutage = { request ->
             if (drops-- > 0) brokenReply(200, layerBytes.copyOf(400_000)) else null
         }
-        val file = client.fetchBlob(resolved, layer, dir)
+        val progress = mutableListOf<Progress>()
+        val file = client.fetchBlob(resolved, layer, dir, ProgressSink { progress += it })
         assertContentEquals(layerBytes, file.readBytes())
         val ranges = cdnRequests().map { it.header("Range") }
         assertEquals(listOf(null, "bytes=400000-"), ranges)
         assertEquals(1_000L, sleeps.sum()) // one retry after the base pause
+        // The retry carries on from the hash it kept: nothing is read back.
+        assertTrue(progress.none { it.step == "verify" })
+    }
+
+    @Test
+    fun `a CDN that refuses its signed link is asked again, without a token flow`() {
+        var refusals = 1
+        registry.cdnOutage = { if (refusals-- > 0) reply(401, "") else null }
+        val tokensBefore = registry.tokenFetches
+        val file = client.fetchBlob(resolved, layer, dir)
+        assertContentEquals(layerBytes, file.readBytes())
+        assertEquals(2, cdnRequests().size)
+        assertEquals(tokensBefore, registry.tokenFetches)
     }
 
     @Test
     fun `cancelling keeps the partial for later`() {
-        var done = 0L
-        val cancel = CancelSignal { done > 0 }
-        assertThrows<LreException.Cancelled> {
-            client.fetchBlob(resolved, layer, dir, ProgressSink { done = it.done }, cancel)
-        }
+        val part = File(dir, "sha256-$hex.part")
+        val cancel = CancelSignal { part.length() > 0 }
+        assertThrows<LreException.Cancelled> { client.fetchBlob(resolved, layer, dir, cancel = cancel) }
         val kept = File(dir, "sha256-$hex.part").length()
         assertTrue(kept in 1 until 700_000)
         val file = client.fetchBlob(resolved, layer, dir)

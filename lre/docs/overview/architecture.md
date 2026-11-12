@@ -18,7 +18,9 @@ image layout (`api`), the launcher and its `launch.conf` contract
 
 The host owns everything stateful and visible:
 `app/modules/phonecando-linux/` keeps the env and image records, runs jobs
-with progress events, gives setup the phone's `HostEnv`, refuses Linux on
+with progress events (an Own env's download under network's `RetryLoop`:
+it waits out a lost network and goes on by itself after an app restart),
+gives setup the phone's `HostEnv`, refuses Linux on
 play (`LinuxGate`), stops an image's processes before a reset or delete
 (`ImageReaper`), builds the launcher (CMake) and packages proot and the
 Default image. The runner (`app/modules/phonecando-runner/`) starts engines
@@ -28,7 +30,10 @@ only through `app/src/engine/linux/`.
 
 The app's settings plugin includes `lre/` as a composite build
 (`app/plugins/withLreCompositeBuild.js`) and substitutes the coordinates
-`com.phonecando.lre:lre-{api,tar,oci,image}` with the projects.
+`com.phonecando.lre:lre-{api,tar,oci,image}` with the projects; our shared
+network code (`network/`) is included the same way
+(`withNetworkCompositeBuild.js`), and by `lre/settings.gradle.kts` for lre's
+own build.
 
 ## Mental model
 

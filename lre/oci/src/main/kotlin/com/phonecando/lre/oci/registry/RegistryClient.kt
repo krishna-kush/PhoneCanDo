@@ -1,18 +1,19 @@
 package com.phonecando.lre.oci.registry
 
 import com.phonecando.lre.api.BaseImage
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
+import com.phonecando.lre.api.lreNet
 import com.phonecando.lre.oci.auth.TokenCache
 import com.phonecando.lre.oci.auth.TokenClient
 import com.phonecando.lre.oci.blob.BlobDownloader
 import com.phonecando.lre.oci.blob.Digest
 import com.phonecando.lre.oci.blob.FileLayer
-import com.phonecando.lre.oci.http.HttpTransport
-import com.phonecando.lre.oci.http.redactUrl
 import com.phonecando.lre.oci.ref.ImageRef
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.download.HashCheckpoints
+import com.phonecando.network.http.HttpPort
 import java.io.File
 import java.io.IOException
 
@@ -29,16 +30,19 @@ import java.io.IOException
  * Typical use: `resolve` → `fetchBlob` for each layer → `toBaseImage`.
  */
 class RegistryClient(
-    transport: HttpTransport,
+    port: HttpPort,
     private val mirrors: Mirrors = Mirrors.default,
-    retry: RetryPolicy = RetryPolicy.DEFAULT,
     /** Wall clock for token expiry; tests move it. */
     nowMillis: () -> Long = System::currentTimeMillis,
+    /** Blocks for a pause between tries on one host; tests pass a recorder. */
+    sleeper: (Long) -> Unit = Thread::sleep,
 ) {
-    private val http = RegistryHttp(transport, TokenClient(transport), TokenCache(nowMillis))
-    private val fallback = SourceFallback(retry)
+    private val http = RegistryHttp(port, TokenClient(port), TokenCache(nowMillis))
+    private val fallback = SourceFallback(SourceFallback.PER_HOST, sleeper)
     private val resolver = ManifestResolver(http)
-    private val downloader = BlobDownloader()
+
+    // How far each partial blob was hashed when its try stopped: the next try skips re-reading it.
+    private val downloader = BlobDownloader(HashCheckpoints())
 
     /**
      * Finds [ref]'s linux/arm64 image and reads its config.
@@ -55,8 +59,10 @@ class RegistryClient(
      * Downloads [layer] to `<destDir>/sha256-<hex>` and returns that file.
      * Resumes `<destDir>/sha256-<hex>.part` from an earlier run (a server
      * that ignores `Range` gets a fresh download); reuses a complete file
-     * after re-verifying it. Reports [Progress] step `download` in bytes.
-     * Cancelling keeps the partial file for next time.
+     * after re-verifying it. Reports [Progress] step `download` in bytes,
+     * and `verify` while it re-reads a complete file or a partial one an
+     * earlier try in this process did not hash. Cancelling keeps the
+     * partial file for next time.
      *
      * @throws LreException.DigestMismatch when the bytes do not match (the partial is deleted).
      * @throws LreException.UnsupportedLayer for a digest that is not sha256.
@@ -74,7 +80,7 @@ class RegistryClient(
         if (!destDir.isDirectory && !destDir.mkdirs() && !destDir.isDirectory) {
             throw IOException("cannot create the download dir ${destDir.name}")
         }
-        downloader.existing(digest, layer.size, destDir, cancel)?.let {
+        lreNet { downloader.existing(digest, layer.size, destDir, sink, cancel) }?.let {
             sink.report(Progress(BlobDownloader.STEP, layer.size, layer.size))
             return it
         }
@@ -85,18 +91,7 @@ class RegistryClient(
         val path = "blobs/$digest"
         val sources = mirrors.sourcesFor(resolved.ref).sortedByDescending { it.host == resolved.sourceHost }
         return fallback.run(sources, cancel) { source ->
-            downloader.download(
-                opener = { offset ->
-                    val range = if (offset > 0) mapOf("Range" to "bytes=$offset-") else emptyMap()
-                    http.open(source, path, range, "layer $digest", cancel, accept = { it == 200 || it == 206 || it == 416 })
-                },
-                where = redactUrl(source.url(path)),
-                digest = digest,
-                size = layer.size,
-                dir = destDir,
-                sink = sink,
-                cancel = cancel,
-            )
+            downloader.download(http.opener(source, path, "layer $digest", cancel), digest, layer.size, destDir, sink, cancel)
         }
     }
 

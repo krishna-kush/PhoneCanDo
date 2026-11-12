@@ -1,9 +1,9 @@
 package com.phonecando.lre.image.setup
 
 import com.phonecando.lre.api.BaseLayer
-import com.phonecando.lre.api.CancelSignal
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.tar.TarExtractor
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.ProgressSink
 import java.io.File
 
 /** Unpacks a layer with our tar extractor; progress is bytes read, step `unpack`. */

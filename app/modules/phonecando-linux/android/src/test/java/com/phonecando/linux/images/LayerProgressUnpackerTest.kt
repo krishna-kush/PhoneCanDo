@@ -2,10 +2,10 @@ package com.phonecando.linux.images
 
 import com.phonecando.lre.api.BaseImage
 import com.phonecando.lre.api.BaseLayer
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.Compression
-import com.phonecando.lre.api.Progress
 import com.phonecando.lre.image.setup.Unpacker
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.ByteArrayInputStream

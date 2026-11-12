@@ -1,6 +1,6 @@
 import type { Env } from '../../engine/linux/types';
 import { useTargetProgress } from '../../state/linux';
-import { progressLine } from '../env/logic/steps';
+import { downloadLine } from '../env/logic/steps';
 import { envTitle } from '../env/logic/titles';
 import LinkRow from '../common/LinkRow';
 
@@ -9,6 +9,6 @@ import LinkRow from '../common/LinkRow';
 // followed or cancelled.
 export default function DownloadRow({ env, onOpen }: { env: Env; onOpen: () => void }) {
   const progress = useTargetProgress({ kind: 'env', id: env.id });
-  const detail = progress ? progressLine(progress.step, progress.done, progress.total) : 'Downloading';
+  const detail = progress ? downloadLine(progress) : 'Downloading';
   return <LinkRow label={envTitle(env.source)} detail={detail} onPress={onOpen} />;
 }

@@ -5,17 +5,17 @@ import com.phonecando.lre.api.ImageConfig
 import com.phonecando.lre.api.LreException
 import com.phonecando.lre.oci.ref.ImageRef
 import com.phonecando.lre.oci.testkit.FakeRegistry
-import com.phonecando.lre.oci.testkit.FakeTransport
 import com.phonecando.lre.oci.testkit.Fixtures
 import com.phonecando.lre.oci.testkit.Synthetic
-import com.phonecando.lre.oci.testkit.reply
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 
 class ResolveTest {
-    private val fake = FakeTransport()
-    private val client = RegistryClient(fake, Mirrors.NONE, RetryPolicy(sleeper = {}))
+    private val fake = FakePort()
+    private val client = RegistryClient(fake, Mirrors.NONE, sleeper = {})
 
     private fun alpine() = FakeRegistry(fake, ImageRef.DOCKER_HUB, "library/alpine").apply {
         manifestFixture("latest", "registry/alpine-index.json", Fixtures.OCI_INDEX)

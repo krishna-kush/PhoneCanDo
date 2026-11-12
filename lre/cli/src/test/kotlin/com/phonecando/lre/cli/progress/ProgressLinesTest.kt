@@ -1,6 +1,6 @@
 package com.phonecando.lre.cli.progress
 
-import com.phonecando.lre.api.Progress
+import com.phonecando.network.Progress
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 

@@ -1,7 +1,7 @@
 package com.phonecando.lre.tar
 
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
 
 /**
  * Reports bytes read from the caller's (compressed) stream as step

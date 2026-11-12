@@ -1,7 +1,7 @@
 package com.phonecando.lre.cli.progress
 
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
 import java.io.PrintStream
 
 /** A ProgressSink that prints [ProgressLines] to [err]; stdout stays clean for the JSON. Call [finish] at the end. */

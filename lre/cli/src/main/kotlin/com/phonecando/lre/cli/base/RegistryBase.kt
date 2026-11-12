@@ -1,17 +1,20 @@
 package com.phonecando.lre.cli.base
 
-import com.phonecando.lre.api.ProgressSink
-import com.phonecando.lre.oci.http.UrlConnectionTransport
 import com.phonecando.lre.oci.ref.ImageRef
 import com.phonecando.lre.oci.registry.RegistryClient
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.http.UrlConnectionPort
 import java.io.File
 
 /**
  * Pulls a registry image the documented RegistryClient way (resolve, then
- * fetchBlob per layer, then toBaseImage), with the same mirrors and retry
- * policy as the app. Blobs already in [blobDir] are re-verified and reused.
+ * fetchBlob per layer, then toBaseImage), with the same mirrors, per-host
+ * retries and User-Agent as the app (which also retries the whole pull).
+ * Blobs already in [blobDir] are re-verified and reused.
  */
-class RegistryBase(private val client: RegistryClient = RegistryClient(UrlConnectionTransport())) {
+class RegistryBase(
+    private val client: RegistryClient = RegistryClient(UrlConnectionPort(userAgent = "phonecando-lre")),
+) {
     /** @throws com.phonecando.lre.api.LreException for every registry failure (InvalidRef, NoArm64, ...). */
     fun fetch(ref: String, blobDir: File, sink: ProgressSink): FetchedBase {
         val resolved = client.resolve(ImageRef.parse(ref))

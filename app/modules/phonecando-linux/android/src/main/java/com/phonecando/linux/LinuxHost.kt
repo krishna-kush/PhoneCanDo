@@ -20,8 +20,9 @@ import com.phonecando.linux.jobs.transactWithJob
 import com.phonecando.linux.records.LinuxRecords
 import com.phonecando.lre.image.delete.ImageDelete
 import com.phonecando.lre.oci.catalog.HubCatalog
-import com.phonecando.lre.oci.http.UrlConnectionTransport
 import com.phonecando.lre.oci.registry.RegistryClient
+import com.phonecando.network.http.UrlConnectionPort
+import com.phonecando.network.retry.ResumeList
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -51,19 +52,23 @@ class LinuxHost private constructor(context: Context) {
   val jobs = JobRegistry()
   val imageLocks = ImageLocks()
   val records = LinuxRecords(paths.state) { listeners.forEach { it.onChanged() } }
+
+  /** Env downloads a process death or a long outage stopped: [recoverOnce] runs them again. */
+  val envResumes = ResumeList(paths.envResumeList)
   val executor: ExecutorService = Executors.newCachedThreadPool { task ->
     Thread(task, "phonecando-linux").apply { isDaemon = true }
   }
 
-  private val transport = UrlConnectionTransport()
-  val registry = RegistryClient(transport)
+  // Registries and Docker Hub see this User-Agent (docs/telemetry.md names it).
+  private val port = UrlConnectionPort(userAgent = "phonecando-lre")
+  val registry = RegistryClient(port)
   val defaultImage = DefaultImageAsset(context.assets)
   val bases = ImageBases(paths, defaultImage, registry)
 
   val envs = EnvOps(this)
   val images = ImageOps(this)
   val guest = GuestOps(this)
-  val catalog = CatalogOps(this, HubCatalog(transport))
+  val catalog = CatalogOps(this, HubCatalog(port))
 
   fun addListener(listener: Listener) = listeners.add(listener)
 
@@ -103,16 +108,18 @@ class LinuxHost private constructor(context: Context) {
 
   /**
    * Once per process, on the first module create: records a process death
-   * left mid-job get fixed (Recovery), a delete it cut short is finished,
-   * and the trash from earlier deletes is emptied in the background. A JS
-   * reload creates the module again but keeps the process and its jobs, so
-   * there is nothing to recover then (an image mid-delete has no job).
+   * left mid-job get fixed (Recovery), the env downloads on the resume list
+   * start again, a delete it cut short is finished, and the trash from
+   * earlier deletes is emptied in the background. A JS reload creates the
+   * module again but keeps the process and its jobs, so there is nothing to
+   * recover then (an image mid-delete has no job).
    */
   fun recoverOnce() {
     if (!recovered.compareAndSet(false, true)) return
+    val resumeList = envResumes.ids()
     val plan = try {
       records.transact {
-        val plan = Recovery.plan(envs, images, jobs::isLive)
+        val plan = Recovery.plan(envs, images, resumeList, jobs::isLive)
         plan.envs.forEach(::putEnv)
         plan.images.forEach(::putImage)
         plan
@@ -121,6 +128,8 @@ class LinuxHost private constructor(context: Context) {
       // The records stay as they were (disk); every call still works on them.
       null
     }
+    plan?.dropResumes?.forEach(envResumes::remove)
+    plan?.resumeEnvs?.forEach(envs::resumeInterrupted)
     plan?.finishDeletes?.forEach { id ->
       try {
         ImageDelete().delete(paths.image(id), executor)

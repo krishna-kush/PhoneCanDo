@@ -1,12 +1,13 @@
 package com.phonecando.lre.oci.auth
 
 import com.phonecando.lre.api.LreException
+import com.phonecando.lre.api.lreNet
 import com.phonecando.lre.oci.decodeOrCorrupt
-import com.phonecando.lre.oci.http.HttpTransport
-import com.phonecando.lre.oci.http.errorFor
-import com.phonecando.lre.oci.http.fetch
-import com.phonecando.lre.oci.http.readCapped
-import com.phonecando.lre.oci.http.redactUrl
+import com.phonecando.network.http.HttpPort
+import com.phonecando.network.http.errorFor
+import com.phonecando.network.http.fetch
+import com.phonecando.network.http.readCapped
+import com.phonecando.network.http.redactUrl
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.net.URI
@@ -18,8 +19,12 @@ internal class Token(val value: String, val ttlSeconds: Long) {
     override fun toString(): String = "Token(<redacted>, ${ttlSeconds}s)"
 }
 
-/** Fetches anonymous pull tokens from a challenge's realm (no credentials sent). */
-internal class TokenClient(private val transport: HttpTransport) {
+/**
+ * Fetches anonymous pull tokens from a challenge's realm (no credentials
+ * sent). Called inside a registry request, so a failure to reach the realm
+ * stays network's error, mapped with the request's.
+ */
+internal class TokenClient(private val port: HttpPort) {
     @Serializable
     private class TokenDoc(
         val token: String? = null,
@@ -39,12 +44,14 @@ internal class TokenClient(private val transport: HttpTransport) {
             add("scope=" + encode(challenge.scope ?: fallbackScope))
         }.joinToString("&")
         val url = realm + (if (realm.contains('?')) "&" else "?") + query
-        val response = transport.fetch(url, mapOf("Accept" to "application/json"))
+        val response = port.fetch(url, mapOf("Accept" to "application/json"))
         if (response.status != 200) {
             response.close()
-            throw errorFor(response.status, url, "token service")
+            throw errorFor(response, url, "token service")
         }
-        val doc = decodeOrCorrupt<TokenDoc>(response.readCapped(TOKEN_LIMIT, url, "token response"), "token response")
+        // Past the cap it is too large; only this call knows the cap.
+        val body = lreNet("token response", TOKEN_LIMIT) { response.readCapped(TOKEN_LIMIT, url, "token response") }
+        val doc = decodeOrCorrupt<TokenDoc>(body, "token response")
         val value = (doc.token ?: doc.accessToken)?.takeIf { it.isNotBlank() }
             ?: throw LreException.Corrupt("token response")
         if (value.any { it == '\r' || it == '\n' }) throw LreException.Corrupt("token response")

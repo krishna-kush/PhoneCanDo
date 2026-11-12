@@ -1,6 +1,8 @@
 // Linux runtime engine: pure JVM modules that turn a base OS into a
 // VM-like image under proot. Dependency law (no other edges, no cycles):
 //   api <- tar, api <- oci, api + tar <- image, oci + image <- cli
+// and from our shared network code (network/, an included build):
+//   network-http <- api (exposed), network-download + network-retry <- oci
 // image never imports oci: the Android host (app/modules/phonecando-linux)
 // composes a download with a setup, and so does cli, our JVM command line
 // for CI (lre-compat.yml), which nothing else depends on. No android.*, no

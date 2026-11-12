@@ -11,7 +11,7 @@ import AppCard from '../../common/AppCard';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import { failureText, linuxFailureText, recordErrorText } from '../logic/errorText';
-import { progressLine, stepFraction } from '../logic/steps';
+import { downloadLine, stepFraction } from '../logic/steps';
 import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
@@ -70,7 +70,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
       {env?.state === 'downloading' ? (
         <>
           <ProgressBar
-            label={progress ? progressLine(progress.step, progress.done, progress.total) : 'Starting'}
+            label={progress ? downloadLine(progress) : 'Starting'}
             fraction={progress ? stepFraction(progress.step, progress.done, progress.total) : null}
           />
           <Note>You can leave this page; the download keeps going, and the menu and the systems list show it.</Note>

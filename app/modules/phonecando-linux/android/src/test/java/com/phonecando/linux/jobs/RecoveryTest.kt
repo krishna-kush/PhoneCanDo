@@ -8,7 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-// JVM checks for what a process death leaves behind and how we fix it on module create.
+// JVM checks for what a process death leaves behind and how we fix or resume it on module create.
 class RecoveryTest {
   private val registry = EnvSource.Registry("alpine", "3.22", "")
 
@@ -51,6 +51,41 @@ class RecoveryTest {
     assertEquals(Samples.envs, plan.envs)
     assertEquals(Samples.images, plan.images)
     assertEquals(emptyList<String>(), plan.finishDeletes)
+  }
+
+  @Test fun aDownloadOnTheResumeListStaysDownloadingAndResumes() {
+    val plan = Recovery.plan(
+      listOf(
+        Samples.env("e1", registry, EnvState.DOWNLOADING),
+        Samples.env("e2", registry, EnvState.DOWNLOADING),
+      ),
+      emptyList(),
+      listOf("e1"),
+    ) { false }
+    assertEquals(listOf(EnvState.DOWNLOADING, EnvState.FAILED), plan.envs.map { it.state })
+    assertEquals(listOf("e1"), plan.resumeEnvs)
+    assertEquals(emptyList<String>(), plan.dropResumes)
+  }
+
+  // Its network stayed down: it stayed on the list, and the next start tries again.
+  @Test fun aFailedDownloadOnTheResumeListResumes() {
+    val failed = Samples.env("e1", registry, EnvState.FAILED)
+    val plan = Recovery.plan(listOf(failed), emptyList(), listOf("e1")) { false }
+    assertEquals(listOf(failed), plan.envs)
+    assertEquals(listOf("e1"), plan.resumeEnvs)
+  }
+
+  @Test fun aReadyOrGoneEnvComesOffTheResumeList() {
+    val plan = Recovery.plan(listOf(Samples.env("e1", registry, EnvState.READY)), emptyList(), listOf("e1", "gone")) { false }
+    assertEquals(emptyList<String>(), plan.resumeEnvs)
+    assertEquals(listOf("e1", "gone"), plan.dropResumes)
+  }
+
+  @Test fun aLiveDownloadIsNeitherResumedNorDropped() {
+    val plan = Recovery.plan(listOf(Samples.env("e1", registry, EnvState.DOWNLOADING)), emptyList(), listOf("e1")) { true }
+    assertEquals(EnvState.DOWNLOADING, plan.envs.single().state)
+    assertEquals(emptyList<String>(), plan.resumeEnvs)
+    assertEquals(emptyList<String>(), plan.dropResumes)
   }
 
   @Test fun livenessIsAskedPerTarget() {

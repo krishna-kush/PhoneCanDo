@@ -1,6 +1,7 @@
 package com.phonecando.linux.errors
 
 import com.phonecando.lre.api.LreException
+import com.phonecando.network.NetException
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.IOException
@@ -43,6 +44,13 @@ class LinuxErrorCodeTest {
     ).forEach {
       assertEquals(it, LinuxErrorCode.of(LinuxError(it, "why")))
     }
+  }
+
+  // A download's wait that a cancel cut short ends with network's own error.
+  @Test fun aNetworkFailureGetsTheRuntimesCode() {
+    assertEquals(LinuxErrorCode.CANCELLED, LinuxErrorCode.of(NetException.Cancelled()))
+    assertEquals(LinuxErrorCode.RATE_LIMITED, LinuxErrorCode.of(NetException.RateLimited("https://registry", 30)))
+    assertEquals("cancelled: cancelled", LinuxErrorCode.lineOf(NetException.Cancelled()))
   }
 
   @Test fun aFullDiskIsNoSpaceAndAnythingElseInternal() {

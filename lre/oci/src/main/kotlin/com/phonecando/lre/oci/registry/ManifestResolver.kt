@@ -1,9 +1,7 @@
 package com.phonecando.lre.oci.registry
 
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.LreException
 import com.phonecando.lre.oci.blob.Digest
-import com.phonecando.lre.oci.blob.Sha256
 import com.phonecando.lre.oci.decodeOrCorrupt
 import com.phonecando.lre.oci.manifest.Arm64
 import com.phonecando.lre.oci.manifest.ConfigDoc
@@ -14,6 +12,8 @@ import com.phonecando.lre.oci.manifest.MediaTypes
 import com.phonecando.lre.oci.manifest.isArm64
 import com.phonecando.lre.oci.manifest.toImageConfig
 import com.phonecando.lre.oci.ref.ImageRef
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.download.Sha256
 
 /**
  * Turns a reference into its linux/arm64 manifest and config on one

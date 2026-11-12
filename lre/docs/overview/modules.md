@@ -2,9 +2,9 @@
 
 | Module | Output | Kind | Depends on | Purpose | Docs |
 |---|---|---|---|---|---|
-| `api` | `lre-api` | JVM | — | Shared types, `ImageLayout`, `LreException`, progress and cancel. | `../modules/api.md` |
+| `api` | `lre-api` | JVM | `network-http` | Shared types, `ImageLayout`, `LreException` (and network's errors mapped to it); progress and cancel are network's. | `../modules/api.md` |
 | `tar` | `lre-tar` | JVM | `api`, XZ for Java | Safe tar unpacking (plain, gzip, xz) with OCI whiteouts. | `../modules/tar.md` |
-| `oci` | `lre-oci` | JVM | `api`, kotlinx-serialization-json | Registry client (linux/arm64, verified blobs, mirrors) and the Docker Hub catalog. | `../modules/oci.md` |
+| `oci` | `lre-oci` | JVM | `api`, `network-download`, `network-retry`, kotlinx-serialization-json | Registry client (linux/arm64, verified blobs, mirrors) and the Docker Hub catalog. | `../modules/oci.md` |
 | `image` | `lre-image` | JVM | `api`, `tar` | Setup, per-start refresh, reset, delete; every `run/` file. | `../modules/image.md` |
 | `cli` | not published | JVM app | `oci`, `image`, kotlinx-serialization-json | The phone's download and setup on a plain JVM, for CI. | `../modules/cli.md` |
 | `launcher/` | `libphonecando_launch.so` | C | — | Multi-call launcher: reads `launch.conf`, runs proot and stands in for the command. | `../modules/launcher.md` |
@@ -13,14 +13,17 @@
 
 The four library modules publish as `com.phonecando.lre:lre-*:0.1.0-dev`;
 the app consumes them through the composite build, never from a
-repository. `launcher/` sources are compiled by the app's CMake
+repository. `network-*` is our shared network code (`network/`), an
+included build here and in the app. `launcher/` sources are compiled by the app's CMake
 (`app/modules/phonecando-linux/android/CMakeLists.txt`); `proot/` and
 `images/default/` outputs are staged into that module's gitignored
 `src/linux/` dirs.
 
 - **api** — contracts only: `BaseImage` and its layers, `HostEnv`,
-  `ImageLayout` and `PayloadNames`, `OsInfo`, `LreException`, `Progress`.
-  Every other module depends on it.
+  `ImageLayout` and `PayloadNames`, `OsInfo`, `LreException` and the
+  mapping of our network code's errors to it. It exposes `network-http`
+  (`CancelSignal`, `Progress`, `ProgressSink`). Every other module depends
+  on it.
 - **tar** — `TarExtractor` applies one layer onto a guest root as the
   app's own uid: nothing in an archive reaches outside the root, hard links
   become copies, device nodes are skipped, limits stop hostile archives.

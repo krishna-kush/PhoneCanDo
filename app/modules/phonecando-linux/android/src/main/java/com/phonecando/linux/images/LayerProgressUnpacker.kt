@@ -2,11 +2,11 @@ package com.phonecando.linux.images
 
 import com.phonecando.lre.api.BaseImage
 import com.phonecando.lre.api.BaseLayer
-import com.phonecando.lre.api.CancelSignal
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.image.setup.TarUnpacker
 import com.phonecando.lre.image.setup.Unpacker
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
 import java.io.File
 
 /**

@@ -1,9 +1,9 @@
 package com.phonecando.lre.oci.catalog
 
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.oci.testkit.FakeTransport
 import com.phonecando.lre.oci.testkit.Fixtures
-import com.phonecando.lre.oci.testkit.reply
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
@@ -11,7 +11,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class HubCatalogTest {
-    private val fake = FakeTransport()
+    private val fake = FakePort()
+
+    // The community lookups ask a few at once; the fake answers one at a time.
     private val catalog = HubCatalog(fake)
     private val alpineTags = "https://hub.docker.com/v2/namespaces/library/repositories/alpine/tags"
 

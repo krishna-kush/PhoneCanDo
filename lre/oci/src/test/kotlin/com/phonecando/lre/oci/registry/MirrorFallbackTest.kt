@@ -3,11 +3,11 @@ package com.phonecando.lre.oci.registry
 import com.phonecando.lre.api.LreException
 import com.phonecando.lre.oci.ref.ImageRef
 import com.phonecando.lre.oci.testkit.FakeRegistry
-import com.phonecando.lre.oci.testkit.FakeTransport
 import com.phonecando.lre.oci.testkit.Fixtures
 import com.phonecando.lre.oci.testkit.Synthetic
-import com.phonecando.lre.oci.testkit.noResponse
-import com.phonecando.lre.oci.testkit.reply
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.noResponse
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -20,12 +20,12 @@ class MirrorFallbackTest {
     @TempDir
     lateinit var dir: File
 
-    private val fake = FakeTransport()
+    private val fake = FakePort()
     private val hub = alpineOn(FakeRegistry(fake, ImageRef.DOCKER_HUB, "library/alpine"))
     private val ecr = alpineOn(FakeRegistry(fake, "public.ecr.aws", "docker/library/alpine", FakeRegistry.Auth.ECR))
     private val gcr = alpineOn(FakeRegistry(fake, "mirror.gcr.io", "library/alpine", auth = null))
     private val sleeps = mutableListOf<Long>()
-    private val client = RegistryClient(fake, Mirrors.default, RetryPolicy(sleeper = { sleeps += it }))
+    private val client = RegistryClient(fake, Mirrors.default, sleeper = { sleeps += it })
 
     private fun alpineOn(registry: FakeRegistry) = registry.apply {
         manifestFixture("latest", "registry/alpine-index.json", Fixtures.OCI_INDEX)
@@ -33,7 +33,7 @@ class MirrorFallbackTest {
         blob(Fixtures.bytes("registry/alpine-arm64-config.json"))
     }
 
-    private fun status(code: Int) = { _: com.phonecando.lre.oci.testkit.Request -> reply(code, "") }
+    private fun status(code: Int) = { _: com.phonecando.network.testkit.Request -> reply(code, "") }
 
     @Test
     fun `Docker Hub 429 falls back to ECR at once`() {

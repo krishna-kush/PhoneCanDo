@@ -1,12 +1,10 @@
 package com.phonecando.lre.image.setup
 
 import com.phonecando.lre.api.BaseImage
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.ImageLayout
 import com.phonecando.lre.api.LreException
 import com.phonecando.lre.api.PackageFamily
 import com.phonecando.lre.api.PayloadNames
-import com.phonecando.lre.api.Progress
 import com.phonecando.lre.image.ImageSetup
 import com.phonecando.lre.image.proc.FakeProc
 import com.phonecando.lre.image.support.ConfParser
@@ -17,6 +15,8 @@ import com.phonecando.lre.image.support.TreeLayer
 import com.phonecando.lre.image.support.TreeUnpacker
 import com.phonecando.lre.image.support.treeBase
 import com.phonecando.lre.image.tools.MissingTools
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.io.IOException

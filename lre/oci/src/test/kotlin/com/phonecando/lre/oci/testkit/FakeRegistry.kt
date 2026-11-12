@@ -1,14 +1,17 @@
 package com.phonecando.lre.oci.testkit
 
-import com.phonecando.lre.oci.http.HttpResponse
+import com.phonecando.network.http.HttpResponse
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.Request
+import com.phonecando.network.testkit.reply
 
 /**
- * One repository on a fake registry, installed into a [FakeTransport]:
+ * One repository on a fake registry, installed into a [FakePort]:
  * anonymous Bearer auth (when [auth] is set), manifests by tag and digest,
  * blobs redirected to a CDN that serves `Range` and refuses credentials.
  */
 class FakeRegistry(
-    private val transport: FakeTransport,
+    private val port: FakePort,
     val host: String,
     val repository: String,
     private val auth: Auth? = Auth.DOCKER_HUB,
@@ -47,10 +50,10 @@ class FakeRegistry(
     private val blobs = HashMap<String, ByteArray>()
 
     init {
-        transport.onPrefix(base) { handle(it) }
-        transport.onPrefix(cdn) { fromCdn(it) }
+        port.onPrefix(base) { handle(it) }
+        port.onPrefix(cdn) { fromCdn(it) }
         auth?.let { a ->
-            transport.onPrefix(a.realm) { request ->
+            port.onPrefix(a.realm) { request ->
                 tokenFetches++
                 check(request.header("Authorization") == null) { "credentials sent to the token realm" }
                 reply(200, """{"token":"$token","expires_in":300,"issued_at":"2026-11-07T00:00:00Z"}""")

@@ -1,13 +1,14 @@
 package com.phonecando.lre.oci.catalog
 
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.LreException
+import com.phonecando.lre.api.lreNet
 import com.phonecando.lre.oci.decodeOrCorrupt
-import com.phonecando.lre.oci.http.HttpTransport
-import com.phonecando.lre.oci.http.errorFor
-import com.phonecando.lre.oci.http.fetch
-import com.phonecando.lre.oci.http.readCapped
 import com.phonecando.lre.oci.ref.ImageRef
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.http.HttpPort
+import com.phonecando.network.http.errorFor
+import com.phonecando.network.http.fetch
+import com.phonecando.network.http.readCapped
 import java.net.URLEncoder
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
@@ -18,7 +19,7 @@ import java.util.concurrent.Executors
  * the arm64 tags of any Hub repository (official or not, e.g. `kalilinux/kali-rolling`). Anonymous,
  * blocking; call from a background thread.
  */
-class HubCatalog(private val transport: HttpTransport) {
+class HubCatalog(private val port: HttpPort) {
     /**
      * Docker Hub's official images in the "Operating systems" category that
      * have an arm64 build, most relevant first.
@@ -136,12 +137,15 @@ class HubCatalog(private val transport: HttpTransport) {
 
     private inline fun <reified T> get(url: String, what: String, cancel: CancelSignal): T {
         if (cancel.isCancelled()) throw LreException.Cancelled()
-        val response = transport.fetch(url, mapOf("Accept" to "application/json"))
-        if (response.status != 200) {
-            response.close()
-            throw errorFor(response.status, url, what)
+        val body = lreNet(what, BODY_LIMIT) {
+            val response = port.fetch(url, mapOf("Accept" to "application/json"))
+            if (response.status != 200) {
+                response.close()
+                throw errorFor(response, url, what)
+            }
+            response.readCapped(BODY_LIMIT, url, what)
         }
-        return decodeOrCorrupt(response.readCapped(BODY_LIMIT, url, what), what)
+        return decodeOrCorrupt(body, what)
     }
 
     companion object {

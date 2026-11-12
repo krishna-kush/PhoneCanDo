@@ -1,12 +1,9 @@
 package com.phonecando.lre.image.reset
 
 import com.phonecando.lre.api.BaseImage
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.HostEnv
 import com.phonecando.lre.api.ImageLayout
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.image.ImageSetup
 import com.phonecando.lre.image.delete.TreeDeleter
 import com.phonecando.lre.image.detect.Detector
@@ -27,6 +24,9 @@ import com.phonecando.lre.image.setup.TarUnpacker
 import com.phonecando.lre.image.setup.Unpacker
 import com.phonecando.lre.image.setup.unpackAll
 import com.phonecando.lre.image.shim.Shims
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
 import java.io.IOException
 import java.nio.file.Files
 

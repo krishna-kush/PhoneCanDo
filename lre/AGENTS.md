@@ -47,7 +47,13 @@ api <- tar
 api <- oci
 api + tar <- image
 oci + image <- cli
+
+network-http <- api            (exposed: CancelSignal, Progress, ProgressSink)
+network-download + network-retry <- oci
 ```
+
+`network-*` is our shared network code (`network/`), an included build
+(`settings.gradle.kts`); it never depends on lre.
 
 - Every module is pure JVM (Kotlin, JDK 17 toolchain). No `android.*`, no
   `org.json`, no app packages.
@@ -59,7 +65,11 @@ oci + image <- cli
   only what its `build.gradle.kts` declares. Add a module to
   `settings.gradle.kts` only with real code and a green build.
 - `api` vs `implementation` must be right: `image` exposes `api` and `tar`
-  types, `oci` keeps kotlinx.serialization internal.
+  types, `api` exposes `network-http` (its progress and cancel types are
+  ours), `oci` keeps kotlinx.serialization, `network-download` and
+  `network-retry` internal.
+- HTTP, resumable verified downloads and retry rules live in `network/`,
+  shared with lme; never a second copy here.
 - Outside dependencies stay few and permissive: XZ for Java (0BSD, `tar`)
   and kotlinx-serialization-json (Apache-2.0, `oci`, `cli`) today.
 
@@ -71,14 +81,21 @@ oci + image <- cli
   unsupported layer or manifest, no shell, corrupt, cancelled. Local disk
   errors stay `IOException`.
 - A failure message names the thing, never a secret: URLs go through
-  `redactUrl` (no user info, query or fragment) before they reach an
-  error.
+  `redactUrl` (network's: no user info, query or fragment) before they
+  reach an error.
+- Our network code throws its own `NetException`; it becomes an
+  `LreException` where it enters lre (`api` `NetErrors.kt`: `lreNet { }`,
+  `toLre()`), kept as the cause so network's retry rules still see it.
+  Inside `oci`, `RegistryHttp.open` and the blob download let it through
+  (a download keeps its hash across a dropped connection); `SourceFallback`
+  and every body read whole map it.
 - A new `LreException` subclass is an app change too: the host's
   `LinuxErrorCode.ofLre` is exhaustive, so the app build fails until the
   subclass has a code there and in `app/src/engine/linux/types.ts`. `cli`
   derives its code (`no_arm64`) from the class name.
-- Long jobs take a `ProgressSink` and a `CancelSignal` and check the signal
-  between units of work; cancelling throws `LreException.Cancelled`.
+- Long jobs take a `ProgressSink` and a `CancelSignal` (network's types)
+  and check the signal between units of work; cancelling throws
+  `LreException.Cancelled`.
 
 ## 4. On-disk contracts
 
@@ -215,7 +232,8 @@ change. See `lre/docs/guides/testing.md` for which workflow guards what.
 ## Review checklist
 
 - [ ] Does every module stay pure JVM, free of `android.*`, `org.json` and
-      app types, with no new edge outside the law?
+      app types, with no new edge outside the law, and network code only
+      from `network/`?
 - [ ] Are expected failures typed `LreException`s, and do new subclasses
       have a host and JS code?
 - [ ] Did a contract change (`ImageLayout`, `run/` files, `conf.h`) update

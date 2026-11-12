@@ -16,14 +16,14 @@ import com.phonecando.linux.records.ImageState
 import com.phonecando.linux.terminal.TerminalRecipe
 import com.phonecando.lre.api.LreException
 import com.phonecando.lre.api.OsInfo
-import com.phonecando.lre.api.Progress
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.image.ImageSetup
 import com.phonecando.lre.image.conf.SocketBudget
 import com.phonecando.lre.image.delete.ImageDelete
 import com.phonecando.lre.image.reset.ImageReset
 import com.phonecando.lre.image.reset.ReinstallList
 import com.phonecando.lre.image.tools.MissingTools
+import com.phonecando.network.Progress
+import com.phonecando.network.ProgressSink
 
 /**
  * Images: made from an env (create, resumable), reset to a fresh copy of

@@ -25,6 +25,7 @@ on:
       - 'lre/gradle.properties'
       - 'lre/gradle/**'
       - 'lre/gradlew'
+      - 'network/**'
       - '.github/workflows/lre.yml'
   pull_request:
     paths:
@@ -39,6 +40,7 @@ on:
       - 'lre/gradle.properties'
       - 'lre/gradle/**'
       - 'lre/gradlew'
+      - 'network/**'
       - '.github/workflows/lre.yml'
   workflow_dispatch:
   schedule:

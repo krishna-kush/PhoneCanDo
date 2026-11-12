@@ -2,7 +2,7 @@ package com.phonecando.linux.jobs
 
 import com.phonecando.linux.errors.LinuxError
 import com.phonecando.linux.errors.LinuxErrorCode
-import com.phonecando.lre.api.CancelSignal
+import com.phonecando.network.CancelSignal
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean

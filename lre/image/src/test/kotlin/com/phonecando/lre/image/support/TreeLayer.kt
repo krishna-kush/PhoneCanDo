@@ -2,11 +2,11 @@ package com.phonecando.lre.image.support
 
 import com.phonecando.lre.api.BaseImage
 import com.phonecando.lre.api.BaseLayer
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.Compression
 import com.phonecando.lre.api.ImageConfig
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.image.setup.Unpacker
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.ProgressSink
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream

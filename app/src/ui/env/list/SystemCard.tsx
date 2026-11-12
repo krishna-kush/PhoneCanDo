@@ -7,7 +7,7 @@ import ChevronIcon from '../../common/ChevronIcon';
 import { useTheme } from '../../common/globals';
 import PlainText from '../../common/PlainText';
 import type { EnvRow } from '../logic/sections';
-import { progressLine, stepFraction } from '../logic/steps';
+import { downloadLine, stepFraction } from '../logic/steps';
 import { envSubtitle, envTitle } from '../logic/titles';
 import ProgressBar from '../parts/ProgressBar';
 import { useSystemLogo } from './useSystemLogo';
@@ -70,7 +70,7 @@ export default function SystemCard({ env, rows, onOpen }: Props) {
       </XStack>
       {env?.state === 'downloading' ? (
         <ProgressBar
-          label={progress ? progressLine(progress.step, progress.done, progress.total) : 'Downloading'}
+          label={progress ? downloadLine(progress) : 'Downloading'}
           fraction={progress ? stepFraction(progress.step, progress.done, progress.total) : null}
         />
       ) : null}

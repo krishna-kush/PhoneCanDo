@@ -1,16 +1,22 @@
 // Job steps in plain words, and how far along a job is. Pure (zero RN
 // imports). The native steps: a download reports `resolve`, then
-// `download` (bytes); an image setup `space`, `unpack` (bytes), `detect`,
-// `fixups`, `shims`, `seed`, then `measure`; a reset `packages`, `unpack`,
-// `swap`, `measure`. Every job starts with `start`. Setup steps report their
-// place in the whole setup as done/total, so only byte steps have a
-// fraction of their own. Unknown steps still read as words.
+// `download` (bytes; `verify` while it re-reads what an earlier try left,
+// `retry` and `offline` while it waits, keeping its count); an image setup
+// `space`, `unpack` (bytes), `detect`, `fixups`, `shims`, `seed`, then
+// `measure`; a reset `packages`, `unpack`, `swap`, `measure`. Every job
+// starts with `start`. Setup steps report their place in the whole setup as
+// done/total, so only byte steps have a fraction of their own. Unknown steps
+// still read as words.
+import type { LinuxProgress } from '../../../engine/linux/types';
 import { formatBytes } from './format.ts';
 
 const STEP_WORDS: Record<string, string> = {
   start: 'Getting ready',
   resolve: 'Finding the image',
   download: 'Downloading',
+  verify: 'Checking what is already here',
+  retry: 'Trying again',
+  offline: 'Waiting for a network',
   space: 'Checking space',
   unpack: 'Unpacking',
   detect: 'Detecting the system',
@@ -22,7 +28,7 @@ const STEP_WORDS: Record<string, string> = {
   swap: 'Putting the fresh system in place',
 };
 
-const BYTE_STEPS = new Set(['download', 'unpack']);
+const BYTE_STEPS = new Set(['download', 'verify', 'retry', 'offline', 'unpack']);
 
 export function stepLabel(step: string | null | undefined): string {
   if (!step) return 'Getting ready';
@@ -44,6 +50,16 @@ export function progressLine(step: string | null | undefined, done: number, tota
   if (f == null) return stepLabel(step);
   const line = `${stepLabel(step)} · ${Math.round(f * 100)}%`;
   return step === 'download' ? `${line} · ${formatBytes(done)} of ${formatBytes(total)}` : line;
+}
+
+/** A download's line: its wait to try again or for a network, else progressLine. */
+export function downloadLine(p: Pick<LinuxProgress, 'step' | 'done' | 'total' | 'retry'>): string {
+  if (p.step === 'retry' && p.retry?.delaySec != null) {
+    const why = p.retry.reason === 'rate_limited' ? 'Docker Hub is limiting downloads' : 'Connection lost';
+    return `${why}: trying again in ${p.retry.delaySec} s (try ${p.retry.attempt} of ${p.retry.max})`;
+  }
+  if (p.step === 'offline') return 'No network: it goes on by itself when one is back';
+  return progressLine(p.step, p.done, p.total);
 }
 
 /** First launch's three phases, in order. */

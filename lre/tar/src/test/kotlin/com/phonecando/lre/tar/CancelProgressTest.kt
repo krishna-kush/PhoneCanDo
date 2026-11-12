@@ -1,12 +1,12 @@
 package com.phonecando.lre.tar
 
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.Compression
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.api.Progress
 import com.phonecando.lre.tar.support.Compress
 import com.phonecando.lre.tar.support.Guest
 import com.phonecando.lre.tar.support.TarBuilder
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.Progress
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path

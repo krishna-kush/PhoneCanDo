@@ -1,7 +1,7 @@
 package com.phonecando.lre.image.delete
 
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.LreException
+import com.phonecando.network.CancelSignal
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files

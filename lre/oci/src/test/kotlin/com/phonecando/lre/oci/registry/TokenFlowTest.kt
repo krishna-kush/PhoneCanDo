@@ -3,9 +3,9 @@ package com.phonecando.lre.oci.registry
 import com.phonecando.lre.api.LreException
 import com.phonecando.lre.oci.ref.ImageRef
 import com.phonecando.lre.oci.testkit.FakeRegistry
-import com.phonecando.lre.oci.testkit.FakeTransport
 import com.phonecando.lre.oci.testkit.Fixtures
-import com.phonecando.lre.oci.testkit.reply
+import com.phonecando.network.testkit.FakePort
+import com.phonecando.network.testkit.reply
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
@@ -14,14 +14,14 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class TokenFlowTest {
-    private val fake = FakeTransport()
+    private val fake = FakePort()
     private val hub = FakeRegistry(fake, ImageRef.DOCKER_HUB, "library/alpine").apply {
         manifestFixture("latest", "registry/alpine-index.json", Fixtures.OCI_INDEX)
         manifestFixture(null, "registry/alpine-arm64-manifest.json", Fixtures.OCI_MANIFEST)
         blob(Fixtures.bytes("registry/alpine-arm64-config.json"))
     }
     private var now = 0L
-    private val client = RegistryClient(fake, Mirrors.NONE, RetryPolicy(sleeper = {}), nowMillis = { now })
+    private val client = RegistryClient(fake, Mirrors.NONE, nowMillis = { now }, sleeper = {})
 
     @Test
     fun `401 fetches one anonymous token, retries, then reuses it`() {

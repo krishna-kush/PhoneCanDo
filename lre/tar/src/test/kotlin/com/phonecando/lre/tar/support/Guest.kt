@@ -1,11 +1,11 @@
 package com.phonecando.lre.tar.support
 
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.Compression
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.tar.ExtractStats
 import com.phonecando.lre.tar.TarExtractor
 import com.phonecando.lre.tar.TarLimits
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.ProgressSink
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.LinkOption

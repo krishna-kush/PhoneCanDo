@@ -1,6 +1,8 @@
 package com.phonecando.linux.errors
 
 import com.phonecando.lre.api.LreException
+import com.phonecando.lre.api.toLre
+import com.phonecando.network.NetException
 import java.io.IOException
 
 /**
@@ -44,10 +46,11 @@ enum class LinuxErrorCode(val code: String) {
   companion object {
     fun fromCode(code: String?): LinuxErrorCode? = entries.firstOrNull { it.code == code }
 
-    /** The code for any failure: ours, the runtime's, or a disk error. */
+    /** The code for any failure: ours, the runtime's, our network code's (a download's wait cancelled), or a disk error. */
     fun of(e: Throwable): LinuxErrorCode = when (e) {
       is LinuxError -> e.code
       is LreException -> ofLre(e)
+      is NetException -> ofLre(e.toLre())
       is InterruptedException -> CANCELLED
       is IOException -> if (isNoSpace(e)) NO_SPACE else INTERNAL
       else -> INTERNAL

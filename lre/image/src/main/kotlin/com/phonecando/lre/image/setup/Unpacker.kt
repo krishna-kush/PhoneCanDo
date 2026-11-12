@@ -2,9 +2,9 @@ package com.phonecando.lre.image.setup
 
 import com.phonecando.lre.api.BaseImage
 import com.phonecando.lre.api.BaseLayer
-import com.phonecando.lre.api.CancelSignal
 import com.phonecando.lre.api.LreException
-import com.phonecando.lre.api.ProgressSink
+import com.phonecando.network.CancelSignal
+import com.phonecando.network.ProgressSink
 import java.io.File
 
 /** Applies one base layer to a rootfs dir; [TarUnpacker] is the real one. */

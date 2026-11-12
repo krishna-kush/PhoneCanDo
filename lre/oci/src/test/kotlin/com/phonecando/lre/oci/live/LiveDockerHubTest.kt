@@ -1,11 +1,11 @@
 package com.phonecando.lre.oci.live
 
 import com.phonecando.lre.api.Compression
-import com.phonecando.lre.api.ProgressSink
 import com.phonecando.lre.oci.catalog.HubCatalog
-import com.phonecando.lre.oci.http.UrlConnectionTransport
 import com.phonecando.lre.oci.ref.ImageRef
 import com.phonecando.lre.oci.registry.RegistryClient
+import com.phonecando.network.ProgressSink
+import com.phonecando.network.http.UrlConnectionPort
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.io.TempDir
@@ -22,11 +22,11 @@ class LiveDockerHubTest {
     @TempDir
     lateinit var dir: File
 
-    private val transport = UrlConnectionTransport()
+    private val port = UrlConnectionPort()
 
     @Test
     fun `resolves alpine latest and downloads its layer`() {
-        val client = RegistryClient(transport)
+        val client = RegistryClient(port)
         val started = System.nanoTime()
         val resolved = client.resolve(ImageRef.parse("alpine:latest"))
         val layer = resolved.layers.single()
@@ -47,7 +47,7 @@ class LiveDockerHubTest {
 
     @Test
     fun `lists official operating systems and arm64 tags`() {
-        val catalog = HubCatalog(transport)
+        val catalog = HubCatalog(port)
         val images = catalog.officialOperatingSystems()
         assertTrue(images.any { it.name == "alpine" } && images.any { it.name == "debian" })
         val tags = catalog.tags("alpine")

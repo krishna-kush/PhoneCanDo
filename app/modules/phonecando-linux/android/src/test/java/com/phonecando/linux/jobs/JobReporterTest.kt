@@ -1,6 +1,7 @@
 package com.phonecando.linux.jobs
 
-import com.phonecando.lre.api.Progress
+import com.phonecando.network.Progress
+import com.phonecando.network.retry.RetryWait
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -96,6 +97,41 @@ class JobReporterTest {
     assertNull(map["rateBytesPerSec"])
     assertNull(map["online"])
     assertEquals(4L, map["elapsedSec"])
+  }
+
+  @Test fun aDownloadWaitingToTryAgainSaysSoAtOnce() {
+    reporter.report(Progress("download", 40, 100))
+    reporter.retrying(RetryWait(2, 6, 5_000, RetryWait.Reason.RATE_LIMITED))
+    val waiting = events.last()
+    assertEquals("retry", waiting.step)
+    assertEquals(40L, waiting.done)
+    assertEquals(
+      mapOf("attempt" to 2, "max" to 6, "delaySec" to 5, "reason" to "rate_limited"),
+      waiting.toMap()["retry"],
+    )
+    reporter.waitingForNetwork()
+    assertEquals("offline", events.last().step)
+    assertNull(events.last().toMap()["retry"])
+    // The next report is the download again, at once.
+    reporter.report(Progress("download", 41, 100))
+    assertEquals("download", events.last().step)
+    assertEquals(false, events.last().toMap().containsKey("retry"))
+  }
+
+  @Test fun onlyDownloadedBytesCountAsATryGettingSomewhere() {
+    reporter.report(Progress("verify", 90, 100))
+    assertEquals(0L, reporter.mostDone)
+    reporter.report(Progress("download", 30, 100))
+    reporter.report(Progress("download", 10, 100))
+    assertEquals(30L, reporter.mostDone)
+  }
+
+  @Test fun theLastEventOfAFailedWaitIsTheDownloadsOwn() {
+    reporter.report(Progress("download", 40, 100))
+    reporter.waitingForNetwork()
+    reporter.finish("network: network error on https://x", "network")
+    assertEquals("download", events.last().step)
+    assertTrue(events.last().finished)
   }
 
   @Test fun aFinishedJobWithoutErrorIsOk() {

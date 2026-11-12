@@ -13,12 +13,12 @@
 | Default image | `python3 -I lre/images/default/verify.py <out-dir>` | A build against its manifest and our rules. |
 | Tier 1 | `.github/ci/lre-image/setup.sh` + `tier1.sh` | The Default image through our launcher and proot, as opencode runs commands. |
 | Tier 2 / 3 | `.github/ci/lre-compat/leg.sh` | A registry image set up with `cli` and used as opencode uses it. |
-| Host | `./gradlew :phonecando-linux:testLiteDebugUnitTest` (from `app/android`) | Records, jobs, ids, error codes, terminal recipes, guest commands, the process selection of the reaper, play refusals. |
+| Host | `./gradlew :phonecando-linux:testLiteDebugUnitTest` (from `app/android`) | Records, jobs and their retry and offline events, recovery and resumed downloads, ids, error codes, terminal recipes, guest commands, the process selection of the reaper, play refusals. |
 | Device | logcat, `adb exec-out screencap` | Anything proot does on the phone. |
 
 Fixtures: `oci` replays recorded registry and Hub responses
-(`lre/oci/src/test/resources/`) through a fake transport and registry
-(`testkit/`); `image` builds tiny distro trees and tars in the test
+(`lre/oci/src/test/resources/`) through a fake registry (`testkit/`) on
+network's `FakePort`; `image` builds tiny distro trees and tars in the test
 (`support/`); `tar` builds archives with `support/TarBuilder.kt`. No unit
 test touches the network.
 

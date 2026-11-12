@@ -1,5 +1,7 @@
 package com.phonecando.linux.jobs
 
+import com.phonecando.network.retry.RetryWait
+
 /** A guest script's `@retry <phase> <n>/<max>` line: a step failed and runs again, try [attempt] of [max]. */
 data class ScriptRetry(val attempt: Int, val max: Int)
 
@@ -42,8 +44,10 @@ data class ProgressEvent(
   val finished: Boolean,
   /** Set on every event of a guest script job, null on other jobs. */
   val script: ScriptDetail? = null,
+  /** A download's wait before its next try (step `retry`); null otherwise. */
+  val wait: RetryWait? = null,
 ) {
-  /** `ok` only on the last event; the script fields only on a guest script job's. */
+  /** `ok` only on the last event; `retry` only while a download waits; the script fields only on a guest script job's. */
   fun toMap(): Map<String, Any?> = buildMap {
     put("jobId", jobId)
     put("target", mapOf("kind" to target.kind.id, "id" to target.id))
@@ -54,6 +58,9 @@ data class ProgressEvent(
     put("errorCode", errorCode)
     put("finished", finished)
     if (finished) put("ok", error == null)
+    wait?.let {
+      put("retry", mapOf("attempt" to it.attempt, "max" to it.max, "delaySec" to (it.delayMillis / 1000).toInt(), "reason" to reasonOf(it)))
+    }
     script?.let {
       put("phase", it.phase)
       put("tail", it.tail)
@@ -64,5 +71,10 @@ data class ProgressEvent(
       put("rateBytesPerSec", it.activity?.rateBytesPerSec)
       put("online", it.activity?.online)
     }
+  }
+
+  private fun reasonOf(wait: RetryWait): String = when (wait.reason) {
+    RetryWait.Reason.NETWORK -> "network"
+    RetryWait.Reason.RATE_LIMITED -> "rate_limited"
   }
 }
