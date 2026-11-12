@@ -36,6 +36,12 @@ test('the agent messaging tools are served on every channel, one route each', as
   for (const name of Object.keys(routes)) assert.deepEqual(byName[name].body, {}, name);
 });
 
+test('the keep-running ask is served on every channel, one route', async () => {
+  const { tools } = await build();
+  const keep = tools.find((t) => t.name === 'agents_keep_running');
+  assert.deepEqual([keep?.method, keep?.route, keep?.channel, keep?.body], ['POST', '/keep', 'all', {}]);
+});
+
 test('composed tools are left out, each with its reason', async () => {
   const { tools, omitted } = await build();
   const names = new Set(tools.map((t) => t.name));

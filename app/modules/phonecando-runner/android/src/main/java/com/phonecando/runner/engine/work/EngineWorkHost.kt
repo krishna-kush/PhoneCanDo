@@ -11,11 +11,13 @@ import com.phonecando.runner.notify.AppForeground
 
 // The work watch's view of the engine supervisor: the engines starting or
 // ready, each idle or not by its kind's rule (as isEngineIdle answers JS),
-// its quiet time, the user's first input and Keep running; the app in
-// front; an agent driving the screen; and a stop as the user's.
+// its quiet time, the user's first input, Keep running and its own ask to
+// stay up; the app in front; an agent driving the screen; and a stop as
+// the user's.
 internal class EngineWorkHost(private val context: Context, private val engines: EngineSupervisor) : WorkWatch.Host {
   private val store = AgentStores.get(context)
   private val keep = KeepRunning.get(context)
+  private val asks = KeepAsks.shared
 
   override fun agents(): List<WorkWatch.Agent> {
     val catalog = KindCatalogs.get(context)
@@ -31,6 +33,7 @@ internal class EngineWorkHost(private val context: Context, private val engines:
           quietMs = kind?.manifest?.idle?.quietSec?.let { it * 1000L } ?: WorkRules.DEFAULT_QUIET_MS,
           firstInputAt = engines.firstInputAt(status.agentId),
           kept = keep.isOn(status.agentId),
+          ask = asks.get(status.agentId),
         )
       }
   }

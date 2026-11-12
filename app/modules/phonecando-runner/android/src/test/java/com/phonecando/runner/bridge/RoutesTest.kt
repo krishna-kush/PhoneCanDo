@@ -37,6 +37,7 @@ class RoutesTest {
   @Test fun telemetryKeysAreRouteNames() {
     assertEquals("pce_act", Route.telemetryKey("/pce/act"))
     assertEquals("accessibility", Route.telemetryKey("/accessibility"))
+    assertEquals("keep", Route.telemetryKey("/keep"))
     assertNull(Route.telemetryKey("/nope"))
   }
 

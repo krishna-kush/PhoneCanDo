@@ -22,7 +22,9 @@ package com.phonecando.runner.bridge
 // the screen, and its dialog stops its time on it (BridgeRouter,
 // ScreenLease). The /agents/* routes (messages between agents,
 // AgentRoutes) exist on every channel and are neither gated nor screen
-// routes: talking to another agent is not phone control. /mcp is not a
+// routes: talking to another agent is not phone control. Nor is /keep
+// (an agent asking to stay up while idle, KeepRoutes), on every channel
+// too: it changes nothing on the phone. /mcp is not a
 // route: BridgeEntry hands it to the MCP endpoint (mcp/), whose tools call
 // these routes through the router.
 // Pure.
@@ -51,6 +53,7 @@ enum class Route(
   AGENTS_SEND("POST", "/agents/send"),
   AGENTS_INBOX("POST", "/agents/inbox"),
   AGENTS_WAIT("POST", "/agents/wait"),
+  KEEP("POST", "/keep"),
   ;
 
   companion object {

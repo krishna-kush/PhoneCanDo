@@ -13,10 +13,10 @@ import java.util.concurrent.ConcurrentHashMap
 // The memory guard's view of the engine supervisor: the engines starting or
 // ready, each working or not by its kind's idle rule (as isEngineIdle
 // answers JS), busy or not by the work watch's last look (a job left
-// running, or Keep running) and on the model whose server it holds; the
-// model servers loading or ready; the agent on screen; and a stop as the
-// user's, with why on its status. A stopped agent's name says which jobs
-// went with it.
+// running, Keep running, or its own ask to stay up) and on the model whose
+// server it holds; the model servers loading or ready; the agent on
+// screen; and a stop as the user's, with why on its status. A stopped
+// agent's name says which jobs went with it.
 internal class EngineMemoryHost(private val context: Context, private val engines: EngineSupervisor) : MemoryGuard.Host {
   private val store = AgentStores.get(context)
 
@@ -32,7 +32,7 @@ internal class EngineMemoryHost(private val context: Context, private val engine
       .map { status ->
         val kind = store.get(status.agentId)?.let { catalog.get(it.kind) }
         val working = kind != null && !engines.isIdle(status.agentId, kind)
-        val busy = work[status.agentId]?.let { it.busy || it.kept } == true
+        val busy = work[status.agentId]?.let { it.busy || it.held } == true
         MemoryAgent(status.agentId, null, working, status.lastUsedAt, modelOf[status.agentId], busy)
       }
   }

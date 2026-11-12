@@ -110,6 +110,14 @@ export type NativeKindDeleted = { deleted: boolean; usedBy: string[] };
 export type NativeRunLimits = { maxAgents: number | null; maxModels: number | null };
 
 /**
+ * An agent's own ask to stay up while idle in the background
+ * (agents_keep_running): why, until when (epoch ms) and that time as the
+ * phone shows one. It ends at that time, when the agent takes it back, or
+ * with its engine.
+ */
+export type NativeKeepAsk = { reason: string; until: number; untilText: string };
+
+/**
  * How close the phone is to running out of memory: ok, warn (near the peak:
  * the runner counts down to stopping one agent itself) or critical (Android
  * is about to kill processes: a short countdown).

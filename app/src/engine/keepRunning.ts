@@ -3,7 +3,10 @@
 // nothing to do. Without it an idle agent stops once the app has been away
 // for its kind's quiet time and nothing it started still runs (a dev
 // server, a download). Kept natively, so the runner holds to it with no JS
-// around. A native build from before it reads as off and cannot save.
+// around. A native build from before it reads as off and cannot save. An
+// agent can also ask to stay up for a while itself (agents_keep_running);
+// keepRunningAsk reads that ask.
+import type { NativeKeepAsk } from '../../modules/phonecando-runner/src/PhoneCanDoRunner.types';
 import type { AgentId } from './agents/records';
 import { isRunnerAvailable, nativeRunner } from './runner';
 
@@ -33,6 +36,19 @@ export function setKeepRunning(agentId: AgentId, on: boolean): boolean | null {
   try {
     const m = nativeRunner();
     return typeof m.setKeepRunning === 'function' ? m.setKeepRunning(agentId, on) : null;
+  } catch {
+    return null;
+  }
+}
+
+export type KeepAsk = NativeKeepAsk;
+
+/** The agent's own live ask to stay up; null when it has none or this build cannot tell. */
+export function keepRunningAsk(agentId: AgentId): KeepAsk | null {
+  if (!isRunnerAvailable()) return null;
+  try {
+    const ask = nativeRunner().keepRunningAsk?.(agentId);
+    return ask && typeof ask.reason === 'string' && typeof ask.untilText === 'string' ? ask : null;
   } catch {
     return null;
   }

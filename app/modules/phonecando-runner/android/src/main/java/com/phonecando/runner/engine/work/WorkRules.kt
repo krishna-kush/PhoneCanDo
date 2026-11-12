@@ -9,6 +9,9 @@ package com.phonecando.runner.engine.work
 //   agent's jobs used ACTIVE_CPU_MS of CPU or moved ACTIVE_IO_BYTES since
 //   the last look, and stays so for ACTIVE_HOLD_MS after
 // - an agent whose kind has no idle rule counts DEFAULT_QUIET_MS as quiet
+// - an agent's own ask to stay up (KeepAsks) lasts ASK_DEFAULT_MINUTES
+//   when it names no time, ASK_MAX_MINUTES at most (it may ask again), and
+//   its reason is cut to ASK_REASON_MAX characters
 object WorkRules {
   const val POLL_MS = 30_000L
   const val MIN_AGE_MS = 10_000L
@@ -18,6 +21,10 @@ object WorkRules {
   const val ACTIVE_HOLD_MS = 60_000L
 
   const val DEFAULT_QUIET_MS = 60_000L
+
+  const val ASK_DEFAULT_MINUTES = 30
+  const val ASK_MAX_MINUTES = 120
+  const val ASK_REASON_MAX = 120
 
   /** What a command line's first word is when it is a shell. */
   val SHELLS = setOf("sh", "bash", "zsh", "dash", "ash", "ksh", "mksh", "fish", "tcsh", "csh", "yash")

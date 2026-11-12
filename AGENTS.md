@@ -111,7 +111,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   is the supervisor (the user's optional cap with LRU idle stop,
   tagged-process reaper; `engine/work/` tells the jobs an agent left
   running from the agent and stops idle agents with none in the
-  background, pure `AgentWork` and `ReclaimPolicy`), `limits/` the run
+  background unless kept running or asked to stay up (`KeepAsks`, the
+  `agents_keep_running` tool), pure `AgentWork` and `ReclaimPolicy`),
+  `limits/` the run
   caps, `memory/` the memory guard (pure `MemoryPolicy`, numbers in
   `MemoryRules`), `jobs/` the jobs anchor (keeps the `specialUse` service
   up while model and Linux jobs run), `power/` the wake lock while work

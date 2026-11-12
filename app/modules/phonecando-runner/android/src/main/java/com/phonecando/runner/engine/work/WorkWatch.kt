@@ -48,7 +48,8 @@ internal class WorkWatch(
   /**
    * [idle]: by its kind's rule, never with a chat working; [firstInputAt]:
    * epoch ms of the user's first input in this engine life (null: none
-   * yet); [kept]: the user keeps it running.
+   * yet); [kept]: the user keeps it running; [ask]: its own live ask to
+   * stay up (KeepAsks).
    */
   data class Agent(
     val agentId: String,
@@ -57,11 +58,27 @@ internal class WorkWatch(
     val quietMs: Long,
     val firstInputAt: Long?,
     val kept: Boolean,
-  )
+    val ask: KeepAsks.Ask? = null,
+  ) {
+    /** Never stopped for being idle: the user keeps it running or it asked to stay up. */
+    val held: Boolean get() = kept || ask != null
+  }
 
-  /** One agent at the last look: its [jobs] by name (WorkNames), whether they are doing something ([active]). */
-  data class State(val agentId: String, val jobs: List<String>, val active: Boolean, val kept: Boolean) {
+  /**
+   * One agent at the last look: its [jobs] by name (WorkNames), whether
+   * they are doing something ([active]), Keep running ([kept]) and its own
+   * ask to stay up ([ask]).
+   */
+  data class State(
+    val agentId: String,
+    val jobs: List<String>,
+    val active: Boolean,
+    val kept: Boolean,
+    val ask: KeepAsks.Ask? = null,
+  ) {
     val busy: Boolean get() = jobs.isNotEmpty()
+
+    val held: Boolean get() = kept || ask != null
   }
 
   private val lock = ReentrantLock()
@@ -81,12 +98,13 @@ internal class WorkWatch(
   fun states(): Map<String, State> = states
 
   /**
-   * Whether the agent has a job running or is kept running, from a fresh
-   * look at its processes (the last look may be POLL_MS old). Any thread.
+   * Whether the agent has a job running, is kept running or asked to stay
+   * up, from a fresh look at its processes (the last look may be POLL_MS
+   * old). Any thread.
    */
   fun busyNow(agentId: String): Boolean {
     val agent = host.agents().firstOrNull { it.agentId == agentId } ?: return false
-    if (agent.kept) return true
+    if (agent.held) return true
     return work(agent, scan(), clock()).any { it.verdict == AgentWork.Verdict.WORK }
   }
 
@@ -151,7 +169,7 @@ internal class WorkWatch(
     val next = agents.associate { a ->
       val named = AgentWork.jobs(judged.getValue(a.agentId)).map(WorkNames::of).distinct()
       if (named.isNotEmpty()) lastBusyAt[a.agentId] = now
-      a.agentId to State(a.agentId, named, a.agentId in active && named.isNotEmpty(), a.kept)
+      a.agentId to State(a.agentId, named, a.agentId in active && named.isNotEmpty(), a.kept, a.ask)
     }
     for ((agentId, list) in judged) logIfChanged(agentId, list)
     val changed = next != states
@@ -161,7 +179,7 @@ internal class WorkWatch(
     onLook(changed)
     if (!foreground) {
       val candidates = agents.map { a ->
-        ReclaimPolicy.Agent(a.agentId, a.ready, a.idle, next.getValue(a.agentId).busy, a.kept, a.quietMs, lastBusyAt[a.agentId])
+        ReclaimPolicy.Agent(a.agentId, a.ready, a.idle, next.getValue(a.agentId).busy, a.held, a.quietMs, lastBusyAt[a.agentId])
       }
       for (agentId in ReclaimPolicy.toStop(candidates, awaySince, host.screenInUse(), now)) {
         // The user came back meanwhile: the app restarts its agent, and a

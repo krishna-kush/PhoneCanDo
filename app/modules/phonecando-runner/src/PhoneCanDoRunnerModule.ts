@@ -6,6 +6,7 @@ import type {
   NativeClientRecipe,
   NativeEngineStatus,
   NativeInstallPlan,
+  NativeKeepAsk,
   NativeKindDeleted,
   NativeKindProblem,
   NativeKindSaved,
@@ -33,6 +34,7 @@ export type {
   NativeDeliveryStatus,
   NativeEngineStatus,
   NativeInstallPlan,
+  NativeKeepAsk,
   NativeKindDeleted,
   NativeKindProblem,
   NativeKindSaved,
@@ -102,6 +104,8 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   keepRunning(agentId: string): boolean;
   /** Saves Keep running and returns it as kept. */
   setKeepRunning(agentId: string, on: boolean): boolean;
+  /** The agent's own live ask to stay up (agents_keep_running), or null. */
+  keepRunningAsk(agentId: string): NativeKeepAsk | null;
   /** The messages between agents (and the runner's notices to them), newest first; at most 500. */
   messageLog(limit: number): NativeMessage[];
   /** Unread (not yet in their turn) messages per agent id, only agents with some. */

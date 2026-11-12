@@ -190,9 +190,10 @@ no bridge. The token is only ever an env reference that the agent expands
 itself, never in argv or on disk.
 
 The same bridge serves the agent tools (`shared/phone-tools/agents.ts`:
-`agents_list`, `agents_send`, `agents_inbox`, `agents_wait`), on every
-channel and outside the phone-control lock, so a kind with no bridge
-cannot message other agents either.
+`agents_list`, `agents_send`, `agents_inbox`, `agents_wait`; `keep.ts`:
+`agents_keep_running`, to stay up while idle), on every channel and
+outside the phone-control lock, so a kind with no bridge cannot message
+other agents either.
 
 ### Messages from other agents
 

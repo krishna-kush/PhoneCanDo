@@ -3,7 +3,8 @@ package com.phonecando.runner.engine.work
 // Which agents the runner stops by itself, freeing their memory: only with
 // the app in the background, and only an agent that is ready, idle by its
 // kind's rule (never with a chat working), has no job left (AgentWork) and
-// is not kept running (the user's switch, KeepRunning). The app has been
+// is not kept running (the user's switch, KeepRunning, or its own ask to
+// stay up, KeepAsks). The app has been
 // away for the kind's quiet time, so a quick look at another app (the
 // browser on the agent's dev server) stops nothing, and the agent's last
 // job ended that long ago, so it can still answer what the job printed.

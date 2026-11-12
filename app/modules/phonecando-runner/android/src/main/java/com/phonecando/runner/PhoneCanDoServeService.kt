@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.text.format.DateFormat
 import android.util.Log
 import com.phonecando.models.jobs.JobTarget
 import com.phonecando.runner.agents.AgentStores
@@ -29,6 +30,7 @@ import com.phonecando.runner.notify.TimeLimitNotice
 import com.phonecando.runner.notify.TransferLines
 import com.phonecando.runner.notify.WorkLines
 import com.phonecando.runner.power.WorkLock
+import java.util.Date
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
@@ -293,7 +295,8 @@ class PhoneCanDoServeService : Service() {
     val running = supervisor?.statuses()?.filter { it.state.live }?.map { it.agentId }.orEmpty()
     val chats = supervisor?.chats().orEmpty()
     val working = chats.filter { it.state == ChatBoard.State.WORKING }.mapTo(HashSet()) { it.agentId }
-    val work = WorkLines.of(Engines.work()?.states()?.values.orEmpty(), working, names)
+    val clock = DateFormat.getTimeFormat(this)
+    val work = WorkLines.of(Engines.work()?.states()?.values.orEmpty(), working, names) { clock.format(Date(it)) }
     val transfers = JobsAnchor.modelJobs().map {
       TransferLines.of(it.label, it.target.kind == JobTarget.Kind.IMPORT, it.done, it.total)
     }

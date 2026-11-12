@@ -18,8 +18,8 @@ class WorkWatchTest {
   private val looks = ArrayList<Boolean>()
   private var agents = listOf(agent("a1"))
 
-  private fun agent(id: String, idle: Boolean = true, kept: Boolean = false) =
-    WorkWatch.Agent(id, ready = true, idle = idle, quietMs = 60_000L, firstInputAt = 500_000L, kept = kept)
+  private fun agent(id: String, idle: Boolean = true, kept: Boolean = false, ask: KeepAsks.Ask? = null) =
+    WorkWatch.Agent(id, ready = true, idle = idle, quietMs = 60_000L, firstInputAt = 500_000L, kept = kept, ask = ask)
 
   private val host = object : WorkWatch.Host {
     override fun agents() = agents
@@ -80,6 +80,24 @@ class WorkWatchTest {
     watch.tick()
     assertEquals(emptyList<String>(), stopped)
     assertTrue(watch.states().getValue("a1").kept)
+  }
+
+  @Test fun anAgentThatAskedToStayUpIsKeptUntilItsAskEnds() {
+    val ask = KeepAsks.Ask("waiting for Tester", now + 3_600_000L)
+    agents = listOf(agent("a1", ask = ask))
+    procs = listOf(engine)
+    foreground = false
+    watch.tick()
+    now += 600_000
+    watch.tick()
+    assertEquals(emptyList<String>(), stopped)
+    assertEquals(ask, watch.states().getValue("a1").ask)
+    assertTrue(watch.states().getValue("a1").held)
+    assertTrue(watch.busyNow("a1"))
+    // The ask ended (the host reads no live ask): idle and away, it stops.
+    agents = listOf(agent("a1"))
+    watch.tick()
+    assertEquals(listOf("a1"), stopped)
   }
 
   @Test fun busyNowLooksAgain() {

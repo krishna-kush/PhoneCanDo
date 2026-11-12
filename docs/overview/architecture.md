@@ -110,7 +110,9 @@ Builder (Claude Code)
 
 - **Tools**: `agents_list`, `agents_send`, `agents_inbox`, `agents_wait`
   on the bridge's MCP server, next to the phone tools; not behind the
-  phone-control lock, on every channel (`../api/tools.md`).
+  phone-control lock, on every channel (`../api/tools.md`). With them,
+  `agents_keep_running`: an idle agent waiting for an answer asks to stay
+  up for a while, as a message never starts a stopped agent.
 - **Mailbox** (the runner's `messages/`): messages in app-private storage,
   never inside a machine; size and rate limits, repeats dropped, a wake
   budget and a hop limit; every message labelled as from another AI agent,

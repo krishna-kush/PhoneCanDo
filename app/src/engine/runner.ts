@@ -8,6 +8,7 @@ import type {
   NativeClientRecipe,
   NativeEngineStatus,
   NativeInstallPlan,
+  NativeKeepAsk,
   NativeKindDeleted,
   NativeKindProblem,
   NativeKindSaved,
@@ -47,6 +48,8 @@ export type RunnerModule = {
   /** Absent from native builds older than Keep running. */
   keepRunning?(agentId: string): boolean;
   setKeepRunning?(agentId: string, on: boolean): boolean;
+  /** Absent from native builds older than agents_keep_running. */
+  keepRunningAsk?(agentId: string): NativeKeepAsk | null;
   /** Agent messages (engine/messages/, which checks what these return). Absent from native builds older than messaging. */
   messageLog?(limit: number): NativeMessage[];
   unreadCounts?(): Record<string, number>;

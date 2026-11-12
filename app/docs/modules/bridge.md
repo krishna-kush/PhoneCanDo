@@ -25,7 +25,8 @@ loopback-only, runs in the app process beside the engines
   (Screen lease below). `Routes.kt` lists every route with its guards.
 - Endpoints: `ping/battery/notify/share/open/clipboard/app/unlock/accessibility`
   plus the automation `/pce/*` routes, the agents' messages
-  `/agents/list|send|inbox|wait` (Agent messages below), and `/mcp`, the
+  `/agents/list|send|inbox|wait` (Agent messages below), `/keep` (an
+  agent's ask to stay up, below), and `/mcp`, the
   same tools over MCP (below). Bodies over 256 KB return 413. `BridgeServer.kt` only frames
   HTTP; `BridgeEntry.kt` checks the token (before the body is even read),
   then hands `/mcp` to the MCP endpoint and every other path to the router.
@@ -171,6 +172,25 @@ screen routes; the caller is the bearer's agent:
 - NanoHTTPD runs each connection on its own thread, so a wait (at most
   30 s) holds only its own request; the TS client gives it 40 s.
 
+## Staying up
+
+`/keep` (`KeepRoutes.kt`, the `agents_keep_running` tool) is the calling
+agent asking to stay up while idle in the background, or taking that back
+(`runner.md` → Jobs and the idle stop). A POST on every channel, neither
+gated nor a screen route: it changes nothing on the phone.
+
+| Body | `data` |
+| --- | --- |
+| `{on: true, reason, minutes?}` | `{on: true, reason, minutes, until, userKeepsRunning}` |
+| `{on: false}` | `{on: false, userKeepsRunning}` |
+
+`reason` is one line the user sees in the notification (cut to 120
+characters); `minutes` defaults to 30 and is cut to 1–120; a new ask
+replaces the last. `until` is ISO-8601 UTC. `userKeepsRunning`: the user's
+Keep running switch is on, so the agent needs no ask. A missing `on`, a
+missing or blank `reason` with `on: true`, or a mistyped argument is 400
+`bad_request`.
+
 ## Agent-side tools
 
 The tools are kind-neutral: `agents/shared/phone-tools/`
@@ -184,7 +204,8 @@ shipped only in full, registers phone control (`phone-tools/control/`),
 `mobile_open_accessibility` (`/accessibility`). Both go through
 `plugins/mobile/opencode.ts` (`Plugin.define` + `ctx.tool.transform`).
 The agent messages' tools, `agents_list`, `agents_send`, `agents_inbox` and
-`agents_wait` (`agents.ts`, one route each), are on every channel.
+`agents_wait` (`agents.ts`, one route each), and `agents_keep_running`
+(`keep.ts`, `/keep`) are on every channel.
 The client uses a 15 s timeout by default, 50 s for unlock and 255 s for
 accessibility, whose bridge wait is 240 s, and degrades to a message when
 the bridge is absent. `mobile_act` derives its timeout from the call, so a

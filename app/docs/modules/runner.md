@@ -516,8 +516,8 @@ per-kind code; every number is in `WorkRules.kt`.
 - **The idle stop** (`ReclaimPolicy.kt`, pure). With the app in the
   background, an agent stops (as a user stop: it and all it started) once
   it is ready, idle by its kind's rule (`isIdle`: no activity for
-  `quietSec`, never with a chat working), has no job, is not kept running,
-  the app has been away for its quiet time (a look at the agent's dev
+  `quietSec`, never with a chat working), has no job, is not kept running
+  and has not asked to stay up, the app has been away for its quiet time (a look at the agent's dev
   server in the browser stops nothing) and its last job ended that long
   ago. Nothing stops while an agent drives the screen (the bridge's screen
   lease, `Bridge.screenInUse`: it may just have put PhoneCanDo in the
@@ -526,9 +526,21 @@ per-kind code; every number is in `WorkRules.kt`.
   switch through `keepRunningFunctions`): the idle stop leaves the agent,
   and the memory guard stops it after the agents with nothing to do. A
   deleted agent leaves the set.
+- **An agent's own ask** (`KeepAsks.kt`; the `agents_keep_running` tool,
+  bridge route `/keep`, `KeepRoutes.kt`): an idle agent that must stay
+  reachable (it asked another agent something and wants the answer to
+  start its next turn, as a message never starts a stopped agent; a CI run
+  it waits for) asks to stay up, with a reason, for 30 minutes or as many
+  as it names, at most 120, and may ask again. It counts as Keep running
+  (the idle stop leaves it, the memory guard stops it after the agents with
+  nothing to do) but is never saved: it ends at its time, when the agent
+  sends `on: false`, or when its engine stops (`WorkWatches`). It never
+  touches the user's switch; the agent page shows it under the switch
+  (`keepRunningAsk`).
 - **Notification.** An agent kept up between chats has a line, "Claude
-  Code · running npm run dev" or "… · kept running", and a Stop button
-  (`ACTION_STOP_AGENT`) that ends it and its jobs.
+  Code · running npm run dev", "… · kept running" or, for its own ask,
+  "… · kept running: waiting for Tester's answer (until 14:30)", and a
+  Stop button (`ACTION_STOP_AGENT`) that ends it and its jobs.
 - **Wake lock** (`power/WorkLock.kt`). The service keeps the process
   alive, not the CPU: screen off, the phone sleeps under a running agent
   and it crawls. A partial wake lock is held while a chat works, a model
@@ -552,7 +564,7 @@ or a Linux job (an env download, a machine's setup or reset, an agent
 install). It runs the start requests, holds for jobs (`ACTION_HOLD` from
 `jobs/JobsAnchor.kt`; `models.md` → Jobs), shows one notification that
 lists the chats the agents are busy with, the agents kept up by a job they
-left running or by Keep running (`WorkLines.kt`, each with a Stop:
+left running, by Keep running or by their own ask (`WorkLines.kt`, each with a Stop:
 `ACTION_STOP_AGENT`), the model server reading a prompt, the model jobs
 and the Linux jobs with their share done
 (`notify/ServiceNotification.kt`, `ReadingLines.kt`, `TransferLines.kt`,

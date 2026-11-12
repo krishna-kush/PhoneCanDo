@@ -36,9 +36,10 @@ Implementation status, wrapper parity and device proof are in
 
 ## Agent tools
 
-Messages between the AI agents on the phone, on every channel and outside
-the phone-control lock (`agents/shared/phone-tools/agents.ts`; one bridge
-route each, so MCP serves them too):
+Messages between the AI agents on the phone, and an agent's ask to stay
+up, on every channel and outside the phone-control lock
+(`agents/shared/phone-tools/agents.ts` and `keep.ts`; one bridge route
+each, so MCP serves them too):
 
 | Tool | Route | Purpose |
 |---|---|---|
@@ -46,6 +47,7 @@ route each, so MCP serves them too):
 | `agents_send` | `POST /agents/send` | a message to an agent by name, `@machine` or `@phone`; `wake: true` (direct only) wakes an idle one |
 | `agents_inbox` | `POST /agents/inbox` | read and mark read the caller's unread messages and notices |
 | `agents_wait` | `POST /agents/wait` | wait up to 30 s for the next message (`from` one agent) |
+| `agents_keep_running` | `POST /keep` | stay up while idle in the background (`on`, a `reason` the user sees, `minutes` up to 120), or end that ask |
 
 Every message is labelled as from another AI agent, never the user. Where
 an agent's kind allows, messages also reach it inside its turns (the

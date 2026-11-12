@@ -51,6 +51,11 @@ export function keepRunningNote(on: boolean): string {
     : 'Stops once idle in the background with nothing it started still running.';
 }
 
+/** The line for the agent's own ask to stay up (agents_keep_running), under Keep running's. */
+export function keepAskNote(ask: { reason: string; untilText: string }): string {
+  return `Asked to stay up until ${ask.untilText}: ${ask.reason}`;
+}
+
 export function installDetail(agent: Agent, run: InstallRun | undefined): RowDetail {
   if (run?.status === 'running') return { text: 'installing…', alert: false };
   if (run?.status === 'failed') return { text: 'install stopped', alert: true };

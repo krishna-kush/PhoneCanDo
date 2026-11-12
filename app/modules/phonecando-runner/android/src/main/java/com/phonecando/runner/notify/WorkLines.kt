@@ -3,18 +3,31 @@ package com.phonecando.runner.notify
 import com.phonecando.runner.engine.work.WorkWatch
 
 // The service notification's lines for the agents that stay up between
-// chats: one that left a job running ("Claude Code · running npm run dev")
-// or that the user keeps running ("Claude Code · kept running"). An agent
-// with a chat working has its chat's line instead. Each line gets a Stop
-// (ServiceNotification), which ends the agent and its jobs. Pure.
+// chats: one that left a job running ("Claude Code · running npm run dev"),
+// that the user keeps running ("Claude Code · kept running") or that asked
+// to stay up ("Claude Code · kept running: waiting for Tester's answer
+// (until 14:30)"). An agent with a chat working has its chat's line
+// instead. Each line gets a Stop (ServiceNotification), which ends the
+// agent and its jobs. Pure.
 internal object WorkLines {
   data class Line(val agentId: String, val name: String, val text: String)
 
-  /** [working]: agents with a chat working; [names]: agent id → name. */
-  fun of(states: Collection<WorkWatch.State>, working: Set<String>, names: Map<String, String>): List<Line> =
-    states.filter { (it.busy || it.kept) && it.agentId !in working }.map { s ->
+  /** [working]: agents with a chat working; [names]: agent id → name; [time]: epoch ms as the phone shows a time. */
+  fun of(
+    states: Collection<WorkWatch.State>,
+    working: Set<String>,
+    names: Map<String, String>,
+    time: (Long) -> String,
+  ): List<Line> =
+    states.filter { (it.busy || it.held) && it.agentId !in working }.map { s ->
       val name = names[s.agentId] ?: s.agentId
-      Line(s.agentId, name, "$name · " + if (s.busy) "running ${jobs(s.jobs)}" else "kept running")
+      val ask = s.ask
+      val text = when {
+        s.busy -> "running ${jobs(s.jobs)}"
+        s.kept || ask == null -> "kept running"
+        else -> "kept running: ${ask.reason} (until ${time(ask.until)})"
+      }
+      Line(s.agentId, name, "$name · $text")
     }
 
   /** "a", "a, b", "a, b +2 more". */
