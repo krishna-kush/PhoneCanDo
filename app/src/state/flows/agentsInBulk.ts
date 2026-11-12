@@ -1,8 +1,9 @@
 // Stopping or deleting several agents at once (the drawer's selection).
 // Stops run together (a stop never fails: an engine already down is
 // stopped). Deletes run one after another, each through the single-agent
-// flow, so the machines' deletes never race; one failure never stops the
-// rest, and each comes back with its reason. With none left, setup shows
+// flow, so the machines' deletes never race and a machine picked agents
+// share goes with the last of them; one failure never stops the rest, and
+// each comes back with its reason. With none left, setup shows
 // in Home's place, so the drawer shuts rather than wait open for the next
 // first agent.
 import type { AgentId } from '../../engine/agents/records';

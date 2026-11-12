@@ -1,4 +1,4 @@
-// A ready image of an env that no agent owns yet: the one a cut-short setup
+// A ready image of an env that no agent uses yet: the one a cut-short setup
 // left behind (reused when ready, waited for while creating, retried when
 // failed), else a new one. First launch builds its agent on top of it.
 import { listAgents } from '../../engine/engines';

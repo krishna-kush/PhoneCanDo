@@ -7,8 +7,12 @@ as RAM allows (no cap unless the user sets one; the runner's memory guard
 warns near the peak and stops the sleepiest itself if nobody does), each
 with its own bridge token (a server engine also gets its own
 loopback port and password); JS starts them through `ensureEngine.ts`.
-Each agent lives in its own image: VM-like Linux through proot, or Android
-without Linux. Home is the active agent's own UI (opencode's pair-loaded
+Each agent lives in an image (a machine): VM-like Linux through proot, or
+Android without Linux. A new agent gets its own (recommended) or shares
+another agent's, like apps on one PC: one system, tools and projects; each
+keeps its own sign-in and chats (a second agent of a kind gets its own state
+folder through the kind's `state` block, or can't share), and every agent's
+instructions name the others there. The machine goes with its last agent. Home is the active agent's own UI (opencode's pair-loaded
 web UI, or the kind's TUI); terminals run over our JNI PTY, rendered by
 xterm.js in a WebView.
 

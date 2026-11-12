@@ -47,8 +47,8 @@ export default function EnvList() {
       <PageHeader kicker="envs · machines" title="Systems" />
       <Note>
         {play
-          ? 'Each agent has its own space for its projects and chats.'
-          : 'A system is a base OS. Each agent gets its own machine made from one, and what it installs stays in that machine.'}
+          ? 'Each agent works in a space for its projects, its own or one it shares, and keeps its own chats.'
+          : 'A system is a base OS. Each agent runs in a machine made from one, its own or one it shares, and what it installs stays in that machine.'}
       </Note>
       {!linuxAvailable && !play ? <Note>Linux isn't available in this build, so agents use Android's own shell.</Note> : null}
       {shown.map((s) => (

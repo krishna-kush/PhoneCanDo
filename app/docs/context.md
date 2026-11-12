@@ -52,8 +52,10 @@ Directory isolation inside one agent = PROJECT (folder + chats). ENV = a fixed
 base OS that is never modified (the Default env baked into the APK, an Own env
 from a container registry, or Android with no Linux). IMAGE = a VM-like machine
 made from an env, with its own HOME (agent config, chats, projects, keys);
-reset replaces its system and keeps HOME. One agent per image, each with its
-own engine, port, password and bridge token. The TUI takes the project folder
+reset replaces its system and keeps HOME. An image holds one agent or
+several that share it (sharing its system, tools and projects); each has its
+own engine, port, password, bridge token, events file and engine log, and a
+second agent of a kind its own state folder (`home/.phonecando/agents/<id>/`). The TUI takes the project folder
 as its trailing argument (v2 has no `--dir`).
 
 ## Linux images

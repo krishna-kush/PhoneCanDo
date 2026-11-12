@@ -18,7 +18,7 @@ export default function AddSystem() {
   return (
     <Screen>
       <PageHeader kicker="add system" title="Which system?" />
-      <Note>A system is a base OS; each agent on it gets its own machine. It comes with its first agent.</Note>
+      <Note>A system is a base OS that machines are made from. It comes with its first agent, on a machine of its own.</Note>
       <AppCard
         title={DEFAULT_ENV_TITLE}
         subtitle="Debian-based · ready in about half a minute, no download"

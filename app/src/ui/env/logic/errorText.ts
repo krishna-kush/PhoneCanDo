@@ -45,13 +45,32 @@ export function failureText(failure: JobFailure): string {
   return failure.code === 'internal' && detail ? `${text} (${detail})` : text;
 }
 
-/** Any rejection from the Linux seam, the runner or a flow, as a sentence; a refused start or model pick says why. */
+/** Any rejection from the Linux seam, the runner or a flow, as a sentence; a refused start, model pick or new agent says why. */
 export function linuxFailureText(e: unknown): string {
   const code = (e as { code?: unknown } | null)?.code;
   if (typeof code === 'string' && Object.prototype.hasOwnProperty.call(START_TEXT, code)) {
     return startFailureText(code as EngineStartError, e instanceof Error ? e.message : null);
   }
+  const refused = createRefusalText(e);
+  if (refused) return refused;
   return failureText(failureOfError(e));
+}
+
+/**
+ * The runner's refusal of a new agent (createAgent) as a sentence; null for
+ * any other rejection. kind_cannot_share: an agent joined a machine that has
+ * one of its kind, and the kind can't give each its own sign-in and chats.
+ * The place step dims such a machine, so this is the race where one was made
+ * there meanwhile. Native puts the code first and names the kind
+ * (`kind_cannot_share: Two opencode agents can't share a machine`).
+ */
+export function createRefusalText(e: unknown): string | null {
+  const raw = (e as { code?: unknown } | null)?.code;
+  const message = e instanceof Error ? e.message : typeof e === 'string' ? e : '';
+  const m = /kind_cannot_share:\s*([^\n]*)/.exec(message);
+  if (raw !== 'kind_cannot_share' && !m) return null;
+  const said = m?.[1].trim().replace(/\.$/, '');
+  return `${said || "Two agents of this kind can't share a machine"}, so this one needs its own.`;
 }
 
 /** A record's failure (`error` + `errorCode`) as a sentence; null when it has none. */

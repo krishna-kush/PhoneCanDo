@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { soleOffer } from '../../../engine/agents/offers';
 import type { Agent } from '../../../engine/agents/records';
 import type { AgentKindId } from '../../../engine/agents/registry';
+import type { ImageId } from '../../../engine/linux/types';
 import { createAgentFromEnv, createAndroidAgent, createDefaultAgent } from '../../../state/flows/createAgentFromEnv';
+import { createAgentOnMachine } from '../../../state/flows/createAgentOnMachine';
 import { createOwnEnv } from '../../../state/flows/createOwnEnv';
 import { offersForEnv } from '../../../state/flows/kindOffers';
 import type { AgentPick } from '../../../state/flows/logic/modelStep';
@@ -18,12 +20,21 @@ import { linuxFailureText } from '../logic/errorText';
 // else opens the Choose agent step for that place; `make` makes the pick,
 // then opens the agent's page in place of the run's steps. An Own env
 // starts its download instead and moves to its progress page; the run
-// makes the agent after.
+// makes the agent after. `share` makes the pick on a machine other agents
+// use, then opens its page the same way.
 export function useNewAgent() {
   const push = useAppStore((s) => s.push);
   const finishCreation = useAppStore((s) => s.finishCreation);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The made agent's page in place of the run's steps, or why it wasn't made.
+  const finish = (made: Promise<Agent>) => {
+    made
+      .then((agent) => finishCreation({ name: 'agent', agentId: agent.id, fresh: true }))
+      .catch((e: unknown) => setError(linuxFailureText(e)))
+      .finally(() => setBusy(false));
+  };
 
   const make = (target: NewAgentTarget, pick: AgentPick) => {
     if (busy) return;
@@ -44,10 +55,14 @@ export function useNewAgent() {
         });
       return;
     }
-    agentFor(target, pick)
-      .then((agent) => finishCreation({ name: 'agent', agentId: agent.id, fresh: true }))
-      .catch((e: unknown) => setError(linuxFailureText(e)))
-      .finally(() => setBusy(false));
+    finish(agentFor(target, pick));
+  };
+
+  const share = (imageId: ImageId, pick: AgentPick) => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    finish(createAgentOnMachine(imageId, pick));
   };
 
   /** The one kind to make without asking, else null (the step asks). */
@@ -66,7 +81,7 @@ export function useNewAgent() {
   /** Whether `start` would ask (Choose agent) rather than make it at once. */
   const asks = (target: NewAgentTarget) => soleKind(target) == null;
 
-  return { busy, error, start, make, asks };
+  return { busy, error, start, make, share, asks };
 }
 
 function agentFor(target: Exclude<NewAgentTarget, { kind: 'own' }>, pick: AgentPick): Promise<Agent> {

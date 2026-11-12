@@ -1,7 +1,7 @@
-// Images no agent owns. One agent owns one image, so an image without an
-// agent is what a setup cut short left behind (the app was killed between
-// "image made" and "agent made"). Setup reuses it instead of making another.
-// Pure.
+// Images no agent uses. A machine is deleted with its last agent, so an
+// image without any is what a setup cut short left behind (the app was
+// killed between "image made" and "agent made"). Setup reuses it instead of
+// making another. Pure.
 import type { Agent } from '../../../engine/agents/records';
 import type { Image, ImageState } from '../../../engine/linux/types';
 

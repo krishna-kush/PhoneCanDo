@@ -121,6 +121,10 @@ const ui = (p) => src('ui/env/logic', p);
   t('record sentence', recordErrorText({ error: 'interrupted', errorCode: 'cancelled' }), 'It stopped before it finished.');
   t('record without error', recordErrorText({ error: null, errorCode: null }), null);
   t('rejection sentence', linuxFailureText(coded), 'Docker Hub is limiting downloads right now (it allows a few an hour). Try again later.');
+  const cantShare = Object.assign(new Error("kind_cannot_share: Two opencode agents can't share a machine"), { code: 'ERR_RUNNER' });
+  t('a kind that cannot share, as native says it', linuxFailureText(cantShare), "Two opencode agents can't share a machine, so this one needs its own.");
+  t('a kind that cannot share, by code', linuxFailureText({ code: 'kind_cannot_share' }), "Two agents of this kind can't share a machine, so this one needs its own.");
+  t('not a refused new agent', linuxFailureText(new Error('boom')), 'Something went wrong on our side. (boom)');
   t('start code', startFailureCode('start-failed:too_many_running'), 'too_many_running');
   t('start code unknown', startFailureCode('start-failed:nope'), null);
   t('start code not a failure', startFailureCode('started'), null);
@@ -226,8 +230,21 @@ const ui = (p) => src('ui/env/logic', p);
     [{ id: 'a1', imageId: 'i1', createdAt: 5 }, { id: 'a2', imageId: 'lost', createdAt: 6 }],
   );
   t('env order', secs.map((x) => x.key), ['def', 'own1', 'own2', 'and', 'lost']);
-  t('rows under env', secs[1].rows.map((r) => [r.image?.id, r.agent?.id]), [['i1', 'a1']]);
-  t('lost rows', secs[4].rows.map((r) => r.key), ['i2', 'agent:a2']);
+  t('rows under env', secs[1].rows.map((r) => [r.image?.id, r.agents.map((a) => a.id)]), [['i1', ['a1']]]);
+  t('lost rows', secs[4].rows.map((r) => r.key), ['i2', 'missing:lost']);
+  const shared = buildEnvSections(
+    [env('def', 'default', 1)],
+    [img('i1', 'def', 'ready', 1), img('i2', 'def', 'ready', 2), img('i3', 'def', 'ready', 3)],
+    [{ id: 'b', imageId: 'i1', createdAt: 8 }, { id: 'c', imageId: 'i2', createdAt: 4 }, { id: 'a', imageId: 'i1', createdAt: 5 }],
+  );
+  t('a shared machine is one row with every agent on it, oldest first', shared[0].rows.map((r) => [r.key, r.agents.map((a) => a.id)]), [
+    ['i3', []], ['i2', ['c']], ['i1', ['a', 'b']],
+  ]);
+  const { agentCountOf } = await import(ui('sections.ts'));
+  t('every agent counted once', agentCountOf(shared[0].rows), 3);
+  t('agents of a missing machine stay together', buildEnvSections([], [], [{ id: 'x', imageId: 'gone', createdAt: 2 }, { id: 'y', imageId: 'gone', createdAt: 1 }])[0].rows.map((r) => [r.key, r.agents.map((a) => a.id)]), [
+    ['missing:gone', ['y', 'x']],
+  ]);
 
   const { envSubtitle, DEFAULT_ENV_TITLE } = await import(ui('titles.ts'));
   t('downloading env line', envSubtitle({ state: 'downloading', source: { kind: 'registry' }, os: null, sizeBytes: 0 }), 'Downloading');
@@ -245,6 +262,8 @@ const ui = (p) => src('ui/env/logic', p);
   t('a downloading env is not ready to judge', places[1].env.ready, false);
   t('download has no target yet', places[places.length - 1].target, null);
   t('without Linux: only Android places', placesFor(placeEnvs, false).map((p) => p.key), ['and']);
+  t('without Linux: Android is recommended', placesFor(placeEnvs, false).map((p) => p.recommended), [true]);
+  t('with Linux: Android is not', places.find((p) => p.key === 'and').recommended, false);
 
   // --- a system's page (ui/env/logic/systemFacts.ts) -----------------------
   const { systemFacts } = await import(ui('systemFacts.ts'));
@@ -268,9 +287,13 @@ const ui = (p) => src('ui/env/logic', p);
   ]);
   t('android has no OS rows', systemFacts({ source: { kind: 'android' }, state: 'ready', os: null, sizeBytes: 0, createdAt: at }, at).map((f) => f.label), ['Kind', 'Added']);
 
-  const { engineStateWord, engineIsUp } = await import(ui('engineState.ts'));
+  const { engineStateWord, engineIsUp, activityWord } = await import(ui('engineState.ts'));
   t('state word', engineStateWord('died'), 'Stopped unexpectedly');
   t('no status is stopped', engineStateWord(undefined), 'Stopped');
+  t('running and busy is working', activityWord('ready', false), 'Working');
+  t('running and quiet is idle', activityWord('ready', true), 'Idle');
+  t('activity not known keeps running', activityWord('ready', null), 'Running');
+  t('a stopped engine ignores activity', activityWord('stopped', false), 'Stopped');
   t('starting is up', engineIsUp('starting'), true);
 
   const { setupTitle, setupNote } = await import(src('ui/setup/copy.ts'));

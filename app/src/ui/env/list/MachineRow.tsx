@@ -1,72 +1,83 @@
 import { useState } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import type { Image } from '../../../engine/linux/types';
-import { useAgentsStore } from '../../../state/agents';
 import { deleteUnusedImage } from '../../../state/flows/deleteAgentAndImage';
-import ChevronIcon from '../../common/ChevronIcon';
 import CardMenu from '../../common/CardMenu';
 import ConfirmDialog from '../../common/ConfirmDialog';
-import AgentFace from '../../common/face/AgentFace';
-import { useAgentLook } from '../../common/face/useAgentLook';
 import PlainText from '../../common/PlainText';
-import { usePageActive } from '../../nav/pageActive';
-import { engineStateWord } from '../logic/engineState';
 import { linuxFailureText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
+import { sharedMachineLine } from '../logic/sharedMachineText';
 import ImageStatus from '../parts/ImageStatus';
 import Note from '../parts/Note';
+import AgentLine, { LineBody } from './AgentLine';
 
-type Props = { image: Image | null; agent: Agent | null; onOpen: (agentId: string) => void };
+type Props = { image: Image | null; agents: Agent[]; onOpen: (agentId: string) => void };
 
-// One machine in its system's agent list: the agent's face, name and
-// engine's word, and the image's setup state while it is not ready. A row
-// of the list's group (no box of its own). Tap opens the agent page. A
-// machine without an agent (a setup cut short) can only be deleted.
-export default function MachineRow({ image, agent, onOpen }: Props) {
-  const status = useAgentsStore((s) => (agent ? s.statuses[agent.id] : undefined));
+// One machine in its system's agent list, a row of the list's group (no box
+// of its own): its agent (AgentLine) with the machine's size, or, on a
+// machine agents share, a line saying so with its size over each of its
+// agents, so the size shows once; then the image's setup state while it is
+// not ready. A machine without an agent (a setup cut short) can only be
+// deleted.
+export default function MachineRow({ image, agents, onOpen }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const size = image && image.sizeBytes > 0 ? formatBytes(image.sizeBytes) : null;
-  const sub = agent
-    ? [image ? engineStateWord(status?.state) : 'Its machine is missing', size].filter(Boolean).join(' · ')
-    : ['Unused machine', size].filter(Boolean).join(' · ');
-
-  return (
-    <YStack
-      paddingHorizontal="3"
-      paddingVertical="2"
-      gap="2"
-      backgroundColor={agent ? 'press:panel2' : undefined}
-      onPress={agent ? () => onOpen(agent.id) : undefined}
-      accessibilityRole={agent ? 'button' : undefined}
-      accessibilityLabel={agent ? `${agent.name}, ${sub}` : undefined}
-    >
-      <XStack alignItems="center" gap="3" minHeight={40}>
-        {agent ? <RowFace agentId={agent.id} /> : <YStack width={25} height={25} borderWidth={1} borderColor="faint" />}
-        <YStack flex={1} minWidth={0} gap={2}>
-          <PlainText fontSize={16} fontWeight="600" numberOfLines={1} ellipsizeMode="tail">
-            {agent?.name ?? 'No agent'}
-          </PlainText>
-          <PlainText fontFamily="mono" fontSize={12} color="dim" numberOfLines={1}>
-            {sub}
-          </PlainText>
-        </YStack>
-        {agent ? (
-          <YStack flexShrink={0} paddingRight="1" opacity={0.5}>
-            <ChevronIcon size={18} />
-          </YStack>
-        ) : image ? (
-          <CardMenu
-            label="Actions for this unused machine"
-            items={[{ label: 'Delete machine', danger: true, onSelect: () => setConfirmDelete(true) }]}
-          />
-        ) : null}
-      </XStack>
+  const below = (
+    <>
       {image && image.state !== 'ready' ? <ImageStatus image={image} /> : null}
       {error ? <Note tone="error">{error}</Note> : null}
-      {image && !agent ? (
+    </>
+  );
+
+  if (agents.length > 1) {
+    return (
+      <YStack paddingTop="2">
+        <YStack paddingHorizontal="3">
+          <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.2} color="secondaryInk" textTransform="uppercase" numberOfLines={1}>
+            {sharedMachineLine(size)}
+          </PlainText>
+        </YStack>
+        {agents.map((a) => (
+          <AgentLine key={a.id} agent={a} missing={image == null} size={null} onOpen={onOpen} />
+        ))}
+        {image && image.state !== 'ready' ? (
+          <YStack paddingHorizontal="3" paddingBottom="2">
+            <ImageStatus image={image} />
+          </YStack>
+        ) : null}
+      </YStack>
+    );
+  }
+
+  if (agents.length === 1) {
+    return (
+      <AgentLine agent={agents[0]} missing={image == null} size={size} onOpen={onOpen}>
+        {below}
+      </AgentLine>
+    );
+  }
+
+  return (
+    <YStack paddingHorizontal="3" paddingVertical="2" gap="2">
+      <LineBody
+        lead={<YStack width={25} height={25} borderWidth={1} borderColor="faint" />}
+        title="No agent"
+        sub={['Unused machine', size].filter(Boolean).join(' · ')}
+        trailing={
+          image ? (
+            <CardMenu
+              label="Actions for this unused machine"
+              items={[{ label: 'Delete machine', danger: true, onSelect: () => setConfirmDelete(true) }]}
+            />
+          ) : null
+        }
+      />
+      {below}
+      {image ? (
         <ConfirmDialog
           open={confirmDelete}
           onClose={() => setConfirmDelete(false)}
@@ -81,11 +92,4 @@ export default function MachineRow({ image, agent, onOpen }: Props) {
       ) : null}
     </YStack>
   );
-}
-
-// Still while another page covers this one.
-function RowFace({ agentId }: { agentId: string }) {
-  const look = useAgentLook(agentId);
-  const active = usePageActive();
-  return <AgentFace mood={look.mood} pose={look.pose} size={18} still={!active} />;
 }

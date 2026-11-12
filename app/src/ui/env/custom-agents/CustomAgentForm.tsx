@@ -74,7 +74,7 @@ export default function CustomAgentForm({ kindId, forNewAgent }: Props) {
     <FormScreen>
       <PageHeader kicker="custom agents" title={title} />
       <Note>
-        Any agent with a terminal UI. It gets its own machine like the others, and Home shows its terminal.
+        Any agent with a terminal UI. It runs in a machine like the others, and Home shows its terminal.
       </Note>
       <FormField label="Name" value={k.form.name} onChange={(v) => k.set('name', v)} placeholder="Aider" problems={problems('name')} />
       <FormField

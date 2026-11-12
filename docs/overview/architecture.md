@@ -2,8 +2,9 @@
 
 PhoneCanDo runs coding agents on an Android phone. Each agent is one
 instance of an agent kind (opencode, Claude Code, Gemini CLI, …), has its
-own engine, and lives in its own image: a VM-like Linux machine through
-proot, or, without Linux, an Android one. Home is the active agent's own
+own engine, and lives in an image: a VM-like Linux machine through proot,
+or, without Linux, an Android one. Agents may share one image, like apps on
+one PC. Home is the active agent's own
 UI: its web UI (opencode) or its TUI (Claude Code, Gemini CLI). Terminals
 run over our JNI PTY, rendered by xterm.js in a WebView.
 
@@ -55,8 +56,15 @@ RN shell (Expo / Tamagui / Zustand)
   `phonecando-terminal`'s `PtyHost`; it keeps running when you leave the
   app, and Home reattaches with its screen replayed). In docs, "engine"
   never means opencode; write "opencode engine" when you mean that one.
-- **Env** and **image** — see Linux runtime below. One agent per image; they
-  are made and deleted together.
+- **Env** and **image** — see Linux runtime below. An image is made with its
+  first agent and deleted with its last; agents that share one share its
+  system, tools, projects and background processes, and each keeps its own
+  sign-in and chats (a second agent of a kind gets a state folder of its
+  own, `home/.phonecando/agents/<id>/`, through its kind's `state` block; a
+  kind without one can't share with itself). Each agent's instructions file
+  names the others on its machine (the runner's machine-mates note), the
+  image's `launch.conf` hides every agent's secrets from guest commands, and
+  installs on one machine run one at a time.
 - **`oc-`** — opencode's manifest `prefix`, used only where its files sit
   in a flat namespace next to other kinds': the `liboc-*.so` payload, the
   `oc-payload-arm64` CI artifact, the `oc-v2` build workdir. Everything

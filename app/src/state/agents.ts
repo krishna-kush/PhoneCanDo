@@ -18,7 +18,9 @@ import {
 } from '../engine/engines';
 import { ensureEngine, type EnsureResult } from '../engine/ensureEngine';
 import { prepareImageForStart } from '../engine/linux/native';
-import { isAutomationEnabled, isRunnerAvailable } from '../engine/runner';
+import type { ImageId } from '../engine/linux/types';
+import { isPhoneInUse, isRunnerAvailable } from '../engine/runner';
+import { agentsOn } from './flows/logic/machineTenants';
 import { keepUnchangedList, keepUnchangedMap } from './logic/keepUnchanged';
 
 const ACTIVE_AGENT_KEY = 'phonecando.activeAgent.v1';
@@ -170,10 +172,11 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
     // engine the runner calls idle (no event or touch for its kind's
     // idle.quietSec: opencode, a minute) stops; one it cannot judge stops too.
     stopIdleAgents: async () => {
-      // Phone control unlocked means an agent may be driving another app
-      // while PhoneCanDo is backgrounded (mobile_home/launch); stopping its
-      // engine here strands the turn before the next tool call.
-      if (isAutomationEnabled()) return;
+      // An agent driving the phone (a screen call now or in the last 30 s)
+      // may have just put PhoneCanDo in the background with
+      // mobile_home/launch; stopping its engine here strands the turn
+      // before the next tool call.
+      if (isPhoneInUse()) return;
       const { agents, statuses } = readNative();
       const running = agents.filter((a) => {
         const state = statuses[a.id]?.state;
@@ -201,11 +204,18 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
 
 /**
  * Await before anything runs in the agent's image: its engine, a shell, an
- * install. Always with its kind's guest env list, so the image's launch.conf
- * never flips between callers. Rejects as prepareImageForStart does.
+ * install. Always with the guest env list of every agent on the image (the
+ * runner's guestUnset gives the machine's whole list), so the image's
+ * launch.conf never flips between callers. Rejects as prepareImageForStart
+ * does.
  */
 export async function prepareAgentImage(agent: Agent): Promise<void> {
   await prepareImageForStart(agent.imageId, guestUnset(agent.id));
+}
+
+/** Every agent on the machine, oldest first, as the runner has them now (a flow's fresh read). */
+export function agentsOnImage(imageId: ImageId): Agent[] {
+  return agentsOn(listAgents(), imageId);
 }
 
 /** The active agent's record, outside React. */

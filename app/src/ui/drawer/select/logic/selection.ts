@@ -40,21 +40,46 @@ export function deleteTitle(names: readonly string[]): string {
 }
 
 /**
- * The delete confirm's message. `bytes`: their machines' size together,
- * null while measuring, 0 when unknown. `every`: no agent would be left.
+ * The delete confirm's message. `bytes`: the size of the machines that go,
+ * together, null while measuring, 0 when unknown. `every`: no agent would
+ * be left. `staying`: the picked agents whose machine stays, because an
+ * agent not picked shares it.
  */
-export function deleteMessage(names: readonly string[], bytes: number | null, every: boolean): string {
+export function deleteMessage(
+  names: readonly string[],
+  bytes: number | null,
+  every: boolean,
+  staying: readonly string[] = [],
+): string {
+  const size = bytes == null ? ' Measuring their size…' : bytes > 0 ? ` That frees about ${formatBytes(bytes)}.` : '';
+  if (staying.length > 0) return `${sharedDeleteLine(names, staying)}${size}`;
   const what =
     names.length === 1
       ? 'This deletes the agent and its machine'
       : `This deletes ${nameList(names)}, each with its machine`;
-  const size = bytes == null ? ' Measuring their size…' : bytes > 0 ? ` That frees about ${formatBytes(bytes)}.` : '';
   const last = !every
     ? ''
     : names.length === 1
       ? " It's your only agent, so we'll set up a fresh one right after."
       : " That's every agent, so we'll set up a fresh one right after.";
   return `${what} with everything in it: projects, chats, keys and installed tools.${size}${last}`;
+}
+
+// Some picked agents share their machine with an agent not picked: it stays.
+function sharedDeleteLine(names: readonly string[], staying: readonly string[]): string {
+  const kept =
+    names.length === 1
+      ? 'Its machine stays, because other agents still use it, and so do the projects in it.'
+      : staying.length === 1
+        ? `${staying[0]}'s machine stays, because other agents still use it, and so do the projects in it.`
+        : `Any machine ${orList(staying)} shares with an agent you didn't pick stays, and so do the projects in it.`;
+  if (staying.length === names.length) return `This deletes ${nameList(names)}. ${kept}`;
+  return `This deletes ${nameList(names)}. A machine no other agent uses goes with everything in it: projects, chats, keys and installed tools. ${kept}`;
+}
+
+// "Bob, Ann or Cy".
+function orList(names: readonly string[]): string {
+  return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
 }
 
 /** After a delete, what did not go: "Couldn't delete Bob: …" (the first reason for several). */

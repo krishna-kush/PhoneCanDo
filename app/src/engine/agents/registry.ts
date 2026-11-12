@@ -1,6 +1,7 @@
 // Every agent kind the app can run, as the runner lists them: each kind's
 // manifest (agents/<type>/<id>/agent.json, packaged per channel) without
-// templates or secrets (KindView). Read and parsed once per JS run, and
+// templates or secrets (KindView); a field the list leaves out reads as its
+// default (stateFolder: false). Read and parsed once per JS run, and
 // again after a custom agent kind is saved or deleted (reloadKinds). Screens
 // look up the kind of the agent in question (`agentKind(agent.kind)`); there
 // is no app-wide kind.
@@ -16,7 +17,7 @@ const unknown = new Map<AgentKindId, KindView>();
 export function allKinds(): KindView[] {
   if (!kinds) {
     try {
-      kinds = JSON.parse(listKinds()) as KindView[];
+      kinds = (JSON.parse(listKinds()) as KindView[]).map((k) => ({ ...k, stateFolder: k.stateFolder === true }));
     } catch {
       // No native runner (Expo Go, web): no kinds, and no agents either.
       kinds = [];
@@ -64,6 +65,7 @@ export function agentKind(id: AgentKindId): KindView {
     runtimes: [],
     commands: [],
     hasInstall: false,
+    stateFolder: false,
     // Not in this build: never offered, and never started.
     payloadPresent: false,
     models: [],

@@ -1,5 +1,5 @@
-// A new agent of the chosen kind on an env: a fresh image made from the env,
-// and the agent on it right away (newAgent.ts: named "opencode 2" and so on,
+// A new agent of the chosen kind on its own machine: a fresh image made from
+// the env, and the agent on it right away (newAgent.ts: named "opencode 2" and so on,
 // on the model picked for it), so the agent pages can show it by name while its
 // machine is still being set up. The agent's engine refuses to start
 // (image_not_ready) until the image is ready, and, for a kind with an
@@ -23,7 +23,7 @@ export async function createAgentFromEnv(envId: EnvId, pick: AgentPick): Promise
   try {
     agent = await makeAgent(imageId, pick);
   } catch (e) {
-    // No agent, no use for the image: one agent, one image.
+    // No agent, no use for the image: a machine goes with its last agent.
     void deleteImage(imageId)
       .catch(() => {})
       .finally(() => useLinuxStore.getState().refreshLinux());

@@ -45,7 +45,7 @@ export default function ChooseAgent({ target, picked }: { target: NewAgentTarget
       <AppButton loading={newAgent.busy} disabled={selected == null} onPress={next}>
         {target ? pickLabel(target) : 'Next'}
       </AppButton>
-      <Note>You pick the agent once: a machine keeps the agent it was made with.</Note>
+      <Note>You pick the agent once: to try another, make another agent.</Note>
       {offerEnv.kind === 'linux' ? (
         <AppButton variant="secondary" onPress={() => push({ name: 'custom-agent', kindId: null, forNewAgent: true })}>
           Add your own agent

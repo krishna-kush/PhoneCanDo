@@ -10,8 +10,12 @@ the config it seeds into each engine's HOME.
 
 - `api/AgentFunctions.kt`: `listAgents`, `createAgent({kind, name,
   imageId})`, `renameAgent`, `deleteAgent` (stops the agent's engine first;
-  the image stays, and JS deletes it through `phonecando-linux`). The record
-  JS sees is `src/engine/agents/records.ts`.
+  the image stays, and JS deletes it through `phonecando-linux` once no
+  agent uses it). `createAgent` on an image that already has an agent of
+  the same kind gives the new one its own state folder (`ownState`) and
+  that agent's `installedVersion`, or refuses `kind_cannot_share` when the
+  kind has no `state` block (see Shared machines). The record JS sees is
+  `src/engine/agents/records.ts`.
 - `api/AgentModelFunctions.kt` (see Local model servers):
   `setAgentModel(agentId, modelId | null)` stops a starting or running
   engine and resolves `{wasRunning, agent}`; JS starts it again. It rejects
@@ -205,7 +209,7 @@ are in `engine/spawn/`.
   `PHONECANDO_EVENTS` (see TUI engines), `PHONECANDO_CHANNEL` and, last,
   `PHONECANDO_AGENT=<agentId>`. A server engine runs from the
   native-library dir in its `launch.cwd` (HOME when it names none); its
-  stdout and stderr go to `<image>/logs/engine.log`.
+  stdout and stderr go to `<image>/logs/engine-<agentId>.log`.
 - **Stop.** SIGTERM to the engine (a TUI's terminal is hung up instead)
   and to every process of our uid whose `/proc/<pid>/environ` carries its
   `PHONECANDO_AGENT` tag, a wait of up to 3 s (tagged processes that appear
@@ -287,9 +291,10 @@ holds it like any engine) and survives a JS reload. Home shows it.
   without a viewer.
 - **Events file** (`engine/events/`): every start of a TUI engine seeds
   the kit's two scripts (`agents/kit/scripts/`) into
-  `<home>/.phonecando/bin/` (mode 755, replaced whole) and empties
-  `<home>/.phonecando/events`, whose path the engine gets as
-  `PHONECANDO_EVENTS` (`/root/…` for an image kind). An image kind also
+  `<home>/.phonecando/bin/` (mode 755, replaced whole) and empties the
+  agent's own `<home>/.phonecando/events-<agentId>`, whose path the engine
+  gets as `PHONECANDO_EVENTS` (`/root/…` for an image kind); without it the
+  scripts write nothing. An image kind also
   gets `BROWSER` = that `phonecando-open` unless its env sets one.
   `phonecando-event <name> [message]` appends
   `<name>\t<session>\t<message>`, `phonecando-open <url>` appends
@@ -484,9 +489,9 @@ the background, `stopIdleAgents` stops each running engine that is idle by
 its kind's rule (`isEngineIdle`, the manifest's `idle`: no activity event
 for `quietSec`, 60 s for opencode; an engine with none since its start is
 idle; never one with a chat working, since a long tool call sends no events
-for minutes, `EngineSupervisor.isIdle`); it does nothing while phone control
-is unlocked, so an agent driving
-another app is not cut off. A start, a chat in front (`useEngineTouch`,
+for minutes, `EngineSupervisor.isIdle`); it does nothing while an agent is
+driving the screen (a screen call running or one in the last 30 s,
+`isPhoneInUse`), so an agent driving another app is not cut off. A start, a chat in front (`useEngineTouch`,
 every two minutes), each bridge call and each engine event mark an engine
 used, so it is not the one stopped to make room (under the user's cap) or
 to free memory (the memory guard).
@@ -624,6 +629,37 @@ per-start refresh (`prepareImageForStart`) with the env names the image
 keeps from guests (`guestUnset(agentId)`); a failure there answers
 `image_not_ready`.
 
+### Shared machines
+
+Several agents may share one image, like apps on one PC: its system, tools
+in `~/.local`, `home/projects/`, VCS and shell config and background
+processes. Each keeps its own engine, port, password, bridge token, events
+file and engine log. A second agent of a kind on one image gets its own
+state folder, `home/.phonecando/agents/<agentId>/` (`AgentFiles`,
+`ownState` on its record): the launch adds the kind's `state.env` (kit
+`LaunchContext.stateDir`, e.g. `CLAUDE_CONFIG_DIR`), and its config and
+instructions file go there (`AgentKind.configDir` / `instructionsFile`).
+`deleteAgent` removes that folder, its events file and its engine log; an
+agent that used its kind's default folders and leaves a machine that stays
+takes them with it (`AgentKind.userStatePaths`, never following links).
+
+- **Secrets.** `guestUnset(agentId)` is the union over every agent on the
+  image (`GuestEnvPolicy.union`), so `launch.conf` reads the same whoever
+  prepares it. An image kind's engine is a guest too and still needs its
+  own values among those names (the bridge URL and token, a model key):
+  `EngineEnv.carry` passes them as `PHONECANDO_CARRY_<NAME>` and the kit's
+  `ImageLaunch` script restores them before `exec`.
+- **Who else is here.** `MachineNotes` writes a marked block into each
+  agent's instructions file naming the others on its machine and asking it
+  to work on its own branch or worktree, leave processes it did not start
+  alone and ask before system-wide installs (`MachineNote`). It is rewritten
+  for every agent there after `createAgent`, `renameAgent` and
+  `deleteAgent`, and on every start; an agent alone gets it removed.
+- **Installs.** `recordInstall` sets the version on every agent of that
+  kind on the image (one copy on disk). JS runs one install per image at a
+  time and stops the co-tenants that use the same files first
+  (`src/state/flows/installAgent.ts`).
+
 ## Installing an agent
 
 A kind with an `install` block is installed into each of its agents' images
@@ -665,7 +701,8 @@ before the agent starts, and only into that image (the order and retries:
 - `guestUnset(agentId)` (kit-render `GuestEnvPolicy`): a native kind's
   bridge URL and token and every env value it fills with a secret; an
   image kind's own engine is the guest and keeps them (lre unsets `LD_*`
-  on top).
+  on top). On a shared image it is the union over every agent there (see
+  Shared machines).
 
 ## Agent config seeding
 
@@ -679,16 +716,19 @@ kind's plugins import it by a relative path; the full-only `control/` part
 is dropped outside full. `agents.gradle`'s `syncAgentConfig<Variant>` task
 packages each kind whose `channels` include the flavor into generated
 Android assets at `agents/<id>/` (`agent.json` and `config/`).
-`ConfigSeeder` writes it to the kind's config dir under the image HOME on
-every engine start (opencode: `home/.config/opencode/`): plugins, the phone
+`ConfigSeeder` writes it to the kind's config dir (`AgentKind.configDir`:
+under the image HOME, or in the agent's own state folder) on every engine
+start (opencode: `home/.config/opencode/`): plugins, the phone
 tools, skills and `AGENTS.md` refresh, `opencode.json` is seeded only when
 absent so edits and BYOK keys survive. A manifest of the seeded files
 (`.phonecando-seeded`) lets the next start delete files we no longer ship,
 so a renamed plugin never loads twice; user files are never touched. Then
 the image's `run/os-note.md` (OS, package manager, no systemd) is written
-between two marker lines at the end of the kind's instructions file
-(opencode: the global `AGENTS.md`), replaced on every start (`OsNote`). A
-failed seed never blocks a start.
+between two marker lines in the kind's instructions file (the manifest's
+`instructions`, `AgentKind.instructionsFile`; opencode: the global
+`AGENTS.md`), replaced where it is on every start (`OsNote`, over the
+shared `MarkedBlock`), and the machine-mates note after it (see Shared
+machines). A failed seed never blocks a start.
 
 ## Build channels
 
@@ -787,7 +827,8 @@ sends later, even from a new process, can still attach it. The shape is
   health probe (`EngineWatch.kt`). An exit without a stop request counts
   `died` and keeps the exit code, the time it was noticed (`lastDiedAt`)
   and, while sharing is on, the last ≤2 KB of that agent's
-  `<image>/logs/engine.log` (an exit that left none clears the old tail).
+  `<image>/logs/engine-<agentId>.log` (an exit that left none clears the
+  old tail).
   The tail reads at most the last 16 KB, redacts all of it, drops the
   cut-off start (the first line, or in a line longer than 16 KB its first
   token and, after a possible credential label, the next), then keeps the

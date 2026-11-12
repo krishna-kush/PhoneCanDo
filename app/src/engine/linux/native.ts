@@ -250,7 +250,7 @@ export function imageSize(imageId: ImageId): Promise<number> {
 /** Await before EVERY engine start, terminal and guest program on this image (then the runner's
     startEngine, terminalRecipe, runGuestScript or runGuestCommand): rewrites what depends on the
     phone and the APK's lib dir, finishes a cut-short reset. `guestUnset` names the variables (a
-    trailing `*` for a prefix) the image's agent holds as secrets: no guest command inherits them,
+    trailing `*` for a prefix) the image's agents hold as secrets: no guest command inherits them,
     nor any `LD_*`, until the next prepare. Cheap when nothing changed; runs off the JS thread.
     Rejects `busy` while a create or reset runs on the image (a guest script does not block it),
     `not_found` when its setup failed, `unsafe_entry` for a name that is not a variable name,

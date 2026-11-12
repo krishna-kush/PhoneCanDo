@@ -251,8 +251,8 @@ so one bug on many phones is one key.
 Only when you tap it, only while sharing is on: `reportId`, the identity,
 device and app fields above, the current `sessionId`, your note (≤ 500 chars),
 the last ≤ 50 events, and the engine log tail: the ≤ 2 KB tail from the last
-unexpected engine exit (the end of that agent's engine log, `logs/engine.log`
-in its image), with whole paths and secrets redacted on the phone and
+unexpected engine exit (the end of that agent's engine log,
+`logs/engine-<agentId>.log` in its image), with whole paths and secrets redacted on the phone and
 again on the server (the schema allows up to 4 KB). Kept 90 days, or until
 Delete my data. A report also records the phone's device row and verifier
 (the same rules as a batch), so Delete my data can find and remove it even

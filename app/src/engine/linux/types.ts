@@ -5,7 +5,8 @@
 // Env:   a fixed base OS, never modified: the Default env baked into this APK,
 //        an Own env pulled from a container registry, or Android (no Linux).
 // Image: a VM-like machine made from an env. Everything done inside it stays,
-//        in that image only. One agent attaches to exactly one image.
+//        in that image only. Each agent is on one image; several agents
+//        may share one, which is deleted with its last agent.
 
 export type EnvId = string;
 export type ImageId = string;

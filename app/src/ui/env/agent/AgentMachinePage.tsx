@@ -5,7 +5,8 @@ import AgentGone from './AgentGone';
 import MachineSection from './MachineSection';
 import { useAgentRecords } from './useAgentRecords';
 
-// An agent's machine: its env, OS, size, setup and the tools it lacks.
+// An agent's machine: its env, OS, size, who else uses it, setup and the
+// tools it lacks.
 export default function AgentMachinePage({ agentId }: { agentId: string }) {
   const { agent, image, env, linux } = useAgentRecords(agentId);
   const { serial } = useAgentLook(agentId);

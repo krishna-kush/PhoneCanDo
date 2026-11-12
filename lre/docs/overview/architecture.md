@@ -24,7 +24,7 @@ gives setup the phone's `HostEnv`, refuses Linux on
 play (`LinuxGate`), stops an image's processes before a reset or delete
 (`ImageReaper`), builds the launcher (CMake) and packages proot and the
 Default image. The runner (`app/modules/phonecando-runner/`) starts engines
-in an image's `home/` with its `run/engine.env`, writes `logs/engine.log`
+in an image's `home/` with its `run/engine.env`, writes `logs/engine-<agentId>.log`
 and reads `run/os-note.md`; it never depends on `lre/`. JS reaches the host
 only through `app/src/engine/linux/`.
 
@@ -47,7 +47,7 @@ env    a fixed base OS, never modified
 image  files/images/<id>/  one VM-like machine made from an env
      │
      ▼
-agent  exactly one per image; its engine runs with run/engine.env
+agent  one or more per image; each engine runs with run/engine.env
 ```
 
 - An env is a `BaseImage`: layers applied in order, plus the registry
@@ -72,7 +72,7 @@ images/<id>/
   home/              HOME: agent config, chats, projects, keys; survives reset
   tmp/               TMPDIR
   shims/             one symlink per guest command -> <libDir>/libphonecando_launch.so
-  logs/              engine.log (the runner writes it)
+  logs/              engine-<agentId>.log, one per agent (the runner writes it)
   run/
     launch.conf      how the launcher starts proot (contract: lre/launcher/src/conf.h)
     engine.env       the engine's environment for this image

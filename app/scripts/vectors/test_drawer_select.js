@@ -65,6 +65,26 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
     s.deleteMessage(['Bob', 'Ann'], 0, true),
     `This deletes Bob and Ann, each with its machine${tail} That's every agent, so we'll set up a fresh one right after.`,
   );
+  t(
+    'one whose machine another agent shares',
+    s.deleteMessage(['Bob'], 0, false, ['Bob']),
+    'This deletes Bob. Its machine stays, because other agents still use it, and so do the projects in it.',
+  );
+  t(
+    'several, some machines stay',
+    s.deleteMessage(['Bob', 'Ann', 'Cy'], 1_200_000_000, false, ['Ann', 'Cy']),
+    `This deletes Bob, Ann and Cy. A machine no other agent uses goes${tail} Any machine Ann or Cy shares with an agent you didn't pick stays, and so do the projects in it. That frees about 1.2 GB.`,
+  );
+  t(
+    'several, every machine stays',
+    s.deleteMessage(['Bob', 'Ann'], 0, false, ['Bob', 'Ann']),
+    "This deletes Bob and Ann. Any machine Bob or Ann shares with an agent you didn't pick stays, and so do the projects in it.",
+  );
+  t(
+    'several, one machine stays',
+    s.deleteMessage(['Bob', 'Ann'], 0, false, ['Ann']),
+    `This deletes Bob and Ann. A machine no other agent uses goes${tail} Ann's machine stays, because other agents still use it, and so do the projects in it.`,
+  );
   t('no failures: no line', s.failedLine([]), null);
   t('one failure', s.failedLine([{ name: 'Bob', reason: 'Busy.' }]), "Couldn't delete Bob: Busy.");
   t(

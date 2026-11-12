@@ -1,7 +1,9 @@
-// New agent's place step: where the picked agent can run. Pure (zero RN
-// imports). Default first (recommended: in the app, no download), then the
-// Own envs oldest first, then Android's own shell where one is set up, then
-// a download of another Linux. Each place carries the env its offers are
+// New agent's place step: where the picked agent can run on a machine of
+// its own (shareChoices.ts lists the machines it could share instead). Pure
+// (zero RN imports). Default first (recommended: in the app, no download),
+// then the Own envs oldest first, then Android's own shell where one is set
+// up (recommended where there is no Linux), then a download of another
+// Linux. Each place carries the env its offers are
 // judged against (agentChoice.ts targetOfferEnv), so a place that cannot run
 // the agent says why instead of failing later. A system's place carries the
 // names its logo is filed under (osLogo.ts).
@@ -55,7 +57,7 @@ export function placesFor(envs: readonly EnvLike[], linuxAvailable: boolean): Pl
       subtitle: envSubtitle(env),
       target,
       env: targetOfferEnv(target, envs),
-      recommended: false,
+      recommended: !linuxAvailable,
       logoKeys: logoKeys(env),
     });
   }

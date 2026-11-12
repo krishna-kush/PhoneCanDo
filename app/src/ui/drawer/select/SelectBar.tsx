@@ -3,6 +3,7 @@ import { XStack, YStack } from 'tamagui';
 import { imageSize } from '../../../engine/linux/native';
 import { useAgentsStore } from '../../../state/agents';
 import { deleteAgents, stopAgents } from '../../../state/flows/agentsInBulk';
+import { freedImages } from '../../../state/flows/logic/machineTenants';
 import AppButton from '../../common/AppButton';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PlainText from '../../common/PlainText';
@@ -21,9 +22,10 @@ type Props = {
 
 // Pinned under the drawer's list while it selects: how many are picked,
 // All or None, Cancel, then Stop (the running ones among them) and Delete
-// (each with its machine, after a confirm that measures what comes back).
-// A finished action ends the selection; a failed delete keeps the ones
-// left picked and says why.
+// (each with its machine, unless an agent not picked shares it, after a
+// confirm that measures what comes back: each machine that goes, once). A
+// finished action ends the selection; a failed delete keeps the ones left
+// picked and says why.
 export default function SelectBar({ picked, all, onToggleAll, onEnd }: Props) {
   const agents = useAgentsStore((s) => s.agents);
   const statuses = useAgentsStore((s) => s.statuses);
@@ -35,6 +37,8 @@ export default function SelectBar({ picked, all, onToggleAll, onEnd }: Props) {
   const chosen = agents.filter((a) => picked.includes(a.id));
   const running = chosen.filter((a) => canStop(statuses[a.id]?.state));
   const names = chosen.map((a) => a.name);
+  const freed = freedImages(agents, picked);
+  const staying = chosen.filter((a) => !freed.includes(a.imageId)).map((a) => a.name);
 
   const stop = () => {
     setBusy('stop');
@@ -47,8 +51,8 @@ export default function SelectBar({ picked, all, onToggleAll, onEnd }: Props) {
 
   const ask = () => {
     setConfirm(true);
-    setBytes(null);
-    void Promise.all(chosen.map((a) => imageSize(a.imageId).catch(() => 0))).then((sizes) =>
+    setBytes(freed.length > 0 ? null : 0);
+    void Promise.all(freed.map((id) => imageSize(id).catch(() => 0))).then((sizes) =>
       setBytes(sizes.reduce((sum, b) => sum + b, 0)),
     );
   };
@@ -100,7 +104,7 @@ export default function SelectBar({ picked, all, onToggleAll, onEnd }: Props) {
         open={confirm}
         onClose={() => setConfirm(false)}
         title={deleteTitle(names)}
-        message={deleteMessage(names, bytes, chosen.length === agents.length)}
+        message={deleteMessage(names, bytes, chosen.length === agents.length, staying)}
         onConfirm={remove}
       />
     </YStack>

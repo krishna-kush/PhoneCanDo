@@ -1,8 +1,9 @@
 // Agent instances and their engines (contract for several agents at once).
-// An agent is one running instance of a kind with its own name, image, port,
-// password and bridge token. Port, password and token stay native: the
-// runner makes every request to an engine, and the TUI's start recipe
-// carries the password through JS to the PTY without JS keeping it.
+// An agent is one running instance of a kind with its own name, port,
+// password and bridge token, in a machine (image) other agents may share.
+// Port, password and token stay native: the runner makes every request to
+// an engine, and the TUI's start recipe carries the password through JS to
+// the PTY without JS keeping it.
 import type { ImageId } from '../linux/types';
 import type { AgentKindId } from './registry';
 
@@ -12,7 +13,7 @@ export type Agent = {
   id: AgentId;
   kind: AgentKindId;
   name: string;
-  /** The image this agent is attached to; created and deleted with it. */
+  /** Its machine: made with the first agent on it, other agents may share it, deleted with the last. */
   imageId: ImageId;
   /** Its work folder, projects/ in its HOME (host path): where its engine and terminals start. */
   projectDir: string;
@@ -23,6 +24,9 @@ export type Agent = {
   needsInstall: boolean;
   /** The local model it runs on (engine/models/); null: the agent's own setup. */
   model: string | null;
+  /** It has a sign-in and chats folder of its own, because another agent of its kind shares its
+      machine; the runner removes that folder with the agent. */
+  ownState: boolean;
 };
 
 export type EngineState = 'stopped' | 'starting' | 'ready' | 'stopping' | 'died' | 'failed';

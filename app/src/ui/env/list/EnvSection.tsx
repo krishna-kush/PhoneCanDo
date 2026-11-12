@@ -15,7 +15,7 @@ import PlainText from '../../common/PlainText';
 import { useSlidInList } from '../../nav/slidIn';
 import { linuxFailureText, recordErrorText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
-import type { EnvRow } from '../logic/sections';
+import { agentCountOf, type EnvRow } from '../logic/sections';
 import { downloadLine, stepFraction } from '../logic/steps';
 import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
@@ -50,8 +50,9 @@ function deleteMessage(env: Env): string {
 
 // One system's page body: its download (progress and Cancel, or why it
 // stopped and Retry), the agents on it (each machine a row of one group,
-// with New agent here as its last row), then Delete system, offered only
-// once no machine comes from it.
+// with every agent that shares it, and New agent here, on a machine of its
+// own, as the last row), then Delete system, offered only once no machine
+// comes from it.
 export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onDeleted }: Props) {
   const progress = useTargetProgress(env ? { kind: 'env', id: env.id } : null);
   const [busy, setBusy] = useState<'retry' | 'delete' | null>(null);
@@ -81,7 +82,7 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
   const retry = () =>
     env && run('retry', () => new Promise<void>((resolve, reject) => void retryOwnEnv(env.id, resolve).catch(reject)));
   const failedWhy = env?.state === 'failed' ? recordErrorText(env) : null;
-  const agents = rows.filter((r) => r.agent != null).length;
+  const agents = agentCountOf(rows);
 
   return (
     <>
@@ -117,7 +118,7 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
       <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
         {shown.map((r, i) => (
           <YStack key={r.key} borderTopWidth={i > 0 ? 1 : 0} borderColor="line">
-            <MachineRow image={r.image} agent={r.agent} onOpen={onOpenAgent} />
+            <MachineRow image={r.image} agents={r.agents} onOpen={onOpenAgent} />
           </YStack>
         ))}
         {makingFirst && rows.length === 0 ? (

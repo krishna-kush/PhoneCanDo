@@ -24,13 +24,22 @@ export function modelDetail(agent: Agent, models: readonly Pick<LocalModel, 'id'
   return model ? { text: model.name, alert: false } : { text: 'model missing', alert: true };
 }
 
-export function machineDetail(image: Image | undefined, env: Env | undefined, missingTools: number): RowDetail {
+/** "N agents" first when others use the machine too. */
+export function machineDetail(
+  image: Image | undefined,
+  env: Env | undefined,
+  missingTools: number,
+  /** Every agent on the machine, this one included. */
+  agentsOnMachine: number,
+): RowDetail {
   if (!image) return { text: 'missing', alert: true };
   if (image.state === 'failed') return { text: 'setup stopped', alert: true };
   if (image.state !== 'ready') return { text: image.state === 'creating' ? 'setting up' : image.state, alert: false };
   if (missingTools > 0) return { text: missingTools === 1 ? '1 tool missing' : `${missingTools} tools missing`, alert: true };
   const size = image.sizeBytes > 0 ? formatBytes(image.sizeBytes) : null;
-  return { text: [env ? envTitle(env.source) : null, size].filter(Boolean).join(' · ') || 'ready', alert: false };
+  const shared = agentsOnMachine > 1 ? `${agentsOnMachine} agents` : null;
+  const text = [shared, env ? envTitle(env.source) : null, size].filter(Boolean).join(' · ');
+  return { text: text || 'ready', alert: false };
 }
 
 export function installDetail(agent: Agent, run: InstallRun | undefined): RowDetail {

@@ -6,7 +6,7 @@ import ChevronIcon from '../../common/ChevronIcon';
 import { useTheme } from '../../common/globals';
 import PlainText from '../../common/PlainText';
 import { logoKeys } from '../logic/osLogo';
-import type { EnvRow } from '../logic/sections';
+import { agentCountOf, type EnvRow } from '../logic/sections';
 import { downloadLine, stepFraction } from '../logic/steps';
 import { envSubtitle, envTitle } from '../logic/titles';
 import ProgressBar from '../parts/ProgressBar';
@@ -15,7 +15,7 @@ import SystemLogo from './SystemLogo';
 type Props = { env: Env | null; rows: EnvRow<Image, Agent>[]; onOpen: () => void };
 
 function agentsLine(rows: EnvRow<Image, Agent>[]): string {
-  const agents = rows.filter((r) => r.agent != null).length;
+  const agents = agentCountOf(rows);
   const settingUp = rows.filter((r) => r.image != null && r.image.state !== 'ready').length;
   const count = agents === 0 ? 'no agents' : agents === 1 ? '1 agent' : `${agents} agents`;
   return settingUp > 0 ? `${count} · ${settingUp} setting up` : count;

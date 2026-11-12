@@ -1,7 +1,8 @@
 # PhoneCanDo app docs
 
 App, engine and agent documentation. An engine hosts one agent, and several
-agents run at once, each in its own image; opencode is the first kind.
+agents run at once, each in its own image or sharing one with other agents;
+opencode is the first kind.
 Cross-cutting docs (overview, the Linux runtime, automation contract, release
 limits) stay in the repo-root `docs/` tree.
 

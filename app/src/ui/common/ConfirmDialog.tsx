@@ -8,19 +8,22 @@ type Props = {
   title: string;
   message?: string;
   confirmLabel?: string;
+  /** The button that only closes it, when "Cancel" says too little (the choice it leaves you with). */
+  cancelLabel?: string;
   onConfirm: () => void;
 };
 
 // Centered confirm dialog (not a bottom sheet): dimmed backdrop, panel card,
-// destructive + cancel side by side. Used for every delete/remove confirm so
-// they all look and behave identically. Android back dismisses via
-// onRequestClose.
+// destructive + cancel side by side. Used for every delete/remove confirm,
+// and for a choice worth a second look (sharing a machine), so they all
+// look and behave identically. Android back dismisses via onRequestClose.
 export default function ConfirmDialog({
   open,
   onClose,
   title,
   message,
   confirmLabel = 'Delete',
+  cancelLabel = 'Cancel',
   onConfirm,
 }: Props) {
   return (
@@ -53,7 +56,7 @@ export default function ConfirmDialog({
           ) : null}
           <XStack gap="2" marginTop="2">
             <AppButton variant="secondary" flex={1} onPress={onClose}>
-              Cancel
+              {cancelLabel}
             </AppButton>
             <AppButton variant="danger" flex={1} onPress={onConfirm}>
               {confirmLabel}

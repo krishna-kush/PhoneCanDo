@@ -6,16 +6,21 @@ import { pendingReinstall, resetAgentImage } from '../../../state/flows/resetAge
 import AppButton from '../../common/AppButton';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import { linuxFailureText, recordErrorText } from '../logic/errorText';
+import { resetMessage } from '../logic/sharedMachineText';
 import { envTitle } from '../logic/titles';
 import Note from '../parts/Note';
 import ReinstallOffer from './ReinstallOffer';
+import { useMachineMates } from './useMachineMates';
 
 type Props = { agent: Agent; image: Image; env: Env };
 
-// Reset: system files back to the env's base, home kept, the engine stopped
-// first. Afterwards (or when an earlier reset left one) the reinstall offer:
-// the agent itself (a kind with an install) and what was installed by hand.
+// Reset: system files back to the env's base, home kept, every agent on
+// the machine stopped first (the confirm names them when it is shared).
+// Afterwards (or when an earlier reset left one) the reinstall offer: the
+// agent itself (a kind with an install; each agent on the machine gets its
+// own on its page) and what was installed by hand.
 export default function ResetBlock({ agent, image, env }: Props) {
+  const mates = useMachineMates(agent);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -67,7 +72,7 @@ export default function ResetBlock({ agent, image, env }: Props) {
         open={confirm}
         onClose={() => setConfirm(false)}
         title="Reset this machine?"
-        message={`System files go back to the ${envTitle(env.source)} base. Your projects, chats and keys stay. Anything you installed goes; we'll offer to install it again. The agent stops first.`}
+        message={resetMessage(envTitle(env.source), [agent.name, ...mates.map((a) => a.name)])}
         confirmLabel="Reset"
         onConfirm={reset}
       />

@@ -20,6 +20,7 @@ import { hasModelSetting, installDetail, machineDetail, modelDetail } from './ag
 import DangerSection from './DangerSection';
 import EngineSection from './EngineSection';
 import { useAgentRecords } from './useAgentRecords';
+import { useMachineMates } from './useMachineMates';
 import { useMissingTools } from './useMissingTools';
 
 // One agent: its face and name (Rename), its engine and the ways in, then
@@ -37,12 +38,13 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
   const [name, setName] = useState('');
   const [renameError, setRenameError] = useState<string | null>(null);
   const tools = useMissingTools(agent, image, linux);
+  const mates = useMachineMates(agent);
 
   if (!agent) return <AgentGone />;
 
   const kind = agentKind(agent.kind);
   const place = env ? envTitle(env.source) : linux ? 'Linux machine' : "Android's own shell";
-  const machine = machineDetail(image, env, tools?.missingTools.length ?? 0);
+  const machine = machineDetail(image, env, tools?.missingTools.length ?? 0, mates.length + 1);
   const install = installDetail(agent, run);
   const installBusy = kind.hasInstall && (agent.needsInstall || (run != null && run.status !== 'done'));
 
