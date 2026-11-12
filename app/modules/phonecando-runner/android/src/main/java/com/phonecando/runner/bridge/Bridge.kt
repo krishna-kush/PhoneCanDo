@@ -51,6 +51,13 @@ object Bridge {
   /** An agent is driving the screen now: a screen call runs or ran within the lease's idle time. */
   fun screenInUse(): Boolean = lease?.inUse() == true
 
+  /**
+   * The agent in the middle of driving the phone: it holds the screen, idle
+   * or not, and has not given it back (mobile_return). Null while the
+   * screen is free or no bridge is open.
+   */
+  fun screenHolder(): String? = lease?.holderId()
+
   /** Who holds the screen and who waits for it; null while no bridge is open. */
   fun screenLine(): ScreenLease.Line? = lease?.line()
 

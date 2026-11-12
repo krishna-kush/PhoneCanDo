@@ -3,6 +3,7 @@ package com.phonecando.runner.notify
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.phonecando.runner.PhoneCanDoRunnerModule
 import com.phonecando.runner.PhoneCanDoServeService
 
@@ -14,6 +15,7 @@ import com.phonecando.runner.PhoneCanDoServeService
 // when the app actually opens on it: two notifications for two agents each
 // open their own agent, whichever was posted last.
 internal object LaunchTargets {
+  private const val TAG = "PhoneCanDoLaunch"
   private const val KEY_TAB = "launch_tab"
   private const val KEY_AGENT = "launch_agent"
   private const val EXTRA_TAB = "com.phonecando.runner.LAUNCH_TAB"
@@ -49,6 +51,15 @@ internal object LaunchTargets {
       // PendingIntent of its own; two notices for the same target share
       // one, which opens the same place. No request-code bookkeeping.
       .setIdentifier(target.key)
+
+  /** Starts PhoneCanDo on `target`; false when Android refused (background start). */
+  fun open(context: Context, target: LaunchTarget): Boolean = try {
+    context.startActivity(intent(context, target))
+    true
+  } catch (e: Exception) {
+    Log.w(TAG, "open PhoneCanDo failed", e)
+    false
+  }
 
   /** A notification's tap: opens PhoneCanDo on `target`. */
   fun tap(context: Context, target: LaunchTarget): PendingIntent = PendingIntent.getActivity(

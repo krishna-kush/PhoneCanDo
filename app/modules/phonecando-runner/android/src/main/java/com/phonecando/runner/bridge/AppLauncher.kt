@@ -1,7 +1,6 @@
 package com.phonecando.runner.bridge
 
 import android.content.Context
-import android.util.Log
 import com.phonecando.runner.PhoneCanDoRunnerModule
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.bridge.PromptRegistry.Kind
@@ -30,13 +29,7 @@ class AppLauncher(private val context: Context) : PromptHost {
   fun canLaunch(): Boolean = context.packageManager.getLaunchIntentForPackage(context.packageName) != null
 
   /** Starts PhoneCanDo on `target`; false when Android refused (background start). */
-  fun launch(target: LaunchTarget): Boolean = try {
-    context.startActivity(LaunchTargets.intent(context, target))
-    true
-  } catch (e: Exception) {
-    Log.w(TAG, "open PhoneCanDo failed", e)
-    false
-  }
+  fun launch(target: LaunchTarget): Boolean = LaunchTargets.open(context, target)
 
   /** /app's tap-to-return notice, in the agent's slot; true when notifications show. */
   fun notifyReturn(agent: AgentRecord, tab: String): Boolean =
@@ -71,7 +64,6 @@ class AppLauncher(private val context: Context) : PromptHost {
   }
 
   private companion object {
-    const val TAG = "PhoneCanDoBridge"
     const val RETURN_TEXT = "Done with the phone. Tap to return."
   }
 }

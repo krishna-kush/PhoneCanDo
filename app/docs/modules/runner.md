@@ -699,9 +699,13 @@ Memory guard) are untagged.
   one replaces the last and makes no sound while the last is still
   showing. A tap opens the agent's Home; showing that agent's chat takes it
   down (`dismissAgentAlert`, from `useEngineTouch`: a call of its own,
-  since `touchEngine` also runs for engine starts that show nothing). A new
-  engine life starts with fresh rules for the agent; deleting an agent
-  takes down all its notifications.
+  since `touchEngine` also runs for engine starts that show nothing). An
+  agent that is waiting while it drives the phone (it holds the screen and
+  has not given it back with `/app`: `Bridge.screenHolder`) also brings
+  PhoneCanDo forward on its Home, so the question is not left behind the
+  app being automated; the alert still goes up, as the way back if Android
+  blocks the background start. A new engine life starts with fresh rules
+  for the agent; deleting an agent takes down all its notifications.
 - **Links to open** (`prompts/`): an `@open` line in a TUI engine's events
   file (`phonecando-open`, for a sign-in) becomes an `open_url` prompt
   when the link is http or https, at most 2 KiB, without whitespace or

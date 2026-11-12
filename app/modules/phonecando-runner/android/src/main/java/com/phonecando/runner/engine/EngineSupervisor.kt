@@ -91,7 +91,7 @@ internal class EngineSupervisor(
   private val prompts: PromptWatch = ModelSlots.promptWatch(context, models, chats::working) { listener.onPrompt(it) }
   private val streams = EngineStreams(
     onActivity = ::onActivity,
-    alerts = AgentAlerts(context, store),
+    alerts = AgentAlerts(context, store) { Bridge.screenHolder() == it },
     chats = chats,
     openUrl = { agentId, url -> OpenUrlPrompts.raise(context, store, agentId, url) },
     dropUrls = { agentId -> OpenUrlPrompts.end(context, agentId) },
