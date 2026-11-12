@@ -55,6 +55,9 @@ internal class ChatTracker(private val onChange: () -> Unit) {
   /** The agents with a run going (ChatBoard.working). */
   fun working(): Set<String> = board.working()
 
+  /** The agent has a chat working or waiting for your answer (ChatBoard.busy). */
+  fun busy(agentId: String): Boolean = board.busy(agentId)
+
   /** The agent's chats, the one on screen included, newest first (ChatBoard.of). */
   fun of(agentId: String): List<ChatBoard.Chat> = board.of(agentId)
 

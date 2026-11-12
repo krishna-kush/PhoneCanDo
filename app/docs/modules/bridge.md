@@ -111,12 +111,20 @@ another agent joins the line once and gets 409 `control_busy` with
 screen; you are #<place> in line; we'll message you when it is yours". The
 holder hears of each new waiter once (`ScreenNotices.waiting`). When the
 holder's lease ends (it calls `/app`, `mobile_return`, done with the phone;
-it has been idle 30 s while someone waits; its engine stops, `forget`, or
-its agent is deleted), the screen is reserved for the first in line for
-30 s and that agent is told it is theirs (`ScreenNotices.yours`, which may
-wake it): only its claim takes the screen, and if it does not come the next
-in line gets the reservation. An idle holder nobody waits for keeps the
-screen until someone claims it. `ScreenTicker` moves the line on every
+its run ends, `runEnded`; it has been idle 30 s while someone waits; its
+engine stops, `forget`, or its agent is deleted), the screen is reserved
+for the first in line for 30 s and that agent is told it is theirs
+(`ScreenNotices.yours`, which may wake it): only its claim takes the
+screen, and if it does not come the next in line gets the reservation. A
+run has ended when its engine's event stream gives a verdict, a stop or a
+deleted session and the agent has no chat left working or waiting for your
+answer (`EngineStreams`, `ChatBoard.busy`), so a subagent's verdict or a
+second chat's end does not count; a screen request still running keeps the
+screen until it ends, and the agent's own place in line or reservation
+stays. So holding the screen means a run is driving it, which is what an
+agent's question reads to bring PhoneCanDo forward (`runner.md` →
+Notifications). An idle holder nobody waits for keeps the screen until
+someone claims it or its run ends. `ScreenTicker` moves the line on every
 second, so a waiter hears even when no agent calls. A reservation is not
 use: `Bridge.screenInUse()` still means a screen request runs or ended
 under 30 s ago. The messages side sends the notices as runner notices and

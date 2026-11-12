@@ -136,6 +136,11 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
   @Synchronized
   fun working(): Set<String> = chats.values.filter { it.state == State.WORKING }.mapTo(HashSet()) { it.agentId }
 
+  /** The agent has a run going or held up on you: a chat working or waiting for your answer. */
+  @Synchronized
+  fun busy(agentId: String): Boolean =
+    chats.values.any { it.agentId == agentId && (it.state == State.WORKING || it.state == State.WAITING) }
+
   /** The agent's chats, the one on screen included, newest first. */
   @Synchronized
   fun of(agentId: String): List<Chat> = chats.values.filter { it.agentId == agentId }.sortedByDescending { it.at }

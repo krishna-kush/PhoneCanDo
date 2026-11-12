@@ -96,6 +96,7 @@ internal class EngineSupervisor(
     openUrl = { agentId, url -> OpenUrlPrompts.raise(context, store, agentId, url) },
     dropUrls = { agentId -> OpenUrlPrompts.end(context, agentId) },
     inboxRead = { agentId, ids -> Messages.get(context).receipt(agentId, ids) },
+    runEnded = Bridge::runEnded,
   )
 
   /** The viewers of the TUI engines' terminals (the engineTerminal* functions). */

@@ -122,6 +122,42 @@ class ScreenLeaseTest {
     assertTrue(claim("a2") is ScreenLease.Busy)
   }
 
+  @Test fun aRunsEndGivesTheScreenBack() {
+    lease.done(granted("a1"))
+    // Another agent's run ending touches nothing.
+    lease.runEnded("a2")
+    assertEquals("a1", lease.holderId())
+    lease.runEnded("a1")
+    assertNull(lease.holderId())
+    lease.done(granted("a2"))
+    assertEquals("a2", lease.holderId())
+  }
+
+  @Test fun aRunsEndWaitsForItsRunningRequest() {
+    val act = granted("a1")
+    busy("a2")
+    lease.runEnded("a1")
+    assertEquals("a1", lease.holderId())
+    lease.done(act)
+    assertNull(lease.holderId())
+    assertEquals("yours a2", told.notes.last())
+  }
+
+  @Test fun aNewRequestAfterTheRunsEndKeepsTheScreen() {
+    val act = granted("a1")
+    lease.runEnded("a1")
+    lease.done(granted("a1"))
+    lease.done(act)
+    assertEquals("a1", lease.holderId())
+  }
+
+  @Test fun aRunsEndKeepsTheAgentsPlaceInLine() {
+    lease.done(granted("a1"))
+    busy("a2")
+    lease.runEnded("a2")
+    assertEquals(listOf("a2"), waiting())
+  }
+
   // The line
 
   @Test fun othersWaitInLineInOrderAndJoinOnce() {

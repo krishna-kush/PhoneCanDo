@@ -53,10 +53,15 @@ object Bridge {
 
   /**
    * The agent in the middle of driving the phone: it holds the screen, idle
-   * or not, and has not given it back (mobile_return). Null while the
-   * screen is free or no bridge is open.
+   * or not, in a run that has not ended or given it back (mobile_return).
+   * Null while the screen is free or no bridge is open.
    */
   fun screenHolder(): String? = lease?.holderId()
+
+  /** The agent has no run going any more: it gives back the screen if it holds it (ScreenLease.runEnded). */
+  fun runEnded(agentId: String) {
+    lease?.runEnded(agentId)
+  }
 
   /** Who holds the screen and who waits for it; null while no bridge is open. */
   fun screenLine(): ScreenLease.Line? = lease?.line()

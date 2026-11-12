@@ -12,11 +12,12 @@ package com.phonecando.runner.bridge
 // The others wait in line, first come first served: an agent joins once
 // (the holder is told, ScreenNotices.waiting) and learns its place. When the
 // holder's lease ends (it gives the screen back: done with release, the
-// holder's /app; it has been idle `idleMs` while someone waits; its engine
-// is gone: `alive` false or forget), the screen is reserved for the first in
-// line for `idleMs` (ScreenNotices.yours): only that agent's claim takes it,
-// and if it does not come, the next in line gets the reservation. An idle
-// holder with nobody in line keeps the screen until someone claims it.
+// holder's /app, or its run ends, runEnded; it has been idle `idleMs` while
+// someone waits; its engine is gone: `alive` false or forget), the screen is
+// reserved for the first in line for `idleMs` (ScreenNotices.yours): only
+// that agent's claim takes it, and if it does not come, the next in line
+// gets the reservation. An idle holder with nobody in line keeps the screen
+// until someone claims it or its run ends.
 //
 // An agent's unlock dialog (promptOpened/promptClosed) stops its time: a
 // holder's idle time or a reservation does not run out while the user
@@ -67,6 +68,10 @@ class ScreenLease(
 
   // The holder's lease began with a reservation the line handed over.
   private var fromLine = false
+
+  // The holder's run ended while a request of its still ran: the screen
+  // goes back when the last one ends (runEnded).
+  private var runOver = false
 
   // Bumped whenever the screen changes hands, so a request that outlived
   // its lease (holder gone mid-call) cannot touch the next holder's count.
@@ -184,10 +189,26 @@ class ScreenLease(
     running = (running - 1).coerceAtLeast(0)
     lastUse = now
     idleFrom = now
-    if (release && running == 0) {
+    if ((release || runOver) && running == 0) {
       endHolder()
       settle(now, null, out)
     }
+  }
+
+  /**
+   * The agent's run ended: a holder gives the screen back, at once or when
+   * its last running request ends, so holding the screen means a run is
+   * driving it. Its place in line or reservation stays (a wake may come for
+   * it); a new request of its keeps the screen after all.
+   */
+  fun runEnded(agentId: String): Unit = locked { out ->
+    if (holder != agentId) return@locked
+    if (running > 0) {
+      runOver = true
+      return@locked
+    }
+    endHolder()
+    settle(clock(), null, out)
   }
 
   /** The agent's engine is gone: it leaves the line and loses the screen or its reservation at once. */
@@ -253,6 +274,7 @@ class ScreenLease(
 
   private fun use(agentId: String, agentName: String, now: Long): Granted {
     holderName = agentName
+    runOver = false
     running++
     lastUse = now
     idleFrom = now
@@ -263,6 +285,7 @@ class ScreenLease(
     holder = null
     running = 0
     fromLine = false
+    runOver = false
   }
 
   private fun reserve(agentId: String, agentName: String, now: Long, fromLine: Boolean) {

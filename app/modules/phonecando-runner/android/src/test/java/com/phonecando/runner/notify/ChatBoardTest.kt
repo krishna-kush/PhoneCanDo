@@ -64,6 +64,23 @@ class ChatBoardTest {
     assertEquals(emptySet<String>(), board.working())
   }
 
+  @Test fun busyWhileAChatWorksOrWaitsForAnAnswer() {
+    on("a", Kind.WORKING, "s1")
+    on("a", Kind.WORKING, "s2")
+    on("a", Kind.FINISHED, "s1")
+    assertTrue(board.busy("a"))
+    on("a", Kind.WAITING, "s2")
+    assertTrue(board.busy("a"))
+    on("a", Kind.STOPPED, "s2")
+    assertFalse(board.busy("a"))
+    // A subagent's verdict leaves its parent's run going.
+    on("b", Kind.WORKING, "p")
+    on("b", Kind.OTHER, "c", child = true)
+    on("b", Kind.FINISHED, "c")
+    assertTrue(board.busy("b"))
+    assertFalse(board.busy("x"))
+  }
+
   @Test fun orderIsWaitingWorkingErrorDoneNewestFirst() {
     on("a", Kind.WORKING, "s1")
     on("b", Kind.FINISHED, "s2")

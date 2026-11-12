@@ -31,9 +31,14 @@ import java.io.File
 // anyone is looking at it, and is what its kind's idle rule reads. Every
 // event also goes to the agent's alerts (finished, failed, waiting for your
 // answer while PhoneCanDo is not in front) and to the chats the service
-// notification lists. Only while usage stats are on, a top-level session
-// creation also counts once per agent and session id (a frame seen again
-// after a reconnect does not count twice).
+// notification lists. A run's end (a verdict, a stop or a deleted session)
+// that leaves the agent no chat working or waiting for your answer is its
+// `runEnded`: it gives back the screen it drove (Bridge.runEnded), so a
+// later question does not pull PhoneCanDo forward (AgentAlerts). A
+// subagent's verdict leaves its parent's chat working, so it never counts.
+// Only while usage stats are on, a top-level session creation also counts
+// once per agent and session id (a frame seen again after a reconnect does
+// not count twice).
 internal class EngineStreams(
   private val onActivity: (agentId: String) -> Unit,
   private val alerts: AgentAlerts,
@@ -41,6 +46,7 @@ internal class EngineStreams(
   private val openUrl: (agentId: String, url: String) -> Unit,
   private val dropUrls: (agentId: String) -> Unit,
   private val inboxRead: (agentId: String, ids: List<Long>) -> Unit = { _, _ -> },
+  private val runEnded: (agentId: String) -> Unit = {},
 ) {
   // "<agentId> <sessionId>" already counted; bounded, oldest dropped first.
   private val createdSeen = object : LinkedHashMap<String, Boolean>() {
@@ -103,6 +109,7 @@ internal class EngineStreams(
     if (event.kind != EngineEvent.Kind.OTHER || event.sessionCreated) onActivity(agentId)
     alerts.onEvent(agentId, event)
     chats.onEvent(agentId, event)
+    if (event.sessionId != null && event.kind in RUN_ENDS && !chats.busy(agentId)) runEnded(agentId)
   }
 
   private fun countCreated(agentId: String, sessionId: String?) {
@@ -118,5 +125,6 @@ internal class EngineStreams(
     const val TAG = "PhoneCanDoEngineSse"
     const val CREATED_SEEN_MAX = 256
     const val QUIET_CHECK_MS = 5_000L
+    val RUN_ENDS = setOf(EngineEvent.Kind.FINISHED, EngineEvent.Kind.FAILED, EngineEvent.Kind.STOPPED, EngineEvent.Kind.GONE)
   }
 }
