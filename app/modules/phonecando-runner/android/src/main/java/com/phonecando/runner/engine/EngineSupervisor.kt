@@ -152,8 +152,14 @@ internal class EngineSupervisor(
     slots[agentId]?.lastUsedAt = System.currentTimeMillis()
   }
 
-  /** Whether the agent's engine may stop, by its kind's idle rule (ManifestKind.isIdle). */
+  /**
+   * Whether the agent's engine may stop, by its kind's idle rule
+   * (ManifestKind.isIdle). Never while one of its chats is working: a long
+   * tool call (a build, a test run) sends no events for minutes, and the
+   * quiet rule alone would stop the engine mid-turn.
+   */
   fun isIdle(agentId: String, kind: ManifestKind): Boolean {
+    if (agentId in chats.working()) return false
     val slot = slots[agentId]
     return kind.isIdle(slot?.lastEventAt, slot?.terminal?.lastOutputAt, System.currentTimeMillis())
   }

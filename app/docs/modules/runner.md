@@ -483,7 +483,9 @@ agents' engines start only when something uses them. When the app goes to
 the background, `stopIdleAgents` stops each running engine that is idle by
 its kind's rule (`isEngineIdle`, the manifest's `idle`: no activity event
 for `quietSec`, 60 s for opencode; an engine with none since its start is
-idle); it does nothing while phone control is unlocked, so an agent driving
+idle; never one with a chat working, since a long tool call sends no events
+for minutes, `EngineSupervisor.isIdle`); it does nothing while phone control
+is unlocked, so an agent driving
 another app is not cut off. A start, a chat in front (`useEngineTouch`,
 every two minutes), each bridge call and each engine event mark an engine
 used, so it is not the one stopped to make room (under the user's cap) or
