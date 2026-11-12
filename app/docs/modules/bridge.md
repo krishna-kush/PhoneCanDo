@@ -179,22 +179,43 @@ GET and DELETE answer 405.
 
 ## Trust gate
 
-`AutomationGate.enabled` is in-memory, default off, and resets with the app
-process. Settings → Phone control or the in-chat unlock modal flips it only
-after `expo-local-authentication` succeeds (device credential fallback
-allowed). Locked calls to `notify/share/open/clipboard/pce/*` return 403
-`automation_off` in full builds; with the switch on but the service not
-enabled in Android settings, `/pce/*` returns 503 `automation_unavailable`,
-also when the service disconnects between the bridge's check and the call
-(the agent's cue to call `mobile_open_accessibility`).
-`/app` stays ungated: own-app launch is safe even while locked. `/unlock`,
-`/accessibility` and `/pce/*` exist only in full builds; lite/play return 404
-`not_found` for them. The gate is one switch for the phone: unlocking it lets
-every running agent use phone control.
+The phone-control lock (`controllock/ControlLock`, one per process via
+`ControlLocks`) decides per calling agent. Its mode, picked in Settings →
+Phone control, says how long an unlock lasts:
+
+- `install` (default): one switch for the phone, kept across restarts until
+  the user locks it.
+- `launch`: one switch, in memory; it ends with the process or when the user
+  closes PhoneCanDo (the activity finishes: swiped from recents).
+- `ask`: no switch. The user's yes to an agent's `/unlock` is that agent's
+  own unlock (`AskGrants`); it ends at the agent's `/app` (`mobile_return`),
+  when its engine stops (`BridgeHandle.agentGone`), after 5 minutes with no
+  gated call from it, or when the user locks. Other agents stay locked and
+  ask for themselves.
+
+Settings or the in-chat unlock modal unlocks only after
+`expo-local-authentication` succeeds (screen-lock PIN, pattern or password
+when there is no biometric; a phone with no screen lock cannot unlock).
+Changing the mode asks too, in either direction, because an agent with
+phone control could tap the picker. Agents run as the app's Linux user and
+can write its files, so the saved mode and the install-mode unlock are
+records signed with Android Keystore keys that sign only within 15 s of a
+fingerprint (strong biometric) or the screen lock (`KeystoreLockStore`):
+each save makes a new key, so a copied older record fails; a mode record
+that fails reads as `ask`, and no key at all as a fresh install's `install`.
+
+Locked calls to `notify/share/open/clipboard/pce/*` return 403
+`automation_off` in full builds; when the lock lets the agent in but the
+service is not enabled in Android settings, `/pce/*` returns 503
+`automation_unavailable`, also when the service disconnects between the
+bridge's check and the call (the agent's cue to call
+`mobile_open_accessibility`). `/app` stays ungated: own-app launch is safe
+even while locked. `/unlock`, `/accessibility` and `/pce/*` exist only in
+full builds; lite/play return 404 `not_found` for them.
 
 Lite/play builds have no accessibility host and no switch, so the six basic
 tools stay available (and the UI/PCE tools are not registered). `/ping` reports
-`channel`, `unlocked`, `pce`, and the `ui` compatibility alias so the agent can
+`channel`, `unlocked` (for the calling agent), `pce`, and the `ui` compatibility alias so the agent can
 explain what is missing. The engine launcher injects
 `PHONECANDO_CHANNEL=full|lite|play` into every engine's env; the agent asset
 also omits the full-only automation plugin and phone-control tools outside

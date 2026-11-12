@@ -518,6 +518,7 @@ internal class EngineSupervisor(
     }
     models.release(agentId)
     chats.detach(agentId)
+    phoneControlGone(agentId)
     emit(status)
     afterEngineGone()
   }
@@ -605,7 +606,10 @@ internal class EngineSupervisor(
       }
     }
     stopping.forEach(::emit)
-    ending.forEach { (slot, _) -> chats.detach(slot.agentId) }
+    ending.forEach { (slot, _) ->
+      chats.detach(slot.agentId)
+      phoneControlGone(slot.agentId)
+    }
     // A stop-all ends the model servers in the same grace; otherwise each
     // agent's hold ends below, once its engine is gone.
     if (agentIds == null) models.stopAll()
@@ -634,6 +638,11 @@ internal class EngineSupervisor(
     }
     ended.forEach(::emit)
     afterEngineGone()
+  }
+
+  // The agent's ask-mode unlock for phone control ends with its engine.
+  private fun phoneControlGone(agentId: String) {
+    lock.withLock { bridge }?.agentGone(agentId)
   }
 
   // The last engine is gone: close the bridge and tell the service.

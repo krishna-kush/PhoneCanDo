@@ -154,7 +154,7 @@ class McpEndpointTest {
   }
 
   @Test fun theLockedSwitchRefusesTheCallAsAToolError() {
-    rig.host.unlocked = false
+    rig.lock.lock()
     val (out, isError) = text(rig.post(call(1, "mobile_notify", JSONObject().put("text", "hi"))))
     assertTrue(isError)
     assertEquals("error automation_off: phone control is locked; unlock it in PhoneCanDo settings", out)

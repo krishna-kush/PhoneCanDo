@@ -7,7 +7,7 @@ export const appTools: PhoneTool[] = [
   {
     name: "mobile_return",
     description:
-      "Bring PhoneCanDo back to the foreground after finishing a phone-control task, with you as the active agent. tab=home|env|settings (default home, your chat). When PhoneCanDo is backgrounded it also posts a tap-to-return notification and reports notified:true; tell the user to tap it if the app did not come forward. Call this before your final report. Ungated; registered in full builds.",
+      "Bring PhoneCanDo back to the foreground after finishing a phone-control task, with you as the active agent. tab=home|env|settings (default home, your chat). When PhoneCanDo is backgrounded it also posts a tap-to-return notification and reports notified:true; tell the user to tap it if the app did not come forward. Call this before your final report, not between steps: it hands the phone back, and if the user has phone control ask each time, it also ends your unlock. Ungated; registered in full builds.",
     input: {
       type: "object",
       properties: {
@@ -30,7 +30,7 @@ export const appTools: PhoneTool[] = [
   {
     name: "mobile_request_unlock",
     description:
-      "Phone control is locked (automation_off). Show the biometric/PIN prompt over the chat and wait up to 45s for the user. This never unlocks by itself. If the result has unlocked:true, continue the task; if unlocked:false, stop and ask the user to unlock. Never retry the locked action or try to bypass the gate.",
+      "Phone control is locked (automation_off). Show the biometric/PIN prompt over the chat and wait up to 45s for the user. This never unlocks by itself. If the result has unlocked:true, continue the task; if unlocked:false, stop and ask the user to unlock. Depending on the user's setting, an unlock may last only for this task (until you call mobile_return), so a later task may need to ask again. Never retry the locked action or try to bypass the gate.",
     input: noArgs,
     channel: "full",
     run: (_args, signal) => call("/unlock", { waitMs: 45_000 }, signal, 50_000),

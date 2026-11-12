@@ -12,9 +12,11 @@ import com.phonecando.runner.api.installFunctions
 import com.phonecando.runner.api.kindFunctions
 import com.phonecando.runner.api.memoryFunctions
 import com.phonecando.runner.api.notifyFunctions
+import com.phonecando.runner.api.phoneControlFunctions
 import com.phonecando.runner.api.runLimitFunctions
 import com.phonecando.runner.api.userKindFunctions
 import com.phonecando.runner.bridge.BridgePrompts
+import com.phonecando.runner.controllock.ControlLocks
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.jobs.JobsAnchor
@@ -102,6 +104,16 @@ class PhoneCanDoRunnerModule : Module() {
       Engines.removeListener(engineListener)
       if (instance === this@PhoneCanDoRunnerModule) instance = null
     }
+    // The user closed PhoneCanDo (swiped it from recent apps; it handles
+    // its own config changes, so nothing else finishes it): launch mode's
+    // phone-control unlock ends here, or with the process. An activity
+    // already gone counts as closed.
+    OnActivityDestroys {
+      val activity = appContext.currentActivity
+      if (activity == null || (activity.isFinishing && !activity.isChangingConfigurations)) {
+        appContext.reactContext?.let { ControlLocks.get(it).appClosed() }
+      }
+    }
 
     agentFunctions { context() }
     agentModelFunctions { context() }
@@ -112,6 +124,7 @@ class PhoneCanDoRunnerModule : Module() {
     userKindFunctions { context() }
     notifyFunctions { context() }
     clipboardFunctions { context() }
+    phoneControlFunctions { context() }
     runLimitFunctions { context() }
     memoryFunctions { context() }
 
@@ -160,20 +173,6 @@ class PhoneCanDoRunnerModule : Module() {
       } catch (_: Exception) {
         "full"
       }
-    }
-
-    // Phone-control master switch. Default off, in-memory only (resets with
-    // the app process). The Settings screen flips it after biometric auth;
-    // the agent process has no way to flip it.
-    Function("setAutomationEnabled") { enabled: Boolean ->
-      AutomationHosts.install()
-      AutomationHosts.current?.setEnabled(enabled)
-      AutomationHosts.current?.enabled == true
-    }
-
-    Function("isAutomationEnabled") {
-      AutomationHosts.install()
-      AutomationHosts.current?.enabled == true
     }
 
     // Prompts for the user from agents: the ones a bridge request waits on

@@ -2,14 +2,10 @@ package com.phonecando.runner
 
 import org.json.JSONObject
 
-// Full-only bridge to the PCE adapter and its biometric gate.
+// Full-only bridge to the PCE adapter. The bridge checks the phone-control
+// lock (controllock/) before any call reaches it.
 object FullAutomation : AutomationHost {
-  override val enabled: Boolean get() = AutomationGate.enabled
   override val connected: Boolean get() = PceAuto.service != null
-
-  override fun setEnabled(enabled: Boolean) {
-    AutomationGate.enabled = enabled
-  }
 
   override fun describe(): JSONObject = pce().describe()
   override fun observe(options: JSONObject): JSONObject = pce().observe(options)

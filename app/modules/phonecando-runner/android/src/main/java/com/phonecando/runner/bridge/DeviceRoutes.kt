@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Build
 import com.phonecando.runner.AutomationHost
+import com.phonecando.runner.controllock.ControlLock
 import com.phonecando.runner.notify.AgentNotices
 import org.json.JSONObject
 
@@ -17,23 +18,25 @@ class DeviceRoutes(
   private val context: Context,
   private val channel: String,
   private val automation: () -> AutomationHost?,
+  private val lock: ControlLock,
 ) {
   private val notices = AgentNotices(context)
 
   fun table(): Map<Route, RouteHandler> = mapOf(
-    Route.PING to { _ -> Reply.ok(ping()) },
+    Route.PING to { call -> Reply.ok(ping(call.agent.id)) },
     Route.BATTERY to { _ -> Reply.ok(battery()) },
     Route.NOTIFY to { call -> notify(call) },
     Route.CLIPBOARD to { call -> clipboard(call.body) },
   )
 
-  private fun ping(): JSONObject = JSONObject()
+  // `unlocked`: the lock lets this agent in (in ask mode, its own unlock).
+  private fun ping(agentId: String): JSONObject = JSONObject()
     .put("channel", channel)
     .put("flavor", channel)
     .put("sdk", Build.VERSION.SDK_INT)
     .put("model", Build.MODEL)
     .put("automation", channel == "full")
-    .put("unlocked", automation()?.enabled == true)
+    .put("unlocked", channel == "full" && lock.unlockedFor(agentId))
     // `ui` is kept as the compatibility alias used by the existing prompt.
     .put("ui", automation()?.connected == true)
     .put("pce", automation()?.connected == true)

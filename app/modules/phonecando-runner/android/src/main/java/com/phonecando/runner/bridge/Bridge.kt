@@ -7,10 +7,14 @@ import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.AutomationHosts
 import com.phonecando.runner.agents.AgentDirectory
 import com.phonecando.runner.bridge.mcp.McpToolAssets
+import com.phonecando.runner.controllock.ControlLocks
 
 /** A running loopback bridge: engines get [url] at launch, each with its own token. */
 interface BridgeHandle {
   val url: String
+
+  /** The agent's engine stopped: its ask-mode unlock ends with it. */
+  fun agentGone(agentId: String)
 
   fun stop()
 }
@@ -29,6 +33,13 @@ object Bridge {
   /** How long the screen stays with an idle agent (ScreenLease). */
   private const val LEASE_IDLE_MS = 30_000L
 
+  // The open bridge's lease, for screenInUse; null while no bridge is open.
+  @Volatile
+  private var lease: ScreenLease? = null
+
+  /** An agent is driving the screen now: a screen call runs or ran within the lease's idle time. */
+  fun screenInUse(): Boolean = lease?.inUse() == true
+
   fun open(context: Context, agents: AgentDirectory, onCall: (agentId: String) -> Unit): BridgeHandle? {
     val app = context.applicationContext
     val channel = buildChannel(app)
@@ -37,14 +48,17 @@ object Bridge {
       AutomationHosts.current
     }
     val launcher = AppLauncher(app)
-    val handlers = DeviceRoutes(app, channel, automation).table() +
+    val lock = ControlLocks.get(app)
+    val handlers = DeviceRoutes(app, channel, automation, lock).table() +
       ActivityRoutes(app, launcher).table() +
       PceRoutes(automation).table() +
-      PromptRoutes(app, PromptFlows(BridgePrompts.registry, launcher), automation).table()
+      PromptRoutes(app, PromptFlows(BridgePrompts.registry, launcher), automation, lock).table()
+    val screen = ScreenLease(LEASE_IDLE_MS) { SystemClock.elapsedRealtime() }
     val router = BridgeRouter(
       full = channel == "full",
       automation = automation,
-      lease = ScreenLease(LEASE_IDLE_MS) { SystemClock.elapsedRealtime() },
+      lock = lock,
+      lease = screen,
       alive = { agents.get(it) != null },
       handlers = handlers,
       onError = { msg, e -> Log.w(TAG, msg, e) },
@@ -54,13 +68,19 @@ object Bridge {
     val tools = McpToolAssets.load(app, full = channel == "full")
     val server = BridgeServer.start(ports, agents, router, tools, appVersion(app), onCall) ?: return null
     prefs.edit().putInt(KEY_PORT, server.listeningPort).apply()
+    lease = screen
     return object : BridgeHandle {
       override val url = "http://127.0.0.1:${server.listeningPort}"
 
+      override fun agentGone(agentId: String) = lock.endAsk(agentId)
+
       override fun stop() {
         server.stop()
-        // No engine is left to hear the answers: end the waits now.
+        if (lease === screen) lease = null
+        // No engine is left to hear the answers: end the waits now, and
+        // every ask-mode unlock with them.
         BridgePrompts.registry.cancelAll()
+        lock.endAsks()
       }
     }
   }

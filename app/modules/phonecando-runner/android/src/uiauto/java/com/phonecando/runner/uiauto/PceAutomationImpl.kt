@@ -18,7 +18,6 @@ import com.phonecando.pce.api.Window
 import com.phonecando.pce.core.Pce
 import com.phonecando.pce.json.PceJson
 import com.phonecando.pce.pack.FlowResult
-import com.phonecando.runner.AutomationGate
 import com.phonecando.runner.PceAutomation
 import com.phonecando.runner.packs.PackStore
 import kotlinx.coroutines.runBlocking
@@ -46,7 +45,8 @@ class PceAutomationImpl(
       .put("sdk", Build.VERSION.SDK_INT)
       .put("model", Build.MODEL)
       .put("automation", true)
-      .put("unlocked", AutomationGate.enabled)
+      // Only an unlocked agent gets here: /pce/describe is behind the lock.
+      .put("unlocked", true)
       .put("packs", packs.describeJson())
   }
 

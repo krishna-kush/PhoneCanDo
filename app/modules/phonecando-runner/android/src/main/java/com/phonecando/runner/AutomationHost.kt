@@ -3,11 +3,10 @@ package com.phonecando.runner
 import org.json.JSONObject
 
 // Main-source seam. The full-only implementation lives in src/uiauto; lite and
-// play compile only this interface and install nothing.
+// play compile only this interface and install nothing. Who may drive is
+// the phone-control lock's call (controllock/ControlLock), not the host's.
 interface AutomationHost {
-  val enabled: Boolean
   val connected: Boolean
-  fun setEnabled(enabled: Boolean)
   fun describe(): JSONObject
   fun observe(options: JSONObject): JSONObject
   fun act(request: JSONObject): JSONObject

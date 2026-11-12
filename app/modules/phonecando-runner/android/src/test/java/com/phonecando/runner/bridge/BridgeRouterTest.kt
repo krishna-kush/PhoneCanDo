@@ -2,23 +2,19 @@ package com.phonecando.runner.bridge
 
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.AutomationUnavailableException
+import com.phonecando.runner.controllock.LockMode
+import com.phonecando.runner.controllock.unlockedLock
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-// The router's checks in order (route, flavor, gate, service, body, lease)
+// The router's checks in order (route, flavor, lock, service, body, lease)
 // and the envelopes they answer with.
 class BridgeRouterTest {
   private class FakeHost : AutomationHost {
-    var unlocked = true
     var service = true
-    override val enabled get() = unlocked
     override val connected get() = service
-
-    override fun setEnabled(enabled: Boolean) {
-      unlocked = enabled
-    }
 
     override fun describe() = JSONObject().put("ok", true)
     override fun observe(options: JSONObject) = JSONObject().put("ok", true).put("snapshotId", 7)
@@ -28,6 +24,7 @@ class BridgeRouterTest {
 
   private var now = 0L
   private val host = FakeHost()
+  private val lock = unlockedLock { now }
   private val dir = FakeDirectory(agent("a1", "opencode"), agent("a2", "opencode 2"))
   private val lease = ScreenLease(30_000) { now }
   private val handled = mutableListOf<String>()
@@ -39,7 +36,7 @@ class BridgeRouterTest {
     Route.entries.associateWith { echo } + PceRoutes { host }.table()
 
   private fun router(full: Boolean = true) =
-    BridgeRouter(full, { if (full) host else null }, lease, { dir.get(it) != null }, handlers)
+    BridgeRouter(full, { if (full) host else null }, lock, lease, { dir.get(it) != null }, handlers)
 
   private fun json(reply: Reply) = JSONObject(reply.body)
 
@@ -64,11 +61,11 @@ class BridgeRouterTest {
   }
 
   @Test fun lockedAndUnavailableComeBeforeTheLease() {
-    host.unlocked = false
+    lock.lock()
     val locked = router().handle(dir.records[0], "POST", "/pce/observe", "{}")
     assertEquals(403, locked.status)
     assertEquals("automation_off", json(locked).getString("code"))
-    host.unlocked = true
+    lock.unlock()
     host.service = false
     val down = router().handle(dir.records[0], "POST", "/pce/observe", "{}")
     assertEquals(503, down.status)
@@ -76,7 +73,7 @@ class BridgeRouterTest {
     // Neither refusal took the screen.
     assertNull(lease.holderId())
     // Ungated routes still work while locked.
-    host.unlocked = false
+    lock.lock()
     assertEquals(200, router().handle(dir.records[0], "POST", "/app", "{}").status)
   }
 
@@ -122,6 +119,30 @@ class BridgeRouterTest {
     assertEquals(200, r.handle(dir.records[0], "POST", "/pce/observe", "{}").status)
     assertEquals("a2", lease.holderId())
     assertEquals(409, r.handle(gone, "POST", "/pce/observe", "{}").status)
+  }
+
+  @Test fun askModeLetsInOnlyTheAgentThatAsked() {
+    lock.setMode(LockMode.ASK)
+    val r = router()
+    assertEquals(403, r.handle(dir.records[0], "POST", "/notify", "{}").status)
+    lock.grantAsk("a1")
+    assertEquals(200, r.handle(dir.records[0], "POST", "/notify", "{}").status)
+    assertEquals(403, r.handle(dir.records[1], "POST", "/notify", "{}").status)
+    // Handing the phone back ends the unlock with the task.
+    assertEquals(200, r.handle(dir.records[0], "POST", "/app", "{}").status)
+    assertEquals(403, r.handle(dir.records[0], "POST", "/notify", "{}").status)
+  }
+
+  @Test fun anAskUnlockLastsWhileItIsUsed() {
+    lock.setMode(LockMode.ASK)
+    lock.grantAsk("a1")
+    val r = router()
+    now += 240_000
+    assertEquals(200, r.handle(dir.records[0], "POST", "/clipboard", "{}").status)
+    now += 240_000
+    assertEquals(200, r.handle(dir.records[0], "POST", "/clipboard", "{}").status)
+    now += 300_000
+    assertEquals(403, r.handle(dir.records[0], "POST", "/clipboard", "{}").status)
   }
 
   @Test fun pceFailuresKeepTheirEnvelopes() {

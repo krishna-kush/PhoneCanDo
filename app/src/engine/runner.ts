@@ -141,23 +141,85 @@ export function getBuildChannel(): string {
   }
 }
 
-// Phone-control master switch (default off, in-memory; flips reset on app
-// restart). Settings flips it after biometric auth; the agent cannot.
-export function setAutomationEnabled(enabled: boolean): boolean {
+// The phone-control lock (full builds; native controllock/). The mode says
+// how long an unlock lasts: install (until you lock it, across restarts),
+// launch (until PhoneCanDo restarts or you close it) or ask (each agent's
+// own unlock, ending when it hands the phone back). Only these calls unlock
+// or change the mode, each right after the user's biometric; the agent
+// cannot reach them.
+export type LockMode = 'install' | 'launch' | 'ask';
+
+const LOCK_MODES: readonly string[] = ['install', 'launch', 'ask'];
+
+type LockFns = {
+  getLockMode?: () => string;
+  setLockMode?: (mode: string) => boolean;
+  setAutomationEnabled?: (v: boolean) => boolean;
+  isAutomationEnabled?: () => boolean;
+  askUnlockCount?: () => number;
+  isPhoneInUse?: () => boolean;
+};
+
+function lockFns(): LockFns {
   try {
-    const m = load() as unknown as { setAutomationEnabled?: (v: boolean) => boolean };
-    if (typeof m.setAutomationEnabled !== 'function') return false;
-    return m.setAutomationEnabled(enabled);
+    return load() as unknown as LockFns;
+  } catch {
+    return {};
+  }
+}
+
+/** The lock mode; ask (the strictest) when native cannot say. */
+export function getLockMode(): LockMode {
+  try {
+    const mode = lockFns().getLockMode?.();
+    return mode && LOCK_MODES.includes(mode) ? (mode as LockMode) : 'ask';
+  } catch {
+    return 'ask';
+  }
+}
+
+/** Right after the user's biometric; false when it could not be saved. */
+export function setLockMode(mode: LockMode): boolean {
+  try {
+    return lockFns().setLockMode?.(mode) ?? false;
   } catch {
     return false;
   }
 }
 
+// Install and launch modes: unlock every agent (right after the user's
+// biometric) or lock; locking also ends ask-mode unlocks. Answers whether
+// phone control is now unlocked; ask mode refuses an unlock.
+export function setAutomationEnabled(enabled: boolean): boolean {
+  try {
+    return lockFns().setAutomationEnabled?.(enabled) ?? false;
+  } catch {
+    return false;
+  }
+}
+
+/** Unlocked for every agent (install and launch modes). */
 export function isAutomationEnabled(): boolean {
   try {
-    const m = load() as unknown as { isAutomationEnabled?: () => boolean };
-    if (typeof m.isAutomationEnabled !== 'function') return false;
-    return m.isAutomationEnabled();
+    return lockFns().isAutomationEnabled?.() ?? false;
+  } catch {
+    return false;
+  }
+}
+
+/** Ask mode: how many agents hold their own unlock. */
+export function askUnlockCount(): number {
+  try {
+    return lockFns().askUnlockCount?.() ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** An agent is driving the screen right now (a screen call runs or ran in the last 30 s). */
+export function isPhoneInUse(): boolean {
+  try {
+    return lockFns().isPhoneInUse?.() ?? false;
   } catch {
     return false;
   }

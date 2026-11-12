@@ -26,9 +26,13 @@ Current implementation notes:
   names the calling agent on every bridge request. Guest commands in a
   Linux image do not inherit it, and every agent's password and token are
   redacted from logs and crash reports.
-- The gate is in-memory, defaults off and resets with the app process; it is
-  one switch for the phone, so unlocking it lets every running agent use
-  phone control. One agent drives the screen at a time (the screen lease).
+- The gate starts locked. Settings → Phone control picks how long an unlock
+  lasts: once per install (kept across restarts until you lock it), each
+  app launch, or each agent's ask (that agent alone, until it hands the
+  phone back). The saved mode and unlock are signed with Android Keystore
+  keys that sign only right after your fingerprint or screen lock, so an
+  agent writing the app's files cannot unlock itself. One agent drives the
+  screen at a time (the screen lease).
   See `../../app/docs/modules/bridge.md` for the exact 403/409/503
   behavior.
 - opencode 2.0.26 has no `ctx.permission.assert`, and Code Mode's `execute`

@@ -8,6 +8,7 @@ import com.phonecando.runner.bridge.Route
 import com.phonecando.runner.bridge.RouteHandler
 import com.phonecando.runner.bridge.ScreenLease
 import com.phonecando.runner.bridge.agent
+import com.phonecando.runner.controllock.unlockedLock
 import org.json.JSONObject
 import java.io.File
 
@@ -27,14 +28,8 @@ object RepoTools {
 }
 
 class FakeHost : AutomationHost {
-  var unlocked = true
   var service = true
-  override val enabled get() = unlocked
   override val connected get() = service
-
-  override fun setEnabled(enabled: Boolean) {
-    unlocked = enabled
-  }
 
   override fun describe() = JSONObject().put("ok", true)
   override fun observe(options: JSONObject) = JSONObject().put("ok", true).put("snapshotId", 7)
@@ -45,6 +40,7 @@ class FakeHost : AutomationHost {
 class McpRig(full: Boolean = true) {
   var now = 0L
   val host = FakeHost()
+  val lock = unlockedLock { now }
   val dir = FakeDirectory(agent("a1", "opencode"), agent("a2", "gemini"))
   val lease = ScreenLease(30_000) { now }
 
@@ -54,7 +50,7 @@ class McpRig(full: Boolean = true) {
     handled += "${call.agent.id} ${call.route.path} ${call.body}"
     Reply.ok(JSONObject().put("route", call.route.path).put("shot", "/data/shot.png"))
   }
-  val router = BridgeRouter(full, { if (full) host else null }, lease, { dir.get(it) != null }, Route.entries.associateWith { echo })
+  val router = BridgeRouter(full, { if (full) host else null }, lock, lease, { dir.get(it) != null }, Route.entries.associateWith { echo })
   val endpoint = McpEndpoint(RepoTools.parse(full), "1.2.3") { agent, route, body ->
     router.handle(agent, route.method, route.path, body)
   }

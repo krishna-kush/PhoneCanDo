@@ -1,6 +1,7 @@
 package com.phonecando.runner.bridge
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -46,6 +47,20 @@ class ScreenLeaseTest {
     now += 1
     lease.done(granted("a2"))
     assertEquals("a2", lease.holderId())
+  }
+
+  @Test fun inUseWhileRunningOrRecent() {
+    assertFalse(lease.inUse())
+    val ticket = granted("a1")
+    now += 90_000
+    assertTrue(lease.inUse())
+    lease.done(ticket)
+    now += 29_999
+    assertTrue(lease.inUse())
+    now += 1
+    // Still the holder, but no longer driving.
+    assertFalse(lease.inUse())
+    assertEquals("a1", lease.holderId())
   }
 
   @Test fun idleExpiryHandsTheScreenOver() {

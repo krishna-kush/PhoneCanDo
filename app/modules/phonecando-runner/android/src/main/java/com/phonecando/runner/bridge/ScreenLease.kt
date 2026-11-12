@@ -66,4 +66,8 @@ class ScreenLease(private val idleMs: Long, private val clock: () -> Long) {
   /** The current holder's agent id, idle or not; null when free. */
   @Synchronized
   fun holderId(): String? = holder
+
+  /** A holder is driving: a screen request runs or one ended under `idleMs` ago. */
+  @Synchronized
+  fun inUse(): Boolean = holder != null && (running > 0 || clock() - lastUse < idleMs)
 }
