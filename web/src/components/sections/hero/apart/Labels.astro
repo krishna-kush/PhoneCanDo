@@ -49,6 +49,13 @@ import { phoneParts } from "../../../../data/phoneParts";
        if those change the pointers follow. */
     .part-labels li {
       --onto: 14px;
+      /* The middle of a name's capitals, down from the top of the font's own
+         box: Geist Mono's is 0.64em (ascent 1.005em less half the 0.73em cap
+         height); below 1.5x the text is hinted onto whole pixels there, and
+         on sharper screens it sits about half a pixel lower, at 0.7em (both
+         measured on the rendered glyphs). The leader runs there, and so does
+         the phantom's strike. */
+      --strike: 0.64em;
       /* Seen from above, a layer's strip is --gap × tan(--tilt) of the plate
          tall; each layer below has its edge that much × tan(--turn) further
          left. Both grow as the layers separate (--s). */
@@ -70,12 +77,19 @@ import { phoneParts } from "../../../../data/phoneParts";
         rotateX(calc(var(--t) * var(--tilt) * -1))
         translateZ(calc(var(--t) * 16px));
     }
+    @media (min-resolution: 1.5dppx) {
+      .part-labels li { --strike: 0.7em; }
+    }
     .part-labels button {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      /* The name's line centred on the leader. */
-      margin-top: calc(-0.7em - 2px);
+      /* The name's capitals centred on the leader. Not its line: Geist Mono
+         sits high in a line (its descent is deep), which put the leader
+         under the capitals' middle, off the phantom's strike. The name's line
+         is the font's own box (line-height: normal), so --strike from its
+         top is the capitals' middle. */
+      margin-top: calc(-2px - var(--strike));
       padding: 2px calc(40px + var(--onto) + var(--fan)) 2px 6px;
       border: 0;
       background: none;
@@ -90,7 +104,7 @@ import { phoneParts } from "../../../../data/phoneParts";
     .part-labels button:focus-visible { outline: 1px solid var(--leader); outline-offset: 2px; }
     .part-labels b { margin-right: 7px; font-weight: 500; color: var(--leader); }
     .part-labels em { font-style: normal; letter-spacing: 0.08em; color: var(--faint); }
-    .part-labels .part-name { transition: color 0.2s; }
+    .part-labels .part-name { line-height: normal; transition: color 0.2s; }
     .part-labels li[data-lit] .part-name { color: var(--accent-ink); }
 
     /* The leader runs from the label to the dot on the anchor. */
@@ -118,22 +132,15 @@ import { phoneParts } from "../../../../data/phoneParts";
     .part-labels li[data-lit]::before { scale: 1.8; }
 
     /* The phantom's label is struck through and dashed, in red. The strike
-       is drawn, not line-through, which sits by the font's own metrics and
-       runs high on capitals. Geist Mono's capitals have their middle 0.64em
-       down (ascent 1.005em less half the 0.73em cap height); below 1.5x the
-       text is hinted onto whole pixels there, and on sharper screens it sits
-       about half a pixel lower, at 0.7em (both measured on the rendered
-       glyphs). A gradient, unlike a box or an underline, can sit between
-       pixels inside the tilted stack. */
+       is drawn at --strike, in line with its leader, not line-through, which
+       sits by the font's own metrics and runs high on capitals. A gradient,
+       unlike a box or an underline, can sit between pixels inside the tilted
+       stack. */
     .part-labels .part-phantom b { color: var(--red); }
     .part-labels .part-phantom .part-name span {
-      --strike: 0.64em;
       margin: 0 -2px;
       padding: 0 2px;
       background: linear-gradient(transparent calc(var(--strike) - 0.5px), var(--red) 0 calc(var(--strike) + 0.5px), transparent 0);
-    }
-    @media (min-resolution: 1.5dppx) {
-      .part-labels .part-phantom .part-name span { --strike: 0.7em; }
     }
     .part-labels .part-phantom::after {
       background: repeating-linear-gradient(90deg, var(--red) 0 3px, transparent 3px 5px);
