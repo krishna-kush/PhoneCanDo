@@ -54,7 +54,6 @@ class AppLauncher(private val context: Context) : PromptHost {
     return notices.post(
       AgentNotices.Notice(
         prompt.agentId, AgentNotices.promptId(prompt.seq), prompt.agentName, text,
-        icon = android.R.drawable.ic_lock_lock,
       ),
     )
   }

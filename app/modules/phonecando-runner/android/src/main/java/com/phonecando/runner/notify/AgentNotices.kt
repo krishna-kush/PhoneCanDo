@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import com.phonecando.runner.R
 
 // The notifications an agent is behind, on one channel: its own posts
 // (/notify), its slot (the /app return notice and its engine alerts) and
@@ -23,7 +24,6 @@ internal class AgentNotices(private val context: Context) {
     /** Shown beside the app name; the agent's name when the title is not. */
     val subText: String? = null,
     val tab: String = "home",
-    val icon: Int = android.R.drawable.ic_dialog_info,
     /** Sound and vibration only when it is not already showing. */
     val quietUpdate: Boolean = false,
   )
@@ -35,7 +35,7 @@ internal class AgentNotices(private val context: Context) {
     val builder = Notification.Builder(context, CHANNEL)
       .setContentTitle(notice.title)
       .setContentText(notice.text)
-      .setSmallIcon(notice.icon)
+      .setSmallIcon(R.drawable.ic_stat_phonecando)
       .setContentIntent(LaunchTargets.tap(context, LaunchTarget.of(notice.tab, notice.agentId)))
       .setAutoCancel(true)
       .setOnlyAlertOnce(notice.quietUpdate)

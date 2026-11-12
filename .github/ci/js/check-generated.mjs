@@ -5,7 +5,8 @@
 //
 //   app/scripts/inline-xterm.js  -> app/assets/xterm/terminal.bundle.html
 //   scripts/make-logos.mjs       -> app/assets/*.png, web/public/ icons,
-//                                   logo/favicon SVGs, site.webmanifest
+//                                   logo/favicon SVGs, site.webmanifest,
+//                                   the runner's notification icon
 //
 // PNGs compare by header + inflated pixel stream: a different zlib build
 // (another Node, CPU) may compress the same pixels to other bytes, which only

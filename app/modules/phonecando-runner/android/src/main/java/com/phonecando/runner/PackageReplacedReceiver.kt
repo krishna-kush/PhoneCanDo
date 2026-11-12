@@ -49,7 +49,7 @@ class PackageReplacedReceiver : BroadcastReceiver() {
       Notification.Builder(context, CHANNEL_ID)
         .setContentTitle("PhoneCanDo updated")
         .setContentText(text)
-        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setSmallIcon(R.drawable.ic_stat_phonecando)
         .setContentIntent(pending)
         .setAutoCancel(true)
         .build(),

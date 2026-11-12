@@ -36,7 +36,6 @@ internal object OpenUrlPrompts {
       AgentNotices.Notice(
         prompt.agentId, AgentNotices.openUrlId(prompt.seq), prompt.agentName,
         "Wants to open ${prompt.host}. Tap to review.",
-        icon = android.R.drawable.ic_menu_view,
       ),
     )
   }

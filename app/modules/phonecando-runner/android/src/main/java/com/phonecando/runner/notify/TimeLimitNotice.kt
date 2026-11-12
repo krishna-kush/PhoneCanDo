@@ -3,6 +3,7 @@ package com.phonecando.runner.notify
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import com.phonecando.runner.R
 
 // What the engine service leaves behind when Android ends it at a
 // foreground-service time limit (PhoneCanDoServeService.onTimeout): one
@@ -21,7 +22,7 @@ internal object TimeLimitNotice {
       .setContentTitle(TITLE)
       .setContentText(TEXT)
       .setStyle(Notification.BigTextStyle().bigText(TEXT))
-      .setSmallIcon(android.R.drawable.ic_dialog_info)
+      .setSmallIcon(R.drawable.ic_stat_phonecando)
       .setContentIntent(LaunchTargets.tap(context, LaunchTarget.of("home", null)))
       .setAutoCancel(true)
       .build()

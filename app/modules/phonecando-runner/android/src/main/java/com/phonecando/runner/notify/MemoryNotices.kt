@@ -3,6 +3,7 @@ package com.phonecando.runner.notify
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import com.phonecando.runner.R
 import com.phonecando.runner.memory.MemoryGuard
 
 // The memory guard's one notification (id 4301, untagged like the engine
@@ -35,7 +36,7 @@ internal class MemoryNotices(private val context: Context) : MemoryGuard.Alerts 
       .setContentTitle(title)
       .setContentText(text)
       .setStyle(Notification.BigTextStyle().bigText(text))
-      .setSmallIcon(android.R.drawable.ic_dialog_info)
+      .setSmallIcon(R.drawable.ic_stat_phonecando)
       .setContentIntent(LaunchTargets.tap(context, LaunchTarget.of("home", null)))
       .setAutoCancel(true)
       .setOnlyAlertOnce(quiet)

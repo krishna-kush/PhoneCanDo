@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import com.phonecando.runner.R
 
 // The foreground service's one notification: the chats the agents are busy
 // with, one line each, the chat, then its agent, then its state
@@ -94,7 +95,7 @@ internal class ServiceNotification(private val context: Context) {
 
   private fun base(tap: PendingIntent?): Notification.Builder =
     Notification.Builder(context, CHANNEL_ID)
-      .setSmallIcon(android.R.drawable.ic_dialog_info)
+      .setSmallIcon(R.drawable.ic_stat_phonecando)
       .setContentIntent(tap)
       .setOngoing(true)
 
