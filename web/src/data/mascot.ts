@@ -54,6 +54,17 @@ export const toyLines = {
   audited: 'you read it all!',
   rolled: (q: number) => `rolled Q${q}`,
   allAnswered: 'all answered!',
+  apart: 'all on device',
+  together: 'clack · intact',
+  part: {
+    cloud: 'no relay here',
+    screen: 'i read pixels',
+    apps: 'tap tap tap',
+    agent: "that's me!",
+    linux: 'my own root',
+    keys: 'kept right here',
+    board: 'no PC needed',
+  },
 };
 
 /** Said when a hard spin of the wheel makes it dizzy; never twice in a row. */

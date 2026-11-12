@@ -1,8 +1,8 @@
 ---
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
-import SessionCard from "./hero/SessionCard.astro";
 import VerbReel from "./hero/VerbReel.astro";
+import PhoneApart from "./hero/apart/PhoneApart.astro";
 import { site } from "../../data/site";
 ---
 
@@ -54,7 +54,10 @@ import { site } from "../../data/site";
     <figure class="phone-wrap">
         <figcaption class="fig-head">
             <div>
-                <p class="fig-label">FIG. 01 — The body</p>
+                <p class="fig-label">
+                    <span class="fig-label-whole">FIG. 01 — The body</span>
+                    <span class="fig-label-apart">FIG. 01A — The body, apart</span>
+                </p>
                 <p class="fig-sub">Model A-01 / 1080 × 2340 / {site.arch}</p>
             </div>
             <span class="stamp">On-device</span>
@@ -63,8 +66,8 @@ import { site } from "../../data/site";
             <span class="dim-v" aria-hidden="true">
                 <span>9:19.5</span>
             </span>
-            <div class="phone">
-                <div class="phone-screen" data-media>
+            <PhoneApart>
+                <div class="phone-screen" data-media data-part="screen">
                     {site.hero.video ? (
                         <video
                             src={site.hero.video}
@@ -76,7 +79,11 @@ import { site } from "../../data/site";
                             aria-label="PhoneCanDo running on a phone"
                         />
                     ) : (
-                        <Slate slot="01" glyph label="Hero loop · 0:08" />
+                        <Slate
+                            slot="01"
+                            glyph
+                            label={`Hero loop · 0:${String(site.hero.loopSeconds).padStart(2, "0")}`}
+                        />
                     )}
                     {site.hero.video ? (
                         <div class="media-loader">
@@ -84,8 +91,7 @@ import { site } from "../../data/site";
                         </div>
                     ) : null}
                 </div>
-            </div>
-            <SessionCard />
+            </PhoneApart>
         </div>
     </figure>
 </section>

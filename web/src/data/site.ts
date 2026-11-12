@@ -69,7 +69,10 @@ export const site = {
   // Where people write to us: hi for anything, support for help with the app.
   email: { hi: 'hi@phonecando.app', support: 'support@phonecando.app' },
   // Hero screen recording. Drop the files in public/ and fill both paths.
-  hero: { video: '', poster: '' },
+  // loopSeconds is the placeholder's length until then: FIG. 01 comes apart
+  // by itself when the hero loop first loops (lib/apart/autoplay.ts), and a
+  // real clip's loop is read from the clip itself.
+  hero: { video: '', poster: '', loopSeconds: 8 },
   // Gate screen recording: the in-app biometric prompt. Same deal.
   gate: { video: '', poster: '' },
   // Install walkthrough: starter APK → "Install full build" → the in-app

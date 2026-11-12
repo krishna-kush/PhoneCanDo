@@ -1,0 +1,184 @@
+---
+// FIG. 01A's leader lines, one per layer (data/phoneParts), numbered from
+// the phantom down. Each label stands upright at its layer: it rides the
+// layer's height, then turns back by the stack's own tilt so it reads flat,
+// and stands a little toward you so no plate cuts through it (only a
+// little: in perspective, toward you also drifts it off its layer).
+//
+// The stack is turned, so the layers' left edges fan out to the left, a
+// little more for each layer below; at a label's height every edge but its
+// own belongs to a layer under it. So each leader runs past that fan and ends a
+// little onto its own layer's strip, the phantom's too, and the higher the
+// layer, the longer the leader.
+// They tick in top first once the layers are far enough apart to fit them;
+// a lit layer lifts out from under its label, which stays put. Each is a button
+// (lib/apart/labels.ts). Too narrow for them beside the stack, each shrinks
+// to a numbered balloon on its layer, and Legend.astro names them below.
+import { phoneParts } from "../../../../data/phoneParts";
+---
+
+<ol class="part-labels" aria-label="What's inside the phone" inert>
+    {phoneParts.map((part, n) => (
+        <li class:list={{ "part-phantom": part.phantom }} style={`--i:${part.lift}`}>
+            <button type="button" data-label={part.id}>
+                <span class="part-name"><b>{String(n).padStart(2, "0")}</b><span>{part.name}</span></span>
+                <em>{part.note}</em>
+            </button>
+        </li>
+    ))}
+</ol>
+
+<style is:global>
+    /* One colour for each label's number, leader and dot: the theme yellow
+       of the figure's 9:19.5 ruler, in both themes. */
+    .part-labels {
+      --leader: var(--accent);
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      transform-style: preserve-3d;
+      pointer-events: none;
+    }
+    /* Each label hangs from one point, its anchor: the li's top right
+       corner, where the dot sits and the leader ends. The anchor is the
+       middle of its layer's visible strip, a little onto the layer (--onto),
+       and the leader is long enough to cross the fan of edges below it. All
+       of it is worked out from the stage's own --gap, --tilt and --turn, so
+       if those change the pointers follow. */
+    .part-labels li {
+      --onto: 14px;
+      /* Seen from above, a layer's strip is --gap × tan(--tilt) of the plate
+         tall; each layer below has its edge that much × tan(--turn) further
+         left. Both grow as the layers separate (--s). */
+      --strip: calc(var(--s) * var(--gap) * tan(var(--tilt)));
+      --fan: calc(var(--i) * var(--strip) * tan(var(--turn) * -1));
+      position: absolute;
+      top: calc(100% - 7px - var(--strip) / 2);
+      right: calc(100% - 7px - var(--onto));
+      font: 500 8.5px/1.4 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--fg);
+      opacity: clamp(0, calc((var(--s) - 0.62 - (6 - var(--i)) * 0.05) * 14), 1);
+      transform-origin: 100% 0;
+      transform:
+        translateZ(calc(var(--i) * var(--gap) * var(--s)))
+        rotateZ(calc(var(--t) * var(--turn) * -1))
+        rotateX(calc(var(--t) * var(--tilt) * -1))
+        translateZ(calc(var(--t) * 16px));
+    }
+    .part-labels button {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      /* The name's line centred on the leader. */
+      margin-top: calc(-0.7em - 2px);
+      padding: 2px calc(40px + var(--onto) + var(--fan)) 2px 6px;
+      border: 0;
+      background: none;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      color: inherit;
+      text-align: right;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    .part-labels button:focus-visible { outline: 1px solid var(--leader); outline-offset: 2px; }
+    .part-labels b { margin-right: 7px; font-weight: 500; color: var(--leader); }
+    .part-labels em { font-style: normal; letter-spacing: 0.08em; color: var(--faint); }
+    .part-labels .part-name { transition: color 0.2s; }
+    .part-labels li[data-lit] .part-name { color: var(--accent-ink); }
+
+    /* The leader runs from the label to the dot on the anchor. */
+    .part-labels li::after {
+      content: '';
+      position: absolute;
+      top: -0.5px;
+      right: 0;
+      width: calc(36px + var(--onto) + var(--fan));
+      height: 1px;
+      background: var(--leader);
+      transition: width 0.25s;
+    }
+    .part-labels li::before {
+      content: '';
+      position: absolute;
+      top: -2.5px;
+      right: -2.5px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--leader);
+      transition: scale 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .part-labels li[data-lit]::before { scale: 1.8; }
+
+    /* The phantom's label is struck through and dashed, in red. The strike
+       is drawn, not line-through, which sits by the font's own metrics and
+       runs high on capitals. Geist Mono's capitals have their middle 0.64em
+       down (ascent 1.005em less half the 0.73em cap height); below 1.5x the
+       text is hinted onto whole pixels there, and on sharper screens it sits
+       about half a pixel lower, at 0.7em (both measured on the rendered
+       glyphs). A gradient, unlike a box or an underline, can sit between
+       pixels inside the tilted stack. */
+    .part-labels .part-phantom b { color: var(--red); }
+    .part-labels .part-phantom .part-name span {
+      --strike: 0.64em;
+      margin: 0 -2px;
+      padding: 0 2px;
+      background: linear-gradient(transparent calc(var(--strike) - 0.5px), var(--red) 0 calc(var(--strike) + 0.5px), transparent 0);
+    }
+    @media (min-resolution: 1.5dppx) {
+      .part-labels .part-phantom .part-name span { --strike: 0.7em; }
+    }
+    .part-labels .part-phantom::after {
+      background: repeating-linear-gradient(90deg, var(--red) 0 3px, transparent 3px 5px);
+    }
+    .part-labels .part-phantom::before {
+      background: none;
+      box-shadow: inset 0 0 0 1px var(--red);
+    }
+
+    /* Narrow: a numbered balloon on each layer's strip, as a drawing marks
+       its parts; the words stay for screen readers, out of sight. */
+    @media (max-width: 1100px) {
+      .part-labels li {
+        right: auto;
+        left: 24px;
+        transform-origin: 0 0;
+      }
+      .part-labels button {
+        margin: 0;
+        padding: 0;
+        pointer-events: none;
+      }
+      /* Centred on the anchor. */
+      .part-labels b {
+        display: grid;
+        place-items: center;
+        width: 17px;
+        height: 17px;
+        margin: -8.5px 0 0 -8.5px;
+        border: 1px solid var(--leader);
+        border-radius: 50%;
+        background: var(--bg);
+        font-size: 7.5px;
+        letter-spacing: 0;
+      }
+      .part-labels .part-phantom b { border-color: var(--red); }
+      .part-labels .part-name span,
+      .part-labels em {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+      .part-labels li::before,
+      .part-labels li::after { display: none; }
+    }
+</style>

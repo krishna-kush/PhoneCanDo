@@ -1,0 +1,317 @@
+---
+// FIG. 01 as an exploded view: pull the hero phone up (or press it) and it
+// tilts back and comes apart into the layers the agent works through, each
+// on a leader line, with the cloud relay drawn dashed over them as the part
+// that is not there. Press again and the layers drop back, the phone stands
+// up and the figure's ON-DEVICE stamp slams down again. The screen is the
+// slot (Hero's clip), so the clip rides up as the top layer.
+//
+// This file is the stage and its motion: --x runs 0 (whole) to 1 (apart).
+// Its first stretch tilts the phone back (--t), the rest lifts the layers
+// (--s), so a slow drag never brings a lifted layer toward you; every
+// transform reads those with --gap, --tilt and --turn. Plates.astro
+// draws the layers, Labels.astro the leader lines, Legend.astro the parts
+// list narrow screens name them in, lib/apart/ wires the press and pull,
+// the lean toward the pointer, the labels, and the coming apart by itself
+// when the hero clip first loops.
+import Plates from "./Plates.astro";
+import Labels from "./Labels.astro";
+import Legend from "./Legend.astro";
+import { site } from "../../../../data/site";
+---
+
+<button
+    class="apart-toggle"
+    type="button"
+    data-apart-toggle
+    data-loop-ms={site.hero.loopSeconds * 1000}
+    aria-pressed="false"
+    aria-label="Take the phone apart"
+></button>
+<div class="phone">
+    <Plates />
+    <slot />
+    <Labels />
+</div>
+<Legend />
+<!-- The hint is a press too, for a pointer: the phone's own button is the
+     labelled control, so this one stays out of the tab order and the tree. -->
+<span class="apart-hint" data-apart-hint aria-hidden="true">
+    <span class="apart-hint-whole">↑ Tap and Take it apart</span>
+    <span class="apart-hint-apart">↓ Put it back</span>
+</span>
+
+<script>
+    import { wireToggle } from "../../../../lib/apart/toggle";
+    import { wireLean } from "../../../../lib/apart/lean";
+    import { wireLabels } from "../../../../lib/apart/labels";
+    import { wireAutoApart } from "../../../../lib/apart/autoplay";
+    import { cueMascot } from "../../../../lib/mascotCue";
+    import { toyLines } from "../../../../data/mascot";
+    import type { PartId } from "../../../../data/phoneParts";
+
+    const toggle = document.querySelector<HTMLButtonElement>(
+        "[data-apart-toggle]",
+    );
+    const figure = toggle?.parentElement;
+    const wrap = toggle?.closest<HTMLElement>(".phone-wrap");
+    const hero = toggle?.closest<HTMLElement>(".hero");
+    const phone = figure?.querySelector<HTMLElement>(":scope > .phone");
+    const list = phone?.querySelector<HTMLElement>(".part-labels");
+    const hint = figure?.querySelector<HTMLElement>("[data-apart-hint]");
+    if (toggle && figure && wrap && hero && phone && list) {
+        const still = matchMedia("(prefers-reduced-motion: reduce)");
+        const lean = wireLean(hero, figure, phone, still);
+        const labels = wireLabels(phone, list, still, (id) =>
+            cueMascot({ say: toyLines.part[id as PartId], move: "hop" }),
+        );
+        const press = wireToggle(toggle, wrap, phone, still, {
+            changed(apart) {
+                lean.set(apart);
+                labels.set(apart);
+                if (apart) cueMascot({ say: toyLines.apart, move: "hop" });
+            },
+            landed: () => cueMascot({ say: toyLines.together }),
+        });
+        hint?.addEventListener("click", press.flip);
+
+        // Left alone, it comes apart at the clip's first loop; any press or
+        // drag on the phone or its hint first leaves it to the visitor.
+        const auto = wireAutoApart(
+            figure,
+            phone.querySelector("video"),
+            Number(toggle.dataset.loopMs),
+            press.open,
+        );
+        for (const el of [toggle, hint])
+            for (const type of ["pointerdown", "click"])
+                el?.addEventListener(type, () => auto.cancel());
+    }
+</script>
+
+<style is:global>
+    .phone-figure {
+        --x: 0;
+        --tilt: 56deg;
+        --turn: -10deg;
+        --gap: 50px;
+        /* How far the stack drops, and slides, as it tilts back. */
+        --sink: 96px;
+        --slide: 0px;
+        /* Two beats each way, so a lifted layer never swings toward you: apart
+         tilts the phone back, then springs the layers up; together drops them
+         under gravity, screen last, then stands the phone up. */
+        --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --drop: cubic-bezier(0.55, 0, 1, 0.45);
+        perspective: 2200px;
+    }
+    .phone-wrap[data-apart] .phone-figure {
+        --x: 1;
+    }
+    /* Narrow: the stack rides higher, leaving the figure's foot to the parts
+       list (Legend.astro), and slides back from the right edge it leans to. */
+    @media (max-width: 1100px) {
+        .phone-figure {
+            --sink: 18px;
+            --slide: -18px;
+        }
+    }
+    /* Pointed at, or its hint is, it lifts a hair: it comes apart. */
+    @media (hover: hover) {
+        .phone-wrap:not([data-apart]) .apart-toggle:hover + .phone,
+        .phone-wrap:not([data-apart])
+            .phone-figure:has(.apart-hint:hover)
+            .phone {
+            --x: 0.05;
+        }
+    }
+
+    /* The press and drag land here, over the phone's resting place. */
+    .apart-toggle {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        padding: 0;
+        border: 0;
+        border-radius: 34px;
+        background: none;
+        cursor: grab;
+    }
+    .phone-wrap[data-dragging] .apart-toggle {
+        cursor: grabbing;
+    }
+    /* The press area stays where the phone rests; its focus ring goes on the
+       phone, so it moves, tilts and comes apart with it. */
+    .apart-toggle:focus-visible {
+        outline: none;
+    }
+    .apart-toggle:focus-visible + .phone {
+        outline: 1px solid var(--accent);
+        outline-offset: 4px;
+    }
+
+    /* Worked out on the phone, where a drag sets --x, so all inside agree. */
+    .phone-figure .phone {
+        --t: min(1, calc(var(--x) * 1.8));
+        --s: clamp(0, calc((var(--x) - 0.25) / 0.75), 1);
+        transform-style: preserve-3d;
+        transform: translate(
+                calc(var(--t) * var(--slide)),
+                calc(var(--t) * var(--sink))
+            )
+            scale(calc(1 - var(--t) * 0.2))
+            rotateX(calc(var(--t) * var(--tilt)))
+            rotateZ(calc(var(--t) * var(--turn)));
+    }
+    .phone-figure .phone-screen {
+        --i: 5;
+        transform: translateZ(
+            calc(var(--i) * var(--gap) * var(--s) + var(--lift, 0px))
+        );
+    }
+    .phone-wrap[data-apart] .phone-screen {
+        box-shadow: 0 0 0 1px var(--accent-line);
+    }
+    /* A pointed-at label pulls its layer out of the stack. */
+    .phone [data-lit] {
+        --lift: 16px;
+    }
+
+    /* Whole: the hover's hair of tilt answers at once. On the way back the
+       phone waits for its layers to drop, then stands up. */
+    .phone-figure .phone {
+        transition: transform 0.35s var(--spring);
+    }
+    .phone-wrap[data-closing] .phone {
+        transition: transform 0.4s cubic-bezier(0.3, 0, 0.2, 1) 0.6s;
+    }
+    .phone-figure :is(.plate, .phone-screen) {
+        transition:
+            transform 0.45s var(--drop) calc(var(--i) * 30ms),
+            opacity 0.1s 0.55s;
+    }
+    .phone-figure .part-labels li {
+        transition:
+            transform 0.45s var(--drop) calc(var(--i) * 30ms),
+            opacity 0.12s;
+    }
+    /* Apart: top layer first, labels ticking in after their layers. */
+    .phone-wrap[data-apart] .phone {
+        transition: transform 0.5s var(--spring);
+    }
+    .phone-wrap[data-apart] :is(.plate, .phone-screen) {
+        transition:
+            transform 0.7s var(--spring) calc(0.15s + (6 - var(--i)) * 45ms),
+            opacity 0.15s;
+    }
+    .phone-wrap[data-apart] .part-labels li {
+        transition:
+            transform 0.7s var(--spring) calc(0.15s + (6 - var(--i)) * 45ms),
+            opacity 0.25s calc(0.45s + (6 - var(--i)) * 45ms);
+    }
+    /* Settled: a hover answers at once, and the stack floats, each layer on
+       its own beat. `translate` rides outside each transform. */
+    .phone-wrap[data-apart][data-settled]
+        :is(.plate, .phone-screen, .part-labels li) {
+        transition:
+            transform 0.35s var(--spring),
+            opacity 0.2s;
+        animation: apart-float 4.2s ease-in-out calc(var(--i) * -0.55s) infinite;
+    }
+    @keyframes apart-float {
+        50% {
+            translate: 0 0 7px;
+        }
+    }
+    /* Dragged: everything follows the pointer. */
+    .phone-wrap[data-dragging]
+        .phone-figure
+        :is(.phone, .plate, .phone-screen, .part-labels li) {
+        transition: none;
+    }
+
+    /* The figure reads as taken apart while it is: its caption says so, the
+       ruler steps aside, and the stamp lifts until it is whole again. */
+    .fig-label-apart,
+    .phone-wrap[data-apart] .fig-label-whole {
+        display: none;
+    }
+    .phone-wrap[data-apart] .fig-label-apart {
+        display: inline;
+    }
+    .phone-wrap .dim-v,
+    .phone-wrap .stamp {
+        transition: opacity 0.3s;
+    }
+    .phone-wrap[data-apart] .dim-v {
+        opacity: 0;
+    }
+    .phone-wrap:is([data-apart], [data-closing]) .stamp {
+        opacity: 0.2;
+    }
+    .phone-wrap[data-slam] .stamp {
+        animation: apart-slam 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+    }
+    .phone-wrap[data-slam] .phone {
+        animation: apart-jolt 0.3s ease-out;
+    }
+    @keyframes apart-slam {
+        from {
+            scale: 1.9;
+            opacity: 0;
+        }
+        55% {
+            scale: 0.9;
+            opacity: 1;
+        }
+    }
+    @keyframes apart-jolt {
+        35% {
+            translate: 0 4px;
+        }
+    }
+
+    /* Padded to a finger's size; the text sits where it did, 32px under. */
+    .apart-hint {
+        position: absolute;
+        left: 50%;
+        bottom: -42px;
+        padding: 10px 14px;
+        translate: -50% 0;
+        font: 500 8.5px/1 var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        color: var(--faint);
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.15s;
+    }
+    @media (hover: hover) {
+        .apart-hint:hover {
+            color: var(--accent-ink);
+        }
+    }
+    .apart-hint-apart,
+    .phone-wrap[data-apart] .apart-hint-whole {
+        display: none;
+    }
+    .phone-wrap[data-apart] .apart-hint-apart {
+        display: inline;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .phone-wrap
+            :is(
+                .phone,
+                .phone-screen,
+                .plate,
+                .part-labels li,
+                .stamp,
+                .dim-v
+            ) {
+            transition: none !important;
+            animation: none !important;
+        }
+    }
+</style>
