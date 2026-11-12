@@ -31,9 +31,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
   the one Back handler (`useBackChain.ts`). `drawer/` is the side menu,
   opened from Home's header. `common/face/` is A-01, the site's mascot, as
-  each agent's face. `models/` is the Models page; an agent's Model page is
-  in `env/agent/`. `memory/` is the RAM warning (sheet, Home chip, pill,
-  auto-stop line; pure copy and rows in `memory/logic/`), mounted once
+  each agent's face. `models/` is the Models page and a model's own page
+  (`model/`); an agent's Model page is in `env/agent/`. `memory/` is the
+  RAM warning (sheet, Home chip, pill, auto-stop line; pure copy and rows
+  in `memory/logic/`), mounted once
   over every page. `messages/` is the Messages page (what agents send each
   other, the screen queue), the drawer's unread marks and an agent page's
   Messages and wake rows; pure parts in `messages/logic/`.

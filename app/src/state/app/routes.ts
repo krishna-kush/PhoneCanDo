@@ -73,6 +73,8 @@ export type Route =
   | { name: 'custom-agent-import' }
   /** Local models: suggestions, Hugging Face search, downloads, the models on the phone. */
   | { name: 'models' }
+  /** One model on the phone: what it is, Stop, Context, the agents set to it, Delete. */
+  | { name: 'model'; modelId: string }
   /** One Hugging Face repository's models. */
   | { name: 'model-repo'; repo: string }
   /** What the agents say to each other, newest first; with `agentId`, only what is to or from that agent. */

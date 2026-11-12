@@ -1,8 +1,9 @@
 // Local models: the job progress fold (src/state/flows/logic/modelProgress.ts),
 // a new agent's Model step (src/state/flows/logic/modelStep.ts), the Models
-// page's words and lines, a prompt being read, its error sentences, the
-// model choices, a model's dates line, the Hugging Face list's filters and
-// a model's context and its slider (src/ui/models/logic/) and the start
+// page's words and lines, a model's users and its card's line, a prompt
+// being read, its error sentences, the model choices, a model's dates
+// line, the Hugging Face list's filters and a model's context and its
+// slider (src/ui/models/logic/) and the start
 // failure text for model_unavailable and the caps (src/ui/env/logic/).
 // Imports the real pure modules (Node 22.18+ strips their types), so these
 // cannot drift.
@@ -130,6 +131,21 @@ const model = (over) => ({
   t('model line, a context off the grid', mt.modelLine(model({ servedContext: 33_792 })), '2.7 GB · Q4_K_M · 4B · 33k context');
   t('source hf', mt.sourceText(model({}).source), 'unsloth/Qwen3.5-4B-GGUF');
   t('source imported', mt.sourceText({ kind: 'imported', fileName: 'my.gguf' }), 'Imported from my.gguf');
+
+  const us = await import(src('ui/models/logic', 'usage.ts'));
+  const crew = [
+    { id: 'a', name: 'Ada', model: 'qwen' },
+    { id: 'b', name: 'Bob', model: 'gemma' },
+    { id: 'c', name: 'Cy', model: 'qwen' },
+    { id: 'd', name: 'Di', model: null },
+    { id: 'e', name: 'Eve', model: 'qwen' },
+  ];
+  const up = (a) => a.id === 'e';
+  t('users: only the model\'s, running first, else in list order', us.usersOf(crew, 'qwen', up).map((a) => a.name), ['Eve', 'Ada', 'Cy']);
+  t('users: none', us.usersOf(crew, 'llama', up), []);
+  t('usage: loaded, some running', us.usageLine(true, 2, 1), 'loaded · 2 agents · 1 running');
+  t('usage: not loaded, one agent', us.usageLine(false, 1, 0), 'not loaded · 1 agent');
+  t('usage: no agents', us.usageLine(false, 0, 0), 'not loaded · no agents');
   const part = (i) => ({ path: `Q8_0/x-0000${i}-of-00003.gguf`, sizeBytes: [0, 20 * GB, 20 * GB, 8.1 * GB][i], sha256: 'a' });
   const split = { quant: null, files: [part(1), part(2), part(3)], sizeBytes: 48.1 * GB };
   t('variant title falls back to the file, part suffix left out', mt.variantTitle(split), 'x.gguf');

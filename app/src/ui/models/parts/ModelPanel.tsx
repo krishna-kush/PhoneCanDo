@@ -6,7 +6,8 @@ import VerdictLine from './VerdictLine';
 import PlainText from '../../common/PlainText';
 
 type Props = {
-  title: string;
+  /** Its name; left out on its own page, whose header has it. */
+  title?: string;
   /** Mono detail lines (size, quant, source); empty ones are left out. */
   lines: string[];
   /** Its files under the details, wrapped as long as it takes so every part shows; '' for none. */
@@ -20,14 +21,17 @@ type Props = {
   children?: ReactNode;
 };
 
-// One model on the Models page: a hairline panel with its name, details,
-// dates, a note, its RAM verdict and actions, like the Choose agent cards.
+// One model as a hairline panel with its name, details, dates, a note, its
+// RAM verdict and actions, like the Choose agent cards: a suggestion or a
+// repository's file on the Models pages, a model's facts on its own page.
 export default function ModelPanel({ title, lines, files, dates, note, ram, children }: Props) {
   return (
     <YStack borderWidth={1} borderColor="line" backgroundColor="panel" padding="3" gap="2">
-      <PlainText fontSize={16} fontWeight="600" numberOfLines={2} ellipsizeMode="tail">
-        {title}
-      </PlainText>
+      {title ? (
+        <PlainText fontSize={16} fontWeight="600" numberOfLines={2} ellipsizeMode="tail">
+          {title}
+        </PlainText>
+      ) : null}
       {lines
         .filter((l) => l.length > 0)
         .map((l) => (

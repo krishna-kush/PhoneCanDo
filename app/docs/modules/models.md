@@ -170,11 +170,14 @@ JS; a file the key cannot open is deleted.
 ## Screens
 
 `src/ui/models/`: the Models page (Env → Models, on every channel where
-the phone can run local models): In progress, On this phone (Stop while
-it is loaded, which stops the agents on it first and asks before when
-there are any; Context; Delete, refused while an agent is set to the
-model; Import), Suggested,
-Hugging Face with a repository's variants, and the token. The list opens
+the phone can run local models): In progress, On this phone (a card per
+model saying whether it is loaded and how many agents use it; Import),
+Suggested, Hugging Face with a repository's variants, and the token. A
+model's card opens its own page (`model/ModelPage.tsx`): its facts, Stop
+while it is loaded (which stops the agents on it first and asks before
+when there are any), Context, Used by (the agents set to it, running ones
+first, each opening its page), its Hugging Face repository, and Delete,
+refused while an agent is set to the model. The list opens
 on the most downloaded chat models; typing searches after a pause. Sort
 and Filters (a sheet: Size, License, chat models only) are two half-width
 buttons with a wrapping line of the filters that are on; nothing scrolls

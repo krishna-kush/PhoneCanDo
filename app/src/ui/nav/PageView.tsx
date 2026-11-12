@@ -18,6 +18,7 @@ import OsPicker from '../env/new-env/OsPicker';
 import PullProgress from '../env/new-env/PullProgress';
 import TagPicker from '../env/new-env/TagPicker';
 import MessagesPage from '../messages/MessagesPage';
+import ModelPage from '../models/model/ModelPage';
 import ModelsPage from '../models/ModelsPage';
 import RepoPage from '../models/RepoPage';
 import AboutPage from '../settings/AboutPage';
@@ -67,6 +68,8 @@ function PageView({ route }: { route: Route }) {
       return <ImportAgent />;
     case 'models':
       return <ModelsPage />;
+    case 'model':
+      return <ModelPage modelId={route.modelId} />;
     case 'model-repo':
       return <RepoPage repo={route.repo} />;
     case 'messages':
