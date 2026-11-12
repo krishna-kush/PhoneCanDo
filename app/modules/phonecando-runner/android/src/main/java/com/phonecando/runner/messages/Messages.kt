@@ -78,8 +78,11 @@ class Messages private constructor(context: Context) {
   /** The engine of [agentId] starts (EngineLauncher.plan, on the start thread): its inbox folder and pending set. */
   fun engineStarting(agentId: String) = mailbox.engineStarting(agentId)
 
-  /** An `@inbox` receipt from [agentId]'s events file. */
-  fun receipt(agentId: String, ids: List<Long>) = later { mailbox.receipt(agentId, ids) }
+  /** An `@inbox` receipt from [agentId]'s events file, with what the agent was doing as it was read (the lines after it may start a run). */
+  fun receipt(agentId: String, ids: List<Long>) {
+    val presence = view.presence(agentId)
+    later { mailbox.receipt(agentId, ids, presence) }
+  }
 
   /** The agent is deleted: its messages and its wake state go (its folder goes with its files, AgentFiles). */
   fun forget(agentId: String) = mailbox.forget(agentId)

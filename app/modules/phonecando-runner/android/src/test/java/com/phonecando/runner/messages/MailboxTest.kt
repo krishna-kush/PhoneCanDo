@@ -79,6 +79,24 @@ class MailboxTest {
     assertFalse(box.wakes.startedByAgent("b"))
   }
 
+  @Test fun aWakeCountsByWhatTheAgentDidAsItsHookClaimed() {
+    box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    val asClaimed = view.presence("b")
+    // Its waiting hook raised the run it started before the receipt is handled.
+    view.set("b", AgentState.WORKING)
+    box.receipt("b", listOf(1), asClaimed)
+    assertTrue(box.recent(1).single().deliveryTo("b")!!.woke)
+    assertTrue(box.wakes.startedByAgent("b"))
+  }
+
+  @Test fun aClaimDuringARunIsNoWake() {
+    box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    view.set("b", AgentState.WORKING)
+    box.receipt("b", listOf(1), view.presence("b"))
+    assertFalse(box.recent(1).single().deliveryTo("b")!!.woke)
+    assertFalse(box.wakes.startedByAgent("b"))
+  }
+
   @Test fun aReplyToAReplyNeverWakes() {
     box.wakes.woke("a", hop = 1, workingNow = true)
     val sent = box.send(a, "Tester", "again", replyTo = null, wake = true)

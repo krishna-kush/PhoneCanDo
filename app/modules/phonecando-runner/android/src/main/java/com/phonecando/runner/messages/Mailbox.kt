@@ -198,13 +198,14 @@ class Mailbox(
   /**
    * [agentId]'s hook or reader put these in its turn (`@inbox <ids>` in its
    * events file): read. A held set with the wake mark, claimed while the
-   * agent had no run going, woke it.
+   * agent had no run going, woke it. [presence] is the agent's when the
+   * receipt was written: by the time this runs, the run the claim started
+   * may already show (a waiting hook raises it right after its receipt).
    */
-  fun receipt(agentId: String, ids: List<Long>) {
+  fun receipt(agentId: String, ids: List<Long>, presence: Presence = agents.presence(agentId)) {
     val mine = log.readable(agentId, ids)
     if (mine.isEmpty()) return
     val parcel = parcels[agentId]
-    val presence = agents.presence(agentId)
     val woke = parcel != null && parcel.wake && mine.any { it in parcel.ids } && presence.state != AgentState.WORKING
     log.mark(agentId, mine, DeliveryStatus.READ, woke = woke)
     if (woke) {
