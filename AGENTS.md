@@ -31,8 +31,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
   the one Back handler (`useBackChain.ts`). `drawer/` is the side menu,
   opened from Home's header. `common/face/` is A-01, the site's mascot, as
-  each agent's face. `models/` is the Models page and a model's own page
-  (`model/`); an agent's Model page is in `env/agent/`. `memory/` is the
+  each agent's face, in the agent's own mascot (`state/mascots.ts`, changed
+  on its Mascot page, `env/agent/mascot/`). `models/` is the Models page and
+  a model's own page (`model/`); an agent's Model page is in `env/agent/`. `memory/` is the
   RAM warning (sheet, Home chip, pill, auto-stop line; pure copy and rows
   in `memory/logic/`), mounted once
   over every page. `messages/` is the Messages page (what agents send each
@@ -96,6 +97,15 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   native icon changes need `expo run:android`. `theme/logo.json` is the one
   shadow + loader spec: web CSS is generated from it in
   `web/src/lib/logoLoaderCss.ts`; the app imports it directly.
+- `mascot/` — the A-series mascots' one spec (own package, pure TS, zero
+  deps), built on `theme/logo.json`: the body and its five shapes
+  (`body.ts`), the parts a unit wears (`parts/{hat,neck,face}/`, a file
+  each), the designs (`designs.ts`: a new design is a line), random picks
+  (`pick.ts`) and the layout every side draws from (`layout/figure.ts`:
+  blocks, eyes and marks, face on, side on or from behind; `layout/path.ts`
+  SVG paths). The site's cards, backdrop and `/mascots` page and the app's
+  faces (`ui/common/face/`) draw from it. `node --test
+  "mascot/test/*.test.mjs"`.
 - `app/src/state/` — zustand stores: `app.ts` (navigation, prefs and
   telemetry slices in `app/`), `agents.ts` (agents, engine states, the
   active agent), `linux.ts` (envs, images, job progress), `models.ts`
@@ -107,7 +117,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   value in `ui/common/keyboard/room.ts`), `recommend.ts` (the "Having
   fun?" card's runs, last ask and answer), `share.ts` (the links this
   phone shared, what they did), `account.ts` (who is signed in),
-  `settingsSync.ts` (when each synced setting last changed here); multi-step
+  `settingsSync.ts` (when each synced setting last changed here),
+  `mascots.ts` (each agent's mascot, picked at random); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
 - `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models,phonecando-back-gesture,phonecando-network,phonecando-account}/` —

@@ -8,8 +8,9 @@ name: Web
 # names), an agent kind's manifest (the
 # Models section deals every kind), lme's suggested models (its
 # cartridges and their RAM), or the agents_* tools and the runner's message
-# rules (the Crew section names and counts them) change, and nightly for
-# drift.
+# rules (the Crew section names and counts them), or the mascots' shared
+# spec (mascot/: the cards, the backdrop and /mascots draw from it) change,
+# and nightly for drift.
 
 on:
   push:
@@ -17,6 +18,7 @@ on:
     paths:
       - web/**
       - theme/**
+      - mascot/**
       - app/app.json
       - app/plugins/withMinSdk.js
       - agents/native/*/agent.json
@@ -30,6 +32,7 @@ on:
     paths:
       - web/**
       - theme/**
+      - mascot/**
       - app/app.json
       - app/plugins/withMinSdk.js
       - agents/native/*/agent.json
@@ -120,6 +123,9 @@ jobs:
         run: pnpm -C web install --frozen-lockfile
       - name: astro check
         run: pnpm -C web check
+      # The mascot spec's own tests (Node strips its types; no install).
+      - name: mascot tests
+        run: node --test "mascot/test/*.test.mjs"
 
   # Non-blocking first: rules relaxed for intentional markup in
   # .github/ci/web/htmlvalidate.json (inline custom-property styles on the

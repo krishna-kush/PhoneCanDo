@@ -13,6 +13,8 @@ on:
     # packaged agent configs (which have an AGENTS.md) are re-included last.
     paths:
       - 'app/**'
+      # The mascots' shared spec, imported by the app's faces (Metro, tsc).
+      - 'mascot/**'
       # Pulled into the app's Gradle build (app/android/settings.gradle includeBuild).
       - 'pce/**'
       # Compiled into the APK by app/modules/phonecando-linux (CMake), and
@@ -87,6 +89,8 @@ on:
     # packaged agent configs (which have an AGENTS.md) are re-included last.
     paths:
       - 'app/**'
+      # The mascots' shared spec, imported by the app's faces (Metro, tsc).
+      - 'mascot/**'
       # Pulled into the app's Gradle build (app/android/settings.gradle includeBuild).
       - 'pce/**'
       # Compiled into the APK by app/modules/phonecando-linux (CMake), and

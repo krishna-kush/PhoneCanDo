@@ -1,0 +1,14 @@
+{
+  "name": "phonecando-mascot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The A-series mascots: their body, the parts they wear, the designs and how one is laid out to draw. Pure TypeScript, read by the app and the website.",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}
