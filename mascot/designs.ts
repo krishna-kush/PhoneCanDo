@@ -74,9 +74,16 @@ export const DESIGNS = [
   { id: 'shy', name: 'Shy', face: 'blush' },
 ] as const satisfies readonly Design[];
 
-export type DesignId = (typeof DESIGNS)[number]['id'];
+/**
+ * Designs a unit earns rather than draws: never picked at random, offered
+ * in the app's picker only once earned. Shift lead: the app's first shift,
+ * every job done.
+ */
+export const EARNED = [{ id: 'shift-lead', name: 'Shift lead', hat: 'hardhat', neck: 'medal' }] as const satisfies readonly Design[];
 
-const BY_ID = new Map<string, Design>(DESIGNS.map((d) => [d.id, d]));
+export type DesignId = (typeof DESIGNS)[number]['id'] | (typeof EARNED)[number]['id'];
+
+const BY_ID = new Map<string, Design>([...DESIGNS, ...EARNED].map((d) => [d.id, d]));
 
 /** A design by its id; null for one we no longer have. */
 export const designOf = (id: string): Design | null => BY_ID.get(id) ?? null;

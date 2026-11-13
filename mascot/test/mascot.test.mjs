@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import { SHAPES, bodyOf, stretchOf } from '../body.ts';
-import { DESIGNS, designOf } from '../designs.ts';
+import { DESIGNS, EARNED, designOf } from '../designs.ts';
 import { figure } from '../layout/figure.ts';
 import { pathOf } from '../layout/path.ts';
 import { PLAIN, lookKey, readLook } from '../look.ts';
@@ -37,15 +37,32 @@ test('the body comes from the logo spec', () => {
 });
 
 test('designs have unique ids and names, and wear parts that exist in their slot', () => {
-  assert.equal(new Set(DESIGNS.map((d) => d.id)).size, DESIGNS.length);
-  assert.equal(new Set(DESIGNS.map((d) => d.name)).size, DESIGNS.length);
-  for (const d of DESIGNS) {
+  const every = [...DESIGNS, ...EARNED];
+  assert.equal(new Set(every.map((d) => d.id)).size, every.length);
+  assert.equal(new Set(every.map((d) => d.name)).size, every.length);
+  for (const d of every) {
     if (d.hat) assert.equal(HATS[d.hat].slot, 'hat', d.id);
     if (d.neck) assert.equal(NECKS[d.neck].slot, 'neck', d.id);
     if (d.face) assert.equal(FACES[d.face].slot, 'face', d.id);
   }
   assert.equal(designOf('plain')?.name, 'Plain');
   assert.equal(designOf('gone'), null);
+});
+
+test('an earned design is a real look, laid out like any other, and never drawn at random', () => {
+  for (const d of EARNED) {
+    assert.equal(designOf(d.id)?.name, d.name);
+    const look = { design: d.id, shape: 'square', swap: false };
+    assert.deepEqual(readLook(look), look);
+    const f = figure(look, { size: 24, body, facing: 'front', toward: 1, gaze: [1, 0] });
+    assert.ok(f.marks.length > 0, d.id);
+  }
+  const earned = new Set(EARNED.map((d) => d.id));
+  const rand = seeded(7);
+  const taken = [];
+  for (let i = 0; i < DESIGNS.length * 3; i++) taken.push(pickLook(taken, rand));
+  assert.ok(taken.every((l) => !earned.has(l.design)));
+  assert.ok(allLooks().every((l) => !earned.has(l.design)));
 });
 
 test('every part is worn by some design', () => {
