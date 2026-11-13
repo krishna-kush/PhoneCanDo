@@ -1,7 +1,8 @@
 // The Models section's agent cards (components/sections/models/), and every
 // kind its copy names or counts: built in, default, stable, local, how far
 // messages reach it and whether two can share a machine (the Crew and Linux
-// sections; data/crew.ts). Build time only: the page prints every card, and
+// sections; data/crew.ts), and how a scheduled task reaches it (the Schedules
+// section; data/schedules.ts). Build time only: the page prints every card, and
 // the pack's script reads them back from the DOM, so no manifest ever
 // reaches the browser. The cartridges are cartridges.ts.
 
@@ -27,6 +28,8 @@ type Manifest = {
   inbox?: { wake?: string };
   /** Where a second agent of the kind on one machine keeps its own state. */
   state?: Record<string, unknown>;
+  /** How its engine is started; a `prompt` block lets it start with a task. */
+  engine?: { prompt?: unknown };
 };
 
 /**
@@ -39,6 +42,15 @@ export type MessagingLevel = 'wakes' | 'delivered' | 'inbox' | 'none';
 // The kit's MessagingLevel.of, from the same three facts of the manifest.
 const messaging = (m: Manifest): MessagingLevel =>
   m.inbox ? (m.inbox.wake ? 'wakes' : 'delivered') : (m.phoneTools ?? 'none') !== 'none' ? 'inbox' : 'none';
+
+/**
+ * How a scheduled task reaches a kind: it can be woken while idle (and
+ * started), only started with the task, or neither. The kit's KindView
+ * `schedules` is the last two together.
+ */
+export type ScheduleLevel = 'wakes' | 'starts' | 'none';
+
+const schedules = (m: Manifest): ScheduleLevel => (m.inbox?.wake ? 'wakes' : m.engine?.prompt ? 'starts' : 'none');
 
 // Every agent kind, read from its own manifest, so the set never lists a
 // kind we dropped or misses one we added. A kind with a `models` block can
@@ -67,6 +79,9 @@ export type AgentCard = {
   messaging: MessagingLevel;
   /** Two of it can share one machine, each with its own state folder. */
   twins: boolean;
+  schedules: ScheduleLevel;
+  /** It can set its own schedules (the schedule_* phone tools). */
+  ownReminders: boolean;
 };
 
 const SIGN_IN: Record<string, string> = {
@@ -149,6 +164,8 @@ export const cards: AgentCard[] = full
     look: look(i, leadIds.includes(m.id) ? CREW[leadIds.indexOf(m.id) % CREW.length] : (others.get(m.id) ?? 'plain')),
     messaging: messaging(m),
     twins: Boolean(m.state),
+    schedules: schedules(m),
+    ownReminders: schedules(m) !== 'none' && (m.phoneTools ?? 'none') !== 'none',
   }));
 
 /** The kind a fresh install starts with; null if no manifest says. */

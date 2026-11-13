@@ -1,0 +1,53 @@
+---
+// The night roll's key: what a run did, stamped as on the roll, the two the
+// night doesn't play too (asked you, missed), and the limits every schedule
+// keeps. The numbers are the runner's ScheduleRules (data/schedules.ts).
+import { busyWait, byAgent, everyMin, lateMax, perAgent, span } from "../../../data/schedules";
+
+const RUNS = [
+    { stamp: "Started", tone: "run", meaning: "It was stopped: it starts with the task as its first prompt." },
+    { stamp: "Woke", tone: "run", meaning: "It was idle: the task lands in its chat and it gets going." },
+    { stamp: "Restarted", tone: "run", meaning: "It can't be woken: once it's idle, it restarts with the task." },
+    { stamp: "Waits", tone: "wait", meaning: `It was busy: the task waits for its run to end, up to ${span(busyWait)}.` },
+    { stamp: "Skipped", tone: "dim", meaning: `Still busy after ${span(busyWait)}: this time is skipped.` },
+    { stamp: "Late", tone: "red", meaning: "The phone was off: it runs once when the phone is back on." },
+    { stamp: "Asked you", tone: "fg", meaning: "Android wouldn't start it in the background, or it left jobs running: a notification asks you to tap to run." },
+    { stamp: "Missed", tone: "dim", meaning: `Due over ${span(lateMax)} ago, while the phone was off: not run.` },
+];
+---
+
+<div class="key runkey">
+    <p class="key-label">Key · what a run did</p>
+    <dl>
+        {RUNS.map((r) => (
+            <div>
+                <dt data-tone={r.tone}>{r.stamp}</dt>
+                <dd>{r.meaning}</dd>
+            </div>
+        ))}
+    </dl>
+    <ul class="key-rules">
+        <li>Once, every {everyMin} min or more, or daily at a time on the days you pick.</li>
+        <li>Up to {perAgent} per agent, {byAgent} of them its own.</li>
+        <li>On time to the minute with Android's Alarms &amp; reminders allowed. Without it, runs may come late.</li>
+        <li>They survive a reboot. The app shows what runs next across all your agents, and what each run did.</li>
+    </ul>
+</div>
+
+<style is:global>
+    /* The frame, grid and rules are the key primitive (styles/primitives/key.css). */
+    .runkey dt {
+      display: inline-block;
+      padding: 3px 5px 2px;
+      border: 1px solid currentColor;
+      color: var(--accent-ink);
+      font: 700 8.5px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      rotate: -5deg;
+    }
+    .runkey [data-tone='wait'] { border-style: dashed; }
+    .runkey [data-tone='red'] { color: var(--red); }
+    .runkey [data-tone='fg'] { color: var(--fg); }
+    .runkey [data-tone='dim'] { color: var(--dim); }
+</style>

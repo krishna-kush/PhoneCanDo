@@ -25,7 +25,9 @@ on:
       - agents/image/*/agent.json
       - lme/catalog/src/main/resources/com/phonecando/lme/catalog/suggested/suggested.json
       - agents/shared/phone-tools/agents.ts
+      - agents/shared/phone-tools/schedule.ts
       - app/modules/phonecando-runner/android/src/main/java/com/phonecando/runner/messages/MessageRules.kt
+      - app/modules/phonecando-runner/android/src/main/java/com/phonecando/runner/schedule/ScheduleRules.kt
       - .github/workflows/web.yml
       - .github/ci/web/**
   pull_request:
@@ -39,7 +41,9 @@ on:
       - agents/image/*/agent.json
       - lme/catalog/src/main/resources/com/phonecando/lme/catalog/suggested/suggested.json
       - agents/shared/phone-tools/agents.ts
+      - agents/shared/phone-tools/schedule.ts
       - app/modules/phonecando-runner/android/src/main/java/com/phonecando/runner/messages/MessageRules.kt
+      - app/modules/phonecando-runner/android/src/main/java/com/phonecando/runner/schedule/ScheduleRules.kt
       - .github/workflows/web.yml
       - .github/ci/web/**
   workflow_dispatch:

@@ -17,6 +17,7 @@ import LogoMark from './LogoMark.astro';
     <a href="/#models">Models</a>
     <a href="/#linux">Linux</a>
     <a href="/#crew">Crew</a>
+    <a href="/#schedules">Schedules</a>
     <a href="/#gate">Gate</a>
     <a href="/#install">Install</a>
     <a href="/#faq">FAQ</a>
@@ -114,14 +115,15 @@ import LogoMark from './LogoMark.astro';
   [data-theme='light'] .theme-toggle .moon { display: block; }
   .nav .btn-primary:hover svg { transform: translateY(1px); }
 
-  @media (max-width: 1100px) {
+  /* The full row needs ~970px, ~1140px with the doc label: drop the label,
+     then GitHub (the footer has it), then the links. */
+  @media (max-width: 1200px) {
     .nav-doc { display: none; }
   }
-  /* The full row needs ~880px: drop GitHub (the footer has it) before the links. */
-  @media (max-width: 900px) {
+  @media (max-width: 1000px) {
     .nav-cta .ghost { display: none; }
   }
-  @media (max-width: 800px) {
+  @media (max-width: 900px) {
     .nav-links { display: none; }
     .nav { gap: 12px; }
     .nav-cta { margin-left: auto; }

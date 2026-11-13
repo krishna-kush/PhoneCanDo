@@ -1,0 +1,55 @@
+---
+// Sec. 04, after the crew pulls its all-nighter: tasks for later. One night
+// on the roll (set tasks, go to sleep, a receipt in the morning) and its key,
+// then an agent's note to itself and which kinds take a task.
+import NightRoll from "./schedules/NightRoll.astro";
+import RunKey from "./schedules/RunKey.astro";
+import NoteToSelf from "./schedules/NoteToSelf.astro";
+import Takers from "./schedules/Takers.astro";
+---
+
+<section class="section schedules" id="schedules">
+    <div class="sec-head">
+        <div class="sec-rail">
+            <p class="kicker">Sec. 04 / Schedules</p>
+            <p class="fig-label">FIG. 06 — The night roll</p>
+        </div>
+        <div class="sec-body">
+            <h2>Set it tonight. Wake up to done.</h2>
+            <p class="lead">
+                Give any agent a task for later: once, every few hours, or each
+                weekday at seven. Agents can set reminders for themselves too.
+                When it's time, the phone does it on its own, with the app
+                closed and the screen off: a stopped agent starts, an idle one
+                wakes, a busy one finishes its run first.{" "}
+                <em>The alarm is on your phone, not on a server.</em>
+            </p>
+        </div>
+    </div>
+
+    <NightRoll />
+    <RunKey />
+
+    <div class="fig-pair">
+        <div class="fig-col">
+            <p class="fig-label">FIG. 06B — Note to self</p>
+            <h3>It can remind itself.</h3>
+            <p>
+                From chat, an agent can set itself a reminder: check back on
+                the CI run in 30 minutes. When it comes due, it reads as its own
+                note, not a new order from you. Turn that off on its page, and
+                the tasks you set still run.
+            </p>
+            <NoteToSelf />
+        </div>
+        <div class="fig-col">
+            <p class="fig-label">FIG. 06C — Who takes a task</p>
+            <h3>Most kinds can.</h3>
+            <p>
+                A kind takes a task if it can start with one or be woken. The
+                app says which on each agent's page.
+            </p>
+            <Takers />
+        </div>
+    </div>
+</section>
