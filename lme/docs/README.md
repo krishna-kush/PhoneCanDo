@@ -59,7 +59,7 @@ DeviceInfo ───────────────────────
   KleidiAI), `verify.sh` (ELF checks), `stage.sh` (into
   `phonecando-models`), `build-host.sh` (the same pins and patches for a
   Linux host, for CI). Both builds apply `patches/` in name order with no
-  fuzz and check the fold below is in place.
+  fuzz and check the fold and the slot's prompt total below are in place.
 
 ## RAM gate and context
 
@@ -103,6 +103,17 @@ allows one system message, first. The patch is a fallback in
   text) at the end of the user or tool message before it, else at the
   start of the user message after it, else (after an assistant turn) its
   own user message. Blank ones are dropped.
+
+## The slot's prompt total
+
+`llamacpp/patches/0002-slot-prompt-total.patch`. The runner watches a
+server read an agent's prompt through `GET /slots` (the agent's engine
+sends the request, so it cannot ask for `return_progress`). A slot there
+gives the new tokens read so far and those its cache held, but not the
+prompt's size: `n_prompt_tokens` is what the slot holds so far. The patch
+adds `n_prompt_tokens_total`, the request's whole prompt, the same number
+the streamed `prompt_progress` gives as `total`, so the app can show how
+far it has read ("33%").
 
 ## Planning
 

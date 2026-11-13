@@ -92,7 +92,8 @@ unpack_fresh "$LLAMA_TARBALL" "$ROOT/llama.cpp"
 unpack_fresh "$KLEIDIAI_TARBALL" "$ROOT/kleidiai"
 
 # Our patches, in name order and exactly (no fuzz); one that does not apply
-# ends the build, and so does a fold that is not in place after them.
+# ends the build, and so does a fold or a slot total that is not in place
+# after them.
 for p in "$HERE"/patches/*.patch; do
   echo "patch: $(basename "$p")" >&2
   patch -p1 --batch --forward --fuzz=0 --no-backup-if-mismatch -d "$ROOT/llama.cpp" <"$p" \
@@ -100,6 +101,8 @@ for p in "$HERE"/patches/*.patch; do
 done
 grep -qF 'workaround::fold_system_messages(params.messages)' "$ROOT/llama.cpp/common/chat.cpp" \
   || { echo "build FAIL: fold_system_messages is not in common/chat.cpp after the patches" >&2; exit 1; }
+grep -qF 'res["n_prompt_tokens_total"]' "$ROOT/llama.cpp/tools/server/server-context.cpp" \
+  || { echo "build FAIL: n_prompt_tokens_total is not in tools/server/server-context.cpp after the patches" >&2; exit 1; }
 
 # llama.cpp's build-info asks git for a commit; the tarball has none, and a
 # repository around the workdir must not leak its own into the binary.

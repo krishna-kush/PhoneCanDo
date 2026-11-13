@@ -1,0 +1,29 @@
+Ours (PhoneCanDo), not from llama.cpp. GET /slots also gives the whole
+prompt of the request a slot works on, so the app can show how much of it
+is still to read.
+
+A first reply on a phone CPU waits minutes while the server reads the
+agent's prompt. The runner watches that through /slots (the agent's own
+engine sends the request, so we cannot ask for return_progress), and a
+slot there gives the new tokens read so far (n_prompt_tokens_processed)
+and those its cache held (n_prompt_tokens_cache), but not the prompt's
+size: n_prompt_tokens is what the slot holds so far, which grows batch by
+batch while it reads.
+
+server_slot::to_json adds n_prompt_tokens_total, the task's own token
+count: the same number the streamed prompt_progress gives as total. It is
+there whenever the other n_prompt_tokens_* fields are; nothing else
+changes.
+
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -822,6 +822,9 @@
+             res["n_prompt_tokens"]           = (int32_t) prompt.tokens.size();
+             res["n_prompt_tokens_processed"] = stats.n_prompt_processed;
+             res["n_prompt_tokens_cache"]     = stats.n_prompt_cached;
++            // PhoneCanDo patch: the request's whole prompt, as the streamed
++            // prompt_progress's total (n_prompt_tokens is what the slot holds so far)
++            res["n_prompt_tokens_total"]     = ptask->n_tokens();
+             res["params"] = ptask->params.to_json(only_metrics);
+             res["next_token"] = json::array({
+                 {

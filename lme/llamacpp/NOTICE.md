@@ -36,7 +36,7 @@ SOFTWARE.
 
 Built by `build.sh` from the versions in `pins.env`, with our patches
 (`patches/`: a chat template that allows one system message takes
-requests with more), everything linked in statically. Each licence text
+requests with more, and `/slots` gives the whole prompt of each request), everything linked in statically. Each licence text
 ships in the source archive named.
 
 | Component | Version | Licence | Where in the source |

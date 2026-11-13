@@ -70,7 +70,8 @@ mkdir -p "$ROOT/llama.cpp"
 tar -xzf "$LLAMA_TARBALL" -C "$ROOT/llama.cpp" --strip-components=1 --no-same-owner
 
 # As build.sh: our patches, in name order and exactly (no fuzz); one that
-# does not apply ends the build, and so does a fold that is not in place.
+# does not apply ends the build, and so does a fold or a slot total that is
+# not in place.
 for p in "$HERE"/patches/*.patch; do
   echo "patch: $(basename "$p")" >&2
   patch -p1 --batch --forward --fuzz=0 --no-backup-if-mismatch -d "$ROOT/llama.cpp" <"$p" \
@@ -78,6 +79,8 @@ for p in "$HERE"/patches/*.patch; do
 done
 grep -qF 'workaround::fold_system_messages(params.messages)' "$ROOT/llama.cpp/common/chat.cpp" \
   || { echo "build FAIL: fold_system_messages is not in common/chat.cpp after the patches" >&2; exit 1; }
+grep -qF 'res["n_prompt_tokens_total"]' "$ROOT/llama.cpp/tools/server/server-context.cpp" \
+  || { echo "build FAIL: n_prompt_tokens_total is not in tools/server/server-context.cpp after the patches" >&2; exit 1; }
 
 # As build.sh: no git commit in build-info, no build paths in the binary.
 export GIT_DIR=/nonexistent
