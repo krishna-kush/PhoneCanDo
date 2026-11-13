@@ -1,5 +1,7 @@
 package com.phonecando.runner.engine.work
 
+import com.phonecando.runner.engine.events.KitFiles
+
 // Every number job detection and the idle stop use, in one place.
 //
 // - a look every POLL_MS while an engine runs (WorkWatch)
@@ -44,4 +46,12 @@ object WorkRules {
    * proot's loader: every guest runs that.
    */
   val RUNTIME_EXES = setOf("libphonecando_launch.so", "libproot.so")
+
+  /**
+   * How a command line names one of our kit's scripts (KitFiles.BIN): the
+   * hooks an agent's kind runs (phonecando-inbox, -event, -open), such as
+   * Claude Code's Stop hook, which waits up to an hour for a message that
+   * may wake it. They are the agent's own, never a job it left running.
+   */
+  const val KIT_SCRIPT = "/${KitFiles.BIN}/phonecando-"
 }

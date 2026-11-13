@@ -51,6 +51,20 @@ class AgentWorkTest {
     assertEquals(setOf(Verdict.OWN), verdicts(all, firstInput = null).values.toSet())
   }
 
+  @Test fun aHookWaitingInOurKitScriptIsTheAgentsNotAJob() {
+    // Claude Code's Stop hook after a turn: sh -c runs phonecando-inbox --wait, which sleeps in a loop.
+    val hook = "sh /root/.phonecando/bin/phonecando-inbox --wait Stop 3600 || { r=${'$'}?; exit ${'$'}r; }"
+    val all = agent +
+      p(20, 12, 150_000, "sh", "-c", hook) +
+      p(21, 20, 150_100, "sh", "/root/.phonecando/bin/phonecando-inbox", "--wait", "Stop", "3600") +
+      p(22, 21, 170_000, "sleep", "1")
+    val v = verdicts(all)
+    assertEquals(Verdict.HELPER, v[20])
+    assertEquals(Verdict.HELPER, v[21])
+    assertEquals(Verdict.HELPER, v[22])
+    assertEquals(emptyList<ProcDetail>(), AgentWork.jobs(AgentWork.judge(all, input, now, emptyMap())))
+  }
+
   @Test fun theAgentAloneHasNoWork() {
     assertEquals(mapOf(10 to Verdict.OWN, 11 to Verdict.OWN, 12 to Verdict.OWN), verdicts(agent))
   }

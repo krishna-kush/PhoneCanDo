@@ -13,7 +13,9 @@ import com.phonecando.runner.engine.proc.Stdin
 // socket from such a parent. That is how MCP stdio servers and language
 // servers run; commands get /dev/null, a terminal or a file. A shell, a
 // command of the agent's own shell, an orphan or daemon (its parent gone),
-// and whatever a job starts are work. Our own runtime is seen through: a
+// and whatever a job starts are work, except our kit's scripts (a hook the
+// agent's kind runs, waiting for a message) and what they run, which are
+// the agent's helpers. Our own runtime is seen through: a
 // native agent's command reaches the machine as our launcher (named like
 // the command, "bash" too), then proot, then the program; parents are read
 // past them, and they take the verdict of what they carry. In doubt it is
@@ -81,9 +83,11 @@ object AgentWork {
     minAgeMs: Long,
   ): Pair<Verdict, String> {
     early(p, firstInputAt, now, minAgeMs)?.let { return it }
+    if (isKitScript(p)) return Verdict.HELPER to "our kit's script (a hook)"
     if (isShell(p)) return Verdict.WORK to "a shell"
     val parent = parentOf(p, byPid) ?: return Verdict.WORK to "its parent is gone (orphan or daemon)"
     val parentVerdict = verdicts[parent.pid]
+    if (parentVerdict == Verdict.HELPER && isKitScript(parent)) return Verdict.HELPER to "run by our kit's script"
     if (parentVerdict == Verdict.WORK) return Verdict.WORK to "started by a job"
     if (parentVerdict == Verdict.OWN && isShell(parent)) return Verdict.WORK to "a command of the agent's shell"
     val agentSide = { pid: Int -> verdicts[pid] == Verdict.OWN || verdicts[pid] == Verdict.HELPER }
@@ -173,6 +177,9 @@ object AgentWork {
 
   /** One of our runtime's binaries (WorkRules.RUNTIME_EXES): the launcher behind the shims, or proot. */
   fun isRuntime(p: ProcDetail): Boolean = p.exe != null && p.exe in WorkRules.RUNTIME_EXES
+
+  /** Its command line runs one of our kit's scripts (WorkRules.KIT_SCRIPT), as a shell's script or inside its -c. */
+  fun isKitScript(p: ProcDetail): Boolean = p.argv.any { WorkRules.KIT_SCRIPT in it }
 
   /** Its command line's first word (a login shell's "-bash" too), or its name. */
   fun isShell(p: ProcDetail): Boolean = program(p) in WorkRules.SHELLS
