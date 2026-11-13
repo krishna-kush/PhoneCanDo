@@ -185,8 +185,11 @@ before an `@` (`promptQueue.ts`), so the heading names where the link goes.
 Edge-to-edge (targetSdk 36) means `adjustResize` no longer shrinks the window
 for the IME. The chat WebView is wrapped in
 `react-native-keyboard-controller`'s `KeyboardAvoidingView`
-(`behavior="height"`, `automaticOffset`) so the web composer, model row and
-send button stay above Gboard. A TUI home uses the terminal's own spacer
+(`behavior="padding"`, `automaticOffset`) so the web composer, model row and
+send button stay above Gboard. Not `"height"`: it pins a height while the
+keyboard is up, the height stays on the view after it closes (Reanimated
+keeps a dropped prop's last value), and a card shown later at Home's foot
+(First shift, Having fun?) was pushed off screen. A TUI home uses the terminal's own spacer
 instead (`terminal.md` → Input and sizing).
 
 ## Theme

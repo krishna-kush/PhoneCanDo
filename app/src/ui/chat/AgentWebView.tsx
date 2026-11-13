@@ -160,8 +160,13 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   }
 
   return (
+    // Padding, not height: "height" pins a height (flex 0) while the
+    // keyboard is up and only drops it when it closes, and the dropped
+    // height stays on the view (Reanimated keeps a removed prop's last
+    // value), so a card shown later under the chat was pushed off screen.
+    // Padding is written every frame, 0 once the keyboard is down.
     <KeyboardAvoidingView
-      behavior="height"
+      behavior="padding"
       automaticOffset
       style={{ flex: 1, backgroundColor: t.bg }}
     >
