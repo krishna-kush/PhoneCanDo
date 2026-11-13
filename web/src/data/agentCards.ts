@@ -5,7 +5,10 @@
 // the pack's script reads them back from the DOM, so no manifest ever
 // reaches the browser. The cartridges are cartridges.ts.
 
-import { CREW_WEAR, OTHER_WEAR, type Wear } from './wear';
+import { SHAPES } from '../../../mascot/body.ts';
+import { DESIGNS, type DesignId } from '../../../mascot/designs.ts';
+import type { Look } from '../../../mascot/look.ts';
+import { hash } from '../lib/backdrop/seed';
 
 /** The fields of an agent kind's agent.json a card shows. */
 type Manifest = {
@@ -45,15 +48,8 @@ const manifests = import.meta.glob<Manifest>('../../../agents/{native,image}/*/a
   import: 'default',
 });
 
-/** How a card's creature stands: the brand mark's poses (theme/logo.json). */
-export type BotLook = {
-  pose: 'square' | 'wide' | 'tall';
-  /** The amber block in front, as the loader's swap frames have it. */
-  swap: boolean;
-  eyes: 'dot' | 'look' | 'sleepy' | 'wide';
-  /** Its hat, tie and glasses (data/wear.ts). */
-  wear: Wear;
-};
+/** A card's creature: its look (mascot/look.ts) and which way its eyes look. */
+export type BotLook = Look & { eyes: 'dot' | 'look' | 'sleepy' | 'wide' };
 
 export type AgentCard = {
   id: string;
@@ -82,7 +78,6 @@ const SIGN_IN: Record<string, string> = {
   'in-tui': 'in its TUI',
 };
 
-const POSES = ['square', 'wide', 'tall'] as const;
 const EYES = ['dot', 'look', 'wide', 'sleepy'] as const;
 
 /**
@@ -91,15 +86,41 @@ const EYES = ['dot', 'look', 'wide', 'sleepy'] as const;
  */
 const NAMED = ['claude-code', 'codex', 'gemini-cli'];
 
-// The default kind first, then the built-in ones, then by name. The first
-// card wears the brand mark's own look; the rest step through the poses,
-// eyes and swaps, so no two match. The lead kinds wear the crew's wear, by
-// the part each plays in the backdrop's story; the rest take turns at the others.
-const look = (i: number, lead: number, other: number): BotLook => ({
-  pose: POSES[i % 3],
-  swap: Math.floor(i / 3) % 2 === 1,
+/**
+ * The lead kinds' designs (mascot/designs.ts), by the part each plays in
+ * the backdrop's story (data/backdrop.ts, crewParts): the one who writes
+ * the code, runs the tests, checks it twice, keeps watch.
+ */
+const CREW: DesignId[] = ['coder', 'tester', 'checker', 'watch'];
+
+/** Everyone else's: any design but the crew's and the brand mark's own. */
+const POOL = DESIGNS.map((d) => d.id).filter((id) => id !== 'plain' && !CREW.includes(id));
+
+/**
+ * Each of the other kinds' design, picked by its id, so a kind keeps its
+ * design as kinds come and go; one already taken steps on to the next.
+ */
+function otherDesigns(ids: string[]): Map<string, DesignId> {
+  const taken = new Set<DesignId>();
+  const out = new Map<string, DesignId>();
+  for (const id of ids) {
+    let k = Math.floor(hash(id) * POOL.length);
+    while (taken.has(POOL[k % POOL.length]) && taken.size < POOL.length) k++;
+    const design = POOL[k % POOL.length];
+    taken.add(design);
+    out.set(id, design);
+  }
+  return out;
+}
+
+// The default kind first, then the built-in ones, then by name. The cards
+// step through the shapes, inks and eyes, so no two match; the lead kinds
+// wear the crew's designs, the rest one of their own.
+const look = (i: number, design: DesignId): BotLook => ({
+  design,
+  shape: SHAPES[i % SHAPES.length],
+  swap: Math.floor(i / SHAPES.length) % 2 === 1,
   eyes: EYES[Math.floor(i / 2) % 4],
-  wear: lead >= 0 ? CREW_WEAR[lead % CREW_WEAR.length] : OTHER_WEAR[other % OTHER_WEAR.length],
 });
 
 const rank = (m: Manifest) => (m.default ? 0 : m.type === 'native' ? 1 : 2);
@@ -112,7 +133,7 @@ const full = Object.values(manifests)
 const leadIds = [full.find((m) => m.default)?.id, ...NAMED]
   .filter((id, i, all): id is string => id != null && full.some((m) => m.id === id) && all.indexOf(id) === i)
   .slice(0, 4);
-const others = full.map((m) => m.id).filter((id) => !leadIds.includes(id));
+const others = otherDesigns(full.map((m) => m.id).filter((id) => !leadIds.includes(id)));
 
 /** The kinds in the build the site hands out (full). */
 export const cards: AgentCard[] = full
@@ -125,7 +146,7 @@ export const cards: AgentCard[] = full
     stable: m.stability === 'stable',
     signIn: (m.signIn ?? []).map((s) => SIGN_IN[s.method] ?? s.method),
     local: Boolean(m.models),
-    look: look(i, leadIds.indexOf(m.id), others.indexOf(m.id)),
+    look: look(i, leadIds.includes(m.id) ? CREW[leadIds.indexOf(m.id) % CREW.length] : (others.get(m.id) ?? 'plain')),
     messaging: messaging(m),
     twins: Boolean(m.state),
   }));

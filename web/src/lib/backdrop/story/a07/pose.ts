@@ -2,7 +2,7 @@
 // beats are built from. The story is told in the right margin: `out` is px
 // from the sheet's edge, z depth, `up` height over the floor's deck.
 
-import type { Eyes, Facing, Pose as Shape } from '../../species/look';
+import type { Eyes, Facing, Shape } from '../../species/look';
 import { easeInOut, jump, mix, span, stepLift } from '../../species/motion';
 
 export type Spot = { out: number; z: number };

@@ -6,7 +6,6 @@
 // screen (someone is always awake), and Little curls up beside them, not
 // alone anymore.
 
-import { wear } from '../../../../data/wear';
 import { cousin } from '../../species/look';
 import { arch, easeInOut, mix, span } from '../../species/motion';
 import type { Story } from '../../world/frame';
@@ -17,8 +16,8 @@ import { drawNote, drawScreen } from '../props';
 import type { Room } from '../room';
 
 // If the page leads with no kinds, three cousins move in instead.
-const STRANGER_WEAR = [wear({ hat: 'cap' }), wear({ hat: 'antenna', neck: 'bowtie' }), wear({ hat: 'beanie' })];
-const STRANGERS: Kind[] = STRANGER_WEAR.map((w, n) => ({ label: '', look: cousin(`crew:${n}`, { size: 22 + n * 3, wear: w }) }));
+const STRANGER_DESIGNS = ['cap', 'butler', 'watch'] as const;
+const STRANGERS: Kind[] = STRANGER_DESIGNS.map((design, n) => ({ label: '', look: cousin(`crew:${n}`, { size: 22 + n * 3, design }) }));
 const WATCH = { w: 26, h: 20, up: 14 };
 
 const SETTLED = 2.6;
@@ -63,7 +62,7 @@ function steps(room: Room): Step[] {
     [1.0, SETTLED, (k) => at(stand, { gaze: toward, eyes: k > 0.5 ? 'happy' : 'wide' })],
     [SETTLED, CAUGHT, (k) => hop(stand, stand, span(k, 0.6, 1), 12, { gaze: [room.side * 0.6, -0.8] })],
     [CAUGHT, NESTED, (k) => walk(stand, nest, k)],
-    [NESTED, ASLEEP, (k) => at(nest, { shape: k > 0.3 ? 'wide' : 'square', eyes: k < 0.75 ? 'happy' : 'shut' })],
+    [NESTED, ASLEEP, (k) => at(nest, { shape: k > 0.3 ? 'wider' : 'square', eyes: k < 0.75 ? 'happy' : 'shut' })],
   ];
 }
 
@@ -111,7 +110,7 @@ export function draw(room: Room) {
       out,
       z: spot.z,
       lift: walking ? Math.abs(Math.sin(walkIn * 28)) * 3 : 0,
-      pose: asleep ? 'wide' : undefined,
+      shape: asleep ? 'wider' : undefined,
       eyes: asleep ? 'shut' : walkIn < 1 ? 'dot' : 'happy',
       sy: asleep ? 0.92 + 0.04 * Math.sin(t * 1.2 + k) : undefined,
       gaze: walking ? [-room.side, 0] : undefined,

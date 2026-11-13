@@ -1,0 +1,111 @@
+---
+// The A-series catalog: every design an agent can wear (mascot/designs.ts),
+// in each of the five shapes and with amber in front, drawn by the same Bot
+// the cards use, so it can't drift from the spec. Unlisted: a sheet for us
+// to look the designs over, not a part of the manual.
+import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+import Bot from "../components/sections/models/Bot.astro";
+import { SHAPES } from "../../../mascot/body.ts";
+import { DESIGNS, type Design } from "../../../mascot/designs.ts";
+import { FACES } from "../../../mascot/parts/face/index.ts";
+import { HATS } from "../../../mascot/parts/hat/index.ts";
+import { NECKS } from "../../../mascot/parts/neck/index.ts";
+import { site } from "../data/site";
+
+const SIZE = 26;
+const worn = (d: Design) =>
+    [d.hat && HATS[d.hat].label, d.neck && NECKS[d.neck].label, d.face && FACES[d.face].label].filter(Boolean).join(" · ") || "Nothing";
+const parts = Object.keys(HATS).length + Object.keys(NECKS).length + Object.keys(FACES).length;
+---
+
+<Base title={`The A-series · ${site.name}`} description="Every design an agent can wear." noindex>
+    <div class="page">
+        <Nav />
+
+        <main class="catalog">
+            <p class="eyebrow">
+                <span class="dot" aria-hidden="true"></span>
+                FIG. A-xx · The A-series
+            </p>
+            <h1>Every design an agent can wear.</h1>
+            <p class="catalog-sub">
+                {DESIGNS.length} designs from {parts} parts, each in {SHAPES.length} shapes, with red or amber in front. A new agent
+                picks one at random; you can change it on the agent's page.
+            </p>
+
+            <ol class="catalog-grid">
+                {
+                    DESIGNS.map((d, i) => (
+                        <li class="catalog-card">
+                            <p class="catalog-name">
+                                <span>{String(i + 1).padStart(2, "0")}</span> {d.name}
+                            </p>
+                            <p class="catalog-parts">{worn(d)}</p>
+                            <div class="catalog-row" style={`--s:${SIZE}px`}>
+                                {SHAPES.map((shape) => (
+                                    <Bot look={{ design: d.id, shape, swap: false, eyes: "dot" }} size={SIZE} />
+                                ))}
+                                <Bot look={{ design: d.id, shape: "square", swap: true, eyes: "look" }} size={SIZE} />
+                            </div>
+                        </li>
+                    ))
+                }
+            </ol>
+        </main>
+
+        <Footer />
+    </div>
+</Base>
+
+<style>
+    .catalog {
+        padding: 48px 0 72px;
+    }
+    .catalog h1 {
+        margin: 12px 0 8px;
+    }
+    .catalog-sub {
+        max-width: 60ch;
+        color: var(--muted);
+        text-wrap: pretty;
+    }
+    .catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 12px;
+        margin: 32px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+    .catalog-card {
+        padding: 14px 16px 16px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+    }
+    .catalog-name {
+        margin: 0;
+        font-weight: 600;
+    }
+    .catalog-name span {
+        color: var(--faint);
+        font-family: var(--mono);
+        font-weight: 400;
+    }
+    .catalog-parts {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+    }
+    /* Room over each bot for the tallest hat. */
+    .catalog-row {
+        --bot-line: var(--fg);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 14px;
+        padding-top: calc(var(--s) * 0.8);
+        margin-top: 4px;
+    }
+</style>

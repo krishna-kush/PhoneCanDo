@@ -6,9 +6,9 @@
 
 import { edgeX } from '../camera';
 import type { Faces, P3, Pen } from '../paint/pen';
-import { drawUnit, hatRise, type Body } from '../paint/unit';
+import { drawUnit, type Body } from '../paint/unit';
 import { hash } from '../seed';
-import { SHADOW, type Eyes, type Facing, type Look, type Pose } from '../species/look';
+import { SHADOW, type Eyes, type Facing, type Look, type Shape } from '../species/look';
 import { STILL, blinking, breathe, jump } from '../species/motion';
 import { floorY } from '../world/building';
 import type { Actor, Frame } from '../world/frame';
@@ -29,7 +29,7 @@ export type UnitAt = {
   lift?: number;
   sx?: number;
   sy?: number;
-  pose?: Pose;
+  shape?: Shape;
   eyes?: Eyes;
   grey?: boolean;
   /** Which way it is turned; side on, it faces where it looks across. */
@@ -174,7 +174,7 @@ export function makeRoom(f: Frame, i: number, side: Side): Room {
       lift: (at.lift ?? 0) + hop.lift,
       sx: (at.sx ?? 1) * hop.sx * air.sx,
       sy: (at.sy ?? 1) * hop.sy * air.sy,
-      pose: at.pose ?? lk.pose,
+      shape: at.shape ?? lk.shape,
       eyes,
       gaze,
       grey: at.grey ?? false,
@@ -182,13 +182,12 @@ export function makeRoom(f: Frame, i: number, side: Side): Room {
       toward: gaze[0] < 0 ? -1 : 1,
     });
     pen.alpha = was;
-    const hat = hatRise(lk);
     if (alpha > 0.5) {
-      const a = pen.at(body.left, body.top - hat, at.z);
+      const a = pen.at(body.left, body.crown, at.z);
       const b = pen.at(body.left + body.w + lk.size * SHADOW, body.top + body.h + lk.size * SHADOW, at.z);
       f.pokes.add({ name, serial: lk.serial, key, x0: a.x - 3, y0: a.y - 3, x1: b.x + 3, y1: b.y + 3 });
     }
-    if (poked.say) f.pokes.lines.push({ text: poked.say, x: body.x, y: body.top - hat - 2, z: at.z });
+    if (poked.say) f.pokes.lines.push({ text: poked.say, x: body.x, y: body.crown - 2, z: at.z });
     return body;
   };
 

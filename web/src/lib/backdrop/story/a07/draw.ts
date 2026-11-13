@@ -39,7 +39,7 @@ export function drawA07(room: Room, f: Frame, i: number): Body | null {
   const { pal } = pen;
   const up = room.y - (floorY(a.i) - a.pose.up);
   // Waiting on the scroll, standing: now and then a hop, then a look at you.
-  const idle = f.resting && !f.still && !a.pose.lift && a.pose.shape !== 'wide' && !a.pose.sx;
+  const idle = f.resting && !f.still && !a.pose.lift && a.pose.shape !== 'wider' && !a.pose.sx;
   const fidget = idle ? phase(room.t, FIDGET) : 1;
   const hop = idle ? jump(fidget / 0.09, 9) : null;
   const glance = idle && fidget > 0.12 && fidget < 0.32;
@@ -59,7 +59,7 @@ export function drawA07(room: Room, f: Frame, i: number): Body | null {
     lift: hop && hop.lift ? hop.lift : a.pose.lift,
     sx: hop && hop.lift ? hop.sx : a.pose.sx,
     sy: hop && hop.lift ? hop.sy : a.pose.sy,
-    pose: a.pose.shape,
+    shape: a.pose.shape,
     eyes: a.pose.eyes,
     gaze,
     facing: glance ? undefined : a.pose.facing,

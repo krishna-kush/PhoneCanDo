@@ -41,7 +41,7 @@ function steps(room: Room): Step[] {
   return [
     [0, AT_CARD, (k) => walk(room.hatch, by, k)],
     [AT_CARD, ANSWERED, (k) => at(by, { gaze: k < 0.5 ? [room.side * 0.9, -0.4] : [-room.side * 0.9, -0.5], eyes: k > 0.6 ? 'happy' : 'wide' })],
-    [ANSWERED, ASLEEP, (k) => at(by, { shape: k > 0.4 ? 'wide' : 'square', eyes: k < 0.6 ? 'happy' : 'shut' })],
+    [ANSWERED, ASLEEP, (k) => at(by, { shape: k > 0.4 ? 'wider' : 'square', eyes: k < 0.6 ? 'happy' : 'shut' })],
   ];
 }
 
@@ -69,7 +69,7 @@ export function draw(room: Room) {
   room.crew.slice(0, beds.length).forEach((kind, k) => {
     const z = 300 - k * 8;
     // One sleeps turned away from us.
-    const body = room.unit(`crew:${kind.label}`, kind.look, { out: beds[k], z, pose: 'wide', eyes: 'shut', sy: 0.92 + 0.04 * Math.sin(t * 1.1 + k * 1.7), facing: k === 1 ? 'back' : undefined });
+    const body = room.unit(`crew:${kind.label}`, kind.look, { out: beds[k], z, shape: 'wider', eyes: 'shut', sy: 0.92 + 0.04 * Math.sin(t * 1.1 + k * 1.7), facing: k === 1 ? 'back' : undefined });
     const q = phase(t, 3.4, k * 0.9);
     pen.faded(arch(q) * 0.8, () => pen.text('z', body.x + q * 10, body.top - 4 - q * 30, z, { px: 7 + q * 5, color: pal.muted, weight: 600 }));
   });

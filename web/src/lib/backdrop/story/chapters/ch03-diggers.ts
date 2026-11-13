@@ -4,7 +4,6 @@
 // its screen lighting with a prompt. Little watches it all, then hops with
 // them.
 
-import { wear } from '../../../../data/wear';
 import { noise } from '../../seed';
 import { cousin } from '../../species/look';
 import { easeInOut, easeOut, jump, mix, span } from '../../species/motion';
@@ -14,8 +13,8 @@ import { drawTerminal } from '../props';
 import type { Room } from '../room';
 
 const DIGGERS = [
-  cousin('diggers:1', { size: 26, pose: 'wide', wear: wear({ hat: 'hardhat' }) }),
-  cousin('diggers:2', { size: 20, pose: 'tall', wear: wear({ hat: 'hardhat', neck: 'tie' }), swap: true }),
+  cousin('diggers:1', { size: 26, shape: 'wider', design: 'digger' }),
+  cousin('diggers:2', { size: 20, shape: 'taller', design: 'foreman', swap: true }),
 ];
 const PIT = { w: 54, d: 34, z: 236 };
 const MACHINE = { w: 44, h: 34 };

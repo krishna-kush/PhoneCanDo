@@ -1,11 +1,11 @@
 // Who lies in the playground, and the trick each one has once it is awake:
 // the phone's apps, and a few cousins of the A-series in their hats
-// (data/wear.ts). You find a trick by throwing the one who has it. The
+// (mascot/designs.ts). You find a trick by throwing the one who has it. The
 // numbers here are how each moves (physics.ts); what the tricks do is
 // habits.ts's, collide.ts's and, for digging and thuds, physics.ts's.
 // Nothing here draws.
 
-import { wear, type Wear } from '../../../data/wear';
+import type { DesignId } from '../../../../../mascot/designs.ts';
 import type { AppKind } from '../story/characters/app';
 
 export type CousinKind = 'headphones' | 'hardhat' | 'tophat' | 'cap';
@@ -66,11 +66,11 @@ export const TRAITS: Record<ToyKind, Traits> = {
 };
 
 /** What each cousin wears: its hat is its trick, so you learn them by sight. */
-export const COUSIN_WEAR: Record<CousinKind, Wear> = {
-  headphones: wear({ hat: 'headphones' }),
-  hardhat: wear({ hat: 'hardhat' }),
-  tophat: wear({ hat: 'tophat', neck: 'bowtie' }),
-  cap: wear({ hat: 'cap' }),
+export const COUSIN_DESIGN: Record<CousinKind, DesignId> = {
+  headphones: 'dj',
+  hardhat: 'digger',
+  tophat: 'magician',
+  cap: 'cap',
 };
 
-export const isCousin = (kind: ToyKind): kind is CousinKind => kind in COUSIN_WEAR;
+export const isCousin = (kind: ToyKind): kind is CousinKind => kind in COUSIN_DESIGN;

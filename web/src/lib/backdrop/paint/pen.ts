@@ -200,6 +200,24 @@ export class Pen {
     }
   }
 
+  /** Part of an ellipse facing the camera, its radii across and down, angles as arc's. */
+  ellipse(x: number, y: number, z: number, rx: number, ry: number, a0: number, a1: number, fill?: string, stroke?: string, width = 1) {
+    const a = this.at(x, y, z);
+    const ctx = this.ctx;
+    this.fade(z);
+    ctx.beginPath();
+    ctx.ellipse(a.x, a.y, Math.max(0.1, rx * a.s), Math.max(0.1, ry * a.s), 0, a0, a1);
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    if (stroke) {
+      ctx.lineWidth = width;
+      ctx.strokeStyle = stroke;
+      ctx.stroke();
+    }
+  }
+
   /** A ring lying flat on a floor at height y, round (x, z): a tap's ripple. */
   ring(x: number, y: number, z: number, r: number, color: string, width = 1) {
     const points: P3[] = [];

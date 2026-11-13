@@ -8,7 +8,7 @@
 import { SHADOW, cousin } from '../species/look';
 import { floorY } from '../world/building';
 import type { Fixture } from './fixtures/kinds';
-import { COUSIN_WEAR, isCousin, type ToyKind } from './kinds';
+import { COUSIN_DESIGN, isCousin, type ToyKind } from './kinds';
 import { SIZE, type Toy } from './toys';
 
 /** A stack: its kinds from the bottom up, at a share of the way across the margin. */
@@ -56,7 +56,7 @@ export function makeToys(keys: string[], fixtures: (Fixture | null)[]): Toy[] {
         toys.push({
           name,
           kind,
-          look: isCousin(kind) ? cousin(name, { size: COUSIN, pose: 'square', wear: COUSIN_WEAR[kind] }) : null,
+          look: isCousin(kind) ? cousin(name, { size: COUSIN, shape: 'square', design: COUSIN_DESIGN[kind] }) : null,
           d: NaN,
           start: at,
           // Stacked: each stands on the one under it.

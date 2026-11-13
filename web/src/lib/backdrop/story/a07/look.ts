@@ -2,14 +2,13 @@
 // any floor by the scarf it always wears and its serial over its head. Once
 // it finds the Spark, the Spark rides on its head.
 
-import { BARE } from '../../../../data/wear';
 import type { Pen } from '../../paint/pen';
 import type { Body } from '../../paint/unit';
 import type { Look } from '../../species/look';
 import { SPARK, drawSpark } from '../characters/spark';
 import type { Kit } from './pose';
 
-export const A07: Look = { size: 30, pose: 'square', swap: false, eyes: 'dot', wear: BARE, serial: 'A-07' };
+export const A07: Look = { size: 30, shape: 'square', swap: false, eyes: 'dot', design: 'plain', serial: 'A-07' };
 
 export const NO_KIT: Kit = { spark: false };
 

@@ -27,9 +27,9 @@ function steps(room: Room): Step[] {
   const { bed, idea } = spots(room);
   return [
     // Asleep, flat on the glass.
-    [0, 1.6, () => at(bed, { shape: 'wide', eyes: 'shut', sy: 0.92 + 0.04 * Math.sin(room.t * 1.2) })],
+    [0, 1.6, () => at(bed, { shape: 'wider', eyes: 'shut', sy: 0.92 + 0.04 * Math.sin(room.t * 1.2) })],
     // Waking: eyes first, then up.
-    [1.6, AWAKE, (k) => at(bed, { shape: k > 0.6 ? 'square' : 'wide', eyes: k < 0.5 ? 'sleepy' : 'dot', sy: k > 0.6 ? 1.06 : 0.94 })],
+    [1.6, AWAKE, (k) => at(bed, { shape: k > 0.6 ? 'square' : 'wider', eyes: k < 0.5 ? 'sleepy' : 'dot', sy: k > 0.6 ? 1.06 : 0.94 })],
     [AWAKE, LOOKED, (k) => at(bed, { gaze: [Math.sin(k * 7) * 0.9, -0.2] })],
     [LOOKED, FOUND, (k) => walk(bed, idea, k)],
     // It looks from the idea out to you…

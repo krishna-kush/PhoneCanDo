@@ -5,10 +5,9 @@
 
 import type { Pen } from '../../paint/pen';
 import { drawUnit } from '../../paint/unit';
-import { BARE } from '../../../../data/wear';
 import type { Look } from '../../species/look';
 
-export const SPARK: Look = { size: 10, pose: 'square', swap: true, eyes: 'dot', wear: BARE, serial: 'A-00' };
+export const SPARK: Look = { size: 10, shape: 'square', swap: true, eyes: 'dot', design: 'plain', serial: 'A-00' };
 
 /** The Spark with its feet at (x, y), glowing; returns where its glow is centred. */
 export function drawSpark(pen: Pen, x: number, y: number, z: number, t: number, gaze: readonly [number, number] = [0, -0.4]) {
@@ -34,7 +33,7 @@ export function drawSpark(pen: Pen, x: number, y: number, z: number, t: number, 
     lift: 0,
     sx: 1,
     sy: 1 + 0.05 * breath,
-    pose: 'square',
+    shape: 'square',
     eyes: (t * 0.9) % 4 < 0.12 ? 'shut' : 'dot',
     gaze,
     grey: false,

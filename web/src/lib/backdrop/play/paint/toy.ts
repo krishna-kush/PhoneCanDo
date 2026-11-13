@@ -8,7 +8,7 @@
 // (light.ts). It leaves its screen box, for picking it up.
 
 import { voices } from '../../../../data/backdrop';
-import { drawUnit, hatRise } from '../../paint/unit';
+import { drawUnit } from '../../paint/unit';
 import { SHADOW, type Eyes } from '../../species/look';
 import { STILL, arch, clamp, jump, phase, span, stepLift } from '../../species/motion';
 import { drawApp } from '../../story/characters/app';
@@ -69,14 +69,14 @@ export function drawToy(room: Room, f: Frame, toy: Toy, n: number, cheer: boolea
   if (isCousin(kind) && toy.look) {
     const j = hop !== null ? jump(hop, DRAWN * 0.7) : STILL;
     const eyes: Eyes = !toy.awake ? 'shut' : hop !== null ? 'happy' : flying ? 'wide' : 'dot';
-    b = drawUnit(pen, toy.look, {
+    const unit = drawUnit(pen, toy.look, {
       x,
       y,
       z: Z,
       lift: j.lift + lift,
       sx: j.sx * (1 + squash * 0.5),
       sy: j.sy * (1 - squash * 0.5),
-      pose: 'square',
+      shape: 'square',
       eyes,
       gaze: [gaze, 0],
       grey: !toy.awake,
@@ -84,7 +84,8 @@ export function drawToy(room: Room, f: Frame, toy: Toy, n: number, cheer: boolea
       facing: walking ? 'side' : 'front',
       toward: toy.vx > 0 ? -1 : 1,
     });
-    crown = b.top - hatRise(toy.look);
+    b = unit;
+    crown = unit.crown;
   } else if (!isCousin(kind)) {
     const rolls = kind === 'clock' || kind === 'settings';
     b = drawApp(pen, kind, x, y, Z, DRAWN, t, {
