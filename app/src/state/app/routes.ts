@@ -39,6 +39,8 @@ export type Route =
   | { name: 'agent-install'; agentId: AgentId }
   /** The end of the agent's last install or update log, read back from its machine. */
   | { name: 'agent-install-log'; agentId: AgentId }
+  /** The agent's mascot: its design, shape and which ink is in front, to pick. */
+  | { name: 'agent-mascot'; agentId: AgentId }
   /**
    * New agent, step 1: which kind, and its model. With `target` the place is
    * set already (New agent here, Android only) and this step makes it;
