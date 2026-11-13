@@ -176,8 +176,12 @@ Suggested, Hugging Face with a repository's variants, and the token. A
 model's card opens its own page (`model/ModelPage.tsx`): its facts, Stop
 while it is loaded (which stops the agents on it first and asks before
 when there are any), Context, Used by (the agents set to it, running ones
-first, each opening its page), its Hugging Face repository, and Delete,
-refused while an agent is set to the model. The list opens
+first, each opening its page), Server log, its Hugging Face repository,
+and Delete, refused while an agent is set to the model. Server log
+(`model/ModelLogPage.tsx`) shows the end of its server's log as its last
+start wrote it (the runner's `modelServerLog`, at most 128 KiB of whole
+lines), re-read every 2 s while the memory guard's reading lists the
+model (loading or loaded). The list opens
 on the most downloaded chat models; typing searches after a pause. Sort
 and Filters (a sheet: Size, License, chat models only) are two half-width
 buttons with a wrapping line of the filters that are on; nothing scrolls

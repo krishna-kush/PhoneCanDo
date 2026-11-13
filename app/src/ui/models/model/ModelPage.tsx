@@ -22,8 +22,8 @@ import UsedBy from './UsedBy';
 // context than it was trained for, its RAM verdict), Stop while it is
 // loaded (its running agents stop first, and it asks first when there are
 // any), its Context setting, the agents set to it (each opens its page),
-// its Hugging Face repository and Delete (refused while an agent is set to
-// it).
+// its server's log, its Hugging Face repository and Delete (refused while
+// an agent is set to it).
 export default function ModelPage({ modelId }: { modelId: string }) {
   const model = useModelsStore((s) => s.models.find((m) => m.id === modelId));
   const agents = useAgentsStore((s) => s.agents);
@@ -59,11 +59,12 @@ export default function ModelPage({ modelId }: { modelId: string }) {
         <ModelContext model={model} />
       </ModelPanel>
       <UsedBy users={users} />
-      {source.kind === 'huggingface' ? (
-        <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
+      <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
+        <LinkRow label="Server log" onPress={() => push({ name: 'model-log', modelId: model.id })} />
+        {source.kind === 'huggingface' ? (
           <LinkRow label="Hugging Face" detail={source.repo} onPress={() => push({ name: 'model-repo', repo: source.repo })} />
-        </YStack>
-      ) : null}
+        ) : null}
+      </YStack>
       <DeleteModel model={model} onDeleted={back} />
     </Screen>
   );

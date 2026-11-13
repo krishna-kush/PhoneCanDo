@@ -10,13 +10,17 @@ import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.models.LocalModelBinding
 import com.phonecando.runner.models.ModelReasons
+import com.phonecando.runner.models.ModelServerLog
+import com.phonecando.runner.models.ModelSlots
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
+import java.io.File
 import kotlin.concurrent.thread
 
 // An agent's local model for JS (records.ts Agent.model), stopping a
-// model with its agents, and a model server reading a prompt
-// (src/engine/models/promptReading.ts). The model ids come from the models
+// model with its agents, a model server reading a prompt
+// (src/engine/models/promptReading.ts) and a model server's log
+// (src/engine/models/serverLog.ts). The model ids come from the models
 // module (app/src/engine/models/).
 internal fun ModuleDefinitionBuilder.agentModelFunctions(context: () -> Context) {
   // The prompt a model server is reading for a bound agent's run
@@ -24,6 +28,15 @@ internal fun ModuleDefinitionBuilder.agentModelFunctions(context: () -> Context)
   // phonecandoPromptReading event.
   Function("promptReading") {
     Engines.peek()?.promptReading()?.toMap()
+  }
+
+  // The end of a model's server log (ModelServerLog.toMap), null when its
+  // server never ran; read off the JS thread.
+  AsyncFunction("modelServerLog") { modelId: String, promise: Promise ->
+    val logs = File(context().filesDir, ModelSlots.LOG_DIR)
+    thread(name = "phonecando-model-log", isDaemon = true) {
+      promise.resolve(ModelServerLog.read(logs, modelId)?.toMap())
+    }
   }
 
   // Sets the model the agent runs on (a model on the phone), or null for
