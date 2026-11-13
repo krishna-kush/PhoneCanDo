@@ -56,7 +56,7 @@ class ImageResetTest {
         assertFalse(File(layout.rootfs, "usr/bin/htop").exists())
         assertFalse(File(layout.rootfs, "root-junk").exists())
         assertTrue(File(layout.rootfs, "usr/bin/apt-get").isFile)
-        assertEquals("phonecando\n", File(layout.rootfs, "etc/hostname").readText())
+        assertEquals("debian\n", File(layout.rootfs, "etc/hostname").readText())
         assertEquals("print(1)", File(layout.home, "projects/app/main.py").readText())
         assertFalse(File(layout.root, "rootfs.new").exists())
         assertFalse(File(layout.root, "rootfs.old").exists())

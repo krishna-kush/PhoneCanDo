@@ -35,10 +35,12 @@ class FakeProcTest {
     }
 
     @Test
-    fun `files cover every bound name and the version names our kernel release`() {
-        val files = FakeProc.files(emptyList())
+    fun `files cover every bound name, the version names our kernel and the hostname is the image's`() {
+        val files = FakeProc.files(emptyList(), "debian")
         assertEquals(FakeProc.NAMES.toSet(), files.keys)
         assertTrue(files.getValue("version").startsWith("Linux version ${FakeProc.KERNEL_RELEASE} "))
+        assertTrue(files.getValue("version").endsWith(" ${FakeProc.KERNEL_VERSION}\n"))
+        assertEquals("debian\n", files["sys/kernel/hostname"])
         assertTrue(files.getValue("stat").contains("\ncpu0 "))
         files.values.forEach { assertTrue(it.endsWith("\n")) }
     }

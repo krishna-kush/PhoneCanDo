@@ -5,6 +5,7 @@ import com.phonecando.lre.api.LreException
 import com.phonecando.lre.api.OsInfo
 import com.phonecando.lre.api.PackageFamily
 import com.phonecando.lre.image.detect.Detection
+import com.phonecando.lre.image.proc.Uname
 import com.phonecando.lre.image.support.ConfParser
 import com.phonecando.lre.image.support.Hosts
 import com.phonecando.lre.image.support.config
@@ -18,6 +19,7 @@ class LaunchConfTest {
     private val r = "/data/user/0/com.phonecando.app/files/images/d1"
     private val alt = "/data/data/com.phonecando.app/files/images/d1"
     private val lib = Hosts.LIB
+    private val uname = Uname("debian", "aarch64")
 
     // What a host passes for an engine holding a password and the bridge token.
     private val secrets = listOf("OPENCODE_SERVER_PASSWORD", "PHONECANDO_BRIDGE_TOKEN", "PHONECANDO_BRIDGE_URL")
@@ -41,7 +43,7 @@ class LaunchConfTest {
             arg --link2symlink
             arg --sysvipc
             arg -0
-            arg --kernel-release=6.1.0-phonecando
+            arg --kernel-release=\Linux\debian\6.1.0-phonecando\#1 SMP PREEMPT Thu Jan 1 00:00:00 UTC 2026\aarch64\(none)\-1\
             arg --rootfs=$r/rootfs
             arg --bind=/dev
             arg --bind=/proc
@@ -57,6 +59,7 @@ class LaunchConfTest {
             arg --bind=$r/run/proc/uptime:/proc/uptime
             arg --bind=$r/run/proc/version:/proc/version
             arg --bind=$r/run/proc/vmstat:/proc/vmstat
+            arg --bind=$r/run/proc/sys/kernel/hostname:/proc/sys/kernel/hostname
             arg --bind=$r/home:/root
             arg --bind=$r/tmp:/tmp
             arg --bind=$r/home:$r/home
@@ -83,12 +86,12 @@ class LaunchConfTest {
             home /root
 
         """.trimIndent()
-        assertEquals(expected, LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), secrets))
+        assertEquals(expected, LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), uname, secrets))
     }
 
     @Test
     fun `only the LD_ prefix is unset unless the host names more, each name once`() {
-        fun unsets(guestUnset: List<String>) = LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), guestUnset)
+        fun unsets(guestUnset: List<String>) = LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), uname, guestUnset)
             .lines().filter { it.startsWith("unset ") }
         assertEquals(listOf("unset LD_*"), unsets(emptyList()))
         assertEquals(listOf("unset LD_*", "unset A", "unset B_*"), unsets(listOf("A", "LD_*", "B_*", "A")))
@@ -99,7 +102,7 @@ class LaunchConfTest {
 
     @Test
     fun `no bash maps bash to the shell`() {
-        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, Hosts.phone, alpine()))
+        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, Hosts.phone, alpine(), uname))
         assertEquals(listOf("bash" to "/bin/sh"), conf.maps)
         assertEquals("/bin/sh", conf.command("bash"))
         assertEquals("/bin/sh", conf.command("$lib/libphonecando_launch.so"))
@@ -110,7 +113,7 @@ class LaunchConfTest {
     @Test
     fun `no sh maps sh to the shell too`() {
         val ashOnly = alpine().copy(os = alpine().os.copy(shell = "/bin/ash"), hasSh = false)
-        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, Hosts.phone, ashOnly))
+        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, Hosts.phone, ashOnly, uname))
         assertEquals(listOf("bash" to "/bin/ash", "sh" to "/bin/ash"), conf.maps)
     }
 
@@ -120,6 +123,7 @@ class LaunchConfTest {
             LaunchConf.build(
                 Hosts.phoneLayout, Hosts.phone,
                 debian(config("PATH=/usr/local/bin:/usr/bin:/bin", "LANG=en_US.UTF-8", "NODE_VERSION=22.11.0", "LD_PRELOAD=/x.so")),
+                uname,
             ),
         )
         assertTrue("PATH=/usr/local/bin:/usr/bin:/bin" in conf.sets)
@@ -131,7 +135,7 @@ class LaunchConfTest {
 
     @Test
     fun `parsed by the launcher rules, the plan keeps host paths and drops secrets`() {
-        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), secrets))
+        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(), uname, secrets))
         assertEquals("$lib/libproot.so", conf.args.first())
         assertEquals("$alt/home/projects/app", conf.cwd("$alt/home/projects/app"))
         assertEquals("$r/tmp", conf.cwd("$r/tmp"))
@@ -159,19 +163,20 @@ class LaunchConfTest {
     @Test
     fun `a single data-dir spelling binds and lists once`() {
         val host = Hosts.phone.copy(dataDirSpellings = listOf("/data/user/0/com.phonecando.app"))
-        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, host, debian()))
+        val conf = ConfParser.parse(LaunchConf.build(Hosts.phoneLayout, host, debian(), uname))
         assertEquals(listOf("$r/home", "$r/tmp"), conf.same)
     }
 
     @Test
     fun `every value is newline-checked`() {
         val badLayout = com.phonecando.lre.api.ImageLayout(java.io.File("/data/user/0/x/images/a\nb"))
-        assertFailsWith<LreException.UnsafeEntry> { LaunchConf.build(badLayout, Hosts.phone, debian()) }
+        assertFailsWith<LreException.UnsafeEntry> { LaunchConf.build(badLayout, Hosts.phone, debian(), uname) }
         assertFailsWith<LreException.UnsafeEntry> {
-            LaunchConf.build(Hosts.phoneLayout, Hosts.phone.copy(libDir = "/data/app/lib\n/arm64"), debian())
+            LaunchConf.build(Hosts.phoneLayout, Hosts.phone.copy(libDir = "/data/app/lib\n/arm64"), debian(), uname)
         }
         assertFailsWith<LreException.UnsafeEntry> {
-            LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian().copy(os = debian().os.copy(shell = "/bin/ba\rsh")))
+            val badShell = debian().copy(os = debian().os.copy(shell = "/bin/ba\rsh"))
+            LaunchConf.build(Hosts.phoneLayout, Hosts.phone, badShell, uname)
         }
         assertFailsWith<LreException.UnsafeEntry> { Directive.SetEnv("K", "a\nb").line() }
         assertFailsWith<LreException.UnsafeEntry> { Directive.Arg("x\u0000").line() }
@@ -184,21 +189,21 @@ class LaunchConfTest {
     @Test
     fun `a relative lib dir or a colon in a bind path is refused`() {
         assertFailsWith<LreException.UnsafeEntry> {
-            LaunchConf.build(Hosts.phoneLayout, Hosts.phone.copy(libDir = "lib/arm64"), debian())
+            LaunchConf.build(Hosts.phoneLayout, Hosts.phone.copy(libDir = "lib/arm64"), debian(), uname)
         }
         val colon = com.phonecando.lre.api.ImageLayout(java.io.File("/data/user/0/x/images/a:b"))
-        assertFailsWith<LreException.UnsafeEntry> { LaunchConf.build(colon, Hosts.phone, debian()) }
+        assertFailsWith<LreException.UnsafeEntry> { LaunchConf.build(colon, Hosts.phone, debian(), uname) }
     }
 
     @Test
     fun `the launcher's size limits hold`() {
         val many = (1..LaunchConf.MAX_LINES).map { "V$it=x" }
         assertFailsWith<LreException.TooLarge> {
-            LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(config(*many.toTypedArray())))
+            LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(config(*many.toTypedArray())), uname)
         }
         val huge = "BIG=" + "x".repeat(LaunchConf.MAX_BYTES)
         assertFailsWith<LreException.TooLarge> {
-            LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(config(huge)))
+            LaunchConf.build(Hosts.phoneLayout, Hosts.phone, debian(config(huge)), uname)
         }
     }
 }

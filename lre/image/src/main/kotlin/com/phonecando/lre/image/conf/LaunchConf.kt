@@ -6,14 +6,17 @@ import com.phonecando.lre.api.LreException
 import com.phonecando.lre.api.PayloadNames
 import com.phonecando.lre.image.detect.Detection
 import com.phonecando.lre.image.proc.FakeProc
+import com.phonecando.lre.image.proc.Uname
 import java.io.File
 
 /**
  * Builds `run/launch.conf`, how our launcher starts proot for one image
  * (contract: lre/launcher/src/conf.h). Pure: paths in, text out.
  *
- * - proot flags are proot-distro's proven set; binds give the guest /dev,
- *   /proc, /sys, the fd links, a per-image /dev/shm and our fake /proc files.
+ * - proot flags are proot-distro's proven set, plus what uname says
+ *   ([Uname]: the image's hostname, our kernel release); binds give the
+ *   guest /dev, /proc, /sys, the fd links, a per-image /dev/shm and our fake
+ *   /proc files.
  * - home/ and tmp/ are bound at `/root` and `/tmp` and at their own host
  *   path under every data-dir spelling, each listed as a `same` path: the
  *   engine's file tools see host paths and its commands must see the same
@@ -45,10 +48,7 @@ internal object LaunchConf {
     // returns when it ends while proot traces the rest (launcher.md). Stopping
     // the engine reaps the agent's processes by PHONECANDO_AGENT, and a reset
     // or delete reaps the image's by PHONECANDO_IMAGE (both kept in the guest).
-    private val PROOT_FLAGS = listOf(
-        "-L", "--link2symlink", "--sysvipc", "-0",
-        "--kernel-release=${FakeProc.KERNEL_RELEASE}",
-    )
+    private val PROOT_FLAGS = listOf("-L", "--link2symlink", "--sysvipc", "-0")
 
     private val DEVICE_BINDS = listOf(
         "/dev", "/proc", "/sys",
@@ -64,13 +64,15 @@ internal object LaunchConf {
         layout: ImageLayout,
         host: HostEnv,
         detection: Detection,
+        uname: Uname,
         guestUnset: List<String> = emptyList(),
-    ): String = render(directives(layout, host, detection, guestUnset))
+    ): String = render(directives(layout, host, detection, uname, guestUnset))
 
     fun directives(
         layout: ImageLayout,
         host: HostEnv,
         detection: Detection,
+        uname: Uname,
         guestUnset: List<String> = emptyList(),
     ): List<Directive> {
         val lib = host.libDir.trimEnd('/')
@@ -83,6 +85,7 @@ internal object LaunchConf {
         val args = buildList {
             add("$lib/${PayloadNames.PROOT}")
             addAll(PROOT_FLAGS)
+            add(uname.prootArg())
             add("--rootfs=${layout.rootfs.path}")
             DEVICE_BINDS.forEach { add("--bind=$it") }
             add(bind(layout.shm.path, "/dev/shm"))

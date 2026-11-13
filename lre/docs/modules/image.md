@@ -50,7 +50,7 @@ missing one.
 | `space` | `setup/SpaceCheck.kt` | Free space ≥ 2.5x the compressed layers (a layer of unknown size counts 0). |
 | `unpack` | `setup/TarUnpacker.kt` | Clears `rootfs/` and applies every layer. |
 | `detect` | `detect/Detector.kt` | os-release, package family, shell; recorded in `run/image.properties` (`record/`). |
-| `fixups` | `fixup/Fixups.kt` | `resolv.conf` (the phone's DNS, else 1.1.1.1 and 8.8.8.8), `hosts`, `hostname` (`phonecando`), the family's proot fix, `/bin/sh` for a busybox-only image. |
+| `fixups` | `fixup/Fixups.kt` | `resolv.conf` (the phone's DNS, else 1.1.1.1 and 8.8.8.8), `hosts` and `hostname` (the OS's name, `fixup/Hostname.kt`), the family's proot fix, `/bin/sh` for a busybox-only image. |
 | `shims` | `shim/Shims.kt` | One symlink in `shims/` per executable on the guest PATH, plus `bash` and `sh`, each pointing at the launcher. |
 | `seed` | `setup/Seeder.kt` | The dirs, fake `/proc`, `engine.env`, `launch.conf`, `os-note.md`. |
 
@@ -98,6 +98,19 @@ Pure builders, paths in and text out:
 - `proc/FakeProc.kt` — `run/proc/{loadavg,stat,uptime,version,vmstat}`:
   static stand-ins for what Android's sepolicy hides, listing the host's
   online CPU ids (`proc/CpuIds.kt`); kernel release `6.1.0-phonecando`.
+  `run/proc/sys/kernel/hostname` holds the image's hostname (the phone's
+  says `localhost`).
+- `proc/Uname.kt` — what `uname` says, through proot's `--kernel-release`
+  in its full form (`\sysname\nodename\release\version\machine\domainname\hwcap\`):
+  the image's hostname, our kernel release and version, the host's machine
+  (the short form keeps the phone's nodename, `localhost`).
+- `fixup/Hostname.kt` — the hostname: the os-release ID as one label
+  (`debian`, `alpine`; `linux` when nothing is left), unless
+  `/etc/hostname` holds another valid name than the one we last wrote
+  (`run/hostname`), which is then kept. `fixup/HostnameFiles.kt` applies
+  it before every start: our name goes into `/etc/hostname`, `/etc/hosts`
+  and `run/hostname`; a hand-written one is left as it is. A reset brings
+  back the OS's name.
 - `conf/SocketBudget.kt` — flags an image whose `home/` or `tmp/`, under
   any spelling, leaves fewer than 40 of the 108 `sun_path` bytes for socket
   names.

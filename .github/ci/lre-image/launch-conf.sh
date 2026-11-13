@@ -6,10 +6,12 @@
 # Left out: the fake /proc files (only Android hides the real ones) and
 # more than one data-dir spelling.
 #
-#   proot      -L --link2symlink --sysvipc -0 --kernel-release (no --kill-on-exit:
+#   proot      -L --link2symlink --sysvipc -0 (no --kill-on-exit:
 #              background processes outlive their command, as on the phone;
 #              the launcher adds --status-fd itself, so the command returns
-#              when it ends)
+#              when it ends), --kernel-release in its full form: hostname
+#              debian (the Default image's OS), our kernel release and
+#              version, this host's machine
 #   binds      rootfs at /, host /dev /proc /sys, /dev/random and the fd
 #              links, run/shm at /dev/shm; home/ at /root and tmp/ at /tmp,
 #              each also at its own path; run/l2s at its own path
@@ -49,7 +51,7 @@ arg -L
 arg --link2symlink
 arg --sysvipc
 arg -0
-arg --kernel-release=6.1.0-phonecando
+arg --kernel-release=\\Linux\\debian\\6.1.0-phonecando\\#1 SMP PREEMPT Thu Jan 1 00:00:00 UTC 2026\\$(uname -m)\\(none)\\-1\\
 arg --rootfs=$IMG/rootfs
 arg --bind=/dev
 arg --bind=/proc

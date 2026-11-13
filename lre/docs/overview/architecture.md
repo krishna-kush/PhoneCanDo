@@ -81,7 +81,8 @@ images/<id>/
     image.properties what setup detected, and the image config
     reinstall.txt    packages installed by hand before the last reset; optional
     reset-swap       only while a reset swaps rootfs/
-    proc/            fake loadavg, stat, uptime, version, vmstat
+    hostname         the hostname we last wrote into /etc/hostname
+    proc/            fake loadavg, stat, uptime, version, vmstat, sys/kernel/hostname
     shm/             bound at /dev/shm
     proot-tmp/       PROOT_TMP_DIR
     l2s/             PROOT_L2S_DIR: link2symlink's files
@@ -134,7 +135,10 @@ engine  (env: run/engine.env)
   at it. `map` lines substitute the image's shell for a missing `bash` or
   `sh`. It forks proot once and stands in for the command (below).
 - proot flags (`LaunchConf.PROOT_FLAGS`): `-L`, `--link2symlink`,
-  `--sysvipc`, `-0` (fake root) and `--kernel-release=6.1.0-phonecando`.
+  `--sysvipc`, `-0` (fake root), then `--kernel-release` in its full form
+  (`proc/Uname.kt`): `uname` says the image's hostname (the OS's name,
+  `debian`, unless set by hand in `/etc/hostname`), kernel
+  `6.1.0-phonecando` and the host's machine.
   No `--kill-on-exit` (see below). The launcher adds `--status-fd` and, on
   the terminal tab's PTY, `--setsid` (our patch, `../modules/proot.md`).
 - Binds: the host's `/dev`, `/proc`, `/sys`, `/dev/urandom` at

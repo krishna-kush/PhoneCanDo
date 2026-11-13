@@ -14,6 +14,7 @@ import com.phonecando.lre.image.family.ManualQuery
 import com.phonecando.lre.image.family.PackageLists
 import com.phonecando.lre.image.files.TextFiles
 import com.phonecando.lre.image.fixup.Fixups
+import com.phonecando.lre.image.fixup.HostnameFiles
 import com.phonecando.lre.image.guest.GuestFs
 import com.phonecando.lre.image.record.ImageRecord
 import com.phonecando.lre.image.record.RecordStore
@@ -84,7 +85,7 @@ class ImageReset(
         RecordStore.save(layout, ImageRecord.Linux(detection))
         Seeder.linuxDirs(layout)
         Shims().refresh(layout, host, detection.guestPath)
-        Seeder.linuxFiles(layout, host, detection)
+        Seeder.linuxFiles(layout, host, detection, HostnameFiles.refresh(layout, detection.os))
 
         val reinstall = if (listed != null && family != null) {
             userOnly(layout, family.manualQuery, listed) { installLine(family, it) }

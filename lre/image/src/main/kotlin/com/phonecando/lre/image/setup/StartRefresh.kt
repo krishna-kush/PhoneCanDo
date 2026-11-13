@@ -6,6 +6,7 @@ import com.phonecando.lre.api.LreException
 import com.phonecando.lre.image.detect.Detection
 import com.phonecando.lre.image.detect.Detector
 import com.phonecando.lre.image.fixup.Fixups
+import com.phonecando.lre.image.fixup.HostnameFiles
 import com.phonecando.lre.image.record.ImageRecord
 import com.phonecando.lre.image.record.RecordStore
 import com.phonecando.lre.image.reset.RootfsSwap
@@ -17,9 +18,10 @@ internal object StartRefresh {
      * Before every engine start: finish a reset a kill cut short, detect the
      * image again (the user or the agent may have installed bash or another
      * package manager since; cheap file checks, fixups redone only on a
-     * change), then rewrite what depends on the phone: DNS, shims and
-     * launch.conf (the APK's lib dir moves on every update; it unsets
-     * [guestUnset] too), engine.env, fake /proc.
+     * change), keep the hostname ([HostnameFiles]: the OS's name unless
+     * someone wrote their own), then rewrite what depends on the phone: DNS,
+     * shims and launch.conf (the APK's lib dir moves on every update; it
+     * unsets [guestUnset] too), engine.env, fake /proc.
      */
     fun beforeStart(layout: ImageLayout, host: HostEnv, guestUnset: List<String>) {
         if (RootfsSwap().recover(layout)) redetect(layout, host)
@@ -31,14 +33,15 @@ internal object StartRefresh {
             }
             is ImageRecord.Linux -> {
                 val detection = Detector().detect(layout.rootfs, record.detection.config)
+                val hostname = HostnameFiles.refresh(layout, detection.os)
                 if (detection != record.detection) {
-                    Fixups().apply(layout.rootfs, detection, host)
+                    Fixups().apply(layout.rootfs, detection, host, hostname)
                     RecordStore.save(layout, ImageRecord.Linux(detection))
                 }
                 Fixups().writeResolvConf(layout.rootfs, host)
                 Seeder.linuxDirs(layout)
                 Shims().refresh(layout, host, detection.guestPath)
-                Seeder.linuxFiles(layout, host, detection, guestUnset)
+                Seeder.linuxFiles(layout, host, detection, hostname, guestUnset)
             }
         }
     }

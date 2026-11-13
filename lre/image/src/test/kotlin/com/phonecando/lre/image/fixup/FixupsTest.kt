@@ -50,9 +50,17 @@ class FixupsTest {
         assertEquals(first, snapshot())
 
         assertEquals(NetFiles.FALLBACK_DNS.joinToString("") { "nameserver $it\n" }, first["etc/resolv.conf"])
-        assertTrue(first.getValue("etc/hosts").startsWith("127.0.0.1 localhost phonecando\n"))
-        assertEquals("phonecando\n", first["etc/hostname"])
+        assertTrue(first.getValue("etc/hosts").startsWith("127.0.0.1 localhost debian\n"))
+        assertEquals("debian\n", first["etc/hostname"])
         assertEquals(ProotFixText.APT_CONF, first["etc/apt/apt.conf.d/${ProotFixText.APT_CONF_NAME}"])
+    }
+
+    @Test
+    fun `a start's hostname goes into hostname and hosts`() {
+        Distros.debian(rootfs)
+        Fixups().apply(rootfs, Detector().detect(rootfs, null), Hosts.local(dir), hostname = "box")
+        assertEquals("box\n", File(rootfs, "etc/hostname").readText())
+        assertTrue(File(rootfs, "etc/hosts").readText().startsWith("127.0.0.1 localhost box\n"))
     }
 
     @Test

@@ -10,7 +10,9 @@ These are not scheduled work unless they are also listed in
   services by hand (`run/os-note.md` tells the agent). `uname -r` says
   `6.1.0-phonecando`, and `/proc/loadavg`, `stat`, `uptime`, `version` and
   `vmstat` are static stand-ins for what Android's sepolicy hides
-  (`FakeProc`); only the CPU ids are the host's.
+  (`FakeProc`); only the CPU ids are the host's. The hostname is the OS's
+  name (`debian`); `hostname <name>` lasts one session (each terminal is
+  its own proot), so to keep one, write it into `/etc/hostname`.
 - Not a security boundary inside the app: guest commands are processes of
   the app's own uid, root is proot's fake root (`-0`), and the host's
   `/dev`, `/proc` and `/sys` are bound in. Android's per-app sandbox is the

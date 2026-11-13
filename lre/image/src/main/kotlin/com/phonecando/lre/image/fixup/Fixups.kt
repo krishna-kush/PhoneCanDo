@@ -15,17 +15,17 @@ import java.nio.file.Paths
 
 /**
  * Makes an unpacked base work under proot on a phone: DNS, hosts and
- * hostname, the package manager's proot fix and, for a busybox-only image,
- * a `/bin/sh` link. Every write lands inside the rootfs (guest paths are
- * resolved guest-side) and replaces a symlink rather than writing through
- * it. Idempotent.
+ * hostname (the OS's name, see [Hostname]), the package manager's proot fix
+ * and, for a busybox-only image, a `/bin/sh` link. Every write lands inside
+ * the rootfs (guest paths are resolved guest-side) and replaces a symlink
+ * rather than writing through it. Idempotent.
  */
 internal class Fixups {
-    fun apply(rootfs: File, detection: Detection, host: HostEnv) {
+    /** [hostname]: the OS's name for a fresh rootfs; a start passes the one the image keeps. */
+    fun apply(rootfs: File, detection: Detection, host: HostEnv, hostname: String = Hostname.forOs(detection.os)) {
         val fs = GuestFs(rootfs)
         writeResolvConf(fs, host)
-        writeEtc(fs, "hosts", NetFiles.hosts())
-        writeEtc(fs, "hostname", NetFiles.hostname())
+        writeNames(fs, hostname)
         detection.os.family?.let { Families.of(it).prootFix }?.let { applyProotFix(fs, it) }
         detection.busyboxSh?.let { linkBinSh(fs, it) }
     }
@@ -35,6 +35,14 @@ internal class Fixups {
 
     private fun writeResolvConf(fs: GuestFs, host: HostEnv) {
         writeEtc(fs, "resolv.conf", NetFiles.resolvConf(host.dnsServers))
+    }
+
+    /** Only /etc/hostname and /etc/hosts, for [hostname]. */
+    fun writeNames(rootfs: File, hostname: String) = writeNames(GuestFs(rootfs), hostname)
+
+    private fun writeNames(fs: GuestFs, hostname: String) {
+        writeEtc(fs, "hosts", NetFiles.hosts(hostname))
+        writeEtc(fs, "hostname", NetFiles.hostname(hostname))
     }
 
     private fun writeEtc(fs: GuestFs, name: String, text: String) {

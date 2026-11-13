@@ -9,6 +9,7 @@ import com.phonecando.lre.image.detect.Detection
 import com.phonecando.lre.image.files.TextFiles
 import com.phonecando.lre.image.proc.CpuIds
 import com.phonecando.lre.image.proc.FakeProc
+import com.phonecando.lre.image.proc.Uname
 import java.io.File
 import java.nio.file.Files
 
@@ -24,17 +25,22 @@ internal object Seeder {
         listOf(layout.home, layout.tmp, layout.logs, layout.run).forEach { Files.createDirectories(it.toPath()) }
     }
 
-    /** Fake /proc, engine.env, launch.conf (unsetting [guestUnset] too) and os-note.md for a Linux image. */
+    /**
+     * Fake /proc, engine.env, launch.conf (unsetting [guestUnset] too) and
+     * os-note.md for a Linux image whose guest is called [hostname].
+     */
     fun linuxFiles(
         layout: ImageLayout,
         host: HostEnv,
         detection: Detection,
+        hostname: String,
         guestUnset: List<String> = emptyList(),
         cpuIds: List<Int> = CpuIds.host(),
+        machine: String = Uname.hostMachine(),
     ) {
-        FakeProc.files(cpuIds).forEach { (name, text) -> TextFiles.write(File(layout.fakeProc, name), text) }
+        FakeProc.files(cpuIds, hostname).forEach { (name, text) -> TextFiles.write(File(layout.fakeProc, name), text) }
         TextFiles.write(layout.engineEnv, EngineEnv.linux(layout, host))
-        TextFiles.write(layout.launchConf, LaunchConf.build(layout, host, detection, guestUnset))
+        TextFiles.write(layout.launchConf, LaunchConf.build(layout, host, detection, Uname(hostname, machine), guestUnset))
         TextFiles.write(layout.osNote, OsNote.text(detection.os))
     }
 

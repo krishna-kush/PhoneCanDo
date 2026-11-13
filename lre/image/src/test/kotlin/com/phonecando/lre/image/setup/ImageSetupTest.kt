@@ -71,7 +71,41 @@ class ImageSetupTest {
             Paths.get(Hosts.LIB, PayloadNames.LAUNCHER),
             Files.readSymbolicLink(File(layout.shims, "git").toPath()),
         )
-        assertEquals("phonecando\n", File(layout.rootfs, "etc/hostname").readText())
+        assertEquals("debian\n", File(layout.rootfs, "etc/hostname").readText())
+    }
+
+    private fun nodename(): String =
+        ConfParser.parse(layout.launchConf.readText()).args.first { it.startsWith("--kernel-release=") }.split('\\')[2]
+
+    @Test
+    fun `the hostname is the OS's name until someone writes their own`() {
+        ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.debian(it) }, host, big)
+        assertEquals("debian", nodename())
+        assertEquals("debian\n", File(layout.fakeProc, "sys/kernel/hostname").readText())
+        assertEquals("debian\n", layout.writtenHostname.readText())
+
+        File(layout.rootfs, "etc/hostname").writeText("box\n")
+        ImageSetup.refreshForStart(layout, host)
+        assertEquals("box", nodename())
+        assertEquals("box\n", File(layout.fakeProc, "sys/kernel/hostname").readText())
+        assertEquals("box\n", File(layout.rootfs, "etc/hostname").readText())
+
+        // With no record of ours, what is there was never anyone's choice.
+        layout.writtenHostname.delete()
+        ImageSetup.refreshForStart(layout, host)
+        assertEquals("debian", nodename())
+        assertTrue(File(layout.rootfs, "etc/hosts").readText().startsWith("127.0.0.1 localhost debian\n"))
+    }
+
+    @Test
+    fun `fixups redone at a start keep a hand-written hostname`() {
+        ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.alpine(it) }, host, big)
+        File(layout.rootfs, "etc/hostname").writeText("box\n")
+        Tree(layout.rootfs).exe("bin/bash") // a detection change: fixups run again
+        ImageSetup.refreshForStart(layout, host)
+        assertEquals("box\n", File(layout.rootfs, "etc/hostname").readText())
+        assertTrue(File(layout.rootfs, "etc/hosts").readText().startsWith("127.0.0.1 localhost box\n"))
+        assertEquals("box", nodename())
     }
 
     @Test

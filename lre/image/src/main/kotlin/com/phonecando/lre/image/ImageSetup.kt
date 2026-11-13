@@ -8,6 +8,7 @@ import com.phonecando.lre.image.conf.SocketBudget
 import com.phonecando.lre.image.delete.TreeDeleter
 import com.phonecando.lre.image.detect.Detector
 import com.phonecando.lre.image.fixup.Fixups
+import com.phonecando.lre.image.fixup.HostnameFiles
 import com.phonecando.lre.image.record.ImageRecord
 import com.phonecando.lre.image.record.RecordStore
 import com.phonecando.lre.image.setup.Seeder
@@ -92,8 +93,9 @@ class ImageSetup internal constructor(
             SetupStep.FIXUPS -> Fixups().apply(layout.rootfs, StartRefresh.recorded(layout), host)
             SetupStep.SHIMS -> Shims().refresh(layout, host, StartRefresh.recorded(layout).guestPath)
             SetupStep.SEED -> {
+                val detection = StartRefresh.recorded(layout)
                 Seeder.linuxDirs(layout)
-                Seeder.linuxFiles(layout, host, StartRefresh.recorded(layout))
+                Seeder.linuxFiles(layout, host, detection, HostnameFiles.refresh(layout, detection.os))
             }
         }
     }
@@ -116,7 +118,9 @@ class ImageSetup internal constructor(
         /**
          * Before every engine start: finishes a reset a kill cut short and
          * rewrites what depends on the phone (DNS, shims, launch.conf,
-         * engine.env, fake /proc). Cheap when nothing changed.
+         * engine.env, fake /proc) and the hostname (the OS's name unless
+         * someone wrote their own into /etc/hostname). Cheap when nothing
+         * changed.
          *
          * [guestUnset] names the variables (a trailing `*` for a prefix) no
          * guest command may inherit, on top of `LD_*`: the secrets the host's

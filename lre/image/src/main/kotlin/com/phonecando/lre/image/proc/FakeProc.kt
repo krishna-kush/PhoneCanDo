@@ -6,14 +6,18 @@ package com.phonecando.lre.image.proc
  * work. Our own numbers: one quiet hour on an idle phone. stat and uptime
  * agree with each other (uptime's idle field is the sum of every CPU's idle
  * ticks) and list the host's real CPU ids, so they match the /proc/cpuinfo
- * the guest reads beside them. Pure.
+ * the guest reads beside them. sys/kernel/hostname says the image's
+ * hostname, as uname does (the phone's says `localhost`). Pure.
  */
 internal object FakeProc {
     /** The kernel release the guest sees in `uname -r` and /proc/version. */
     const val KERNEL_RELEASE = "6.1.0-phonecando"
 
+    /** The kernel version the guest sees in `uname -v` and /proc/version. */
+    const val KERNEL_VERSION = "#1 SMP PREEMPT Thu Jan 1 00:00:00 UTC 2026"
+
     /** File names under run/proc/, each bound at /proc/<name>. */
-    val NAMES = listOf("loadavg", "stat", "uptime", "version", "vmstat")
+    val NAMES = listOf("loadavg", "stat", "uptime", "version", "vmstat", "sys/kernel/hostname")
 
     private const val USER_HZ = 100
     private const val UPTIME_SECONDS = 3600
@@ -31,13 +35,14 @@ internal object FakeProc {
     )
     private const val IDLE = 3
 
-    /** Every fake file by name, for the CPUs [cpuIds] (cpu0 alone when empty). */
-    fun files(cpuIds: List<Int>): Map<String, String> = mapOf(
+    /** Every fake file by name, for the CPUs [cpuIds] (cpu0 alone when empty) and [hostname]. */
+    fun files(cpuIds: List<Int>, hostname: String): Map<String, String> = mapOf(
         "loadavg" to "0.08 0.05 0.01 1/128 512\n",
         "stat" to stat(cpuIds),
         "uptime" to uptime(cpuIds),
         "version" to VERSION,
         "vmstat" to VMSTAT,
+        "sys/kernel/hostname" to "$hostname\n",
     )
 
     fun stat(cpuIds: List<Int>): String {
@@ -60,7 +65,7 @@ internal object FakeProc {
         cpuIds.ifEmpty { listOf(0) }.mapIndexed { i, id -> id to CPU_ROWS[i % CPU_ROWS.size] }
 
     private const val VERSION = "Linux version $KERNEL_RELEASE (phonecando@phonecando) " +
-        "(clang version 18.0.0, LLD 18.0.0) #1 SMP PREEMPT Thu Jan 1 00:00:00 UTC 2026\n"
+        "(clang version 18.0.0, LLD 18.0.0) $KERNEL_VERSION\n"
 
     /** softirq: the total, then HI TIMER NET_TX NET_RX BLOCK IRQ_POLL TASKLET SCHED HRTIMER RCU. */
     private const val STAT_TAIL = "intr 412093\n" +

@@ -41,7 +41,13 @@ class ImageLayout(val root: File) {
     val engineEnv: File get() = File(run, "engine.env")
     val osNote: File get() = File(run, "os-note.md")
 
-    /** Fake /proc entries Android won't let apps read (loadavg, stat, uptime, version, vmstat). */
+    /** The hostname we last wrote into the guest's /etc/hostname: another name there is someone's own. */
+    val writtenHostname: File get() = File(run, "hostname")
+
+    /**
+     * Fake /proc entries: what Android won't let apps read (loadavg, stat,
+     * uptime, version, vmstat) and the guest's own sys/kernel/hostname.
+     */
     val fakeProc: File get() = File(run, "proc")
 
     /** Per-image dir bound at /dev/shm. */
