@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import { TamaguiProvider } from 'tamagui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { initialWindowMetrics, SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import HomeHeader from './src/ui/chat/HomeHeader';
 import HomeScreen from './src/ui/chat/HomeScreen';
@@ -18,6 +18,7 @@ import { useEngineTerminalTheme } from './src/ui/terminal/theme/useEngineTermina
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
+import SafeRoot from './src/ui/common/SafeRoot';
 import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
@@ -163,17 +164,13 @@ export default function App() {
             header drew under the status bar until they arrived. */}
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <KeyboardTracker />
-          <SafeAreaView
-            style={{ flex: 1, backgroundColor: t.panel }}
-            edges={['top', 'bottom', 'left', 'right']}
-            onLayout={hideSplash}
-          >
+          <SafeRoot backgroundColor={t.panel} onLayout={hideSplash}>
             {!hasAgents ? (
               // No agent yet: setup creates the first one, then Home shows.
               <FirstLaunchScreen />
             ) : (
               // One box inside the safe area: the pages and the drawer are
-              // absolute layers, which the SafeAreaView's padding would not hold.
+              // absolute layers, which SafeRoot's padding would not hold.
               <View style={{ flex: 1 }}>
                 {/* Home IS the active agent's own UI: its pair-loaded web UI
                     (projects and sessions live there, no app-side project/chat
@@ -194,7 +191,7 @@ export default function App() {
                 <MemoryGuard />
               </View>
             )}
-          </SafeAreaView>
+          </SafeRoot>
           <UnlockDialog />
           <AccessibilityDialog />
           <OpenUrlDialog />
