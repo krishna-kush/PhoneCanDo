@@ -1,0 +1,13 @@
+{
+  "name": "phonecando-account",
+  "version": "0.1.0",
+  "description": "PhoneCanDo account: optional Sign in with Google (Credential Manager) and the session token, sealed in the Keystore.",
+  "main": "src/PhoneCanDoAccountModule.ts",
+  "types": "src/PhoneCanDoAccountModule.ts",
+  "license": "SEE LICENSE IN ../../../LICENSE",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

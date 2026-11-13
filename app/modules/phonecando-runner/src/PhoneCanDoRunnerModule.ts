@@ -17,6 +17,7 @@ import type {
   NativePromptReading,
   NativeRunLimits,
   NativeScreenQueue,
+  NativeShareResult,
   NativeTerminalAttach,
   NativeTerminalTheme,
   NativeUserKind,
@@ -48,6 +49,7 @@ export type {
   NativePromptReading,
   NativeRunLimits,
   NativeScreenQueue,
+  NativeShareResult,
   NativeTerminalAttach,
   NativeTerminalTheme,
   NativeUserKind,
@@ -128,6 +130,10 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   deleteUserKind(id: string): NativeKindDeleted;
   copyText(text: string): boolean;
   clipboardText(): string | null;
+  /** Android's share sheet; `chosen: false` when it closed without a pick. `app` (the picked app's label) stays on the phone. */
+  shareChooser(text: string, title: string): Promise<NativeShareResult>;
+  /** When this app was first installed on the phone (ms): kept across updates, new after a reinstall. */
+  firstInstallTime(): number;
   pairWebUi(agentId: string): Promise<string>;
   clientRecipe(agentId: string, projectDir: string, sessionId: string | null): NativeClientRecipe;
   isEngineIdle(agentId: string): boolean;

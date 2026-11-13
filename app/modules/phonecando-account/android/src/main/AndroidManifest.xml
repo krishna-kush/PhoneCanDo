@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Our accounts API. -->
+  <uses-permission android:name="android.permission.INTERNET" />
+  <!-- Android 11+ package visibility: whether Google Play services is on
+       the phone (PlayServices.kt), so Settings can hide Sign in with Google
+       where it cannot work. -->
+  <queries>
+    <package android:name="com.google.android.gms" />
+  </queries>
+</manifest>

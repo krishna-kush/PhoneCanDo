@@ -1,0 +1,34 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.phonecando.account'
+version = '0.1.0'
+
+expoModule {
+  canBePublished false
+}
+
+android {
+  namespace "com.phonecando.account"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // Sign in with Google through Android's Credential Manager: the button's
+  // account sheet, served by Google Play services on the phone. googleid is
+  // Google's own (closed-source) library for the Google ID token credential.
+  implementation 'androidx.credentials:credentials:1.6.0'
+  implementation 'androidx.credentials:credentials-play-services-auth:1.6.0'
+  implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+
+  // JVM tests of the pure parts (error mapping, answers, allowed hosts):
+  // ./gradlew :phonecando-account:testDebugUnitTest
+  testImplementation 'junit:junit:4.13.2'
+  // android.jar's org.json is a stub on the JVM; the answers are parsed with it.
+  testImplementation 'org.json:json:20250517'
+}

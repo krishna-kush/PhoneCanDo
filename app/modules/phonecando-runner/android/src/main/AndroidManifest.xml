@@ -12,6 +12,12 @@
     <intent>
       <action android:name="android.settings.SHOW_RESTRICTED_SETTING_DIALOG" />
     </intent>
+    <!-- Apps that take shared text: the name of the app a share went
+         through, shown on the Tell a friend page (share/ShareChooser.kt). -->
+    <intent>
+      <action android:name="android.intent.action.SEND" />
+      <data android:mimeType="text/plain" />
+    </intent>
   </queries>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />

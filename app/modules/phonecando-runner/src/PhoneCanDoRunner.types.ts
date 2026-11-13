@@ -213,3 +213,6 @@ export type NativeScreenQueue = {
   reserved: boolean;
   waiting: { agentId: string; name: string }[];
 };
+
+/** The share sheet closed: whether an app was picked, and that app's label (kept on the phone, never sent). */
+export type NativeShareResult = { chosen: boolean; app: string | null };

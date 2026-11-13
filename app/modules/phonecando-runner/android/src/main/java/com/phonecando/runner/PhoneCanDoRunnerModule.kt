@@ -16,6 +16,7 @@ import com.phonecando.runner.api.messageFunctions
 import com.phonecando.runner.api.notifyFunctions
 import com.phonecando.runner.api.phoneControlFunctions
 import com.phonecando.runner.api.runLimitFunctions
+import com.phonecando.runner.api.shareFunctions
 import com.phonecando.runner.api.userKindFunctions
 import com.phonecando.runner.bridge.BridgePrompts
 import com.phonecando.runner.controllock.ControlLocks
@@ -133,6 +134,7 @@ class PhoneCanDoRunnerModule : Module() {
     userKindFunctions { context() }
     notifyFunctions { context() }
     clipboardFunctions { context() }
+    shareFunctions({ context() }) { appContext.currentActivity }
     phoneControlFunctions { context() }
     runLimitFunctions { context() }
     memoryFunctions { context() }
