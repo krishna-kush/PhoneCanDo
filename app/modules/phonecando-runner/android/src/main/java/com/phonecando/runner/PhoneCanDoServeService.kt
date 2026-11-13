@@ -56,7 +56,11 @@ import java.util.concurrent.RejectedExecutionException
 // later, and the idle engines with it (onDestroy), as the work watch's
 // idle stop would; the app starts its agent again when it comes back. A
 // run going, a job (also one just started: WorkWatch's starting) or Keep
-// running all list, so they hold the process.
+// running all list, so they hold the process. So does a start that ended
+// with the app away (an alarm's), until its first run shows: away, Android
+// lets the service back into the foreground only in an exemption's window,
+// and a scheduled prompt comes seconds after the engine is ready
+// (awaitingRun).
 // Nothing restarts it: every command answers START_NOT_STICKY, and a
 // null-intent restart starts nothing (the app ensures its engines again
 // when it comes to the foreground).
@@ -75,6 +79,11 @@ class PhoneCanDoServeService : Service() {
 
   // Main thread only: the agents whose start runs, one entry per start.
   private val starting = ArrayList<String>()
+
+  // Main thread only: agents whose start ended with the app away, each
+  // until its first run shows or its epoch-ms deadline (RUN_WAIT_MS); they
+  // list as starting.
+  private val awaitingRun = HashMap<String, Long>()
 
   // Main thread only: startForeground took, and nothing left the foreground since.
   private var foreground = false
@@ -170,6 +179,7 @@ class PhoneCanDoServeService : Service() {
         main.post {
           starting.remove(agentId)
           requestId?.let(pendingRequests::remove)
+          if (result.isSuccess) awaitRun(agentId)
           render()
           stopIfIdle()
         }
@@ -179,6 +189,34 @@ class PhoneCanDoServeService : Service() {
       requestId?.let(pendingRequests::remove)
       EngineRequests.complete(requestId, failure("the engine service is stopping"))
     }
+  }
+
+  // A start that ended with the app away came from an alarm (a scheduled
+  // run, restart or wake): its run begins seconds later, when only the
+  // foreground still held lets it run. With the app in front nothing waits.
+  private fun awaitRun(agentId: String) {
+    if (AppForeground.isForeground(this)) return
+    awaitingRun[agentId] = System.currentTimeMillis() + RUN_WAIT_MS
+    main.postDelayed(renderAgain, RUN_WAIT_MS + 100)
+  }
+
+  private val renderAgain = Runnable {
+    render()
+    stopIfIdle()
+  }
+
+  // The agents still waiting for their first run, less those whose run
+  // shows (a chat or a work line), whose engine is gone or whose wait is
+  // up; none with the app in front, which may take the foreground back any
+  // time.
+  private fun awaited(chats: List<ChatBoard.Chat>, work: List<WorkLines.Line>, live: List<String>): Set<String> {
+    if (awaitingRun.isEmpty()) return emptySet()
+    if (AppForeground.isForeground(this)) awaitingRun.clear()
+    val now = System.currentTimeMillis()
+    awaitingRun.entries.removeAll { (id, until) ->
+      now >= until || id !in live || chats.any { it.agentId == id } || work.any { it.agentId == id }
+    }
+    return awaitingRun.keys
   }
 
   // The notification's Stop on an agent kept up: it and its jobs end, on
@@ -347,7 +385,7 @@ class PhoneCanDoServeService : Service() {
       agents.firstOrNull { it.imageId == image }?.name
     }
     val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read) }
-    val starts = starting.map { names[it] ?: it }.distinct()
+    val starts = (starting + awaited(chats, work, running)).map { names[it] ?: it }.distinct()
     return notification.build(chats, names, running, transfers, reading, linux, work, starts, ::stopIntent)
   }
 
@@ -373,6 +411,9 @@ class PhoneCanDoServeService : Service() {
     // How long the service stays once nothing runs (stopIfIdle), and in
     // the foreground once nothing happens with the app away (render).
     private const val LINGER_MS = 10_000L
+
+    // How long a start that ended with the app away waits for its first run (awaitingRun).
+    private const val RUN_WAIT_MS = 120_000L
 
     // The runner's own prefs file: the launch target waiting for the app
     // (notify/LaunchTargets), the notification-permission ask, the
