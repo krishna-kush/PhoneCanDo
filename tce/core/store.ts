@@ -18,8 +18,12 @@ import type {
   PagePoint,
   ReportRow,
   SessionRow,
+  ShareDailyRow,
+  ShareInstallRow,
+  ShareLinkRow,
   SiteDailyRow,
 } from './schema/rows.ts';
+import type { ShareLinkStats } from './schema/wire.ts';
 
 /** Everything one batch writes. Applied atomically: all of it or none. */
 export interface BatchWrite {
@@ -29,6 +33,10 @@ export interface BatchWrite {
   sessions: SessionRow[];
   events: EventRow[];
   errors: ErrorRow[];
+  /** Share links this device sent (absent: none); every row's device_id is the batch's device. */
+  shareLinks?: ShareLinkRow[];
+  /** At most one: the link this device's install came through (absent: none). */
+  shareInstalls?: ShareInstallRow[];
 }
 
 /** Rows newly inserted (events, errors) or inserted-or-merged (sessions). */
@@ -51,6 +59,9 @@ export interface Store {
    *   - the device row exists with a non-null verifier different from
    *     write.device.verifier (a null stored verifier is filled in);
    *   - any session_id in write.sessions already exists with another device_id.
+   * Share rows: share_links insert-or-ignore on code (the first device keeps
+   * it); share_installs insert-or-ignore on device_id, and not written when
+   * the code's share_links row (stored, or in this write) is the same device's.
    * May answer `unavailable` while the backend is near a hard storage limit.
    */
   applyBatch(write: BatchWrite): Promise<TceResult<BatchCounts>>;
@@ -90,6 +101,20 @@ export interface Store {
   writePagePoint(point: PagePoint): Promise<TceResult<void>>;
   /** `{ rollup: false }` writes only the analytics point: a download not counted in site_daily (download op). */
   writeDownloadPoint(point: DownloadPoint, options?: PointOptions): Promise<TceResult<void>>;
+
+  /**
+   * +row.count on share_daily (code, step, day): an open or a download of a
+   * share link, no identity. Skipped (ok, logged) while the storage gate is
+   * closed, like the site_daily rollup; bad_request for a malformed day.
+   */
+  countShareStep(row: ShareDailyRow): Promise<TceResult<void>>;
+
+  /**
+   * All-time counts per share code, one entry per distinct code in the order
+   * given, zeros for a code never seen. `using`: installs whose device has a
+   * session that started on a UTC day after the install's day.
+   */
+  shareStats(codes: readonly string[]): Promise<TceResult<ShareLinkStats[]>>;
 
   /** site_daily rows with day in [fromDay, toDay] (YYYY-MM-DD, inclusive). */
   listSiteDaily(fromDay: string, toDay: string): Promise<TceResult<SiteDailyRow[]>>;

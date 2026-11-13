@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
 
 import { CAPACITY, LIMITS, RETENTION_DAYS } from '../../core/schema/limits.ts';
-import type { BatchResponse, ErrorBody, ForgetResponse, HealthResponse, ReportResponse } from '../../core/schema/wire.ts';
+import type { BatchResponse, ErrorBody, ForgetResponse, HealthResponse, ReportResponse, ShareStatsResponse } from '../../core/schema/wire.ts';
 import {
   batchRequest,
   DAY_MS,
@@ -17,6 +17,7 @@ import {
   DEVICE_VERIFIER_2,
   errorRow,
   eventRow,
+  eventWire,
   forgetRequest,
   hitRequest,
   identityWire,
@@ -24,6 +25,8 @@ import {
   REPORT_ID_2,
   reportRequest,
   reportRow,
+  SHARE_CODE,
+  SHARE_CODE_2,
   SITE_ORIGIN,
   STRANGER_PROOF,
 } from '../../testkit/fixtures.ts';
@@ -36,15 +39,28 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
   const w = useWorker();
   const { assets, call, count, ctx, downloads, logs, pageviews, pending, postJson, printed, rollup } = w;
 
-  it('has the eight tables from migration 0001, the verifier column from 0002 and site_daily from 0003', async () => {
+  it('has the eight tables from migration 0001, the verifier column from 0002, site_daily from 0003 and the share tables from 0004', async () => {
     assert.deepEqual(
-      MIGRATIONS.map((m) => m.name).slice(0, 3),
-      ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql'],
+      MIGRATIONS.map((m) => m.name).slice(0, 4),
+      ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql', '0004_share.sql'],
     );
     const rows = await w.env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_%' ESCAPE '\\' ORDER BY name").all<{ name: string }>();
     assert.deepEqual(
       rows.results.map((r) => r.name).filter((n) => n !== 'd1_migrations' && !n.startsWith('sqlite_')),
-      ['devices', 'errors', 'events', 'github_assets_daily', 'github_repo_daily', 'installs', 'reports', 'sessions', 'site_daily'],
+      [
+        'devices',
+        'errors',
+        'events',
+        'github_assets_daily',
+        'github_repo_daily',
+        'installs',
+        'reports',
+        'sessions',
+        'share_daily',
+        'share_installs',
+        'share_links',
+        'site_daily',
+      ],
     );
     const cols = await w.env.DB.prepare('PRAGMA table_info(devices)').all<{ name: string }>();
     assert.ok(cols.results.some((c) => c.name === 'verifier'));
@@ -138,6 +154,50 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
     assert.deepEqual(points.map((p) => p?.blobs?.[5]), ['bot', 'bot', 'bot']);
   });
 
+  it('counts a share link opened on the site host, and a download from its page, then sends the browser home with the code', async () => {
+    const res = await call(`/i/${SHARE_CODE}`, { base: SITE_BASE, headers: { 'sec-fetch-mode': 'navigate' } });
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.get('location'), `/?i=${SHARE_CODE}`);
+    assert.equal(res.headers.get('cache-control'), 'no-store');
+    // A chat app's link preview (no Sec-Fetch-Mode) still redirects, uncounted.
+    assert.equal((await call(`/i/${SHARE_CODE}`, { base: SITE_BASE })).status, 302);
+    const dl = await call(`/v1/dl/lite?i=${SHARE_CODE}`, { headers: { 'sec-fetch-mode': 'navigate' } });
+    assert.equal(dl.status, 302);
+    assert.deepEqual((await w.env.DB.prepare('SELECT code, step, count FROM share_daily ORDER BY step').all()).results, [
+      { code: SHARE_CODE, step: 'download', count: 1 },
+      { code: SHARE_CODE, step: 'open', count: 1 },
+    ]);
+  });
+
+  it('answers /i/* only on the site host: on the API host it is the static site', async () => {
+    const before = assets.calls.length;
+    const res = await call(`/i/${SHARE_CODE}`, { headers: { 'sec-fetch-mode': 'navigate' } });
+    assert.equal(res.status, 200);
+    assert.deepEqual(assets.calls.slice(before), [`${BASE}/i/${SHARE_CODE}`]);
+    assert.equal(await count('share_daily'), 2, 'nothing more counted');
+  });
+
+  it('registers a link from a share.sent event and answers POST /v1/share/stats with each link’s counts', async () => {
+    const sent = await postJson(
+      '/v1/batch',
+      batchRequest({
+        batchId: '22222222-3333-4444-8555-666666666666',
+        events: [eventWire({ seq: 9, name: 'share.sent', props: { code: SHARE_CODE } })],
+      }),
+    );
+    assert.equal(sent.status, 200, await sent.clone().text());
+    assert.deepEqual((await w.env.DB.prepare('SELECT code, device_id FROM share_links').all()).results, [
+      { code: SHARE_CODE, device_id: identityWire().deviceId },
+    ]);
+    const res = await postJson('/v1/share/stats', { codes: [SHARE_CODE, SHARE_CODE_2] });
+    assert.equal(res.status, 200, await res.clone().text());
+    assert.deepEqual(((await res.json()) as ShareStatsResponse).links, [
+      { code: SHARE_CODE, opened: 1, downloaded: 1, installed: 0, using: 0, lastDay: new Date().toISOString().slice(0, 10) },
+      { code: SHARE_CODE_2, opened: 0, downloaded: 0, installed: 0, using: 0, lastDay: null },
+    ]);
+    assert.equal((await postJson('/v1/share/stats', { codes: ['nope'] })).status, 400);
+  });
+
   it('answers GET /v1/health with the database size from D1, the capacity ratios and no caching', async () => {
     const res = await call('/v1/health');
     assert.equal(res.status, 200, await res.clone().text());
@@ -168,9 +228,14 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
     const res = await postJson('/v1/forget', forgetRequest());
     assert.equal(res.status, 200, await res.clone().text());
     const { deleted } = (await res.json()) as ForgetResponse;
-    assert.equal(deleted['events'], 2);
+    assert.equal(deleted['events'], 3);
     assert.equal(deleted['reports'], 1);
-    for (const table of ['devices', 'installs', 'sessions', 'events', 'errors', 'reports']) assert.equal(await count(table), 0, table);
+    // The link it sent, with its open and download counts.
+    assert.equal(deleted['share_links'], 1);
+    assert.equal(deleted['share_daily'], 2);
+    for (const table of ['devices', 'installs', 'sessions', 'events', 'errors', 'reports', 'share_links', 'share_daily']) {
+      assert.equal(await count(table), 0, table);
+    }
     const again = await postJson('/v1/forget', forgetRequest());
     assert.equal(again.status, 404);
   });
@@ -187,7 +252,17 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
     assert.equal(await count('reports'), 1);
     const res = await postJson('/v1/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }));
     assert.equal(res.status, 200, await res.clone().text());
-    assert.deepEqual(((await res.json()) as ForgetResponse).deleted, { events: 0, errors: 0, reports: 1, sessions: 0, installs: 0, devices: 1 });
+    assert.deepEqual(((await res.json()) as ForgetResponse).deleted, {
+      events: 0,
+      errors: 0,
+      reports: 1,
+      share_daily: 0,
+      share_installs: 0,
+      share_links: 0,
+      sessions: 0,
+      installs: 0,
+      devices: 1,
+    });
     for (const table of ['devices', 'reports']) assert.equal(await count(table), 0, table);
   });
 

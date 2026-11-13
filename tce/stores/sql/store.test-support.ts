@@ -34,7 +34,18 @@ export function dev(verifier: string | null, over: Partial<DeviceRow> = {}): Dev
 
 /** A full per-table count record (forget's result shape). */
 export function counts(over: Partial<Record<ForgettableTable, number>>): Record<ForgettableTable, number> {
-  return { events: 0, errors: 0, reports: 0, sessions: 0, installs: 0, devices: 0, ...over };
+  return {
+    events: 0,
+    errors: 0,
+    reports: 0,
+    share_daily: 0,
+    share_installs: 0,
+    share_links: 0,
+    sessions: 0,
+    installs: 0,
+    devices: 0,
+    ...over,
+  };
 }
 
 /** What the recording wrapper saw. */

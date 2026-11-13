@@ -16,6 +16,8 @@ on:
     branches: [prod]
     paths:
       - tce/**
+      # The Worker bundles the accounts routes (accounts/hosts/cloudflare).
+      - accounts/**
       # All of app/src: check-deps fails any import of tce outside app/src/engine/telemetry/.
       - app/src/**
       - app/modules/phonecando-runner/src/telemetry.types.ts
@@ -26,6 +28,8 @@ on:
   pull_request:
     paths:
       - tce/**
+      # The Worker bundles the accounts routes (accounts/hosts/cloudflare).
+      - accounts/**
       # All of app/src: check-deps fails any import of tce outside app/src/engine/telemetry/.
       - app/src/**
       - app/modules/phonecando-runner/src/telemetry.types.ts

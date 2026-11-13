@@ -8,12 +8,17 @@
 // Anything else (curl, scripts, crawlers faking a browser user agent, which
 // send no Sec-Fetch headers) still gets the redirect and is kept in the
 // analytics point as client 'bot', so bot volume stays visible.
+//
+// `?i=<code>`: the download came from a share link's page (`/?i=<code>`, see
+// share-open.ts); a download that counts in site_daily also adds +1
+// `download` for that code in share_daily. A bad code is ignored.
 
 import type { HttpOp, HttpResponse, RequestCtx } from '../op.ts';
 import { writePointSafely } from '../points.ts';
 import { refHost } from '../referrer.ts';
 import { err, ok, type TceResult } from '../result.ts';
 import type { DownloadPoint } from '../schema/rows.ts';
+import { isShareCode } from '../share.ts';
 import { utcDay } from '../time.ts';
 import { androidMajor, uaClass } from '../ua.ts';
 
@@ -33,11 +38,18 @@ export interface DownloadInput {
   countable: boolean;
   /** Sec-Fetch-Mode was 'navigate': a browser followed a link or opened the URL. */
   navigation: boolean;
+  /** The share link the download came from (`?i=`), or null. */
+  shareCode: string | null;
 }
 
 /** GitHub release asset URL of the arm64 APK for `channel` at `version`. */
 export function apkUrl(repo: string, version: string, channel: DownloadChannel): string {
   return `https://github.com/${repo}/releases/download/v${version}/phonecando-${version}-${channel}-arm64.apk`;
+}
+
+/** The `?i=` share code, or null when absent or not a code. */
+function shareCodeOf(raw: string | undefined): string | null {
+  return isShareCode(raw) ? raw : null;
 }
 
 /** GET /v1/dl/:channel. */
@@ -60,6 +72,7 @@ export const downloadOp: HttpOp<DownloadInput> = {
       host: req.headers.host,
       countable: req.method !== 'HEAD' && !req.limited,
       navigation: req.headers.secFetchMode === 'navigate',
+      shareCode: shareCodeOf(req.query['i']),
     });
   },
 
@@ -78,6 +91,10 @@ export const downloadOp: HttpOp<DownloadInput> = {
         uaClass: person ? client : 'bot',
       };
       await writePointSafely(ctx.log, 'download', () => ctx.store.writeDownloadPoint(point, { rollup: person }));
+      if (person && input.shareCode !== null) {
+        const row = { day: point.day, code: input.shareCode, step: 'download' as const, count: 1 };
+        await writePointSafely(ctx.log, 'share download', () => ctx.store.countShareStep(row));
+      }
     }
     // no-store: the target moves with every release, so a cached redirect would serve an old APK.
     return ok({ status: 302, location: apkUrl(repo, version, input.channel), headers: { 'Cache-Control': 'no-store' } });

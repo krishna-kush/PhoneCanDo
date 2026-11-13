@@ -123,7 +123,7 @@ describe('ingest gate', () => {
     assert.deepEqual(await s.listSiteDaily(DAY, DAY), { ok: true, value: [{ day: DAY, kind: 'view', key: '/', country: 'IN', count: 1 }] });
     assert.deepEqual(await s.forget(DEVICE_ID, V1), {
       ok: true,
-      value: { events: 1, errors: 1, reports: 0, sessions: 1, installs: 1, devices: 1 },
+      value: { events: 1, errors: 1, reports: 0, share_daily: 0, share_installs: 0, share_links: 0, sessions: 1, installs: 1, devices: 1 },
     });
   });
 

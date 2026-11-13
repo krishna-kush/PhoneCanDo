@@ -63,7 +63,9 @@ describe('forget', () => {
     assert.equal(rec.batches.length, 1, 'one atomic batch');
     assert.deepEqual(
       rec.batches[0]!.map((st) => st.sql),
-      ['events', 'errors', 'reports', 'sessions', 'installs', 'devices'].map((t) => FORGET_STATEMENTS[t as ForgettableTable]),
+      ['events', 'errors', 'reports', 'share_daily', 'share_installs', 'share_links', 'sessions', 'installs', 'devices'].map(
+        (t) => FORGET_STATEMENTS[t as ForgettableTable],
+      ),
     );
     assert.match(rec.batches[0]![0]!.sql, /^DELETE FROM events WHERE session_id IN \(SELECT session_id FROM sessions WHERE device_id = \?\)$/);
     assert.ok(rec.batches[0]!.every((st) => st.params.length === 1 && st.params[0] === DEVICE_ID));
@@ -120,7 +122,7 @@ describe('forget', () => {
   });
 });
 
-describe('query plans (migration 0002 indexes)', () => {
+describe('query plans (migration 0002 and 0004 indexes)', () => {
   /** SQLite's plan for `sql` as one string of detail lines. */
   const plan = (sql: string, params: (string | number)[]): string =>
     (h.db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params) as { detail: string }[]).map((r) => r.detail).join(' | ');
@@ -133,6 +135,9 @@ describe('query plans (migration 0002 indexes)', () => {
       sessions: /^SEARCH sessions USING (COVERING )?INDEX sessions_device \(device_id=\?\)$/,
       installs: /^SEARCH installs USING (COVERING )?INDEX installs_device \(device_id=\?\)$/,
       devices: /^SEARCH devices USING PRIMARY KEY \(device_id=\?\)$/,
+      share_daily: /SEARCH share_daily USING PRIMARY KEY \(code=\?\).*SEARCH share_links USING (COVERING )?INDEX share_links_device \(device_id=\?\)|SEARCH share_links USING (COVERING )?INDEX share_links_device \(device_id=\?\).*SEARCH share_daily USING PRIMARY KEY \(code=\?\)/,
+      share_installs: /MULTI-INDEX OR.*SEARCH share_installs USING PRIMARY KEY \(device_id=\?\).*SEARCH share_installs USING (COVERING )?INDEX share_installs_code \(code=\?\)/,
+      share_links: /^SEARCH share_links USING (COVERING )?INDEX share_links_device \(device_id=\?\)$/,
     };
     for (const [table, sql] of Object.entries(FORGET_STATEMENTS) as [ForgettableTable, string][]) {
       const p = plan(sql, [DEVICE_ID]);

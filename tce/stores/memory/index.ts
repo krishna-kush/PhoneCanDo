@@ -4,7 +4,9 @@
 // (last_seen for devices and installs, received for sessions); on a tie the
 // incoming row counts as newer. A device's verifier is first-write-wins.
 // Analytics points are kept in pagePoints/downloadPoints (the detail sink) and
-// counted in site_daily (the permanent rollup).
+// counted in site_daily (the permanent rollup). Share links follow
+// core/store.ts: the first device keeps a code, one install per device, never
+// through its own link.
 
 import { err, ok, type TceResult } from '../../core/result.ts';
 import { compareSiteDaily, downloadRollup, pageViewRollup } from '../../core/site-daily.ts';
@@ -22,9 +24,14 @@ import type {
   PagePoint,
   ReportRow,
   SessionRow,
+  ShareDailyRow,
+  ShareInstallRow,
+  ShareLinkRow,
   SiteDailyRow,
   TableName,
 } from '../../core/schema/rows.ts';
+import type { ShareLinkStats } from '../../core/schema/wire.ts';
+import { DAY_MS } from '../../core/time.ts';
 import type { BatchCounts, BatchWrite, PointOptions, Store, StoreUsage } from '../../core/store.ts';
 
 /** Row type of every table. */
@@ -38,6 +45,9 @@ export interface TableRows {
   github_assets_daily: GithubAssetDailyRow;
   github_repo_daily: GithubRepoDailyRow;
   site_daily: SiteDailyRow;
+  share_links: ShareLinkRow;
+  share_daily: ShareDailyRow;
+  share_installs: ShareInstallRow;
 }
 
 /** Live read-only view: each property returns copies of the table's current rows, in insertion order. */
@@ -85,6 +95,9 @@ const REQUIRED: { readonly [T in TableName]: readonly (keyof TableRows[T])[] } =
   github_assets_daily: ['day', 'tag', 'asset', 'download_count'],
   github_repo_daily: ['day', 'stars', 'forks', 'watchers'],
   site_daily: ['day', 'kind', 'key', 'country', 'count'],
+  share_links: ['code', 'device_id', 'created'],
+  share_daily: ['code', 'step', 'day', 'count'],
+  share_installs: ['device_id', 'code', 'ts', 'day'],
 };
 
 const SEP = '\u0000';
@@ -100,6 +113,9 @@ const KEY: { readonly [T in TableName]: (row: TableRows[T]) => string } = {
   github_assets_daily: (r) => r.day + SEP + r.tag + SEP + r.asset,
   github_repo_daily: (r) => r.day,
   site_daily: (r) => r.day + SEP + r.kind + SEP + r.key + SEP + r.country,
+  share_links: (r) => r.code,
+  share_daily: (r) => r.code + SEP + r.step + SEP + r.day,
+  share_installs: (r) => r.device_id,
 };
 
 /** The first NOT NULL violation in `row`, or null. */
@@ -186,6 +202,9 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
     github_assets_daily: new Map(),
     github_repo_daily: new Map(),
     site_daily: new Map(),
+    share_links: new Map(),
+    share_daily: new Map(),
+    share_installs: new Map(),
   };
   const pagePoints: PagePoint[] = [];
   const downloadPoints: DownloadPoint[] = [];
@@ -272,6 +291,8 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
         write.sessions.map((r) => missingColumn('sessions', r)).find((m) => m !== null) ??
         write.events.map((r) => missingColumn('events', r)).find((m) => m !== null) ??
         write.errors.map((r) => missingColumn('errors', r)).find((m) => m !== null) ??
+        (write.shareLinks ?? []).map((r) => missingColumn('share_links', r)).find((m) => m !== null) ??
+        (write.shareInstalls ?? []).map((r) => missingColumn('share_installs', r)).find((m) => m !== null) ??
         null;
       if (bad !== null) return err('internal', `memory store: ${bad} must not be null`, bad);
 
@@ -292,6 +313,11 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
       for (const e of write.events) if (insertOrIgnore('events', e)) events++;
       let errors = 0;
       for (const e of write.errors) if (insertOrIgnore('errors', e)) errors++;
+      // Links first, so an install in the same batch sees its own device's link.
+      for (const l of write.shareLinks ?? []) insertOrIgnore('share_links', l);
+      for (const i of write.shareInstalls ?? []) {
+        if (data.share_links.get(i.code)?.device_id !== i.device_id) insertOrIgnore('share_installs', i);
+      }
       return ok({ sessions: write.sessions.length, events, errors });
     },
 
@@ -327,7 +353,12 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
       }
       const sessionIds = new Set<string>();
       for (const s of data.sessions.values()) if (s.device_id === deviceId) sessionIds.add(s.session_id);
+      const codes = new Set<string>();
+      for (const l of data.share_links.values()) if (l.device_id === deviceId) codes.add(l.code);
       return ok({
+        share_daily: deleteWhere('share_daily', (r) => codes.has(r.code)),
+        share_installs: deleteWhere('share_installs', (r) => r.device_id === deviceId || codes.has(r.code)),
+        share_links: deleteWhere('share_links', (r) => r.device_id === deviceId),
         devices: deleteWhere('devices', (r) => r.device_id === deviceId),
         installs: deleteWhere('installs', (r) => r.device_id === deviceId),
         sessions: deleteWhere('sessions', (r) => r.device_id === deviceId),
@@ -343,6 +374,41 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
 
     async writeDownloadPoint(point: DownloadPoint, options: PointOptions = {}): Promise<TceResult<void>> {
       return writePoint(point, downloadRollup(point), downloadPoints, options.rollup !== false);
+    },
+
+    async countShareStep(row: ShareDailyRow): Promise<TceResult<void>> {
+      const bad = missingColumn('share_daily', row);
+      if (bad !== null) return err('internal', `memory store: ${bad} must not be null`, bad);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(row.day)) return err('bad_request', 'day must be YYYY-MM-DD', 'day');
+      if (row.step !== 'open' && row.step !== 'download') return err('bad_request', "step must be 'open' or 'download'", 'step');
+      const stored = data.share_daily.get(KEY.share_daily(row));
+      put('share_daily', stored ? { ...stored, count: stored.count + row.count } : row);
+      return ok(undefined);
+    },
+
+    async shareStats(codes: readonly string[]): Promise<TceResult<ShareLinkStats[]>> {
+      const byCode = new Map<string, ShareLinkStats>();
+      for (const code of codes) byCode.set(code, { code, opened: 0, downloaded: 0, installed: 0, using: 0, lastDay: null });
+      const seen = (s: ShareLinkStats, day: string): void => {
+        if (s.lastDay === null || day > s.lastDay) s.lastDay = day;
+      };
+      for (const r of data.share_daily.values()) {
+        const s = byCode.get(r.code);
+        if (!s) continue;
+        if (r.step === 'open') s.opened += r.count;
+        else s.downloaded += r.count;
+        seen(s, r.day);
+      }
+      for (const i of data.share_installs.values()) {
+        const s = byCode.get(i.code);
+        if (!s) continue;
+        s.installed++;
+        // A session that started on a UTC day after the install's day.
+        const nextDay = Date.parse(`${i.day}T00:00:00Z`) + DAY_MS;
+        if ([...data.sessions.values()].some((x) => x.device_id === i.device_id && x.started >= nextDay)) s.using++;
+        seen(s, i.day);
+      }
+      return ok([...byCode.values()]);
     },
 
     async listSiteDaily(fromDay: string, toDay: string): Promise<TceResult<SiteDailyRow[]>> {

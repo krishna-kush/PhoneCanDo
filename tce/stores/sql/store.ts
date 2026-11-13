@@ -20,10 +20,21 @@ import type {
   PagePoint,
   ReportRow,
   SessionRow,
+  ShareDailyRow,
   SiteDailyRow,
 } from '../../core/schema/rows.ts';
+import type { ShareLinkStats } from '../../core/schema/wire.ts';
 import { STATEMENT_LIMITS, buildInserts, buildKeyedDeletes, placeholders, toSqlValue } from './chunk.ts';
 import type { SqlDriver, SqlStatement, SqlValue } from './driver.ts';
+import {
+  SHARE_FORGET_STATEMENTS,
+  shareBatchStatements,
+  shareStatsFrom,
+  shareStatsStatements,
+  shareStepStatement,
+  type DailyStatsRow,
+  type InstallStatsRow,
+} from './share.ts';
 import { LIST_SITE_DAILY, dayBound, downloadRollup, pageRollup, rollupStatement, siteDailyFrom } from './site.ts';
 import {
   DEVICES,
@@ -66,11 +77,26 @@ export interface SqlStoreOptions {
 /** Logger that drops everything; hosts pass a real one. */
 export const SILENT_LOGGER: Logger = { info() {}, warn() {}, error() {} };
 
-/** Order forget() deletes in: events first, because it finds them through sessions. */
-const FORGET_ORDER: readonly ForgettableTable[] = ['events', 'errors', 'reports', 'sessions', 'installs', 'devices'];
+/**
+ * Order forget() deletes in: events first, because it finds them through
+ * sessions; the share counts and installs before share_links, because they
+ * are found through the device's links.
+ */
+const FORGET_ORDER: readonly ForgettableTable[] = [
+  'events',
+  'errors',
+  'reports',
+  'share_daily',
+  'share_installs',
+  'share_links',
+  'sessions',
+  'installs',
+  'devices',
+];
 
 /**
- * forget()'s statements for one device, in FORGET_ORDER; each binds the device_id once.
+ * forget()'s statements for one device, in FORGET_ORDER; each binds the
+ * device_id once (stores/sql/share.ts uses `?1` where it needs it twice).
  * Every one is an index lookup (sessions_device, errors_device, reports_device,
  * installs_device, the devices key). Why events only through sessions: events
  * has no device_id index (each index costs a D1 row write per insert), and
@@ -84,6 +110,7 @@ export const FORGET_STATEMENTS: Readonly<Record<ForgettableTable, string>> = {
   sessions: 'DELETE FROM sessions WHERE device_id = ?',
   installs: 'DELETE FROM installs WHERE device_id = ?',
   devices: 'DELETE FROM devices WHERE device_id = ?',
+  ...SHARE_FORGET_STATEMENTS,
 };
 
 /**
@@ -291,7 +318,8 @@ export function createSqlStore(
         const sessions = buildInserts(SESSIONS, write.sessions);
         const events = buildInserts(EVENTS, write.events);
         const errors = buildInserts(ERRORS, write.errors);
-        const ran = await runOwnedBatch([...head, ...sessions, ...events, ...errors], write.device, write.sessions);
+        const shares = shareBatchStatements(write.shareLinks ?? [], write.shareInstalls ?? []);
+        const ran = await runOwnedBatch([...head, ...sessions, ...events, ...errors, ...shares], write.device, write.sessions);
         if (!ran.ok) return ran;
         const changes = ran.value;
         let at = head.length;
@@ -367,6 +395,31 @@ export function createSqlStore(
 
     writeDownloadPoint(point: DownloadPoint, options: PointOptions = {}): Promise<TceResult<void>> {
       return writePoint('writeDownloadPoint', (sink) => sink.download(point), options.rollup === false ? null : () => downloadRollup(point));
+    },
+
+    countShareStep(row: ShareDailyRow): Promise<TceResult<void>> {
+      return guard('countShareStep', async () => {
+        const stmt = shareStepStatement(row);
+        if (!stmt.ok) return stmt;
+        if (paused()) {
+          log.warn('tce sql store: countShareStep skipped; storage is nearly full', { day: row.day, step: row.step });
+          return ok(undefined);
+        }
+        await runBatch([stmt.value]);
+        return ok(undefined);
+      });
+    },
+
+    shareStats(codes: readonly string[]): Promise<TceResult<ShareLinkStats[]>> {
+      return guard('shareStats', async () => {
+        const distinct = [...new Set(codes)];
+        const reads = shareStatsStatements(distinct);
+        const daily: DailyStatsRow[] = [];
+        const installs: InstallStatsRow[] = [];
+        for (const st of reads.daily) daily.push(...(await driver.all<DailyStatsRow>(st.sql, st.params)));
+        for (const st of reads.installs) installs.push(...(await driver.all<InstallStatsRow>(st.sql, st.params)));
+        return ok(shareStatsFrom(distinct, daily, installs));
+      });
     },
 
     listSiteDaily(fromDay: string, toDay: string): Promise<TceResult<SiteDailyRow[]>> {

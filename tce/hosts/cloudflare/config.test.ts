@@ -113,6 +113,8 @@ describe('rateLimiter', () => {
       hit: 'RL_PUBLIC',
       download: 'RL_PUBLIC',
       health: 'RL_PUBLIC',
+      share_open: 'RL_PUBLIC',
+      share_stats: 'RL_PUBLIC',
     });
   });
 

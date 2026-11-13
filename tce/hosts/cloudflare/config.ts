@@ -20,16 +20,24 @@ export interface Env {
   RL_INGEST?: RateLimit;
   /** Rate limiter for /v1/report and /v1/forget. Absent: not limited. */
   RL_RARE?: RateLimit;
-  /** Rate limiter for /v1/hit, /v1/dl/* and /v1/health. Absent: not limited. */
+  /** Rate limiter for /v1/hit, /v1/dl/*, /v1/health, /i/* and /v1/share/stats. Absent: not limited. */
   RL_PUBLIC?: RateLimit;
   /** Comma list of origins allowed to post /v1/hit. */
   ALLOWED_ORIGINS?: string;
-  /** Comma list of hostnames that answer /v1/* (the API host). Unset or empty: every host does (local dev, tests). */
+  /**
+   * Comma list of hostnames that answer /v1/* (the API host); every other host
+   * answers the share links /i/*. Unset or empty: every host answers both
+   * (local dev, tests).
+   */
   API_HOSTS?: string;
   /** 'true' lets the retention cron delete expired rows; anything else (the default) keeps everything. */
   RETENTION_ENABLED?: string;
   /** Optional secret: fine-grained PAT (Administration: read) for GitHub traffic. */
   GITHUB_STATS_PAT?: string;
+  /** D1 `phonecando-accounts` for the accounts routes (accounts/). Absent: they answer not_configured. */
+  ACCOUNTS_DB?: D1Database;
+  /** Comma list of Google OAuth client IDs sign-in accepts. Empty: sign-in is off. */
+  GOOGLE_CLIENT_IDS?: string;
 }
 
 /** Names of the rate limiting bindings. */
@@ -48,6 +56,10 @@ export const RATE_LIMIT_BINDINGS: Readonly<Record<string, RateLimitBinding>> = {
   download: 'RL_PUBLIC',
   // Public and bodiless, polled by the build's limit check; each call costs one D1 query.
   health: 'RL_PUBLIC',
+  // A person opening a share link (over the limit it still redirects, without counting).
+  share_open: 'RL_PUBLIC',
+  // The app's Tell a friend page; two D1 reads per call, and the brake on guessing codes.
+  share_stats: 'RL_PUBLIC',
 };
 
 /** TceConfig from the bundled release facts and the Worker's vars, secrets and bindings. */
@@ -66,11 +78,25 @@ export function configFromEnv(env: Env): TceConfig {
  * site, so the site's domain keeps all its paths for pages.
  */
 export function servesApi(env: Env, hostname: string): boolean {
-  const hosts = (env.API_HOSTS ?? '')
+  const hosts = apiHosts(env);
+  return hosts.length === 0 || hosts.includes(hostname.toLowerCase());
+}
+
+/**
+ * True when `hostname` answers the share links /i/*: every host that is not
+ * an API host (the site's own domain), or every host when API_HOSTS is unset.
+ */
+export function servesSite(env: Env, hostname: string): boolean {
+  const hosts = apiHosts(env);
+  return hosts.length === 0 || !hosts.includes(hostname.toLowerCase());
+}
+
+/** API_HOSTS as lowercase names; empty when unset. */
+function apiHosts(env: Env): string[] {
+  return (env.API_HOSTS ?? '')
     .split(',')
     .map((h) => h.trim().toLowerCase())
     .filter((h) => h !== '');
-  return hosts.length === 0 || hosts.includes(hostname.toLowerCase());
 }
 
 /** Parses an IPv6 address into its eight 16-bit groups, or null when it is not one. */
@@ -139,6 +165,27 @@ export function rateLimiter(env: Env, clientIp: string | null, log: Logger): Dis
       // Caught here rather than by dispatch so the error text can be scrubbed:
       // a binding's message could echo the key, and the key holds the address.
       log.warn('rate limiter failed; request allowed', { op: op.name, binding: name, error: scrubAddresses(e, [subject, clientIp!]) });
+      return true;
+    }
+  };
+}
+
+/**
+ * The accounts routes' limiter (accounts/hosts/cloudflare): bucket 'rare'
+ * (sign-in, delete) on RL_RARE, 'public' (the rest) on RL_PUBLIC, keyed
+ * `account.${bucket}:${subject}` like rateLimiter. It never throws, so the
+ * accounts side never sees an error that could echo the address.
+ */
+export function accountsLimiter(env: Env, clientIp: string | null, log: Logger): (bucket: 'rare' | 'public') => Promise<boolean> {
+  const subject = clientIp === null ? null : rateLimitSubject(clientIp);
+  return async (bucket) => {
+    const binding = bucket === 'rare' ? env.RL_RARE : env.RL_PUBLIC;
+    if (subject === null || !binding) return true;
+    try {
+      const outcome = await binding.limit({ key: `account.${bucket}:${subject}` });
+      return outcome?.success !== false;
+    } catch (e) {
+      log.warn('rate limiter failed; request allowed', { bucket, error: scrubAddresses(e, [subject, clientIp!]) });
       return true;
     }
   };

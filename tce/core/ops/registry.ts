@@ -9,9 +9,20 @@ import { githubDailyOp } from './github-daily.ts';
 import { healthOp } from './health.ts';
 import { hitOp } from './hit.ts';
 import { reportOp } from './report.ts';
+import { shareOpenOp } from './share-open.ts';
+import { shareStatsOp } from './share-stats.ts';
 
 /** HTTP operations, matched by method and path. */
-export const httpOps: readonly AnyHttpOp[] = [batchOp, hitOp, downloadOp, reportOp, forgetOp, healthOp];
+export const httpOps: readonly AnyHttpOp[] = [
+  batchOp,
+  hitOp,
+  downloadOp,
+  reportOp,
+  forgetOp,
+  healthOp,
+  shareOpenOp,
+  shareStatsOp,
+];
 
 /**
  * Cron operations, matched by schedule. The retention op (./retention.ts) is

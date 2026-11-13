@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createMemoryStore, type MemoryStore } from '../../stores/memory/index.ts';
 import { callHttp, fakeCtx, type FakeCtx } from '../../testkit/ctx.ts';
-import { DAY_MS, SITE_HOST, T0, UA, httpRequest, type HttpRequestOverrides } from '../../testkit/fixtures.ts';
+import { DAY_MS, SHARE_CODE, SITE_HOST, T0, UA, httpRequest, type HttpRequestOverrides } from '../../testkit/fixtures.ts';
 import type { HttpResponse } from '../op.ts';
 import { err, type TceResult } from '../result.ts';
 import { apkUrl, downloadOp } from './download.ts';
@@ -145,5 +145,34 @@ describe('download', () => {
     const r2 = await download(throwing, 'lite');
     assert.equal(r2.ok && r2.value.location, LITE);
     assert.equal(throwing.log.entries[0]!.level, 'error');
+  });
+});
+
+describe('download from a share link (?i=)', () => {
+  it('adds +1 download for the code when the download counts in site_daily', async () => {
+    const ctx = setup();
+    const r = await download(ctx, 'lite', { query: { i: SHARE_CODE } });
+    assert.deepEqual(r, { ok: true, value: { status: 302, location: LITE, headers: { 'Cache-Control': 'no-store' } } });
+    await download(ctx, 'full', { query: { i: SHARE_CODE } });
+    assert.deepEqual(ctx.store.tables.share_daily, [{ day: '2026-11-01', code: SHARE_CODE, step: 'download', count: 2 }]);
+  });
+
+  it('counts nothing for the code from a bot, a HEAD, over the rate limit, or for a malformed code', async () => {
+    const ctx = setup();
+    await download(ctx, 'lite', { query: { i: SHARE_CODE }, headers: { secFetchMode: null, userAgent: 'curl/8.5.0' } });
+    await download(ctx, 'lite', { query: { i: SHARE_CODE }, method: 'HEAD' });
+    await download(ctx, 'lite', { query: { i: SHARE_CODE }, limited: true });
+    for (const i of ['K7Q2M9XA', 'k7q2m9x', 'k7q2m9xl', '']) await download(ctx, 'lite', { query: { i } });
+    assert.deepEqual(ctx.store.tables.share_daily, []);
+    // The malformed codes still counted as plain downloads.
+    assert.equal(ctx.store.tables.site_daily[0]!.count, 4);
+  });
+
+  it('still redirects when the share count fails', async () => {
+    const store = createMemoryStore();
+    const failing = setup({ ...store, countShareStep: async () => err('unavailable', 'db down') });
+    const r = await download(failing, 'lite', { query: { i: SHARE_CODE } });
+    assert.equal(r.ok && r.value.status, 302);
+    assert.equal(failing.log.entries.at(-1)!.level, 'warn');
   });
 });

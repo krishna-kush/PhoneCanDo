@@ -45,6 +45,9 @@ const PRIMARY_KEYS: Readonly<Record<TableName, readonly string[]>> = {
   github_assets_daily: ['day', 'tag', 'asset'],
   github_repo_daily: ['day'],
   site_daily: ['day', 'kind', 'key', 'country'],
+  share_links: ['code'],
+  share_daily: ['code', 'step', 'day'],
+  share_installs: ['device_id'],
 };
 const TABLES = Object.keys(PRIMARY_KEYS) as TableName[];
 /** Later than any fixture row, so listExpired returns everything. */
@@ -112,7 +115,18 @@ export async function snapshot(s: StoreUnderTest): Promise<Record<string, Row[]>
 
 /** A full per-table count record (forget's result shape). */
 export function counts(over: Partial<Record<ForgettableTable, number>>): Record<ForgettableTable, number> {
-  return { devices: 0, installs: 0, sessions: 0, events: 0, errors: 0, reports: 0, ...over };
+  return {
+    devices: 0,
+    installs: 0,
+    sessions: 0,
+    events: 0,
+    errors: 0,
+    reports: 0,
+    share_links: 0,
+    share_daily: 0,
+    share_installs: 0,
+    ...over,
+  };
 }
 
 /** Skip the rest of a case that needs merged values when the store has no dump hook. */

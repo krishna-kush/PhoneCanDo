@@ -9,12 +9,24 @@ import { HTTP_STATUS, err, ok } from './result.ts';
 import type { TceError, TceResult } from './result.ts';
 import type { ErrorBody } from './schema/wire.ts';
 
-/** Path prefixes that belong to ops; every other path is the static site. */
-export const OP_PATH_PREFIXES: readonly string[] = ['/v1/'];
+/**
+ * Path prefixes that belong to ops; every other path is the static site.
+ * `/v1/` is the API (its own host in production); the SITE_OP_PATH_PREFIXES
+ * are links people open on the site's own host (share links, `/i/<code>`).
+ */
+export const OP_PATH_PREFIXES: readonly string[] = ['/v1/', '/i/'];
+
+/** The part of OP_PATH_PREFIXES served on the site's host instead of the API host. */
+export const SITE_OP_PATH_PREFIXES: readonly string[] = ['/i/'];
 
 /** True when `path` is under one of OP_PATH_PREFIXES. */
 export function isOpPath(path: string): boolean {
   return OP_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+/** True when `path` is under one of SITE_OP_PATH_PREFIXES (an op path, or a route pattern, served on the site host). */
+export function isSiteOpPath(path: string): boolean {
+  return SITE_OP_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
 /** Outcome of reading a request body under a byte cap. */

@@ -27,7 +27,7 @@ describe('migrations', () => {
   test('a new file gets the shared and local schema; a reopen applies nothing and keeps data', async () => {
     const path = dbPath();
     const first = openSqliteDatabase(path, { clock });
-    assert.deepEqual(first.applied, ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql', 'sqlite/0001_points.sql']);
+    assert.deepEqual(first.applied, ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql', '0004_share.sql', 'sqlite/0001_points.sql']);
     const tables = (first.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as { name: string }[]).map(
       (r) => r.name,
     );
@@ -43,6 +43,9 @@ describe('migrations', () => {
       'points_pageviews',
       'reports',
       'sessions',
+      'share_daily',
+      'share_installs',
+      'share_links',
       'site_daily',
     ]);
     first.close();
@@ -59,6 +62,7 @@ describe('migrations', () => {
         { name: '0001_init.sql', applied_at: T0 },
         { name: '0002_ownership_indexes.sql', applied_at: T0 },
         { name: '0003_site_daily.sql', applied_at: T0 },
+        { name: '0004_share.sql', applied_at: T0 },
         { name: 'sqlite/0001_points.sql', applied_at: T0 },
       ],
     );
@@ -87,9 +91,9 @@ describe('migrations', () => {
     h.close();
   });
 
-  test('every shared migration file is applied, in order (0001, 0002, 0003): verifier column, ownership indexes, site_daily', () => {
+  test('every shared migration file is applied, in order (0001 to 0004): verifier column, ownership indexes, site_daily, share tables', () => {
     const shared = readdirSync(new URL('../sql/migrations/', import.meta.url)).filter((f) => f.endsWith('.sql')).sort();
-    assert.deepEqual(shared.slice(0, 3), ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql']);
+    assert.deepEqual(shared.slice(0, 4), ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql', '0004_share.sql']);
     assert.deepEqual(
       defaultMigrations().map((m) => m.name),
       [...shared, 'sqlite/0001_points.sql'],
@@ -129,7 +133,7 @@ describe('migrations', () => {
       .run(DEVICE_ID, T0, T0);
     old.close();
     const upgraded = openSqliteDatabase(path, { clock });
-    assert.deepEqual(upgraded.applied, ['0002_ownership_indexes.sql', '0003_site_daily.sql', 'sqlite/0001_points.sql']);
+    assert.deepEqual(upgraded.applied, ['0002_ownership_indexes.sql', '0003_site_daily.sql', '0004_share.sql', 'sqlite/0001_points.sql']);
     assert.deepEqual({ ...(upgraded.db.prepare('SELECT device_id, verifier FROM devices').get() as object) }, { device_id: DEVICE_ID, verifier: null });
     upgraded.close();
   });

@@ -15,6 +15,7 @@ import {
   buildConfig,
   dispatch,
   isOpPath,
+  isSiteOpPath,
   jsonLogger,
   parseContentLength,
   parseOriginList,
@@ -413,13 +414,24 @@ describe('runCron', () => {
 });
 
 describe('helpers', () => {
-  it('isOpPath covers /v1/* only', () => {
+  it('isOpPath covers /v1/* and the share links /i/*', () => {
     assert.ok(isOpPath('/v1/batch'));
     assert.ok(isOpPath('/v1/dl/lite'));
+    assert.ok(isOpPath('/i/k7q2m9xa'));
     assert.ok(!isOpPath('/'));
     assert.ok(!isOpPath('/v1'));
+    assert.ok(!isOpPath('/i'));
+    assert.ok(!isOpPath('/install'));
     assert.ok(!isOpPath('/apix/batch'));
     assert.ok(!isOpPath('/download'));
+  });
+
+  it('isSiteOpPath covers the share links /i/* only', () => {
+    assert.ok(isSiteOpPath('/i/k7q2m9xa'));
+    assert.ok(isSiteOpPath('/i/:code'));
+    assert.ok(!isSiteOpPath('/v1/batch'));
+    assert.ok(!isSiteOpPath('/v1/share/stats'));
+    assert.ok(!isSiteOpPath('/install'));
   });
 
   it('parses origin lists and content lengths', () => {

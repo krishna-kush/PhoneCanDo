@@ -14,6 +14,9 @@ import type {
   PagePoint,
   ReportRow,
   SessionRow,
+  ShareDailyRow,
+  ShareInstallRow,
+  ShareLinkRow,
 } from '../core/schema/rows.ts';
 import type {
   AppWire,
@@ -84,6 +87,11 @@ export const STRANGER_PROOF = '8aca4f36774f82a67c507cb9c96679482e2cc767f2d385022
 export const STRANGER_VERIFIER = 'a6510c843d0ba18fc7430941efed86256b23d241f80bd6c3b6cf38624adefff5';
 
 /** Production site host and origin. */
+/** Share codes (core/share.ts SHARE_CODE). */
+export const SHARE_CODE = 'k7q2m9xa';
+export const SHARE_CODE_2 = 'p3rt8wnb';
+export const SHARE_CODE_3 = 'zz22hh44';
+
 export const SITE_HOST = 'phonecando.app';
 export const SITE_ORIGIN = `https://${SITE_HOST}`;
 
@@ -248,6 +256,21 @@ export function pagePoint(over: Partial<PagePoint> = {}): PagePoint {
 /** A lite download from India on T0's UTC day. */
 export function downloadPoint(over: Partial<DownloadPoint> = {}): DownloadPoint {
   return { day: '2026-11-01', channel: 'lite', version: '0.1.2', country: 'IN', androidMajor: 16, refHost: null, uaClass: 'android', ...over };
+}
+
+/** A share_links row: DEVICE_ID sent SHARE_CODE at T0. */
+export function shareLinkRow(over: Partial<ShareLinkRow> = {}): ShareLinkRow {
+  return { code: SHARE_CODE, device_id: DEVICE_ID, created: T0, ...over };
+}
+
+/** A share_daily row: one open of SHARE_CODE on T0's UTC day. */
+export function shareDailyRow(over: Partial<ShareDailyRow> = {}): ShareDailyRow {
+  return { day: '2026-11-01', code: SHARE_CODE, step: 'open', count: 1, ...over };
+}
+
+/** A share_installs row: DEVICE_ID_2 installed through SHARE_CODE at T0. */
+export function shareInstallRow(over: Partial<ShareInstallRow> = {}): ShareInstallRow {
+  return { device_id: DEVICE_ID_2, code: SHARE_CODE, ts: T0, day: '2026-11-01', ...over };
 }
 
 /** One device, one install, one session with one event and one error. */

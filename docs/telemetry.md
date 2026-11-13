@@ -33,6 +33,9 @@ caps in `tce/core/schema/limits.ts`, event names in
   `com.phonecando.app.<channel>.dev`). They queue locally, and only the
   developer-only switch "Send to local dev host" sends that queue, to
   `127.0.0.1:8787` (`pnpm -C tce dev`) and nowhere else.
+- **Share links** (Settings → Tell a friend) count how often each link you
+  shared was opened, downloaded from and installed through, never who. Only
+  while sharing is on; see [Share links](#share-links).
 - **Never sent:** prompts, chats, files, keys, the screen, which apps the agent
   used. Full list under [Never collected](#never-collected).
 
@@ -44,9 +47,9 @@ crashes and engine failures to fix first.
 
 | | |
 |---|---|
-| Endpoint | `https://api.phonecando.app/v1/*` (the Worker that also serves the site at `phonecando.app`; the API answers only on its own host) |
+| Endpoint | `https://api.phonecando.app/v1/*` (the Worker that also serves the site at `phonecando.app`; the API answers only on its own host), and the share links `https://phonecando.app/i/<code>` on the site's host |
 | Code | `tce/` (Telemetry Collection Engine); Cloudflare host in `tce/hosts/cloudflare/` |
-| Storage | Our Cloudflare account: D1 database `phonecando-stats` (the app's rows and the `site_daily` traffic totals) and Analytics Engine datasets `phonecando_pageviews` and `phonecando_downloads`. There is no archive and no backup copy beyond D1's own 7-day Time Travel. Cloudflare processes it on our behalf. |
+| Storage | Our Cloudflare account: D1 database `phonecando-stats` (the app's rows, the share links' counts and the `site_daily` traffic totals) and Analytics Engine datasets `phonecando_pageviews` and `phonecando_downloads`. There is no archive and no backup copy beyond D1's own 7-day Time Travel. Cloudflare processes it on our behalf. |
 | Not stored | Nothing analytics-related is written to the GitHub repo. Nothing is sold or shared. |
 
 | Route | Body cap | Sent by |
@@ -55,7 +58,9 @@ crashes and engine failures to fix first.
 | `POST /v1/report` | 16 KB (≤ 50 events) | the app, when you tap Send report |
 | `POST /v1/forget` | 2 KB | the app, when you tap Delete my data |
 | `POST /v1/hit` | 2 KB | the site, once per page load |
-| `GET /v1/dl/lite`, `GET /v1/dl/full` | none | the site's download buttons and QR code |
+| `GET /v1/dl/lite`, `GET /v1/dl/full` | none | the site's download buttons and QR code (`?i=<code>` from a share link's page) |
+| `GET /i/<code>` (on `phonecando.app`) | none | a person opening a share link |
+| `POST /v1/share/stats` | 2 KB (≤ 100 codes) | the app's Tell a friend page |
 | `GET /v1/health` | none | the capacity check on every build ([Capacity](#capacity-get-v1health)); public |
 
 The app queues events locally (at most 500; the oldest drop first) and sends
@@ -66,7 +71,8 @@ reads a year outside 2000–2200, nothing is sent until it is fixed.
 
 **Abuse limits.** The endpoints are public and need no login, so the Worker
 rate-limits each route per client (batch 6, report and delete 3, page views,
-downloads and health 30 per minute, per Cloudflare location). The limiter is
+downloads, share links, share stats and health 30 per minute, per Cloudflare
+location). The limiter is
 keyed on the connection's IP address, held only in Cloudflare's rate limiter
 for that minute; it is never logged, never passed to the telemetry code and
 never stored. Over the limit, the app is told to retry later; a page view or a
@@ -83,6 +89,7 @@ downloads are not added to `site_daily`, while Delete my data keeps working.
 | `errors` | 180 days, then deleted the same way |
 | `reports` | 90 days, then deleted the same way |
 | `devices`, `installs`, `sessions` | until Delete my data |
+| `share_links`, `share_daily`, `share_installs` (your share links, their daily opens and downloads, and the installs that came through them) | until the sharing phone's Delete my data; a phone's own install through a link also until that phone's Delete my data |
 | `github_assets_daily`, `github_repo_daily` | kept (aggregate counters, no people) |
 | `site_daily` (daily page view and download totals) | kept (counts per day, path or channel, and country; no people) |
 | Analytics Engine (site views and downloads in detail) | about 3 months (Cloudflare's limit) |
@@ -180,8 +187,9 @@ Each event has `sessionId`, `seq`, `ts` (phone clock), `name` and optional
 `props`: at most 16 keys of ≤ 40 chars, values a number, a boolean or a string
 of ≤ 200 chars (paths replaced by `<path>`), ≤ 512 bytes as JSON. The props
 the app sends today are `version`, `lite`, `manual`, `stage`, `from`, `to` and
-`channel` on update events: short strings, numbers and booleans, never
-content, e.g. `{"version": "0.1.3", "stage": "download"}`.
+`channel` on update events and `code` (a share link's 8-character code) on
+share events: short strings, numbers and booleans, never content, e.g.
+`{"version": "0.1.3", "stage": "download"}`.
 The server drops names that are not in this list:
 
 | Name | When |
@@ -196,6 +204,8 @@ The server drops names that are not in this list:
 | `chat.open`, `terminal.open` | the tab was opened |
 | `env.add` | an Own env (a Linux base the user picked from a container registry) finished downloading; the image name and tag are not sent |
 | `report.sent` | you used Send report |
+| `share.sent` | you shared a tracked link (an app was picked in the share sheet), with its `code`; see [Share links](#share-links) |
+| `share.install` | this install was opened through a share link within 7 days of installing, once, with the link's `code` |
 
 Also in the server's vocabulary but **not sent by the app today**:
 `a11y.restricted_seen`, `forget.requested`, `provider.<name>` (no read-only
@@ -264,8 +274,10 @@ Sends `deviceId` and the device proof (see [Identity](#identity)); it is the
 only request that carries the proof. If the proof matches the verifier the
 server pinned for that phone, the server deletes every row with that
 `device_id` (all installs on the phone, whatever install ID made them) from
-`devices`, `installs`, `sessions`, `events`, `errors` and `reports`, and
-returns the counts. The app first stops sending and waits for any send in
+`devices`, `installs`, `sessions`, `events`, `errors` and `reports`, the
+share links the phone sent with their counts and the installs that came
+through them (`share_links`, `share_daily`, `share_installs`), and the
+phone's own install through someone else's link, and returns the counts. The app first stops sending and waits for any send in
 flight, so nothing lands after the delete. It then clears its queue, turns
 sharing off and makes a new install ID. If the server holds nothing for the
 phone, the app says so instead of claiming a deletion. Not reached: D1's
@@ -302,6 +314,28 @@ opens a URL, a scanned QR code included; Chrome 76+, Firefox 90+, Safari
 scripts, crawlers, and browsers older than those) still redirects and is kept
 in Analytics Engine with the user-agent class `bot`. The computer commands
 link GitHub directly. `./manage data` shows both.
+
+## Share links
+
+Settings → Tell a friend shares a link with its own random code,
+`https://phonecando.app/i/<code>` (8 characters; one code per share). The
+code is made on the phone. It is a tracked link only while sharing is on;
+with sharing off the plain `https://phonecando.app` goes out instead. Which
+app you shared through stays on the phone.
+
+| Step | How it is counted | What is kept |
+|---|---|---|
+| Sent | the event `share.sent` with the code, in a batch | `share_links`: the code, the sharing phone's `deviceId`, when |
+| Opened | `GET /i/<code>` on the site's host: a person's browser (the same rule as downloads: a navigation from a client that does not name itself a bot, so a chat app's link preview does not count) adds +1, then redirects to `/?i=<code>` | `share_daily`: +1 on (code, `open`, UTC day). No ID, no IP, no cookie, nothing about the person |
+| Downloaded | `GET /v1/dl/<channel>?i=<code>` from that page: a download that counts in `site_daily` also adds +1 | `share_daily`: +1 on (code, `download`, UTC day). Same: no ID |
+| Installed | the friend's phone opens PhoneCanDo through the link (the link again, or the page's Open button) within 7 days of installing, and sends `share.install` with the code. Only phones with sharing on send it; once per phone, the first link wins; never your own link | `share_installs`: the friend's phone's `deviceId`, the code, when |
+| Using it | of those installs, the ones whose phone opened PhoneCanDo again on a later UTC day (from its own sessions) | nothing more: worked out when asked |
+
+`POST /v1/share/stats` (`{ "codes": [...] }`, at most 100) answers each code's
+totals: `opened`, `downloaded`, `installed`, `using` and the last day with
+any of them. It needs no identity: a code is the link itself, so whoever
+holds a link can read its counts, and nothing else. Nobody can see who opened,
+downloaded or installed.
 
 ## Capacity (`GET /v1/health`)
 
@@ -345,7 +379,7 @@ numbers.
 |---|---|---|
 | `GET https://github.com/krishna-kush/PhoneCanDo/releases/latest/download/latest.json` | on launch (full; lite unless muted in Settings → Update) and from Settings → Update; never in play builds | nothing beyond a normal request |
 | The release APK from `github.com` (redirected to GitHub's file host) | only after you tap install (an update, or lite → full) | nothing beyond a normal request |
-| `https://api.phonecando.app/v1/*` | release builds, while sharing is on; report and delete only when you tap them | the fields on this page |
+| `https://api.phonecando.app/v1/*` | release builds, while sharing is on; report and delete only when you tap them; share stats when Settings → Tell a friend shows your links | the fields on this page; share stats carry only your links' codes |
 | `GET https://models.opencode.ai/api.json` (opencode's models.dev catalog) | by each running engine (opencode v2.0.26; one per running agent) when it starts, then again every 5 minutes while it runs: the whole catalog (over 2 MB) each time; `OPENCODE_DISABLE_MODELS_FETCH` is not set | a `User-Agent: opencode/<channel>/<version>/<name>` header |
 | `https://hub.docker.com` (Docker Hub's catalog: the official OS list and an image's tags) | full and lite, only while you pick an Own env (Env → New env → Own) | the repository name and the version filter you type; a `User-Agent: phonecando-lre` header |
 | The container registry of an Own env (Docker Hub's `registry-1.docker.io` and its token service, or the registry the image name gives), the storage it redirects downloads to and, for Docker Hub official images when Docker Hub refuses or fails, `public.ecr.aws` and `mirror.gcr.io` | full and lite, only when you add an Own env or retry its download, a running download's automatic retries, and on the next app start for a download the app's process or a lost network stopped | the image name and tag you picked; a `User-Agent: phonecando-lre` header |

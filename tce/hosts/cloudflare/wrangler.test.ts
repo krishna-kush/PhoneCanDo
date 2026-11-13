@@ -223,7 +223,7 @@ describe('hosts/cloudflare/wrangler.jsonc', () => {
   });
 
   it('binds D1 and Analytics Engine under the names the store expects, and no R2 bucket', () => {
-    assert.equal(raw.d1_databases.length, 1);
+    assert.equal(raw.d1_databases.length, 2);
     const db = raw.d1_databases[0]!;
     assert.equal(db.binding, 'DB');
     assert.equal(db.database_name, 'phonecando-stats');
@@ -233,6 +233,13 @@ describe('hosts/cloudflare/wrangler.jsonc', () => {
     const files = readdirSync(migrations).filter((f) => f.endsWith('.sql')).sort();
     assert.deepEqual(files.slice(0, 3), ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql']);
     for (const f of files) assert.match(f, /^\d{4}_[a-z0-9_]+\.sql$/, 'wrangler applies migrations in file-name order');
+
+    // Optional sign-in's own database (accounts/), never the stats one.
+    const accounts = raw.d1_databases[1]!;
+    assert.equal(accounts.binding, 'ACCOUNTS_DB');
+    assert.equal(accounts.database_name, 'phonecando-accounts');
+    assert.notEqual(accounts.database_id, db.database_id);
+    assert.equal(resolve(HERE, accounts.migrations_dir), resolve(REPO, 'accounts/stores/sql/migrations'));
 
     assert.deepEqual(raw.analytics_engine_datasets, [
       { binding: 'PAGEVIEWS', dataset: 'phonecando_pageviews' },
@@ -261,5 +268,14 @@ describe('hosts/cloudflare/wrangler.jsonc', () => {
     // Turning it on is a deliberate edit to "true"; scripts/check-limits.mjs
     // warns before the oldest row passes the age the privacy page promises.
     assert.equal(raw.vars['RETENTION_ENABLED'], 'false');
+  });
+
+  it("accepts the app's Google client for sign-in", () => {
+    // The app asks Google for an ID token for GOOGLE_WEB_CLIENT_ID; a Worker
+    // that does not list the same id refuses every sign-in.
+    const app = readFileSync(resolve(REPO, 'app/src/engine/account/config.ts'), 'utf8');
+    const id = /GOOGLE_WEB_CLIENT_ID = '([^']+)'/.exec(app)?.[1];
+    assert.ok(id, 'the app names its Google client');
+    assert.ok(parseOriginList(raw.vars['GOOGLE_CLIENT_IDS']).includes(id), `GOOGLE_CLIENT_IDS lists ${id}`);
   });
 });

@@ -20,6 +20,10 @@ export const EVENT_NAMES = [
   'engine.died',
   'report.sent',
   'forget.requested',
+  // props { code }: a tracked share link went out (an app was picked in the share sheet).
+  'share.sent',
+  // props { code }: this install was opened through a share link within 7 days of installing.
+  'share.install',
 ] as const;
 
 export type StaticEventName = (typeof EVENT_NAMES)[number];

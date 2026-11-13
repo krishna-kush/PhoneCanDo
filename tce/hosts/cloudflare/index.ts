@@ -1,7 +1,10 @@
 // Cloudflare Worker `phonecando`: /v1/* on the API host (API_HOSTS,
-// api.phonecando.app) goes to core/ops/registry.ts; every other request, on
-// any host, is the static site (web/dist via the ASSETS binding); and cron
-// triggers run the cron ops whose schedule matches. Config lives in
+// api.phonecando.app) goes to core/ops/registry.ts, and so do the share links
+// /i/* on the site's host (every other host); every other request, on any
+// host, is the static site (web/dist via the ASSETS binding); and cron
+// triggers run the cron ops whose schedule matches. The accounts routes
+// (/v1/account*, accounts/hosts/cloudflare) answer on the API host before
+// tce's own; tce and accounts share nothing else. Config lives in
 // wrangler.jsonc next to this file; Workers Builds deploys it on push to prod.
 // Requests are rate limited per op and client network (config.ts); the client
 // address is read only for that and goes nowhere else.
@@ -9,15 +12,27 @@
 // why only `default` (and types) are exported: workerd treats every named
 // export of the entry module as a candidate entrypoint.
 
-import type { Edge, FetchPort, HashPort, Logger, OpCtx } from '../../core/op.ts';
+import type { AnyHttpOp, Edge, FetchPort, HashPort, Logger, OpCtx } from '../../core/op.ts';
 import { cronOps, httpOps } from '../../core/ops/registry.ts';
 import { createCloudflareStore } from '../../stores/cloudflare/index.ts';
-import { childLogger, concatChunks, dispatch, isOpPath, jsonLogger, parseContentLength, runCron } from '../../core/http.ts';
+import { childLogger, concatChunks, dispatch, isOpPath, isSiteOpPath, jsonLogger, parseContentLength, runCron } from '../../core/http.ts';
 import type { BodyRead, HostRequest } from '../../core/http.ts';
-import { configFromEnv, rateLimiter, servesApi } from './config.ts';
+import { accountsFetch } from '../../../accounts/hosts/cloudflare/index.ts';
+import { accountsLimiter, configFromEnv, rateLimiter, servesApi, servesSite } from './config.ts';
 import type { Env } from './config.ts';
 
 export type { Env } from './config.ts';
+
+/** Ops answered on the API host (/v1/*) and on the site's host (/i/*); a host never routes the other's. */
+const API_OPS = httpOps.filter((op) => !isSiteOpPath(op.path));
+const SITE_OPS = httpOps.filter((op) => isSiteOpPath(op.path));
+
+/** The ops this host answers for this path, or null when it is the static site's. */
+function opsFor(env: Env, url: URL): readonly AnyHttpOp[] | null {
+  if (!isOpPath(url.pathname)) return null;
+  if (isSiteOpPath(url.pathname)) return servesSite(env, url.hostname) ? SITE_OPS : null;
+  return servesApi(env, url.hostname) ? API_OPS : null;
+}
 
 /** SHA-256 hex via Web Crypto. */
 const workerHash: HashPort = {
@@ -99,16 +114,24 @@ function hostRequest(request: Request, url: URL): HostRequest {
 export default {
   async fetch(request, env, _ctx): Promise<Response> {
     const url = new URL(request.url);
-    // run_worker_first sends only /v1/* here, on every host; the isOpPath check
-    // keeps the Worker correct if that list and OP_PATH_PREFIXES ever differ.
-    if (!isOpPath(url.pathname) || !servesApi(env, url.hostname)) return env.ASSETS.fetch(request);
+    if (servesApi(env, url.hostname)) {
+      const log = jsonLogger(console, { requestId: request.headers.get('cf-ray') });
+      const limit = accountsLimiter(env, request.headers.get('cf-connecting-ip'), log);
+      const accounts = await accountsFetch(request, url, env, limit);
+      if (accounts) return accounts;
+    }
+    // run_worker_first sends only /v1/* and /i/* here, on every host; the
+    // isOpPath check keeps the Worker correct if that list and
+    // OP_PATH_PREFIXES ever differ.
+    const ops = opsFor(env, url);
+    if (ops === null) return env.ASSETS.fetch(request);
 
     const requestId = request.headers.get('cf-ray') ?? crypto.randomUUID();
     const log = jsonLogger(console, { requestId });
     const ctx = { ...opCtx(env, log), edge: edgeOf(request, requestId) };
     // cf-connecting-ip is set by Cloudflare's edge (a client cannot forge it there); it keys the limiter only.
     const limit = rateLimiter(env, request.headers.get('cf-connecting-ip'), log);
-    const out = await dispatch(hostRequest(request, url), httpOps, ctx, limit ? { limit } : {});
+    const out = await dispatch(hostRequest(request, url), ops, ctx, limit ? { limit } : {});
     return new Response(out.body, { status: out.status, headers: out.headers });
   },
 

@@ -12,10 +12,26 @@ export type TableName =
   | 'reports'
   | 'github_assets_daily'
   | 'github_repo_daily'
-  | 'site_daily';
+  | 'site_daily'
+  | 'share_links'
+  | 'share_daily'
+  | 'share_installs';
 
-/** Tables `forget` clears for a device. */
-export type ForgettableTable = 'devices' | 'installs' | 'sessions' | 'events' | 'errors' | 'reports';
+/**
+ * Tables `forget` clears for a device: its own rows, the share links it sent
+ * with their counts and the installs that came through them, and its own
+ * install through someone else's link.
+ */
+export type ForgettableTable =
+  | 'devices'
+  | 'installs'
+  | 'sessions'
+  | 'events'
+  | 'errors'
+  | 'reports'
+  | 'share_links'
+  | 'share_daily'
+  | 'share_installs';
 
 /** Tables the retention cron deletes expired rows from (there is no cold storage yet). */
 export type ArchivableTable = 'events' | 'errors';
@@ -204,6 +220,47 @@ export interface SiteDailyRow {
   key: string;
   country: string;
   count: number;
+}
+
+/**
+ * A share link a phone sent (event `share.sent`). Insert-or-ignore on code:
+ * the first device to send a code owns it. Kept until that device's forget.
+ */
+export interface ShareLinkRow {
+  code: string;
+  device_id: string;
+  /** Skew-corrected time of the `share.sent` event. */
+  created: number;
+}
+
+/** What share_daily counts per link: a person's browser opening it, or downloading from its page. */
+export type ShareStep = 'open' | 'download';
+
+/**
+ * Opens and downloads per share link and UTC day, no identity. Upsert on
+ * (code, step, day): count += the incoming count. Counted even for a code
+ * whose share_links row has not landed yet (a friend can be quicker than the
+ * sharer's next batch).
+ */
+export interface ShareDailyRow {
+  day: string;
+  code: string;
+  step: ShareStep;
+  count: number;
+}
+
+/**
+ * The share link this phone's install came through (event `share.install`).
+ * Insert-or-ignore on device_id: one per phone, the first link wins; never
+ * written for a link the same device owns.
+ */
+export interface ShareInstallRow {
+  device_id: string;
+  code: string;
+  /** Skew-corrected time of the `share.install` event. */
+  ts: number;
+  /** UTC day of `ts`, YYYY-MM-DD. */
+  day: string;
 }
 
 export interface ArchiveRowMap {

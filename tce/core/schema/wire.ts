@@ -159,6 +159,34 @@ export interface HitRequest {
 }
 
 /**
+ * POST /v1/share/stats — what share links did, by code. No identity: whoever
+ * holds a link can read its counts. 1..LIMITS.shareStatsCodes codes.
+ */
+export interface ShareStatsRequest {
+  codes: string[];
+}
+
+/** One share link's counts, all time. */
+export interface ShareLinkStats {
+  code: string;
+  /** A person's browser opened the link. */
+  opened: number;
+  /** Downloads from the link's page. */
+  downloaded: number;
+  /** Installs opened through the link (phones with usage stats on). */
+  installed: number;
+  /** Of those installs, the ones that opened PhoneCanDo again on a later UTC day. */
+  using: number;
+  /** Last UTC day with an open, a download or an install (YYYY-MM-DD); null when none. */
+  lastDay: string | null;
+}
+
+/** One entry per distinct requested code, in request order, zeros for a code never seen. */
+export interface ShareStatsResponse {
+  links: ShareLinkStats[];
+}
+
+/**
  * GET /v1/health — public, no identity, for the limit check run on every
  * build (scripts/check-limits.mjs). Ratios come from CAPACITY in limits.ts.
  */

@@ -52,6 +52,10 @@ storeContract(
   { pointSinkFailure: true },
 );
 
+
+/** forget's counts for the share tables when the device has no share rows. */
+const NO_SHARE_ROWS = { share_links: 0, share_daily: 0, share_installs: 0 };
+
 describe('cloudflare: D1 specifics', () => {
   beforeEach(reset);
 
@@ -69,10 +73,10 @@ describe('cloudflare: D1 specifics', () => {
     );
   });
 
-  test('migrations 0001, 0002 and 0003 were applied in order: devices.verifier, the ownership indexes, site_daily', async () => {
+  test('migrations 0001 to 0004 were applied in order: devices.verifier, the ownership indexes, site_daily, the share tables', async () => {
     assert.deepEqual(
-      MIGRATIONS.map((m) => m.name).slice(0, 3),
-      ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql'],
+      MIGRATIONS.map((m) => m.name).slice(0, 4),
+      ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql', '0004_share.sql'],
     );
     const site = await DB.prepare('PRAGMA table_info(site_daily)').all<{ name: string; pk: number }>();
     assert.deepEqual(
@@ -199,7 +203,7 @@ describe('cloudflare: D1 specifics', () => {
     assert.equal(await count('events'), 2);
     assert.deepEqual(await store.forget(DEVICE_ID, V1), {
       ok: true,
-      value: { events: 2, errors: 1, reports: 1, sessions: 1, installs: 1, devices: 1 },
+      value: { ...NO_SHARE_ROWS, events: 2, errors: 1, reports: 1, sessions: 1, installs: 1, devices: 1 },
     });
   });
 
@@ -244,7 +248,7 @@ describe('cloudflare: D1 specifics', () => {
     assert.equal(await count('reports'), 1);
     assert.deepEqual(await store.forget(DEVICE_ID_2, V2), {
       ok: true,
-      value: { events: 0, errors: 0, reports: 1, sessions: 0, installs: 0, devices: 1 },
+      value: { ...NO_SHARE_ROWS, events: 0, errors: 0, reports: 1, sessions: 0, installs: 0, devices: 1 },
     });
     assert.equal(await count('reports'), 0);
     assert.equal(await count('devices'), 0);

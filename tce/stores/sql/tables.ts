@@ -26,6 +26,9 @@ import type {
   InstallRow,
   ReportRow,
   SessionRow,
+  ShareDailyRow,
+  ShareInstallRow,
+  ShareLinkRow,
   SiteDailyRow,
 } from '../../core/schema/rows.ts';
 
@@ -308,6 +311,26 @@ export const SITE_DAILY: TableSpec<SiteDailyRow> = {
   columns: columnsOf<SiteDailyRow>()(['day', 'kind', 'key', 'country', 'count']),
   onConflict: 'ON CONFLICT (day, kind, key, country) DO UPDATE SET count = site_daily.count + excluded.count',
 };
+
+/** share_links: insert-or-ignore on code, so the first device to send a code keeps it. */
+export const SHARE_LINKS: TableSpec<ShareLinkRow> = {
+  table: 'share_links',
+  columns: columnsOf<ShareLinkRow>()(['code', 'device_id', 'created']),
+  onConflict: 'ON CONFLICT (code) DO NOTHING',
+};
+
+/** share_daily: upsert on (code, step, day); count adds the incoming count, as site_daily does. */
+export const SHARE_DAILY: TableSpec<ShareDailyRow> = {
+  table: 'share_daily',
+  columns: columnsOf<ShareDailyRow>()(['code', 'step', 'day', 'count']),
+  onConflict: 'ON CONFLICT (code, step, day) DO UPDATE SET count = share_daily.count + excluded.count',
+};
+
+/**
+ * share_installs columns. Its insert is not a plain spec insert: it also
+ * skips a link the same device owns (stores/sql/share.ts, shareInstallInsert).
+ */
+export const SHARE_INSTALL_COLUMNS = columnsOf<ShareInstallRow>()(['device_id', 'code', 'ts', 'day']);
 
 /** Read/delete shape of a table the retention cron drains. */
 export interface RetentionSpec {

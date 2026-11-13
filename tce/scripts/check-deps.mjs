@@ -9,7 +9,8 @@
 //   2. Bare specifiers (npm packages, node:*, cloudflare:*) only where BARE allows.
 //   3. Relative imports carry their extension (.ts / .json): Node runs the
 //      sources directly with type stripping, and Metro and esbuild accept it.
-//   4. Nothing in tce reaches outside tce except the release facts hosts read.
+//   4. Nothing in tce reaches outside tce except the release facts hosts read
+//      and the Worker's mount of the accounts routes (accounts/hosts/cloudflare).
 //   5. Outside tce, only the app's telemetry adapter (app/src/engine/telemetry/)
 //      imports tce, and only tce/client and tce/core; web/ never imports tce.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -54,7 +55,8 @@ const TEST_BARE_BY_MODULE = { 'stores/cloudflare': ['wrangler'], 'hosts/cloudfla
 
 // Files outside tce that hosts may read (release facts, bundled as JSON).
 const OUTSIDE_ALLOWED = {
-  'hosts/cloudflare': ['app/app.json', 'web/src/data/release.json'],
+  // The Worker mounts the accounts routes (accounts/AGENTS.md): their one entry only.
+  'hosts/cloudflare': ['app/app.json', 'web/src/data/release.json', 'accounts/hosts/cloudflare/index.ts'],
   'hosts/node': ['app/app.json', 'web/src/data/release.json'],
   scripts: ['app/app.json', 'web/src/data/release.json'],
 };

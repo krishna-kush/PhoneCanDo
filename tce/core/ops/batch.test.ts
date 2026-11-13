@@ -14,6 +14,9 @@ import {
   INSTALL_ID_3,
   SESSION_ID,
   SESSION_ID_2,
+  SHARE_CODE,
+  SHARE_CODE_2,
+  SHARE_CODE_3,
   STRANGER_VERIFIER,
   T0,
   batchRequest,
@@ -640,5 +643,52 @@ describe('batch run', () => {
     await send(ctx, batchRequest({ sessions: [], events: [], errors: [errorWire({ sessionId: SESSION_ID, seq: null })] }));
     assert.deepEqual([ctx.store.tables.errors[0]!.session_id, ctx.store.tables.errors[0]!.seq], [SESSION_ID, null]);
     assert.equal(ctx.store.tables.sessions.length, 0);
+  });
+});
+
+describe('batch share rows', () => {
+  it('turns share.sent into links and the first share.install into an install, in the same write', async () => {
+    const ctx = setup();
+    const sentAt = T0 - HOUR;
+    ctx.clock.set(T0);
+    await send(
+      ctx,
+      batchRequest({
+        sentAt,
+        events: [
+          eventWire({ seq: 1, name: 'share.sent', props: { code: SHARE_CODE }, ts: sentAt - 1000 }),
+          eventWire({ seq: 2, name: 'share.sent', props: { code: SHARE_CODE }, ts: sentAt - 900 }),
+          eventWire({ seq: 3, name: 'share.sent', props: { code: SHARE_CODE_2 }, ts: sentAt - 800 }),
+          eventWire({ seq: 4, name: 'share.install', props: { code: SHARE_CODE_3 }, ts: sentAt - 700 }),
+          eventWire({ seq: 5, name: 'share.install', props: { code: SHARE_CODE_2 }, ts: sentAt - 600 }),
+        ],
+      }),
+    );
+    // Times are skew-corrected like every event's.
+    assert.deepEqual(ctx.store.tables.share_links, [
+      { code: SHARE_CODE, device_id: DEVICE_ID, created: T0 - 1000 },
+      { code: SHARE_CODE_2, device_id: DEVICE_ID, created: T0 - 800 },
+    ]);
+    assert.deepEqual(ctx.store.tables.share_installs, [{ device_id: DEVICE_ID, code: SHARE_CODE_3, ts: T0 - 700, day: '2026-10-31' }]);
+    // The events themselves are stored as usual.
+    assert.equal(ctx.store.tables.events.filter((e) => e.name.startsWith('share.')).length, 5);
+  });
+
+  it('ignores share events without a valid code', async () => {
+    const ctx = setup();
+    await send(
+      ctx,
+      batchRequest({
+        events: [
+          eventWire({ seq: 1, name: 'share.sent' }),
+          eventWire({ seq: 2, name: 'share.sent', props: { code: 'K7Q2M9XA' } }),
+          eventWire({ seq: 3, name: 'share.sent', props: { code: 'k7q2m9x' } }),
+          eventWire({ seq: 4, name: 'share.install', props: { code: 'k7q2m9x0' } }),
+          eventWire({ seq: 5, name: 'share.install', props: { code: 12345678 } }),
+        ],
+      }),
+    );
+    assert.deepEqual(ctx.store.tables.share_links, []);
+    assert.deepEqual(ctx.store.tables.share_installs, []);
   });
 });

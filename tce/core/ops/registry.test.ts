@@ -15,6 +15,8 @@ describe('registry', () => {
         ['POST', '/v1/report', 'report', LIMITS.reportBodyBytes],
         ['POST', '/v1/forget', 'forget', LIMITS.smallBodyBytes],
         ['GET', '/v1/health', 'health', 0],
+        ['GET', '/i/:code', 'share_open', 0],
+        ['POST', '/v1/share/stats', 'share_stats', LIMITS.smallBodyBytes],
       ],
     );
     assert.ok(httpOps.every((op) => op.kind === 'http'));
@@ -28,7 +30,7 @@ describe('registry', () => {
     assert.ok(cronOps.every((op) => op.kind === 'cron'));
   });
 
-  it('degrades only the routes that must answer without a write (page views, download redirects)', () => {
+  it('degrades only the routes that must answer without a write (page views, download and share-link redirects)', () => {
     assert.deepEqual(
       httpOps.map((op) => [op.name, op.whenLimited ?? 'reject']),
       [
@@ -38,6 +40,8 @@ describe('registry', () => {
         ['report', 'reject'],
         ['forget', 'reject'],
         ['health', 'reject'],
+        ['share_open', 'degrade'],
+        ['share_stats', 'reject'],
       ],
     );
   });

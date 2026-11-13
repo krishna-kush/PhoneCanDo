@@ -2,7 +2,8 @@
 // and errors become normalized rows written atomically by the store. Client
 // times are corrected by the batch's clock skew; unknown event names are
 // dropped and counted; props, counters and error text are bounded and redacted.
-// The device verifier travels on the device row: the store pins the first one
+// `share.sent` and `share.install` events also add share rows (core/share.ts)
+// in the same atomic write. The device verifier travels on the device row: the store pins the first one
 // per device and answers `forbidden` (403) to a write that carries another, or
 // that names a session owned by another device.
 
@@ -10,6 +11,7 @@ import { deviceRowOf, readIdentity, UUID, type Identity } from '../identity.ts';
 import type { HashPort, HttpOp, HttpResponse, RequestCtx } from '../op.ts';
 import { ok, type TceResult } from '../result.ts';
 import { isEventName } from '../schema/events.ts';
+import { shareRowsOf, type ShareEvent } from '../share.ts';
 import { LIMITS } from '../schema/limits.ts';
 import type { Bit, ErrorRow, EventRow, SessionRow } from '../schema/rows.ts';
 import type { AppWire, BatchResponse, DeviceWire } from '../schema/wire.ts';
@@ -85,6 +87,7 @@ export async function buildBatchWrite(
   const country = ctx.edge.country;
 
   const events: EventRow[] = [];
+  const shareEvents: ShareEvent[] = [];
   let droppedEvents = 0;
   const seenEvents = new Set<string>();
   for (const e of input.events) {
@@ -106,6 +109,7 @@ export async function buildBatchWrite(
       ts: e.ts + skew,
       received,
     });
+    shareEvents.push({ name: e.name, props: e.props, ts: e.ts + skew });
   }
 
   const base = {
@@ -209,6 +213,7 @@ export async function buildBatchWrite(
     sessions: [...sessions.values()],
     events,
     errors,
+    ...shareRowsOf(shareEvents, deviceId),
   };
   return { write, droppedEvents };
 }

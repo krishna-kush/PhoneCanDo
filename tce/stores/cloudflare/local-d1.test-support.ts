@@ -49,6 +49,9 @@ export const TABLES: readonly TableName[] = [
   'github_assets_daily',
   'github_repo_daily',
   'site_daily',
+  'share_links',
+  'share_daily',
+  'share_installs',
 ];
 
 /** Empty every table, so each case starts from a clean database. */

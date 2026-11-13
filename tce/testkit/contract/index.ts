@@ -2,7 +2,7 @@
 // storeContract('<name>', make) once; every case gets a fresh store from
 // make() and closes it afterwards. Checks go through the Store interface
 // (listExpired exposes event/error rows, listSiteDaily the rollup, forget
-// per-table counts, countReportsSince reports). When make() also returns
+// per-table counts, countReportsSince reports, shareStats share counts). When make() also returns
 // `dump`, merged device, install, session, report and GitHub values are
 // checked as well; without it those value checks are skipped. stores/memory
 // is the reference. One file per concern registers its cases; harness.ts is
@@ -17,6 +17,7 @@ import { mergeRuleCases } from './merge-rules.ts';
 import { ownershipCases } from './ownership.ts';
 import { reportCases } from './reports.ts';
 import { retentionScanCases } from './retention-scans.ts';
+import { shareCases } from './share.ts';
 import { siteDailyCases } from './site-daily.ts';
 import { usageCases } from './usage.ts';
 
@@ -33,6 +34,7 @@ export function storeContract(name: string, make: Make, opts: StoreContractOptio
     retentionScanCases(make);
     githubCases(make);
     siteDailyCases(make, opts);
+    shareCases(make);
     usageCases(make);
   });
 }

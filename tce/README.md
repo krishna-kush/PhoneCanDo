@@ -29,16 +29,22 @@ platform by replacing one folder.
 The ops answer only on the API host, `https://api.phonecando.app` (the
 Worker var `API_HOSTS`), all under `/v1/`. On every other host, the site's
 `phonecando.app` included, `/v1/*` is the static site's 404, so the site
-keeps all its paths for pages. `pnpm -C tce cf:dev` sets `API_HOSTS` to
-`localhost`; with it unset (the Worker tests), every host answers.
+keeps all its paths for pages. The one exception is the share links,
+`/i/<code>`: they answer on every host that is not an API host (the site's
+own domain, the link people open) and are the site's 404 on the API host
+(`SITE_OP_PATH_PREFIXES` in `core/http.ts`). `pnpm -C tce cf:dev` sets
+`API_HOSTS` to `localhost`; with it unset (the Worker tests), every host
+answers both.
 
 | Op | Route / schedule (UTC) | Does |
 |---|---|---|
-| `batch` | `POST /v1/batch` | app identity, device, sessions, events, errors → D1 |
+| `batch` | `POST /v1/batch` | app identity, device, sessions, events, errors → D1; `share.sent` / `share.install` events also add `share_links` / `share_installs` (`core/share.ts`) |
 | `report` | `POST /v1/report` | a user's Send report → `reports`; also upserts the phone's `devices` row (pins its verifier) |
-| `forget` | `POST /v1/forget` | Delete my data: every row of that device |
+| `forget` | `POST /v1/forget` | Delete my data: every row of that device, its share links with their counts and installs, and its own install through a link |
 | `hit` | `POST /v1/hit` | site page view → Analytics Engine, +1 on `site_daily` |
-| `download` | `GET /v1/dl/lite`, `GET /v1/dl/full` | count (Analytics Engine; +1 on `site_daily` only for a person's browser: `Sec-Fetch-Mode: navigate` and no bot user agent, else the point's class is `bot`), then 302 to the current version's GitHub APK |
+| `download` | `GET /v1/dl/lite`, `GET /v1/dl/full` | count (Analytics Engine; +1 on `site_daily` only for a person's browser: `Sec-Fetch-Mode: navigate` and no bot user agent, else the point's class is `bot`; with `?i=<code>` also +1 `download` on that share link's `share_daily`), then 302 to the current version's GitHub APK |
+| `share_open` | `GET /i/<code>` (site host) | a share link opened: +1 `open` on `share_daily` for a person's browser (the download rule), then 302 to `/?i=<code>` |
+| `share_stats` | `POST /v1/share/stats` | each share code's totals (opened, downloaded, installed, using, last day); no identity |
 | `health` | `GET /v1/health` | public capacity facts: database size, limit, ratios, `ingestPaused`, the retention switch and the oldest kept row's age per table (`HealthResponse` in `core/schema/wire.ts`); no identity, never cached |
 | `github_daily` | `17 3 * * *` | GitHub's release and repo counters → D1 |
 | `retention` | not scheduled (would be `*/15 * * * *`) | **currently off**; when on: reports > 90 days deleted first, then events > 90 days, errors > 180 days ([Retention](#retention)) |

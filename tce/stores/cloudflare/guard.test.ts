@@ -194,7 +194,10 @@ describe('storage guard: blocking', () => {
     assert.ok(u.ok);
     assert.deepEqual([u.value.dbBytes, u.value.ingestPaused], [499 * MB, true]);
     const forgot = await s.forget(DEVICE_ID, VERIFIER);
-    assert.deepEqual(forgot, { ok: true, value: { events: 1, errors: 1, reports: 0, sessions: 1, installs: 1, devices: 1 } });
+    assert.deepEqual(forgot, {
+      ok: true,
+      value: { events: 1, errors: 1, reports: 0, share_daily: 0, share_installs: 0, share_links: 0, sessions: 1, installs: 1, devices: 1 },
+    });
     assert.equal(errors().length, 1, 'over-limit sizes seen inside the window do not log again');
     assert.equal(state.blockedUntil, T0 + STORAGE_BLOCK_MS, 'nor extend it');
   });

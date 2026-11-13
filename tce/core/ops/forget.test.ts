@@ -112,7 +112,7 @@ describe('forget', () => {
     const res = await postForget(ctx, forgetRequest());
     assert.equal(res.status, 200);
     assert.deepEqual(JSON.parse(res.body!), {
-      deleted: { devices: 1, installs: 2, sessions: 2, events: 3, errors: 1, reports: 1 },
+      deleted: { devices: 1, installs: 2, sessions: 2, events: 3, errors: 1, reports: 1, share_links: 0, share_daily: 0, share_installs: 0 },
     });
     assert.deepEqual(
       Object.fromEntries(Object.entries(ctx.store.tables).map(([t, rows]) => [t, rows.map((r) => (r as { device_id?: string }).device_id)])),
@@ -126,6 +126,9 @@ describe('forget', () => {
         github_assets_daily: [],
         github_repo_daily: [],
         site_daily: [],
+        share_links: [],
+        share_daily: [],
+        share_installs: [],
       },
     );
     assert.equal(ctx.store.tables.devices.some((d) => d.device_id === DEVICE_ID), false);
@@ -152,7 +155,9 @@ describe('forget', () => {
 
     const res = await post(ctx, '/v1/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }));
     assert.equal(res.status, 200, String(res.body));
-    assert.deepEqual(JSON.parse(res.body!), { deleted: { devices: 1, installs: 0, sessions: 0, events: 0, errors: 0, reports: 1 } });
+    assert.deepEqual(JSON.parse(res.body!), {
+      deleted: { devices: 1, installs: 0, sessions: 0, events: 0, errors: 0, reports: 1, share_links: 0, share_daily: 0, share_installs: 0 },
+    });
     for (const rows of Object.values(ctx.store.tables)) assert.deepEqual(rows, []);
     assert.equal((await post(ctx, '/v1/forget', forgetRequest({ deviceId: DEVICE_ID_2, deviceProof: DEVICE_PROOF_2 }))).status, 404);
   });

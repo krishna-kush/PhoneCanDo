@@ -41,6 +41,10 @@ app/src/engine/telemetry/ -> client, core   (the only code outside tce that impo
   namespaces, no parameter properties, `import type` for types.
 - No reverse edges, no cycles. Tests may additionally import `testkit` and the
   local stores.
+- One edge out of tce: `hosts/cloudflare` mounts the accounts routes through
+  `accounts/hosts/cloudflare/index.ts` (optional Google sign-in; its own
+  package, database and rules in `accounts/AGENTS.md`). Nothing else in tce
+  imports accounts, and no tce table ever holds an account ID.
 
 ## 3. Code law
 

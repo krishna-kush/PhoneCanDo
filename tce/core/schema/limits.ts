@@ -45,6 +45,8 @@ export const LIMITS = {
   reportNote: 500,
   pathLength: 200,
   hostLength: 100,
+  // Codes per POST /v1/share/stats (one D1 read per 100, STATEMENT_LIMITS.maxParams).
+  shareStatsCodes: 100,
 
   // Client-side queue.
   queueCap: 500,
