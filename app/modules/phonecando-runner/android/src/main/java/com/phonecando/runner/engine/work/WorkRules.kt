@@ -5,6 +5,12 @@ package com.phonecando.runner.engine.work
 // - a look every POLL_MS while an engine runs (WorkWatch)
 // - a process younger than MIN_AGE_MS is not work yet: hooks, `git status`
 //   and spawn helpers come and go
+// - one STARTING_AGE_MS old that every other rule calls work, of an agent
+//   with no run going, is a job starting: the notification names it until
+//   MIN_AGE_MS decides, so the `npm run dev &` a run ended with holds the
+//   app before you switch to the browser. For MIN_AGE_MS after a poke (a
+//   run ended, the app left the screen), a look follows every
+//   STARTING_AGE_MS while such a process is younger than that
 // - a job is active (the CPU stays awake for it, power/WorkLock) when the
 //   agent's jobs used ACTIVE_CPU_MS of CPU or moved ACTIVE_IO_BYTES since
 //   the last look, and stays so for ACTIVE_HOLD_MS after
@@ -15,6 +21,7 @@ package com.phonecando.runner.engine.work
 object WorkRules {
   const val POLL_MS = 30_000L
   const val MIN_AGE_MS = 10_000L
+  const val STARTING_AGE_MS = 2_000L
 
   const val ACTIVE_CPU_MS = 200L
   const val ACTIVE_IO_BYTES = 64L * 1024L

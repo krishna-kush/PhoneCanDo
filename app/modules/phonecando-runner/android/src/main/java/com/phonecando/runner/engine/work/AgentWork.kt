@@ -42,9 +42,16 @@ object AgentWork {
    * user's first input in this engine life, null before it (all is the
    * agent's). [writers]: per pipe inode, the members holding it open for
    * writing (DetailScanner.pipeWriters); null when unreadable, then a pipe
-   * from the parent counts as the agent's.
+   * from the parent counts as the agent's. [minAgeMs]: younger is YOUNG
+   * (WorkRules.STARTING_AGE_MS finds jobs starting).
    */
-  fun judge(members: List<ProcDetail>, firstInputAt: Long?, now: Long, writers: Map<Long, Set<Int>>?): List<Judged> {
+  fun judge(
+    members: List<ProcDetail>,
+    firstInputAt: Long?,
+    now: Long,
+    writers: Map<Long, Set<Int>>?,
+    minAgeMs: Long = WorkRules.MIN_AGE_MS,
+  ): List<Judged> {
     val byPid = members.associateBy { it.pid }
     val verdicts = HashMap<Int, Verdict>()
     val whys = HashMap<Int, String>()
@@ -52,12 +59,12 @@ object AgentWork {
     // The programs first, oldest first, so a parent is judged before its
     // children; then our runtime's processes, by what runs under them.
     for (p in sorted.filterNot(::isRuntime)) {
-      val (verdict, why) = verdict(p, byPid, verdicts, firstInputAt, now, writers)
+      val (verdict, why) = verdict(p, byPid, verdicts, firstInputAt, now, writers, minAgeMs)
       verdicts[p.pid] = verdict
       whys[p.pid] = why
     }
     for (r in sorted.filter(::isRuntime)) {
-      val (verdict, why) = runtimeVerdict(r, members, byPid, verdicts, firstInputAt, now)
+      val (verdict, why) = runtimeVerdict(r, members, byPid, verdicts, firstInputAt, now, minAgeMs)
       verdicts[r.pid] = verdict
       whys[r.pid] = why
     }
@@ -71,8 +78,9 @@ object AgentWork {
     firstInputAt: Long?,
     now: Long,
     writers: Map<Long, Set<Int>>?,
+    minAgeMs: Long,
   ): Pair<Verdict, String> {
-    early(p, firstInputAt, now)?.let { return it }
+    early(p, firstInputAt, now, minAgeMs)?.let { return it }
     if (isShell(p)) return Verdict.WORK to "a shell"
     val parent = parentOf(p, byPid) ?: return Verdict.WORK to "its parent is gone (orphan or daemon)"
     val parentVerdict = verdicts[parent.pid]
@@ -96,10 +104,10 @@ object AgentWork {
   }
 
   // The start-time verdicts every process gets first; null: judge it further.
-  private fun early(p: ProcDetail, firstInputAt: Long?, now: Long): Pair<Verdict, String>? = when {
+  private fun early(p: ProcDetail, firstInputAt: Long?, now: Long, minAgeMs: Long): Pair<Verdict, String>? = when {
     firstInputAt == null -> Verdict.OWN to "no input yet"
     p.startedAt < firstInputAt -> Verdict.OWN to "started before the first input"
-    now - p.startedAt < WorkRules.MIN_AGE_MS -> Verdict.YOUNG to "younger than ${WorkRules.MIN_AGE_MS / 1000} s"
+    now - p.startedAt < minAgeMs -> Verdict.YOUNG to "younger than ${minAgeMs / 1000} s"
     else -> null
   }
 
@@ -113,12 +121,13 @@ object AgentWork {
     verdicts: Map<Int, Verdict>,
     firstInputAt: Long?,
     now: Long,
+    minAgeMs: Long,
   ): Pair<Verdict, String> {
-    early(r, firstInputAt, now)?.let { return it }
+    early(r, firstInputAt, now, minAgeMs)?.let { return it }
     val under = members.filter { !isRuntime(it) && carries(r, it, byPid) }.map { verdicts[it.pid] }
     return when {
       Verdict.WORK in under -> Verdict.WORK to "our runtime, carrying a job"
-      Verdict.YOUNG in under -> Verdict.YOUNG to "our runtime, carrying a program younger than ${WorkRules.MIN_AGE_MS / 1000} s"
+      Verdict.YOUNG in under -> Verdict.YOUNG to "our runtime, carrying a program younger than ${minAgeMs / 1000} s"
       under.isNotEmpty() -> Verdict.HELPER to "our runtime, carrying the agent's helper"
       else -> Verdict.HELPER to "our runtime, with nothing under it"
     }

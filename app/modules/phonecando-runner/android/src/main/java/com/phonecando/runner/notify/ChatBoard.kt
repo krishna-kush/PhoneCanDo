@@ -13,12 +13,13 @@ import com.phonecando.agents.kit.EngineEvent.Kind
 //   (that holds up its parent); its other moves belong to the parent's run.
 // - A run the user stopped, and a deleted session, leave the board.
 // - At most [maxEnded] done/error chats stay; the oldest go first.
-// - The chat on screen (setOpen) is left out: you are in it. A run that
-//   ends while it is open counts as seen, and opening a done or error chat
-//   is seeing it, so neither shows as done after you leave. The web UI names
-//   it by id; a TUI only by the title it shows (cut to 37 characters and
-//   "…" past 40), which counts only when exactly one of that agent's chats
-//   has it, so a fresh untitled chat or two alike stay listed.
+// - The chat on screen (setOpen) shows while its run goes, as every chat
+//   does: the notification is there only while something happens. A run
+//   that ends while it is open counts as seen, and opening a done or error
+//   chat is seeing it, so neither shows as done. The web UI names it by
+//   id; a TUI only by the title it shows (cut to 37 characters and "…"
+//   past 40), which counts only when exactly one of that agent's chats has
+//   it, so a fresh untitled chat or two alike are not seen by opening.
 // - Each agent's last top-level chat to move (latest) is kept while its
 //   engine runs, whatever the board shows: where other agents' messages go
 //   for a server engine (messages/).
@@ -81,10 +82,7 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
       return Change(chats.remove(key) != null)
     }
     if (current?.state == next) return NONE
-    if (key == openKey() && (next == State.DONE || next == State.FAILED)) {
-      chats.remove(key)
-      return NONE
-    }
+    if (key == openKey() && (next == State.DONE || next == State.FAILED)) return Change(chats.remove(key) != null)
     chats[key] = Chat(agentId, session, next, current?.title, now)
     trimEnded()
     // A new run may follow a rename, and a finished run's title is final.
@@ -151,12 +149,7 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
 
   /** Waiting first, then working, error, done; newest first within each. */
   @Synchronized
-  fun chats(): List<Chat> {
-    val hidden = openKey()
-    return chats.values
-      .filter { key(it.agentId, it.sessionId) != hidden }
-      .sortedWith(compareBy<Chat>({ it.state.ordinal }, { -it.at }))
-  }
+  fun chats(): List<Chat> = chats.values.sortedWith(compareBy<Chat>({ it.state.ordinal }, { -it.at }))
 
   private fun applyTitle(agentId: String, sessionId: String, title: String): Boolean {
     val key = key(agentId, sessionId)

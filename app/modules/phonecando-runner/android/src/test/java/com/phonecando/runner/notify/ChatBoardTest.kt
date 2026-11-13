@@ -142,22 +142,21 @@ class ChatBoardTest {
     assertFalse(board.drop("a"))
   }
 
-  @Test fun theOpenChatIsLeftOutUntilYouLeave() {
+  @Test fun theOpenChatShowsWhileItsRunGoes() {
     on("a", Kind.WORKING, "s1")
     on("b", Kind.WORKING, "s2")
     assertTrue(board.setOpen("a", "s1"))
     assertFalse(board.setOpen("a", "s1"))
-    assertEquals(listOf("b/s2/WORKING"), shown())
+    assertEquals(listOf("b/s2/WORKING", "a/s1/WORKING"), shown())
     on("a", Kind.WAITING, "s1")
-    assertEquals(listOf("b/s2/WORKING"), shown())
-    assertTrue(board.setOpen(null, null))
     assertEquals(listOf("a/s1/WAITING", "b/s2/WORKING"), shown())
   }
 
   @Test fun aRunThatEndsWhileOpenIsSeen() {
     on("a", Kind.WORKING, "s1")
     board.setOpen("a", "s1")
-    assertFalse(on("a", Kind.FINISHED, "s1").changed)
+    // It leaves the board: a change.
+    assertTrue(on("a", Kind.FINISHED, "s1").changed)
     board.setOpen("a", "other")
     assertEquals(emptyList<String>(), shown())
     // The next run in that chat shows again once you have left it.
@@ -180,33 +179,32 @@ class ChatBoardTest {
     board.setTitle("a", "s1", "Fix login")
     board.setTitle("a", "s2", "Refactor the payment service retries and timeouts")
     board.setTitle("b", "s3", "Fix login")
-    // Exact title: that agent's chat only.
+    // Exact title: that agent's chat only; a finish there is seen.
     board.setOpen("a", null, "Fix login")
+    on("a", Kind.FINISHED, "s1")
     assertEquals(listOf("a/s2/WORKING", "b/s3/WORKING"), shown().sortedBy { it })
     // Cut to 37 characters and "…".
     board.setOpen("a", null, "Refactor the payment service retries …")
-    assertEquals(listOf("a/s1/WORKING", "b/s3/WORKING"), shown().sortedBy { it })
-    // A finish there is seen.
     on("a", Kind.FINISHED, "s2")
     board.setOpen(null, null)
-    assertEquals(listOf("a/s1/WORKING", "b/s3/WORKING"), shown().sortedBy { it })
+    assertEquals(listOf("b/s3/WORKING"), shown())
   }
 
-  @Test fun anUnknownOrSharedTitleHidesNothing() {
+  @Test fun anUnknownOrSharedTitleSeesNothing() {
     on("a", Kind.WORKING, "s1")
     on("a", Kind.WORKING, "s2")
     board.setTitle("a", "s1", "Same")
     board.setTitle("a", "s2", "Same")
     board.setOpen("a", null, "Same")
-    assertEquals(2, board.chats().size)
+    on("a", Kind.FINISHED, "s1")
+    assertEquals(listOf("a/s1/DONE", "a/s2/WORKING"), shown().sortedBy { it })
     board.setOpen("a", null, "Nothing like it")
     assertEquals(2, board.chats().size)
-    // A chat whose title arrives later is hidden once it fits.
-    on("a", Kind.WORKING, "s9")
+    // A done chat whose title changes later is seen once it fits.
     board.setOpen("a", null, "Late title")
-    assertEquals(3, board.chats().size)
-    assertTrue(board.setTitle("a", "s9", "Late title"))
     assertEquals(2, board.chats().size)
+    assertTrue(board.setTitle("a", "s1", "Late title"))
+    assertEquals(listOf("a/s2/WORKING"), shown())
   }
 
   @Test fun aRenameNamesTheChatAndATuiCanThenSeeIt() {

@@ -3,12 +3,13 @@ package com.phonecando.runner.notify
 import com.phonecando.runner.engine.work.WorkWatch
 
 // The service notification's lines for the agents that stay up between
-// chats: one that left a job running ("Claude Code · running npm run dev"),
-// that the user keeps running ("Claude Code · kept running") or that asked
-// to stay up ("Claude Code · kept running: waiting for Tester's answer
-// (until 14:30)"). An agent with a chat working has its chat's line
-// instead. Each line gets a Stop (ServiceNotification), which ends the
-// agent and its jobs. Pure.
+// chats: one that left a job running or is starting one ("Claude Code ·
+// running npm run dev"), that the user keeps running ("Claude Code · kept
+// running"), that asked to stay up ("Claude Code · kept running: waiting
+// for Tester's answer (until 14:30)") or whose kind tells no chats and is
+// not idle ("Cline · active"). An agent with a chat working has its
+// chat's line instead. Each line gets a Stop (ServiceNotification), which
+// ends the agent and its jobs. Pure.
 internal object WorkLines {
   data class Line(val agentId: String, val name: String, val text: String)
 
@@ -19,13 +20,14 @@ internal object WorkLines {
     names: Map<String, String>,
     time: (Long) -> String,
   ): List<Line> =
-    states.filter { (it.busy || it.held) && it.agentId !in working }.map { s ->
+    states.filter { (it.busy || it.held || it.starting.isNotEmpty() || it.printing) && it.agentId !in working }.map { s ->
       val name = names[s.agentId] ?: s.agentId
       val ask = s.ask
       val text = when {
-        s.busy -> "running ${jobs(s.jobs)}"
-        s.kept || ask == null -> "kept running"
-        else -> "kept running: ${ask.reason} (until ${time(ask.until)})"
+        s.busy || s.starting.isNotEmpty() -> "running ${jobs((s.jobs + s.starting).distinct())}"
+        s.kept -> "kept running"
+        ask != null -> "kept running: ${ask.reason} (until ${time(ask.until)})"
+        else -> "active"
       }
       Line(s.agentId, name, "$name · $text")
     }

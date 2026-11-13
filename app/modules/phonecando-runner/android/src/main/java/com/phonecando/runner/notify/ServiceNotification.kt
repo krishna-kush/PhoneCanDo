@@ -7,17 +7,20 @@ import android.app.PendingIntent
 import android.content.Context
 import com.phonecando.runner.R
 
-// The foreground service's one notification: the chats the agents are busy
-// with, one line each, the chat, then its agent, then its state
-// (ChatBoard), then the agents kept up by a job they left running or by
-// Keep running (WorkLines, each with a Stop button for the first
-// MAX_STOPS), then a model server reading a prompt (ReadingLines), then
-// the model downloads and imports running (TransferLines), then the Linux
-// jobs (LinuxJobLines). Engines themselves never show. Chat titles, jobs and
-// model, system and agent names stay off the lock screen: the public
-// version only counts. Tapping opens the app; on that
-// agent's Home when every chat listed belongs to one agent (or, with none,
-// one engine runs).
+// The foreground service's one notification, there only while something
+// happens: the chats the agents are busy with, one line each, the chat,
+// then its agent, then its state (ChatBoard), then the agents kept up by a
+// job they left running or are starting, by Keep running or at work
+// unseen (WorkLines, each with a Stop button for the first MAX_STOPS),
+// then the agents starting, then a model server reading a prompt
+// (ReadingLines), then the model downloads and imports running
+// (TransferLines), then the Linux jobs (LinuxJobLines). An engine that
+// only runs never shows: with nothing to list there is no notification
+// (build gives null) and the service leaves the foreground. Chat titles,
+// jobs and model, system and agent names stay off the lock screen: the
+// public version only counts. Tapping opens the app; on that agent's Home
+// when every chat listed belongs to one agent (or, with none, one engine
+// runs).
 internal class ServiceNotification(private val context: Context) {
   fun createChannel() {
     context.getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -29,8 +32,9 @@ internal class ServiceNotification(private val context: Context) {
    * [names]: agent id → name; [running]: agents whose engine is live;
    * [transfers]: TransferLines of the model jobs; [reading]: the ReadingLines
    * line while a model server reads a prompt; [linuxJobs]: LinuxJobLines of
-   * the Linux jobs; [work]: WorkLines of the agents kept up; [stop]: the
-   * intent that stops one of those agents.
+   * the Linux jobs; [work]: WorkLines of the agents kept up; [starting]: the
+   * names of the agents whose engines start; [stop]: the intent that stops
+   * one of those agents. Null when there is nothing to list.
    */
   fun build(
     chats: List<ChatBoard.Chat>,
@@ -40,24 +44,26 @@ internal class ServiceNotification(private val context: Context) {
     reading: String? = null,
     linuxJobs: List<String> = emptyList(),
     work: List<WorkLines.Line> = emptyList(),
+    starting: List<String> = emptyList(),
     stop: (String) -> PendingIntent? = { null },
-  ): Notification {
+  ): Notification? {
+    val extra = work.map { it.text } + starting.map { "Starting $it" } + listOfNotNull(reading) + transfers + linuxJobs
+    if (chats.isEmpty() && extra.isEmpty()) return null
     val agent = chats.map { it.agentId }.distinct().singleOrNull()
       ?: running.singleOrNull()?.takeIf { chats.isEmpty() }
     val tap = agent?.let { LaunchTargets.tap(context, LaunchTarget("home", it)) } ?: launchIntent()
     val counts = listOf(
-      summary(chats), WorkLines.count(work), if (reading != null) READING else "", transferCount(transfers), linuxCount(linuxJobs),
+      summary(chats), WorkLines.count(work), startingCount(starting), if (reading != null) READING else "",
+      transferCount(transfers), linuxCount(linuxJobs),
     )
     val summary = counts.filter { it.isNotEmpty() }.joinToString(" · ")
-    val extra = work.map { it.text } + listOfNotNull(reading) + transfers + linuxJobs
     val builder = base(tap)
     for (line in work.take(MAX_STOPS)) {
       val intent = stop(line.agentId) ?: continue
       builder.addAction(Notification.Action.Builder(null, "Stop ${line.name}", intent).build())
     }
     when {
-      chats.isEmpty() && extra.size <= 1 ->
-        builder.setContentTitle("PhoneCanDo").setContentText(extra.firstOrNull() ?: NO_CHATS)
+      chats.isEmpty() && extra.size == 1 -> builder.setContentTitle("PhoneCanDo").setContentText(extra[0])
       chats.size == 1 && extra.isEmpty() -> {
         val chat = chats[0]
         builder.setContentTitle(title(chat)).setContentText("${name(chat, names)} · ${chat.state.label}")
@@ -75,8 +81,23 @@ internal class ServiceNotification(private val context: Context) {
         builder.setContentTitle(title).setContentText(summary).setStyle(style)
       }
     }
-    val public = base(tap).setContentTitle("PhoneCanDo").setContentText(summary.ifEmpty { NO_CHATS }).build()
+    val public = base(tap).setContentTitle("PhoneCanDo").setContentText(summary).build()
     return builder.setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(public).build()
+  }
+
+  /**
+   * What startForeground shows when there is nothing to list: Android
+   * wants one for every start of the service, which then leaves the
+   * foreground at once. Android 12 and later hold a new foreground
+   * service's notification back for some seconds, so it is not seen.
+   */
+  fun quiet(): Notification = base(launchIntent()).setContentTitle("PhoneCanDo").build()
+
+  // "1 agent starting": no names.
+  private fun startingCount(starting: List<String>): String = when (starting.size) {
+    0 -> ""
+    1 -> "1 agent starting"
+    else -> "${starting.size} agents starting"
   }
 
   // "2 models coming in": no names, so the lock screen may show it.
@@ -121,8 +142,6 @@ internal class ServiceNotification(private val context: Context) {
   companion object {
     const val CHANNEL_ID = "phonecando-engine"
     const val NOTIFICATION_ID = 4101
-    private const val NO_CHATS = "No chats running"
-
     // No model name, so the lock screen may show it.
     private const val READING = "reading the prompt"
 

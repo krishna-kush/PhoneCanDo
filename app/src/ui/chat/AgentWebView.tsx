@@ -40,7 +40,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   // up for good.
   const [covered, setCovered] = useState(true);
   const restoreRef = useRef(lastPage(agent.id));
-  // The chat the page shows, if any: the service notification leaves it out.
+  // The chat the page shows, if any: a run that ends there is seen.
   const [chatId, setChatId] = useState<string | null>(null);
   const web = useRef<WebView<object>>(null);
   const canGoBackRef = useRef(false);

@@ -109,6 +109,37 @@ class WorkWatchTest {
     assertFalse(watch.busyNow("gone"))
   }
 
+  @Test fun aJobARunLeftShowsAsStartingUntilItIsDecided() {
+    // The run ended 3 s after `npm run dev &`; a hook is a few ms old and
+    // not named.
+    val npm = p(20, 10, now - 3_000L, "npm", "run", "dev")
+    procs = listOf(engine, npm, p(30, 10, now - 50L, "sh", "hook"))
+    // The next look when npm turns MIN_AGE_MS old.
+    assertEquals(7_100L, watch.tick())
+    assertEquals(listOf("npm run dev"), watch.states().getValue("a1").starting)
+    assertEquals(emptyList<String>(), watch.states().getValue("a1").jobs)
+    procs = listOf(engine, npm)
+    now += 7_100L
+    assertEquals(WorkRules.POLL_MS, watch.tick())
+    assertEquals(listOf("npm run dev"), watch.states().getValue("a1").jobs)
+    assertEquals(emptyList<String>(), watch.states().getValue("a1").starting)
+  }
+
+  @Test fun nothingStartsWhileARunGoes() {
+    agents = listOf(agent("a1").copy(running = true))
+    procs = listOf(engine, p(20, 10, now - 3_000L, "npm", "test"))
+    watch.tick()
+    assertEquals(emptyList<String>(), watch.states().getValue("a1").starting)
+  }
+
+  @Test fun anAgentWhoseKindTellsNoChatsIsPrintingUntilIdle() {
+    agents = listOf(agent("a1", idle = false).copy(reportsChats = false), agent("a2", idle = false))
+    procs = listOf(engine)
+    watch.tick()
+    assertTrue(watch.states().getValue("a1").printing)
+    assertFalse(watch.states().getValue("a2").printing)
+  }
+
   @Test fun endsOnceNoEngineRuns() {
     procs = listOf(engine, p(20, 10, 900_000L, "vite"))
     watch.tick()

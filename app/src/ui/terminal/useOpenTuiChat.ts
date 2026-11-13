@@ -6,8 +6,8 @@ import { agentKind } from '../../engine/agents/registry';
 import { agentById, setOpenChat } from '../../engine/engines';
 
 // The TUI's counterpart of useOpenChat (ui/chat): an agent TUI in front
-// tells the runner which chat it shows, so the service notification leaves
-// it out. The TUI never says which session it is on, only the title it
+// tells the runner which chat it shows, so a run that ends there is seen.
+// The TUI never says which session it is on, only the title it
 // gives the terminal, so the chat goes by title (the runner matches it to
 // that agent's chats). `agentId` is the agent whose TUI is in front: its
 // TUI client in a terminal, or a TUI engine on Home; null for a

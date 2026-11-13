@@ -80,8 +80,8 @@ set (`term.modes`), never from the agent kind:
 
 Only true taps post `tap`. The page also posts the title a program sets
 (`{type:'title'}`, OSC 0/2): an agent TUI names its chat there, and
-`useOpenTuiChat.ts` reports that chat as open so the service notification
-leaves it out (`runner.md` → Notifications).
+`useOpenTuiChat.ts` reports that chat as open so a run that ends there is
+seen (`runner.md` → Notifications).
 
 `app/scripts/inline-xterm.js` bundles `xterm.js` (base64) + `xterm.css` +
 `terminal.js` into `terminal.bundle.html`. Re-run after page changes.

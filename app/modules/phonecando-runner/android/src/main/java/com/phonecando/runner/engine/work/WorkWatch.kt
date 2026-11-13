@@ -8,9 +8,12 @@ import kotlin.concurrent.withLock
 
 // Watches what the running agents left running, and stops an idle agent
 // with nothing left once the app is in the background. While an engine
-// runs it looks every POLL_MS (and at once on poke: an engine starting):
-// reads our processes, judges each agent's (AgentWork), measures whether
-// its jobs are doing something (WorkMeter), and, with the app in the
+// runs it looks every POLL_MS (and at once on poke: an engine starting, a
+// run ending, the app leaving the screen; sooner while a job is starting,
+// WorkRules.STARTING_AGE_MS): reads our processes, judges each agent's
+// (AgentWork), measures whether its jobs are doing something (WorkMeter),
+// tells an agent whose kind raises no chat events while it is not idle by
+// its kind's rule (it may be at work, unseen), and, with the app in the
 // background, stops the agents ReclaimPolicy picks (Host.stop, as a user
 // stop: the agent and all it started). It tells [onLook] after every look,
 // whether anything changed, so the service can update its notification
@@ -49,7 +52,9 @@ internal class WorkWatch(
    * [idle]: by its kind's rule, never with a chat working; [firstInputAt]:
    * epoch ms of the user's first input in this engine life (null: none
    * yet); [kept]: the user keeps it running; [ask]: its own live ask to
-   * stay up (KeepAsks).
+   * stay up (KeepAsks); [running]: a chat of its is working (what it
+   * starts then is the run's own); [reportsChats]: its kind raises chat
+   * events, so the notification sees its runs.
    */
   data class Agent(
     val agentId: String,
@@ -59,6 +64,8 @@ internal class WorkWatch(
     val firstInputAt: Long?,
     val kept: Boolean,
     val ask: KeepAsks.Ask? = null,
+    val running: Boolean = false,
+    val reportsChats: Boolean = true,
   ) {
     /** Never stopped for being idle: the user keeps it running or it asked to stay up. */
     val held: Boolean get() = kept || ask != null
@@ -66,8 +73,10 @@ internal class WorkWatch(
 
   /**
    * One agent at the last look: its [jobs] by name (WorkNames), whether
-   * they are doing something ([active]), Keep running ([kept]) and its own
-   * ask to stay up ([ask]).
+   * they are doing something ([active]), Keep running ([kept]), its own
+   * ask to stay up ([ask]), the jobs it is [starting] (WorkRules.
+   * STARTING_AGE_MS), and [printing]: its kind raises no chat events and
+   * it is not idle by its kind's rule, so it may be at work.
    */
   data class State(
     val agentId: String,
@@ -75,6 +84,8 @@ internal class WorkWatch(
     val active: Boolean,
     val kept: Boolean,
     val ask: KeepAsks.Ask? = null,
+    val starting: List<String> = emptyList(),
+    val printing: Boolean = false,
   ) {
     val busy: Boolean get() = jobs.isNotEmpty()
 
@@ -87,6 +98,10 @@ internal class WorkWatch(
   private var woken = false
 
   @Volatile private var states: Map<String, State> = emptyMap()
+
+  // Epoch ms until which a process younger than STARTING_AGE_MS brings the
+  // next look that close (poke).
+  @Volatile private var quickUntil = 0L
 
   // The watch thread's own.
   private val meter = WorkMeter()
@@ -108,8 +123,13 @@ internal class WorkWatch(
     return work(agent, scan(), clock()).any { it.verdict == AgentWork.Verdict.WORK }
   }
 
-  /** Looks at once, starting the watch's thread when none runs. */
+  /**
+   * Looks at once, starting the watch's thread when none runs; for
+   * MIN_AGE_MS after, a job that may be starting is looked at again soon
+   * (WorkRules.STARTING_AGE_MS).
+   */
   fun poke() {
+    quickUntil = clock() + WorkRules.MIN_AGE_MS
     lock.withLock {
       woken = true
       wake.signalAll()
@@ -161,7 +181,11 @@ internal class WorkWatch(
       return null
     }
     val all = scan()
-    val judged = agents.associate { it.agentId to work(it, all, now) }
+    val looked = agents.associate { it.agentId to members(it, all) }
+    val judged = agents.associate { a -> a.agentId to looked.getValue(a.agentId).judge(a, now) }
+    val starting = agents.associate { a ->
+      a.agentId to starting(a, looked.getValue(a.agentId), judged.getValue(a.agentId), now)
+    }
     val jobs = judged.mapValues { (_, list) -> list.filter { it.verdict == AgentWork.Verdict.WORK }.map { it.proc } }
     val active = meter.look(all, jobs, now)
     lastBusyAt.keys.retainAll(judged.keys)
@@ -169,7 +193,9 @@ internal class WorkWatch(
     val next = agents.associate { a ->
       val named = AgentWork.jobs(judged.getValue(a.agentId)).map(WorkNames::of).distinct()
       if (named.isNotEmpty()) lastBusyAt[a.agentId] = now
-      a.agentId to State(a.agentId, named, a.agentId in active && named.isNotEmpty(), a.kept, a.ask)
+      val coming = starting.getValue(a.agentId).jobs.map(WorkNames::of).distinct()
+      val printing = !a.reportsChats && !a.idle
+      a.agentId to State(a.agentId, named, a.agentId in active && named.isNotEmpty(), a.kept, a.ask, coming, printing)
     }
     for ((agentId, list) in judged) logIfChanged(agentId, list)
     val changed = next != states
@@ -189,14 +215,46 @@ internal class WorkWatch(
         host.stop(agentId)
       }
     }
-    return WorkRules.POLL_MS
+    return nextLook(starting.values, now)
   }
 
-  private fun work(agent: Agent, all: List<ProcDetail>, now: Long): List<AgentWork.Judged> {
+  // An agent's processes, and who writes the stdin pipes of those that may be helpers.
+  private class Members(val procs: List<ProcDetail>, val writers: Map<Long, Set<Int>>?) {
+    fun judge(agent: Agent, now: Long, minAgeMs: Long = WorkRules.MIN_AGE_MS): List<AgentWork.Judged> =
+      AgentWork.judge(procs, agent.firstInputAt, now, writers, minAgeMs)
+  }
+
+  // [jobs]: what an agent with no run going is starting (WorkRules.
+  // STARTING_AGE_MS); [fresh]: something of its is younger still.
+  private class Starting(val jobs: List<ProcDetail>, val fresh: Boolean)
+
+  private fun members(agent: Agent, all: List<ProcDetail>): Members {
     val members = AgentWork.members(all, agent.agentId)
     val pipes = AgentWork.pipesToCheck(members, agent.firstInputAt)
-    val pipeWriters = if (pipes.isEmpty()) emptyMap() else writers(members.map { it.pid }, pipes)
-    return AgentWork.judge(members, agent.firstInputAt, now, pipeWriters)
+    return Members(members, if (pipes.isEmpty()) emptyMap() else writers(members.map { it.pid }, pipes))
+  }
+
+  private fun work(agent: Agent, all: List<ProcDetail>, now: Long): List<AgentWork.Judged> = members(agent, all).judge(agent, now)
+
+  // The jobs past STARTING_AGE_MS that MIN_AGE_MS has not decided yet but
+  // every other rule calls work. None while a run goes: what it starts is
+  // its own until it ends.
+  private fun starting(agent: Agent, members: Members, judged: List<AgentWork.Judged>, now: Long): Starting {
+    val young = judged.filter { it.verdict == AgentWork.Verdict.YOUNG }.mapTo(HashSet()) { it.proc.pid }
+    if (agent.running || young.isEmpty()) return NONE_STARTING
+    val early = members.judge(agent, now, WorkRules.STARTING_AGE_MS)
+    return Starting(AgentWork.jobs(early).filter { it.pid in young }, early.any { it.verdict == AgentWork.Verdict.YOUNG })
+  }
+
+  // POLL_MS; sooner while jobs are starting (when the first is decided)
+  // and, for a while after a poke, while something is younger still.
+  private fun nextLook(starting: Collection<Starting>, now: Long): Long {
+    var delay = WorkRules.POLL_MS
+    starting.flatMap { it.jobs }.minOfOrNull { it.startedAt + WorkRules.MIN_AGE_MS - now }?.let {
+      delay = minOf(delay, it.coerceAtLeast(0L) + DECIDE_SLACK_MS)
+    }
+    if (now < quickUntil && starting.any { it.fresh }) delay = minOf(delay, WorkRules.STARTING_AGE_MS)
+    return delay
   }
 
   // Each process's verdict once it has one (not YOUNG) and whenever it
@@ -209,5 +267,12 @@ internal class WorkWatch(
       log("[phonecando-work] $agentId ${j.proc.pid} ${j.verdict} ${WorkNames.of(j.proc)} (${j.why})")
     }
     logged[agentId] = decided.mapTo(HashSet()) { it.proc.pid to it.verdict }
+  }
+
+  private companion object {
+    val NONE_STARTING = Starting(emptyList(), fresh = false)
+
+    // A look meant for when a job is decided comes this much after.
+    const val DECIDE_SLACK_MS = 100L
   }
 }

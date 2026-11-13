@@ -42,4 +42,18 @@ class WorkLinesTest {
       WorkLines.of(states, working = emptySet(), names = names, time = time).map { it.text },
     )
   }
+
+  @Test fun aJobStartingAndAnAgentAtWorkUnseen() {
+    val states = listOf(
+      // The run ended seconds ago with `npm run dev &`: named before it is decided.
+      WorkWatch.State("a1", emptyList(), active = false, kept = false, starting = listOf("npm run dev")),
+      WorkWatch.State("a2", listOf("vite"), active = false, kept = false, starting = listOf("vite", "tsc")),
+      // Its kind tells no chats, and it printed lately.
+      WorkWatch.State("a3", emptyList(), active = false, kept = false, printing = true),
+    )
+    assertEquals(
+      listOf("Claude Code · running npm run dev", "opencode · running vite, tsc", "Codex · active"),
+      WorkLines.of(states, working = emptySet(), names = names, time = time).map { it.text },
+    )
+  }
 }

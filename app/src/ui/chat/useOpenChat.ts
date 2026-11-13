@@ -4,10 +4,11 @@ import type { AgentId } from '../../engine/agents/records';
 import { setOpenChat } from '../../engine/engines';
 import { useHomeInFront } from '../nav/homeInFront';
 
-// Tells the runner which chat is on screen, so the service notification
-// leaves it out: you are in it. On screen means the web UI shows that chat,
-// Home is up with no page over it, and the app is in the foreground.
-// Anything else, and unmounting, reports none.
+// Tells the runner which chat is on screen, so a run that ends there is
+// seen and the service notification never lists it as done. On screen
+// means the web UI shows that chat, Home is up with no page over it, and
+// the app is in the foreground. Anything else, and unmounting, reports
+// none.
 export function useOpenChat(agentId: AgentId, sessionId: string | null) {
   const inFront = useHomeInFront();
   const [active, setActive] = useState(AppState.currentState === 'active');

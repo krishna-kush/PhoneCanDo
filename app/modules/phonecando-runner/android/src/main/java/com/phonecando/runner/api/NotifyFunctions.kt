@@ -26,11 +26,12 @@ internal fun ModuleDefinitionBuilder.notifyFunctions(context: () -> Context) {
     Engines.peek()?.chatsSeen(agentId)
   }
 
-  // The chat on screen, or nulls when none is: the service notification
-  // leaves it out. The web UI names it by id (useOpenChat); a TUI only by
-  // the title it shows (useOpenTuiChat). No supervisor yet means no engine and so no
-  // chat to hide; the chat's own engine start creates it before the chat
-  // page can load.
+  // The chat on screen, or nulls when none is: a run that ends there is
+  // seen, so the service notification never lists it as done. The web UI
+  // names it by id (useOpenChat); a TUI only by the title it shows
+  // (useOpenTuiChat). No supervisor yet means no engine and so no chat to
+  // see; the chat's own engine start creates it before the chat page can
+  // load.
   Function("setOpenChat") { agentId: String?, sessionId: String?, title: String? ->
     Engines.peek()?.setOpenChat(agentId, sessionId, title)
   }

@@ -17,8 +17,8 @@ import java.io.File
 // The work watch bound to this phone, made once with the supervisor
 // (Engines): our processes in /proc, clock ticks at the kernel's rate,
 // process starts against elapsedRealtime (which a check at install logs),
-// logcat for its verdicts. It wakes when an engine starts; an agent's ask
-// to stay up (KeepAsks) ends with its engine.
+// logcat for its verdicts. It wakes when an engine starts and when a run
+// ends; an agent's ask to stay up (KeepAsks) ends with its engine.
 internal object WorkWatches {
   private const val TAG = "PhoneCanDoWork"
 
@@ -37,9 +37,18 @@ internal object WorkWatches {
       onError = { Log.w(TAG, "work look failed", it) },
     )
     Engines.addListener(object : Engines.Listener {
+      private var working = emptySet<String>()
+
       override fun onStatus(status: EngineStatus) {
         if (status.state == EngineState.STARTING) watch.poke()
         if (!status.state.live) KeepAsks.shared.clear(status.agentId)
+      }
+
+      // A run ended: what it left starting shows at once.
+      override fun onChats() {
+        val now = engines.working()
+        val ended = synchronized(this) { (working - now).isNotEmpty().also { working = now } }
+        if (ended) watch.poke()
       }
     })
     return watch

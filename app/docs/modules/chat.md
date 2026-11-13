@@ -208,8 +208,8 @@ the UI falls back to opencode's palette.
   `../../src/ui/chat/tui/AgentTuiHome.tsx`, `../../src/ui/chat/InstallHome.tsx`
 - `../../src/ui/chat/webNavigation.ts`, `../../src/ui/chat/useEngineTouch.ts`
 - `../../src/ui/chat/useOpenChat.ts` (tells the runner which chat is on
-  screen, via the web adapter's `sessionOf`, so the service notification
-  leaves it out; see `runner.md` → Notifications)
+  screen, via the web adapter's `sessionOf`, so a run that ends there is
+  seen; see `runner.md` → Notifications)
 - `../../src/ui/chat/lastPage.ts` (pure; vectors in
   `../../scripts/vectors/test_chat_pages.js`)
 - `../../src/engine/agents/webAdapter.ts` (pure; vectors in
