@@ -15,6 +15,11 @@ the agent's machine. Shared image-kind rules: `agents/AGENTS.md` §4.
 
 - `resume` adds `--continue`: the newest chat for the folder, else the
   newest anywhere.
+- `prompt` (a scheduled task) appends `-i <task>`, after `--continue`:
+  "Start an interactive session and automatically execute this prompt"
+  (docs.github.com, Copilot CLI command reference; 1.0.107's changelog
+  lets `--continue` send it). From the docs only: the binary's parser is
+  not readable.
 - No `chatTitle` yet: the window title is `<chat title> - <intent> -
   GitHub Copilot`, or `GitHub Copilot`, and we have not seen a signed-in
   one.

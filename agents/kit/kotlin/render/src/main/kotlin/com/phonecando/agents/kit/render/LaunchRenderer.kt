@@ -4,6 +4,7 @@ import com.phonecando.agents.kit.LaunchContext
 import com.phonecando.agents.kit.LaunchSpec
 import com.phonecando.agents.kit.ProjectDir
 import com.phonecando.agents.kit.manifest.Command
+import com.phonecando.agents.kit.manifest.PromptArgs
 import com.phonecando.agents.kit.manifest.Resume
 
 /** What the kind's TUI client attaches with: the engine, the agent's image and a project folder. */
@@ -32,12 +33,15 @@ data class ClientRecipe(val cmd: List<String>, val env: Map<String, String>, val
 // launch. An engine with no port (a TUI) has no
 // {{port}} or {{serverUrl}}; {{bridgeUrl}} is empty for a kind with no
 // bridge, so a `when` item drops its args. When the agent ran before, the resume args go in
-// at their index, or at the end. The TUI client's env starts with what any
-// terminal program needs from us, then the kind's: HOME and TMPDIR are the
-// image HOME (as the client always had), TERM and COLORTERM say what our
-// xterm renders.
+// at their index, or at the end. A launch with a first prompt adds the
+// kind's prompt args the same way, {{prompt}} filled in as one argv item
+// (the value is never read for placeholders again); both indexes count in
+// the launch's own argv, and where they meet the resume args come first.
+// The TUI client's env starts with what any terminal program needs from
+// us, then the kind's: HOME and TMPDIR are the image HOME (as the client
+// always had), TERM and COLORTERM say what our xterm renders.
 object LaunchRenderer {
-  fun engine(command: Command, ctx: LaunchContext, resume: Resume? = null): LaunchSpec {
+  fun engine(command: Command, ctx: LaunchContext, resume: Resume? = null, prompt: PromptArgs? = null): LaunchSpec {
     val values = buildMap {
       put("libDir", ctx.libDir)
       put("home", ctx.home.path)
@@ -50,13 +54,30 @@ object LaunchRenderer {
         put("serverUrl", EngineUrl.base(ctx.port))
       }
     }
-    var argv = Templates.argv(command.argv, values)
-    if (ctx.resume && resume != null) {
-      val at = (resume.at ?: argv.size).coerceIn(0, argv.size)
-      argv = argv.subList(0, at) + resume.args.map { Templates.render(it, values) } + argv.subList(at, argv.size)
-    }
+    val own = Templates.argv(command.argv, values)
+    val inserts = listOfNotNull(
+      resume?.takeIf { ctx.resume }?.let { (it.at ?: own.size) to it.args.map { arg -> Templates.render(arg, values) } },
+      prompt?.let { p -> ctx.prompt?.let { text -> (p.at ?: own.size) to promptArgs(p, values, text) } },
+    )
+    val argv = if (inserts.isEmpty()) own else insert(own, inserts)
     val cwd = command.cwd?.let { Templates.render(it, values) }
     return LaunchSpec(argv, Templates.env(command.env, values), cwd)
+  }
+
+  // The prompt args with {{prompt}} as [text]; the rest are templates as any.
+  private fun promptArgs(prompt: PromptArgs, values: Map<String, String>, text: String): List<String> {
+    val withPrompt = values + (PromptArgs.PLACEHOLDER to text)
+    return prompt.args.map { Templates.render(it, withPrompt) }
+  }
+
+  // [inserts] (an index in [argv], clamped to it, with its args) put in, in
+  // their order where two share an index.
+  private fun insert(argv: List<String>, inserts: List<Pair<Int, List<String>>>): List<String> = buildList {
+    val at = inserts.map { (index, args) -> index.coerceIn(0, argv.size) to args }
+    for (i in 0..argv.size) {
+      at.filter { it.first == i }.forEach { addAll(it.second) }
+      if (i < argv.size) add(argv[i])
+    }
   }
 
   fun client(command: Command, ctx: ClientContext): ClientRecipe {

@@ -91,6 +91,25 @@ interface AgentKind {
 
   /** The newest chat's id in what that request answered; null when it names none. */
   fun inboxLatestId(answer: String): String? = null
+
+  /** The request that makes a new chat titled [title] (`inbox.server.create`), for a task that wants one; null without one. */
+  fun inboxCreateRequest(port: String, password: String, title: String): InboxRequest? = null
+
+  /** The new chat's id in what that request answered; null when it names none. */
+  fun inboxCreatedId(answer: String): String? = null
+
+  /**
+   * Its engine can start with a first prompt (the manifest's
+   * `engine.prompt`): LaunchContext.prompt goes in as one argv item, and
+   * the TUI runs it as its first turn.
+   */
+  val promptsAtStart: Boolean get() = false
+
+  /**
+   * An agent of it can run a scheduled task: its engine starts with the
+   * task as its first prompt, or the task can wake an idle one ([canWake]).
+   */
+  val runsSchedules: Boolean get() = promptsAtStart || canWake
 }
 
 /** What any engine launch knows, whatever the kind. */
@@ -118,6 +137,11 @@ data class LaunchContext(
    * PHONECANDO_CARRY_<NAME>, and the image's sh restores it before the program.
    */
   val carry: Set<String> = emptySet(),
+  /**
+   * The first prompt the engine runs (a scheduled task), for a kind that
+   * promptsAtStart: one argv item, never through a shell. Null: none.
+   */
+  val prompt: String? = null,
 )
 
 /** The kind's part of a launch: argv[0] is the engine binary; [cwd] null means HOME. */

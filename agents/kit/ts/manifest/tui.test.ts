@@ -53,6 +53,41 @@ describe('resume and launch', () => {
     fails((m) => (m.engine.resume = {} as never), '/engine/resume/args required');
   });
 
+  it('starts with a first prompt as one whole arg', () => {
+    ok((m) => (m.engine.prompt = { args: ['{{prompt}}'] }));
+    ok((m) => (m.engine.prompt = { args: ['-i', '{{prompt}}', '{{projectDir}}'], at: 1 }));
+    fails((m) => (m.engine.prompt = { args: ['--p={{prompt}}'] }), '/engine/prompt/args mismatch');
+    fails((m) => (m.engine.prompt = { args: ['{{prompt}}', '{{prompt}}'] }), '/engine/prompt/args mismatch');
+    fails((m) => (m.engine.prompt = { args: ['-i'] }), '/engine/prompt/args mismatch');
+    fails((m) => (m.engine.prompt = { args: ['{{prompt}}', '{{password}}'] }), '/engine/prompt/args/1 forbidden');
+    fails((m) => (m.engine.prompt = { args: ['{{prompt}}'], at: 0 }), '/engine/prompt/at range');
+    fails((m) => (m.engine.prompt = { args: [] }), '/engine/prompt/args length');
+    // Only these args name it.
+    fails((m) => (m.engine.resume = { args: ['{{prompt}}'] }), '/engine/resume/args/0 unknown');
+  });
+
+  it('puts the prompt past a shell script\'s $0', () => {
+    const script = (m: Tui) => (m.engine.launch.argv = ['sh', '-c', 'exec demo "$@"', 'demo']);
+    ok((m) => {
+      script(m);
+      m.engine.prompt = { args: ['{{prompt}}'] };
+    });
+    ok((m) => {
+      script(m);
+      m.engine.prompt = { args: ['{{prompt}}'], at: 4 };
+    });
+    fails((m) => {
+      script(m);
+      m.engine.prompt = { args: ['{{prompt}}'], at: 2 };
+    }, '/engine/prompt/at range');
+  });
+
+  it('keeps the first prompt to a tui engine', () => {
+    const opencode = JSON.parse(readFileSync(new URL('../../schema/fixtures/valid/opencode.json', import.meta.url), 'utf8'));
+    const result = validate({ ...opencode, engine: { ...opencode.engine, prompt: { args: ['{{prompt}}'] } } }, { origin: 'bundled' });
+    assert.ok(result.problems.some((p) => p.path === '/engine/prompt' && p.code === 'forbidden'));
+  });
+
   it('starts in a working directory', () => {
     fails((m) => (m.engine.launch.cwd = '{{password}}'), '/engine/launch/cwd forbidden');
     fails((m) => (m.engine.launch.cwd = '{{nope}}'), '/engine/launch/cwd unknown');

@@ -21,6 +21,12 @@ from system settings whatever the folder's trust.
   `~/.qwen/updates`.
 - `resume` adds `--continue`; with no saved chat for the folder Qwen
   starts a new one.
+- `prompt` (a scheduled task) adds `--prompt-interactive <task>`, the
+  first prompt of an interactive session (a bare positional runs once and
+  exits); it waits until the chat `--continue` loaded is ready (v0.27.3:
+  `packages/cli/src/config/config.ts`, `ui/AppContainer.tsx`). In a
+  folder with `.qwen/PROJECT_SUMMARY.md` Qwen first asks welcome-back,
+  and the task waits for that answer.
 - The window title is `Qwen - <folder>` until the chat has a name, then
   the name, with a state glyph in front, padded to 80 columns;
   `surfaces.chatTitle` takes the name and skips the default.

@@ -1,12 +1,14 @@
-// The engine block: its style, launch command, auth (server), readiness and
-// resume args. A server engine is ready once its readiness path answers; a
-// tui engine (the agent's own TUI in a PTY) after its first output and some
-// quiet, or after being alive a while, with defaults for both.
+// The engine block: its style, launch command, auth (server), readiness,
+// resume args and (tui) first-prompt args. A server engine is ready once its
+// readiness path answers; a tui engine (the agent's own TUI in a PTY) after
+// its first output and some quiet, or after being alive a while, with
+// defaults for both.
 import { fields, integer, isObject, list, oneOf, string, type Add, type Json } from './primitives.ts';
-import { ENGINE_STYLES, MAX, PATTERNS, READINESS_RULES } from './rules.ts';
+import { ENGINE_STYLES, FIRST_SCRIPT_ARG, MAX, PATTERNS, PROMPT_PLACEHOLDER, READINESS_RULES, SHELL_SCRIPT_FLAG } from './rules.ts';
 import { command, httpBlock, template } from './templates.ts';
 
-const ENGINE_FIELDS = ['style', 'launch', 'auth', 'readiness', 'resume'];
+const ENGINE_FIELDS = ['style', 'launch', 'auth', 'readiness', 'resume', 'prompt'];
+const PROMPT = `{{${PROMPT_PLACEHOLDER}}}`;
 
 export function checkEngine(add: Add, engine: unknown) {
   // acp is named as reserved, not as an unknown field.
@@ -23,6 +25,7 @@ export function checkEngine(add: Add, engine: unknown) {
   if ('readiness' in e) checkReadiness(add, e.readiness, e.style);
   else if (e.style === 'server') add('/engine/readiness', 'required', 'a server engine needs readiness');
   if ('resume' in e) checkResume(add, e.resume);
+  if ('prompt' in e) checkPrompt(add, e);
 }
 
 function checkAuth(add: Add, auth: unknown, server: boolean) {
@@ -69,6 +72,40 @@ function checkResume(add: Add, resume: unknown) {
   const r = resume as Json;
   list(add, '/engine/resume/args', r.args, { min: 1, unique: false }, (path, arg) => template(add, path, arg));
   integer(add, '/engine/resume/at', r.at, 1, MAX.resumeAt);
+}
+
+// Args a tui engine starts with to run a first prompt (a scheduled task):
+// exactly one is {{prompt}}, whole, so the prompt is one argv item; the
+// others are templates as any. Appended, or put in at argv index `at`
+// (counted in the launch's own argv, as resume's is), and past a shell
+// script's $0. A server engine takes a task through its inbox instead.
+function checkPrompt(add: Add, e: Json) {
+  const at = '/engine/prompt';
+  if (e.style !== 'tui') add(at, 'forbidden', 'engine.prompt is for a tui engine (a server takes a task through its inbox)');
+  if (!fields(add, at, e.prompt, ['args', 'at'], ['args'])) return;
+  const p = e.prompt as Json;
+  if (list(add, `${at}/args`, p.args, { min: 1, unique: false }, (path, arg) => promptArg(add, path, arg))) {
+    const naming = p.args.filter((arg) => typeof arg === 'string' && arg.includes(PROMPT));
+    if (naming.length !== 1 || naming[0] !== PROMPT) add(`${at}/args`, 'mismatch', `holds ${PROMPT} as one whole arg, once`);
+  }
+  integer(add, `${at}/at`, p.at, 1, MAX.resumeAt);
+  if (typeof p.at === 'number' && p.at < FIRST_SCRIPT_ARG && runsScript(e.launch)) {
+    add(`${at}/at`, 'range', `a shell script's own args start at ${FIRST_SCRIPT_ARG} (after its $0); leave at out to append`);
+  }
+}
+
+// A template that may also name {{prompt}}; no secret.
+function promptArg(add: Add, path: string, value: unknown) {
+  if (typeof value === 'string' && value.includes(PROMPT)) {
+    string(add, path, value, PATTERNS.promptTemplate, MAX.template);
+    return;
+  }
+  template(add, path, value);
+}
+
+// `sh -c <script> …`: the launch's second arg is the shell's -c.
+function runsScript(launch: unknown): boolean {
+  return isObject(launch) && Array.isArray(launch.argv) && launch.argv[1] === SHELL_SCRIPT_FLAG;
 }
 
 /** The engine's style when it names a known one, else null. */

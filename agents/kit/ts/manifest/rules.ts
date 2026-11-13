@@ -71,6 +71,16 @@ export const INBOX_WAKES = ['hook', 'server', 'reader'];
 export const INBOX_METHODS = ['POST'];
 export const INBOX_MESSAGES = 'messages';
 export const INBOX_SESSION = 'sessionId';
+/** A new chat's title: the one placeholder `inbox.server.create`'s body may name. */
+export const INBOX_TITLE = 'title';
+
+// A tui engine's first prompt (`engine.prompt`): {{prompt}}, which no other
+// template may name, is exactly one of its args, so the prompt is one argv
+// item. A launch through a shell script (`sh -c <script> <$0> …`) takes it
+// only past the script's $0, as one of "$@".
+export const PROMPT_PLACEHOLDER = 'prompt';
+export const SHELL_SCRIPT_FLAG = '-c';
+export const FIRST_SCRIPT_ARG = 4;
 
 // What every agent on a machine shares in HOME, which `userState` (deleted
 // when an agent that kept the kind's defaults leaves a machine that stays)
@@ -139,6 +149,10 @@ export const PATTERNS = {
   inboxPathTemplate: templateOf([INBOX_SESSION]),
   /** An inbox server call's body strings: {{messages}} and {{sessionId}}. */
   inboxBodyTemplate: templateOf([INBOX_MESSAGES, INBOX_SESSION]),
+  /** The create call's body strings: {{title}} only. */
+  inboxCreateTemplate: templateOf([INBOX_TITLE]),
+  /** A prompt arg: known placeholders, no {{password}}, and {{prompt}}. */
+  promptTemplate: templateOf([...PLACEHOLDERS.filter((n) => n !== SECRET_PLACEHOLDER), PROMPT_PLACEHOLDER]),
   httpPath: '^/\\S*$',
   jsonPointer: '^(?:/(?:[^~/]|~[01])*)+$',
   envName: '^[A-Za-z_][A-Za-z0-9_]*$',
@@ -185,7 +199,7 @@ export const MAX = {
   /** Readiness waits, in milliseconds and seconds. */
   readyMs: 60000,
   readySec: 3600,
-  /** The argv index resume args go in at (after the program). */
+  /** The argv index resume args, or prompt args, go in at (after the program). */
   resumeAt: 256,
   /** A package name with its suffix. */
   package: 128,

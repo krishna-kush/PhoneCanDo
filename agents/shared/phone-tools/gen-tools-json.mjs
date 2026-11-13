@@ -53,8 +53,9 @@ async function loadTools() {
   const { basicTools } = await import(pathToFileURL(join(HERE, 'basic.ts')).href);
   const { agentTools } = await import(pathToFileURL(join(HERE, 'agents.ts')).href);
   const { keepTools } = await import(pathToFileURL(join(HERE, 'keep.ts')).href);
+  const { scheduleTools } = await import(pathToFileURL(join(HERE, 'schedule.ts')).href);
   const { controlTools } = await import(pathToFileURL(join(HERE, 'control/index.ts')).href);
-  return [...basicTools, ...agentTools, ...keepTools, ...controlTools];
+  return [...basicTools, ...agentTools, ...keepTools, ...scheduleTools, ...controlTools];
 }
 
 // One run against a bridge that answers the first call with PROBE and

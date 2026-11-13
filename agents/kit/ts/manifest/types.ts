@@ -127,6 +127,16 @@ export interface Resume {
   at?: number;
 }
 
+/**
+ * Args a tui engine starts with to run a first prompt (a scheduled task):
+ * exactly one is `{{prompt}}`, so the prompt is one argv item; appended
+ * unless `at` (an argv index, counted as resume's) says where.
+ */
+export interface PromptArgs {
+  args: string[];
+  at?: number;
+}
+
 export interface Engine {
   style: EngineStyle;
   /** For an image kind, argv[0] is a guest command or an absolute guest path. */
@@ -135,6 +145,8 @@ export interface Engine {
   auth?: { basic: { user: string } };
   readiness?: Readiness;
   resume?: Resume;
+  /** Tui only. */
+  prompt?: PromptArgs;
 }
 
 /** A rule over a tui engine's PTY output: `match` (a regex over the OSC text) narrows it. */
@@ -339,6 +351,8 @@ export interface Inbox {
     wake?: InboxEndpoint;
     /** GET `path` answers the agent's chats newest first; `id` points at the newest one's id (when the host knows none). */
     latest?: { path: string; id: string };
+    /** `method` `path` (no placeholders) makes a new chat, the body's strings naming {{title}}; `id` points at its id in the answer. */
+    create?: { method: 'POST'; path: string; body: Record<string, unknown>; id: string };
   };
   /** The kind's own extension or plugin reads PHONECANDO_INBOX itself. */
   reader?: boolean;

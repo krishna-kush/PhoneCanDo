@@ -20,6 +20,11 @@ extension of ours, `config/phonecando.ts` (with `messages.ts` and
   pi finds itself, so `~/.pi/agent/` stays yours.
 - `resume` adds `--continue`; with no chat for the folder pi starts a new
   one.
+- `prompt` (a scheduled task) appends `-- <task>`: pi's interactive mode
+  sends its messages as the first prompt and stays open (v1.5.2:
+  `packages/coding-agent/src/cli/args.ts` `--`, `main.ts`
+  `InteractiveMode` `initialMessages`). After `--` a message starting with
+  `@` is still a file; the runner's never does.
 - The window title is `π - <folder>`, or `π - <chat name> - <folder>` once
   the chat has a name (`/name`); `surfaces.chatTitle` takes the name.
 

@@ -12,6 +12,11 @@ glibc-only, so no Alpine.
 ## Launch
 
 - No `resume`: Cline has no `--continue`.
+- `prompt` (a scheduled task) starts it as `cline --tui -- <task>`: the
+  TUI with the task as its first prompt (`apps/cli` 3.0.74:
+  `src/main.ts` runs the TUI with `initialPrompt` for `-i/--tui`,
+  `src/tui/root.tsx` submits it once sign-in is done). Never without
+  `--tui`: a bare `cline <prompt>` runs it once, in yolo mode, and exits.
 - Its TUI may start its local hub daemon (`cline hub`, port 25463); the
   runner reaps it with the engine.
 - The window title is `Cline`, then `> <your prompt>` once a task runs;

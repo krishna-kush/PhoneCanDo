@@ -109,7 +109,8 @@ class ManifestDecoderTest {
           "style": "tui",
           "launch": { "argv": ["tuido"], "env": {}, "cwd": "{{projectDir}}" },
           "readiness": { "output": { "settleMs": 250 } },
-          "resume": { "args": ["--continue"], "at": 1 }
+          "resume": { "args": ["--continue"], "at": 1 },
+          "prompt": { "args": ["-i", "{{prompt}}"] }
         },
         "events": [{ "pty": { "rules": [
           { "on": "bel", "event": "waiting" },
@@ -132,6 +133,7 @@ class ManifestDecoderTest {
     assertEquals("{{projectDir}}", engine.launch!!.cwd)
     assertEquals(Readiness(null, OutputReadiness(250, null), null), engine.readiness)
     assertEquals(Resume(listOf("--continue"), 1), engine.resume)
+    assertEquals(PromptArgs(listOf("-i", "{{prompt}}"), null), engine.prompt)
     assertEquals(
       listOf(
         PtyRule(PtySignal.BEL, null, PtyEvent.WAITING),

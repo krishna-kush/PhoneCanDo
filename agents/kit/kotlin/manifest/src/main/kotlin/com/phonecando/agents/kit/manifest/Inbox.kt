@@ -41,8 +41,16 @@ enum class InboxFormat(val wire: String) {
   JSON("json"),
 }
 
-/** A server engine's inbox calls; [deliver] always, [wake] when an idle agent can be woken through it. */
-data class InboxServer(val deliver: InboxEndpoint, val wake: InboxEndpoint?, val latest: InboxLookup? = null)
+/**
+ * A server engine's inbox calls; [deliver] always, [wake] when an idle agent
+ * can be woken through it, [create] when the host can make it a new chat.
+ */
+data class InboxServer(
+  val deliver: InboxEndpoint,
+  val wake: InboxEndpoint?,
+  val latest: InboxLookup? = null,
+  val create: InboxCreate? = null,
+)
 
 /**
  * GET [path] on the engine (no placeholders) answers its chats, newest
@@ -50,6 +58,19 @@ data class InboxServer(val deliver: InboxEndpoint, val wake: InboxEndpoint?, val
  * host knows no chat of the agent's (none has run since its engine started).
  */
 data class InboxLookup(val path: String, val id: String)
+
+/**
+ * [method] [path] on the engine (no placeholders) with the JSON [body],
+ * whose strings may name `{{title}}` (the new chat's title), makes a new
+ * chat; [id] is the JSON pointer to its id in the answer. Asked before a
+ * scheduled task that wants a chat of its own wakes the agent.
+ */
+data class InboxCreate(val method: String, val path: String, val body: JsonObject, val id: String) {
+  companion object {
+    /** The one placeholder its body may name. */
+    const val TITLE = "title"
+  }
+}
 
 /**
  * [method] [path] on the engine (`{{sessionId}}` in it the chat, a URI

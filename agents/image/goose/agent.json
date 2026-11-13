@@ -60,7 +60,7 @@
       "argv": [
         "sh",
         "-c",
-        "if [ -n \"${GOOSE_PATH_ROOT:-}\" ]; then cfg=\"$GOOSE_PATH_ROOT/config/config.yaml\"; else cfg=\"$HOME/.config/goose/config.yaml\"; fi; if [ -z \"${GOOSE_PROVIDER:-}\" ] && ! grep -qsE '^(active_provider|GOOSE_PROVIDER):' \"$cfg\"; then /root/.local/bin/goose configure || exit; fi; exec /root/.local/bin/goose session \"$@\"",
+        "if [ -n \"${GOOSE_PATH_ROOT:-}\" ]; then cfg=\"$GOOSE_PATH_ROOT/config/config.yaml\"; else cfg=\"$HOME/.config/goose/config.yaml\"; fi; if [ -z \"${GOOSE_PROVIDER:-}\" ] && ! grep -qsE '^(active_provider|GOOSE_PROVIDER):' \"$cfg\"; then /root/.local/bin/goose configure || exit; fi; for a; do if [ \"$a\" = --text ]; then exec /root/.local/bin/goose run --interactive \"$@\"; fi; done; exec /root/.local/bin/goose session \"$@\"",
         "goose"
       ],
       "env": {
@@ -69,7 +69,8 @@
       "cwd": "{{projectDir}}"
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
-    "resume": { "args": ["-r"] }
+    "resume": { "args": ["-r"] },
+    "prompt": { "args": ["--text", "{{prompt}}"] }
   },
   "events": [
     {

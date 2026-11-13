@@ -34,6 +34,11 @@ project ones, and `mcpServers` and `hooks` merge across them, so
   (`GEMINI_CLI_NO_RELAUNCH` stays unset).
 - `resume` adds `--resume latest`; with no saved chat Gemini starts a new
   one.
+- No `prompt`, so it cannot run scheduled tasks: `-i/--prompt-interactive`
+  starts a new chat with a first prompt, but with `--resume latest`
+  (0.68.0) it sends the prompt before the old chat has loaded, so the
+  model never sees that chat and the turn is not saved to it
+  (`ui/AppContainer.tsx` does not wait for `useSessionResume`).
 - No `chatTitle`: the window title is only the state and the folder.
 
 ## State

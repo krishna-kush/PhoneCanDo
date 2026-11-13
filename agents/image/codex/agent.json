@@ -97,7 +97,8 @@
       "cwd": "{{projectDir}}"
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
-    "resume": { "args": ["resume", "--last"], "at": 1 }
+    "resume": { "args": ["resume", "--last"], "at": 1 },
+    "prompt": { "args": ["--", "{{prompt}}"] }
   },
   "events": [
     {

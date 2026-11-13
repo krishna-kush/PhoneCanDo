@@ -34,7 +34,8 @@ import java.io.File
 // kind there. An agent given a state folder of its own keeps its state
 // there (StateSeam), and its instructions file and config move with it.
 // Other agents' messages reach a running agent as its `inbox` says
-// (InboxSeam): its hooks print them, or its server takes them.
+// (InboxSeam): its hooks print them, or its server takes them. A TUI kind
+// with `engine.prompt` can start with a first prompt (a scheduled task).
 // of() refuses a kind this build cannot run (KindChecks throws
 // KindException), so the catalog never holds one.
 class ManifestKind private constructor(
@@ -105,7 +106,7 @@ class ManifestKind private constructor(
   override fun launch(ctx: LaunchContext): LaunchSpec {
     val state = ownState(ctx.stateDir)
     if (manifest.type != TYPE_IMAGE) {
-      val spec = LaunchRenderer.engine(launchCommand, ctx, manifest.engine?.resume)
+      val spec = LaunchRenderer.engine(launchCommand, ctx, manifest.engine?.resume, startPrompt(ctx))
       return withModel(state?.let { StateSeam.apply(spec, it, ctx.stateDir!!.path) } ?: spec, ctx)
     }
     // Everything the program sees is the guest's: {{home}}, {{tmp}},
@@ -113,7 +114,7 @@ class ManifestKind private constructor(
     // its cwd, which the image's sh enters (ImageLaunch); the process starts
     // in HOME.
     val guest = ctx.copy(home = File(ImageLaunch.GUEST_HOME), tmp = File(ImageLaunch.GUEST_TMP))
-    val rendered = LaunchRenderer.engine(launchCommand, guest, manifest.engine?.resume)
+    val rendered = LaunchRenderer.engine(launchCommand, guest, manifest.engine?.resume, startPrompt(ctx))
     val own = state?.let { StateSeam.apply(rendered, it, StateSeam.guestPath(ctx.stateDir!!, ctx.home)) }
     val spec = withModel(own ?: rendered, ctx)
     val image = ctx.image ?: throw KindException("$id: an image kind runs in its image, and none was given")
@@ -123,6 +124,14 @@ class ManifestKind private constructor(
       env = spec.env + ImageLaunch.GUEST_DIRS,
       cwd = null,
     )
+  }
+
+  override val promptsAtStart: Boolean get() = manifest.engine?.prompt != null
+
+  // The kind's prompt args for a launch with a first prompt; a kind that
+  // cannot start with one refuses it rather than start without the task.
+  private fun startPrompt(ctx: LaunchContext) = ctx.prompt?.let {
+    manifest.engine?.prompt ?: throw KindException("$id cannot start with a prompt (no engine.prompt)")
   }
 
   // The kind's state block when the agent has a state folder of its own
@@ -222,6 +231,12 @@ class ManifestKind private constructor(
 
   override fun inboxLatestId(answer: String): String? =
     manifest.inbox?.server?.latest?.let { JsonPointer.text(answer, it.id) }?.takeIf { it.isNotBlank() }
+
+  override fun inboxCreateRequest(port: String, password: String, title: String): InboxRequest? =
+    manifest.inbox?.server?.create?.let { InboxSeam.create(it, auth, port, password, title) }
+
+  override fun inboxCreatedId(answer: String): String? =
+    manifest.inbox?.server?.create?.let { JsonPointer.text(answer, it.id) }?.takeIf { it.isNotBlank() }
 
   /**
    * The kind's TUI attached to its running engine; null when it has none.

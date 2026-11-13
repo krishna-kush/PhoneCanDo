@@ -208,10 +208,27 @@
             "args": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/template" } },
             "at": { "type": "integer", "minimum": 1, "maximum": 256 }
           }
+        },
+        "prompt": {
+          "description": "Tui only: args the engine starts with to run a first prompt (a scheduled task). Exactly one is {{prompt}}, whole, so the prompt is one argv item; appended unless at (an argv index in the launch's own argv, as resume's) says where; past a shell script's $0.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["args"],
+          "properties": {
+            "args": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/promptTemplate" },
+              "contains": { "const": "{{prompt}}" },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            "at": { "type": "integer", "minimum": 1, "maximum": 256 }
+          }
         }
       },
       "if": { "properties": { "style": { "const": "server" } }, "required": ["style"] },
-      "then": { "required": ["readiness"], "properties": { "readiness": { "required": ["http"] } } },
+      "then": { "required": ["readiness"], "properties": { "readiness": { "required": ["http"] }, "prompt": false } },
       "else": { "properties": { "auth": false, "readiness": { "properties": { "http": false } } } }
     },
     "events": {
@@ -448,6 +465,18 @@
                 "path": { "type": "string", "pattern": "^/\\S*$" },
                 "id": { "type": "string", "pattern": "^(?:/(?:[^~/]|~[01])*)+$" }
               }
+            },
+            "create": {
+              "description": "method path (no placeholders) makes a new chat, with the kind's auth; body's strings may name {{title}} (the chat's title); id is the JSON pointer to the new chat's id in the answer. Asked before a scheduled task that wants a chat of its own wakes the agent.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["method", "path", "body", "id"],
+              "properties": {
+                "method": { "enum": ["POST"] },
+                "path": { "type": "string", "pattern": "^/\\S*$" },
+                "body": { "type": "object", "additionalProperties": { "$ref": "#/$defs/inboxCreateJson" } },
+                "id": { "$ref": "#/$defs/jsonPointer" }
+              }
             }
           }
         },
@@ -590,6 +619,15 @@
         "body": { "type": "object", "additionalProperties": { "$ref": "#/$defs/inboxBodyJson" } }
       }
     },
+    "inboxCreateText": { "type": "string", "maxLength": 1024, "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:title)\\}\\})*$" },
+    "inboxCreateJson": {
+      "anyOf": [
+        { "$ref": "#/$defs/inboxCreateText" },
+        { "type": ["number", "boolean", "null"] },
+        { "type": "array", "items": { "$ref": "#/$defs/inboxCreateJson" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/inboxCreateJson" } }
+      ]
+    },
     "inboxBodyText": { "type": "string", "maxLength": 1024, "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:messages|sessionId)\\}\\})*$" },
     "inboxBodyJson": {
       "anyOf": [
@@ -651,6 +689,12 @@
       "type": "string",
       "maxLength": 1024,
       "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:libDir|home|tmp|port|serverUrl|bridgeUrl|projectDir|sessionId|code)\\}\\})*$"
+    },
+    "promptTemplate": {
+      "description": "An engine.prompt arg: a template that may also name {{prompt}}. Never {{password}}.",
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^(?:[^{]|\\{(?!\\{)|\\{\\{(?:libDir|home|tmp|port|serverUrl|bridgeUrl|projectDir|sessionId|code|prompt)\\}\\})*$"
     },
     "envTemplate": {
       "description": "An env value: a template that may also hold {{password}}.",

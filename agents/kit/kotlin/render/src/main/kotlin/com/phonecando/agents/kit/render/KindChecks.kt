@@ -7,17 +7,37 @@ import com.phonecando.agents.kit.manifest.EventSource
 import com.phonecando.agents.kit.manifest.HomeSurface
 import com.phonecando.agents.kit.manifest.LinuxNeed
 import com.phonecando.agents.kit.manifest.Manifest
+import com.phonecando.agents.kit.manifest.PromptArgs
 
 // What ManifestKind.of() refuses: a manifest this build cannot run as it
 // says. Each check throws KindException naming the kind and the reason.
 internal object KindChecks {
   private const val MAX_RESUME_AT = 256
 
+  // `sh -c <script> <$0> <$1>…`: the script's own args start at index 4.
+  private const val SHELL_SCRIPT = "-c"
+  private const val FIRST_SCRIPT_ARG = 4
+
   fun engine(manifest: Manifest) {
     val engine = manifest.engine ?: throw KindException("${manifest.id}: no engine")
     if (engine.launch == null) throw KindException("${manifest.id}: a ${engine.style.wire} engine needs engine.launch")
     engine.resume?.at?.let {
       if (it !in 1..MAX_RESUME_AT) throw KindException("${manifest.id}: engine.resume.at must be 1..$MAX_RESUME_AT")
+    }
+    engine.prompt?.let { prompt(manifest.id, it, engine.launch!!.argv) }
+  }
+
+  // The prompt is one argv item: exactly one arg is `{{prompt}}`, whole,
+  // and no other names it. A launch through a shell script (`sh -c`) takes
+  // it only past the script's $0, as one of "$@".
+  private fun prompt(id: String, prompt: PromptArgs, argv: List<ArgvItem>) {
+    val whole = "{{${PromptArgs.PLACEHOLDER}}}"
+    val naming = prompt.args.filter { PromptArgs.PLACEHOLDER in Templates.names(it) }
+    if (naming != listOf(whole)) throw KindException("$id: engine.prompt.args holds $whole as one whole arg, once")
+    val at = prompt.at ?: return
+    if (at !in 1..MAX_RESUME_AT) throw KindException("$id: engine.prompt.at must be 1..$MAX_RESUME_AT")
+    if ((argv.getOrNull(1) as? ArgvItem.Text)?.template == SHELL_SCRIPT && at < FIRST_SCRIPT_ARG) {
+      throw KindException("$id: engine.prompt.at must be past the shell script's \$0 ($FIRST_SCRIPT_ARG or more), or absent")
     }
   }
 
@@ -36,6 +56,7 @@ internal object KindChecks {
     val id = manifest.id
     if (manifest.events.any { it is EventSource.Pty }) throw KindException("$id: PTY events need a tui engine")
     if (manifest.events.any { it is EventSource.Hook }) throw KindException("$id: hook events need a tui engine")
+    if (manifest.engine?.prompt != null) throw KindException("$id: engine.prompt needs a tui engine (a server takes a task through its inbox)")
     return manifest.engine?.readiness?.http?.path ?: throw KindException("$id: a server engine needs engine.readiness.http")
   }
 

@@ -28,6 +28,12 @@ glibc or musl, so Alpine works (with `libgcc`).
   share anonymous usage data.
 - `resume` adds `-r` (the newest session). With none goose exits 1, and
   the runner's resume fallback starts it without.
+- `prompt` (a scheduled task) adds `--text <task>`. `goose session` takes
+  no prompt, so the wrapper runs `goose run --interactive "$@"` instead
+  when its args hold `--text`: the same interactive loop, with the task
+  as its first message (v1.59.0: `crates/goose-cli/src/cli.rs` `run`'s
+  `-t/--text`, `-s/--interactive`, `-r/--resume`; `session/mod.rs`
+  `interactive(prompt)`). Read in the source, not yet run on a phone.
 - No `chatTitle`: the window title is `🪿 <folder>`.
 
 ## State

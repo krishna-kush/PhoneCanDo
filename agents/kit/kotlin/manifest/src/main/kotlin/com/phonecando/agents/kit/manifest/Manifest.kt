@@ -130,6 +130,7 @@ data class Engine(
   val auth: Auth?,
   val readiness: Readiness?,
   val resume: Resume?,
+  val prompt: PromptArgs? = null,
 )
 
 /** A process to start: argv items, env and an optional working directory, all templates. */
@@ -169,6 +170,19 @@ data class AliveReadiness(val ms: Int?)
 
 /** Args (templates) added when the engine relaunches an agent that ran before: at argv index [at], or appended. */
 data class Resume(val args: List<String>, val at: Int?)
+
+/**
+ * Args (templates) a TUI engine starts with to run a first prompt: one is
+ * exactly `{{prompt}}`, so the prompt is one argv item. At argv index [at],
+ * or appended; both indexes count in the launch's own argv, and the resume
+ * args come first where they meet.
+ */
+data class PromptArgs(val args: List<String>, val at: Int?) {
+  companion object {
+    /** The one placeholder only these args may name: the prompt. */
+    const val PLACEHOLDER = "prompt"
+  }
+}
 
 sealed interface EventSource {
   /** A server-sent event stream at [path], read by the parser hook [parser]. */

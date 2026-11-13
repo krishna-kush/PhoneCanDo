@@ -26,6 +26,7 @@ import {
   PATTERNS,
   PHONE_TOOLS,
   PLACEHOLDERS,
+  PROMPT_PLACEHOLDER,
   PTY_EVENTS,
   PTY_SIGNALS,
   READINESS_RULES,
@@ -145,6 +146,7 @@ describe('validator and schema agree', () => {
     assert.deepEqual(props.inbox.properties.wake.enum, INBOX_WAKES);
     assert.deepEqual(defs.inboxHook.properties.format.enum, INBOX_FORMATS);
     assert.deepEqual(defs.inboxCall.properties.method.enum, INBOX_METHODS);
+    assert.deepEqual(props.inbox.properties.server.properties.create.properties.method.enum, INBOX_METHODS);
   });
 
   it('has the same patterns', () => {
@@ -183,12 +185,24 @@ describe('validator and schema agree', () => {
     assert.equal(defs.inboxCall.properties.path.allOf[0].pattern, PATTERNS.httpPath);
     assert.equal(defs.inboxCall.properties.path.allOf[1].pattern, PATTERNS.inboxPathTemplate);
     assert.equal(defs.inboxBodyText.pattern, PATTERNS.inboxBodyTemplate);
+    assert.equal(defs.inboxCreateText.pattern, PATTERNS.inboxCreateTemplate);
+    assert.equal(props.inbox.properties.server.properties.create.properties.path.pattern, PATTERNS.httpPath);
+    assert.equal(defs.promptTemplate.pattern, PATTERNS.promptTemplate);
+    assert.equal(props.engine.properties.prompt.properties.args.contains.const, `{{${PROMPT_PLACEHOLDER}}}`);
+  });
+
+  it('has the same prompt and resume limits', () => {
+    assert.equal(props.engine.properties.resume.properties.at.maximum, MAX.resumeAt);
+    assert.equal(props.engine.properties.prompt.properties.at.maximum, MAX.resumeAt);
+    assert.equal(defs.promptTemplate.maxLength, MAX.template);
   });
 
   it('has the same inbox limits', () => {
     assert.equal(defs.inboxHook.properties.exit.maximum, MAX.hookExit);
     assert.equal(props.inbox.properties.hooks.propertyNames.maxLength, MAX.name);
-    for (const def of [defs.inboxHookText, defs.inboxBodyText, defs.inboxCall.properties.path]) assert.equal(def.maxLength, MAX.template);
+    for (const def of [defs.inboxHookText, defs.inboxBodyText, defs.inboxCreateText, defs.inboxCall.properties.path]) {
+      assert.equal(def.maxLength, MAX.template);
+    }
   });
 
   it('has the same install rules', () => {

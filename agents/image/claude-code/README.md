@@ -15,6 +15,11 @@ image-kind rules: `agents/AGENTS.md` §4.
 - `USE_BUILTIN_RIPGREP=0`: the system `rg`, which Alpine needs.
 - `resume` adds `--continue`, which exits 1 when the folder has no saved
   chat; the runner's resume fallback then starts it without.
+- `prompt` (a scheduled task) appends `-- <task>`: `claude "query"`
+  starts the interactive session with that first prompt, with
+  `--continue` too (code.claude.com/docs/en/cli-reference; tried with
+  2.1.306). `--` ends `--mcp-config`, which takes several values and
+  would read the task as one more.
 - The window title is `<glyph> <title>` (`✳` idle, `◐`/`◑` working), and
   `Claude Code` until the chat has a title; `surfaces.chatTitle` skips
   that default.

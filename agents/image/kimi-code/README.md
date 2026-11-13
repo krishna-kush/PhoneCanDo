@@ -23,6 +23,9 @@ is archived.
   with its own sign-in).
 - `resume` adds `--continue`; with no chat for the folder Kimi starts a
   new one.
+- No `prompt`, so it cannot run scheduled tasks: the TUI takes no first
+  prompt (2.6.1 `apps/kimi-code/src/cli/commands.ts`: an argument is an
+  unknown command), and `-p` answers once without the TUI.
 - The window title is the chat's title (cut to 32 characters) or `Kimi
   Code`; `surfaces.chatTitle` skips the default.
 

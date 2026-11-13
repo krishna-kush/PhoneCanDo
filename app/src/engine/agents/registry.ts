@@ -2,7 +2,7 @@
 // manifest (agents/<type>/<id>/agent.json, packaged per channel) without
 // templates or secrets (KindView); a field the list leaves out reads as its
 // default (stateFolder: false; inbox: pull, so its agents read messages
-// only when they ask; canWake: false; messaging: none). Read and parsed once per JS run, and
+// only when they ask; canWake: false; messaging: none; schedules: false). Read and parsed once per JS run, and
 // again after a custom agent kind is saved or deleted (reloadKinds). Screens
 // look up the kind of the agent in question (`agentKind(agent.kind)`); there
 // is no app-wide kind.
@@ -25,6 +25,7 @@ export function allKinds(): KindView[] {
         inbox: k.inbox === 'push' ? 'push' : 'pull',
         canWake: k.canWake === true,
         messaging: levelOf(k.messaging),
+        schedules: k.schedules === true,
       }));
     } catch {
       // No native runner (Expo Go, web): no kinds, and no agents either.
@@ -80,6 +81,7 @@ export function agentKind(id: AgentKindId): KindView {
     inbox: 'pull',
     canWake: false,
     messaging: 'none',
+    schedules: false,
   };
   unknown.set(id, standIn);
   return standIn;

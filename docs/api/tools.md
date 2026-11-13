@@ -36,10 +36,10 @@ Implementation status, wrapper parity and device proof are in
 
 ## Agent tools
 
-Messages between the AI agents on the phone, and an agent's ask to stay
-up, on every channel and outside the phone-control lock
-(`agents/shared/phone-tools/agents.ts` and `keep.ts`; one bridge route
-each, so MCP serves them too):
+Messages between the AI agents on the phone, an agent's ask to stay up
+and its tasks for later, on every channel and outside the phone-control
+lock (`agents/shared/phone-tools/agents.ts`, `keep.ts` and `schedule.ts`;
+one bridge route each, so MCP serves them too):
 
 | Tool | Route | Purpose |
 |---|---|---|
@@ -48,10 +48,19 @@ each, so MCP serves them too):
 | `agents_inbox` | `POST /agents/inbox` | read and mark read the caller's unread messages and notices |
 | `agents_wait` | `POST /agents/wait` | wait up to 30 s for the next message (`from` one agent) |
 | `agents_keep_running` | `POST /keep` | stay up while idle in the background (`on`, a `reason` the user sees, `minutes` up to 120), or end that ask |
+| `schedule_add` | `POST /schedule/add` | a task for the agent itself later: `at` (local time), `in` minutes, `every` minutes (15 at least) or `daily` "HH:MM" on `days`; `chat` new or same |
+| `schedule_list` | `POST /schedule/list` | the caller's schedules, with the phone's time and zone |
+| `schedule_cancel` | `POST /schedule/cancel` | drop one the agent set itself (`id`); one the user set is refused |
 
 Every message is labelled as from another AI agent, never the user. Where
 an agent's kind allows, messages also reach it inside its turns (the
 manifest's `inbox`, `../../agents/AGENTS.md` §4).
+
+A scheduled task reaches its agent at its time with no app around: the
+runner starts it with the task as its first prompt (the manifest's
+`engine.prompt`), wakes it, or asks the user. A task the agent set reads
+as its own reminder, never as a new instruction from the user
+(`../../app/docs/modules/runner.md`, Schedules).
 
 ## `mobile_describe`
 

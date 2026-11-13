@@ -17,8 +17,11 @@ object Templates {
     "baseUrl", "model", "contextWindow", "modelKey",
     // The agent's own state folder (StateSeam), in a kind's `state.env` only.
     "stateDir",
-    // Other agents' messages, rendered (InboxSeam), in a kind's `inbox` only.
-    "messages",
+    // Other agents' messages, rendered (InboxSeam), in a kind's `inbox` only;
+    // a new chat's title, in `inbox.server.create` only.
+    "messages", "title",
+    // The first prompt (LaunchRenderer), in `engine.prompt` only.
+    "prompt",
   )
 
   private val PLACEHOLDER = Regex("""\{\{([^{}]*)\}\}""")

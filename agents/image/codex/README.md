@@ -29,6 +29,11 @@ Every setting is a flag, so `~/.codex/config.toml` stays yours.
   name alone, which `surfaces.chatTitle` takes whole.
 - `resume` puts `resume --last` before the flags; with no saved chat
   Codex starts a new one.
+- `prompt` (a scheduled task) appends `-- <task>`: the TUI's optional
+  first prompt, which it submits once the session is set up; after
+  `resume --last` the one positional is that prompt, not a session id
+  (rust-v0.168.0: `codex-rs/tui/src/cli.rs` `prompt`,
+  `codex-rs/cli/src/main.rs` `resume_last_accepts_prompt_positional`).
 
 ## State
 

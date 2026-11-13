@@ -126,6 +126,12 @@
       "args": [
         "--continue"
       ]
+    },
+    "prompt": {
+      "args": [
+        "--",
+        "{{prompt}}"
+      ]
     }
   },
   "events": [

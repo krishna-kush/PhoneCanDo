@@ -72,7 +72,8 @@
       "cwd": "{{projectDir}}"
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
-    "resume": { "args": ["--continue"] }
+    "resume": { "args": ["--continue"] },
+    "prompt": { "args": ["-i", "{{prompt}}"] }
   },
   "events": [
     {

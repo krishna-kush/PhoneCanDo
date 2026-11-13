@@ -56,6 +56,9 @@ export type KindView = {
       message can start a turn while it is idle), delivered (pushed into its turns), inbox (only when it
       calls agents_inbox), none (no phone tools: it can neither read nor send). */
   messaging: MessagingLevel;
+  /** An agent of it can run scheduled tasks: it starts with one as its first prompt (the manifest's
+      `engine.prompt`), or one can wake it while it is idle (`inbox.wake`). */
+  schedules: boolean;
 };
 
 /** How far other agents' messages reach an agent of a kind (kit-api MessagingLevel), best first. */

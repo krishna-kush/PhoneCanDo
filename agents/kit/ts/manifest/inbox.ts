@@ -5,13 +5,14 @@
 // the event's template ({{messages}}, its one placeholder; a json one must
 // be JSON once filled) and exits with its `exit`. `server`: the runner posts
 // them to a server engine's chat ({{sessionId}} in the path or body), with
-// `deliver` while it works and `wake` to an idle one. `reader`: the kind's
+// `deliver` while it works and `wake` to an idle one; `create` makes it a
+// new chat ({{title}} in its body) for a task that wants one. `reader`: the kind's
 // own extension reads the folder. `wake` names which of these can wake an
 // idle agent; the block must have it. kit-render's InboxChecks keeps the
 // same rules on the phone.
 import { engineStyle } from './engine.ts';
 import { escape, fields, integer, isObject, oneOf, record, string, type Add, type Json } from './primitives.ts';
-import { INBOX_FORMATS, INBOX_KEYS, INBOX_MESSAGES, INBOX_METHODS, INBOX_SESSION, INBOX_WAKES, MAX, PATTERNS } from './rules.ts';
+import { INBOX_FORMATS, INBOX_KEYS, INBOX_MESSAGES, INBOX_METHODS, INBOX_SESSION, INBOX_TITLE, INBOX_WAKES, MAX, PATTERNS } from './rules.ts';
 
 const PLACEHOLDER = /\{\{([^{}]*)\}\}/g;
 const MESSAGES = `{{${INBOX_MESSAGES}}}`;
@@ -83,12 +84,29 @@ function checkJson(add: Add, at: string, template: string) {
 // The runner posts to the engine's own port, so a server engine only.
 function checkServer(add: Add, server: unknown, style: string | null) {
   if (style !== 'server') add('/inbox/server', 'forbidden', 'inbox.server needs engine.style server');
-  if (!fields(add, '/inbox/server', server, ['deliver', 'wake', 'latest'], ['deliver'])) return;
+  if (!fields(add, '/inbox/server', server, ['deliver', 'wake', 'latest', 'create'], ['deliver'])) return;
   const s = server as Json;
   for (const key of ['deliver', 'wake']) {
     if (key in s) checkCall(add, `/inbox/server/${key}`, s[key]);
   }
   if ('latest' in s) checkLatest(add, s.latest);
+  if ('create' in s) checkCreate(add, s.create);
+}
+
+// Make a new chat: a path with no placeholders, a body whose strings may
+// name {{title}}, and where the new chat's id is in the answer.
+function checkCreate(add: Add, create: unknown) {
+  const at = '/inbox/server/create';
+  if (!fields(add, at, create, [...CALL_KEYS, 'id'], [...CALL_KEYS, 'id'])) return;
+  const c = create as Json;
+  oneOf(add, `${at}/method`, c.method, INBOX_METHODS);
+  if (filled(add, `${at}/path`, c.path, [], PATTERNS.httpPath)) string(add, `${at}/path`, c.path, PATTERNS.httpPath);
+  if (isObject(c.body)) {
+    strings(`${at}/body`, c.body).forEach(([path, text]) => filled(add, path, text, [INBOX_TITLE], PATTERNS.inboxCreateTemplate));
+  } else if ('body' in c) {
+    add(`${at}/body`, 'type', 'must be an object');
+  }
+  string(add, `${at}/id`, c.id, PATTERNS.jsonPointer);
 }
 
 // GET the agent's chats, newest first (no placeholders), and where the newest one's id is.

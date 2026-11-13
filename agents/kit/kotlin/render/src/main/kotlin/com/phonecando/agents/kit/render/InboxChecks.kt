@@ -16,7 +16,8 @@ import kotlinx.serialization.json.JsonPrimitive
 // {{messages}} or names anything else, or whose json string template is no
 // JSON once filled or puts the messages outside a JSON string; a server
 // block on an engine with no port, or a call whose body lacks {{messages}}
-// or that names what it cannot have; a wake mode the block does not support.
+// or that names what it cannot have (the create call: {{title}} only); a
+// wake mode the block does not support.
 internal object InboxChecks {
   // As phonecando-event's names (the TS validator's PATTERNS.eventName).
   private val EVENT_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
@@ -48,6 +49,13 @@ internal object InboxChecks {
           throw KindException("$id: inbox.server.latest.path must be a path on the engine (/…, no spaces, no placeholders)")
         }
         if (!lookup.id.startsWith('/')) throw KindException("$id: inbox.server.latest.id must be a JSON pointer (/…)")
+      }
+      server.create?.let { create ->
+        if (!create.path.startsWith('/') || create.path.any(Char::isWhitespace) || Templates.names(create.path).isNotEmpty()) {
+          throw KindException("$id: inbox.server.create.path must be a path on the engine (/…, no spaces, no placeholders)")
+        }
+        InboxSeam.strings(create.body).forEach { only(id, "inbox.server.create.body", it, InboxSeam.CREATE_PLACEHOLDERS) }
+        if (!create.id.startsWith('/')) throw KindException("$id: inbox.server.create.id must be a JSON pointer (/…)")
       }
     }
     val supported = when (inbox.wake) {

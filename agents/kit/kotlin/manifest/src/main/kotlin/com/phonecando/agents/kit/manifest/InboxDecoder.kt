@@ -41,6 +41,14 @@ internal object InboxDecoder {
     deliver = endpoint(s.obj("deliver")),
     wake = s.optObj("wake")?.let(::endpoint),
     latest = s.optObj("latest")?.let { InboxLookup(path = it.string("path"), id = it.string("id")) },
+    create = s.optObj("create")?.let(::create),
+  )
+
+  private fun create(c: JsonFields) = InboxCreate(
+    method = ManifestDecoder.enumOf(c, "method", METHODS) { it },
+    path = c.string("path"),
+    body = c.obj("body").tree,
+    id = c.string("id"),
   )
 
   private fun endpoint(e: JsonFields) = InboxEndpoint(

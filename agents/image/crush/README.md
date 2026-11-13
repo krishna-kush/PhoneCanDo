@@ -19,6 +19,9 @@ the same download in Node.
 - Crush checks GitHub for a newer release on each start and shows a
   notice. There is no switch for it, and it never updates itself.
 - `resume` adds `--continue`, the newest chat.
+- No `prompt`, so it cannot run scheduled tasks: the TUI takes no first
+  prompt (v0.101.0 `internal/cmd/root.go`: `crush <text>` is an unknown
+  command), and `crush run` answers once without the TUI.
 - No `chatTitle`: the window title is `crush <folder>`.
 
 ## State

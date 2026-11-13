@@ -44,13 +44,16 @@ class InboxDecoderTest {
     val inbox = decode(
       """{"server":{
            "deliver":{"method":"POST","path":"/s/{{sessionId}}/queue","body":{"text":"{{messages}}"}},
-           "wake":{"method":"POST","path":"/s/{{sessionId}}/prompt","body":{"parts":[{"text":"{{messages}}"}]}}},
+           "wake":{"method":"POST","path":"/s/{{sessionId}}/prompt","body":{"parts":[{"text":"{{messages}}"}]}},
+           "create":{"method":"POST","path":"/s","body":{"title":"{{title}}"},"id":"/data/id"}},
          "reader":true,"wake":"server"}""",
     )
     val server = inbox.server!!
     assertEquals("/s/{{sessionId}}/queue", server.deliver.path)
     assertEquals("POST", server.wake!!.method)
     assertEquals("""{"parts":[{"text":"{{messages}}"}]}""", server.wake!!.body.toString())
+    val create = server.create!!
+    assertEquals(listOf("POST", "/s", """{"title":"{{title}}"}""", "/data/id"), listOf(create.method, create.path, create.body.toString(), create.id))
     assertTrue(inbox.reader)
     assertEquals(InboxWake.SERVER, inbox.wake)
     assertTrue(inbox.hooks.isEmpty())
@@ -71,5 +74,7 @@ class InboxDecoderTest {
     assertEquals("/inbox/server/deliver", refused("""{"server":{"wake":{"method":"POST","path":"/","body":{}}}}""").path)
     assertEquals("/inbox/server/deliver/method", refused("""{"server":{"deliver":{"method":"GET","path":"/","body":{}}}}""").path)
     assertEquals("/inbox/server/deliver/body", refused("""{"server":{"deliver":{"method":"POST","path":"/"}}}""").path)
+    val deliver = """"deliver":{"method":"POST","path":"/","body":{"t":"{{messages}}"}}"""
+    assertEquals("/inbox/server/create/id", refused("""{"server":{$deliver,"create":{"method":"POST","path":"/","body":{}}}}""").path)
   }
 }

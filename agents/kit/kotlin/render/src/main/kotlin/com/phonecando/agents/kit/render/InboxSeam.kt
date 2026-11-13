@@ -2,6 +2,7 @@ package com.phonecando.agents.kit.render
 
 import com.phonecando.agents.kit.InboxRequest
 import com.phonecando.agents.kit.manifest.Auth
+import com.phonecando.agents.kit.manifest.InboxCreate
 import com.phonecando.agents.kit.manifest.InboxEndpoint
 import com.phonecando.agents.kit.manifest.InboxFormat
 import com.phonecando.agents.kit.manifest.InboxHook
@@ -19,9 +20,12 @@ import kotlinx.serialization.json.JsonPrimitive
 // filled, which escapes them. A server call's path takes {{sessionId}} (the
 // chat) as a URI component, and its body's strings take {{messages}} and
 // {{sessionId}}; every call carries the kind's auth, as its health probe does.
+// The call that makes a new chat (`create`) takes {{title}} in its body's
+// strings, escaped the same way.
 object InboxSeam {
   const val MESSAGES = "messages"
   const val SESSION = "sessionId"
+  const val TITLE = InboxCreate.TITLE
 
   /** What a hook template may name. */
   val HOOK_PLACEHOLDERS = setOf(MESSAGES)
@@ -31,6 +35,9 @@ object InboxSeam {
 
   /** What a server call's body may name. */
   val BODY_PLACEHOLDERS = setOf(MESSAGES, SESSION)
+
+  /** What the create call's body may name. */
+  val CREATE_PLACEHOLDERS = setOf(TITLE)
 
   /** What a hook event prints, [messages] filled in. */
   fun hook(hook: InboxHook, messages: String): String {
@@ -56,6 +63,12 @@ object InboxSeam {
     val url = EngineUrl.base(port) + Templates.render(endpoint.path, values, Templates::uriComponent)
     val headers = linkedMapOf("Content-Type" to "application/json") + SecretForms.headers(auth, password)
     return InboxRequest(url, headers, endpoint.method, fill(endpoint.body, values).toString())
+  }
+
+  /** The call that makes a new chat titled [title] (`inbox.server.create`), with the kind's auth. */
+  fun create(create: InboxCreate, auth: Auth?, port: String, password: String, title: String): InboxRequest {
+    val headers = linkedMapOf("Content-Type" to "application/json") + SecretForms.headers(auth, password)
+    return InboxRequest(EngineUrl.base(port) + create.path, headers, create.method, fill(create.body, mapOf(TITLE to title)).toString())
   }
 
   /** The GET for the agent's newest chat (`inbox.server.latest`), with the kind's auth. */

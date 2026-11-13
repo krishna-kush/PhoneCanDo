@@ -85,6 +85,7 @@ object ManifestDecoder {
     auth = e.optObj("auth")?.let { a -> Auth(a.optObj("basic")?.let { BasicAuth(it.string("user")) }) },
     readiness = e.optObj("readiness")?.let(::readiness),
     resume = e.optObj("resume")?.let { r -> Resume(r.strings("args"), r.optInt("at")) },
+    prompt = e.optObj("prompt")?.let { p -> PromptArgs(p.strings("args"), p.optInt("at")) },
   )
 
   private fun readiness(r: JsonFields) = Readiness(

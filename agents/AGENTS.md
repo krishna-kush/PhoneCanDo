@@ -139,6 +139,19 @@ phonecando-linux <- kit-api   (ProjectDir only: the machine's shell starts in th
     notification.
   - `idle.from` may hold `output`: quiet means no PTY output.
   - Exit 0 is a stop; any other exit is a death.
+  - `prompt {args, at?}`: the args the TUI starts with to run a first
+    prompt (a scheduled task) and stay interactive. Exactly one arg is
+    `{{prompt}}`, whole (its one placeholder, no other template's), so the
+    prompt is one argv item and never meets a shell; they go in at argv
+    index `at`, else at the end. Both `at`s count in the launch's own argv,
+    and where they meet the resume args come first; a launch through `sh
+    -c` takes it only past the script's `$0` (index 4 or more), as one of
+    `"$@"`. A task that wants a new chat starts without the resume args.
+    A kind gets the block only once its CLI's docs or source show that
+    form starts the TUI with the prompt (its README says where); a kind
+    with neither this nor a `wake` cannot run scheduled tasks (KindView
+    `schedules`, kit-api `AgentKind.runsSchedules`). The prompt the runner
+    renders starts with a word, never a `-`.
 - Both styles: `launch.cwd`, where the engine runs (HOME when it names
   none), and `resume {args, at?}`, the args added (at argv index `at`,
   else at the end) when the agent's engine ran before. A TUI launched with
@@ -192,9 +205,11 @@ itself, never in argv or on disk.
 
 The same bridge serves the agent tools (`shared/phone-tools/agents.ts`:
 `agents_list`, `agents_send`, `agents_inbox`, `agents_wait`; `keep.ts`:
-`agents_keep_running`, to stay up while idle), on every channel and
-outside the phone-control lock, so a kind with no bridge cannot message
-other agents either.
+`agents_keep_running`, to stay up while idle; `schedule.ts`:
+`schedule_add`, `schedule_list`, `schedule_cancel`, the agent's own tasks
+for later), on every channel and outside the phone-control lock, so a
+kind with no bridge cannot message other agents or schedule itself
+either.
 
 ### Messages from other agents
 
@@ -245,6 +260,12 @@ least one way in:
     `{{sessionId}}`.
   - The request carries the kind's `engine.auth`, as its health probe
     does. A call that names the chat is not made while the agent has none.
+  - `latest {path, id}`: GET the agent's chats, newest first, and the
+    JSON pointer to the newest one's id, for when the runner knows none.
+  - `create {method, path, body, id}`: makes a new chat (the path names
+    nothing; the body's strings may name `{{title}}`), `id` the JSON
+    pointer to its id in the answer; asked before a scheduled task that
+    wants a chat of its own wakes the agent.
 - `reader: true`: the kind's own extension or plugin reads the folder
   (`pending/messages.jsonl`, `pending/wake`), claims it as the script does
   and writes the receipt itself.

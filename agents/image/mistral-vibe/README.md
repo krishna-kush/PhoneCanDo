@@ -21,6 +21,12 @@ run as a TUI in the agent's machine. Shared image-kind rules:
   environment layer.
 - `resume` adds `--continue`; with no chat for the folder Vibe starts a
   new one.
+- `prompt` (a scheduled task) appends `-- <task>`, after `--continue`: the
+  positional is the interactive session's first prompt (`-p` would be the
+  headless one), and `--` keeps it from being read as an option or a
+  subcommand (v3.1.2: `vibe/cli-rust/src/cli.rs` `initial_prompt`,
+  `event_handler.rs` `process_initial_prompt`; the Python `vibe` launcher
+  passes its args on as they are).
 - The window title is the chat's title or `Vibe`. To a terminal that does
   not answer the 7501 query Vibe adds state marks (`>>`, `?`,
   `- Action Required`, `- Task Complete`); `surfaces.chatTitle` takes the

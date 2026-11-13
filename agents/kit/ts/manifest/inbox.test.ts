@@ -122,4 +122,16 @@ describe('inbox', () => {
     fails(server, { server: { deliver: { method: 'POST', path: '/' } } }, '/inbox/server/deliver/body required');
     fails(server, { server: { deliver: DELIVER, extra: {} } }, '/inbox/server/extra unknown');
   });
+
+  it('makes a new chat with a create call that names only {{title}}', () => {
+    const CREATE = { method: 'POST', path: '/api/session', body: { title: '{{title}}', n: 1 }, id: '/data/id' };
+    ok(server, { server: { deliver: DELIVER, create: CREATE } });
+    ok(server, { server: { deliver: DELIVER, create: { ...CREATE, body: {} } } });
+    fails(server, { server: { deliver: DELIVER, create: { ...CREATE, path: '/s/{{sessionId}}' } } }, '/inbox/server/create/path unknown');
+    fails(server, { server: { deliver: DELIVER, create: { ...CREATE, body: { t: '{{messages}}' } } } }, '/inbox/server/create/body/t unknown');
+    fails(server, { server: { deliver: DELIVER, create: { ...CREATE, id: 'data.id' } } }, '/inbox/server/create/id pattern');
+    fails(server, { server: { deliver: DELIVER, create: { ...CREATE, method: 'PUT' } } }, '/inbox/server/create/method enum');
+    const { id: _, ...noId } = CREATE;
+    fails(server, { server: { deliver: DELIVER, create: noId } }, '/inbox/server/create/id required');
+  });
 });
