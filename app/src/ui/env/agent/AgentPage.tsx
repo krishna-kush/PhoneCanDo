@@ -17,6 +17,7 @@ import InstallStatus from '../parts/InstallStatus';
 import Note from '../parts/Note';
 import AgentGone from './AgentGone';
 import AgentHero from './AgentHero';
+import AgentScheduleRows from './AgentScheduleRows';
 import { hasModelSetting, installDetail, machineDetail, modelDetail } from './agentSettings';
 import DangerSection from './DangerSection';
 import EngineSection from './EngineSection';
@@ -95,6 +96,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
         ) : null}
         <KeepRunningRow agentId={agentId} />
         <AgentMessageRows agent={agent} />
+        <AgentScheduleRows agent={agent} />
       </YStack>
 
       <DangerSection agent={agent} image={image} env={env} linux={linux} />

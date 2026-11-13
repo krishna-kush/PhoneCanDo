@@ -22,6 +22,7 @@ import LinkRow from '../common/LinkRow';
 import { unreadText } from '../messages/logic/messagesCopy';
 import { unreadTotal } from '../messages/logic/messageView';
 import PlainText from '../common/PlainText';
+import SchedulesDrawerRow from '../schedule/SchedulesDrawerRow';
 import SelectBar from './select/SelectBar';
 import TextAction from './select/TextAction';
 import { useAgentSelection } from './select/useAgentSelection';
@@ -43,8 +44,8 @@ function channel(): string {
 // What the drawer holds: every agent (tap to switch, › for its page, a long
 // press or Select to pick several, with the selection's bar pinned below),
 // Own envs still downloading, New agent, then the app's other places:
-// Models, Systems, Custom agents, Messages (once agents can talk to each
-// other), Settings, About. Memoised: the drawer's own renders (open, shut)
+// Models, Systems, Custom agents, Schedules (while an agent can run them),
+// Messages (once agents can talk to each other), Settings, About. Memoised: the drawer's own renders (open, shut)
 // pass the same `still` until its slide ends. Mounting it starts the
 // unread counts (each row's mark), which the runner keeps current.
 function DrawerContent({ still }: { still: boolean }) {
@@ -130,6 +131,7 @@ function DrawerContent({ still }: { still: boolean }) {
         {linuxAvailable ? (
           <LinkRow label="Custom agents" onPress={() => push({ name: 'custom-agents' })} reach={PLACE_REACH} />
         ) : null}
+        <SchedulesDrawerRow reach={PLACE_REACH} />
         {messaging ? (
           <LinkRow
             label="Messages"

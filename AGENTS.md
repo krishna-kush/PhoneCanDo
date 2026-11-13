@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,messages,recommend,account,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,messages,schedule,recommend,account,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -38,6 +38,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   over every page. `messages/` is the Messages page (what agents send each
   other, the screen queue), the drawer's unread marks and an agent page's
   Messages and wake rows; pure parts in `messages/logic/`.
+  `schedule/` is the Schedules page (tasks set to reach an agent at a time,
+  the recent runs, its editor in `editor/`), the drawer row and an agent
+  page's Schedules and "Can schedule itself" rows; pure parts in
+  `schedule/logic/`.
   `recommend/` is telling a friend: the Refer page (Settings' Tell a friend
   row: Share, then what each link did), the "Having fun?" card at Home's
   foot after a run finished in front of you, and the listener for a
@@ -73,13 +77,15 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `models/native.ts` local models, `files.ts` file system, `auth.ts`
   biometrics, `backGesture.ts` the back gesture's progress, `memory.ts` the
   memory guard's reading, `runLimits.ts` the run caps, `keepRunning.ts` an
-  agent's Keep running, `splash.ts` the launch splash). Agents and engines:
+  agent's Keep running, `splash.ts` the launch splash, `pick.ts` Android's
+  date and time dialogs). Agents and engines:
   `engines.ts`, `ensureEngine.ts`, `connection.ts`; agent kinds through
   `agents/registry.ts` (each kind's `KindView`, from the runner's
   `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
   `agents/user/` (the user's own kinds); `sharing.ts` (clipboard, share
   sheet); `messages/` agent messages (the log, unread counts, the screen
-  queue, the wake switch); `apiHost.ts` our API host; `account/` the
+  queue, the wake switch); `schedule/` schedules (the list, the runs log,
+  exact alarms, "Can schedule itself"); `apiHost.ts` our API host; `account/` the
   optional Google sign-in (`modules/phonecando-account`; the session token
   stays native); `share/` share links' counts and codes' random bytes.
   Screens stay dumb.
@@ -96,7 +102,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   (local models, downloads, job progress), `kinds.ts` (the user's own
   kinds), `memory.ts` (the memory guard's reading, the warning's
   episode), `messages.ts` (unread counts, the message log, the screen
-  queue), `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
+  queue), `schedule.ts` (the schedules, their runs, exact alarms),
+  `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
   value in `ui/common/keyboard/room.ts`), `recommend.ts` (the "Having
   fun?" card's runs, last ask and answer), `share.ts` (the links this
   phone shared, what they did), `account.ts` (who is signed in),
@@ -144,6 +151,11 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   who's here, send, inbox, wait; the log in `files/state/`; delivery
   into each agent's inbox folder or its own server by its manifest's
   `inbox` block; waking idle agents; the screen queue's notices).
+  `schedule/` is Schedules (the `schedule_*` tools' routes and the app's;
+  `files/state/schedules.json` and the runs log; one AlarmManager alarm,
+  exact when allowed; at a task's time it starts the agent with the task
+  as its first prompt (the manifest's `engine.prompt`), wakes it or asks
+  you; pure `NextRun`, `DueRules`, `FireRules`, numbers in `ScheduleRules`).
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
 - `docs/README.md` — repo docs map; `app/docs/README.md` — app/engine docs.

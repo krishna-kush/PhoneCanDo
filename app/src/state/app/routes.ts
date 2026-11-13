@@ -75,10 +75,14 @@ export type Route =
   | { name: 'models' }
   /** One model on the phone: what it is, Stop, Context, the agents set to it, Delete. */
   | { name: 'model'; modelId: string }
+  /** A model's server log, as its last start wrote it (live while the model is loaded). */
+  | { name: 'model-log'; modelId: string }
   /** One Hugging Face repository's models. */
   | { name: 'model-repo'; repo: string }
   /** What the agents say to each other, newest first; with `agentId`, only what is to or from that agent. */
   | { name: 'messages'; agentId?: AgentId }
+  /** Tasks set to run at a time, grouped by agent; with `agentId`, only that agent's. */
+  | { name: 'schedules'; agentId?: AgentId }
   /** Settings: a short hub of rows, each opening one of its pages. */
   | { name: 'settings' }
   | { name: 'settings-page'; page: SettingsPageId }

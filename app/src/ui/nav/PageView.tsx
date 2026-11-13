@@ -18,9 +18,11 @@ import OsPicker from '../env/new-env/OsPicker';
 import PullProgress from '../env/new-env/PullProgress';
 import TagPicker from '../env/new-env/TagPicker';
 import MessagesPage from '../messages/MessagesPage';
+import ModelLogPage from '../models/model/ModelLogPage';
 import ModelPage from '../models/model/ModelPage';
 import ModelsPage from '../models/ModelsPage';
 import RepoPage from '../models/RepoPage';
+import SchedulesPage from '../schedule/SchedulesPage';
 import AboutPage from '../settings/AboutPage';
 import SettingsPage from '../settings/SettingsPage';
 import SettingsScreen from '../settings/SettingsScreen';
@@ -70,10 +72,14 @@ function PageView({ route }: { route: Route }) {
       return <ModelsPage />;
     case 'model':
       return <ModelPage modelId={route.modelId} />;
+    case 'model-log':
+      return <ModelLogPage modelId={route.modelId} />;
     case 'model-repo':
       return <RepoPage repo={route.repo} />;
     case 'messages':
       return <MessagesPage agentId={route.agentId ?? null} />;
+    case 'schedules':
+      return <SchedulesPage agentId={route.agentId ?? null} />;
     case 'settings':
       return <SettingsScreen />;
     case 'settings-page':
