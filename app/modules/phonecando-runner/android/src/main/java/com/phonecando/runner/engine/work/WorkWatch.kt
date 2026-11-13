@@ -32,6 +32,8 @@ internal class WorkWatch(
   private val clock: () -> Long = System::currentTimeMillis,
   /** A look that failed; the watch looks again after POLL_MS. */
   private val onError: (Exception) -> Unit = {},
+  /** Ends one job and what is under it (JobEnd.end); false when it is gone. Blocks. */
+  private val endJob: (JobEnd.Ref) -> Boolean = { false },
 ) {
   /** What the watch sees of the engines and the app. */
   interface Host {
@@ -75,8 +77,9 @@ internal class WorkWatch(
    * One agent at the last look: its [jobs] by name (WorkNames), whether
    * they are doing something ([active]), Keep running ([kept]), its own
    * ask to stay up ([ask]), the jobs it is [starting] (WorkRules.
-   * STARTING_AGE_MS), and [printing]: its kind raises no chat events and
-   * it is not idle by its kind's rule, so it may be at work.
+   * STARTING_AGE_MS), [printing]: its kind raises no chat events and it is
+   * not idle by its kind's rule, so it may be at work, and [refs]: each job
+   * by its name and its root process, for a Stop of that job alone.
    */
   data class State(
     val agentId: String,
@@ -86,10 +89,30 @@ internal class WorkWatch(
     val ask: KeepAsks.Ask? = null,
     val starting: List<String> = emptyList(),
     val printing: Boolean = false,
+    val refs: List<Job> = emptyList(),
   ) {
     val busy: Boolean get() = jobs.isNotEmpty()
 
     val held: Boolean get() = kept || ask != null
+  }
+
+  /** One job by its name (WorkNames) and its root process, by pid and start (JobEnd.Ref). */
+  data class Job(val name: String, val pid: Int, val startTicks: Long)
+
+  /**
+   * Ends one job of [agentId] and what is under it, the agent and its
+   * other jobs left running (JobEnd), then looks at once so the
+   * notification shows it gone. False when it was gone already. Blocks.
+   */
+  fun stopJob(agentId: String, job: Job): Boolean {
+    val ended = try {
+      endJob(JobEnd.Ref(agentId, job.pid, job.startTicks))
+    } catch (e: Exception) {
+      onError(e)
+      false
+    }
+    poke()
+    return ended
   }
 
   private val lock = ReentrantLock()
@@ -191,11 +214,13 @@ internal class WorkWatch(
     lastBusyAt.keys.retainAll(judged.keys)
     logged.keys.retainAll(judged.keys)
     val next = agents.associate { a ->
-      val named = AgentWork.jobs(judged.getValue(a.agentId)).map(WorkNames::of).distinct()
+      val roots = AgentWork.jobs(judged.getValue(a.agentId))
+      val named = roots.map(WorkNames::of).distinct()
+      val refs = roots.map { Job(WorkNames.of(it), it.pid, it.startTicks) }
       if (named.isNotEmpty()) lastBusyAt[a.agentId] = now
       val coming = starting.getValue(a.agentId).jobs.map(WorkNames::of).distinct()
       val printing = !a.reportsChats && !a.idle
-      a.agentId to State(a.agentId, named, a.agentId in active && named.isNotEmpty(), a.kept, a.ask, coming, printing)
+      a.agentId to State(a.agentId, named, a.agentId in active && named.isNotEmpty(), a.kept, a.ask, coming, printing, refs)
     }
     for ((agentId, list) in judged) logIfChanged(agentId, list)
     val changed = next != states

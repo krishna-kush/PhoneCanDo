@@ -8,28 +8,38 @@ import com.phonecando.runner.engine.work.WorkWatch
 // running"), that asked to stay up ("Claude Code · kept running: waiting
 // for Tester's answer (until 14:30)") or whose kind tells no chats and is
 // not idle ("Cline · active"). An agent with a chat working has its
-// chat's line instead. Each line gets a Stop (ServiceNotification), which
-// ends the agent and its jobs. Pure.
+// chat's line instead. Each line gets a Stop for each of its [Line.jobs]
+// (that job alone) and one for the agent and all its jobs
+// (ServiceNotification). A job being stopped is off its line at once.
+// Pure.
 internal object WorkLines {
-  data class Line(val agentId: String, val name: String, val text: String)
+  data class Line(val agentId: String, val name: String, val text: String, val jobs: List<WorkWatch.Job> = emptyList())
 
-  /** [working]: agents with a chat working; [names]: agent id → name; [time]: epoch ms as the phone shows a time. */
+  /**
+   * [working]: agents with a chat working; [names]: agent id → name;
+   * [ending]: the root pids of the jobs being stopped; [time]: epoch ms as
+   * the phone shows a time.
+   */
   fun of(
     states: Collection<WorkWatch.State>,
     working: Set<String>,
     names: Map<String, String>,
+    ending: Set<Int> = emptySet(),
     time: (Long) -> String,
   ): List<Line> =
-    states.filter { (it.busy || it.held || it.starting.isNotEmpty() || it.printing) && it.agentId !in working }.map { s ->
+    states.filter { it.agentId !in working }.mapNotNull { s ->
+      val refs = s.refs.filter { it.pid !in ending }
+      val running = if (s.refs.isEmpty()) s.jobs else refs.map { it.name }.distinct()
+      if (running.isEmpty() && !s.held && s.starting.isEmpty() && !s.printing) return@mapNotNull null
       val name = names[s.agentId] ?: s.agentId
       val ask = s.ask
       val text = when {
-        s.busy || s.starting.isNotEmpty() -> "running ${jobs((s.jobs + s.starting).distinct())}"
+        running.isNotEmpty() || s.starting.isNotEmpty() -> "running ${jobs((running + s.starting).distinct())}"
         s.kept -> "kept running"
         ask != null -> "kept running: ${ask.reason} (until ${time(ask.until)})"
         else -> "active"
       }
-      Line(s.agentId, name, "$name · $text")
+      Line(s.agentId, name, "$name · $text", refs)
     }
 
   /** "a", "a, b", "a, b +2 more". */
