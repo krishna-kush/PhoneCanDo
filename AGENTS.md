@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,messages,recommend,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,messages,recommend,account,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -38,10 +38,17 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   over every page. `messages/` is the Messages page (what agents send each
   other, the screen queue), the drawer's unread marks and an agent page's
   Messages and wake rows; pure parts in `messages/logic/`.
-  `recommend/` is telling a friend: the share sheet with our link (Settings'
-  Tell a friend row) and the "Having fun?" card at Home's foot after a run
-  finished in front of you (`copy.ts` pure; when it asks is
-  `state/logic/recommendAsk.ts`).
+  `recommend/` is telling a friend: the Refer page (Settings' Tell a friend
+  row: Share, then what each link did), the "Having fun?" card at Home's
+  foot after a run finished in front of you, and the listener for a
+  friend's link opening the app (`copy.ts`, `logic/funnel.ts` pure; when
+  it asks is `state/logic/recommendAsk.ts`; links and codes are
+  `state/logic/share/`). `account/` is the optional Google sign-in's
+  Account page (`copy.ts` pure; what is coming next, also optional, is
+  `COMING` there and in `docs/planning/todo.md`) and `useSettingsSync.ts`,
+  mounted once in `App.tsx`: a signed-in person's settings follow them
+  (`state/flows/settingsSync.ts`, pure keys and merge in
+  `state/logic/settingsSync/`).
   `accessibility/` is the whole Accessibility setup guide: `guide.ts`
   (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
   hook, the step list, the Settings block and the agent's dialog.
@@ -72,7 +79,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
   `agents/user/` (the user's own kinds); `sharing.ts` (clipboard, share
   sheet); `messages/` agent messages (the log, unread counts, the screen
-  queue, the wake switch). Screens stay dumb.
+  queue, the wake switch); `apiHost.ts` our API host; `account/` the
+  optional Google sign-in (`modules/phonecando-account`; the session token
+  stays native); `share/` share links' counts and codes' random bytes.
+  Screens stay dumb.
 - `theme/tokens.json` — the ONLY palette (dark + light, web-sourced). Web
   (`Base.astro`) and app (`globals/theme.ts`, `tamagui.config.ts`) read it
   directly; never hardcode a theme colour on either side. Brand/favicon
@@ -88,10 +98,12 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   episode), `messages.ts` (unread counts, the message log, the screen
   queue), `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
   value in `ui/common/keyboard/room.ts`), `recommend.ts` (the "Having
-  fun?" card's runs, last ask and answer); multi-step
+  fun?" card's runs, last ask and answer), `share.ts` (the links this
+  phone shared, what they did), `account.ts` (who is signed in),
+  `settingsSync.ts` (when each synced setting last changed here); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
-- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models,phonecando-back-gesture,phonecando-network}/` —
+- `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models,phonecando-back-gesture,phonecando-network,phonecando-account}/` —
   own Expo modules (Kotlin + TS shims, clean-room). The PTY's plain POSIX
   core is `phonecando-terminal/android/src/main/cpp/pty/` (`forkpty.c` is the
   JNI glue). `phonecando-linux` is the Linux runtime's Android host (env and
@@ -107,7 +119,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   by its agents; `LocalModelBinding.kt` the one join) serve a model to an
   agent. `phonecando-back-gesture` runs the
   back gesture's steps on the UI thread while a page or the drawer is open
-  and tells JS the commit (optional: without it Back still works). Never Termux code in our own
+  and tells JS the commit (optional: without it Back still works).
+  `phonecando-account` is the optional Google sign-in (Credential Manager,
+  needs Google Play services; the session token sealed in Keystore, never
+  in JS; it calls only our `/v1/account` routes). Never Termux code in our own
   modules; programs we ship as-is (opencode, proot from the termux fork) are
   third-party payloads with their own licenses, built from pinned sources.
   The runner packages every agent kind from `agents/` (`agents.gradle`:
@@ -174,7 +189,14 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   (`tce/hosts/cloudflare/wrangler.jsonc`, deployed by Workers Builds on push
   to `prod`). Read `tce/AGENTS.md`; open work in `tce/docs/planning/todo.md`.
   Only `app/src/engine/telemetry/` imports it; a new field ships with its
-  line in `docs/telemetry.md`.
+  line in `docs/telemetry.md`. Share links (`/i/<code>`, `/v1/share/stats`)
+  are tce too.
+- `accounts/` — optional Google sign-in's server (own pnpm package, zero
+  runtime deps): checks Google ID tokens, sessions, the share-link list and
+  the synced settings a signed-in person keeps; own D1 `phonecando-accounts`, never joined with
+  usage stats. The tce Worker mounts its one entry
+  (`accounts/hosts/cloudflare/index.ts`). Read `accounts/AGENTS.md`; the
+  published schema is `docs/accounts.md`.
 - `lme/` — local model engine: finds, fetches and checks GGUF weights and
   plans the llama.cpp server that serves them on loopback; read
   `lme/AGENTS.md`, docs in `lme/docs/README.md`, work in
@@ -271,7 +293,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 11. CI path filters: `android.yml`, `tce.yml`, `web.yml`, `pce.yml`,
    `agents.yml`, `agent-payload.yml`, `lre.yml`, `proot.yml`, `lre-image.yml`,
    `lre-compat.yml`, `lme.yml`, `llamacpp.yml`, `local-models.yml`,
-   `network.yml` and `suggested-models.yml` run only for the `paths:` they list. When a change gives a build or check a
+   `network.yml`, `accounts.yml` and `suggested-models.yml` run only for the `paths:` they list. When a change gives a build or check a
    new input (the app importing a new folder, a CI script
    reading a new file, a new packaged asset), add that path to the matching
    lists in the same change. `ci`, `lint`, `security` and `codeql` run on

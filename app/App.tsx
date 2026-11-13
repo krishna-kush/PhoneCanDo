@@ -11,6 +11,8 @@ import HomeScreen from './src/ui/chat/HomeScreen';
 import AppDrawer from './src/ui/drawer/AppDrawer';
 import PageStack from './src/ui/nav/PageStack';
 import { useBackChain } from './src/ui/nav/useBackChain';
+import { useShareLinkOpen } from './src/ui/recommend/useShareLinkOpen';
+import { useSettingsSync } from './src/ui/account/useSettingsSync';
 import { useEngineTerminalTheme } from './src/ui/terminal/theme/useEngineTerminalTheme';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
@@ -61,6 +63,12 @@ export default function App() {
 
   // The TUI engines' terminals answer in the app's scheme, shown or not.
   useEngineTerminalTheme();
+
+  // A friend's share link opening the app (phonecando.app/i/<code>).
+  useShareLinkOpen();
+
+  // A signed-in person's settings follow them to their other phones.
+  useSettingsSync();
 
   useEffect(() => {
     // Where to land when the app opens for a reason: a tap on an agent's

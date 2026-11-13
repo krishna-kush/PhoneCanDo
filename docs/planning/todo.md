@@ -59,3 +59,20 @@ Before play ships:
   not count. Check this before adding a wake lock for busy agents.
 - [ ] On the phone, check whether a busy agent stalls while the screen is
   off (we hold no wake lock; the service keeps the process, not the CPU).
+
+## 3. Account: coming features (optional, need sign-in)
+
+Sign-in (Settings → Account, `accounts/`, `docs/accounts.md`) is in place so
+these can come later. Each one needs an account and stays optional: nothing
+that works today may start needing one. The Account page lists them
+(`app/src/ui/account/copy.ts`, `COMING`); keep that list and this one in step.
+
+- [ ] Share chats with friends: send a chat with your agent to a friend, to
+  read or carry on in theirs.
+- [ ] Use a local agent together: invite friends into your agent's chat and
+  work with it side by side, live, each from their own phone.
+- [ ] Share compute: lend your phone's spare power and local models to a
+  friend's agents, or borrow theirs for a big job.
+- [ ] More fun together: other features for a crew of friends, each optional.
+- [ ] Each of these ships with its lines in `docs/accounts.md` (what it keeps,
+  for how long) and the site's privacy page before it reaches anyone.

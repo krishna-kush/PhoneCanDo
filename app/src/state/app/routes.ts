@@ -25,8 +25,8 @@ export type TerminalSession =
   /** A shell in the agent's Linux image; `initialInput` is typed in without Enter. */
   | { id: number; kind: 'linux'; agentId: AgentId; initialInput?: string };
 
-/** Settings' own pages, each opened from a row of the Settings hub. */
-export type SettingsPageId = 'look' | 'agents' | 'privacy' | 'updates';
+/** Settings' own pages, each opened from a row of the Settings hub (`refer`: Tell a friend). */
+export type SettingsPageId = 'account' | 'look' | 'agents' | 'privacy' | 'updates' | 'refer';
 
 export type Route =
   /** One agent: its engine, the ways in and its settings rows; `fresh` right after it was made. */

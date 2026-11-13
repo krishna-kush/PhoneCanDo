@@ -74,6 +74,10 @@ export type RunnerModule = {
   deleteUserKind(id: string): NativeKindDeleted;
   copyText(text: string): boolean;
   clipboardText(): string | null;
+  /** Android's share sheet, telling which app was picked (its label). Absent from native builds older than share tracking. */
+  shareChooser?(text: string, title: string): Promise<{ chosen: boolean; app: string | null }>;
+  /** When the app was first installed (ms). Absent from native builds older than share tracking. */
+  firstInstallTime?(): number;
   pairWebUi(agentId: string): Promise<string>;
   clientRecipe(agentId: string, projectDir: string, sessionId: string | null): NativeClientRecipe;
   isEngineIdle(agentId: string): boolean;
@@ -151,6 +155,18 @@ export function getBuildChannel(): string {
     return m.getBuildChannel();
   } catch {
     return 'full';
+  }
+}
+
+/** When the app was first installed (ms); null where the native build can't tell. */
+export function firstInstallTime(): number | null {
+  try {
+    const m = load();
+    if (typeof m.firstInstallTime !== 'function') return null;
+    const at = m.firstInstallTime();
+    return Number.isFinite(at) && at > 0 ? at : null;
+  } catch {
+    return null;
   }
 }
 

@@ -28,6 +28,9 @@ const TABLE_NAMES: ReadonlyArray<readonly [string, string, string]> = [
   ['events', 'event', 'events'],
   ['errors', 'error', 'errors'],
   ['reports', 'report', 'reports'],
+  ['share_links', 'share link', 'share links'],
+  ['share_daily', "day of a link's counts", "days of links' counts"],
+  ['share_installs', 'install through a link', 'installs through links'],
 ];
 
 /** "Deleted from the server: 1 device record, 2 installs, … Sharing is off." from forget's counts. */

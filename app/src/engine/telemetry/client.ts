@@ -4,6 +4,7 @@
 // build lacks expo-crypto (usage stats stay off) or setup failed.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type AdapterClient } from '../../../../tce/client/index.ts';
+import { API_HOST, DEV_API_HOST } from '../apiHost';
 import { cryptoModule } from './crypto';
 import { log } from './log';
 import { envPort, netPort } from './ports';
@@ -12,11 +13,10 @@ import { envPort, netPort } from './ports';
  * The one production endpoint: the tce Worker's API host (paths /v1/*). Kept
  * apart from the site's domain so the backend can move without an app update.
  */
-export const TELEMETRY_BASE = 'https://api.phonecando.app';
+export const TELEMETRY_BASE = API_HOST;
 /** What is collected and why, in plain words: a page on the website. */
 export const PRIVACY_URL = 'https://phonecando.app/privacy/';
 
-const DEV_LOCAL_BASE = 'http://127.0.0.1:8787';
 const NET_TIMEOUT_MS = 10_000;
 
 let client: AdapterClient | null | undefined;
@@ -32,7 +32,7 @@ export function getClient(): AdapterClient | null {
   }
   try {
     client = createClient({
-      baseUrl: __DEV__ ? DEV_LOCAL_BASE : TELEMETRY_BASE,
+      baseUrl: __DEV__ ? DEV_API_HOST : TELEMETRY_BASE,
       storage: AsyncStorage,
       net: netPort,
       env: envPort,

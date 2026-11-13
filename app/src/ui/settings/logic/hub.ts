@@ -1,11 +1,12 @@
 // The Settings hub's rows: each of Settings' pages with a playful line
-// that also says what is inside, and a short line of how it is set now,
-// plus Tell a friend, which shares our link instead of opening a page.
-// Phone control is not a row: it sits on Settings itself, above them.
-// Pure (zero RN imports).
+// that also says what is inside, and a short line of how it is set now.
+// Account (optional Google sign-in) comes first, Tell a friend (sharing
+// and what the links did) near the end. Phone control is not a row: it
+// sits on Settings itself, above them. Pure (zero RN imports).
 import type { RunLimits } from '../../../engine/runLimits';
 import type { SettingsPageId } from '../../../state/app/routes';
-import { ROW_LINE, ROW_NOW, ROW_TITLE } from '../../recommend/copy.ts';
+import * as account from '../../account/copy.ts';
+import * as refer from '../../recommend/copy.ts';
 import { capsLine } from './caps.ts';
 
 export type HubFacts = {
@@ -17,11 +18,15 @@ export type HubFacts = {
   /** Usage stats on or off; null while unknown or not in this build. */
   telemetry: boolean | null;
   version: string;
+  /** Who is signed in; `offered` when this phone and build can sign in at all. */
+  account: { signedIn: boolean; email: string | null; offered: boolean };
+  /** Links shared from this phone (and the account). */
+  sharesSent: number;
 };
 
 export type HubRow = {
-  /** The page it opens: one of Settings' own, or About; `share` opens the share sheet instead. */
-  target: SettingsPageId | 'about' | 'share';
+  /** The page it opens: one of Settings' own, or About. */
+  target: SettingsPageId | 'about';
   title: string;
   /** Playful, and says what is inside. */
   line: string;
@@ -31,6 +36,7 @@ export type HubRow = {
 
 export function hubRows(f: HubFacts): HubRow[] {
   return [
+    { target: 'account', title: account.ROW_TITLE, line: account.ROW_LINE, now: account.rowNow(f.account) },
     {
       target: 'look',
       title: 'Look & feel',
@@ -50,7 +56,7 @@ export function hubRows(f: HubFacts): HubRow[] {
       now: f.telemetry == null ? 'usage stats' : `usage stats ${f.telemetry ? 'on' : 'off'}`,
     },
     { target: 'updates', title: 'Updates', line: updatesLine(f.channel), now: `v${f.version} · ${f.channel}` },
-    { target: 'share', title: ROW_TITLE, line: ROW_LINE, now: ROW_NOW },
+    { target: 'refer', title: refer.ROW_TITLE, line: refer.ROW_LINE, now: refer.rowNow(f.sharesSent) },
     { target: 'about', title: 'About', line: 'Version, licences, and a mascot that likes boops', now: `v${f.version}` },
   ];
 }
@@ -61,7 +67,7 @@ function updatesLine(channel: string): string {
   return 'Fresh builds from GitHub, checked at every launch';
 }
 
-const ORDER: readonly SettingsPageId[] = ['look', 'agents', 'privacy', 'updates'];
+const ORDER: readonly SettingsPageId[] = ['account', 'look', 'agents', 'privacy', 'updates', 'refer'];
 
 /** A page's kicker, numbered as its row on the hub: "settings · 02". */
 export function pageKicker(id: SettingsPageId): string {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { canSetRunLimits, runLimits, setRunLimits, type RunLimits } from '../../../engine/runLimits';
+import { noteCapsChanged } from '../../../state/flows/settingsSync';
 import { usePageActive } from '../../nav/pageActive';
 
 /**
@@ -18,9 +19,13 @@ export function useRunLimits() {
   }, [active]);
 
   const save = useCallback((next: RunLimits) => {
+    const before = runLimits();
     const kept = setRunLimits(next);
     setFailed(kept == null);
-    if (kept) setLimits(kept);
+    if (!kept) return;
+    setLimits(kept);
+    // A signed-in person's caps follow them to their other phones.
+    noteCapsChanged(before, kept);
   }, []);
 
   return { limits, save, supported, failed };

@@ -1,8 +1,12 @@
 // When the "Having fun?" card asks (src/state/logic/recommendAsk.ts): not in the
 // first days or before a few good runs, only while you look at the chat,
 // at most once a fortnight, and never after Share, "Don't ask again" or
-// three "Not now". Imports the real pure module (Node 22.18+ strips its
-// types), so these cannot drift.
+// three "Not now". Then share links (src/state/logic/share/): codes, links
+// and reading one back, when opening through one counts as an install, the
+// kept list and joining it with the account's; the server's answers
+// (engine/share/wire.ts, engine/account/wire.ts); and the Refer page's
+// funnel (ui/recommend/logic/funnel.ts). Imports the real pure modules
+// (Node 22.18+ strips their types), so these cannot drift.
 // Run: node test_recommend.js (or pnpm check:vectors)
 'use strict';
 const path = require('node:path');
@@ -75,6 +79,139 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
     notNow: 0,
     done: false,
   });
+
+  // --- share codes -----------------------------------------------------------
+  const c = await import(src('state/logic/share/code.ts'));
+  t('32 letters nobody misreads', [c.CODE_ALPHABET.length, /[lo01]/.test(c.CODE_ALPHABET)], [32, false]);
+  const code = c.codeFromBytes([0, 1, 2, 31, 32, 255, 100, 7, 9]);
+  t('a code from bytes: each byte\'s low 5 bits', code, 'abc9a9eh');
+  t('a made code is a code', c.isShareCode(code), true);
+  t('too few bytes: no code', c.codeFromBytes([1, 2, 3]), null);
+  t('not codes', ['abcdefgl', 'ABCDEFGH', 'abcdefg', 'abcdefghj', 'abcdef0h', 42, null].map(c.isShareCode), [
+    false, false, false, false, false, false, false,
+  ]);
+
+  // --- links -----------------------------------------------------------------
+  const l = await import(src('state/logic/share/link.ts'));
+  t('tracked link', l.shareLinkFor('k7q2m9xa'), 'https://phonecando.app/i/k7q2m9xa');
+  t('untracked link', l.shareLinkFor(null), 'https://phonecando.app');
+  t('read back', [
+    l.codeFromUrl('https://phonecando.app/i/k7q2m9xa'),
+    l.codeFromUrl('https://phonecando.app/i/k7q2m9xa/'),
+    l.codeFromUrl('https://phonecando.app/i/k7q2m9xa?utm=x'),
+    l.codeFromUrl('https://PhoneCanDo.app/i/k7q2m9xa#top'),
+  ], ['k7q2m9xa', 'k7q2m9xa', 'k7q2m9xa', 'k7q2m9xa']);
+  t('other urls read nothing', [
+    l.codeFromUrl('http://phonecando.app/i/k7q2m9xa'),
+    l.codeFromUrl('https://evil.app/i/k7q2m9xa'),
+    l.codeFromUrl('https://phonecando.app.evil.com/i/k7q2m9xa'),
+    l.codeFromUrl('https://phonecando.app/i/k7q2m9xa/more'),
+    l.codeFromUrl('https://phonecando.app/i/K7Q2M9XA'),
+    l.codeFromUrl('https://phonecando.app/'),
+    l.codeFromUrl(null),
+  ], [null, null, null, null, null, null, null]);
+
+  const now = 50 * DAY;
+  const check = (o) => l.countsAsInstall({ code: 'k7q2m9xa', own: [], firstInstallAt: now - DAY, now, counted: false, ...o });
+  t('a fresh install through a friend\'s link counts', check({}), true);
+  t('a week in still counts', check({ firstInstallAt: now - 7 * DAY }), true);
+  t('older installs do not', check({ firstInstallAt: now - 8 * DAY }), false);
+  t('our own link does not', check({ own: ['k7q2m9xa'] }), false);
+  t('only once', check({ counted: true }), false);
+  t('no install time: not counted', check({ firstInstallAt: null }), false);
+  t('a clock before the install: not counted', check({ firstInstallAt: now + DAY }), false);
+
+  // --- the kept list ---------------------------------------------------------
+  const k = await import(src('state/logic/share/list.ts'));
+  t('nothing kept is empty', k.parseKept(null), k.EMPTY);
+  t('junk is empty', k.parseKept('{nope'), k.EMPTY);
+  const kept = k.parseKept(JSON.stringify({
+    links: [
+      { code: 'aaaaaaaa', at: 1, app: 'Chat' },
+      { code: null, at: 3, app: null },
+      { code: 'bbbbbbbb', at: 2, app: '' },
+      { code: 'bad', at: 4, app: 'x' },
+      { at: 'x' },
+    ],
+    installCounted: true,
+  }));
+  t('kept reads back newest first, junk dropped', kept, {
+    links: [
+      { code: null, at: 3, app: null },
+      { code: 'bbbbbbbb', at: 2, app: null },
+      { code: 'aaaaaaaa', at: 1, app: 'Chat' },
+    ],
+    installCounted: true,
+  });
+  t('a code is added once', k.addLink(kept.links, { code: 'aaaaaaaa', at: 9, app: null }), kept.links);
+  t('a new link goes first', k.addLink(kept.links, { code: 'cccccccc', at: 9, app: 'Mail' })[0], { code: 'cccccccc', at: 9, app: 'Mail' });
+  t('tracked codes', k.trackedCodes(kept.links), ['bbbbbbbb', 'aaaaaaaa']);
+  t('what the account gets', k.forAccount(kept.links), [{ code: 'bbbbbbbb', created: 2 }, { code: 'aaaaaaaa', created: 1 }]);
+  t('joined with the account', k.mergeAccount(kept.links, [
+    { code: 'aaaaaaaa', created: 0 },
+    { code: 'dddddddd', created: 5 },
+    { code: 'nope', created: 6 },
+  ]), [
+    { code: 'dddddddd', at: 5, app: null },
+    { code: null, at: 3, app: null },
+    { code: 'bbbbbbbb', at: 2, app: null },
+    { code: 'aaaaaaaa', at: 0, app: 'Chat' },
+  ]);
+  const many = Array.from({ length: k.MAX_LINKS + 5 }, (_, i) => ({ code: null, at: i, app: null }));
+  t('at most MAX_LINKS kept', k.parseKept(JSON.stringify({ links: many })).links.length, k.MAX_LINKS);
+
+  // --- the server's answers --------------------------------------------------
+  const sw = await import(src('engine/share/wire.ts'));
+  t('stats read', sw.parseStats({ links: [
+    { code: 'aaaaaaaa', opened: 3, downloaded: 1, installed: 1, using: 0, lastDay: '2026-11-12' },
+    { code: 'bbbbbbbb', opened: -1, downloaded: 'x' },
+    { nope: 1 },
+  ] }), {
+    aaaaaaaa: { code: 'aaaaaaaa', opened: 3, downloaded: 1, installed: 1, using: 0, lastDay: '2026-11-12' },
+    bbbbbbbb: { code: 'bbbbbbbb', opened: 0, downloaded: 0, installed: 0, using: 0, lastDay: null },
+  });
+  t('no list: no stats', sw.parseStats({ error: 'internal' }), null);
+  const aw = await import(src('engine/account/wire.ts'));
+  t('account read', [aw.parseAccount('{"email":"a@b.c","createdAt":5}'), aw.parseAccount({ email: 'a@b.c' }), aw.parseAccount('nope')], [
+    { email: 'a@b.c', createdAt: 5 },
+    null,
+    null,
+  ]);
+  t('account links read', aw.parseAccountLinks({ links: [{ code: 'aaaaaaaa', created: 1 }, { code: 2 }] }), [{ code: 'aaaaaaaa', created: 1 }]);
+  t('error code', [aw.errorCode({ error: 'bad_token' }), aw.errorCode({}), aw.errorCode(null)], ['bad_token', null, null]);
+
+  // --- the Refer page's funnel -----------------------------------------------
+  const f = await import(src('ui/recommend/logic/funnel.ts'));
+  const stats = sw.parseStats({ links: [
+    { code: 'aaaaaaaa', opened: 3, downloaded: 2, installed: 1, using: 1 },
+    { code: 'bbbbbbbb', opened: 1 },
+  ] });
+  const totals = f.funnel(kept.links, stats);
+  t('funnel totals', totals, { sent: 3, opened: 4, downloaded: 2, installed: 1, using: 1 });
+  t('funnel steps in order', f.funnelSteps(totals).map((x) => [x.label, x.count]), [
+    ['Sent', 3], ['Opened', 4], ['Downloaded', 2], ['Installed', 1], ['Using it', 1],
+  ]);
+  t('link lines', [
+    f.linkLine(kept.links[0], undefined),
+    f.linkLine(kept.links[1], undefined),
+    f.linkLine(kept.links[1], stats.bbbbbbbb),
+    f.linkLine(kept.links[2], stats.aaaaaaaa),
+    f.linkLine(kept.links[2], { ...stats.aaaaaaaa, opened: 0, downloaded: 0, installed: 0, using: 0 }),
+  ], [
+    'Not tracked: usage stats were off',
+    'Not counted yet',
+    '1 opened',
+    '3 opened · 2 downloaded · 1 installed · 1 using it',
+    'No clicks yet',
+  ]);
+  t('link titles', [f.linkTitle(kept.links[2]), f.linkTitle(kept.links[1])], ['Via Chat', 'Shared']);
+  const noon = new Date(2026, 10, 12, 12).getTime();
+  t('sent labels', [
+    f.sentLabel(noon - 60_000, noon),
+    f.sentLabel(new Date(2026, 10, 11, 23).getTime(), noon),
+    f.sentLabel(new Date(2026, 9, 3, 9).getTime(), noon),
+    f.sentLabel(new Date(2025, 0, 2, 9).getTime(), noon),
+  ], ['today', 'yesterday', '3 Oct', '2 Jan 2025']);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

@@ -171,12 +171,27 @@ const MIN = 60_000;
     limits: { maxAgents: null, maxModels: null },
     telemetry: true,
     version: '1.2.3',
+    account: { signedIn: false, email: null, offered: true },
+    sharesSent: 0,
   };
   const hub = h.hubRows(facts);
-  t('hub order: phone control is not a row', hub.map((x) => x.target), ['look', 'agents', 'privacy', 'updates', 'share', 'about']);
+  t('hub order: phone control is not a row', hub.map((x) => x.target), ['account', 'look', 'agents', 'privacy', 'updates', 'refer', 'about']);
   t('every row says what is inside', hub.every((x) => x.line.length > 0 && x.now.length > 0), true);
-  t('privacy now', hub[2].now, 'usage stats on');
-  t('kickers follow the hub', [h.pageKicker('look'), h.pageKicker('updates')], ['settings · 01', 'settings · 04']);
+  t('privacy now', hub[3].now, 'usage stats on');
+  t('account now: signed out', hub[0].now, 'signed out · optional');
+  t('account now: signed in', h.hubRows({ ...facts, account: { signedIn: true, email: 'a@b.c', offered: true } })[0].now, 'a@b.c');
+  t('account now: not here', h.hubRows({ ...facts, account: { signedIn: false, email: null, offered: false } })[0].now, 'not on this phone or build');
+  t('refer now', [hub[5].now, h.hubRows({ ...facts, sharesSent: 1 })[5].now, h.hubRows({ ...facts, sharesSent: 3 })[5].now], [
+    'no links sent yet',
+    '1 link sent',
+    '3 links sent',
+  ]);
+  t('kickers follow the hub', [h.pageKicker('account'), h.pageKicker('look'), h.pageKicker('updates'), h.pageKicker('refer')], [
+    'settings · 01',
+    'settings · 02',
+    'settings · 05',
+    'settings · 06',
+  ]);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

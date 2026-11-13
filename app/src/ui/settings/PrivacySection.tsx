@@ -22,8 +22,9 @@ import ThumbIcon from '../common/ThumbIcon';
 type Busy = 'report' | 'forget' | 'reset' | null;
 
 // Settings → Privacy, the body of its page (pages/PrivacyPage.tsx): the
-// usage-stats switch, what it sends and what it never does, and the user's
-// tools (new anonymous id, send a report, delete my data). Reset only
+// usage-stats switch, what it sends and what it never does (and how share
+// links and the optional sign-in fit in), and the user's tools (new
+// anonymous id, send a report, delete my data). Reset only
 // starts a new install id; Delete my data is what removes the phone's data
 // from the server, so the copy never blurs the two. For our own test
 // phones, a long-press on the usage-stats card reveals the tester-device
@@ -111,6 +112,16 @@ export default function PrivacySection() {
         Sent: your device type, Android and app version, crashes, engine health and how often
         features are used, under a random anonymous ID. Never sent: your chats, files, keys, or
         anything on your screen. Off stops it and deletes what has not been sent yet.
+      </PlainText>
+      <PlainText fontSize={14} color="muted">
+        Tell a friend: each link you share carries a random code, so we can count how often it
+        was opened, downloaded and installed. Never who. Links you share while this is off go out
+        untracked.
+      </PlainText>
+      <PlainText fontSize={14} color="muted">
+        Signing in with Google (Settings → Account) is optional. We keep your email, your links&apos;
+        codes and a few settings (theme, extra keys, run caps) only if you sign in, and never link
+        them to these usage stats.
       </PlainText>
       <AppButton
         variant="secondary"
@@ -206,7 +217,7 @@ export default function PrivacySection() {
         open={confirmForget}
         onClose={() => setConfirmForget(false)}
         title="Delete my data?"
-        message="Deletes all usage data the server holds for this phone (every install, also from before a reset or reinstall), then turns sharing off."
+        message="Deletes all usage data the server holds for this phone (every install, also from before a reset or reinstall, and what your share links counted), then turns sharing off. Your account, if you signed in, has its own Delete in Settings → Account."
         confirmLabel="Delete"
         onConfirm={() => {
           setConfirmForget(false);

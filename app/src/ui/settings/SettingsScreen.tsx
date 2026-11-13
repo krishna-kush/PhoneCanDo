@@ -3,7 +3,9 @@ import { XStack, YStack } from 'tamagui';
 import { getBuildChannel } from '../../engine/runner';
 import { runLimits } from '../../engine/runLimits';
 import { installedVersion } from '../../engine/updates';
+import { useAccountStore } from '../../state/account';
 import { useAppStore } from '../../state/app';
+import { useShareStore } from '../../state/share';
 import AppCard from '../common/AppCard';
 import AgentFace from '../common/face/AgentFace';
 import { settingsLine } from '../common/face/lines';
@@ -12,22 +14,24 @@ import PlainText from '../common/PlainText';
 import Screen from '../common/Screen';
 import SectionTitle from '../common/SectionTitle';
 import { usePageActive } from '../nav/pageActive';
-import { shareApp } from '../recommend/share';
 import { hubRows, type HubFacts } from './logic/hub';
 import PhoneControlSection from './PhoneControlSection';
 
 // Settings: Phone control on the page itself, at the top (it gates what
 // agents may do, so it is never a tap away), then a short hub of one row
-// per page (Look & feel, Agents & models, Privacy, Updates, About), each
-// with a line of what is inside and how it is set now, and Tell a friend,
-// which opens the share sheet with our link. App-wide options
-// only: each agent's own settings live on its page. The rows re-read what
-// they show whenever Settings is back in front.
+// per page (Account, Look & feel, Agents & models, Privacy, Updates, Tell
+// a friend, About), each with a line of what is inside and how it is set
+// now. App-wide options only: each agent's own settings live on its page.
+// The rows re-read what they show whenever Settings is back in front.
 export default function SettingsScreen() {
   const push = useAppStore((s) => s.push);
   const themeMode = useAppStore((s) => s.themeMode);
   const extraKeysSticky = useAppStore((s) => s.extraKeysSticky);
   const telemetry = useAppStore((s) => s.telemetry);
+  const signedIn = useAccountStore((s) => s.signedIn);
+  const email = useAccountStore((s) => s.account?.email ?? s.profile?.email ?? null);
+  const signInOffered = useAccountStore((s) => s.supported && s.configured);
+  const sharesSent = useShareStore((s) => s.links.length);
   const active = usePageActive();
   const [limits, setLimits] = useState(runLimits);
   const [line] = useState(() => settingsLine(Math.random() * 1000));
@@ -36,6 +40,8 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (!active) return;
     setLimits(runLimits());
+    useAccountStore.getState().hydrate();
+    void useShareStore.getState().hydrate();
   }, [active]);
 
   const facts: HubFacts = {
@@ -45,6 +51,8 @@ export default function SettingsScreen() {
     limits,
     telemetry: telemetry.ready && telemetry.available ? telemetry.enabled : null,
     version: installedVersion().version,
+    account: { signedIn, email, offered: signInOffered },
+    sharesSent,
   };
 
   return (
@@ -76,10 +84,7 @@ export default function SettingsScreen() {
               {String(i + 1).padStart(2, '0')}
             </PlainText>
           }
-          onPress={() => {
-            if (row.target === 'share') void shareApp();
-            else push(row.target === 'about' ? { name: 'about' } : { name: 'settings-page', page: row.target });
-          }}
+          onPress={() => push(row.target === 'about' ? { name: 'about' } : { name: 'settings-page', page: row.target })}
         >
           <PlainText fontFamily="mono" fontSize={11} color="secondaryInk" numberOfLines={1}>
             {row.now}
