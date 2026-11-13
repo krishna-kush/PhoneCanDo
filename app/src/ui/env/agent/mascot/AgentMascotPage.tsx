@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { SHAPES } from '../../../../../../mascot/body.ts';
-import { DESIGNS, designOf } from '../../../../../../mascot/designs.ts';
+import { DESIGNS, designOf, EARNED } from '../../../../../../mascot/designs.ts';
 import type { Look } from '../../../../../../mascot/look.ts';
+import { useAppStore } from '../../../../state/app';
 import { useMascotsStore } from '../../../../state/mascots';
+import { useStarterStore } from '../../../../state/starter';
 import AppButton from '../../../common/AppButton';
 import AgentFace from '../../../common/face/AgentFace';
 import { useAgentLook } from '../../../common/face/useAgentLook';
@@ -12,6 +14,8 @@ import PlainText from '../../../common/PlainText';
 import Screen from '../../../common/Screen';
 import SectionTitle from '../../../common/SectionTitle';
 import { usePageActive } from '../../../nav/pageActive';
+import { lockedLabel } from '../../../starter/copy';
+import { isEarned } from '../../../starter/reward';
 import AgentGone from '../AgentGone';
 import { useAgentRecords } from '../useAgentRecords';
 import { inkLabel, MASCOT_TITLE, SHAPE_LABEL, SURPRISE, wornLine } from './copy';
@@ -20,11 +24,14 @@ import MascotChoice from './MascotChoice';
 // An agent's Mascot page: its face big, with the design's name and what it
 // wears, then its shape, which ink is in front and every design there is
 // (mascot/designs.ts), each shown as it would look; or Surprise me for one
-// at random. A pick shows at once wherever its face does.
+// at random. A pick shows at once wherever its face does. An earned design
+// comes last, locked (a tap opens the first shift) until it is earned.
 export default function AgentMascotPage({ agentId }: { agentId: string }) {
   const { agent } = useAgentRecords(agentId);
   const look = useAgentLook(agentId);
   const active = usePageActive();
+  const push = useAppStore((s) => s.push);
+  const earned = useStarterStore((s) => s.shift.earned);
   const [hop, setHop] = useState(0);
   if (!agent) return <AgentGone />;
 
@@ -94,6 +101,28 @@ export default function AgentMascotPage({ agentId }: { agentId: string }) {
             onSelect={() => choose({ design: d.id })}
           />
         ))}
+        {EARNED.map((d) =>
+          isEarned(d.id, earned) ? (
+            <MascotChoice
+              key={d.id}
+              label={d.name}
+              mascot={{ ...mascot, design: d.id }}
+              selected={d.id === mascot.design}
+              onSelect={() => choose({ design: d.id })}
+            />
+          ) : (
+            <MascotChoice
+              key={d.id}
+              label={lockedLabel(d.name)}
+              mascot={{ ...mascot, design: d.id }}
+              selected={false}
+              onSelect={() => {
+                useStarterStore.getState().start();
+                push({ name: 'starter' });
+              }}
+            />
+          ),
+        )}
       </XStack>
     </Screen>
   );

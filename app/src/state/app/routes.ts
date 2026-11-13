@@ -89,6 +89,8 @@ export type Route =
   | { name: 'settings' }
   | { name: 'settings-page'; page: SettingsPageId }
   | { name: 'about' }
+  /** The first shift: a newcomer's missions, each ticked when the app sees it happen. */
+  | { name: 'starter' }
   /** Which folder the active agent's terminal UI opens in. */
   | { name: 'folder-picker' }
   | { name: 'terminal'; session: TerminalSession };

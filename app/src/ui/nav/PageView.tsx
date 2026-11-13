@@ -27,6 +27,7 @@ import SchedulesPage from '../schedule/SchedulesPage';
 import AboutPage from '../settings/AboutPage';
 import SettingsPage from '../settings/SettingsPage';
 import SettingsScreen from '../settings/SettingsScreen';
+import ShiftPage from '../starter/ShiftPage';
 import FolderPicker from '../terminal/FolderPicker';
 import TerminalPage from '../terminal/TerminalPage';
 
@@ -89,6 +90,8 @@ function PageView({ route }: { route: Route }) {
       return <SettingsPage page={route.page} />;
     case 'about':
       return <AboutPage />;
+    case 'starter':
+      return <ShiftPage />;
     case 'folder-picker':
       return <FolderPicker />;
     case 'terminal':

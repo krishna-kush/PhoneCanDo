@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import { getBuildChannel, isRunnerAvailable } from '../../engine/runner';
 import { installedVersion } from '../../engine/updates';
+import { useAppStore } from '../../state/app';
+import { useStarterStore } from '../../state/starter';
 import AppButton from '../common/AppButton';
 import AgentFace from '../common/face/AgentFace';
 import { boopLine } from '../common/face/lines';
@@ -9,6 +11,7 @@ import LicensesDialog from '../common/LicensesDialog';
 import PageHeader from '../common/PageHeader';
 import PlainText from '../common/PlainText';
 import Screen from '../common/Screen';
+import { SHIFT_TITLE } from '../starter/copy';
 import Barcode from './Barcode';
 
 function channel(): string {
@@ -19,10 +22,11 @@ function channel(): string {
   }
 }
 
-// What the app is, its version as a real barcode, and the licences. A-01
-// lives here too: tap it.
+// What the app is, its version as a real barcode, the first shift again
+// (on, with its marks kept) and the licences. A-01 lives here too: tap it.
 export default function AboutPage() {
   const version = installedVersion();
+  const push = useAppStore((s) => s.push);
   const [licensesOpen, setLicensesOpen] = useState(false);
   const [boops, setBoops] = useState(0);
 
@@ -55,6 +59,15 @@ export default function AboutPage() {
       <YStack paddingVertical="3">
         <Barcode text={`PCD ${version.version}`} />
       </YStack>
+      <AppButton
+        variant="secondary"
+        onPress={() => {
+          useStarterStore.getState().start();
+          push({ name: 'starter' });
+        }}
+      >
+        {SHIFT_TITLE}
+      </AppButton>
       <AppButton variant="secondary" onPress={() => setLicensesOpen(true)}>
         Licenses
       </AppButton>

@@ -6,6 +6,7 @@ import { getBuildChannel, isRunnerAvailable } from '../../engine/runner';
 import { installedVersion } from '../../engine/updates';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
+import { useKindsStore } from '../../state/kinds';
 import { useLinuxStore } from '../../state/linux';
 import { useMessagesStore } from '../../state/messages';
 import { useModelsStore } from '../../state/models';
@@ -23,6 +24,7 @@ import { unreadText } from '../messages/logic/messagesCopy';
 import { unreadTotal } from '../messages/logic/messageView';
 import PlainText from '../common/PlainText';
 import SchedulesDrawerRow from '../schedule/SchedulesDrawerRow';
+import ShiftDrawerRow from '../starter/ShiftDrawerRow';
 import SelectBar from './select/SelectBar';
 import TextAction from './select/TextAction';
 import { useAgentSelection } from './select/useAgentSelection';
@@ -44,7 +46,7 @@ function channel(): string {
 // What the drawer holds: every agent (tap to switch, › for its page, a long
 // press or Select to pick several, with the selection's bar pinned below),
 // Own envs still downloading, New agent, then the app's other places:
-// Models, Systems, Custom agents, Schedules (while an agent can run them),
+// First shift (while it runs), Models, Systems, Custom agents, Schedules (while an agent can run them),
 // Messages (once agents can talk to each other), Settings, About. Memoised: the drawer's own renders (open, shut)
 // pass the same `still` until its slide ends. Mounting it starts the
 // unread counts (each row's mark), which the runner keeps current.
@@ -60,6 +62,7 @@ function DrawerContent({ still }: { still: boolean }) {
   const downloading = envs.filter((e) => e.state === 'downloading');
   const modelsOffered = useModelsStore((s) => s.device.supported);
   const modelCount = useModelsStore((s) => s.models.length);
+  const customCount = useKindsStore((s) => s.userKinds.length);
   const newAgent = useStartNewAgent();
   const awake = agents.filter((a) => moodOf(statuses[a.id]?.state) === 'awake').length;
   const version = installedVersion();
@@ -68,6 +71,10 @@ function DrawerContent({ still }: { still: boolean }) {
   const unread = useMessagesStore((s) => unreadTotal(s.unread));
   const messaging = messagesAvailable() && (agents.length > 1 || unread > 0);
   useEffect(() => useMessagesStore.getState().refreshMessages(), []);
+  // The custom agents' count: read once here; a save or delete reads them again.
+  useEffect(() => {
+    if (linuxAvailable) useKindsStore.getState().readUserKinds();
+  }, [linuxAvailable]);
 
   return (
     <YStack flex={1}>
@@ -114,6 +121,7 @@ function DrawerContent({ still }: { still: boolean }) {
 
         <YStack height={1} backgroundColor="line" marginVertical="3" />
 
+        <ShiftDrawerRow reach={PLACE_REACH} />
         {modelsOffered ? (
           <LinkRow
             label="Models"
@@ -129,7 +137,12 @@ function DrawerContent({ still }: { still: boolean }) {
           reach={PLACE_REACH}
         />
         {linuxAvailable ? (
-          <LinkRow label="Custom agents" onPress={() => push({ name: 'custom-agents' })} reach={PLACE_REACH} />
+          <LinkRow
+            label="Custom agents"
+            detail={customCount === 0 ? 'none yet' : `${customCount} added`}
+            onPress={() => push({ name: 'custom-agents' })}
+            reach={PLACE_REACH}
+          />
         ) : null}
         <SchedulesDrawerRow reach={PLACE_REACH} />
         {messaging ? (
