@@ -1,0 +1,338 @@
+---
+// The bench: one per AI, each a radio, so picking works without script. The
+// picked one's ruling shows under the row (CSS, :checked), its stamp landing
+// as the gavel comes down; nothing picked, the gavel waits over an empty
+// card. The script bangs the gavel on every pick, ticks each judge heard and
+// each chat read, counts them in the plate's bar and closes the case on the
+// last.
+import { hearing } from '../../../data/secondOpinion';
+
+const { judges } = hearing;
+const meta = (model: string) => [model, `asked ${hearing.asked}`].filter(Boolean).join(' · ');
+---
+
+<div class="court" style={`--n:${judges.length}`}>
+  {judges.map((j, i) => (
+    <div class="judge" style={`--i:${i + 1}`}>
+      <label class="bench">
+        <input type="radio" name="judge" value={j.id} data-name={j.name} />
+        <span class="op-label bench-no">Bench {i + 1}</span>
+        <span class="bench-name">{j.name}</span>
+        <span class="op-label bench-maker">{j.maker}</span>
+        <span class="bench-heard" aria-hidden="true">✓ Heard</span>
+      </label>
+      <article class="ruling">
+        <span class="stamp ruling-stamp">Ruled · {j.name}</span>
+        <p class="op-label">Its ruling, in its own words</p>
+        <blockquote>{j.ruling}</blockquote>
+        <p class="op-label ruling-meta">{meta(j.model)}</p>
+        <div class="ruling-acts">
+          <a class="btn btn-primary" href={j.chat} target="_blank" rel="noreferrer" data-chat>
+            Read the whole chat
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </a>
+          <a class="ruling-own" href={j.home} target="_blank" rel="noreferrer">Ask {j.name} yourself ↗</a>
+        </div>
+        <span class="ruling-read" aria-hidden="true">✓ Read</span>
+      </article>
+    </div>
+  ))}
+  <div class="ruling ruling-wait">
+    <p class="ruling-wait-title">The court awaits.</p>
+    <p class="op-label">↑ Pick a judge</p>
+    <p class="op-label ruling-accused">The accused: PhoneCanDo v{hearing.version} · pleads not guilty</p>
+  </div>
+  <svg class="gavel" width="72" height="52" viewBox="0 0 72 52" fill="none" aria-hidden="true">
+    <path class="gavel-hit" d="M24 38 18 33M64 38l6-5M23 46h-6M65 46h6"></path>
+    <rect x="28" y="42" width="32" height="7"></rect>
+    <g class="gavel-arm">
+      <rect x="4" y="26" width="30" height="4"></rect>
+      <rect x="34" y="17" width="14" height="24"></rect>
+      <path d="M34 22h14M34 36h14"></path>
+    </g>
+  </svg>
+</div>
+
+<script>
+  import { cueMascot } from '../../../lib/mascotCue';
+  import { toyLines } from '../../../data/mascot';
+
+  const court = document.querySelector<HTMLElement>('.court');
+  const plate = court?.closest<HTMLElement>('.op-plate');
+  const state = plate?.querySelector<HTMLElement>('[data-heard]');
+  const gavel = court?.querySelector<SVGElement>('.gavel');
+  if (court && plate && state && gavel) {
+    const lines = toyLines.hearing;
+    const benches = [...court.querySelectorAll<HTMLElement>('.bench')];
+    const heard = () => benches.filter((b) => b.hasAttribute('data-heard')).length;
+    const bang = () => {
+      gavel.removeAttribute('data-bang');
+      void gavel.getBoundingClientRect();
+      gavel.setAttribute('data-bang', '');
+    };
+    let current: HTMLInputElement | null = null;
+
+    for (const bench of benches) {
+      const pick = bench.querySelector('input');
+      if (!pick) continue;
+      // A click on the judge already heard bangs again: order in court.
+      pick.addEventListener('click', () => {
+        if (pick !== current) return;
+        bang();
+        cueMascot({ say: lines.order, move: 'shake' });
+      });
+      pick.addEventListener('change', () => {
+        current = pick;
+        bang();
+        const first = heard() === 0;
+        if (!bench.hasAttribute('data-heard')) {
+          bench.setAttribute('data-heard', '');
+          state.textContent = `${heard()} of ${benches.length} heard`;
+          if (heard() === benches.length) {
+            plate.setAttribute('data-closed', '');
+            return cueMascot({ say: lines.closed, move: 'hop', ms: 2400 });
+          }
+        }
+        cueMascot({ say: first ? lines.rise : lines.ruled(pick.dataset.name ?? ''), move: 'hop' });
+      });
+    }
+
+    for (const ruling of court.querySelectorAll<HTMLElement>('.ruling')) {
+      const chat = ruling.querySelector<HTMLAnchorElement>('[data-chat]');
+      const read = () => {
+        if (ruling.hasAttribute('data-read')) return;
+        ruling.setAttribute('data-read', '');
+        cueMascot({ say: lines.read, move: 'hop' });
+      };
+      chat?.addEventListener('click', read);
+      chat?.addEventListener('auxclick', (e) => e.button === 1 && read());
+    }
+  }
+</script>
+
+<style is:global>
+  /* The benches side by side in the top row; every ruling, the empty card
+     and the gavel share the row under them, one shown at a time. */
+  .court {
+    position: relative;
+    --gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+    grid-template-rows: auto 1fr;
+    gap: 0 var(--gap);
+    min-width: 0;
+  }
+  .judge { display: contents; }
+
+  /* A bench stands proud on its amber offset; picked, it's pressed flat,
+     like a key held down. */
+  .bench {
+    position: relative;
+    grid-row: 1;
+    grid-column: var(--i);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    padding: 12px 14px 14px;
+    border: 1px solid var(--line-2);
+    border-top-width: 4px;
+    background: var(--bg);
+    box-shadow: 4px 4px 0 var(--accent);
+    cursor: pointer;
+    transition: translate 0.12s, box-shadow 0.12s, border-color 0.12s;
+  }
+  @media (hover: hover) {
+    .bench:hover { translate: -2px -2px; border-color: var(--accent-ink); box-shadow: 6px 6px 0 var(--accent); }
+  }
+  .bench:has(input:checked) { translate: 4px 4px; border-color: var(--red); box-shadow: 0 0 0 var(--accent); }
+  .bench:has(input:focus-visible) { outline: 2px solid var(--red-hi); outline-offset: 3px; }
+  .bench input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; }
+  .bench-no { display: flex; align-items: center; gap: 6px; }
+  .bench-no::before { content: ''; width: 6px; height: 6px; border: 1px solid var(--line-2); }
+  .bench:has(input:checked) .bench-no::before { border-color: var(--red); background: var(--red); }
+  .bench-name {
+    font: 400 clamp(22px, 2.4vw, 30px)/1 var(--serif);
+    letter-spacing: -0.01em;
+    transition: color 0.12s;
+  }
+  .bench:has(input:checked) .bench-name { color: var(--red-hi); }
+  .bench .bench-maker { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bench-heard,
+  .ruling-read {
+    position: absolute;
+    top: -10px;
+    right: 8px;
+    display: none;
+    padding: 3px 6px;
+    border: 1px solid var(--red);
+    background: var(--bg);
+    color: var(--red-hi);
+    font: 500 8px/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    rotate: 4deg;
+  }
+  .bench[data-heard] .bench-heard,
+  .ruling[data-read] .ruling-read {
+    display: block;
+    animation: src-thunk 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+  }
+
+  /* The ruling: a card under the row, notched at its judge, jolted as the
+     gavel lands; its buttons at its foot. */
+  .ruling {
+    position: relative;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    display: none;
+    flex-direction: column;
+    margin-top: 22px;
+    padding: 26px 22px 22px;
+    border: 1px solid var(--red);
+    background: var(--bg);
+    animation: ruling-jolt 0.5s ease-out both;
+  }
+  .bench:has(input:checked) + .ruling { display: flex; }
+  .court:not(:has(input:checked)) .ruling-wait { display: flex; }
+  .ruling:not(.ruling-wait)::before {
+    content: '';
+    position: absolute;
+    top: -7px;
+    left: calc((var(--i) - 0.5) * (100% + var(--gap)) / var(--n) - var(--gap) / 2 - 6px);
+    width: 12px;
+    height: 12px;
+    border: solid var(--red);
+    border-width: 1px 0 0 1px;
+    background: var(--bg);
+    rotate: 45deg;
+  }
+  .ruling-stamp {
+    position: absolute;
+    top: -11px;
+    left: 16px;
+    border-color: var(--red-hi);
+    background: var(--bg);
+    color: var(--red-hi);
+    opacity: 1;
+    animation: src-thunk 0.42s 0.18s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+  }
+  .ruling blockquote {
+    margin: 10px 0 0;
+    padding-right: 64px;
+    font: italic 400 clamp(22px, 2.3vw, 28px)/1.22 var(--serif);
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
+  }
+  .ruling blockquote::before { content: '“'; color: var(--red); }
+  .ruling blockquote::after { content: '”'; color: var(--red); }
+  .ruling-meta { margin-top: 14px; }
+  .ruling-acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+    margin-top: auto;
+    padding-top: 22px;
+  }
+  .ruling-own {
+    font: 500 10px/1.4 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px dashed var(--line-2);
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .ruling-own:hover { color: var(--red-hi); border-color: var(--red); }
+  .ruling-wait {
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px 22px 44px;
+    border: 1px dashed var(--line-2);
+    background: transparent;
+    animation: none;
+  }
+  .ruling-wait-title {
+    font: italic 400 clamp(26px, 2.6vw, 32px)/1 var(--serif);
+    color: var(--muted);
+  }
+  .ruling-wait .op-label.ruling-accused { margin-top: auto; padding-top: 28px; color: var(--faint); animation: none; }
+  .ruling-wait .op-label {
+    margin-top: 12px;
+    color: var(--accent-ink);
+    animation: ruling-point 1.4s ease-in-out infinite;
+  }
+
+  /* The gavel, line-work over the ruling's top right corner: raised and
+     twitching while the court waits, down hard on each pick. */
+  .gavel {
+    position: relative;
+    z-index: 1;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    align-self: start;
+    justify-self: end;
+    margin: 30px 14px 0 0;
+    overflow: visible;
+    color: var(--accent-ink);
+    pointer-events: none;
+  }
+  .gavel :is(rect, path) { stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+  .gavel rect { fill: var(--bg); }
+  .gavel-arm { transform-box: view-box; transform-origin: 6px 28px; }
+  .gavel .gavel-hit { stroke: var(--red); stroke-linecap: round; opacity: 0; }
+  .court:not(:has(input:checked)) .gavel-arm { animation: gavel-ready 1.4s ease-in-out infinite; }
+  .gavel[data-bang] .gavel-arm { animation: gavel-bang 0.5s cubic-bezier(0.5, 0, 0.6, 1.4) both; }
+  .gavel[data-bang] .gavel-hit { animation: gavel-hit 0.5s ease-out both; }
+
+  @keyframes gavel-ready {
+    0%, 100% { rotate: -30deg; }
+    50% { rotate: -38deg; }
+  }
+  @keyframes gavel-bang {
+    0% { rotate: -40deg; }
+    40% { rotate: 2deg; }
+    58% { rotate: -7deg; }
+    100% { rotate: 0deg; }
+  }
+  @keyframes gavel-hit {
+    0%, 34% { opacity: 0; }
+    42% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes ruling-jolt {
+    0%, 36% { translate: 0 0; }
+    44% { translate: 0 4px; }
+    62% { translate: 0 -1px; }
+    100% { translate: 0 0; }
+  }
+  @keyframes ruling-point {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -4px; }
+  }
+
+  @media (max-width: 520px) {
+    .court { --gap: 8px; }
+    .bench { padding: 10px 9px 12px; box-shadow: 3px 3px 0 var(--accent); }
+    .bench:has(input:checked) { translate: 3px 3px; }
+    .bench-name { font-size: 20px; }
+    .bench .op-label { font-size: 7.5px; letter-spacing: 0.06em; }
+    .ruling { padding: 24px 16px 18px; }
+    .ruling blockquote { padding-right: 0; padding-top: 22px; }
+    .gavel { width: 54px; height: 39px; margin: 30px 8px 0 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bench,
+    .bench-name { transition: none; }
+    .ruling,
+    .ruling-stamp,
+    .ruling-wait .op-label,
+    .court:not(:has(input:checked)) .gavel-arm,
+    .gavel[data-bang] .gavel-arm,
+    .gavel[data-bang] .gavel-hit,
+    .bench[data-heard] .bench-heard,
+    .ruling[data-read] .ruling-read { animation: none; }
+  }
+</style>

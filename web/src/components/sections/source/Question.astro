@@ -1,0 +1,104 @@
+---
+// The question every judge got, word for word, its link the pinned commit,
+// and a button to copy it and ask your own. When the release you'd install
+// is newer than the one on trial, a line under it links that one's code.
+import { site } from '../../../data/site';
+import { hearing } from '../../../data/secondOpinion';
+
+const { question, tree } = hearing;
+const at = question.indexOf(tree);
+const before = at < 0 ? question : question.slice(0, at);
+const after = at < 0 ? '' : question.slice(at + tree.length);
+const newer = hearing.version !== site.version;
+---
+
+<div class="ask">
+  <p class="op-label">$ ask · word for word</p>
+  <pre class="ask-text">{before}{at >= 0 && <a href={tree} target="_blank" rel="noreferrer">{tree}</a>}{after}</pre>
+  <div class="ask-acts">
+    <button class="toy-btn" type="button" data-copy>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <path d="M4 4h7v7H4zM8 4V1H1v7h3" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"></path>
+      </svg>
+      <span data-copy-label>Copy the question</span>
+    </button>
+    <p>Paste it into any AI you like.</p>
+  </div>
+  {newer && (
+    <p class="op-label ask-newer">
+      On trial: v{hearing.version} · you'd install v{site.version} ·{" "}
+      <a href={`${site.repo}/tree/v${site.version}`} target="_blank" rel="noreferrer">its code ↗</a>
+    </p>
+  )}
+</div>
+
+<script>
+  import { cueMascot } from '../../../lib/mascotCue';
+  import { toyLines } from '../../../data/mascot';
+
+  const copy = document.querySelector<HTMLButtonElement>('[data-copy]');
+  const text = document.querySelector<HTMLElement>('.ask-text');
+  const label = copy?.querySelector<HTMLElement>('[data-copy-label]');
+  if (copy && text && label) {
+    const idle = label.textContent;
+    let timer = 0;
+    copy.addEventListener('click', async () => {
+      window.clearTimeout(timer);
+      try {
+        await navigator.clipboard.writeText(text.textContent ?? '');
+        label.textContent = 'Copied ✓';
+        copy.setAttribute('data-copied', '');
+        cueMascot({ say: toyLines.hearing.copied, move: 'hop' });
+      } catch {
+        // No clipboard (an old browser, a page not served over https):
+        // select it so a long-press or Ctrl+C takes it.
+        getSelection()?.selectAllChildren(text);
+        cueMascot({ say: toyLines.hearing.copyFailed, move: 'shake' });
+      }
+      timer = window.setTimeout(() => {
+        label.textContent = idle;
+        copy.removeAttribute('data-copied');
+      }, 2000);
+    });
+  }
+</script>
+
+<style is:global>
+  .ask { min-width: 0; }
+  /* The question as typed: mono, kept as written, ruled in red down its
+     edge like the source files' commands; the commit link wraps anywhere. */
+  .ask-text {
+    margin: 10px 0 0;
+    padding: 14px 16px;
+    border: 1px solid var(--line-2);
+    border-left: 3px solid var(--red);
+    background: var(--bg);
+    font: 400 11.5px/1.65 var(--mono);
+    color: var(--fg);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    transition: border-color 0.2s;
+  }
+  .ask-text a {
+    color: var(--red-hi);
+    text-decoration: underline dashed;
+    text-underline-offset: 3px;
+  }
+  .ask:has([data-copied]) .ask-text { border-color: var(--red); }
+  .ask-acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-top: 14px;
+  }
+  .ask-acts p { font-size: 13px; color: var(--dim); }
+  .ask [data-copied] { border-color: var(--red); color: var(--red-hi); }
+  .ask-newer { margin-top: 12px; }
+  .ask-newer a { color: var(--accent-ink); border-bottom: 1px dashed currentColor; }
+  .ask-newer a:hover { color: var(--red-hi); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ask-text { transition: none; }
+  }
+</style>

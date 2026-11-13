@@ -95,6 +95,16 @@ export const toyLines = {
   allSet: 'all set!',
   opened: (n: number, of: number) => `read ${n} of ${of}`,
   audited: 'you read it all!',
+  // The second opinion: A-01 is the accused.
+  hearing: {
+    rise: 'all rise!',
+    order: 'order! order!',
+    ruled: (name: string) => `${name.toLowerCase()} has ruled`,
+    read: 'every word ✓',
+    closed: 'case closed!',
+    copied: 'your turn · ask!',
+    copyFailed: 'select it · copy',
+  },
   rolled: (q: number) => `rolled Q${q}`,
   allAnswered: 'all answered!',
   apart: 'all on device',

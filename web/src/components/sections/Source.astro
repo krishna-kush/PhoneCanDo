@@ -2,8 +2,10 @@
 // Sec. 07, right after install: the files behind the manual's claims, linked
 // straight into the public repo, so a reader can check instead of trusting
 // us. A plate like the rest of the manual's, closed by the privacy note's
-// pondering mark. Every path here must exist on the default branch.
+// pondering mark, then the second opinion (source/) for whoever won't read
+// it all. Every path here must exist on the default branch.
 import { site } from '../../data/site';
+import SecondOpinion from './source/SecondOpinion.astro';
 
 const blob = (path: string) => `${site.repo}/blob/HEAD/${path}`;
 const tree = (path: string) => `${site.repo}/tree/HEAD/${path}`;
@@ -130,6 +132,8 @@ const files: { path: string; href: string; title: string; text: string }[] = [
       <p>Source-available · read, study, contribute</p>
     </figcaption>
   </figure>
+
+  <SecondOpinion />
 </section>
 
 <script>

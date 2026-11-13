@@ -1,0 +1,84 @@
+---
+// FIG. 09B, under the source files, for whoever won't read them all: one
+// release, pinned to its commit, put to three AIs with one question (is this
+// app out to get me?). Pick a judge to hear its ruling and read the whole
+// chat, or copy the question and ask your own. Dressed as FIG. 09's plate
+// (its bar, body, foot and stamps); "Case closed" once all three are heard.
+import { hearing } from '../../../data/secondOpinion';
+import Judges from './Judges.astro';
+import Question from './Question.astro';
+---
+
+<div class="fig-col opinion">
+  <p class="fig-label">FIG. 09B — Second opinion</p>
+  <h3>Too long to read? Put us on trial.</h3>
+  <p>
+    Nobody reads a whole repo, so we had three AIs do it. Each got
+    v{hearing.version}, pinned to one commit, and one question: is this app
+    out to get me? Pick a judge to hear its ruling, then read the whole chat.
+  </p>
+
+  <figure class="op-plate">
+    <span class="stamp src-stamp">{hearing.demo ? 'Demo links' : 'On trial'}</span>
+    <span class="stamp src-audited op-closed" aria-hidden="true">Case closed</span>
+    <div class="src-bar">
+      <span>
+        Second opinion /{" "}
+        <a href={hearing.tree} target="_blank" rel="noreferrer">v{hearing.version} @ {hearing.commit.slice(0, 7)}</a>
+      </span>
+      <span class="src-bar-state">
+        <i aria-hidden="true"></i><span data-heard>0 of {hearing.judges.length} heard</span>
+      </span>
+    </div>
+
+    <div class="src-body op-body">
+      <Judges />
+      <Question />
+    </div>
+
+    <figcaption class="src-foot">
+      <p><span>Think we asked till they said nice things?</span> fair. copy the question, ask your own</p>
+      <p>Asked {hearing.asked} · every chat linked whole</p>
+    </figcaption>
+  </figure>
+</div>
+
+<style is:global>
+  .opinion { margin-top: clamp(48px, 6vw, 72px); }
+  .op-plate {
+    position: relative;
+    margin: 0;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    box-shadow: var(--plate-shadow);
+  }
+  .op-plate .src-bar a { color: var(--fg); transition: color 0.15s; }
+  .op-plate .src-bar a:hover { color: var(--red-hi); }
+  /* The plate's small print: bench numbers, makers, what a block is. */
+  .op-label {
+    font: 500 8.5px/1.4 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .op-plate[data-closed] .op-closed {
+    display: inline-block;
+    animation: src-thunk 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+  }
+  .op-plate[data-closed] .src-bar-state { color: var(--accent-ink); }
+  .op-plate[data-closed] .src-bar-state i { background: var(--accent); }
+  /* The bench on the left, as tall as the question beside it; one column,
+     bench first, on narrow screens. */
+  .op-body {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: clamp(28px, 3.4vw, 40px);
+  }
+
+  @media (max-width: 980px) {
+    .op-body { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .op-plate[data-closed] .op-closed { animation: none; }
+  }
+</style>
