@@ -138,7 +138,8 @@ Pure logic stays pure: `keys.ts`, `reconcile.ts`, `sizing.ts`,
 `TerminalView.tsx` holds all of it (page, hidden input, spacer, row) for
 every terminal, over a transport (`transport/`): `local.ts`, a PTY of its
 own, or `engine.ts`, a TUI engine's hosted PTY (see Engine terminal). Its
-`active` prop gates autofocus, tap-to-focus and the output pump, because
+`active` prop gates autofocus (once, when the view is first both active
+and drawn: a page slides in inactive), tap-to-focus and the output pump, because
 the page stack keeps every page mounted under the top one: a terminal page
 is active only while it is the page in front (`ui/nav/pageActive.ts`), a
 TUI home only while no page is over Home. A terminal opens as a page

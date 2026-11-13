@@ -106,6 +106,18 @@ export default function TerminalView({ transport, active, name, initialInput, on
     if (!active) inputRef.current?.blur();
   }, [active, inputRef]);
 
+  // Autofocus, once: when the view is first both in front and drawn. A page
+  // slides in inactive and its terminal is often drawn before the slide
+  // ends, so neither the mount's autoFocus nor 'ready' would bring the
+  // keyboard up for it.
+  const [drawn, setDrawn] = useState(false);
+  const autoFocused = useRef(false);
+  useEffect(() => {
+    if (autoFocused.current || !active || !drawn) return;
+    autoFocused.current = true;
+    inputRef.current?.focus();
+  }, [active, drawn, inputRef]);
+
   // Keyboard spacer: the room the keyboard takes, every frame on the UI
   // thread, settle included (common/keyboard/room.ts), not the one-shot
   // keyboardDidShow, which understates Gboard. Nothing sits below a
@@ -141,6 +153,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
         );
         applySize(msg.cols, msg.rows);
         theme.onReady();
+        setDrawn(true);
         if (active) inputRef.current?.focus();
       } else if (msg.type === 'termsize') {
         console.log(
