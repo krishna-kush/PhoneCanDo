@@ -44,10 +44,12 @@ export type NativePromptReading = {
   modelId: string;
   modelName: string;
   agentIds: string[];
-  /** New prompt tokens read so far; the total is not known while it reads. */
+  /** New prompt tokens read so far. */
   read: number;
   /** Tokens its prompt cache already held. */
   cached: number;
+  /** New prompt tokens to read in all (the whole prompt less `cached`); null when the server does not say. */
+  total: number | null;
 };
 
 /** The end of a model's server log: whole lines, whether earlier ones were left out, when it was last written (epoch ms) and its size in bytes. */

@@ -205,10 +205,16 @@ const model = (over) => ({
   t('tokens, thousands', mt.tokensText(4096), '4.1k');
   t('tokens, tens of thousands', mt.tokensText(12_345), '12.3k');
   t('tokens, none', mt.tokensText(0), '0');
-  t('reading, before the first batch', mt.readingText(0), 'Reading prompt');
-  t('reading, with a count', mt.readingText(4096), 'Reading prompt · 4.1k');
-  t('reading label', mt.readingLabel(4096), 'The local model is reading the prompt: 4.1k tokens so far');
-  t('reading label, no count', mt.readingLabel(0), 'The local model is reading the prompt');
+  t('reading, before the first batch', mt.readingText(0, 12_345), 'Reading prompt · 0%');
+  t('reading, rounded down', mt.readingText(4096, 12_345), 'Reading prompt · 33%');
+  t('reading, never 100% before the last token', mt.readingText(12_344, 12_345), 'Reading prompt · 99%');
+  t('reading, never past the whole', mt.readingText(2048, 950), 'Reading prompt · 100%');
+  t('reading, no whole, before the first batch', mt.readingText(0, null), 'Reading prompt');
+  t('reading, no whole, with a count', mt.readingText(4096, null), 'Reading prompt · 4.1k');
+  t('reading label', mt.readingLabel(4096, 12_345), 'The local model is reading the prompt: 33%, 4.1k of 12.3k tokens');
+  t('reading label, never past the whole', mt.readingLabel(2048, 950), 'The local model is reading the prompt: 100%, 950 of 950 tokens');
+  t('reading label, no whole', mt.readingLabel(4096, null), 'The local model is reading the prompt: 4.1k tokens so far');
+  t('reading label, no count', mt.readingLabel(0, null), 'The local model is reading the prompt');
 
   // --- ui/models/logic/context -------------------------------------------------
   const cx = await import(src('ui/models/logic', 'context.ts'));

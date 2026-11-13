@@ -22,11 +22,11 @@ export default function ReadingChip({ agentId }: { agentId: AgentId | null }) {
       paddingHorizontal={6}
       paddingVertical={2}
       accessibilityRole="text"
-      accessibilityLabel={readingLabel(reading.read)}
+      accessibilityLabel={readingLabel(reading.read, reading.total)}
       accessibilityLiveRegion="polite"
     >
       <PlainText fontFamily="mono" fontSize={12} color="secondaryInk" numberOfLines={1} flexShrink={1}>
-        {readingText(reading.read)}
+        {readingText(reading.read, reading.total)}
       </PlainText>
     </XStack>
   );

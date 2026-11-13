@@ -417,10 +417,12 @@ files are `phonecando-models`' (`models.md`); the runner serves them
   `PromptWatch` asks that server's `GET /slots` every 2 s (with several
   busy at once, the first; the app shows one reading). A slot that is processing
   and has decoded no token is reading: `read` is
-  `n_prompt_tokens_processed` (it grows once per 2048-token batch) and
-  `cached` is `n_prompt_tokens_cache`. /slots gives no total for the
-  prompt, so none is shown. Each change goes to the app (the event) and to
-  the service notification (`notify/ReadingLines.kt`).
+  `n_prompt_tokens_processed` (it grows once per 2048-token batch),
+  `cached` is `n_prompt_tokens_cache`, and `total`, the new tokens to read
+  in all, is `n_prompt_tokens_total` (the request's whole prompt, our
+  llama.cpp patch: `lme/docs/README.md` → The slot's prompt total) less
+  `cached`. Each change goes to the app (the event) and to the service
+  notification (`notify/ReadingLines.kt`): "33%, 4.1k of 12.3k tokens".
 
 ## Run limits
 

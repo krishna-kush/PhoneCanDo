@@ -31,7 +31,7 @@ class PromptWatchTest {
 
   private fun slots(processing: Boolean, processed: Long, decoded: Long) =
     """[{"id":0,"is_processing":$processing,"n_prompt_tokens_processed":$processed,""" +
-      """"n_prompt_tokens_cache":0,"next_token":[{"n_decoded":$decoded}]}]"""
+      """"n_prompt_tokens_cache":0,"n_prompt_tokens_total":7300,"next_token":[{"n_decoded":$decoded}]}]"""
 
   @Test fun busyForTheHoldersWithARunGoing() {
     val target = PromptWatch.busy(listOf(serving), setOf("a3", "a1", "other"))
@@ -70,6 +70,7 @@ class PromptWatchTest {
 
     assertEquals("http://127.0.0.1:9000/slots" to key, asked.first())
     assertEquals(listOf(0L, 2048L, null), told.map { it?.read })
+    assertEquals(7300L, told.first()?.total)
     assertEquals(listOf("a1"), told.first()?.agentIds)
     assertNull(watch.current())
 

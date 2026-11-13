@@ -384,7 +384,7 @@ class PhoneCanDoServeService : Service() {
     val linux = LinuxJobLines.of(JobsAnchor.linuxJobs(), JobsAnchor::envName) { image ->
       agents.firstOrNull { it.imageId == image }?.name
     }
-    val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read) }
+    val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read, it.total) }
     val starts = (starting + awaited(chats, work, running)).map { names[it] ?: it }.distinct()
     return notification.build(chats, names, running, transfers, reading, linux, work, starts, ::stopIntent)
   }

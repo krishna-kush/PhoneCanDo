@@ -70,7 +70,7 @@ internal class PromptWatch(
     if (!looking()) return true
     val body = fetch("${busy.baseUrl}/slots", busy.key) ?: return true
     val slot = PromptReading.readingSlot(body)
-    publish(slot?.let { PromptReading(busy.modelId, busy.modelName, busy.agentIds, it.read, it.cached) })
+    publish(slot?.let { PromptReading(busy.modelId, busy.modelName, busy.agentIds, it.read, it.cached, it.total) })
     return true
   }
 

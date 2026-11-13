@@ -205,8 +205,10 @@ agents on the model (`state/flows/modelContext.ts`), which brings the
 server up with the new context.
 
 While the model reads a prompt for the agent in front, the app bar shows
-"Reading prompt · 4.1k" (`parts/ReadingChip.tsx`, from `runner.md` → Local
-model servers) without changing its height. Pure parts live in
+"Reading prompt · 33%", the share of the new tokens read so far, rounded
+down; its screen-reader label adds the tokens ("4.1k of 12.3k")
+(`parts/ReadingChip.tsx`, from `runner.md` → Local model servers). It
+never changes the bar's height. Pure parts live in
 `src/ui/models/logic/` and `src/state/flows/logic/`, checked by
 `scripts/vectors/test_models.js`.
 

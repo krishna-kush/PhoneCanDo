@@ -143,13 +143,24 @@ export function tokensText(count: number): string {
   return `${(count / 1000).toFixed(1)}k`;
 }
 
-/** The header's line while the model reads a prompt: "Reading prompt · 4.1k", without a count before the first batch. */
-export function readingText(read: number): string {
+/** How far into the prompt once the server says how much it reads: 4_096 of 12_345 → 33 (whole percent, rounded down); null when it does not. */
+function readingShare(read: number, total: number | null): { done: number; total: number; percent: number } | null {
+  if (total == null || !(total > 0)) return null;
+  const done = Math.min(Math.max(read, 0), total);
+  return { done, total, percent: Math.floor((done * 100) / total) };
+}
+
+/** The header's line while the model reads a prompt: "Reading prompt · 33%"; without a total, the count so far, none before the first batch. */
+export function readingText(read: number, total: number | null): string {
+  const share = readingShare(read, total);
+  if (share) return `Reading prompt · ${share.percent}%`;
   return read > 0 ? `Reading prompt · ${tokensText(read)}` : 'Reading prompt';
 }
 
-/** What a screen reader says of it. */
-export function readingLabel(read: number): string {
+/** What a screen reader says of it, with the tokens: "…: 33%, 4.1k of 12.3k tokens". */
+export function readingLabel(read: number, total: number | null): string {
   const base = 'The local model is reading the prompt';
+  const share = readingShare(read, total);
+  if (share) return `${base}: ${share.percent}%, ${tokensText(share.done)} of ${tokensText(share.total)} tokens`;
   return read > 0 ? `${base}: ${tokensText(read)} tokens so far` : base;
 }
