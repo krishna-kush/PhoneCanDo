@@ -5,6 +5,8 @@
 // the pack's script reads them back from the DOM, so no manifest ever
 // reaches the browser. The cartridges are cartridges.ts.
 
+import { CREW_WEAR, OTHER_WEAR, type Wear } from './wear';
+
 /** The fields of an agent kind's agent.json a card shows. */
 type Manifest = {
   id: string;
@@ -49,7 +51,8 @@ export type BotLook = {
   /** The amber block in front, as the loader's swap frames have it. */
   swap: boolean;
   eyes: 'dot' | 'look' | 'sleepy' | 'wide';
-  antenna: boolean;
+  /** Its hat, tie and glasses (data/wear.ts). */
+  wear: Wear;
 };
 
 export type AgentCard = {
@@ -82,22 +85,37 @@ const SIGN_IN: Record<string, string> = {
 const POSES = ['square', 'wide', 'tall'] as const;
 const EYES = ['dot', 'look', 'wide', 'sleepy'] as const;
 
+/**
+ * The kinds the lead names: the default, then these when agents/ has them
+ * (the page never names a kind it does not have), four at most.
+ */
+const NAMED = ['claude-code', 'codex', 'gemini-cli'];
+
 // The default kind first, then the built-in ones, then by name. The first
 // card wears the brand mark's own look; the rest step through the poses,
-// eyes and swaps, so no two match.
-const look = (i: number): BotLook => ({
+// eyes and swaps, so no two match. The lead kinds wear the crew's wear, by
+// the part each plays in the backdrop's story; the rest take turns at the others.
+const look = (i: number, lead: number, other: number): BotLook => ({
   pose: POSES[i % 3],
   swap: Math.floor(i / 3) % 2 === 1,
   eyes: EYES[Math.floor(i / 2) % 4],
-  antenna: i % 4 === 2,
+  wear: lead >= 0 ? CREW_WEAR[lead % CREW_WEAR.length] : OTHER_WEAR[other % OTHER_WEAR.length],
 });
 
 const rank = (m: Manifest) => (m.default ? 0 : m.type === 'native' ? 1 : 2);
 
-/** The kinds in the build the site hands out (full). */
-export const cards: AgentCard[] = Object.values(manifests)
+const full = Object.values(manifests)
   .filter((m) => m.channels.includes('full'))
-  .sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label, 'en', { sensitivity: 'base' }))
+  .sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label, 'en', { sensitivity: 'base' }));
+
+/** The lead's ids, in its order. */
+const leadIds = [full.find((m) => m.default)?.id, ...NAMED]
+  .filter((id, i, all): id is string => id != null && full.some((m) => m.id === id) && all.indexOf(id) === i)
+  .slice(0, 4);
+const others = full.map((m) => m.id).filter((id) => !leadIds.includes(id));
+
+/** The kinds in the build the site hands out (full). */
+export const cards: AgentCard[] = full
   .map((m, i) => ({
     id: m.id,
     label: m.label,
@@ -107,7 +125,7 @@ export const cards: AgentCard[] = Object.values(manifests)
     stable: m.stability === 'stable',
     signIn: (m.signIn ?? []).map((s) => SIGN_IN[s.method] ?? s.method),
     local: Boolean(m.models),
-    look: look(i),
+    look: look(i, leadIds.indexOf(m.id), others.indexOf(m.id)),
     messaging: messaging(m),
     twins: Boolean(m.state),
   }));
@@ -118,11 +136,5 @@ export const defaultCard = cards.find((c) => c.isDefault) ?? null;
 /** The card every first pack holds: the default kind, else the first built in. */
 export const firstPull = (defaultCard ?? cards.find((c) => c.builtIn) ?? cards[0])?.id ?? '';
 
-/**
- * The kinds the lead names: the default, then these when agents/ has them
- * (the page never names a kind it does not have), four at most.
- */
-const NAMED = ['claude-code', 'codex', 'gemini-cli'];
-export const leadCards = [defaultCard, ...NAMED.map((id) => cards.find((c) => c.id === id))]
-  .filter((c, i, all): c is AgentCard => c != null && all.indexOf(c) === i)
-  .slice(0, 4);
+/** The kinds the lead names, in its order: the default, then NAMED, four at most. */
+export const leadCards = leadIds.map((id) => cards.find((c) => c.id === id)).filter((c): c is AgentCard => c != null);

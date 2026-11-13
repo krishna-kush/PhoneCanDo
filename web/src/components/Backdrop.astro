@@ -1,19 +1,38 @@
 ---
-// The world behind the sheet: the phone cut open, one floor per part of the
-// page, where A-01's cousins act out each part's motto while the camera
-// rides down through it with the scroll (lib/backdrop/). Drawn into the
-// margins on one canvas under the page, so it lives where A-01 does: wide
-// screens only.
+// The world behind the sheet and the story told in it, The Phone That Could:
+// the phone cut open, one floor per part of the page, and Little, unit A-07,
+// going down through it chapter by chapter as you scroll, its words in the
+// right margin (lib/backdrop/, data/backdrop.ts). The left margin tells no
+// story: it is a playground of the phone's apps (lib/backdrop/play/). Drawn into the margins, a
+// canvas each, under the page, so it lives where A-01 does: wide screens
+// only. Its script is only fetched once the screen is wide enough, after the
+// page has settled, so a phone never downloads it.
+//
+// The crew Little meets are the agent kinds the Models section leads with,
+// each in its card's look; only their names and looks reach the page.
+import { leadCards } from '../data/agentCards';
+
+const crew = leadCards.map(({ label, look }) => ({ label, ...look }));
 ---
 
-<canvas class="backdrop" aria-hidden="true"></canvas>
+<div class="backdrop" aria-hidden="true" data-crew={JSON.stringify(crew)}>
+  <canvas data-side="left"></canvas>
+  <canvas data-side="right"></canvas>
+</div>
 
 <script>
-  // Bundled, not inline: the backdrop's modules are its own chunk.
-  import { startBackdrop } from '../lib/backdrop/boot';
-
-  const canvas = document.querySelector<HTMLCanvasElement>('.backdrop');
-  if (canvas) startBackdrop(canvas);
+  const root = document.querySelector<HTMLElement>('.backdrop');
+  const wide = matchMedia('(min-width: 1440px)');
+  let started = false;
+  const start = () => {
+    if (started || !root) return;
+    started = true;
+    import('../lib/backdrop/boot').then(({ startBackdrop }) => startBackdrop(root));
+  };
+  // Once the page has settled: the story can wait a moment, the page can't.
+  const soon = () => ('requestIdleCallback' in window ? requestIdleCallback(start, { timeout: 1500 }) : setTimeout(start, 300));
+  if (wide.matches) soon();
+  else wide.addEventListener('change', (e) => e.matches && soon());
 </script>
 
 <style is:global>
@@ -21,17 +40,26 @@
 
   @media (min-width: 1440px) {
     /* Before .page in the markup and both at z 0, so the sheet lies over it;
-       in the margins nothing does, so it gets the clicks there. */
+       in the margins nothing does, so the canvases get the clicks there. */
     .backdrop {
       position: fixed;
       inset: 0;
       z-index: 0;
       display: block;
-      width: 100%;
+      pointer-events: none;
+    }
+    /* Each as wide as its margin (boot.ts sets it). */
+    .backdrop canvas {
+      position: absolute;
+      top: 0;
+      width: 0;
       height: 100%;
+      pointer-events: auto;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
+    .backdrop canvas[data-side='left'] { left: 0; }
+    .backdrop canvas[data-side='right'] { right: 0; }
     /* The sheet is paper over the world: opaque, lifted off it by a shadow. */
     .page {
       background-color: var(--bg);

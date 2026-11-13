@@ -5,13 +5,14 @@
 // further in); `up` is height over the floor.
 
 import { edgeX } from '../camera';
-import type { Faces, Pen } from '../paint/pen';
-import { drawUnit, type Body } from '../paint/unit';
+import type { Faces, P3, Pen } from '../paint/pen';
+import { drawUnit, hatRise, type Body } from '../paint/unit';
 import { hash } from '../seed';
-import { SHADOW, type Eyes, type Look, type Pose } from '../species/look';
+import { SHADOW, type Eyes, type Facing, type Look, type Pose } from '../species/look';
 import { STILL, blinking, breathe, jump } from '../species/motion';
 import { floorY } from '../world/building';
 import type { Actor, Frame } from '../world/frame';
+import type { Kind } from './characters/crew';
 import { drawA07 } from './a07/draw';
 import { hatchSpot } from './a07/exit';
 import type { Spot } from './a07/pose';
@@ -31,6 +32,8 @@ export type UnitAt = {
   pose?: Pose;
   eyes?: Eyes;
   grey?: boolean;
+  /** Which way it is turned; side on, it faces where it looks across. */
+  facing?: Facing;
   /** Where it looks, -1 to 1 each way; at the pointer when left out. */
   gaze?: readonly [number, number];
   /** Fades it, for one arriving or leaving. */
@@ -48,16 +51,39 @@ export type Room = {
   /** This margin's width on screen. */
   margin: number;
   key: string;
-  /** Seconds into A-07's chapter on this floor: 0 until it lands, the chapter's length once it has gone. */
+  /** Seconds into Little's chapter on this floor: 0 until it lands, the chapter's length once it has gone. */
   sec: number;
-  /** The hatch in the right margin that A-07 lands by and leaves through. */
+  /** The hatch in the right margin that Little lands by and leaves through. */
   hatch: Spot;
-  /** A-07, when this is its floor. */
+  /** Little, when this is its floor. */
   actor: Actor | null;
-  /** Draws A-07 if it is in this room now, once a frame; a chapter calls it where A-07 stands among its props. */
+  /** The agent kinds Little meets. */
+  crew: Kind[];
+  /**
+   * Makes something that isn't a unit answer a click: its screen box, its
+   * lines, and where its callout goes. Returns how it should react: its hop
+   * (0 to 1, null when over) and whether its line is up.
+   */
+  clickable: (
+    name: string,
+    box: { x0: number; y0: number; x1: number; y1: number },
+    says: string[],
+    callout: readonly [number, number, number],
+  ) => { hop: number | null; talking: boolean };
+  /** How a clickable thing should react this frame, before it is drawn: as `clickable` returns. */
+  heard: (name: string) => { hop: number | null; talking: boolean };
+  /** Draws Little if it is in this room now, once a frame; a chapter calls it where Little stands among its props. */
   a07: () => Body | null;
+  /** Darkens the whole world this frame, 0 to 1. */
+  dark: (k: number) => void;
+  /** A light that shines through the dark at a world point, [r] world units round. */
+  light: (x: number, y: number, z: number, r: number) => void;
+  /** A line through world points that glows through the dark along its length, [r] world units each side. */
+  glow: (points: readonly P3[], r: number) => void;
   /** World x of a point `out` px from the sheet's edge, at depth z. */
   x: (out: number, z: number) => number;
+  /** The margin across the page: its width, and world x and `fit` there as they are here. */
+  other: { margin: number; x: (out: number, z: number) => number; fit: (width: number, min?: number) => number };
   /** The `out` that centres a thing `width` px wide in the margin, never under `min`. */
   fit: (width: number, min?: number) => number;
   /** World x of the left edge of a thing `w` wide whose sheet-side edge is `out` px from the sheet. */
@@ -95,6 +121,12 @@ export function makeRoom(f: Frame, i: number, side: Side): Room {
   const y = floorY(i);
 
   const x = (out: number, z: number) => edgeX(cam, sheet, side, out, z);
+  const otherMargin = side < 0 ? view.w - view.right : view.left;
+  const other = {
+    margin: otherMargin,
+    x: (out: number, z: number) => edgeX(cam, side < 0 ? view.right : view.left, side < 0 ? 1 : -1, out, z),
+    fit: (width: number, min = 14) => Math.max(min, (otherMargin - width) / 2),
+  };
   const edge = (out: number, z: number, w: number) => (side > 0 ? x(out, z) : x(out, z) - w);
 
   const box: Room['box'] = (out, up, z, w, h, d, faces) => {
@@ -123,7 +155,7 @@ export function makeRoom(f: Frame, i: number, side: Side): Room {
     let eyes: Eyes = at.eyes ?? 'dot';
     if (eyes === 'dot' && f.rush > 0.45) eyes = 'wide';
     if (poked.hop !== null) eyes = 'happy';
-    else if ((eyes === 'dot' || eyes === 'wide') && !f.still && blinking(f.t, seed)) eyes = 'shut';
+    else if ((eyes === 'dot' || eyes === 'wide') && !f.still && !f.settling && blinking(f.t, seed)) eyes = 'shut';
     const ux = x(at.out, at.z);
     const feet = y - (at.up ?? 0);
     let gaze = at.gaze;
@@ -146,9 +178,11 @@ export function makeRoom(f: Frame, i: number, side: Side): Room {
       eyes,
       gaze,
       grey: at.grey ?? false,
+      facing: at.facing,
+      toward: gaze[0] < 0 ? -1 : 1,
     });
     pen.alpha = was;
-    const hat = lk.gear === 'antenna' || lk.gear === 'hardhat' || lk.gear === 'cap' ? lk.size * 0.45 : 0;
+    const hat = hatRise(lk);
     if (alpha > 0.5) {
       const a = pen.at(body.left, body.top - hat, at.z);
       const b = pen.at(body.left + body.w + lk.size * SHADOW, body.top + body.h + lk.size * SHADOW, at.z);
@@ -177,8 +211,31 @@ export function makeRoom(f: Frame, i: number, side: Side): Room {
     sec: secOn(f.timeline, i, f.clock),
     hatch: hatchSpot(view.w - view.right),
     actor: f.actor?.i === i ? f.actor : null,
+    crew: f.crew,
+    clickable: (name, box, says, [cx, cy, cz]) => {
+      f.pokes.add({ name, serial: '', key, ...box, says });
+      const poked = f.pokes.state(name, f.now);
+      if (poked.say) f.pokes.lines.push({ text: poked.say, x: cx, y: cy, z: cz });
+      return { hop: f.still ? null : poked.hop, talking: poked.say !== null };
+    },
+    heard: (name) => {
+      const poked = f.pokes.state(name, f.now);
+      return { hop: f.still ? null : poked.hop, talking: poked.say !== null };
+    },
     a07,
+    dark: (k) => {
+      f.dark = Math.max(f.dark, k);
+    },
+    light: (lx, ly, lz, r) => {
+      const p = pen.at(lx, ly, lz);
+      f.lights.push({ x: p.x, y: p.y, r: r * p.s });
+    },
+    glow: (points, r) => {
+      const at = points.map(([gx, gy, gz]) => pen.at(gx, gy, gz));
+      if (at.length > 1) f.glows.push({ points: at, r: r * at[0].s });
+    },
     x,
+    other,
     fit: (width, min = 14) => Math.max(min, (margin - width) / 2),
     edge,
     box,

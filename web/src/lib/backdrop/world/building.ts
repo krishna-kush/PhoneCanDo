@@ -2,6 +2,8 @@
 // page, the glass on top, the board at the back and the night under the last
 // floor. World units are CSS px on the page plane (camera.ts).
 
+import { span } from '../species/motion';
+
 /** Camera to the page plane. */
 export const LENS = 900;
 /** Floor to floor. */
@@ -12,9 +14,12 @@ export const SLAB = 22;
 export const DEEP = 1500;
 /** How high over a floor the camera rides while its part of the page is read. */
 export const EYE = 130;
+/** How much higher it rises through the last part, so the page ends looking down on the last floor. */
+const END_RISE = 90;
 
 /** World y of floor i's top, where its units stand. */
 export const floorY = (i: number) => (i + 1) * PITCH;
 
-/** Camera y for a floor number from track.ts: halfway through a part, EYE over its floor. */
-export const cameraY = (floor: number) => (floor + 0.5) * PITCH - EYE;
+/** Camera y for a floor number from track.ts, of [floors]: halfway through a part, EYE over its floor; at the end, END_RISE higher. */
+export const cameraY = (floor: number, floors: number) =>
+  (floor + 0.5) * PITCH - EYE - END_RISE * span(floor, floors - 1, floors - 0.5);

@@ -5,6 +5,7 @@ import "@fontsource/instrument-serif/400.css";
 import "@fontsource/instrument-serif/400-italic.css";
 import serifUrl from "@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2?url";
 import serifItalicUrl from "@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url";
+import sansUrl from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 import "../styles/global.css";
 import tokens from "../../../theme/tokens.json";
 import { logoLoaderCss } from "../lib/logoLoaderCss";
@@ -27,10 +28,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 // touches it. Component <style>s stay unlayered and beat both.
 const layerOrder = "@layer base, primitives;";
 
-// The serif is the h1's face. Its files are found only once the CSS is in and
-// the heading laid out, so the headline painted in Georgia and then swapped;
-// preloading them starts the fetch with the page.
-const fontPreloads = [serifUrl, serifItalicUrl];
+// The serif is the h1's face (its verb in italic), and Geist is the body's.
+// Their files are found only once the CSS is in and the text laid out, so the
+// first screen painted in fallback faces and then swapped; preloading them
+// starts the fetch with the page.
+const fontPreloads = [serifUrl, serifItalicUrl, sansUrl];
 
 // theme/tokens.json is the single source for the site and the app. Roles map
 // onto the var names the stylesheets already use, so they need no renames

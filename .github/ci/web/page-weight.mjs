@@ -9,11 +9,13 @@
 // not say preload="none"; the README's recordings are separate media.
 // Text types are also measured brotli-compressed, as the host serves them.
 //
-// Fails when a page's raw first-load weight passes --budget (default 3 MB).
-// Warns past --warn (default 1 MB), on any non-media file over 1 MB, and on
-// any recording over the README's 3 MB.
+// Fails when a page's raw first-load weight passes --budget (default 3 MB),
+// or its first-load scripts alone pass --js-budget (default 1 MB). Scripts a
+// page loads later (a dynamic import(), like the backdrop's) are not first
+// load. Warns past --warn (default 1 MB), on any non-media file over 1 MB,
+// and on any recording over the README's 3 MB.
 //
-//   node .github/ci/web/page-weight.mjs [web/dist] [--budget BYTES] [--warn BYTES]
+//   node .github/ci/web/page-weight.mjs [web/dist] [--budget BYTES] [--js-budget BYTES] [--warn BYTES]
 
 import { readdir, readFile, stat, appendFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -25,11 +27,13 @@ const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     budget: { type: 'string', default: String(3 * 1024 * 1024) },
+    'js-budget': { type: 'string', default: String(1024 * 1024) },
     warn: { type: 'string', default: String(1024 * 1024) },
   },
 });
 const dist = path.resolve(positionals[0] ?? 'web/dist');
 const BUDGET = Number(opts.budget);
+const JS_BUDGET = Number(opts['js-budget']);
 const WARN = Number(opts.warn);
 const MEDIA = /\.(mp4|webm|mov|m4v)$/i;
 const TEXT = /\.(html|css|js|mjs|svg|json|webmanifest|txt|xml)$/i;
@@ -187,6 +191,8 @@ const failures = [];
 for (const r of results) {
   if (r.totals.raw > BUDGET) failures.push(`${r.page}: ${kb(r.totals.raw)} first load, budget ${kb(BUDGET)}`);
   else if (r.totals.raw > WARN) warnings.push(`${r.page}: ${kb(r.totals.raw)} first load, over the ${kb(WARN)} warning line`);
+  const js = r.byCat.js?.raw ?? 0;
+  if (js > JS_BUDGET) failures.push(`${r.page}: ${kb(js)} of scripts on first load, budget ${kb(JS_BUDGET)}`);
 }
 let distTotal = 0;
 for (const f of all) {
@@ -197,7 +203,7 @@ for (const f of all) {
 }
 
 const CATS = ['html', 'css', 'js', 'fonts', 'images', 'other', 'media'];
-let md = `### Page weight · budget ${kb(BUDGET)} per page (first load, raw)\n\n`;
+let md = `### Page weight · budget ${kb(BUDGET)} per page, ${kb(JS_BUDGET)} of it scripts (first load, raw)\n\n`;
 md += `| Page | ${CATS.join(' | ')} | Total raw | Total brotli |\n|---|${CATS.map(() => '---:').join('|')}|---:|---:|\n`;
 for (const r of results) {
   const cells = CATS.map((c) => (r.byCat[c] ? `${kb(r.byCat[c].raw)} (${r.byCat[c].n})` : '-'));

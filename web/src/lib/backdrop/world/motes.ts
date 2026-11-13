@@ -6,8 +6,8 @@ import { noise } from '../seed';
 import type { Frame } from './frame';
 import { rows, spans } from './reach';
 
-const CELL = 240;
-const DEPTHS = [240, 520, 860, 1220];
+const CELL = 360;
+const DEPTHS = [900];
 
 export function drawMotes(f: Frame) {
   const { pen, t } = f;

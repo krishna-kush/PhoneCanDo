@@ -1,4 +1,4 @@
-// Where A-07 is this frame, from the story clock: the floor it is on, how
+// Where Little is this frame, from the story clock: the floor it is on, how
 // far into that floor's chapter, its pose (the chapter's, or the walk to the
 // hatch and the drop once it leaves), and the kit it has on by then.
 

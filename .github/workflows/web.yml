@@ -205,9 +205,11 @@ jobs:
         with:
           name: web-site
           path: web/dist
-      # Today's pages are ~200 KB on first load; 3 MB fails, 1 MB warns.
+      # Today the home page is ~380 KB raw on first load (~155 KB brotli), 48 KB
+      # of it scripts; the backdrop's script loads later, on wide screens only.
+      # Past 600 KB, or 100 KB of scripts, fails; past 450 KB warns.
       - name: Measure against the budget
-        run: node .github/ci/web/page-weight.mjs web/dist --budget 3145728 --warn 1048576
+        run: node .github/ci/web/page-weight.mjs web/dist --budget 614400 --js-budget 102400 --warn 460800
 
   release-links:
     name: Release downloads

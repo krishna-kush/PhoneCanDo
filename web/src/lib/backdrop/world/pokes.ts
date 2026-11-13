@@ -2,7 +2,18 @@
 // reads. Each frame the units drawn leave their screen boxes here; a press
 // finds the last one drawn under it, which is the nearest.
 
-export type Hit = { name: string; serial: string; key: string; x0: number; y0: number; x1: number; y1: number };
+export type Hit = {
+  name: string;
+  /** A unit's serial, for A-01's hello; empty for the others. */
+  serial: string;
+  key: string;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  /** Its own lines; a unit says its floor's. */
+  says?: string[];
+};
 
 /** A line to draw over everything once the frame is done, at a world point. */
 export type Said = { text: string; x: number; y: number; z: number };

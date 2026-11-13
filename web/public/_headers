@@ -1,0 +1,6 @@
+# Cloudflare's static assets read this file (it is never served itself).
+# Everything under /_astro/ is named by a hash of its contents, so a file
+# there never changes: browsers keep it a year and never re-check it. Pages
+# and the files in public/ keep Cloudflare's default (re-checked each visit).
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable

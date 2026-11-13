@@ -4,6 +4,8 @@
 
 import type { P3, Pen } from '../paint/pen';
 import { noise } from '../seed';
+import { phase } from '../species/motion';
+import type { Room } from './room';
 
 /** A phone's glass at (x, y), w by h: rows of UI, [lit] in amber, the whole lit amber by [flash]. */
 export function drawScreen(pen: Pen, x: number, y: number, z: number, w: number, h: number, rows = 6, lit = -1, flash = 0) {
@@ -49,26 +51,6 @@ export function drawTerminal(
   }
 }
 
-/** A crate on the floor, [w] wide and [h] tall, stencilled with [label]. */
-export function drawCrate(pen: Pen, x: number, y: number, z: number, w: number, h: number, label: string, ink?: string) {
-  const { pal } = pen;
-  pen.box(x, y, z, w, h, w * 0.8, { front: pal.panel2, top: pal.panel, side: pal.panel, stroke: pal.ink });
-  pen.line([x, y + h * 0.22, z], [x + w, y + h * 0.22, z], pal.line2);
-  pen.line([x, y + h * 0.78, z], [x + w, y + h * 0.78, z], pal.line2);
-  pen.text(label, x + w / 2, y + h * 0.52, z, { px: h * 0.3, color: ink ?? pal.ink, align: 'center', base: 'middle', weight: 600, track: 0.08 });
-}
-
-/** A magnifier: its lens round (x, y), its handle reaching to [grip]. */
-export function drawMagnifier(pen: Pen, x: number, y: number, z: number, r: number, grip: P3) {
-  const { pal } = pen;
-  const dx = grip[0] - x;
-  const dy = grip[1] - y;
-  const len = Math.hypot(dx, dy) || 1;
-  pen.faded(0.18, () => pen.circle(x, y, z, r, pal.accent));
-  pen.line([x + (dx / len) * r, y + (dy / len) * r, z], grip, pal.fg, Math.max(1.5, r * 0.22 * pen.scale(z)));
-  pen.circle(x, y, z, r, undefined, pal.fg, Math.max(1.5, r * 0.16 * pen.scale(z)));
-}
-
 /** A folded note, [w] wide, centred on (x, y) and turned [turn] radians. */
 export function drawNote(pen: Pen, x: number, y: number, z: number, w: number, turn = 0) {
   const { pal } = pen;
@@ -81,28 +63,21 @@ export function drawNote(pen: Pen, x: number, y: number, z: number, w: number, t
   pen.line(at(-w * 0.32, h * 0.16), at(w * 0.12, h * 0.16), pal.artDim);
 }
 
-/** A fingerprint on a pad: ridges open at the bottom, [ink] coloured. */
-export function drawPrint(pen: Pen, x: number, y: number, z: number, r: number, ink: string) {
-  for (let k = 1; k <= 4; k++) {
-    pen.arc(x, y, z, (r * k) / 4, Math.PI * 0.8, Math.PI * 2.2, undefined, ink);
-  }
-}
-
-/** A mug with a handle and, when [hot], steam curling off it. */
-export function drawMug(pen: Pen, x: number, y: number, z: number, w: number, t: number, hot = true, handle: 1 | -1 = 1) {
+/**
+ * Your idea, on a dark card standing on the glass: glowing a little, "my
+ * idea:" and its words, with a caret while it is still unfinished. Its
+ * sheet-side edge `out` px from the sheet, [w] wide; returns its world box.
+ */
+export function drawIdeaCard(room: Room, out: number, z: number, w: number, words: string, finished: boolean) {
+  const { pen, t } = room;
   const { pal } = pen;
-  const h = w * 1.15;
-  pen.box(x, y, z, w, h, w, { front: pal.onPrimary, top: pal.line2, side: pal.line2, stroke: pal.ink });
-  const hx = handle > 0 ? x + w : x - w * 0.36;
-  pen.rect(hx, y + h * 0.22, w * 0.36, h * 0.46, z, undefined, pal.ink);
-  pen.rect(x, y + h * 0.3, w, h * 0.16, z, pal.red);
-  if (!hot) return;
-  for (const k of [0.3, 0.7]) {
-    const pts: P3[] = [];
-    for (let i = 0; i <= 8; i++) {
-      const up = (i / 8) * w * 2.2;
-      pts.push([x + w * k + Math.sin(up * 0.35 - t * 4 + k * 5) * w * 0.12, y - 3 - up, z]);
-    }
-    pen.faded(0.55, () => pen.poly(pts, pal.muted));
-  }
+  const h = 46;
+  const glowX = room.edge(out, z, w) + w / 2;
+  pen.faded(0.2 + 0.08 * Math.sin(t * 1.4) + (finished ? 0.15 : 0), () => pen.circle(glowX, room.y - h / 2, z + 2, w * 0.75, pal.accent));
+  const card = room.box(out, 0, z, w, h, 4, { front: pal.artBg, top: pal.panel, side: pal.panel2, stroke: finished ? pal.accent : pal.ink });
+  pen.text('my idea:', card.x + 7, card.y + 14, z - 0.5, { px: 7, color: pal.artDim });
+  const caret = !finished && phase(t, 1.1) < 0.55 ? ' ▌' : '';
+  pen.text(`${words}${caret}`, card.x + 7, card.y + 27, z - 0.5, { px: 7, color: finished ? pal.accent : pal.artFg });
+  if (finished) pen.text('✓', card.x + w - 10, card.y + 14, z - 0.5, { px: 8, color: pal.accent });
+  return { x: card.x, y: card.y, w, h };
 }

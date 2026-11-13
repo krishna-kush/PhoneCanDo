@@ -5,9 +5,10 @@
 
 import { project, scaleAt, type Camera, type Dot } from '../camera';
 import type { Palette } from '../palette';
+import { drawGlow } from './glow';
 
 export type P3 = readonly [number, number, number];
-type Fill = string | CanvasPattern;
+type Fill = string | CanvasPattern | CanvasGradient;
 
 /** A box's paint: each face that shows, and its edges. */
 export type Faces = { front?: Fill; top?: string; side?: string; stroke?: string };
@@ -26,6 +27,7 @@ export type Type = {
   turn?: number;
   /** Never smaller than this on screen, so a label stays legible further in. */
   min?: number;
+  italic?: boolean;
 };
 
 const MONO = "'Geist Mono Variable', ui-monospace, monospace";
@@ -168,6 +170,14 @@ export class Pen {
     face([ftl, ftr, fbr, fbl], faces.front);
   }
 
+  /** A soft light at a world point, [r] world units round, [k] how strong (0 to 1); never hazed. */
+  glow(x: number, y: number, z: number, r: number, color: string, k: number) {
+    if (k <= 0.005) return;
+    const a = this.at(x, y, z);
+    this.ctx.globalAlpha = Math.min(1, k * this.alpha);
+    drawGlow(this.ctx, color, a.x, a.y, r * a.s);
+  }
+
   circle(x: number, y: number, z: number, r: number, fill?: string, stroke?: string, width = 1) {
     this.arc(x, y, z, r, 0, Math.PI * 2, fill, stroke, width);
   }
@@ -202,15 +212,31 @@ export class Pen {
 
   private font(px: number, type: Type) {
     const ctx = this.ctx;
-    ctx.font = `${type.weight ?? 500} ${px.toFixed(1)}px ${type.serif ? SERIF : MONO}`;
+    ctx.font = `${type.italic ? 'italic ' : ''}${type.weight ?? 500} ${px.toFixed(1)}px ${type.serif ? SERIF : MONO}`;
     ctx.letterSpacing = `${((type.track ?? 0) * px).toFixed(2)}px`;
+  }
+
+  // Widths already measured, by font and text: the narration and the chat
+  // ask for the same words every frame.
+  private widths = new Map<string, number>();
+
+  /** Forgets measured widths: the fonts have loaded, or the type has changed. */
+  forget() {
+    this.widths.clear();
   }
 
   /** How wide a line of type is on screen at depth z. */
   measure(text: string, z: number, type: Type = {}) {
     const px = Math.max(type.min ?? 0, (type.px ?? 9) * this.scale(z));
-    this.font(px, type);
-    return this.ctx.measureText(text).width;
+    const key = `${type.italic ? 'i' : ''}${type.serif ? 's' : 'm'}${type.weight ?? 500}|${px.toFixed(1)}|${type.track ?? 0}|${text}`;
+    let width = this.widths.get(key);
+    if (width === undefined) {
+      this.font(px, type);
+      width = this.ctx.measureText(text).width;
+      if (this.widths.size > 4000) this.widths.clear();
+      this.widths.set(key, width);
+    }
+    return width;
   }
 
   text(text: string, x: number, y: number, z: number, type: Type = {}) {

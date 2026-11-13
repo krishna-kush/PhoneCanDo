@@ -1,7 +1,7 @@
-// A-07's story as one clock in seconds. Each floor is a stretch of it: its
+// Little's story as one clock in seconds. Each floor is a stretch of it: its
 // beats, then the walk to the hatch and the drop to the next floor. The
 // scroll never sets the clock, only where it is headed: always the end of
-// a beat, a rest, so A-07 is never left hanging mid-move when the page stops.
+// a beat, a rest, so Little is never left hanging mid-move when the page stops.
 
 import type { Floor, Story } from '../../world/frame';
 import { EXIT } from './exit';
@@ -10,8 +10,8 @@ import { at } from './pose';
 export type Stretch = { start: number; length: number; leaveAt: number | null; story: Story };
 export type Timeline = { stretches: Stretch[]; total: number };
 
-// A floor with no chapter of its own: A-07 lands and goes on down.
-const PASS: Story = { rests: [], leave: 0.5, pose: (_, room) => at(room.hatch) };
+// A floor with no chapter of its own: Little lands and goes on down.
+const PASS: Story = { rests: [], leave: 0.5, pose: (_, room) => at(room.hatch), narrate: [] };
 
 export function makeTimeline(floors: Floor[]): Timeline {
   let start = 0;
@@ -40,7 +40,7 @@ export function goal(tl: Timeline, floor: number): number {
   return st.start + sec;
 }
 
-/** The floor A-07 is on at [clock], and how many seconds into it. */
+/** The floor Little is on at [clock], and how many seconds into it. */
 export function find(tl: Timeline, clock: number): { i: number; sec: number } {
   const last = tl.stretches.length - 1;
   for (let i = 0; i <= last; i++) {
@@ -50,7 +50,7 @@ export function find(tl: Timeline, clock: number): { i: number; sec: number } {
   return { i: 0, sec: 0 };
 }
 
-/** Seconds into floor i's stretch: 0 until A-07 lands there, its length once it has gone. */
+/** Seconds into floor i's stretch: 0 until Little lands there, its length once it has gone. */
 export function secOn(tl: Timeline, i: number, clock: number): number {
   const st = tl.stretches[i];
   return st ? Math.min(st.length, Math.max(0, clock - st.start)) : 0;

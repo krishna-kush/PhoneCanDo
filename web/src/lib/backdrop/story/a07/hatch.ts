@@ -1,4 +1,4 @@
-// The trapdoors A-07 drops through: one in every deck but the last, all in
+// The trapdoors Little drops through: one in every deck but the last, all in
 // the same spot of the right margin. Shut, a square outline with a pull;
 // open, a dark hole, seen from above in the deck and from below in the
 // underside.
