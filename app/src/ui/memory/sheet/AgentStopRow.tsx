@@ -28,7 +28,7 @@ export default function AgentStopRow({ row }: { row: AgentRow }) {
 
   return (
     <XStack alignItems="center" gap="3" paddingVertical="2" borderTopWidth={1} borderColor="line">
-      <AgentFace mood={look.mood} pose={look.pose} size={20} />
+      <AgentFace mood={look.mood} mascot={look.mascot} size={20} />
       <YStack flex={1} minWidth={0} gap={2}>
         <XStack alignItems="center" gap="2">
           <PlainText fontSize={16} fontWeight="600" numberOfLines={1} flexShrink={1}>

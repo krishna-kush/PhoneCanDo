@@ -67,7 +67,7 @@ export default function AgentRow({ agent, active, still, picking, picked, onSwit
         accessibilityLabel={[agent.name, sub, active ? 'active' : '', unreadLabel(unread)].filter(Boolean).join(', ')}
         accessibilityHint={picking ? 'Picks it to stop or delete' : 'Makes it the agent Home shows'}
       >
-        <AgentFace mood={look.mood} pose={look.pose} size={22} still={still} />
+        <AgentFace mood={look.mood} mascot={look.mascot} size={22} still={still} />
         <YStack flex={1} minWidth={0} gap={2}>
           <XStack alignItems="center" gap="2">
             <PlainText fontSize={16} fontWeight="600" numberOfLines={1} flexShrink={1}>

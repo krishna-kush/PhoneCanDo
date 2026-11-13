@@ -1,13 +1,15 @@
+import { PLAIN, type Look } from '../../../../../mascot/look.ts';
 import type { AgentId } from '../../../engine/agents/records';
 import { useAgentsStore } from '../../../state/agents';
 import { useInstallRun } from '../../../state/flows/installRuns';
-import { agentSerial, moodOf, poseOf, type Mood, type Pose } from './mood';
+import { useMascotsStore } from '../../../state/mascots';
+import { agentSerial, moodOf, type Mood } from './mood';
 
-/** An agent's face as it is now: its mood, serial (A-01…) and shape. */
-export function useAgentLook(agentId: AgentId): { mood: Mood; serial: string; pose: Pose } {
+/** An agent's face as it is now: its mood, its serial (A-01…) and its mascot (A-01's own until it has one). */
+export function useAgentLook(agentId: AgentId): { mood: Mood; serial: string; mascot: Look } {
   const agents = useAgentsStore((s) => s.agents);
   const state = useAgentsStore((s) => s.statuses[agentId]?.state);
   const installing = useInstallRun(agentId)?.status === 'running';
-  const serial = agentSerial(agents, agentId);
-  return { mood: moodOf(state, installing), serial, pose: poseOf(serial) };
+  const mascot = useMascotsStore((s) => s.looks[agentId]) ?? PLAIN;
+  return { mood: moodOf(state, installing), serial: agentSerial(agents, agentId), mascot };
 }

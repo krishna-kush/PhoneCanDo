@@ -13,6 +13,7 @@ import PageStack from './src/ui/nav/PageStack';
 import { useBackChain } from './src/ui/nav/useBackChain';
 import { useShareLinkOpen } from './src/ui/recommend/useShareLinkOpen';
 import { useSettingsSync } from './src/ui/account/useSettingsSync';
+import { useMascotPicks } from './src/ui/common/face/useMascotPicks';
 import { useEngineTerminalTheme } from './src/ui/terminal/theme/useEngineTerminalTheme';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
@@ -69,6 +70,7 @@ export default function App() {
 
   // A signed-in person's settings follow them to their other phones.
   useSettingsSync();
+  useMascotPicks();
 
   useEffect(() => {
     // Where to land when the app opens for a reason: a tap on an agent's

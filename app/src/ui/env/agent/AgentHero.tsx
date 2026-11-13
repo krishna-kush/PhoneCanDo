@@ -34,7 +34,7 @@ export default function AgentHero({ agent, place, fresh, trailing }: Props) {
         accessibilityRole="button"
         accessibilityLabel={`${agent.name}'s face. Tap it.`}
       >
-        <AgentFace mood={look.mood} pose={look.pose} size={44} hop={boops} still={!active} />
+        <AgentFace mood={look.mood} mascot={look.mascot} size={44} hop={boops} still={!active} />
       </YStack>
       <YStack flex={1} minWidth={0} gap={4}>
         <XStack alignItems="center" gap="2">

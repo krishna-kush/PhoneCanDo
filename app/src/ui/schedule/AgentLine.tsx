@@ -31,7 +31,7 @@ export default function AgentLine({ agentId, agent, size = 22 }: Props) {
   const sub = `${look.serial} · ${agentKind(agent.kind).label} · ${engineStateWord(state).toLowerCase()}`;
   return (
     <XStack alignItems="center" gap="3" minWidth={0}>
-      <AgentFace mood={look.mood} size={size} />
+      <AgentFace mood={look.mood} mascot={look.mascot} size={size} />
       <YStack flex={1} minWidth={0} gap={2}>
         <PlainText fontSize={16} fontWeight="600" numberOfLines={1}>
           {agent.name}

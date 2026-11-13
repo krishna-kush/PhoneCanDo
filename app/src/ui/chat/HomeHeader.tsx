@@ -100,7 +100,7 @@ export default function HomeHeader() {
 function ChipFace({ agentId }: { agentId: Agent['id'] }) {
   const look = useAgentLook(agentId);
   const inFront = useHomeInFront();
-  return <AgentFace mood={look.mood} pose={look.pose} size={16} still={!inFront} />;
+  return <AgentFace mood={look.mood} mascot={look.mascot} size={16} still={!inFront} />;
 }
 
 type MenuActions = {

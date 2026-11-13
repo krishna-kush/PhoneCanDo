@@ -131,7 +131,6 @@ const names = (pages) => pages.map((p) => p.route.name);
   t('no status is asleep', f.moodOf(undefined), 'asleep');
   const crew = [{ id: 'b', createdAt: 5 }, { id: 'a', createdAt: 1 }, { id: 'c', createdAt: 9 }];
   t('serials by age', ['a', 'b', 'c'].map((id) => f.agentSerial(crew, id)), ['A-01', 'A-02', 'A-03']);
-  t('poses take turns', ['A-01', 'A-02', 'A-03', 'A-04'].map(f.poseOf), ['square', 'wide', 'tall', 'square']);
   const l = await import(src('ui/common/face/lines.ts'));
   t('crew line', [l.crewLine(3, 1), l.crewLine(1, 0), l.crewLine(0, 0)], ['3 agents · 1 awake', '1 agent · all asleep', 'nobody home yet']);
   t('boops take turns and wrap', [l.boopLine(0), l.boopLine(l.BOOPS.length)], [l.BOOPS[0], l.BOOPS[0]]);

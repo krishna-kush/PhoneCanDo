@@ -85,5 +85,5 @@ export function LineBody({ lead, title, sub, trailing }: { lead: ReactNode; titl
 function RowFace({ agentId }: { agentId: string }) {
   const look = useAgentLook(agentId);
   const active = usePageActive();
-  return <AgentFace mood={look.mood} pose={look.pose} size={18} still={!active} />;
+  return <AgentFace mood={look.mood} mascot={look.mascot} size={18} still={!active} />;
 }
