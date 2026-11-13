@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useMemo, useState } from 'react';
+import { Fragment, type ReactNode, useMemo } from 'react';
 import { XStack, YStack } from 'tamagui';
 import type { AgentId } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
@@ -14,12 +14,10 @@ import SectionTitle from '../common/SectionTitle';
 import TextAction from '../drawer/select/TextAction';
 import Note from '../env/parts/Note';
 import { usePageActive } from '../nav/pageActive';
-import { ChoiceChips } from './editor/Chip';
 import LateRunsRow from './LateRunsRow';
 import {
   cannotRunText,
   emptyText,
-  LAYOUT_LABELS,
   NO_AGENTS,
   NOT_IN_BUILD,
   NOT_RUNNING,
@@ -31,7 +29,6 @@ import {
 import { runsFor, type TimelineEntry, timeline } from './logic/timeline';
 import RecentRuns from './RecentRuns';
 import ScheduleRow from './ScheduleRow';
-import ScheduleRowTimeFirst from './ScheduleRowTimeFirst';
 import { useNow } from './useNow';
 import { useScheduleAgents } from './useScheduleAgents';
 
@@ -43,12 +40,6 @@ type Props = {
   onAdd: () => void;
   onEdit: (s: Schedule) => void;
 };
-
-type Layout = keyof typeof LAYOUT_LABELS;
-
-// TEMPORARY: both row layouts behind a switch until we pick one; then the
-// other row, this switch and its copy go.
-const LAYOUTS = (['agent', 'time'] as const).map((value) => ({ value, label: LAYOUT_LABELS[value] }));
 
 // The Schedules page's list: the intro, the line about late runs while
 // Android's exact alarms are off, then one timeline across agents (on a
@@ -67,7 +58,6 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
   const agents = useAgentsStore((s) => s.agents);
   const runners = useScheduleAgents();
 
-  const [layout, setLayout] = useState<Layout>('agent');
   const line = useMemo(() => timeline(schedules, agents, agentId, now), [schedules, agents, agentId, now]);
   const empty = line.days.length === 0 && line.rest.length === 0;
   const shownRuns = useMemo(() => runsFor(runs, agentId, RUNS_SHOWN), [runs, agentId]);
@@ -84,17 +74,16 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
       {!available ? <Note>{NOT_IN_BUILD}</Note> : null}
       {available && exact === false ? <LateRunsRow /> : null}
       {cannot ? <Note>{cannot}</Note> : null}
-      {empty ? null : <ChoiceChips<Layout> options={LAYOUTS} value={layout} onPick={setLayout} />}
       {line.days.map((day) => (
         <Fragment key={day.label}>
           <SectionTitle>{day.label}</SectionTitle>
-          <Rows entries={day.entries} layout={layout} now={now} onEdit={onEdit} />
+          <Rows entries={day.entries} now={now} onEdit={onEdit} />
         </Fragment>
       ))}
       {line.rest.length > 0 ? (
         <>
           <SectionTitle>{NOT_RUNNING}</SectionTitle>
-          <Rows entries={line.rest} layout={layout} now={now} onEdit={onEdit} />
+          <Rows entries={line.rest} now={now} onEdit={onEdit} />
         </>
       ) : null}
       {available && empty ? <Note>{emptyText(agentId ? (agent?.name ?? 'this agent') : null)}</Note> : null}
@@ -110,24 +99,13 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
 }
 
 // Rows in one box, a line between them.
-function Rows({
-  entries,
-  layout,
-  now,
-  onEdit,
-}: {
-  entries: readonly TimelineEntry[];
-  layout: Layout;
-  now: number;
-  onEdit: (s: Schedule) => void;
-}) {
-  const Row = layout === 'time' ? ScheduleRowTimeFirst : ScheduleRow;
+function Rows({ entries, now, onEdit }: { entries: readonly TimelineEntry[]; now: number; onEdit: (s: Schedule) => void }) {
   return (
     <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
       {entries.map((e, i) => (
         <Fragment key={e.schedule.id}>
           {i > 0 ? <YStack height={1} backgroundColor="line" /> : null}
-          <Row entry={e} now={now} onEdit={onEdit} />
+          <ScheduleRow entry={e} now={now} onEdit={onEdit} />
         </Fragment>
       ))}
     </YStack>

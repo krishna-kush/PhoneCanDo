@@ -71,9 +71,6 @@ export function setByLine(s: { by: SetBy; chat: ChatMode }): string {
 /** The timeline's heading for what won't run again. */
 export const NOT_RUNNING = 'Off or done';
 
-/** The temporary switch between the two row layouts, while you choose one. */
-export const LAYOUT_LABELS = { agent: 'Agent first', time: 'Time first' } as const;
-
 const OUTCOME_WORDS: Record<RunOutcome, string> = {
   started: 'started',
   woke: 'woke',

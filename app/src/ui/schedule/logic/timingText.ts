@@ -80,17 +80,3 @@ export function nextRunText(s: Pick<Schedule, 'on' | 'nextAt' | 'timing'>, now: 
   if (s.nextAt <= now) return `due since ${hhmm(s.nextAt)}`;
   return `next ${whenText(s.nextAt, now)}`;
 }
-
-/**
- * A timeline row's time column: the clock time of its next run, big, and
- * under it how far off while that is today ("in 12 min", "in 3 h"); "due"
- * while a run waits past its time; "off", "done" or "—" when it won't run.
- */
-export function timeColumn(s: Pick<Schedule, 'on' | 'nextAt' | 'timing'>, now: number): { time: string; under: string } {
-  if (!s.on) return { time: 'off', under: '' };
-  if (s.nextAt == null) return { time: s.timing.type === 'once' ? 'done' : '—', under: '' };
-  if (s.nextAt <= now) return { time: hhmm(s.nextAt), under: 'due' };
-  const ahead = s.nextAt - now;
-  if (ahead < HOUR) return { time: hhmm(s.nextAt), under: ahead < MIN ? 'now' : `in ${Math.floor(ahead / MIN)} min` };
-  return { time: hhmm(s.nextAt), under: daysFrom(now, s.nextAt) === 0 ? `in ${Math.floor(ahead / HOUR)} h` : '' };
-}

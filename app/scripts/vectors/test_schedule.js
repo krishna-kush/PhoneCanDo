@@ -310,14 +310,6 @@ const at = (d, h, m) => Date.UTC(2026, 10, d, h, m);
   t('runs: all, at most max', g.runsFor(runs, null, 2).map((x) => x.seq), [3, 2]);
   t('runs: one agent', g.runsFor(runs, 'a', 10).map((x) => x.seq), [3, 1]);
 
-  // --- time column ------------------------------------------------------------------
-  t('column: soon', w.timeColumn({ on: true, nextAt: NOW + 12 * MIN, timing: { type: 'every', minutes: 30, anchor: 0 } }, NOW), { time: '10:32', under: 'in 12 min' });
-  t('column: later today', w.timeColumn({ on: true, nextAt: at(13, 15, 0), timing: { type: 'once', at: 0 } }, NOW), { time: '15:00', under: 'in 4 h' });
-  t('column: tomorrow has no under', w.timeColumn({ on: true, nextAt: at(14, 9, 0), timing: { type: 'once', at: 0 } }, NOW), { time: '09:00', under: '' });
-  t('column: waiting', w.timeColumn({ on: true, nextAt: NOW - MIN, timing: { type: 'once', at: 0 } }, NOW), { time: '10:19', under: 'due' });
-  t('column: off', w.timeColumn({ on: false, nextAt: at(14, 9, 0), timing: { type: 'once', at: 0 } }, NOW), { time: 'off', under: '' });
-  t('column: done', w.timeColumn({ on: true, nextAt: null, timing: { type: 'once', at: 0 } }, NOW), { time: 'done', under: '' });
-
   // --- presets ------------------------------------------------------------------------
   const pr = await import(src('ui/schedule/logic/presets.ts'));
   t('once presets at 10:20', pr.oncePresets(NOW).map((x) => [x.label, x.at]), [
