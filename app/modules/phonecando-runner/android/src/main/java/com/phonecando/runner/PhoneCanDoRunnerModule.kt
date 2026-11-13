@@ -15,7 +15,9 @@ import com.phonecando.runner.api.memoryFunctions
 import com.phonecando.runner.api.messageFunctions
 import com.phonecando.runner.api.notifyFunctions
 import com.phonecando.runner.api.phoneControlFunctions
+import com.phonecando.runner.api.pickFunctions
 import com.phonecando.runner.api.runLimitFunctions
+import com.phonecando.runner.api.scheduleFunctions
 import com.phonecando.runner.api.shareFunctions
 import com.phonecando.runner.api.userKindFunctions
 import com.phonecando.runner.bridge.BridgePrompts
@@ -26,6 +28,8 @@ import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.memory.MemoryStatus
 import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.prompts.OpenUrlPrompts
+import com.phonecando.runner.schedule.ScheduleEvents
+import com.phonecando.runner.schedule.Schedules
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
@@ -92,7 +96,7 @@ class PhoneCanDoRunnerModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("PhoneCanDoRunner")
-    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory", "phonecandoMessages", "phonecandoRunFinished")
+    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory", "phonecandoMessages", "phonecandoRunFinished", ScheduleEvents.NAME)
 
     OnCreate {
       instance = this@PhoneCanDoRunnerModule
@@ -109,10 +113,23 @@ class PhoneCanDoRunnerModule : Module() {
       Engines.addListener(engineListener)
       // Model jobs and Linux jobs keep the process in the foreground.
       appContext.reactContext?.let { JobsAnchor.install(it) }
+      // Schedules tell the app when they change; making them arms their
+      // alarm again (gone after a force-stop until something reads them).
+      ScheduleEvents.listener = { sendEvent(ScheduleEvents.NAME, emptyMap<String, Any?>()) }
+      appContext.reactContext?.let { Schedules.get(it) }
     }
     OnDestroy {
       Engines.removeListener(engineListener)
-      if (instance === this@PhoneCanDoRunnerModule) instance = null
+      if (instance === this@PhoneCanDoRunnerModule) {
+        instance = null
+        ScheduleEvents.listener = null
+      }
+    }
+    // The app leaves the screen (its activity pauses): a fresh look at
+    // what the agents left running, while Android still lets the service
+    // take the foreground for a job that just started (WorkWatch).
+    OnActivityEntersBackground {
+      Engines.work()?.poke()
     }
     // The user closed PhoneCanDo (swiped it from recent apps; it handles
     // its own config changes, so nothing else finishes it): launch mode's
@@ -140,6 +157,8 @@ class PhoneCanDoRunnerModule : Module() {
     memoryFunctions { context() }
     keepRunningFunctions { context() }
     messageFunctions({ context() }) { sendEvent("phonecandoMessages", it) }
+    scheduleFunctions { context() }
+    pickFunctions { appContext.currentActivity }
 
     Function("getPrefix") {
       appFilesDir().absolutePath

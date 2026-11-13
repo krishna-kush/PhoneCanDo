@@ -6,9 +6,11 @@ import com.phonecando.runner.agents.AgentRecord
  * An agent's undelivered messages, ready to hand over: their ids (oldest
  * first), the text a model reads (Renderer), one JSON line per message for
  * an extension that reads them itself, and whether they may wake it now
- * (MessagePolicy; the mailbox decides).
+ * (MessagePolicy; the mailbox decides). [newChat]: a scheduled task in it
+ * asks for a chat of its own, with this title (a server that can make one
+ * makes it before the wake).
  */
-data class Parcel(val ids: List<Long>, val text: String, val jsonl: String, val wake: Boolean)
+data class Parcel(val ids: List<Long>, val text: String, val jsonl: String, val wake: Boolean, val newChat: String? = null)
 
 /** How a parcel went. */
 enum class Handover {

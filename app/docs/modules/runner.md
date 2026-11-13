@@ -80,6 +80,22 @@ engine's HOME.
   (`{agentId: n}`), `screenQueue()` (`{holder, reserved, waiting}`) and
   `setAgentWakeable(agentId, wakeable)` → the agent as kept; changes come
   as the `phonecandoMessages` event (`{unread}`).
+- `api/PickFunctions.kt` (`pick/PickDialogs`): `pickDate(year, month,
+  day, minMs, maxMs)` → `{year, month, day}` and `pickTime(hour, minute)`
+  → `{hour, minute}` (the phone's 12- or 24-hour clock), Android's own
+  dialogs over the current activity; null when cancelled or no screen
+  shows (the Schedules editor's day and time).
+- `api/ScheduleFunctions.kt` (see Schedules), synchronous:
+  `listSchedules()` (`NativeSchedule[]`, the wire JSON),
+  `addSchedule({agentId, text, timing, chat?})` and `updateSchedule(id,
+  {text?, timing?, chat?, on?})` → `{ok: true, schedule}` or `{ok: false,
+  reason, code}` (reason `limit`, `unsupported`, `not_found` or
+  `agent_gone`, else a sentence), `removeSchedule(id)`,
+  `runScheduleNow(id)` → `{ok}` or `{ok: false, reason}`,
+  `scheduleRuns(limit)` (newest first), `scheduleAlarms()` (`{exact}`),
+  `openAlarmSettings()`, `canScheduleItself(agentId)`,
+  `setCanScheduleItself(agentId, on)` and `kindRunsSchedules(kindId)`;
+  changes come as the `phonecandoSchedules` event (`{}`).
 - `PhoneCanDoRunnerModule.kt`: `getPrefix`, `getBuildChannel`, the
   phone-control switch, the `phonecandoLaunchTarget` event, the bridge
   prompts (`pendingPrompts`, `resolveUnlock`, `resolveAccessibility`, event
@@ -144,7 +160,12 @@ reaches JS, and the password only inside the TUI client's recipe
 (`clientRecipe`), which JS hands to the PTY without storing it. The image
 id names `files/images/<imageId>/`, so it is short and has no separators.
 `ranBefore` turns true the first time the agent's engine is ready; from
-then on a launch adds the kind's resume args (`engine.resume`).
+then on a launch adds the kind's resume args (`engine.resume`). A start
+for a scheduled task (Schedules) leaves its first prompt in
+`engine/StartPrompts` (dropped after 2 minutes unused); `plan()` takes it,
+and the launch adds the kind's `engine.prompt` args with the task as one
+argv item, after the resume args. A task for a new chat starts without
+the resume args.
 
 Only an engine whose kind names its phone tools (`phoneTools` `plugin`,
 `mcp:config` or `mcp:argv`; `engine/BridgeAccess.kt`) gets the bridge: its
@@ -331,7 +352,7 @@ holds it like any engine) and survives a JS reload. Home shows it.
   (first-run screens made it ready), may have had nothing to resume
   (`claude --continue` in a folder without a chat), so it is launched once
   more without them, as the same start (`ResumeFallback`: one start, no
-  death).
+  death). A scheduled task's first prompt stays with that second launch.
 - **Stale runs**: hooks may never say a run ended (Claude Code's Esc fires
   none), so for a kind with `events[].hook` a run left `working` that has
   shown nothing for 30 s ends as stopped and leaves the chat board.
@@ -369,7 +390,9 @@ files are `phonecando-models`' (`models.md`); the runner serves them
   serves, so each model's card shows its server's own context. The start
   waits for `/health` (up to 5 min), so the agent stays `starting` while
   its model loads, and the service's start thread waits with it. Each
-  server's output goes to `files/logs/model-server-<model id>.log`; its
+  server's output goes to `files/logs/model-server-<model id>.log`,
+  written afresh on each start, and the model's Server log page reads its
+  end (`modelServerLog`, `models/ModelServerLog.kt`); its
   process carries `PHONECANDO_AGENT=model-server` and
   `PHONECANDO_MODEL=<model id>`, so a stop-all finds every one and the
   memory guard tells them apart. The first launch in an app process ends
@@ -490,13 +513,22 @@ per-kind code; every number is in `WorkRules.kt`.
   from such a parent. That is how MCP stdio servers and language servers
   run, while commands get `/dev/null`, a terminal or a file. A shell, a
   command of the agent's own shell, an orphan or daemon (its parent gone)
-  and whatever a job starts are jobs. Our own runtime is seen through
+  and whatever a job starts are jobs, except our kit's scripts
+  (`WorkRules.KIT_SCRIPT`, `.phonecando/bin/phonecando-*` in a command
+  line, such as Claude Code's Stop hook waiting in `phonecando-inbox
+  --wait`) and what they run, which are the agent's helpers. Our own runtime is seen through
   (`WorkRules.RUNTIME_EXES`, by `/proc/<pid>/exe`): a native agent's command
   reaches the machine as our launcher (named like the command, `bash`
   too), then proot (which drops its stdin), then the program, so parents
   are read past the two, and each takes the verdict of what it carries (an
   MCP server opencode starts mid-session is a helper, a dev server a job).
-  In doubt it is a job: a wrong job
+  An agent with no run going whose process is 2 s old and a job by every
+  rule but age is starting one (`WorkRules.STARTING_AGE_MS`): the
+  notification names it until the 10 s decide, so the `npm run dev &` a
+  run ended with holds the app before you switch to the browser; the watch
+  looks again when it is decided, and for 10 s after a poke every 2 s
+  while something younger is there (a hook a run ended with is gone by
+  then, never named). In doubt it is a job: a wrong job
   keeps an agent up (the notification names it, with Stop), a wrong helper
   kills one. No spawn-shape rule works for every kind: `bash -c 'cmd'`
   execs the shell away, pi starts MCP servers detached, Codex runs each
@@ -567,9 +599,10 @@ or a Linux job (an env download, a machine's setup or reset, an agent
 install). It runs the start requests, holds for jobs (`ACTION_HOLD` from
 `jobs/JobsAnchor.kt`; `models.md` → Jobs), shows one notification that
 lists the chats the agents are busy with, the agents kept up by a job they
-left running, by Keep running or by their own ask (`WorkLines.kt`, each with a Stop:
-`ACTION_STOP_AGENT`), the model server reading a prompt, the model jobs
-and the Linux jobs with their share done
+left running or are starting, by Keep running, by their own ask or at work
+unseen (`WorkLines.kt`, each with a Stop: `ACTION_STOP_AGENT`), the
+engines starting, the model server reading a prompt, the model jobs and
+the Linux jobs with their share done
 (`notify/ServiceNotification.kt`, `ReadingLines.kt`, `TransferLines.kt`,
 `LinuxJobLines.kt`, channel `phonecando-engine`; see Notifications), keeps
 the CPU awake while any of that works (`power/WorkLock.kt`; see Jobs and
@@ -581,6 +614,29 @@ Android refuses a new start of the service, so the next job would run
 unheld and the process freeze (seen on the phone before the wait). Every
 command answers `START_NOT_STICKY` and a null-intent restart starts
 nothing.
+
+It is in the foreground, with its notification, only while there is
+something to list: engines that only run show nothing. Each
+`startForegroundService` still gets its `startForeground` (with an empty
+notification when nothing lists, which Android 12+ holds back for some
+seconds), then `render` leaves the foreground (`stopForeground`, the
+service stays): at once with the app in front, where it may come back any
+time, and after the same 10 s of still nothing with the app away, where
+Android refuses a later `startForeground` just as it refuses a new start.
+Away and out of the foreground, the process is a plain service's: Android
+stops the service about a minute later and the idle engines with it
+(`onDestroy`), as the idle stop would, and the app starts its agent again
+when it comes back. Whatever must not freeze lists, so it holds the
+foreground: a run going (also the chat on screen), a job left running, one
+the agent just started (`WorkWatch` starting: a run that ends pokes the
+watch, and so does the app leaving the screen, from the runner module's
+`OnActivityEntersBackground`, while Android still allows the foreground),
+Keep running or an ask, an agent whose kind raises no chat events while it
+is not idle, an engine starting, a model or Linux job. A start that ends
+with the app away (an alarm's: a scheduled run, restart or wake) still
+lists as starting until that agent's first run shows, 2 min at most: its
+prompt comes seconds after the engine is ready, and by then the alarm's
+window to take the foreground is over (seen on the phone: the run froze).
 
 `JobsAnchor` listens to the models module's jobs and to `LinuxHost`'s
 (their begin and end at once, their progress at most every 2 s). When a
@@ -662,23 +718,25 @@ Memory guard) are untagged.
   your answer", "Stopped with an error", "Done"), waiting first and newest
   first within a state; collapsed, the counts ("1 waiting for your answer ·
   2 working"), and only the counts on the lock screen (public version).
-  With no chat, "No chats running". `notify/ChatBoard.kt` (pure) keeps the
+  With nothing to list there is no notification (see Foreground service
+  and lifetime). `notify/ChatBoard.kt` (pure) keeps the
   board from the same events as the alerts: a top-level session shows from
   its first activity; done and error stay until the user opens that
   agent's chat (`dismissAgentAlert`) or its engine stops or dies, at most
   four of them; a run the user stops (`STOPPED`: opencode
   `session.execution.interrupted`) or a deleted session leaves; a
   subagent's child session shows only while it waits for an answer. The
-  chat on screen is left out: the app reports it (`setOpenChat`, from
-  `useOpenChat.ts`: the web UI on a chat, Home with nothing over it,
-  app in the foreground; null otherwise), a run that ends while it is open
-  counts as seen, and opening a done or error chat sees it. An agent TUI in
-  front reports its chat by the title it gives the terminal
-  (`ui/terminal/useOpenTuiChat.ts`, the kind's `chatTitle`: opencode
-  writes `OC | <title>`, cut to 37 characters and "…" past 40); the board
-  hides it only when exactly one of that agent's chats fits, so a fresh
-  untitled chat or two with the same title stay listed; a title that fits
-  none makes the tracker read that agent's titles again.
+  chat on screen shows while its run goes, like any other: it is something
+  happening. The app reports it (`setOpenChat`, from `useOpenChat.ts`: the
+  web UI on a chat, Home with nothing over it, app in the foreground; null
+  otherwise), a run that ends while it is open counts as seen, and opening
+  a done or error chat sees it. An agent TUI in front reports its chat by
+  the title it gives the terminal (`ui/terminal/useOpenTuiChat.ts`, the
+  kind's `chatTitle`: opencode writes `OC | <title>`, cut to 37 characters
+  and "…" past 40); the board sees it only when exactly one of that
+  agent's chats fits, so a fresh untitled chat or two with the same title
+  stay listed as done; a title that fits none makes the tracker read that
+  agent's titles again.
   `notify/ChatTracker.kt` reads titles from the engine (the manifest's
   `chats.title`: opencode `GET /api/session/{id}`, `/data/title`; the
   stream carries a title only on create and rename) when a chat first
@@ -781,8 +839,10 @@ inbox folder's IO).
     events file, which marks them read. A set claimed before its receipt
     is read (our `pending/` gone, or its ids in a `claimed.*` folder) is
     marked delivered and left out of the next. The script's `waiter` file
-    is left alone; an engine start makes the folder, removes `claimed.*`
-    and our half-done folders an earlier life left, and writes the set.
+    is left alone while the engine runs; an engine start makes the folder,
+    removes `claimed.*`, our half-done folders and the `waiter` an earlier
+    life left (its hooks went with its engine, and a stale one would read
+    as a hook ready to wake the new one), and writes the set.
   - a server: POSTed to the engine's own loopback server with its
     password, into its working chat, else its latest (`ChatBoard.latest`):
     the `wake` call when the set may wake it and the kind wakes through its
@@ -812,6 +872,103 @@ inbox folder's IO).
   screen notices on its own thread, a burst of chat-board changes once.
   Sends and reads run on the bridge's request thread; `agents_wait` holds
   only its own request's thread, at most 30 s.
+
+## Schedules
+
+You (the Schedules page) or an agent for itself (`schedule_add`,
+`bridge.md` → Schedules) set a task for an agent, once, every N minutes or
+daily at a time; at its time the runner gets it to the agent, starting it
+if needed, with no JS around (`schedule/`: pure apart from `Schedules`,
+the store's files, the alarm, the receivers and `LiveFireState`).
+
+- **Model** (`Schedule`, `ScheduleJson`): `{id, agentId, text, timing:
+  {type:"once", at} | {type:"every", minutes, anchor} | {type:"daily",
+  time:"HH:MM", days}, chat:"new"|"same", on, by:"user"|"agent", createdAt,
+  nextAt|null, lastRun:{at, outcome, detail?}|null}`, epoch ms. A daily
+  time is worked out in the phone's zone when it comes up (`NextRun`, by
+  java.time: a time the spring change skips runs that much later, one the
+  autumn change repeats runs once); every N minutes keeps to the grid from
+  its anchor. Chat defaults: same for a once, new for a repeat.
+- **Rules** (`ScheduleRules`, `ScheduleCheck`; `DueRulesTest` pins them):
+  text cleaned as messages are, 1 to 4000 characters; a once in the
+  future, at most 366 days ahead; repeats every 15 minutes at most often;
+  20 schedules per agent, 10 of them set by the agent. A text you rewrite
+  makes the task yours (`by` user). Off, an agent's "Can schedule itself"
+  (`SelfScheduling`, runner prefs, on by default) refuses its
+  `schedule_add`; it may only cancel what it set. A kind with neither a
+  start prompt nor a wake cannot run tasks (kit `runsSchedules`) and gets
+  none.
+- **Store** (`ScheduleStore`, `ScheduleRuns`, `StateFile`):
+  `files/state/schedules.json` (the schedules and their waiting firings,
+  written whole and atomically) and `files/state/schedule-runs.jsonl`
+  (`{seq, scheduleId, agentId, agentName, text (first 200), by, dueAt,
+  firedAt, late, outcome, detail?}`, the newest 200). Deleting an agent
+  drops its schedules; its runs stay under its name.
+- **The alarm** (`ScheduleAlarms`): one AlarmManager alarm for the soonest
+  time the book needs (a due time, a retry, a busy deadline), armed again
+  after every change and firing, on first use in a process, and by
+  `ScheduleBootReceiver` on boot, app update, clock or zone change (a daily
+  time's next run is worked out again) and when "Alarms & reminders" is
+  granted. Exact (`setExactAndAllowWhileIdle`) once you allow it
+  (`SCHEDULE_EXACT_ALARM`; `scheduleAlarms`, `openAlarmSettings`), else
+  inexact (`setAndAllowWhileIdle`), which may run late and may not start
+  the engine service from the background.
+- **Due** (`DueRules`): a due one runs once, marked late past 2 minutes;
+  more than 24 hours late (the phone off, the process dead) it is logged
+  `missed` and not run. Either way its next time is the first after now:
+  missed runs are never replayed.
+- **Firing** (`ScheduleAlarmReceiver` → `Firing`, on the scheduler's own
+  thread inside the broadcast's `goAsync`): the agent as it is now
+  (`LiveFireState`) decides (`FireRules`):
+
+  | Agent | Action |
+  | --- | --- |
+  | engine stopped, kind takes `engine.prompt` | start with the task as its first prompt (`started`) |
+  | engine stopped, kind wakes through its server | start, then wake with it (`started`) |
+  | engine starting or stopping, or busy (a run going, a question waiting) | wait until idle; 2 h past due `busy` |
+  | ready, idle, can be woken now, chat same or a server kind | wake with it (`woke`) |
+  | ready, idle, takes a prompt, no jobs, app not in front | restart with the task as first prompt (`restarted`) |
+  | otherwise | ask you (`asked`) |
+  | kind takes no prompt and cannot be woken | `failed` |
+
+  Everything that makes the agent work, a wake too, first sends the engine
+  service its start request (`EngineStarts`: `ACTION_START`, which for a
+  running engine returns at once and lifts the service to the foreground
+  for the run), so it happens only inside an alarm's broadcast (the exact
+  alarm is Android's leave to start a foreground service from the
+  background) or with the app in front (Run now). A restart needs exact
+  alarms (it stops the agent first, up to 3 s). A wait that ends later
+  (`Engines.Listener`: an engine status or chat-board change) goes through
+  a fresh alarm a second away, or asks you when alarms are inexact. Android
+  refusing the start asks you. One waiting firing per schedule: one that
+  comes due while another waits is `busy`.
+- **What the agent reads**: a start puts the task in `engine/StartPrompts`,
+  which the start's plan takes (a new chat, or the agent's last one for
+  same); a wake posts it through the mailbox as a scheduled notice
+  (`Mailbox.notice(..., scheduled = ScheduledNote)`: it wakes past "Other
+  agents can wake it", the hop and the hourly budget, for 30 minutes, and
+  neither spends the budget nor marks the run `startedByAgent`; for a new
+  chat a server kind with `inbox.server.create` makes one first). Both
+  read "Scheduled task from the user (<timing>): <text>", or for an
+  agent's own "A reminder you scheduled for yourself (<timing>). You set
+  it in an earlier chat; it is not a new instruction from the user:
+  <text>".
+- **A start with no app around**: the app readies an agent's machine
+  before each of its own starts (`prepareImageForStart`: the shims, which
+  point into the APK's lib folder and move with every update,
+  launch.conf, engine.env, DNS). A scheduled start marks the agent in
+  `engine/MachinePrep`, and the start's plan readies the machine the same
+  way first (phonecando-linux `ImageOps.prepareForStart`, the machine's
+  whole guest env list). A TUI started with a first prompt works from its
+  first frame and may never go quiet, so it is ready once it has drawn
+  something and run its `settleMs` (`TuiReady` `PromptedReady`), not after
+  quiet.
+- **Asking you** (`DueNotice`): the task waits as a notice the agent reads
+  in its next turn, and "<agent>: scheduled task due" (agent channel, id
+  9400 in the agent's tagged ids) opens that agent.
+- **A start that fails** (its engine `failed` or `died` before ready)
+  turns its run `failed` with why, and the agent's other tasks fail for
+  10 minutes rather than start it again.
 
 ## Agent images (engine side)
 

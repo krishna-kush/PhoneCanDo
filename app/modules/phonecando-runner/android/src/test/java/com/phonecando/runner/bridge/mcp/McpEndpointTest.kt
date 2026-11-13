@@ -125,7 +125,8 @@ class McpEndpointTest {
       }.map { it.getString("name") }
     }
     val basic = listOf("mobile_ping", "mobile_battery", "mobile_notify", "mobile_share", "mobile_open", "mobile_clipboard") +
-      listOf("agents_list", "agents_send", "agents_inbox", "agents_wait")
+      listOf("agents_list", "agents_send", "agents_inbox", "agents_wait", "agents_keep_running") +
+      listOf("schedule_add", "schedule_list", "schedule_cancel")
     assertEquals(basic, names(McpRig(full = false)))
     val full = names(rig)
     assertTrue(full.containsAll(basic + listOf("mobile_observe", "mobile_act", "mobile_return", "mobile_request_unlock")))

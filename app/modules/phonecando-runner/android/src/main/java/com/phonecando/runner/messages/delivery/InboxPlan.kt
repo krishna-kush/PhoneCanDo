@@ -31,4 +31,10 @@ interface InboxPlan {
 
   /** The newest chat's id in what that request answered; null when it names none. */
   fun latestId(answer: String): String? = null
+
+  /** The request that makes a new chat titled [title] (`inbox.server.create`); null when the kind has none. */
+  fun createRequest(port: String, password: String, title: String): InboxRequest? = null
+
+  /** The new chat's id in what that request answered; null when it names none. */
+  fun createdId(answer: String): String? = null
 }

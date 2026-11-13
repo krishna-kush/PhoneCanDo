@@ -20,6 +20,10 @@ data class ServerSeat(val port: String, val password: String, val sessionId: Str
 //   into its working chat, else its latest (ServerSeat), else the newest the
 //   engine itself lists (`inbox.server.latest`): the wake call when
 //   they may wake it and the kind wakes through its server, else deliver.
+//   A waking set with a scheduled task that asks for a new chat
+//   (Parcel.newChat) goes into a chat the engine makes first
+//   (`inbox.server.create`), made once per task however often the post is
+//   tried; without that call, or when it fails, into the chat above.
 //   A 2xx is delivered (WOKE or POSTED), and pending/ goes. No chat known
 //   yet, no engine, or a failure: they stay queued, and a retry (an engine
 //   start, a chat showing up) waits RETRY_MS after a failure.
@@ -37,6 +41,9 @@ class InboxCourier(
   // The ids of the set last written to each agent's pending/.
   private val written = ConcurrentHashMap<String, List<Long>>()
   private val failedAt = ConcurrentHashMap<String, Long>()
+
+  // The chat made for each agent's last new-chat set: its first id, the chat.
+  private val made = ConcurrentHashMap<String, Pair<Long, String>>()
 
   override fun claimed(agent: AgentRecord): Set<Long> {
     val inbox = folder(agent) ?: return emptySet()
@@ -72,8 +79,9 @@ class InboxCourier(
   private fun serve(agent: AgentRecord, p: InboxPlan, parcel: Parcel, retry: Boolean): Handover? {
     if (retry && failedAt[agent.id]?.let { clock() - it < RETRY_MS } == true) return null
     val s = seat(agent) ?: return null
-    val sessionId = s.sessionId ?: newestChat(agent, p, s) ?: return null
     val waking = parcel.wake && p.wakesByServer
+    val fresh = if (waking && parcel.newChat != null) newChat(agent, p, s, parcel) else null
+    val sessionId = fresh ?: s.sessionId ?: newestChat(agent, p, s) ?: return null
     val call = if (waking) InboxCall.WAKE else InboxCall.DELIVER
     val request = p.request(call, s.port, s.password, sessionId, parcel.text) ?: return null
     val status = try {
@@ -103,6 +111,22 @@ class InboxCourier(
     }
   }
 
+  // The chat made for [parcel]'s new-chat task: the one made on an earlier
+  // try of the same set, else a new one; null when the kind makes none or it failed.
+  private fun newChat(agent: AgentRecord, p: InboxPlan, s: ServerSeat, parcel: Parcel): String? {
+    val first = parcel.ids.firstOrNull() ?: return null
+    made[agent.id]?.takeIf { it.first == first }?.let { return it.second }
+    val request = p.createRequest(s.port, s.password, parcel.newChat ?: return null) ?: return null
+    return try {
+      val (status, answer) = fetch(request)
+      val id = if (status in 200..299) p.createdId(answer) else null
+      id?.also { made[agent.id] = first to it }
+    } catch (e: Exception) {
+      onError("new chat for ${agent.id} not made", e)
+      null
+    }
+  }
+
   override fun clear(agent: AgentRecord) {
     written.remove(agent.id)
     folder(agent)?.clear()
@@ -111,12 +135,14 @@ class InboxCourier(
   override fun prepare(agent: AgentRecord) {
     written.remove(agent.id)
     failedAt.remove(agent.id)
+    made.remove(agent.id)
     folder(agent)?.prepare()
   }
 
   override fun forget(agentId: String) {
     written.remove(agentId)
     failedAt.remove(agentId)
+    made.remove(agentId)
   }
 
   companion object {

@@ -22,6 +22,24 @@ class TuiReadyTest {
     assertEquals(60_000L, ready.timeoutMs)
   }
 
+  @Test fun aPromptedStartNeedsOutputAndSettleMsNotQuiet() {
+    val ready = PromptedReady({ lastOutput }, startedAt = now, settleMs = 400, timeoutMs = 60_000, now = { now })
+    now += 1_000
+    assertEquals(ReadyProbe.Verdict.WAIT, ready.check())
+    // It keeps drawing (a spinner while the model answers): never quiet, still ready.
+    lastOutput = now
+    assertEquals(ReadyProbe.Verdict.READY, ready.check())
+  }
+
+  @Test fun aPromptedStartWaitsItsSettleMs() {
+    val ready = PromptedReady({ lastOutput }, startedAt = now, settleMs = 400, timeoutMs = 60_000, now = { now })
+    lastOutput = now + 50
+    now += 399
+    assertEquals(ReadyProbe.Verdict.WAIT, ready.check())
+    now += 1
+    assertEquals(ReadyProbe.Verdict.READY, ready.check())
+  }
+
   @Test fun alive() {
     val ready = AliveReady(startedAt = now, ms = 500, now = { now })
     assertEquals(ReadyProbe.Verdict.WAIT, ready.check())
@@ -32,5 +50,7 @@ class TuiReadyTest {
   @Test fun byTheKindsReadiness() {
     assertTrue(TuiReady.of(TuiReadiness.Output(1, 2), { null }, 0) is OutputReady)
     assertTrue(TuiReady.of(TuiReadiness.Alive(1), { null }, 0) is AliveReady)
+    assertTrue(TuiReady.of(TuiReadiness.Output(1, 2), { null }, 0, prompted = true) is PromptedReady)
+    assertTrue(TuiReady.of(TuiReadiness.Alive(1), { null }, 0, prompted = true) is AliveReady)
   }
 }

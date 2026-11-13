@@ -4,7 +4,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 // A message as one line of the log file (MessageStore), and back. A line
-// that does not read as a message (no id, no sender) is null. Pure (org.json
+// that does not read as a message (no id, no sender) is null; a scheduled
+// task's notice keeps its ScheduledNote under `scheduled`. Pure (org.json
 // ships with Android; the tests add it).
 internal object MessageJson {
   fun write(m: Message): JSONObject = JSONObject()
@@ -22,6 +23,7 @@ internal object MessageJson {
     .put("wake", m.wake)
     .put("notice", m.notice)
     .put("deliveries", JSONArray(m.deliveries.map(::delivery)))
+    .put("scheduled", m.scheduled?.let(::scheduled) ?: JSONObject.NULL)
 
   fun read(o: JSONObject): Message? {
     val id = o.optLong("id", 0L).takeIf { it > 0 } ?: return null
@@ -42,7 +44,19 @@ internal object MessageJson {
       wake = o.optBoolean("wake", false),
       notice = o.optBoolean("notice", false),
       deliveries = (0 until list.length()).mapNotNull { list.optJSONObject(it)?.let(::delivery) },
+      scheduled = o.optJSONObject("scheduled")?.let(::scheduled),
     )
+  }
+
+  private fun scheduled(n: ScheduledNote): JSONObject = JSONObject()
+    .put("scheduleId", n.scheduleId)
+    .put("by", n.by)
+    .put("newChat", n.newChat)
+    .put("timing", n.timing)
+
+  private fun scheduled(o: JSONObject): ScheduledNote? {
+    val id = o.optString("scheduleId").takeIf { it.isNotEmpty() } ?: return null
+    return ScheduledNote(id, o.optString("by", ScheduledNote.BY_USER), o.optBoolean("newChat", false), o.optString("timing"))
   }
 
   private fun delivery(d: Delivery): JSONObject = JSONObject()

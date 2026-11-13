@@ -104,7 +104,9 @@ class MessageLog(
 
   /** When each agent was woken by messages (distinct times), for the wake budget. */
   fun wokeAt(): List<Pair<String, Long>> = lock.withLock {
-    messages.values.flatMap { m -> m.deliveries.filter { it.woke }.map { it.agentId to it.at } }.distinct().sortedBy { it.second }
+    // A scheduled task's wake is not another agent's: it spends no budget.
+    messages.values.filter { it.scheduled == null }
+      .flatMap { m -> m.deliveries.filter { it.woke }.map { it.agentId to it.at } }.distinct().sortedBy { it.second }
   }
 
   /** Drops every delivery to [agentId], and the messages that had no other recipient; rewrites the file. */

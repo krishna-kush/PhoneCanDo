@@ -11,6 +11,7 @@ import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.agents.kit.render.GuestEnvPolicy
 import com.phonecando.agents.kit.render.ImageLaunch
 import com.phonecando.agents.kit.render.ManifestKind
+import com.phonecando.linux.LinuxHost
 import com.phonecando.runner.TelemetryRecorder
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.agents.AgentStores
@@ -48,6 +49,8 @@ internal data class LaunchPlan(
   val model: ModelEndpoint? = null,
   /** The agent's own state folder (AgentFiles), made; null: it keeps its state where its kind does. */
   val stateDir: File? = null,
+  /** The first prompt this start runs (StartPrompts: a scheduled task), for a kind that promptsAtStart; null: none. */
+  val prompt: String? = null,
 ) {
   /** A server engine's output; per agent, as a machine may run several engines. */
   val logFile: File get() = image.engineLog(record.id)
@@ -66,8 +69,11 @@ internal data class LaunchPlan(
 // empty events file (KitFiles), the agent's inbox folder with its
 // undelivered messages for a kind with an `inbox` block (messages/), and
 // the machine-mates note into every instructions file on the machine
-// (MachineNotes). spawn() renders the kind's launch (its resume args when
-// the agent ran before, its local model's wiring when it has one, its
+// (MachineNotes). It takes the agent's first prompt for this start
+// (StartPrompts: a scheduled task) when its kind can start with one; one
+// that wants a chat of its own starts without the resume args. spawn()
+// renders the kind's launch (its resume args when the agent ran before,
+// its first prompt, its local model's wiring when it has one, its
 // state folder; an image kind through its image's shell, carrying what
 // the machine's launch.conf would take from it: EngineEnv.carry) and
 // starts it in its cwd (HOME when it names none; an image kind's guest sh
@@ -94,6 +100,9 @@ internal class EngineLauncher(private val context: Context) {
 
   /** Throws image_not_ready while the image has no engine.env. */
   fun plan(record: AgentRecord, kind: ManifestKind, requestedAt: Long): LaunchPlan {
+    // Taken first, so a start that fails here never leaves it for a later one.
+    val start = startPrompt(record.id, kind)
+    if (MachinePrep.take(record.id)) prepareMachine(record)
     val image = ImageDir.of(context.filesDir, record.imageId)
     val env = image.readEnv()
     val home = File(env.getValue("HOME")).apply { mkdirs() }
@@ -112,7 +121,36 @@ internal class EngineLauncher(private val context: Context) {
     if (kind.style == EngineStyle.TUI) seedKit(home, record.id)
     prepareInbox(record.id)
     refreshMachineNotes(record.imageId, home)
-    return LaunchPlan(record, kind, image, home, env, requestedAt, stateDir = stateDir)
+    return LaunchPlan(
+      record, kind, image, home, env, requestedAt,
+      resume = if (start?.newChat == true) false else record.ranBefore,
+      stateDir = stateDir,
+      prompt = start?.prompt,
+    )
+  }
+
+  // A start with no app around (MachinePrep): the machine readied as the
+  // app readies it before its own starts, with the whole machine's guest
+  // env list, so launch.conf reads the same whoever asks.
+  private fun prepareMachine(record: AgentRecord) {
+    val unset = AgentInstalls(AgentStores.get(context), KindCatalogs.get(context)).machineUnset(record.imageId)
+    try {
+      LinuxHost.get(context).images.prepareForStart(record.imageId, unset)
+    } catch (e: Exception) {
+      throw EngineStartException(
+        EngineStartError.IMAGE_NOT_READY,
+        "its machine could not be readied: ${e.message ?: e.javaClass.simpleName}",
+      )
+    }
+  }
+
+  // The agent's first prompt for this start, when its kind can start with
+  // one; a kind that cannot (the schedule wakes those instead) drops it.
+  private fun startPrompt(agentId: String, kind: ManifestKind): StartPrompt? {
+    val start = StartPrompts.take(agentId) ?: return null
+    if (kind.promptsAtStart) return start
+    Log.w(TAG, "${kind.displayName} cannot start with a prompt; $agentId starts without its task")
+    return null
   }
 
   /**
@@ -134,6 +172,7 @@ internal class EngineLauncher(private val context: Context) {
       model = plan.model,
       bridgeUrl = bridgeUrl.orEmpty(),
       stateDir = plan.stateDir,
+      prompt = plan.prompt,
     )
     val first = plan.kind.launch(ctx)
     val tui = plan.kind.style == EngineStyle.TUI

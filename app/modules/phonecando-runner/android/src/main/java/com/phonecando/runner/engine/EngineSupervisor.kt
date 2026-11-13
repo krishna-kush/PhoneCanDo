@@ -132,7 +132,7 @@ internal class EngineSupervisor(
   /** The user has this agent's chat in front: its done and error chats go. */
   fun chatsSeen(agentId: String) = chats.seen(agentId)
 
-  /** The chat on screen (by id, or a TUI's by title), left out of the notification; nulls for none. */
+  /** The chat on screen (by id, or a TUI's by title), whose ended run is seen; nulls for none. */
   fun setOpenChat(agentId: String?, sessionId: String?, title: String?) {
     openAgent = agentId
     chats.setOpen(agentId, sessionId, title)
@@ -341,7 +341,7 @@ internal class EngineSupervisor(
     val terminal = (proc as? TuiProcess)?.terminal
     val dies = { status: Int -> terminal == null || status != 0 }
     val ready = if (terminal != null) {
-      TuiReady.of(checkNotNull(plan.kind.tuiReadiness), { terminal.lastOutputAt }, System.currentTimeMillis())
+      TuiReady.of(checkNotNull(plan.kind.tuiReadiness), { terminal.lastOutputAt }, System.currentTimeMillis(), plan.prompt != null)
     } else {
       HttpReady(plan.kind.healthProbe(checkNotNull(port).toString(), plan.record.password))
     }

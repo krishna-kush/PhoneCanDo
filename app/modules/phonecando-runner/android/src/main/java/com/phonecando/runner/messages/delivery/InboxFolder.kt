@@ -18,8 +18,10 @@ import java.nio.file.Files
 // place, then the old one removed), so a reader's `mv pending claimed.$$`
 // gets one whole set or none. Everything else in the folder (the kit
 // script's own files: `waiter`, its claimed.* while it runs) is left alone,
-// except that prepare() at an engine start removes claimed.* and our own
-// half-done folders an earlier life left behind. Pure JVM.
+// except that prepare() at an engine start removes claimed.*, our own
+// half-done folders and the `waiter` an earlier life left behind: that
+// life's hooks were stopped with its engine, and a `waiter` left over would
+// read as a hook ready to wake the new one (waiterAlive). Pure JVM.
 class InboxFolder(val dir: File) {
   val pending: File get() = File(dir, PENDING)
 
@@ -82,7 +84,7 @@ class InboxFolder(val dir: File) {
     dir.mkdirs()
     for (child in dir.listFiles().orEmpty()) {
       val name = child.name
-      if (name.startsWith(CLAIMED) || name.startsWith(NEXT) || name.startsWith(OLD)) TreeDelete.of(child)
+      if (name.startsWith(CLAIMED) || name.startsWith(NEXT) || name.startsWith(OLD) || name == WAITER) TreeDelete.of(child)
     }
   }
 

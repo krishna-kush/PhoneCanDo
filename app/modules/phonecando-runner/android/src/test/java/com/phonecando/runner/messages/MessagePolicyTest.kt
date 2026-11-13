@@ -26,6 +26,8 @@ class MessagePolicyTest {
     assertEquals(6, MessageRules.WAKES_PER_HOUR)
     assertEquals(2, MessageRules.NO_WAKE_HOP)
     assertEquals(30, MessageRules.WAIT_MAX_SEC)
+    assertEquals(10 * 60_000L, MessageRules.WAKE_TTL_MS)
+    assertEquals(30 * 60_000L, MessageRules.SCHEDULED_WAKE_TTL_MS)
   }
 
   @Test fun directMessagesAreLimitedPerRecipient() {
@@ -110,5 +112,27 @@ class MessagePolicyTest {
     ).map { MessagePolicy.wakeRefusal(it, now) }
     assertTrue(refusals.all { it != null })
     assertEquals(refusals.size, refusals.toSet().size)
+  }
+
+  @Test fun aScheduledTaskWakesPastTheSwitchTheHopAndTheBudgetForHalfAnHour() {
+    val task = MessagePolicy.WakeCheck(
+      asked = true, broadcast = false, hop = 0, sentAt = now, wakeable = true,
+      kindCanWake = true, running = true, idle = true, wakesLeft = 1, scheduled = true,
+    )
+    // What another agent's message would be refused for does not hold it back.
+    for (c in listOf(task.copy(wakeable = false), task.copy(hop = 5), task.copy(wakesLeft = 0), task.copy(sentAt = now - 20 * 60_000))) {
+      assertNull(MessagePolicy.wakeRefusal(c, now))
+      assertNotNull(MessagePolicy.wakeRefusal(c.copy(scheduled = false), now))
+    }
+    // The agent must still be able to take it.
+    val refusals = listOf(
+      task.copy(asked = false),
+      task.copy(sentAt = now - MessageRules.SCHEDULED_WAKE_TTL_MS - 1),
+      task.copy(kindCanWake = false),
+      task.copy(hookWaiting = false),
+      task.copy(running = false),
+      task.copy(idle = false),
+    ).map { MessagePolicy.wakeRefusal(it, now) }
+    assertTrue(refusals.all { it != null })
   }
 }

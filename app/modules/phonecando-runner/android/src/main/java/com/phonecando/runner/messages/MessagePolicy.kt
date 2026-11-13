@@ -8,6 +8,7 @@ import com.phonecando.runner.messages.MessageRules.DUPLICATE_MS
 import com.phonecando.runner.messages.MessageRules.HOUR_MS
 import com.phonecando.runner.messages.MessageRules.MINUTE_MS
 import com.phonecando.runner.messages.MessageRules.NO_WAKE_HOP
+import com.phonecando.runner.messages.MessageRules.SCHEDULED_WAKE_TTL_MS
 import com.phonecando.runner.messages.MessageRules.WAKES_PER_HOUR
 import com.phonecando.runner.messages.MessageRules.WAKE_TTL_MS
 
@@ -23,6 +24,10 @@ import com.phonecando.runner.messages.MessageRules.WAKE_TTL_MS
 //   "Other agents can wake it" is on, of a kind that can be woken, whose
 //   engine runs (a stopped engine is never started) and has no run going or
 //   question waiting, and which has been woken fewer than 6 times this hour.
+// - A scheduled task's notice (ScheduledNote) is the user's or the agent's
+//   own, not another agent's: it wakes whatever the switch, the hop and the
+//   budget say, for 30 minutes; the kind must still wake, the engine run
+//   and be idle.
 // The windows live in memory: a new app process starts them afresh (the
 // wake budget is seeded from the log). Pure: the clock is injected.
 class MessagePolicy(private val clock: () -> Long) {
@@ -117,6 +122,8 @@ class MessagePolicy(private val clock: () -> Long) {
     /** No run going and no question waiting. */
     val idle: Boolean,
     val wakesLeft: Int,
+    /** A scheduled task's notice (ScheduledNote). */
+    val scheduled: Boolean = false,
   )
 
   companion object {
@@ -124,14 +131,14 @@ class MessagePolicy(private val clock: () -> Long) {
     fun wakeRefusal(c: WakeCheck, now: Long): String? = when {
       !c.asked -> "not asked"
       c.broadcast -> "a broadcast never wakes anyone"
-      c.hop >= NO_WAKE_HOP -> "a reply to a reply never wakes anyone"
-      now - c.sentAt > WAKE_TTL_MS -> "asked too long ago"
-      !c.wakeable -> "the user switched off waking it"
+      !c.scheduled && c.hop >= NO_WAKE_HOP -> "a reply to a reply never wakes anyone"
+      now - c.sentAt > (if (c.scheduled) SCHEDULED_WAKE_TTL_MS else WAKE_TTL_MS) -> "asked too long ago"
+      !c.scheduled && !c.wakeable -> "the user switched off waking it"
       !c.kindCanWake -> "its kind cannot be woken"
       !c.hookWaiting -> "it can be woken only while the hook it leaves after a turn is waiting, and none is waiting now"
       !c.running -> "it is stopped, and is never started by a message"
       !c.idle -> "it is busy"
-      c.wakesLeft <= 0 -> "it was woken $WAKES_PER_HOUR times this hour"
+      !c.scheduled && c.wakesLeft <= 0 -> "it was woken $WAKES_PER_HOUR times this hour"
       else -> null
     }
   }

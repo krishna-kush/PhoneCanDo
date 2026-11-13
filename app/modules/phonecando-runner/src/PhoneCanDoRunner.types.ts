@@ -50,6 +50,9 @@ export type NativePromptReading = {
   cached: number;
 };
 
+/** The end of a model's server log: whole lines, whether earlier ones were left out, when it was last written (epoch ms) and its size in bytes. */
+export type NativeModelServerLog = { text: string; cut: boolean; modifiedAt: number; size: number };
+
 /** The kind's TUI attached to an agent's engine, rendered natively from its manifest. */
 export type NativeClientRecipe = { cmd: string[]; env: Record<string, string>; cwd: string };
 
@@ -203,6 +206,8 @@ export type NativeMessage = {
   /** 0 from a turn the user started; one more for each turn another agent's message started before it. */
   hop: number;
   notice: boolean;
+  /** A task a schedule posted (the text is the task's own words); null for any other message. */
+  scheduled: { scheduleId: string; by: 'user' | 'agent'; newChat: boolean; timing: string } | null;
   deliveries: NativeDelivery[];
 };
 
@@ -216,3 +221,54 @@ export type NativeScreenQueue = {
 
 /** The share sheet closed: whether an app was picked, and that app's label (kept on the phone, never sent). */
 export type NativeShareResult = { chosen: boolean; app: string | null };
+
+/** When a schedule runs: once at a time; every so many minutes from `anchor`; daily at "HH:MM" on `days` (none: every day). Times epoch ms. */
+export type NativeScheduleTiming =
+  | { type: 'once'; at: number }
+  | { type: 'every'; minutes: number; anchor: number }
+  | { type: 'daily'; time: string; days: ('mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun')[] };
+
+/** What a scheduled run did. */
+export type NativeScheduleOutcome = 'started' | 'woke' | 'restarted' | 'asked' | 'busy' | 'missed' | 'failed';
+
+/** One schedule as the runner keeps it (files/state/schedules.json). */
+export type NativeSchedule = {
+  id: string;
+  agentId: string;
+  text: string;
+  timing: NativeScheduleTiming;
+  chat: 'new' | 'same';
+  on: boolean;
+  by: 'user' | 'agent';
+  createdAt: number;
+  /** Null: off, or a one-off that ran. */
+  nextAt: number | null;
+  lastRun: { at: number; outcome: NativeScheduleOutcome; detail?: string } | null;
+};
+
+/** One line of the runs log (files/state/schedule-runs.jsonl, newest 200 kept). */
+export type NativeScheduleRun = {
+  seq: number;
+  scheduleId: string;
+  agentId: string;
+  agentName: string;
+  /** The first 200 characters of the task. */
+  text: string;
+  by: 'user' | 'agent';
+  dueAt: number;
+  firedAt: number;
+  late: boolean;
+  outcome: NativeScheduleOutcome;
+  detail?: string;
+};
+
+/** A new schedule from the app; chat defaults to same for a one-off, new for a repeating one. Every's anchor defaults to now. */
+export type NativeScheduleSpec = { agentId: string; text: string; timing: NativeScheduleTiming; chat?: 'new' | 'same' };
+
+/** An edit from the app: only what changed. */
+export type NativeSchedulePatch = { text?: string; timing?: NativeScheduleTiming; chat?: 'new' | 'same'; on?: boolean };
+
+/** reason: limit, unsupported, not_found, agent_gone, or a sentence; code: the reason's code. */
+export type NativeScheduleResult = { ok: true; schedule: NativeSchedule } | { ok: false; reason: string; code: string };
+
+export type NativeRunNowResult = { ok: true } | { ok: false; reason: string; code: string };

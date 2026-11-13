@@ -28,6 +28,10 @@ import java.util.concurrent.TimeUnit
 //   agents_wait mark read; a held set with the wake mark, claimed while the
 //   agent had no run going, woke it (its wake budget; its run is
 //   startedByAgent).
+// - a scheduled task (schedule/) is a notice with its ScheduledNote: it may
+//   wake past the switch, the hop and the budget (MessagePolicy), and its
+//   wake neither spends the budget nor marks the run startedByAgent: the
+//   task is the user's, or the agent's own.
 // onChange runs after every change (the app's phonecandoMessages event).
 // Pure apart from the log's store and the courier; the clock is injected.
 class Mailbox(
@@ -39,6 +43,9 @@ class Mailbox(
   private val onError: (String, Throwable) -> Unit = { _, _ -> },
 ) {
   data class SendResult(val id: Long?, val results: List<Sent>)
+
+  /** How a notice went: [woke] its server took the wake call, or its hook or reader has a set that wakes it. */
+  data class Noticed(val handover: Handover, val woke: Boolean)
 
   /** Messages taken from an inbox (now read), and whether more are unread. */
   data class Taken(val messages: List<Message>, val more: Boolean)
@@ -129,23 +136,30 @@ class Mailbox(
   private fun cannotRead(agent: AgentRecord) =
     "${agent.name} can't read messages: ${agents.kindLabel(agent.kind)} isn't connected to the phone tools"
 
-  /** A runner notice to [agentId] (the screen queue); [wake]: it may wake the agent as a direct message that asks to. */
-  fun notice(agentId: String, text: String, wake: Boolean = false) {
-    val agent = agents.get(agentId) ?: return
-    log.add { id -> noticeTo(id, agent, MessageText.clean(text), wake) }
+  /**
+   * A runner notice to [agentId] (the screen queue, a scheduled task);
+   * [wake]: it may wake the agent as a direct message that asks to;
+   * [scheduled]: it is that task (ScheduledNote). Null for an unknown agent.
+   */
+  fun notice(agentId: String, text: String, wake: Boolean = false, scheduled: ScheduledNote? = null): Noticed? {
+    val agent = agents.get(agentId) ?: return null
+    log.add { id -> noticeTo(id, agent, MessageText.clean(text), wake, scheduled) }
     capUnread(agent)
-    deliver(agentId)
+    val out = deliver(agentId)
     changed()
+    val woke = out.handover == Handover.WOKE || (out.handover == Handover.HELD && out.parcel?.wake == true)
+    return Noticed(out.handover, woke)
   }
 
   private fun refused(to: String, reason: String) = SendResult(null, listOf(Sent(to, SendStatus.REFUSED, reason)))
 
-  private fun noticeTo(id: Long, agent: AgentRecord, text: String, wake: Boolean): Message {
+  private fun noticeTo(id: Long, agent: AgentRecord, text: String, wake: Boolean, scheduled: ScheduledNote? = null): Message {
     val now = clock()
     return Message(
       id = id, from = Message.RUNNER, fromName = Message.RUNNER_NAME, fromKind = null, fromImage = null,
       to = agent.id, toName = agent.name, text = text, replyTo = null, sentAt = now, hop = 0, wake = wake,
       notice = true, deliveries = listOf(Delivery(agent.id, agent.name, DeliveryStatus.QUEUED, at = now)),
+      scheduled = scheduled,
     )
   }
 
@@ -208,7 +222,8 @@ class Mailbox(
     val parcel = parcels[agentId]
     val woke = parcel != null && parcel.wake && mine.any { it in parcel.ids } && presence.state != AgentState.WORKING
     log.mark(agentId, mine, DeliveryStatus.READ, woke = woke)
-    if (woke) {
+    // Only another agent's message spends the budget and marks the run.
+    if (woke && mine.any { log.get(it)?.let { m -> m.wake && m.scheduled == null } == true }) {
       policy.woke(agentId)
       wakes.woke(agentId, mine.mapNotNull { log.get(it)?.hop }.maxOrNull() ?: 0, workingNow = false)
     }
@@ -249,9 +264,10 @@ class Mailbox(
           val woke = handover == Handover.WOKE
           log.mark(agentId, parcel.ids, DeliveryStatus.DELIVERED, woke = woke)
           parcels.remove(agentId)
-          if (woke) {
+          val byAgents = wakers.filter { it.scheduled == null }
+          if (woke && byAgents.isNotEmpty()) {
             policy.woke(agentId)
-            wakes.woke(agentId, wakers.maxOf { it.hop }, workingNow = false)
+            wakes.woke(agentId, byAgents.maxOf { it.hop }, workingNow = false)
           }
         }
         Handover.HELD -> parcels[agentId] = parcel
@@ -272,6 +288,7 @@ class Mailbox(
     running = presence.running,
     idle = presence.idle,
     wakesLeft = policy.wakesLeft(agent.id),
+    scheduled = m.scheduled != null,
   )
 
   // ---- engine and chat changes ----------------------------------------------------

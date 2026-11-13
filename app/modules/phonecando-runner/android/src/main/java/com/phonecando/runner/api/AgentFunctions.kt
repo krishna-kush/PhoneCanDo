@@ -14,6 +14,7 @@ import com.phonecando.runner.engine.image.ImageDir
 import com.phonecando.runner.engine.image.MachineNotes
 import com.phonecando.runner.messages.Messages
 import com.phonecando.runner.notify.AgentNotices
+import com.phonecando.runner.schedule.Schedules
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
@@ -60,8 +61,9 @@ internal fun ModuleDefinitionBuilder.agentFunctions(context: () -> Context) {
   // Stops the agent's engine first (up to ~3 s, so off the JS thread),
   // then forgets it and takes down its notifications, whose taps would
   // name an agent that is gone, drops the messages to it (Messages; the log
-  // keeps what it sent), and removes what it alone kept on its machine
-  // (AgentFiles: its state folder, events file, inbox folder and engine log;
+  // keeps what it sent) and its schedules (Schedules), and removes what it
+  // alone kept on its machine (AgentFiles: its state folder, events file,
+  // inbox folder and engine log;
   // when it kept its state where its kind does and other agents stay on
   // the machine, its kind's user state there, so the next agent of the
   // kind starts clean). Resolves false for an unknown id. The image always
@@ -76,6 +78,7 @@ internal fun ModuleDefinitionBuilder.agentFunctions(context: () -> Context) {
         engines.forget(id)
         AgentNotices(ctx).cancelAll(id)
         Messages.get(ctx).forget(id)
+        Schedules.get(ctx).forget(id)
         val store = AgentStores.get(ctx)
         val record = store.get(id)
         val deleted = store.delete(id)

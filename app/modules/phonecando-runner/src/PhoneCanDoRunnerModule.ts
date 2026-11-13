@@ -13,9 +13,16 @@ import type {
   NativeLaunchTarget,
   NativeMemoryStatus,
   NativeMessage,
+  NativeModelServerLog,
   NativeOpenUrlAction,
   NativePromptReading,
   NativeRunLimits,
+  NativeRunNowResult,
+  NativeSchedule,
+  NativeSchedulePatch,
+  NativeScheduleResult,
+  NativeScheduleRun,
+  NativeScheduleSpec,
   NativeScreenQueue,
   NativeShareResult,
   NativeTerminalAttach,
@@ -45,9 +52,18 @@ export type {
   NativeMemoryModel,
   NativeMemoryStatus,
   NativeMessage,
+  NativeModelServerLog,
   NativeOpenUrlAction,
   NativePromptReading,
   NativeRunLimits,
+  NativeRunNowResult,
+  NativeSchedule,
+  NativeScheduleOutcome,
+  NativeSchedulePatch,
+  NativeScheduleResult,
+  NativeScheduleRun,
+  NativeScheduleSpec,
+  NativeScheduleTiming,
   NativeScreenQueue,
   NativeShareResult,
   NativeTerminalAttach,
@@ -64,6 +80,8 @@ type RunnerEvents = {
   phonecandoMemory(e: NativeMemoryStatus): void;
   /** The messages between agents changed: a new one, or a delivery moved on; unread per agent id. */
   phonecandoMessages(e: { unread: Record<string, number> }): void;
+  /** The schedules or their runs changed (added, edited, removed, fired). */
+  phonecandoSchedules(e: Record<string, never>): void;
 };
 
 declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
@@ -94,6 +112,8 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   renameAgent(id: string, name: string): NativeAgent;
   deleteAgent(id: string): Promise<boolean>;
   promptReading(): NativePromptReading | null;
+  /** Null when the model's server never ran. Absent from native builds older than the Server log page. */
+  modelServerLog?(modelId: string): Promise<NativeModelServerLog | null>;
   startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;
@@ -116,6 +136,31 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   screenQueue(): NativeScreenQueue;
   /** Saves "Other agents can wake it" and returns the agent as kept. */
   setAgentWakeable(agentId: string, wakeable: boolean): NativeAgent;
+  /** Every schedule, every agent's. */
+  listSchedules(): NativeSchedule[];
+  /** Adds one set by you; refused with a reason (limit, a kind that can't run schedules, ...). */
+  addSchedule(spec: NativeScheduleSpec): NativeScheduleResult;
+  /** Changes one; the agent stays. A text you rewrite on one the agent set makes it yours. */
+  updateSchedule(id: string, patch: NativeSchedulePatch): NativeScheduleResult;
+  removeSchedule(id: string): boolean;
+  /** Runs it now (the app is in front, so a start is allowed); its next time stays. */
+  runScheduleNow(id: string): NativeRunNowResult;
+  /** The newest `limit` runs, newest first. */
+  scheduleRuns(limit: number): NativeScheduleRun[];
+  /** Whether runs come on time: exact alarms allowed (Alarms & reminders). */
+  scheduleAlarms(): { exact: boolean };
+  /** Opens Android's Alarms & reminders page for the app; false when it couldn't. */
+  openAlarmSettings(): boolean;
+  /** The agent page's "Can schedule itself" (on by default). */
+  canScheduleItself(agentId: string): boolean;
+  /** Saves it and returns it as kept. */
+  setCanScheduleItself(agentId: string, on: boolean): boolean;
+  /** Whether agents of the kind can run schedules (a prompt at start, or a server/hook/reader wake). */
+  kindRunsSchedules(kindId: string): boolean;
+  /** Android's date dialog (month 1..12; minMs..maxMs bound the days); null when cancelled. */
+  pickDate(year: number, month: number, day: number, minMs: number, maxMs: number): Promise<{ year: number; month: number; day: number } | null>;
+  /** Android's time dialog on the phone's own clock; null when cancelled. */
+  pickTime(hour: number, minute: number): Promise<{ hour: number; minute: number } | null>;
   memoryStatus(): NativeMemoryStatus;
   isAnyEngineAlive(): boolean;
   touchEngine(agentId: string): void;

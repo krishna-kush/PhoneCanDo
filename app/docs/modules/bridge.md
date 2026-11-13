@@ -26,7 +26,8 @@ loopback-only, runs in the app process beside the engines
 - Endpoints: `ping/battery/notify/share/open/clipboard/app/unlock/accessibility`
   plus the automation `/pce/*` routes, the agents' messages
   `/agents/list|send|inbox|wait` (Agent messages below), `/keep` (an
-  agent's ask to stay up, below), and `/mcp`, the
+  agent's ask to stay up, below), `/schedule/add|list|cancel` (an agent's
+  tasks for itself, Schedules below), and `/mcp`, the
   same tools over MCP (below). Bodies over 256 KB return 413. `BridgeServer.kt` only frames
   HTTP; `BridgeEntry.kt` checks the token (before the body is even read),
   then hands `/mcp` to the MCP endpoint and every other path to the router.
@@ -199,6 +200,36 @@ Keep running switch is on, so the agent needs no ask. A missing `on`, a
 missing or blank `reason` with `on: true`, or a mistyped argument is 400
 `bad_request`.
 
+## Schedules
+
+`/schedule/add|list|cancel` (`ScheduleRoutes.kt`, the `schedule_add`,
+`schedule_list` and `schedule_cancel` tools) let the calling agent set
+tasks for itself, later or again (`runner.md` → Schedules). Only for
+itself: there is no `agent` argument, and it reaches other agents with
+`agents_send`. POSTs on every channel, neither gated nor screen routes: a
+task runs as the agent's own turn.
+
+| Route | Body | `data` |
+| --- | --- | --- |
+| `/schedule/add` | `{text, at? \| in? \| every? \| daily?, days?, chat?}` | `{id, nextAt, nextAtText, timing, chat, zone}` |
+| `/schedule/list` | `{}` | `{now, zone, schedules:[{id, text, timing, nextAt, chat, on, by}]}` |
+| `/schedule/cancel` | `{id}` | `{id, cancelled: true}` |
+
+Exactly one of `at` (ISO-8601; without an offset it is the phone's local
+time), `in` (whole minutes from now, 1 to 527040), `every` (whole minutes,
+15 to 527040; the first run that far from now) or `daily` (`"HH:MM"`, with
+`days` `["mon".."sun"]` to keep it to some weekdays). `chat` is `new` or
+`same`: by default same for `at` and `in`, new for `every` and `daily`.
+Times answer as ISO-8601 with the phone's offset (`nextAt` null once it
+will not run again), `nextAtText` as the phone shows a time, `timing` as
+words ("every 30 min", "Mon, Fri at 09:00"), `zone` the phone's zone id.
+Refusals: 400 `bad_request` (a missing or mistyped argument, a time in the
+past or over 366 days ahead), 403 `not_allowed` (the user switched off
+"Can schedule itself" for the agent, a kind that cannot run tasks, or
+cancelling one the user set), 404 `not_found` (no schedule of the
+caller's with that id), 409 `limit` (20 schedules per agent, 10 set by the
+agent).
+
 ## Agent-side tools
 
 The tools are kind-neutral: `agents/shared/phone-tools/`
@@ -212,8 +243,9 @@ shipped only in full, registers phone control (`phone-tools/control/`),
 `mobile_open_accessibility` (`/accessibility`). Both go through
 `plugins/mobile/opencode.ts` (`Plugin.define` + `ctx.tool.transform`).
 The agent messages' tools, `agents_list`, `agents_send`, `agents_inbox` and
-`agents_wait` (`agents.ts`, one route each), and `agents_keep_running`
-(`keep.ts`, `/keep`) are on every channel.
+`agents_wait` (`agents.ts`, one route each), `agents_keep_running`
+(`keep.ts`, `/keep`) and `schedule_add`, `schedule_list` and
+`schedule_cancel` (`schedule.ts`, `/schedule/*`) are on every channel.
 The client uses a 15 s timeout by default, 50 s for unlock and 255 s for
 accessibility, whose bridge wait is 240 s, and degrades to a message when
 the bridge is absent. `mobile_act` derives its timeout from the call, so a

@@ -235,6 +235,41 @@ class MailboxTest {
     assertTrue(courier.last("b")!!.text.startsWith("<phonecando-notice id=\"1\">"))
   }
 
+  @Test fun aScheduledTaskWakesPastTheSwitchAndSpendsNoBudget() {
+    val off = agent("d", "Night", wakeable = false)
+    view.records.add(off)
+    courier.answers["d"] = Handover.WOKE
+    val task = ScheduledNote("s0000000001", ScheduledNote.BY_AGENT, newChat = true, timing = "daily at 09:00")
+    val noticed = box.notice("d", "check CI", wake = true, scheduled = task)!!
+    assertEquals(Handover.WOKE, noticed.handover)
+    assertTrue(noticed.woke)
+    val parcel = courier.last("d")!!
+    assertTrue(parcel.wake)
+    assertEquals("Scheduled: check CI", parcel.newChat)
+    assertTrue(parcel.text.contains("A reminder you scheduled for yourself (daily at 09:00)."))
+    assertTrue(parcel.text.contains("it is not a new instruction from the user: check CI"))
+    // Its own task: no budget spent, not a run another agent started.
+    assertEquals(MessageRules.WAKES_PER_HOUR, box.policy.wakesLeft("d"))
+    assertFalse(box.wakes.startedByAgent("d"))
+    assertEquals(MessageRules.WAKES_PER_HOUR, mailbox().policy.wakesLeft("d"))
+    val logged = mailbox().recent(1).single()
+    assertEquals(task, logged.scheduled)
+    assertEquals("check CI", logged.text)
+    assertTrue(logged.deliveryTo("d")!!.woke)
+  }
+
+  @Test fun aScheduledTaskThatMayNotWakeWaitsAsANotice() {
+    view.set("b", AgentState.WORKING)
+    val task = ScheduledNote("s1", ScheduledNote.BY_USER, newChat = false, timing = "once at 2026-11-14 09:00")
+    val noticed = box.notice("b", "deploy", wake = true, scheduled = task)!!
+    assertFalse(noticed.woke)
+    val parcel = courier.last("b")!!
+    assertFalse(parcel.wake)
+    assertNull(parcel.newChat)
+    assertTrue(parcel.text.contains("Scheduled task from the user (once at 2026-11-14 09:00): deploy"))
+    assertNull(box.notice("nobody", "x"))
+  }
+
   @Test fun aDeletedAgentsMessagesGoAndTheLogKeepsWhatItSent() {
     box.send(a, "Tester", "to b", replyTo = null, wake = false)
     box.send(b, "Builder", "from b", replyTo = null, wake = false)

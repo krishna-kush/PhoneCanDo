@@ -15,9 +15,16 @@ import type {
   NativeLaunchTarget,
   NativeMemoryStatus,
   NativeMessage,
+  NativeModelServerLog,
   NativeOpenUrlAction,
   NativePromptReading,
   NativeRunLimits,
+  NativeRunNowResult,
+  NativeSchedule,
+  NativeSchedulePatch,
+  NativeScheduleResult,
+  NativeScheduleRun,
+  NativeScheduleSpec,
   NativeScreenQueue,
   NativeTerminalAttach,
   NativeTerminalTheme,
@@ -55,7 +62,24 @@ export type RunnerModule = {
   unreadCounts?(): Record<string, number>;
   screenQueue?(): NativeScreenQueue;
   setAgentWakeable?(agentId: string, wakeable: boolean): NativeAgent;
+  /** Schedules (engine/schedule/, which checks what these return). Absent from native builds older than schedules. */
+  listSchedules?(): NativeSchedule[];
+  addSchedule?(spec: NativeScheduleSpec): NativeScheduleResult;
+  updateSchedule?(id: string, patch: NativeSchedulePatch): NativeScheduleResult;
+  removeSchedule?(id: string): boolean;
+  runScheduleNow?(id: string): NativeRunNowResult;
+  scheduleRuns?(limit: number): NativeScheduleRun[];
+  scheduleAlarms?(): { exact: boolean };
+  openAlarmSettings?(): boolean;
+  canScheduleItself?(agentId: string): boolean;
+  setCanScheduleItself?(agentId: string, on: boolean): boolean;
+  kindRunsSchedules?(kindId: string): boolean;
+  /** Android's date and time dialogs (engine/pick.ts). Absent from native builds older than them. */
+  pickDate?(year: number, month: number, day: number, minMs: number, maxMs: number): Promise<{ year: number; month: number; day: number } | null>;
+  pickTime?(hour: number, minute: number): Promise<{ hour: number; minute: number } | null>;
   promptReading(): NativePromptReading | null;
+  /** Null when the model's server never ran. Absent from native builds older than the Server log page. */
+  modelServerLog?(modelId: string): Promise<NativeModelServerLog | null>;
   startEngine(agentId: string): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;

@@ -37,6 +37,16 @@ class MessageStoreTest {
     assertEquals(loaded.messages, MessageStore(file).load(now).messages)
   }
 
+  @Test fun aScheduledTasksNoteRoundTrips() {
+    val task = msg(1).copy(notice = true, scheduled = ScheduledNote("s0000000001", ScheduledNote.BY_AGENT, true, "every 2 h"))
+    val store = MessageStore(file)
+    store.append(task)
+    store.append(msg(2))
+    val loaded = MessageStore(file).load(now).messages
+    assertEquals(task, loaded[0])
+    assertEquals(null, loaded[1].scheduled)
+  }
+
   @Test fun loadKeepsTheNewest500AndNoneOlderThanAWeek() {
     val store = MessageStore(file)
     store.append(msg(1, sentAt = now - MessageRules.LOG_MAX_AGE_MS - 1))

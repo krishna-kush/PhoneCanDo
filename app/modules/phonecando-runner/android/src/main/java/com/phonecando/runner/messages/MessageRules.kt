@@ -38,6 +38,9 @@ object MessageRules {
   /** A wake asked for longer ago than this no longer wakes (the recipient sees it at its next turn). */
   const val WAKE_TTL_MS = 10 * MINUTE_MS
 
+  /** A scheduled task's notice wakes for this long after it was posted (its agent may still be starting). */
+  const val SCHEDULED_WAKE_TTL_MS = 30 * MINUTE_MS
+
   /** A woken agent that shows no run within this was not woken after all. */
   const val WAKE_START_MS = MINUTE_MS
 

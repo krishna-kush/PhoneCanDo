@@ -91,7 +91,8 @@ class InboxCourierTest {
     val outside = File(home, "keep.txt").apply { writeText("keep") }
     Files.createSymbolicLink(File(dir, "claimed.99/link").toPath(), home.toPath())
     folder.prepare()
-    assertEquals(setOf("waiter"), dir.list()!!.toSet())
+    // The earlier life's waiter went with its engine: none waits for the new one.
+    assertEquals(emptySet<String>(), dir.list()!!.toSet())
     assertEquals("keep", outside.readText())
   }
 
@@ -146,6 +147,46 @@ class InboxCourierTest {
     // The engine lists none: still queued.
     val empty = InboxCourier({ plan }, { folder }, { ServerSeat("4096", "pw", null) }, { 200 }, fetch = { 200 to "{\"data\":[]}" })
     assertEquals(Handover.NONE, empty.handOver(b, parcel))
+  }
+
+  @Test fun aScheduledTaskForANewChatWakesAChatMadeForItOnce() {
+    val plan = object : InboxPlan {
+      override val hooks: Map<String, Int> = emptyMap()
+      override val reader = false
+      override val server = true
+      override val wakesByServer = true
+
+      override fun hookOutput(event: String, text: String) = text
+
+      override fun request(call: InboxCall, port: String, password: String, sessionId: String, text: String) =
+        InboxRequest("http://127.0.0.1:$port/$call/$sessionId", emptyMap(), "POST", text)
+
+      override fun createRequest(port: String, password: String, title: String) =
+        InboxRequest("http://127.0.0.1:$port/session", emptyMap(), "POST", title)
+
+      override fun createdId(answer: String) = Regex("\"id\":\"([^\"]+)\"").find(answer)?.groupValues?.get(1)
+    }
+    val posted = ArrayList<String>()
+    val made = ArrayList<String>()
+    var status = 500
+    val courier = InboxCourier(
+      { plan }, { folder }, { ServerSeat("4096", "pw", "ses_current") }, { posted += it.url; status },
+      fetch = { made += it.body; 200 to "{\"id\":\"ses_new${made.size}\"}" },
+    )
+    val task = parcel.copy(newChat = "Scheduled: check CI")
+    assertEquals(Handover.NONE, courier.handOver(b, task))
+    // The post failed: the retry wakes the chat already made, not a second one.
+    status = 200
+    assertEquals(Handover.WOKE, courier.handOver(b, task))
+    assertEquals(listOf("Scheduled: check CI"), made)
+    assertEquals(listOf("http://127.0.0.1:4096/WAKE/ses_new1", "http://127.0.0.1:4096/WAKE/ses_new1"), posted)
+    // Not waking: no chat is made, it goes to the current one.
+    assertEquals(Handover.POSTED, courier.handOver(b, task.copy(ids = listOf(9), wake = false)))
+    assertEquals("http://127.0.0.1:4096/DELIVER/ses_current", posted.last())
+    // A kind that makes no chats wakes the current one.
+    val plain = InboxCourier({ Plan(server = true, wakesByServer = true) }, { folder }, { ServerSeat("4096", "pw", "ses_current") }, { posted += it.url; 200 })
+    assertEquals(Handover.WOKE, plain.handOver(b, task))
+    assertEquals("http://127.0.0.1:4096/WAKE/ses_current", posted.last())
   }
 
   @Test fun noChatOrAFailureKeepsThemQueued() {

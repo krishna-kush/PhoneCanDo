@@ -12,6 +12,9 @@ import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.work.KeepAsks
 import com.phonecando.runner.engine.work.KeepRunning
 import com.phonecando.runner.messages.Messages
+import com.phonecando.runner.schedule.PhoneTime
+import com.phonecando.runner.schedule.Schedules
+import com.phonecando.runner.schedule.SelfScheduling
 
 /** A running loopback bridge: engines get [url] at launch, each with its own token. */
 interface BridgeHandle {
@@ -35,7 +38,9 @@ interface BridgeHandle {
 // is told apart there (WakeTracker) for the screen line (BridgeRouter).
 // The screen line moves on every second (ScreenTicker), and an agent whose
 // engine is gone leaves it. An agent's ask to stay up (/keep, KeepRoutes)
-// goes to the work watch's KeepAsks, which drops it with the engine.
+// goes to the work watch's KeepAsks, which drops it with the engine. An
+// agent's tasks for itself (/schedule/*, ScheduleRoutes) go to the
+// process's Schedules, as long as its "Can schedule itself" is on.
 object Bridge {
   private const val TAG = "PhoneCanDoBridge"
   private const val PREFS = "phonecando_bridge"
@@ -81,7 +86,8 @@ object Bridge {
       PceRoutes(automation).table() +
       PromptRoutes(app, PromptFlows(BridgePrompts.registry, launcher), automation, lock).table() +
       AgentRoutes(messages.mailbox, messages.view).table() +
-      KeepRoutes(KeepAsks.shared, KeepRunning.get(app)::isOn) { Engines.work()?.poke() }.table()
+      KeepRoutes(KeepAsks.shared, KeepRunning.get(app)::isOn) { Engines.work()?.poke() }.table() +
+      ScheduleRoutes(Schedules.get(app).book, SelfScheduling.get(app)::isOn, timeText = PhoneTime.text(app)).table()
     val screen = ScreenLease(LEASE_IDLE_MS, notices = messages.screenNotices(LEASE_IDLE_MS)) { SystemClock.elapsedRealtime() }
     val router = BridgeRouter(
       full = channel == "full",

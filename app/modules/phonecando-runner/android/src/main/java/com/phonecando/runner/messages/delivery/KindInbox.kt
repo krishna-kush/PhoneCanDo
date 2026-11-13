@@ -6,8 +6,9 @@ import com.phonecando.agents.kit.manifest.InboxWake
 import com.phonecando.agents.kit.render.ManifestKind
 
 // A kind's manifest `inbox` block (kit ManifestKind.inbox, renderInboxHook,
-// inboxRequest, inboxLatestRequest/Id) as an InboxPlan: the one place messaging meets the kit's
-// inbox API. Null for a kind without the block (it only pulls).
+// inboxRequest, inboxLatestRequest/Id, inboxCreateRequest/CreatedId) as an
+// InboxPlan: the one place messaging meets the kit's inbox API. Null for a
+// kind without the block (it only pulls).
 class KindInbox private constructor(private val kind: ManifestKind) : InboxPlan {
   private val spec = checkNotNull(kind.inbox)
 
@@ -24,6 +25,11 @@ class KindInbox private constructor(private val kind: ManifestKind) : InboxPlan 
   override fun latestRequest(port: String, password: String): InboxRequest? = kind.inboxLatestRequest(port, password)
 
   override fun latestId(answer: String): String? = kind.inboxLatestId(answer)
+
+  override fun createRequest(port: String, password: String, title: String): InboxRequest? =
+    kind.inboxCreateRequest(port, password, title)
+
+  override fun createdId(answer: String): String? = kind.inboxCreatedId(answer)
 
   companion object {
     fun of(kind: ManifestKind): KindInbox? = if (kind.inbox == null) null else KindInbox(kind)

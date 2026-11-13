@@ -4,8 +4,10 @@ package com.phonecando.runner.messages
 //   {id, from:{agentId|null, name, kind|null},
 //    to:{kind:"agent"|"machine"|"phone", agentId?, name?, imageId?},
 //    text, replyTo, sentAt, hop, notice,
-//    deliveries:[{agentId, name, status, woke, reason?}]}
-// A runner notice is from agentId null, name "PhoneCanDo". Names are the
+//    deliveries:[{agentId, name, status, woke, reason?}],
+//    scheduled:{scheduleId, by:"user"|"agent", newChat, timing}|null}
+// A runner notice is from agentId null, name "PhoneCanDo"; a scheduled
+// task's notice has `scheduled` (text is the task's own). Names are the
 // ones the agents had when it was sent; kind is the sender's kind id.
 // Numbers are doubles, as the bridge to JS passes them. Pure.
 object MessageJs {
@@ -30,6 +32,9 @@ object MessageJs {
         put("woke", d.woke)
         d.reason?.let { put("reason", it) }
       }
+    },
+    "scheduled" to m.scheduled?.let {
+      mapOf("scheduleId" to it.scheduleId, "by" to it.by, "newChat" to it.newChat, "timing" to it.timing)
     },
   )
 

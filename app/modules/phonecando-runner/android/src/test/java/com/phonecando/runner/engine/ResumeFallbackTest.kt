@@ -37,7 +37,7 @@ class ResumeFallbackTest {
   )
 
   private fun argv(plan: LaunchPlan) =
-    plan.kind.launch(LaunchContext("/lib", plan.home, image.tmp, "", "pw", image.root, plan.resume)).argv.drop(3)
+    plan.kind.launch(LaunchContext("/lib", plan.home, image.tmp, "", "pw", image.root, plan.resume, prompt = plan.prompt)).argv.drop(3)
 
   @Test fun aResumedTuiThatDiesBeforeReadyLaunchesOnceWithoutThem() {
     val first = plan(resuming, ranBefore = true)
@@ -56,6 +56,13 @@ class ResumeFallbackTest {
     assertFalse(ResumeFallback.appliesAfterReady(first, 1, sawEvent = true))
     assertFalse(ResumeFallback.appliesAfterReady(first, 0, sawEvent = false))
     assertFalse(ResumeFallback.appliesAfterReady(plan(resuming, ranBefore = false), 1, sawEvent = false))
+  }
+
+  @Test fun theLaunchAgainKeepsTheFirstPrompt() {
+    val prompting = tui(""","resume":{"args":["--continue"],"at":1},"prompt":{"args":["{{prompt}}"]}""")
+    val first = plan(prompting, ranBefore = true).copy(prompt = "check CI")
+    assertEquals(listOf("demo", "--continue", "--x", "check CI"), argv(first))
+    assertEquals(listOf("demo", "--x", "check CI"), argv(ResumeFallback.without(first)))
   }
 
   @Test fun everyOtherExitCountsAsItWould() {

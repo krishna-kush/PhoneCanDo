@@ -27,6 +27,12 @@
   <!-- Runtime-requested on launch (Android 13+ drops plain posts without the
        grant; the app never asked, so appops sat at `ignore`). -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- Schedules (schedule/): exact alarms once you allow "Alarms & reminders"
+       (every channel; not USE_EXACT_ALARM, which only alarm and calendar
+       apps may hold), else inexact ones that may run late; and the alarm
+       armed again after a reboot. -->
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
   <application>
     <!-- specialUse: Android gives it no time limit (dataSync gets 6 hours in
@@ -54,6 +60,29 @@
       android:exported="false">
       <intent-filter>
         <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
+    <!-- Schedules' one alarm (schedule/ScheduleAlarmReceiver.kt): only our
+         own PendingIntent sends it. -->
+    <receiver
+      android:name="com.phonecando.runner.schedule.ScheduleAlarmReceiver"
+      android:exported="false" />
+    <!-- Arms that alarm again (schedule/ScheduleBootReceiver.kt). Not
+         exported: system_server sends all of these as the system uid, which
+         reaches a receiver that is not exported (ActivityManager's
+         checkComponentPermission lets the root and system uids through), as
+         PackageReplacedReceiver above and WorkManager's RescheduleReceiver
+         get theirs. Boot, time and zone changes are allowed implicit
+         broadcasts for manifest receivers; the other two go to us by name. -->
+    <receiver
+      android:name="com.phonecando.runner.schedule.ScheduleBootReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        <action android:name="android.intent.action.TIME_SET" />
+        <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+        <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
       </intent-filter>
     </receiver>
     <!-- Telemetry: installs the crash handler before Application.onCreate

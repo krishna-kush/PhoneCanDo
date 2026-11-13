@@ -72,6 +72,7 @@ internal class AgentNotices(private val context: Context) {
     private const val PROMPT_SLOTS = 256
     private const val OPEN_URL_BASE = 9300
     private const val OPEN_URL_SLOTS = 64
+    // 9400: a scheduled task that is due and needs you (schedule/DueNotice).
 
     /** /notify: one per agent and title, so a new status replaces the last. */
     fun notifyId(title: String) = NOTIFY_BASE + (title.hashCode() and 0xfff)
