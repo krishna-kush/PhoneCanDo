@@ -8,8 +8,29 @@ import type { Route, TerminalSession } from './routes';
 
 export type Page = { key: number; route: Route };
 
-export function pushPage(pages: readonly Page[], page: Page): Page[] {
+/**
+ * The page on top. The page already on top again is no new page: a second
+ * tap before the first one's page showed (a big page takes a render to
+ * build, an action may wait first) would stack it twice, and Back would
+ * have to close it twice. Then [pages] itself comes back, so nothing that
+ * watches the stack (transitionStore.ts) sees a change.
+ */
+export function pushPage(pages: Page[], page: Page): Page[] {
+  const top = pages[pages.length - 1];
+  if (top && sameRoute(top.route, page.route)) return pages;
   return [...pages, page];
+}
+
+/** The same page: the same name and the same value under every key, in any order. */
+export function sameRoute(a: Route, b: Route): boolean {
+  if (a.name !== b.name) return false;
+  const x = a as Record<string, unknown>;
+  const y = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(x), ...Object.keys(y)]);
+  for (const key of keys) {
+    if (JSON.stringify(x[key]) !== JSON.stringify(y[key])) return false;
+  }
+  return true;
 }
 
 /** One page down; Home (an empty stack) stays as it is. */

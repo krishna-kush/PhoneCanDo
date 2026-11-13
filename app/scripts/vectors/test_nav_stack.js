@@ -24,6 +24,20 @@ const names = (pages) => pages.map((p) => p.route.name);
   const p = (key, route) => ({ key, route });
   const agent = p(1, { name: 'agent', agentId: 'a1' });
   t('push opens on top', names(s.pushPage([agent], p(2, { name: 'agent-model', agentId: 'a1' }))), ['agent', 'agent-model']);
+  // A second tap before the first one's page showed: still one page.
+  const once = [agent];
+  t('the top page again is no new page', s.pushPage(once, p(2, { agentId: 'a1', name: 'agent' })) === once, true);
+  t('another agent is a new page', names(s.pushPage([agent], p(2, { name: 'agent', agentId: 'a2' }))), ['agent', 'agent']);
+  t('a flag makes it another page', names(s.pushPage([agent], p(2, { name: 'agent', agentId: 'a1', fresh: true }))), ['agent', 'agent']);
+  t('only the top counts', names(s.pushPage([agent, p(2, { name: 'settings' })], p(3, { name: 'agent', agentId: 'a1' }))), ['agent', 'settings', 'agent']);
+  t('nested parts compare too', [
+    s.sameRoute({ name: 'new-agent-place', pick: { kindId: 'oc', modelId: null } }, { name: 'new-agent-place', pick: { kindId: 'oc', modelId: null } }),
+    s.sameRoute({ name: 'new-agent-place', pick: { kindId: 'oc', modelId: null } }, { name: 'new-agent-place', pick: { kindId: 'cc', modelId: null } }),
+  ], [true, false]);
+  t('two terminals are two pages', s.sameRoute(
+    { name: 'terminal', session: { id: 1, kind: 'linux', agentId: 'a1' } },
+    { name: 'terminal', session: { id: 2, kind: 'linux', agentId: 'a1' } },
+  ), false);
   t('pop goes one down', names(s.popPage([agent, p(2, { name: 'settings' })])), ['agent']);
   t('pop on Home stays Home', s.popPage([]), []);
   t('replace swaps the top', names(s.replaceTop([agent, p(2, { name: 'folder-picker' })], p(3, { name: 'settings' }))), ['agent', 'settings']);
