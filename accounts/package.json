@@ -1,0 +1,21 @@
+{
+  "name": "phonecando-accounts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Accounts: optional Google sign-in for PhoneCanDo, its sessions and the share links a signed-in person keeps.",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "typecheck": "node scripts/typecheck.mjs",
+    "deps": "node scripts/check-deps.mjs",
+    "check": "node scripts/typecheck.mjs && node scripts/check-deps.mjs",
+    "test": "node --test --test-timeout=60000 \"core/**/*.test.ts\" \"runtime/**/*.test.ts\" \"stores/**/*.test.ts\" \"hosts/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3"
+  }
+}

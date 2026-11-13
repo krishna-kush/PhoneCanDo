@@ -1,0 +1,131 @@
+name: Accounts
+
+# Accounts (accounts/, its own pnpm package): optional Google sign-in, its
+# sessions and the share-link list a signed-in person keeps. Per-module
+# type-check plus the accounts/AGENTS.md dependency law, and the route,
+# token-check and store tests on the Node floor and current LTS. Nothing here
+# deploys: the Worker that mounts these routes is built and deployed by
+# Cloudflare Workers Builds on every push to prod (tce/README.md), and its
+# bundle is checked by tce.yml. Runs when accounts changes, or when tce, the
+# app or the site change (the law checks that only the Worker imports
+# accounts); nightly for drift; on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - accounts/**
+      # check-deps.mjs reads these for imports of accounts from outside.
+      - tce/**
+      - app/src/**
+      - web/src/**
+      - .github/workflows/accounts.yml
+  pull_request:
+    paths:
+      - accounts/**
+      - tce/**
+      - app/src/**
+      - web/src/**
+      - .github/workflows/accounts.yml
+  workflow_dispatch:
+  schedule:
+    - cron: '53 2 * * *'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. A force-push's replaced commit is
+# cancelled by cancel-replaced.yml. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    name: check (types + dependency law)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # pnpm version comes from the root package.json packageManager field.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: accounts/pnpm-lock.yaml
+      - name: Install accounts deps (frozen lockfile)
+        run: pnpm -C accounts install --frozen-lockfile
+      # tsc per module with only the globals that layer may use, then
+      # scripts/check-deps.mjs: module edges, bare imports, and that only
+      # tce/hosts/cloudflare/ imports accounts from outside.
+      - name: pnpm -C accounts check
+        run: pnpm -C accounts check
+      - name: Syntax-check accounts scripts (node --check)
+        run: |
+          set -euo pipefail
+          find accounts/scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check
+          echo "node --check: $(find accounts/scripts -name '*.mjs' | wc -l) files OK"
+
+  # Every *.test.ts: Google ID-token checks against a test RSA key, the key
+  # cache, and the route scenarios on the memory store, node:sqlite and the
+  # D1 driver (no network, no Cloudflare).
+  test:
+    name: test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 is the floor (accounts/package.json engines, type stripping and
+        # node:sqlite unflagged); 24 is the current LTS devs run.
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+          cache-dependency-path: accounts/pnpm-lock.yaml
+      - name: Install accounts deps (frozen lockfile)
+        run: pnpm -C accounts install --frozen-lockfile
+      - name: pnpm -C accounts test
+        run: pnpm -C accounts test
+
+  accounts-ok:
+    # The one accounts check to require in branch protection: green only when
+    # every job above succeeded (a skipped or cancelled job counts as a failure).
+    name: accounts-ok
+    if: always()
+    needs: [check, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All gates passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Accounts gates"
+            echo
+            echo "| Job | Result |"
+            echo "|---|---|"
+            jq -r 'to_entries[] | "| \(.key) | \(.value.result) |"' <<< "$NEEDS"
+          } >> "$GITHUB_STEP_SUMMARY"
+          bad=$(jq -r '[to_entries[] | select(.value.result != "success") | "\(.key)=\(.value.result)"] | join(", ")' <<< "$NEEDS")
+          if [ -n "$bad" ]; then
+            echo "::error::gates not successful: $bad"
+            exit 1
+          fi
+          echo "all gates succeeded"
