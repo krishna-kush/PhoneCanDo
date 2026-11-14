@@ -1,14 +1,16 @@
 ---
-// The A-series catalog: every design an agent can wear (mascot/designs.ts),
+// The A-series wardrobe: every design an agent can wear (mascot/designs.ts),
 // in each of the five shapes and with amber in front, drawn by the same Bot
-// the cards use, so it can't drift from the spec. Unlisted: a sheet for us
-// to look the designs over, not a part of the manual.
+// the cards use, so it can't drift from the spec. Earned designs hang at the
+// end as locked silhouettes. Hidden on purpose: search engines are told to
+// skip it (noindex), and the only way in is a secret door on the main page,
+// the booster binder's "Full set" stamp, which shows once every card is in.
 import Base from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import Footer from "../components/Footer.astro";
 import Bot from "../components/sections/models/Bot.astro";
 import { SHAPES } from "../../../mascot/body.ts";
-import { DESIGNS, type Design } from "../../../mascot/designs.ts";
+import { DESIGNS, EARNED, type Design } from "../../../mascot/designs.ts";
 import { FACES } from "../../../mascot/parts/face/index.ts";
 import { HATS } from "../../../mascot/parts/hat/index.ts";
 import { NECKS } from "../../../mascot/parts/neck/index.ts";
@@ -16,23 +18,26 @@ import { site } from "../data/site";
 
 const SIZE = 26;
 const worn = (d: Design) =>
-    [d.hat && HATS[d.hat].label, d.neck && NECKS[d.neck].label, d.face && FACES[d.face].label].filter(Boolean).join(" · ") || "Nothing";
+    [d.hat && HATS[d.hat].label, d.neck && NECKS[d.neck].label, d.face && FACES[d.face].label].filter(Boolean).join(" · ") ||
+    "Nothing · bold choice";
 const parts = Object.keys(HATS).length + Object.keys(NECKS).length + Object.keys(FACES).length;
+const hangers = EARNED.length === 1 ? "One hanger is still empty" : `${EARNED.length} hangers are still empty`;
 ---
 
-<Base title={`The A-series · ${site.name}`} description="Every design an agent can wear." noindex>
+<Base title={`The wardrobe · ${site.name}`} description="Every outfit an A-series unit can wear. Not in the manual." noindex>
     <div class="page">
         <Nav />
 
         <main class="catalog">
             <p class="eyebrow">
                 <span class="dot" aria-hidden="true"></span>
-                FIG. A-xx · The A-series
+                FIG. A-xx · The wardrobe · staff only
             </p>
-            <h1>Every design an agent can wear.</h1>
+            <h1>You found the <em>wardrobe.</em></h1>
             <p class="catalog-sub">
-                {DESIGNS.length} designs from {parts} parts, each in {SHAPES.length} shapes, with red or amber in front. A new agent
-                picks one at random; you can change it on the agent's page.
+                Not in the manual, on purpose. These are the {DESIGNS.length} outfits our units wear: {parts} parts,
+                {SHAPES.length} body shapes, red or amber up front. Every new agent grabs one at random on its way in;
+                swap it any time on the agent's page. {hangers}: someone has to earn it.
             </p>
 
             <ol class="catalog-grid">
@@ -52,12 +57,58 @@ const parts = Object.keys(HATS).length + Object.keys(NECKS).length + Object.keys
                         </li>
                     ))
                 }
+                {
+                    EARNED.map((d, i) => (
+                        <li class="catalog-card catalog-locked">
+                            <p class="catalog-name">
+                                <span>{String(DESIGNS.length + i + 1).padStart(2, "0")}</span> ???
+                            </p>
+                            <p class="catalog-parts">Earned, never handed out: finish every job of your first shift.</p>
+                            <div class="catalog-row" style={`--s:${SIZE}px`}>
+                                <Bot look={{ design: d.id, shape: "square", swap: false, eyes: "dot" }} size={SIZE} />
+                                <span class="catalog-ask" aria-hidden="true">?</span>
+                            </div>
+                            <span class="catalog-stamp" aria-hidden="true">Locked</span>
+                        </li>
+                    ))
+                }
             </ol>
+            <p class="catalog-end">That's the whole rack. Back to the <a href="/">manual</a>, and act like you never saw it.</p>
         </main>
 
         <Footer />
     </div>
 </Base>
+
+<script>
+    // A press on a card makes its units hop, one after another, the way a
+    // card's unit hops on the main page; the locked one's silhouette shakes
+    // its head instead: no peeking.
+    const HOP: Keyframe[] = [
+        { translate: "0 0", rotate: "0deg", scale: "1" },
+        { translate: "0 -10px", rotate: "-8deg", scale: "1", offset: 0.3 },
+        { translate: "0 0", rotate: "0deg", scale: "1.1 0.9", offset: 0.6 },
+        { translate: "0 0", rotate: "0deg", scale: "0.96 1.04", offset: 0.8 },
+        { translate: "0 0", rotate: "0deg", scale: "1" },
+    ];
+    const SHAKE: Keyframe[] = [
+        { translate: "0 0" },
+        { translate: "-4px 0" },
+        { translate: "4px 0" },
+        { translate: "-3px 0" },
+        { translate: "0 0" },
+    ];
+    const still = matchMedia("(prefers-reduced-motion: reduce)");
+    for (const card of document.querySelectorAll<HTMLElement>(".catalog-card")) {
+        const locked = card.classList.contains("catalog-locked");
+        card.addEventListener("click", () => {
+            if (still.matches) return;
+            card.querySelectorAll<HTMLElement>(".bot").forEach((bot, i) =>
+                bot.animate(locked ? SHAKE : HOP, { duration: locked ? 380 : 550, delay: i * 60, easing: "ease-out" }),
+            );
+        });
+    }
+</script>
 
 <style>
     .catalog {
@@ -65,6 +116,10 @@ const parts = Object.keys(HATS).length + Object.keys(NECKS).length + Object.keys
     }
     .catalog h1 {
         margin: 12px 0 8px;
+    }
+    .catalog h1 em {
+        font-style: italic;
+        color: var(--red);
     }
     .catalog-sub {
         max-width: 60ch;
@@ -83,6 +138,7 @@ const parts = Object.keys(HATS).length + Object.keys(NECKS).length + Object.keys
         padding: 14px 16px 16px;
         border: 1px solid var(--line);
         background: var(--panel);
+        cursor: pointer;
     }
     .catalog-name {
         margin: 0;
@@ -107,5 +163,118 @@ const parts = Object.keys(HATS).length + Object.keys(NECKS).length + Object.keys
         gap: 14px;
         padding-top: calc(var(--s) * 0.8);
         margin-top: 4px;
+    }
+    /* Squash and stretch from the feet; every unit blinks now and then, out
+       of step with its neighbours, like the cards'. */
+    .catalog-row :global(.bot) {
+        transform-origin: 50% 100%;
+    }
+    .catalog-row :global(.bot-eye) {
+        animation: wardrobe-blink 5s infinite;
+    }
+    .catalog-card:nth-child(3n + 2) .catalog-row :global(.bot-eye) {
+        animation-delay: -1.7s;
+    }
+    .catalog-card:nth-child(3n) .catalog-row :global(.bot-eye) {
+        animation-delay: -3.3s;
+    }
+    .catalog-locked .catalog-row :global(.bot-eye) {
+        animation: none;
+    }
+    @keyframes wardrobe-blink {
+        0%, 95%, 100% { scale: 1 1; }
+        97% { scale: 1 0.1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .catalog-row :global(.bot-eye) {
+            animation: none;
+        }
+    }
+    /* Hover: the card lifts and its units bob in a wave; the one under the
+       pointer hops, like a card's unit on the main page. The locked one
+       only shakes its head, and its question mark wobbles. A press (the
+       script) still wins over all of it. */
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+        .catalog-card {
+            transition: translate 0.2s ease-out;
+        }
+        .catalog-card:hover {
+            translate: 0 -2px;
+        }
+        .catalog-card:not(.catalog-locked):hover .catalog-row :global(.bot) {
+            animation: wardrobe-bob 1.2s ease-in-out infinite;
+        }
+        .catalog-card:hover .catalog-row :global(.bot:nth-child(2)) { animation-delay: -0.2s; }
+        .catalog-card:hover .catalog-row :global(.bot:nth-child(3)) { animation-delay: -0.4s; }
+        .catalog-card:hover .catalog-row :global(.bot:nth-child(4)) { animation-delay: -0.6s; }
+        .catalog-card:hover .catalog-row :global(.bot:nth-child(5)) { animation-delay: -0.8s; }
+        .catalog-card:hover .catalog-row :global(.bot:nth-child(6)) { animation-delay: -1s; }
+        .catalog-card:not(.catalog-locked):hover .catalog-row :global(.bot:hover) {
+            animation: wardrobe-hop 0.55s ease-out;
+        }
+        .catalog-locked .catalog-row :global(.bot:hover) {
+            animation: wardrobe-shake 0.38s ease-out;
+        }
+        .catalog-locked:hover .catalog-ask {
+            animation: wardrobe-wobble 0.7s ease-in-out infinite;
+        }
+    }
+    @keyframes wardrobe-bob {
+        50% { translate: 0 -3px; }
+    }
+    @keyframes wardrobe-hop {
+        30% { translate: 0 -10px; rotate: -8deg; }
+        60% { translate: 0 0; rotate: 0deg; scale: 1.1 0.9; }
+        80% { scale: 0.96 1.04; }
+    }
+    @keyframes wardrobe-shake {
+        25% { translate: -4px 0; }
+        50% { translate: 4px 0; }
+        75% { translate: -3px 0; }
+    }
+    @keyframes wardrobe-wobble {
+        25% { rotate: -12deg; }
+        75% { rotate: 12deg; }
+    }
+    /* An earned design: a dashed hanger with its unit in silhouette, every
+       colour it wears turned to the page's faint ink, and a stamp on it. */
+    .catalog-locked {
+        position: relative;
+        border-style: dashed;
+        border-color: var(--line-2);
+    }
+    .catalog-locked .catalog-row {
+        --red: var(--faint);
+        --accent: var(--line-2);
+        --on-primary: var(--faint);
+        --art-bg: var(--faint);
+        --bot-line: var(--faint);
+        align-items: center;
+    }
+    .catalog-ask {
+        display: inline-block;
+        font: 400 32px/1 var(--serif);
+        color: var(--red);
+    }
+    .catalog-stamp {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        padding: 4px 7px;
+        border: 1px solid var(--red);
+        color: var(--red);
+        font: 500 8.5px/1 var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        rotate: 5deg;
+    }
+    .catalog-end {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 14px;
+    }
+    .catalog-end a {
+        color: var(--fg);
+        text-underline-offset: 3px;
     }
 </style>

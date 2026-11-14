@@ -67,7 +67,7 @@ const builtIn = cards.filter((c) => c.builtIn).length;
     <div class="binder-wrap">
         <p class="booster-label">
             <b>Binder</b>
-            <span class="binder-full">Full set</span>
+            <a class="binder-full" href="/mascots/">Full set · the wardrobe →</a>
         </p>
         <ol class="binder" data-binder>
             {cards.map((card) => (
@@ -358,16 +358,24 @@ const builtIn = cards.filter((c) => c.builtIn).length;
       padding: 14px 18px 16px;
       border-top: 1px solid var(--line);
     }
+    /* The full set's stamp is the secret door to the wardrobe (/mascots/):
+       hidden, so neither seen nor reachable, until every card is in. */
     .binder-full {
       padding: 4px 7px;
       border: 1px solid var(--red);
       color: var(--red);
+      text-decoration: none;
       transform: rotate(-4deg);
       visibility: hidden;
     }
     .booster[data-full] .binder-full {
       visibility: visible;
       animation: full-stamp 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.2);
+    }
+    .booster[data-full] .binder-full:hover,
+    .booster[data-full] .binder-full:focus-visible {
+      background: var(--red);
+      color: var(--on-primary);
     }
     @keyframes full-stamp { from { opacity: 0; transform: rotate(-16deg) scale(1.9); } }
     .binder {

@@ -25,6 +25,7 @@ export const sceneLines: Record<string, string> = {
   sends: 'packing light',
   never: 'lips sealed',
   controls: "you're the boss",
+  extras: 'only if you want',
   site: 'no cookies? :(',
   kept: 'best before…',
   elsewhere: 'who i call',
@@ -43,7 +44,7 @@ export const toyLines = {
   upright: 'phew · upright',
   newCards: (n: number) => (n === 1 ? 'new card!' : `${n} new cards!`),
   dupes: 'dupes · again?',
-  fullSet: 'full set! ✓',
+  fullSet: 'psst · wardrobe',
   brainIn: (name: string) => `${name} in!`,
   seal: ['still 0 shared', 'yep · 0 shared', 'stamp all u like', 'nothing leaks'],
   // The Crew section: the floor plan's notes, the screen's line.
