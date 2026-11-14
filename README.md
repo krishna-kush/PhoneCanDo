@@ -12,7 +12,7 @@
 <p align="center">
   <a href="LICENSE"><img alt="Source-available" src="https://img.shields.io/badge/license-source--available-111?style=flat-square"></a>
   <img alt="Android" src="https://img.shields.io/badge/platform-Android-3DDC84?style=flat-square&logo=android&logoColor=white">
-  <img alt="Alpha" src="https://img.shields.io/badge/status-alpha-f59e0b?style=flat-square">
+  <a href="https://github.com/krishna-kush/PhoneCanDo/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/krishna-kush/PhoneCanDo?style=flat-square&label=release&color=f59e0b"></a>
 </p>
 
 ---

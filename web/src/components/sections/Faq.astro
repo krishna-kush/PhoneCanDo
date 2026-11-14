@@ -23,7 +23,7 @@ import RollDie from "./faq/RollDie.astro";
     <details>
         <summary>Is it on the Play Store?</summary>
         <p>
-            Not yet. The alpha ships as a signed APK you install
+            Not yet. {site.alpha ? "The alpha" : "PhoneCanDo"} ships as a signed APK you install
             yourself. The full build can drive other apps through
             Android accessibility, which Play restricts — a reduced
             build is planned for stores, while the full one stays

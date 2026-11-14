@@ -19,7 +19,7 @@ const home = Astro.site.origin;
         phonecando
       </a>
       <p class="meta">
-        Alpha software, built on a phone. Bundles open-source components, opencode among them,
+        {site.alpha ? 'Alpha software, built' : 'Built'} on a phone. Bundles open-source components, opencode among them,
         under their own licenses; every other agent installs straight from its maker. Android is a
         trademark of Google LLC, and each agent's name belongs to its maker. Not affiliated with
         Google or any of them.
