@@ -1,0 +1,172 @@
+---
+// The two extras, both optional: share links and signing in, as coupons you
+// clip only if you want them. The plain-language twin of docs/telemetry.md
+// (Share links) and docs/accounts.md; change it with those pages.
+import { site } from '../../data/site';
+
+const accounts = `${site.repo}/blob/HEAD/docs/accounts.md`;
+---
+
+<section class="pv-sec pv-tint" id="extras" aria-labelledby="pv-extras-h">
+  <header class="pv-head">
+    <p class="pv-num" aria-hidden="true">5</p>
+    <p class="pv-kicker">Add-ons · not included</p>
+    <h2 id="pv-extras-h">Share links and <em>signing in</em></h2>
+    <p class="pv-lead">
+      Both <b>optional</b>. Skip them and nothing in this section exists for
+      you. Use them and this is what they keep.
+    </p>
+  </header>
+
+  <ul class="pv-coupons">
+    <li class="pv-coupon">
+      <p class="pv-coupon-where">Settings → Tell a friend</p>
+      <h3>Share links</h3>
+      <p>
+        Share PhoneCanDo and the link carries a random 8-character code made
+        on the phone. Our server counts how often each link was opened,
+        downloaded from and installed through, never who: nothing is kept
+        about the person who taps it. Which app you shared it through stays
+        on the phone.
+      </p>
+      <dl>
+        <div><dt>Only while</dt><dd>usage stats are on; off, the plain address goes out</dd></div>
+        <div><dt>Kept</dt><dd>until you tap Delete my data</dd></div>
+      </dl>
+      <span class="pv-coupon-stamp" aria-hidden="true">Optional</span>
+    </li>
+    <li class="pv-coupon">
+      <p class="pv-coupon-where">Settings → Account · Google</p>
+      <h3>Signing in</h3>
+      <p>
+        PhoneCanDo works the same without it. Sign in with Google and your
+        share links and a few settings, like the theme and the caps on what
+        runs at once, follow you to a new phone. The account never meets the
+        usage stats: it holds no device or install ID, and they hold no
+        account.
+      </p>
+      <dl>
+        <div>
+          <dt>Kept</dt>
+          <dd>
+            Google's number for your account, your email, when you first
+            signed in and last used it, a hash of each phone's session, your
+            share links' codes, those settings
+          </dd>
+        </div>
+        <div>
+          <dt>Never</dt>
+          <dd>
+            your name, your photo, Google's token, your password, your IP
+            address, anything from your agents
+          </dd>
+        </div>
+        <div>
+          <dt>Gone</dt>
+          <dd>all at once with Delete account; Sign out ends only that phone's session</dd>
+        </div>
+      </dl>
+      <p class="pv-coupon-fine">
+        Google learns that you signed in to PhoneCanDo. Every field is in{" "}
+        <a href={accounts} target="_blank" rel="noreferrer">the accounts schema</a>.
+      </p>
+      <span class="pv-coupon-stamp" aria-hidden="true">Optional</span>
+    </li>
+  </ul>
+</section>
+
+<style is:global>
+  .pv-coupons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 30px 26px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  /* A coupon: a dashed edge with scissors on it, and a stamp saying you can
+     leave it in the paper. It lifts a little when the pointer finds it. */
+  .pv-coupon {
+    position: relative;
+    padding: 24px 24px 26px;
+    border: 2px dashed var(--line-2);
+    background: var(--bg);
+    transition: rotate 0.35s var(--pv-spring), translate 0.35s var(--pv-spring);
+  }
+  .pv-coupon:hover { rotate: -0.6deg; translate: 0 -3px; }
+  .pv-coupon::before {
+    content: '✂';
+    position: absolute;
+    top: -12px;
+    left: 18px;
+    padding: 0 6px;
+    background: var(--panel);
+    color: var(--muted);
+    font: 15px/1 var(--mono);
+  }
+  .pv-coupon-where {
+    font: 500 9px/1.4 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+  .pv-coupon h3 {
+    margin: 6px 0 8px;
+    font: 400 28px/1.05 var(--serif);
+    letter-spacing: -0.01em;
+  }
+  .pv-coupon > p:not(.pv-coupon-where) {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .pv-coupon dl {
+    display: grid;
+    gap: 10px;
+    margin: 18px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .pv-coupon dl div {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .pv-coupon dt {
+    padding-top: 3px;
+    font: 500 9.5px/1.4 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+  .pv-coupon dd {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+  .pv-coupon > p.pv-coupon-fine { margin-top: 16px; font-size: 12.5px; }
+  .pv-coupon-fine a { color: inherit; text-underline-offset: 3px; }
+  .pv-coupon-stamp {
+    position: absolute;
+    top: -12px;
+    right: 14px;
+    padding: 4px 7px;
+    border: 1px solid var(--red);
+    background: var(--bg);
+    color: var(--red-hi);
+    font: 500 8.5px/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    rotate: 5deg;
+  }
+
+  @media (max-width: 860px) {
+    .pv-coupons { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-coupon { transition: none; }
+    .pv-coupon:hover { rotate: none; translate: none; }
+  }
+</style>

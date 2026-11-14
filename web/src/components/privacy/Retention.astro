@@ -1,7 +1,8 @@
 ---
 // Where it is kept and for how long, as shelf life: one bar per kind of
-// data, shortest first, on a log scale that ends at a year. Two have no
-// date: device rows last until you delete them, daily site totals for good.
+// data, shortest first, on a log scale that ends at a year. Three have no
+// date: device rows and an account last until you delete them, daily site
+// totals for good.
 type Shelf = { what: string; kept: string; tag: string; days?: number; end?: 'delete' | 'forever' };
 const shelf: Shelf[] = [
   { what: "The server's own request logs", kept: '3 days, for debugging', tag: '3 d', days: 3 },
@@ -10,7 +11,13 @@ const shelf: Shelf[] = [
   { what: 'Reports you send', kept: '90 days, then deleted', tag: '90 d', days: 90 },
   { what: 'Site page views and downloads in detail', kept: 'about 3 months', tag: '~3 mo', days: 91 },
   { what: 'Errors and crashes', kept: '180 days, then deleted', tag: '180 d', days: 180 },
-  { what: 'Device, install and app-run rows', kept: 'until you tap Delete my data', tag: 'you say', end: 'delete' },
+  { what: 'Device, install, app-run and share-link rows', kept: 'until you tap Delete my data', tag: 'you say', end: 'delete' },
+  {
+    what: 'Your account, if you sign in',
+    kept: "until you tap Delete account; a phone's session ends after 180 days unused",
+    tag: 'you say',
+    end: 'delete',
+  },
   {
     what: 'Daily site totals',
     kept: 'kept for good: counts per page or download channel and country, nothing about you',
@@ -31,12 +38,13 @@ const ticks: [string, number][] = [
 
 <section class="pv-sec pv-tint" id="kept" aria-labelledby="pv-kept-h">
   <header class="pv-head">
-    <p class="pv-num" aria-hidden="true">6</p>
+    <p class="pv-num" aria-hidden="true">7</p>
     <p class="pv-kicker">Shelf life · best before</p>
     <h2 id="pv-kept-h">Where it is kept, and for <em>how long</em></h2>
     <p class="pv-lead">
       On <b>Cloudflare</b>, which runs this website and its server and stores
-      the data on our behalf (a database and an analytics store). There is no
+      the data on our behalf (a database for usage stats, a separate one for
+      accounts, and an analytics store). There is no
       archive: once its time below is up, data is deleted.
     </p>
   </header>

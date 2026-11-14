@@ -1,7 +1,8 @@
 ---
 // What it never sends: every item struck through, locked in a vault drawn
-// like the phone's screen (dark in both themes, like every artefact here).
+// like the phone's screen: dark in the dark theme, white in the light one.
 // One row per sentence of the old paragraph, so the groups stay together.
+// Email is not on it: signing in sends it, so the note under the list says so.
 const never: string[][] = [
   ['Prompts', 'Chats', 'Model replies'],
   ['Files', 'Folder paths', 'Anything in the terminal'],
@@ -9,7 +10,7 @@ const never: string[][] = [
   ['Screenshots', 'Anything on the screen'],
   ['Which apps the agent opened or used'],
   ['Contacts', 'Messages', 'Notifications'],
-  ['Your IP address', 'Precise location', 'Advertising ID', 'Name', 'Email', 'Phone number'],
+  ['Your IP address', 'Precise location', 'Advertising ID', 'Name', 'Phone number'],
   ["Android's raw device ID"],
 ];
 // Each strike-through leans the other way from the last, flatter the longer
@@ -42,6 +43,10 @@ const slant = (item: string) => `--slant:${((n++ % 2 ? 1 : -1) * Math.min(7, 60 
         </li>
       ))}
     </ul>
+    <p class="pv-vault-note">
+      Your email leaves only if you sign in, and signing in is optional: see
+      <a href="#extras">Optional extras</a>.
+    </p>
     <p class="pv-vault-stamp" aria-hidden="true">Never<br />leaves</p>
   </div>
 </section>
@@ -59,6 +64,13 @@ const slant = (item: string) => `--slant:${((n++ % 2 ? 1 : -1) * Math.min(7, 60 
     box-shadow: 8px 8px 0 var(--red);
     color: var(--art-fg);
     overflow: hidden;
+  }
+  /* The light theme's vault is white: its artefact colours take the page's. */
+  [data-theme='light'] .pv-vault {
+    --art-bg: var(--bg);
+    --art-fg: var(--fg);
+    --art-muted: var(--muted);
+    --art-accent: var(--accent-ink);
   }
   .pv-vault-label {
     display: inline-flex;
@@ -101,6 +113,13 @@ const slant = (item: string) => `--slant:${((n++ % 2 ? 1 : -1) * Math.min(7, 60 
     rotate: var(--slant);
   }
   .pv-nope ul li:hover { animation: pv-nope 0.4s linear; color: var(--art-fg); }
+  .pv-vault-note {
+    max-width: 46ch;
+    margin-top: 26px;
+    font: 500 11.5px/1.6 var(--mono);
+    color: var(--art-muted);
+  }
+  .pv-vault-note a { color: var(--art-accent); text-underline-offset: 3px; }
   .pv-vault-stamp {
     position: absolute;
     right: clamp(14px, 4vw, 44px);

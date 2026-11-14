@@ -1,13 +1,61 @@
 ---
 // Everything else the app connects to: a map with the phone in the middle,
-// A-01 on its screen glancing at each line, and packets running out along
-// dashed wires to the four places it calls.
+// A-01 on its screen glancing at each side, and packets running out along
+// dashed wires to each place it calls. The plain-language twin of
+// docs/telemetry.md's "Every network call the app makes".
 import Mug from './Mug.astro';
+
+type Call = { when: string; title: string; text: string; direct?: boolean };
+const calls: Call[] = [
+  {
+    when: 'At start · on install',
+    title: 'GitHub',
+    text: 'To check for updates when the app starts (full and lite), and to download an update when you tap install.',
+  },
+  {
+    when: 'At start · every 5 min',
+    title: "opencode's model catalog",
+    text: 'models.opencode.ai, which each running opencode downloads when it starts and every 5 minutes after, so it knows which models exist.',
+  },
+  {
+    when: 'Your key · direct',
+    title: 'The model providers you set up',
+    text: 'Straight from your phone with your key, plus whatever an installed agent sends its own maker, under their terms. Our server is never in between.',
+    direct: true,
+  },
+  {
+    when: 'Models page · on download',
+    title: 'Hugging Face',
+    text: "The model list and your searches while you browse on Models (the size filter stays on the phone), and a model's files when you tap Download. Your Hugging Face token goes along if you saved one.",
+  },
+  {
+    when: 'When you add an agent',
+    title: 'Where agents come from',
+    text: "Its machine's package mirrors, Node.js from nodejs.org when it needs it, and its maker's own source (Claude Code from claude.ai, Gemini CLI from npm). Again on Update agent.",
+  },
+  {
+    when: 'Only for a Linux of your own',
+    title: 'Docker Hub and image registries',
+    text: 'The catalog while you pick one, then the image you chose. The Default Linux ships inside the app and needs no download.',
+  },
+  {
+    when: 'Optional · only if you sign in',
+    title: 'Google',
+    text: "Android's own Google sheet, when you sign in from Settings → Account. Google learns that you signed in to PhoneCanDo.",
+  },
+  {
+    when: 'Your call',
+    title: 'Whatever you or the agent start',
+    text: 'A web search, a download in the terminal.',
+  },
+];
+// Two calls a row, one each side of the phone; the spine's ends need the count.
+const rows = Math.ceil(calls.length / 2);
 ---
 
 <section class="pv-sec" id="elsewhere" aria-labelledby="pv-elsewhere-h">
   <header class="pv-head">
-    <p class="pv-num" aria-hidden="true">7</p>
+    <p class="pv-num" aria-hidden="true">8</p>
     <p class="pv-kicker">Who else it calls</p>
     <h2 id="pv-elsewhere-h">Everything else the app connects to</h2>
   </header>
@@ -19,51 +67,33 @@ import Mug from './Mug.astro';
         <span>your phone</span>
       </div>
     </div>
-    <ul class="pv-calls">
-      <li>
-        <p class="pv-call-when">At start · on install</p>
-        <h3>GitHub</h3>
-        <p>
-          To check for updates when the app starts (full and lite), and to
-          download an update when you tap install.
-        </p>
-      </li>
-      <li>
-        <p class="pv-call-when">At start · every 5 min</p>
-        <h3>opencode's model catalog</h3>
-        <p>
-          models.opencode.ai, which the engine downloads when it starts and
-          every 5 minutes while it runs, so it knows which models exist.
-        </p>
-      </li>
-      <li class="pv-call-direct">
-        <p class="pv-call-when">Your key · direct</p>
-        <h3>The model providers you set up</h3>
-        <p>
-          Straight from your phone with your key. Our server is never in
-          between.
-        </p>
-        <span class="pv-call-stamp" aria-hidden="true">No middleman</span>
-      </li>
-      <li>
-        <p class="pv-call-when">Your call</p>
-        <h3>Whatever you or the agent start</h3>
-        <p>A web search, a download in the terminal.</p>
-      </li>
+    <ul class="pv-calls" style={`--rows:${rows}`}>
+      {calls.map((c) => (
+        <li class={c.direct ? 'pv-call-direct' : undefined}>
+          <p class="pv-call-when">{c.when}</p>
+          <h3>{c.title}</h3>
+          <p>{c.text}</p>
+          {c.direct && <span class="pv-call-stamp" aria-hidden="true">No middleman</span>}
+        </li>
+      ))}
     </ul>
   </div>
 </section>
 
 <style is:global>
-  /* Wide: the list is a three-column grid with its middle left empty, two
-     calls each side wired to the phone, which sits over that middle. */
+  /* Wide: the list is a three-column grid with its middle left empty, the
+     calls taking turns left and right. Each one's wire runs to a spine down
+     the middle, and the spine runs through the phone, which sits over it. */
   .pv-map {
     --wire: 56px;
+    --mid: 150px;
+    --gap: 26px;
     position: relative;
   }
   .pv-hub {
     position: absolute;
     inset: 0;
+    z-index: 1;
     display: grid;
     place-items: center;
     pointer-events: none;
@@ -99,36 +129,55 @@ import Mug from './Mug.astro';
   /* On the map A-01 checks each side in turn, slower than its idle look. */
   .pv-hub .pv-mug-eye b { animation-name: pv-hub-look; animation-duration: 4s; }
 
+  /* The light theme's phone has a white screen; the dark frame stays. */
+  [data-theme='light'] .pv-hub-phone { background: var(--bg); }
+  [data-theme='light'] .pv-hub-phone span { color: var(--muted); }
+
   .pv-calls {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1fr);
-    gap: 26px var(--wire);
+    grid-template-columns: minmax(0, 1fr) var(--mid) minmax(0, 1fr);
+    grid-auto-rows: 1fr;
+    gap: var(--gap) var(--wire);
     margin: 0;
     padding: 0;
     list-style: none;
   }
+  /* The spine, from the first row's wires to the last's, in two halves that
+     meet at the phone so their packets run outward, like the wires'. Rows
+     are equal (1fr), so the end wires sit half a row in from each end. */
+  .pv-calls::before,
+  .pv-calls::after {
+    --half: calc((100% - (var(--rows) - 1) * var(--gap)) / var(--rows) / 2);
+    content: '';
+    position: absolute;
+    left: calc(50% - 1px);
+    width: 2px;
+    background: repeating-linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 12px);
+    animation: pv-packets-down 0.8s linear infinite;
+  }
+  .pv-calls::before { top: var(--half); bottom: 50%; animation-direction: reverse; }
+  .pv-calls::after { top: 50%; bottom: var(--half); }
   .pv-calls li {
     position: relative;
     padding: 18px 20px 20px;
     border: 1px solid var(--line-2);
     background: var(--panel);
   }
-  .pv-calls li:nth-child(1) { grid-area: 1 / 1; }
-  .pv-calls li:nth-child(2) { grid-area: 2 / 1; }
-  .pv-calls li:nth-child(3) { grid-area: 1 / 3; }
-  .pv-calls li:nth-child(4) { grid-area: 2 / 3; }
-  /* Wires to the phone: dashes with packets running outward. */
+  .pv-calls li:nth-child(odd) { grid-column: 1; }
+  .pv-calls li:nth-child(even) { grid-column: 3; }
+  /* Wires to the spine: dashes with packets running outward. */
   .pv-calls li::after {
     content: '';
     position: absolute;
     top: 50%;
-    width: var(--wire);
+    width: calc(var(--wire) + var(--mid) / 2);
     height: 2px;
     background: repeating-linear-gradient(to right, var(--accent) 0 6px, transparent 6px 12px);
     animation: pv-packets 0.8s linear infinite;
   }
-  .pv-calls li:nth-child(-n + 2)::after { left: 100%; animation-direction: reverse; }
-  .pv-calls li:nth-child(n + 3)::after { right: 100%; }
+  .pv-calls li:nth-child(odd)::after { left: 100%; animation-direction: reverse; }
+  .pv-calls li:nth-child(even)::after { right: 100%; }
   .pv-call-direct { border-color: var(--red); box-shadow: 4px 4px 0 var(--accent); }
   .pv-call-when {
     font: 500 9px/1.4 var(--mono);
@@ -164,6 +213,9 @@ import Mug from './Mug.astro';
   @keyframes pv-packets {
     to { background-position: 12px 0; }
   }
+  @keyframes pv-packets-down {
+    to { background-position: 0 12px; }
+  }
   @keyframes pv-hub-look {
     0%, 45% { translate: calc(-1.5 * var(--u)) 0; }
     50%, 95% { translate: calc(1.5 * var(--u)) 0; }
@@ -175,22 +227,18 @@ import Mug from './Mug.astro';
     .pv-hub { position: static; margin-bottom: 30px; }
     .pv-hub-phone { width: 108px; }
     .pv-calls {
-      position: relative;
       grid-template-columns: minmax(0, 1fr);
+      grid-auto-rows: auto;
     }
-    .pv-calls::before {
-      content: '';
-      position: absolute;
-      top: -30px;
-      bottom: 30px;
-      left: calc(50% - 1px);
-      width: 2px;
-      background: repeating-linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px 12px);
-    }
+    /* One wire from the phone down behind the stack, packets running down. */
+    .pv-calls::before { top: -30px; bottom: 30px; animation-direction: normal; }
+    .pv-calls::after { display: none; }
     .pv-calls li:nth-child(n) { grid-area: auto; }
     .pv-calls li:nth-child(n)::after { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .pv-calls li::after { animation: none; }
+    .pv-calls li::after,
+    .pv-calls::before,
+    .pv-calls::after { animation: none; }
   }
 </style>
