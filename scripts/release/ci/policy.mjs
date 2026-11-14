@@ -40,6 +40,8 @@ export const WORKFLOWS = {
   'llamacpp.yml': { gate: 'llamacpp-ok' },
   // Every kind with a models block against our llama-server (weekly too).
   'local-models.yml': { gate: 'local-models-ok' },
+  'suggested-models.yml': { gate: 'suggested-models-ok' },
+  'accounts.yml': { gate: 'accounts-ok' },
   'android.yml': {
     jobsBlock: true,
     reportOnly: ['Android lint'],

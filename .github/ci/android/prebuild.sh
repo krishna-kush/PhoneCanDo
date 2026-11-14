@@ -58,9 +58,13 @@ need app/src/full/AndroidManifest.xml 'PhoneCanDoAccessibilityService' withBuild
 need app/src/play/AndroidManifest.xml 'REQUEST_INSTALL_PACKAGES' withBuildChannel
 need app/src/liteDebug/res/values/strings.xml 'PhoneCanDo Lite Dev' withDevAppId
 need app/src/main/res/xml/network_security_config.xml '127.0.0.1' withLoopbackCleartext
-need app/src/main/AndroidManifest.xml 'android:extractNativeLibs="true"' withExtractNativeLibs
+need gradle.properties 'expo.useLegacyPackaging=true' withExtractNativeLibs
 need app/src/main/AndroidManifest.xml 'android:networkSecurityConfig=' withLoopbackCleartext
 need app/src/main/AndroidManifest.xml 'com.phonecando.channel' withBuildChannel
+# AGP 9 fails the build on android:extractNativeLibs in the manifest.
+if grep -qF 'android:extractNativeLibs' app/android/app/src/main/AndroidManifest.xml 2>/dev/null; then
+  missing+=("withExtractNativeLibs: android:extractNativeLibs still in app/android/app/src/main/AndroidManifest.xml")
+fi
 if [ "${#missing[@]}" -gt 0 ]; then
   for m in "${missing[@]}"; do echo "::error title=Config plugin output missing::$m"; done
   exit 1

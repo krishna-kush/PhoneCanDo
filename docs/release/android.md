@@ -85,8 +85,10 @@ The script:
    - CI on the commit is not green. These block when they failed, were
      cancelled or have not finished (queued, running, or their workflow is
      still running): `ci-ok` and `lint-ok`, which must exist (they run on
-     every push, so a missing one means CI has not run); `web-ok`, `pce-ok`,
-     `tce-ok`, `lre-ok` and `proot-ok` when their workflow ran; and every
+     every push, so a missing one means CI has not run); every other
+     workflow's roll-up (`web-ok`, `pce-ok`, `tce-ok`, `lre-ok`, `proot-ok`,
+     `agents-ok`, `accounts-ok`, `network-ok`, `lme-ok`, `llamacpp-ok`,
+     `local-models-ok`, `suggested-models-ok`, ...) when it ran; and every
      `android.yml` job that ran (PTY host test, prebuild, the debug APKs,
      the release shape, the lite emulator smoke on API 36).
    - Only a warning: a workflow that did not run for the commit (its path
