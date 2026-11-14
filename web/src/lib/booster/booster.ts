@@ -86,6 +86,9 @@ export function mountBooster(root: HTMLElement) {
       later(landed + i * TURN_GAP, () => {
         delete card.dataset.face;
         card.toggleAttribute('data-new', fresh.includes(card.dataset.card ?? ''));
+        // Turned over, it lies flat, so its small print stays sharp in the fan.
+        const turn = card.querySelector('.card-flip')?.getAnimations() ?? [];
+        Promise.all(turn.map((a) => a.finished)).then(() => (card.dataset.flat = ''), () => {});
       }),
     );
     later(landed + hand.length * TURN_GAP + 200, () => {
@@ -101,7 +104,7 @@ export function mountBooster(root: HTMLElement) {
       root.toggleAttribute('data-full', full);
       setState('open');
       const names = hand.map((card) => card.dataset.label).join(', ');
-      live.textContent = `Pack opened: ${names}. ${fresh.length} new, ${got.size} collected${full ? ': the full set' : ''}.`;
+      live.textContent = `Pack opened: ${names}. ${fresh.length} new, ${got.size} collected${full ? ": the full set, and the binder's stamp now opens the wardrobe" : ''}.`;
       if (full && fresh.length) cueMascot({ say: toyLines.fullSet, move: 'hop', ms: 2400 });
       else if (fresh.length) cueMascot({ say: toyLines.newCards(fresh.length), move: 'hop' });
       else cueMascot({ say: toyLines.dupes, move: 'shake' });
@@ -125,6 +128,7 @@ export function mountBooster(root: HTMLElement) {
       for (const card of hand) {
         card.hidden = true;
         card.dataset.face = 'down';
+        delete card.dataset.flat;
         card.removeAttribute('data-new');
         delete card.dataset.slot;
         for (const a of card.getAnimations()) a.cancel();

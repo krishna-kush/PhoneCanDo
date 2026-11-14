@@ -2,8 +2,8 @@
 // One agent's trading card, printed face down and hidden until a pack deals
 // it (lib/booster/). The front is the agent: its creature, where it lives,
 // how it signs in, and its brain, which follows the cartridge in the phone
-// when it takes a local model. The built-in one wears a double frame and
-// a Built in stamp.
+// when it takes a local model, then its flavor line (data/cardQuips.ts).
+// The built-in one wears a double frame and a Built in stamp.
 import Bot from "./Bot.astro";
 import LogoMark from "../../LogoMark.astro";
 import type { AgentCard } from "../../../data/agentCards";
@@ -16,13 +16,6 @@ interface Props {
 const { card, brain } = Astro.props;
 const no = String(card.no).padStart(2, "0");
 const rarity = card.builtIn ? "Built in" : card.stable ? "Stable" : "Preview";
-const flavour = card.builtIn
-    ? card.local
-      ? "Comes with the app: no machine to set up, and at home on the phone's own brain."
-      : "Comes with the app: no machine to set up."
-    : card.local
-      ? "Moves into a Linux machine of its own. Brings its own brain, or borrows the phone's."
-      : "Moves into a Linux machine of its own and signs in to its own provider.";
 ---
 
 <li class="card" data-card={card.id} data-label={card.label} data-face="down" style={`--i:${card.no}`} hidden>
@@ -38,7 +31,7 @@ const flavour = card.builtIn
                     {card.builtIn && <span class="card-stamp">Built in</span>}
                 </div>
                 <h3 class="card-name">{card.label}</h3>
-                <p class="card-type">Agent · {card.builtIn ? "built into the app" : "lives in its own machine"}</p>
+                <p class="card-type">Agent · {card.builtIn ? "built into the app" : "lives in a Linux machine"}</p>
                 <dl class="card-stats">
                     <div>
                         <dt>Sign-in</dt>
@@ -53,7 +46,7 @@ const flavour = card.builtIn
                         )}
                     </div>
                 </dl>
-                <p class="card-flavour">{flavour}</p>
+                <p class="card-flavour">{card.quip}</p>
                 <p class="card-foot">
                     <span>Agents · Series 01</span>
                     <span>{card.local ? "◆ Local-ready" : "Sign-in only"}</span>
@@ -71,7 +64,7 @@ const flavour = card.builtIn
 <style is:global>
     /* Three layers so their moves never fight: the card is dealt and fanned,
        its tilt follows the pointer, its flip turns it over. Everything on
-       the face is sized by the card's own width (cqi), so a card prints the
+       the face is sized by the flip's width (cqi), so a card prints the
        same at any size. */
     .card {
       position: relative;
@@ -79,30 +72,36 @@ const flavour = card.builtIn
       aspect-ratio: 63 / 88;
       list-style: none;
       perspective: 1000px;
-      container-type: inline-size;
     }
     .card-tilt,
     .card-flip {
       position: relative;
       width: 100%;
       height: 100%;
-      transform-style: preserve-3d;
     }
-    .card-tilt {
-      transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-      transition: transform 0.25s ease-out, translate 0.2s;
+    .card-tilt { transition: transform 0.25s ease-out, translate 0.2s; }
+    .card-flip {
+      container-type: inline-size;
+      transition: transform 0.65s cubic-bezier(0.3, 1.35, 0.5, 1);
     }
-    .card-flip { transition: transform 0.65s cubic-bezier(0.3, 1.35, 0.5, 1); }
     .card[data-face='down'] .card-flip { transform: rotateY(180deg); }
     .card-front,
     .card-back {
       position: absolute;
       inset: 0;
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
       border: 1px solid var(--line-2);
       box-shadow: 6px 6px 0 var(--accent);
     }
+    /* A 3D card is drawn upright as a picture and then turned, which blurs
+       print this small, so a card is 3D only while it has to be: face down
+       and turning over. Then lib/booster/ marks it data-flat, and the page
+       draws its face in place, fanned and sharp. */
+    .card:not([data-flat]) :is(.card-tilt, .card-flip) { transform-style: preserve-3d; }
+    .card:not([data-flat]) :is(.card-front, .card-back) {
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+    }
+    .card[data-flat] .card-back { display: none; }
 
     .card-front {
       display: flex;
@@ -322,7 +321,22 @@ const flavour = card.builtIn
     @keyframes card-sticker { from { opacity: 0; scale: 2.2; rotate: -10deg; } }
 
     @media (hover: hover) {
-      .card:not([data-face='down']):hover .card-tilt { translate: 0 -8px; }
+      /* A tilt is 3D, so the face is drawn as a picture again. To keep the
+         print sharp it is laid out twice as big (zoom; the flip is the cqi
+         container, so cqi grow with it in every browser) and the tilt halves
+         it on all three axes, so the picture holds twice the detail shown. */
+      .card:not([data-face='down']):hover .card-tilt {
+        translate: 0 -8px;
+        transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+        scale: 0.5 0.5 0.5;
+      }
+      .card:not([data-face='down']):hover .card-flip {
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        zoom: 2;
+      }
       .card:hover .card-front::before { opacity: 1; }
       .card:not([data-face='down']):hover .card-art .bot { animation: bot-hop 0.55s ease-out; }
     }

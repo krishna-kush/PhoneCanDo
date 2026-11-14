@@ -10,6 +10,7 @@ import { SHAPES } from '../../../mascot/body.ts';
 import { DESIGNS, type DesignId } from '../../../mascot/designs.ts';
 import type { Look } from '../../../mascot/look.ts';
 import { hash } from '../lib/backdrop/seed';
+import { quipOf } from './cardQuips';
 
 /** The fields of an agent kind's agent.json a card shows. */
 type Manifest = {
@@ -75,6 +76,8 @@ export type AgentCard = {
   /** How it signs in, in a few words each. */
   signIn: string[];
   local: boolean;
+  /** Its card's flavor line (cardQuips.ts). */
+  quip: string;
   look: BotLook;
   messaging: MessagingLevel;
   /** Two of it can share one machine, each with its own state folder. */
@@ -159,8 +162,10 @@ export const cards: AgentCard[] = full
     builtIn: m.type === 'native',
     isDefault: m.default === true,
     stable: m.stability === 'stable',
-    signIn: (m.signIn ?? []).map((s) => SIGN_IN[s.method] ?? s.method),
+    // A kind can list one method twice (two notes on it); the card names it once.
+    signIn: [...new Set((m.signIn ?? []).map((s) => SIGN_IN[s.method] ?? s.method))],
     local: Boolean(m.models),
+    quip: quipOf(m.id),
     look: look(i, leadIds.includes(m.id) ? CREW[leadIds.indexOf(m.id) % CREW.length] : (others.get(m.id) ?? 'plain')),
     messaging: messaging(m),
     twins: Boolean(m.state),
