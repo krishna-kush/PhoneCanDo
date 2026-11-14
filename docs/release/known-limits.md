@@ -124,8 +124,6 @@ These are not scheduled work unless they are also listed in
 - An Own env needs a linux/arm64 image. Docker Hub allows about ten
   anonymous pulls per hour per IP; official images then come from
   `public.ecr.aws` or `mirror.gcr.io`, other images have no mirror.
-- `lre/images/default/lock.json` locks no image yet, so no build ships a
-  Default image; a release needs `--without-linux` until one is locked.
 - Reset replaces an image's system and keeps `home/`; packages installed by
   hand are offered for reinstall, not reinstalled by themselves.
 - Unix socket paths are capped at 108 bytes; image setup flags an image

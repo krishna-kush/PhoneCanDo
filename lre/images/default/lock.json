@@ -1,12 +1,12 @@
 {
-  "version": null,
-  "release": null,
-  "asset": null,
-  "url": null,
-  "repo": null,
-  "sha256": null,
-  "size": null,
-  "debian_digest": null,
-  "snapshot": null,
-  "run_id": null
+  "version": "20261107-9de7e565",
+  "release": "linux-image-20261107-9de7e565",
+  "asset": "phonecando-linux-default-20261107-9de7e565-arm64.tar.xz",
+  "url": "https://github.com/krishna-kush/PhoneCanDo/releases/download/linux-image-20261107-9de7e565/phonecando-linux-default-20261107-9de7e565-arm64.tar.xz",
+  "repo": "krishna-kush/PhoneCanDo",
+  "sha256": "dcb4a259b9a20b96cfa79bc0e8638d2ebc3a5b8eafb09ab7a92cf56b82e246d3",
+  "size": 48307080,
+  "debian_digest": "sha256:e529717ccc8118a0b9d38525f2b4e78cf150dbe470ad60d733c7c0023cabc3b0",
+  "snapshot": "20261107T000000Z",
+  "run_id": 42433528817
 }
