@@ -108,8 +108,8 @@ and play have no driver, so they take no lease.
 
 The others wait in line, first come first served. A screen request from
 another agent joins the line once and gets 409 `control_busy` with
-`holder`, `retryAfterMs` and its `place` (1-based): "<holder> holds the
-screen; you are #<place> in line; we'll message you when it is yours". The
+`holder`, `retryAfterMs` and its `place` (1-based): "`<holder>` holds the
+screen; you are #`<place>` in line; we'll message you when it is yours". The
 holder hears of each new waiter once (`ScreenNotices.waiting`). When the
 holder's lease ends (it calls `/app`, `mobile_return`, done with the phone;
 its run ends, `runEnded`; it has been idle 30 s while someone waits; its

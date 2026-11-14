@@ -37,7 +37,7 @@ class StartPromptTest {
     assertEquals(listOf("demo", "-i", task, "--x"), flag.launch(ctx.copy(prompt = task)).argv)
   }
 
-  @Test fun bothIndexesCountInTheLaunchsOwnArgvAndResumeComesFirst() {
+  @Test fun bothIndexesCountInTheLaunchArgvAndResumeComesFirst() {
     val both = tui(""""launch":{"argv":["demo","--x"]},"resume":{"args":["--continue"],"at":1},"prompt":{"args":["{{prompt}}"],"at":1}""")
     assertEquals(listOf("demo", "--continue", task, "--x"), both.launch(ctx.copy(resume = true, prompt = task)).argv)
     assertEquals(listOf("demo", task, "--x"), both.launch(ctx.copy(prompt = task)).argv)

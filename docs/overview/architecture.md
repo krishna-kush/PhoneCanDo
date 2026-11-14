@@ -162,7 +162,7 @@ builds, tests, limits): `../../lre/docs/README.md`.
   them. Reset unpacks a fresh base next to the old one and
   swaps it in by rename, keeping `home/`; packages installed by hand are
   offered for reinstall afterwards, and an installed agent of a kind with an
-  install is offered "Reinstall <agent>" (its runtimes and itself live in
+  install is offered "Reinstall `<agent>`" (its runtimes and itself live in
   `home/`; the system packages it needs do not).
 - **How commands run.** A native kind's engine stays a bionic binary run
   from the native-library dir (an image kind's runs in the guest through

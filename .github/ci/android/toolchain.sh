@@ -40,7 +40,14 @@ fi
 
 sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 log="${RUNNER_TEMP:-/tmp}/sdkmanager.log"
-packages=("ndk;$ndk" "cmake;$cmake" "platforms;android-$compile" "build-tools;$tools")
+# From API 37 the platform package carries a minor version
+# (platforms;android-37.0) while the catalog says compileSdk = "37". Newer
+# sdkmanager builds list packages as platforms/android-N, older ones with ';'.
+platform="platforms;android-$compile"
+if ! "$sdkmanager" --list 2>/dev/null | grep -qE "^ *platforms[;/]android-$compile[[:space:]|]"; then
+  platform="platforms;android-$compile.0"
+fi
+packages=("ndk;$ndk" "cmake;$cmake" "$platform" "build-tools;$tools")
 echo "[toolchain] installing ${packages[*]}"
 if ! "$sdkmanager" --install "${packages[@]}" >"$log" 2>&1; then
   tail -n 40 "$log"

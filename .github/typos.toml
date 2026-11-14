@@ -16,8 +16,12 @@ extend-exclude = [
   "pce/gradlew",
   "pce/gradlew.bat",
   "pce/gradle/wrapper/",
-  # Upstream diffs (opencode/opentui) keep upstream spelling.
+  # Upstream diffs (opencode/opentui, proot) keep upstream spelling.
   "agents/native/*/build/patches/",
+  "lre/proot/patches/",
+  # Recorded Docker Hub and Hugging Face responses (image and repo names).
+  "lre/oci/src/test/resources/catalog/",
+  "lme/catalog/src/test/resources/catalog/",
   # Binary assets and font licence text.
   "*.png",
   "*.jpg",
@@ -47,10 +51,33 @@ extend-ignore-re = [
   # Short shell variable named after opentui in agents/native/opencode/ci/sources.sh (ot="$work/...").
   "\\bot=",
   "\\$ot\\b",
+  "\\bot_sha\\b",
+  # Note lengths in the videos' scores: 8ths, 16ths, 32nds.
+  "\\b[0-9]+ths\\b",
+  # A Hugging Face paging cursor (base64) in HfCatalogTest.
+  "cursor=[A-Za-z0-9_-]+",
+  # A word split across chunks in LineSplitterTest.
+  "\"hel\"",
   # Inline opt-out for a single line: `typos: ignore-line`.
   "(?Rm)^.*typos: ignore-line.*$",
 ]
 
 [default.extend-words]
 # Legitimate words typos mistakes for misspellings go here, as
-# word = "word" (none needed yet).
+# word = "word".
+# React Native's View prop (collapsable={false}).
+collapsable = "collapsable"
+# Yann Collet, author of xxHash (licence notices).
+collet = "collet"
+# The launcher's count of its own proot options (lre/launcher).
+nown = "nown"
+# The site's room labels, MCH-01 (web crew floor plan).
+mch = "mch"
+# look-alikes, mis-stamped, unparseable: real words.
+alikes = "alikes"
+mis = "mis"
+unparseable = "unparseable"
+# A sound filter (videos' reed voice).
+formant = "formant"
+# Regex stem matching authenticate/authentication (tce scripts).
+authenticat = "authenticat"

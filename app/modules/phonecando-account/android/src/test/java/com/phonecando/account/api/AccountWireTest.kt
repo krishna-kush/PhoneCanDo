@@ -10,7 +10,7 @@ class AccountWireTest {
 
   @Test
   fun readsTheNonce() {
-    assertEquals("n0nce-n0nce_n0nce", AccountWire.nonce("""{"nonce":"n0nce-n0nce_n0nce"}"""))
+    assertEquals("abcd-EFGH_1234-xy", AccountWire.nonce("""{"nonce":"abcd-EFGH_1234-xy"}"""))
     assertNull(AccountWire.nonce("""{"nonce":"short"}"""))
     assertNull(AccountWire.nonce("""{"nonce":"has space in it, so no"}"""))
     assertNull(AccountWire.nonce("not json"))

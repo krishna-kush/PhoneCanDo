@@ -175,7 +175,7 @@ records a version the record changes and the agent's own home mounts.
 `ui/common/OpenUrlDialog.tsx` shows an agent's `open_url` prompt (its
 program called `phonecando-open`, e.g. for a sign-in; `runner.md` →
 Notifications) in the same queue as the other bridge prompts
-(`useBridgePrompts.ts`): "<agent> wants to open <host>", the full link, and
+(`useBridgePrompts.ts`): "`<agent>` wants to open `<host>`", the full link, and
 Open (`Linking.openURL`, only http and https), Copy (native copies it) or
 Not now, each answered with `resolveOpenUrl`. The host drops any user info
 before an `@` (`promptQueue.ts`), so the heading names where the link goes.
