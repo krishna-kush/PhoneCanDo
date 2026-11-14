@@ -13,9 +13,9 @@ const PRUNE_DIRS = new Set([
   '.git', 'node_modules', 'dist', 'build', '.expo', '.gradle', '.cxx', '.kotlin',
   '.tamagui', '.astro', '__pycache__', '.playwright-mcp', 'reference', 'web-build',
 ]);
-// Paths ignored by the repo .gitignore files (root, app/, pce/, web/, video/).
+// Paths ignored by the repo .gitignore files (root, app/, pce/, web/, videos/).
 const PRUNE_PATHS = new Set([
-  'app/android', 'app/ios', 'video/out',
+  'app/android', 'app/ios', 'videos/out', 'videos/public',
   'app/modules/phonecando-linux/android/src/linux/libs',
   'app/modules/phonecando-linux/android/src/linux/assets',
   'app/modules/phonecando-linux/android/src/linux/dev-assets',
@@ -27,6 +27,7 @@ const IGNORED_FILES = [
   /\.log$/, /(^|\/)\.DS_Store$/, /(^|\/)local\.properties$/, /\.iml$/, /\.tsbuildinfo$/,
   /(^|\/)expo-env\.d\.ts$/, /\.(jks|keystore|p8|p12|key|pem|mobileprovision)$/,
   /(^|\/)release\.env$/, /(^|\/)\.env(\.(?!example$)[^/]*)?$/, /\.orig\./, /(^|\/)\.metro-health-check/,
+  /^videos\/brand\/facts\/facts\.gen\.json$/,
 ];
 
 function walk(root) {

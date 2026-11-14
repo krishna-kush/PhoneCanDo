@@ -1,0 +1,6 @@
+# Rendered videos, stills and filmstrips: `pnpm render` / `pnpm stills` make them again.
+out/
+# What the page loads that we generate: each film's sound (`pnpm sound <film>`).
+public/
+# What the films read from the repo (`pnpm facts`, run by every script).
+brand/facts/facts.gen.json

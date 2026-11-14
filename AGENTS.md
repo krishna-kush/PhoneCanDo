@@ -106,17 +106,26 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   SVG paths). The site's cards, backdrop and `/mascots` page and the app's
   faces (`ui/common/face/`) draw from it. `node --test
   "mascot/test/*.test.mjs"`.
-- `video/` — the intro video for YouTube, LinkedIn and the feeds (own pnpm
-  package; no deps but the site's fonts). `src/timeline/` is the one beat
-  line picture and sound share (138 BPM; a script per scene: its words,
-  moments and sounds), `src/picture/` a page drawn frame by frame from it
-  (reads `theme/tokens.json` and `mascot/` as they are; scenes in
-  `picture/scenes/`, the stage crew's set changes between them in
-  `picture/stagehands/`), `src/sound/` the synthesized music and effects,
-  and `src/render/` headless Chrome over the DevTools protocol plus ffmpeg.
-  `pnpm -C video sound`, then `pnpm -C video render [--format
-  16x9|9x16|1x1] [--draft]` into `video/out/` (ignored); `pnpm -C video
-  preview` to scrub it in a browser.
+- `videos/` — every video we make (own pnpm package, on Remotion): an
+  engine any film runs on, our look, and one folder per film, with the law
+  engine ← brand ← films (`engine/law.test.ts`). `engine/` knows nothing
+  of PhoneCanDo: `beats/` (a film's tempo, cues and shots, the one beat
+  line picture and sound share), `motion/` (eases, keys, springs, hops),
+  `stage/` (frame sizes, `u`, the camera, the picture's clock), `sound/`
+  (synthesized music and effects, mixed and mastered in plain Node) and
+  `render/` (a film as Remotion compositions, and our commands); beats,
+  motion and sound import neither Remotion nor React. `brand/` is our look
+  for every film: `looks/` (`theme/tokens.json` as the site's vars, the
+  fonts), `units/` (the mascots from `mascot/`), `parts/`, `facts/` (what
+  films read from the repo). `films/<id>/` is one film: `beats.ts` (tempo
+  and shots), `film.tsx` (its picture), `sound.ts` and `score/`. `pnpm -C
+  videos studio` previews every film; `pnpm -C videos sound <film>`, then
+  `pnpm -C videos render <film> [--format 16x9|9x16|1x1] [--draft]` into
+  `videos/out/` (ignored); `pnpm -C videos stills <film> --strip a..b`
+  lays a move out as one picture. Read `videos/README.md`. `field-notes`
+  is a rough cut (`films/field-notes/todo.md` has what is left); the intro
+  we publish was made by `video/`, the package this one replaced, and its
+  code is in git history.
 - `app/src/state/` — zustand stores: `app.ts` (navigation, prefs and
   telemetry slices in `app/`), `agents.ts` (agents, engine states, the
   active agent), `linux.ts` (envs, images, job progress), `models.ts`

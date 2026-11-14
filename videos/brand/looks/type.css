@@ -1,0 +1,29 @@
+/* The site's type at film size: Instrument Serif headlines with the red
+   italic word, Geist Mono labels in tracked capitals, Geist for the rest.
+   Sizes are in --u, a hundredth of the frame's short side (LookFrame sets
+   it), so every format reads the same. */
+
+.head {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: calc(var(--u) * 11);
+  line-height: 0.94;
+  letter-spacing: -0.012em;
+  color: var(--fg);
+  text-wrap: balance;
+}
+.head em { font-style: italic; color: var(--red); padding-right: 0.04em; }
+
+.label {
+  font: 500 calc(var(--u) * 1.9) / 1.3 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.label.accent { color: var(--accent-ink); }
+.label.red { color: var(--red); }
+.label.fg { color: var(--fg); }
+
+.mono { font-family: var(--mono); font-weight: 500; }
+.sans { font-family: var(--sans); }

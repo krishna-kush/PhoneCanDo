@@ -1,0 +1,6 @@
+allowBuilds:
+  esbuild: true
+# Remotion pins zod 4.5.4, which has an advisory (an oversized collection can
+# exhaust memory while it is checked); 4.6.6 fixed it.
+overrides:
+  zod: ^4.6.6
