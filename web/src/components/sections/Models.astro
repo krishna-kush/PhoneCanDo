@@ -34,9 +34,9 @@ const picks = cartridges.filter((c) => !c.any).length;
         <div class="sec-body">
             <h2>Collect your crew. Pick its brain.</h2>
             <p class="lead">
-                Choose from {cards.length} coding agents — {lead} — each in a
-                machine of its own, as many at once as the phone has room
-                for. Each signs in to its own provider, or runs on a model
+                Choose from {cards.length} coding agents — {lead} — built
+                into the app or moved into a Linux machine, as many at once
+                as the phone has room for. Each signs in to its own provider, or runs on a model
                 right on the phone:{" "}
                 <em>the prompt never leaves the device.</em>
             </p>
@@ -48,7 +48,7 @@ const picks = cartridges.filter((c) => !c.any).length;
     <dl class="house-rules">
         <div>
             <dt>Agents</dt>
-            <dd><b>{cards.length}<span class="inf"> + ∞</span></b> kinds ready to go, and room for as many more as you write: add any agent as your own kind. {builtInLine}</dd>
+            <dd><b>{cards.length}<span class="inf"> + ∞</span></b> kinds ready to go, and the ∞ is yours: add any agent as your own kind. {builtInLine}</dd>
         </div>
         <div>
             <dt>At once</dt>
@@ -56,7 +56,7 @@ const picks = cartridges.filter((c) => !c.any).length;
         </div>
         <div>
             <dt>Local models</dt>
-            <dd><b>{picks}<span class="inf"> + ∞</span></b> Our picks, plus any GGUF from Hugging Face or a file. {localKinds} of the agents run on one. Load several as RAM allows, each shared by the agents on it; stopping one stops them first.</dd>
+            <dd><b>{picks}<span class="inf"> + ∞</span></b> Our picks, plus any GGUF from Hugging Face or a file. {localKinds} of the agents run on one. Load several as RAM allows, each shared by the agents on it; stop a model and its agents stop first.</dd>
         </div>
         <div data-ram aria-live="polite">
             <dt>RAM</dt>
@@ -75,7 +75,7 @@ const picks = cartridges.filter((c) => !c.any).length;
     </dl>
 
     <p class="model-foot">
-        {stability} · every model runs on the phone, on llama.cpp
+        {stability} · every local model runs on the phone, on llama.cpp
     </p>
 </section>
 

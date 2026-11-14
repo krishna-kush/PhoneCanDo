@@ -12,7 +12,7 @@ import RollDie from "./faq/RollDie.astro";
         <div class="sec-body">
             <h2>The fine print.</h2>
             <p class="lead">
-                The store, the hardware, the permissions, the network —
+                The store, the hardware, the permissions, offline, sign-in —
                 the answers we give most often, in full,{" "}
                 <em>license terms included.</em>
             </p>
@@ -65,7 +65,7 @@ import RollDie from "./faq/RollDie.astro";
     <details>
         <summary>Do I need a computer?</summary>
         <p>
-            No. Setup, the agent, the terminal and the model keys
+            No. Setup, the agents, the terminal and the model keys
             all live on the phone.
         </p>
     </details>
@@ -73,8 +73,10 @@ import RollDie from "./faq/RollDie.astro";
         <summary>Which phones does it run on?</summary>
         <p>
             Arm64 devices on Android {site.minAndroid} or newer,
-            with 2 GB free. It will not run on x86 emulators or
-            32-bit phones.
+            with 2 GB free. Each agent with a machine of its own
+            takes a few hundred MB more, and a model on the phone
+            3–6 GB. It will not run on x86 emulators or 32-bit
+            phones.
         </p>
     </details>
     <details>
@@ -82,18 +84,40 @@ import RollDie from "./faq/RollDie.astro";
         <p>
             Any app with a visible UI: tapping, typing, scrolling,
             reading the screen, plus notifications, clipboard,
-            sharing and intents. Actions that change the phone need
-            a biometric unlock first.
+            sharing and intents. All of it waits for your
+            fingerprint, face or PIN first.
         </p>
     </details>
     <details>
-        <summary>Does it need a constant connection?</summary>
+        <summary>Does it work offline?</summary>
         <p>
-            The agent and your files run locally. Model calls go to
-            the provider you configure, so it needs network for
-            those — unless you point it at a local endpoint. The
-            update check and the usage stats use the network too,
-            but nothing waits for them.
+            Mostly. The agents, the terminal and your files run on
+            the phone. An agent on a cloud model needs the network
+            for each model call; one on a model in the phone needs
+            none, and the prompt never leaves it. Downloading a
+            model, a Linux or a new agent needs the network once.
+            The update check and the usage stats use it too, but
+            nothing waits for them.
+        </p>
+    </details>
+    <details>
+        <summary>Do I need to sign in?</summary>
+        <p>
+            No. Everything works without an account. Signing in
+            with Google (Settings → Account) is optional: your share
+            links and a few settings, like the theme, follow you to
+            a new phone. What it keeps is in the{" "}
+            <a href="/privacy/#extras">privacy note</a>.
+        </p>
+    </details>
+    <details>
+        <summary>Can I add my own agent?</summary>
+        <p>
+            Yes. Custom agents, in the side menu, takes a name, how to
+            install it and how to start it, and your agent moves into
+            a machine like any other. Give it the phone tools and it
+            can use the phone and message the crew too. Share one
+            with a friend, or import theirs.
         </p>
     </details>
     <details>

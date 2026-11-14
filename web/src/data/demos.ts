@@ -10,12 +10,12 @@ export type Demo = {
 };
 
 export const demos: Demo[] = [
-  { slug: 'reply', title: 'Reply to the last message', tags: ['read screen', 'tap', 'send'] },
-  { slug: 'order', title: 'Order your usual', tags: ['tap', 'cart', 'checkout'] },
+  { slug: 'late', title: 'Tell the group chat I’m late', tags: ['read screen', 'tap', 'send'] },
+  { slug: 'order', title: 'Order my usual, extra spicy', tags: ['tap', 'cart', 'checkout'] },
   { slug: 'twofa', title: 'Copy the 2FA code', tags: ['screen', 'clipboard'] },
-  { slug: 'summarize', title: 'Summarise what’s on screen', tags: ['screenshot', 'model'] },
+  { slug: 'build', title: 'Fix the build, then ping me', tags: ['terminal', 'notify'] },
   { slug: 'battery', title: 'Battery low? Turn on saver', tags: ['settings', 'intent'] },
-  { slug: 'ride', title: 'Book the cheapest ride', tags: ['apps', 'compare', 'tap'] },
+  { slug: 'ride', title: 'Book the cheapest ride home', tags: ['apps', 'compare', 'tap'] },
   { slug: 'slack', title: 'Post this screenshot to Slack', tags: ['share', 'intent'] },
   { slug: 'silence', title: 'Silence it until 9', tags: ['dnd', 'system'] },
 ];

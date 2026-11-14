@@ -6,6 +6,8 @@ import NightRoll from "./schedules/NightRoll.astro";
 import RunKey from "./schedules/RunKey.astro";
 import NoteToSelf from "./schedules/NoteToSelf.astro";
 import Takers from "./schedules/Takers.astro";
+import { cards } from "../../data/agentCards";
+import { takers } from "../../data/schedules";
 ---
 
 <section class="section schedules" id="schedules">
@@ -17,7 +19,7 @@ import Takers from "./schedules/Takers.astro";
         <div class="sec-body">
             <h2>Set it tonight. Wake up to done.</h2>
             <p class="lead">
-                Give any agent a task for later: once, every few hours, or each
+                Give an agent a task for later: once, every few hours, or each
                 weekday at seven. Agents can set reminders for themselves too.
                 When it's time, the phone does it on its own, with the app
                 closed and the screen off: a stopped agent starts, an idle one
@@ -33,7 +35,7 @@ import Takers from "./schedules/Takers.astro";
     <div class="fig-pair">
         <div class="fig-col">
             <p class="fig-label">FIG. 06B — Note to self</p>
-            <h3>It can remind itself.</h3>
+            <h3>It sets its own alarms.</h3>
             <p>
                 From chat, an agent can set itself a reminder: check back on
                 the CI run in 30 minutes. When it comes due, it reads as its own
@@ -44,7 +46,7 @@ import Takers from "./schedules/Takers.astro";
         </div>
         <div class="fig-col">
             <p class="fig-label">FIG. 06C — Who takes a task</p>
-            <h3>Most kinds can.</h3>
+            <h3>{takers.length} of {cards.length} clock in.</h3>
             <p>
                 A kind takes a task if it can start with one or be woken. The
                 app says which on each agent's page.

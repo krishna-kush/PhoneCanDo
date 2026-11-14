@@ -56,6 +56,9 @@ const GROUPS: { level: ScheduleLevel; title: string; meaning: string }[] = [
 /** The three ways a kind takes a task, each with the kinds that do. */
 export const groups = GROUPS.map((g) => ({ ...g, kinds: cards.filter((c) => c.schedules === g.level) }));
 
+/** Kinds that take a task at all: started with one, woken, or both. */
+export const takers = cards.filter((c) => c.schedules !== 'none');
+
 /** Kinds that run the schedules you set but can't set their own (no phone tools). */
 export const yoursOnly = cards.filter((c) => c.schedules !== 'none' && !c.ownReminders);
 

@@ -29,6 +29,12 @@ const files: { path: string; href: string; title: string; text: string }[] = [
     text: 'Our Cloudflare Worker that receives the stats, with its schema and its storage.',
   },
   {
+    path: 'docs/accounts.md',
+    href: blob('docs/accounts.md'),
+    title: 'What signing in keeps',
+    text: 'Only if you sign in: everything the account server holds for you, and for how long.',
+  },
+  {
     path: 'docs/api/security.md',
     href: blob('docs/api/security.md'),
     title: 'How phone control is gated',
@@ -56,7 +62,7 @@ const files: { path: string; href: string; title: string; text: string }[] = [
     path: 'LICENSE',
     href: blob('LICENSE'),
     title: 'What you may do with it',
-    text: 'Source-available: read it, study it, contribute to it. Copying or redistributing it needs our written permission.',
+    text: 'Source-available: read it, study it, contribute to it. Anything else, using, copying or redistributing the code, needs our written permission.',
   },
 ];
 ---
@@ -68,10 +74,10 @@ const files: { path: string; href: string; title: string; text: string }[] = [
       <p class="fig-label">FIG. 09 — Source files</p>
     </div>
     <div class="sec-body">
-      <h2>Read the code yourself.</h2>
+      <h2>Don't trust us. Read us.</h2>
       <p class="lead">
-        PhoneCanDo is source-available: the app, this site and the server the
-        app reports to are all public on GitHub. If anything in this manual
+        PhoneCanDo is source-available: the app, this site and our servers are
+        all public on GitHub. If anything in this manual
         makes you wonder, don't take our word for it.{" "}
         <em>Open the file and see.</em>
       </p>
@@ -236,7 +242,7 @@ const files: { path: string; href: string; title: string; text: string }[] = [
      the command you would type to open it. */
   .src-files {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     margin: 0;
     padding: 0;

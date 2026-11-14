@@ -1,6 +1,6 @@
 ---
 // FIG. 05C: the long shift, as a ruler of hours. A dashed ghost of the
-// service type we used before walks to 6 h and is cut off there (Android 15
+// usual background service type walks to 6 h and is cut off there (Android 15
 // and later give it 6 hours in any 24 in the background); our agent hops the
 // cut and keeps going. Below, what keeps an agent up, what lets it sleep, and
 // what doesn't work yet (docs/release/known-limits.md). CSS only.
@@ -19,11 +19,11 @@ const HOURS = [0, 2, 4, 6, 8, 10, 12];
 
     <div class="shift-ruler" aria-hidden="true">
         <div class="ruler-lane ruler-before">
-            <span class="ruler-lane-name">Before</span>
+            <span class="ruler-lane-name">Usual</span>
             <span class="ruler-ghost"><i></i></span>
         </div>
         <div class="ruler-lane ruler-now">
-            <span class="ruler-lane-name">Now</span>
+            <span class="ruler-lane-name">Ours</span>
             {walker && (
                 <span class="ruler-walker">
                     <span class="ruler-cart">npm run dev</span>
@@ -38,8 +38,8 @@ const HOURS = [0, 2, 4, 6, 8, 10, 12];
         <span class="ruler-cut"><b>✂ 6 h</b></span>
     </div>
     <p class="shift-cut-note">
-        <b>6 h</b> in any 24 is all Android 15 and later gives the service
-        type we used before, in the background. Ours has no limit.
+        Android 15 and later cut the usual service type for background work
+        off after <b>6 h</b> a day. Ours keeps going.
     </p>
 
     <ul class="shift-facts">
@@ -67,7 +67,7 @@ const HOURS = [0, 2, 4, 6, 8, 10, 12];
     </ul>
 
     <figcaption class="shift-caution">
-        <b>Not yet</b>
+        <b>Not yet. On the list:</b>
         <span>A crashed agent waits until you open it</span>
         <span>After a reboot, only a schedule starts an agent</span>
         <span>The Play Store build waits on Google's OK for its service type</span>
