@@ -1,0 +1,32 @@
+/* The asks as a field manual page (and the pages after it): a heading in
+   the site's red slanted box, a numbered list that grows and is stamped,
+   figures with their captions, and the captions that stop the music. */
+
+/* A page's heading, the site's red slanted box (asks, agents, locked). */
+.page-head {
+  font: italic 400 calc(var(--u) * 8) / 1 var(--serif);
+  color: var(--on-primary);
+  background: var(--red);
+  padding: 0.04em 0.28em 0.12em 0.22em;
+  transform: rotate(-2.5deg);
+  box-shadow: calc(var(--u) * 0.9) calc(var(--u) * 0.9) 0 var(--amber);
+}
+.caption {
+  font: 600 calc(var(--u) * 6) / 1.1 var(--mono);
+  color: var(--fg);
+  white-space: nowrap;
+  text-shadow: 0 0 calc(var(--u) * 2) var(--bg);
+}
+.caption.amber { color: var(--amber-ink); }
+.burst { position: absolute; left: 0; top: 0; overflow: visible; width: 1px; height: 1px; }
+
+.page-intro { font: 400 calc(var(--u) * 2.5) / 1.4 var(--sans); color: var(--muted); }
+.ask-row { display: flex; align-items: baseline; gap: calc(var(--u) * 1.6); white-space: nowrap; }
+.ask-row b { font: 600 calc(var(--u) * 2.1) / 1 var(--mono); color: var(--amber-ink); letter-spacing: 0.08em; }
+.ask-row span { font-family: var(--serif); line-height: 1; color: var(--fg); }
+.ask-bar { position: absolute; left: 0; top: 0; background: var(--red-soft); border-left: calc(var(--u) * 0.45) solid var(--red); }
+.figbox { position: absolute; left: 0; top: 0; border: calc(var(--u) * 0.18) solid var(--line-strong); background: var(--panel); }
+.figbox svg { position: absolute; inset: 12% 10%; width: 80%; height: 76%; overflow: visible; }
+.figcap { position: absolute; left: 0; top: 0; font: 500 calc(var(--u) * 1.6) / 1.5 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber-ink); white-space: nowrap; }
+.figcap small { display: block; font-size: 0.9em; color: var(--muted); }
+.figbox .photo { position: absolute; inset: calc(var(--u) * 0.8); background: var(--panel2); }

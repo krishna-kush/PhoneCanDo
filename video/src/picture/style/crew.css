@@ -1,0 +1,33 @@
+/* The crew: agent cards dealt onto the catalogue page, the units in a
+   team photo, notes passed between them. */
+
+.card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(var(--u) * 1.4);
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.18) var(--line-strong), calc(var(--u) * 0.7) calc(var(--u) * 0.7) 0 var(--amber);
+  border-radius: calc(var(--u) * 0.6);
+}
+.card .label { font-size: calc(var(--u) * 1.2); }
+.card .name { font: 400 calc(var(--u) * 2.6) / 1.02 var(--serif); color: var(--fg); white-space: nowrap; }
+.card .name.long { font-size: calc(var(--u) * 2.1); white-space: normal; }
+.card .face { position: relative; flex: 1; }
+.card.lead { box-shadow: inset 0 0 0 calc(var(--u) * 0.25) var(--red), calc(var(--u) * 0.7) calc(var(--u) * 0.7) 0 var(--red); }
+.note {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--u) * 3.6);
+  height: calc(var(--u) * 2.8);
+  background: var(--fg);
+  box-shadow: calc(var(--u) * 0.35) calc(var(--u) * 0.35) 0 var(--amber);
+}
+.note::after { content: ''; position: absolute; left: 18%; right: 18%; top: 42%; height: calc(var(--u) * 0.3); background: var(--dim); }
+.zzz { position: absolute; left: 0; top: 0; font: 600 calc(var(--u) * 3) / 1 var(--mono); color: var(--amber-ink); }
+.moon { position: absolute; left: 0; top: 0; border-radius: 50%; background: var(--amber); box-shadow: 0 0 calc(var(--u) * 6) var(--amber-line); }
+.moon i { position: absolute; border-radius: 50%; background: var(--bg); }

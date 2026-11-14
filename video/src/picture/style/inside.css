@@ -1,0 +1,86 @@
+/* Inside the phone: the site's FIG. 01A, the body apart, as plates lifted
+   off each other in 3D with their callouts (scenes/apart.ts); then the
+   terminal on the Linux plate (scenes/terminal.ts). */
+
+.apart3d { position: absolute; inset: 0; perspective: calc(var(--u) * 260); }
+.stack3d { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
+.plate {
+  position: absolute;
+  inset: 0;
+  border-radius: calc(var(--pw) * 0.13);
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.2) var(--line-strong);
+  overflow: hidden;
+}
+.plate.phantom { background: transparent; box-shadow: none; border: calc(var(--u) * 0.25) dashed var(--red); }
+.plate.glass { background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 40%), var(--term-bg); }
+.plate .dots { position: absolute; inset: 14% 12%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14% 0; justify-items: center; }
+.plate .dots i { width: calc(var(--pw) * 0.13); height: calc(var(--pw) * 0.13); border-radius: 50%; background: var(--amber); }
+.plate .dots i.red { background: var(--red); }
+.plate pre {
+  position: absolute;
+  left: 10%;
+  top: 14%;
+  margin: 0;
+  font: 500 calc(var(--pw) * 0.075) / 1.5 var(--mono);
+  color: var(--term-fg);
+}
+.plate pre b { color: var(--amber-ink); font-weight: 500; }
+/* The terminal scene's own terminal, shrunk and turned onto the Linux plate. */
+.plate .mini { position: absolute; left: 50%; top: 50%; }
+.plate .chip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46%;
+  height: 22%;
+  transform: translate(-50%, -50%);
+  border: calc(var(--u) * 0.25) dashed var(--amber);
+  display: grid;
+  place-items: center;
+  font: 600 calc(var(--pw) * 0.08) / 1 var(--mono);
+  color: var(--amber-ink);
+  letter-spacing: 0.1em;
+}
+.plate .trace { position: absolute; height: calc(var(--u) * 0.2); background: var(--amber-line); }
+.plate .sticker { position: absolute; left: 30%; top: 36%; width: 40%; aspect-ratio: 1; background: var(--red); box-shadow: calc(var(--pw) * 0.05) calc(var(--pw) * 0.05) 0 var(--amber); }
+.plate .sticker i { position: absolute; top: 29%; width: 25%; height: 29%; background: var(--on-primary); }
+.plate .sticker i:first-child { left: 21%; }
+.plate .sticker i:last-child { right: 21%; }
+.plate svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.plate .spot { position: absolute; left: 9%; top: 7%; width: 1px; height: 1px; }
+
+.legend { position: absolute; left: 0; top: 0; font: 500 calc(var(--u) * 1.9) / 1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; }
+.legend b { color: var(--amber-ink); font-weight: 600; margin-right: 0.9em; }
+.legend span { color: var(--fg); }
+.legend em { font-style: normal; color: var(--muted); }
+.legend.phantom span, .legend.phantom b { color: var(--red); }
+.leaders { position: absolute; left: 0; top: 0; overflow: visible; width: 1px; height: 1px; }
+
+.term {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: var(--term-bg);
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.18) var(--line-strong), calc(var(--u) * 1.2) calc(var(--u) * 1.2) 0 var(--amber);
+  border-radius: calc(var(--u) * 1);
+  overflow: hidden;
+  font: 500 calc(var(--u) * 2.9) / 1.55 var(--mono);
+  color: var(--term-fg);
+}
+.term .bar {
+  display: flex;
+  justify-content: space-between;
+  padding: calc(var(--u) * 1.4) calc(var(--u) * 2.2);
+  border-bottom: calc(var(--u) * 0.15) solid var(--term-line);
+  font-size: calc(var(--u) * 1.8);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--term-muted);
+}
+.term .bar b { color: var(--amber); font-weight: 600; }
+.term .body { padding: calc(var(--u) * 2) calc(var(--u) * 2.6); white-space: pre; }
+.term .p { color: var(--amber-ink); }
+.term .ok { color: var(--amber-ink); }
+.term .dim { color: var(--term-muted); }
+.term .cur { display: inline-block; width: 0.6em; height: 1.2em; vertical-align: -0.28em; background: var(--amber); }

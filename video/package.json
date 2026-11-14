@@ -1,0 +1,27 @@
+{
+  "name": "phonecando-video",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The intro video: its picture (a page drawn frame by frame from one clock), its sound (synthesized, no samples) and the renderer that turns both into an MP4 for each platform.",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "sound": "node --disable-warning=ExperimentalWarning src/sound/cli.ts",
+    "render": "node --disable-warning=ExperimentalWarning src/render/cli.ts",
+    "preview": "node --disable-warning=ExperimentalWarning src/render/preview.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3"
+  }
+}

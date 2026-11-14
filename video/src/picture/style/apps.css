@@ -1,0 +1,174 @@
+/* What runs on the phone's screen: a home screen and the group chat with
+   its keyboard. Sized from the phone's width (--pw) so it scales with it;
+   the product stays dark as on the site, in the terminal roles. */
+
+.home { position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 0%, var(--term-panel), var(--term-bg) 70%); }
+.home .grid {
+  position: absolute;
+  left: calc(var(--pw) * 0.08);
+  right: calc(var(--pw) * 0.08);
+  top: calc(var(--ph) * 0.17);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: calc(var(--pw) * 0.09);
+  justify-items: center;
+}
+.home .app {
+  width: calc(var(--pw) * 0.15);
+  height: calc(var(--pw) * 0.15);
+  border-radius: calc(var(--pw) * 0.045);
+  background: var(--term-panel);
+  box-shadow: inset 0 0 0 calc(var(--pw) * 0.004) var(--term-line);
+  display: grid;
+  place-items: center;
+}
+.home .app i { display: block; width: 46%; height: 46%; border-radius: 28%; background: var(--term-line); }
+.home .app.chat { background: var(--amber); }
+.home .app.chat i { background: var(--term-bg); border-radius: 50% 50% 50% 12%; height: 40%; }
+.home .app.red { background: var(--red); }
+.home .app.red i { background: var(--on-primary); border-radius: 50%; width: 30%; height: 30%; }
+.home .dock {
+  position: absolute;
+  left: calc(var(--pw) * 0.07);
+  right: calc(var(--pw) * 0.07);
+  bottom: calc(var(--pw) * 0.08);
+  height: calc(var(--pw) * 0.22);
+  border-radius: calc(var(--pw) * 0.08);
+  background: var(--term-panel);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.ripple {
+  position: absolute;
+  width: calc(var(--pw) * 0.2);
+  height: calc(var(--pw) * 0.2);
+  margin: calc(var(--pw) * -0.1) 0 0 calc(var(--pw) * -0.1);
+  border-radius: 50%;
+  background: var(--term-fg);
+  opacity: 0;
+}
+
+.chatapp {
+  position: absolute;
+  inset: 0;
+  background: var(--term-bg);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--sans);
+  color: var(--term-fg);
+}
+.chatapp .top {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--pw) * 0.03);
+  padding: calc(var(--pw) * 0.15) calc(var(--pw) * 0.06) calc(var(--pw) * 0.035);
+  border-bottom: calc(var(--pw) * 0.004) solid var(--term-line);
+}
+.chatapp .faces { display: flex; }
+.chatapp .face {
+  width: calc(var(--pw) * 0.085);
+  height: calc(var(--pw) * 0.085);
+  border-radius: 50%;
+  margin-right: calc(var(--pw) * -0.025);
+  box-shadow: 0 0 0 calc(var(--pw) * 0.008) var(--term-bg);
+  display: grid;
+  place-items: center;
+  font: 600 calc(var(--pw) * 0.036) / 1 var(--sans);
+  color: var(--term-bg);
+}
+.chatapp .name { font: 600 calc(var(--pw) * 0.05) / 1.1 var(--sans); margin-left: calc(var(--pw) * 0.03); }
+.chatapp .name small { display: block; font: 400 calc(var(--pw) * 0.034) / 1.3 var(--sans); color: var(--term-muted); }
+.chatapp .log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: calc(var(--pw) * 0.02);
+  padding: calc(var(--pw) * 0.04) calc(var(--pw) * 0.05);
+  overflow: hidden;
+}
+.msg {
+  max-width: 78%;
+  padding: calc(var(--pw) * 0.026) calc(var(--pw) * 0.038);
+  border-radius: calc(var(--pw) * 0.045);
+  font: 400 calc(var(--pw) * 0.045) / 1.25 var(--sans);
+  background: var(--term-panel);
+  box-shadow: inset 0 0 0 calc(var(--pw) * 0.004) var(--term-line);
+  align-self: flex-start;
+  transform-origin: 0% 100%;
+}
+.msg b { display: block; font: 600 calc(var(--pw) * 0.032) / 1.4 var(--sans); color: var(--amber); }
+.msg.mine { align-self: flex-end; background: var(--red); box-shadow: none; color: var(--on-primary); transform-origin: 100% 100%; }
+.chatapp .input {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--pw) * 0.03);
+  padding: calc(var(--pw) * 0.025) calc(var(--pw) * 0.04);
+}
+.chatapp .field {
+  flex: 1;
+  min-height: calc(var(--pw) * 0.1);
+  padding: calc(var(--pw) * 0.022) calc(var(--pw) * 0.04);
+  border-radius: calc(var(--pw) * 0.06);
+  background: var(--term-panel);
+  box-shadow: inset 0 0 0 calc(var(--pw) * 0.004) var(--term-line);
+  font: 400 calc(var(--pw) * 0.045) / 1.25 var(--sans);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.chatapp .field .cur { width: calc(var(--pw) * 0.006); margin-left: calc(var(--pw) * 0.004); background: var(--amber); }
+.chatapp .field.empty { color: var(--term-muted); }
+.chatapp .send {
+  width: calc(var(--pw) * 0.1);
+  height: calc(var(--pw) * 0.1);
+  border-radius: 50%;
+  background: var(--red);
+  display: grid;
+  place-items: center;
+}
+.chatapp .send i {
+  width: 0;
+  height: 0;
+  border-left: calc(var(--pw) * 0.03) solid var(--on-primary);
+  border-top: calc(var(--pw) * 0.02) solid transparent;
+  border-bottom: calc(var(--pw) * 0.02) solid transparent;
+  margin-left: calc(var(--pw) * 0.008);
+}
+.keys {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--pw) * 0.022);
+  padding: calc(var(--pw) * 0.035) calc(var(--pw) * 0.015) calc(var(--pw) * 0.09);
+  background: var(--term-panel);
+}
+.keys .row { display: flex; justify-content: center; gap: calc(var(--pw) * 0.012); }
+.keys .k {
+  position: relative;
+  width: calc(var(--pw) * 0.084);
+  height: calc(var(--pw) * 0.11);
+  border-radius: calc(var(--pw) * 0.015);
+  background: var(--term-key);
+  font: 400 calc(var(--pw) * 0.048) / calc(var(--pw) * 0.11) var(--sans);
+  text-align: center;
+  color: var(--term-fg);
+}
+.keys .k.wide { width: calc(var(--pw) * 0.44); }
+.keys .k.on { background: var(--term-muted); color: var(--term-bg); }
+.keys .k .tip {
+  position: absolute;
+  left: 50%;
+  bottom: 85%;
+  width: 150%;
+  height: 120%;
+  margin-left: -75%;
+  border-radius: calc(var(--pw) * 0.02);
+  background: var(--term-fg);
+  color: var(--term-bg);
+  font-size: calc(var(--pw) * 0.07);
+  line-height: calc(var(--pw) * 0.13);
+  display: none;
+}
+.keys .k.on .tip { display: block; }
+.keys .k.wide .tip { display: none; }

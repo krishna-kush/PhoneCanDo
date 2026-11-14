@@ -1,0 +1,226 @@
+/* The pieces scenes are built from, in the site's drawing language: the
+   amber blueprint grid, hairline frames with registration ticks, red
+   stamps, the red button on its hard amber offset, the phone. */
+
+/* ---------- backdrop ---------- */
+
+.sky-grid {
+  position: absolute;
+  inset: -10%;
+  background-image:
+    linear-gradient(to right, var(--grid) calc(var(--u) * 0.14), transparent calc(var(--u) * 0.14)),
+    linear-gradient(to bottom, var(--grid) calc(var(--u) * 0.14), transparent calc(var(--u) * 0.14));
+  background-size: calc(var(--u) * 6) calc(var(--u) * 6);
+}
+.sky-grid.dots {
+  background-image: radial-gradient(circle, var(--grid-dot) calc(var(--u) * 0.2), transparent calc(var(--u) * 0.26));
+  background-size: calc(var(--u) * 3) calc(var(--u) * 3);
+}
+.sky-floor {
+  position: absolute;
+  left: -70%;
+  right: -70%;
+  bottom: -6%;
+  height: 64%;
+  transform-origin: 50% 100%;
+  transform: perspective(calc(var(--u) * 70)) rotateX(70deg);
+  background-image:
+    linear-gradient(to right, var(--grid-floor) calc(var(--u) * 0.3), transparent calc(var(--u) * 0.3)),
+    linear-gradient(to bottom, var(--grid-floor) calc(var(--u) * 0.3), transparent calc(var(--u) * 0.3));
+  background-size: calc(var(--u) * 9) calc(var(--u) * 9);
+  mask-image: linear-gradient(to top, #000 8%, transparent 90%);
+}
+.sky-glow, .sky-night, .sky-dawn { position: absolute; inset: 0; }
+
+/* ---------- HUD ---------- */
+
+.hud { position: absolute; inset: 0; pointer-events: none; }
+.hud-frame {
+  position: absolute;
+  inset: calc(var(--u) * 3);
+  border: calc(var(--u) * 0.1) solid var(--line);
+}
+.hud-tick {
+  position: absolute;
+  width: calc(var(--u) * 2.4);
+  height: calc(var(--u) * 2.4);
+  border-color: var(--amber);
+  border-style: solid;
+  border-width: 0;
+}
+.hud-tick.tl { left: calc(var(--u) * 3 - var(--u) * 0.25); top: calc(var(--u) * 3 - var(--u) * 0.25); border-left-width: calc(var(--u) * 0.3); border-top-width: calc(var(--u) * 0.3); }
+.hud-tick.tr { right: calc(var(--u) * 3 - var(--u) * 0.25); top: calc(var(--u) * 3 - var(--u) * 0.25); border-right-width: calc(var(--u) * 0.3); border-top-width: calc(var(--u) * 0.3); }
+.hud-tick.bl { left: calc(var(--u) * 3 - var(--u) * 0.25); bottom: calc(var(--u) * 3 - var(--u) * 0.25); border-left-width: calc(var(--u) * 0.3); border-bottom-width: calc(var(--u) * 0.3); }
+.hud-tick.br { right: calc(var(--u) * 3 - var(--u) * 0.25); bottom: calc(var(--u) * 3 - var(--u) * 0.25); border-right-width: calc(var(--u) * 0.3); border-bottom-width: calc(var(--u) * 0.3); }
+.hud .label { position: absolute; font-size: calc(var(--u) * 1.75); }
+.hud-brand { left: calc(var(--u) * 5); top: calc(var(--u) * 4.4); color: var(--muted); }
+.hud-brand::before {
+  content: '';
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-right: 0.7em;
+  background: var(--red);
+  box-shadow: 0.14em 0.14em 0 var(--amber);
+  vertical-align: 0.02em;
+}
+.hud-sec { right: calc(var(--u) * 5); top: calc(var(--u) * 4.4); color: var(--amber-ink); }
+.hud-url { left: calc(var(--u) * 5); bottom: calc(var(--u) * 4.4); color: var(--fg); }
+.hud-rec { right: calc(var(--u) * 5); bottom: calc(var(--u) * 4.4); }
+.hud-rec i { display: inline-block; width: 0.62em; height: 0.62em; background: var(--red); margin-right: 0.7em; vertical-align: 0.02em; }
+.hud-bar { position: absolute; left: 0; top: 0; height: calc(var(--u) * 0.35); width: 100%; background: var(--red); transform-origin: 0 50%; }
+.tall .hud-sec { left: calc(var(--u) * 5); right: auto; top: calc(var(--u) * 7.4); }
+.tall .hud-url { left: auto; right: calc(var(--u) * 5); top: calc(var(--u) * 4.4); bottom: auto; }
+.tall .hud-rec { display: none; }
+
+/* ---------- flash ---------- */
+
+.flash { position: absolute; inset: 0; background: var(--fg); opacity: 0; pointer-events: none; }
+
+/* ---------- FIG labels ---------- */
+
+.fig { display: flex; align-items: center; gap: 0.9em; color: var(--amber-ink); }
+.fig::before { content: ''; width: 2.4em; height: calc(var(--u) * 0.15); background: currentColor; }
+.cur { display: inline-block; width: 0.62em; height: 1.05em; margin-left: 0.15em; background: currentColor; vertical-align: -0.18em; }
+
+/* ---------- stamps ---------- */
+
+.stamp {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: 700 calc(var(--u) * 4.2) / 1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--red);
+  border: calc(var(--u) * 0.55) solid currentColor;
+  border-radius: calc(var(--u) * 0.5);
+  padding: calc(var(--u) * 1) calc(var(--u) * 1.3) calc(var(--u) * 0.85) calc(var(--u) * 1.6);
+  white-space: nowrap;
+}
+.stamp.amber { color: var(--amber-ink); }
+.stamp.fg { color: var(--fg); }
+.stamp.fill { background: var(--red); color: var(--on-primary); border-color: var(--red); }
+
+/* ---------- bubbles ---------- */
+
+.bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: 500 calc(var(--u) * 3) / 1.2 var(--mono);
+  color: var(--bg);
+  background: var(--fg);
+  padding: calc(var(--u) * 1.3) calc(var(--u) * 1.8);
+  border-radius: calc(var(--u) * 1.2);
+  white-space: nowrap;
+  box-shadow: calc(var(--u) * 0.6) calc(var(--u) * 0.6) 0 var(--amber);
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  width: calc(var(--u) * 2.2);
+  height: calc(var(--u) * 2.2);
+  background: inherit;
+  bottom: calc(var(--u) * -0.9);
+  left: calc(var(--u) * 2.4);
+  transform: rotate(45deg) skew(12deg, 12deg);
+  border-radius: calc(var(--u) * 0.3);
+}
+.bubble.right::after { left: auto; right: calc(var(--u) * 2.4); }
+
+/* ---------- the button ---------- */
+
+.btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  font: 600 calc(var(--u) * 3.4) / 1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-primary);
+  background: var(--red);
+  padding: calc(var(--u) * 2.2) calc(var(--u) * 3.4);
+  white-space: nowrap;
+  box-shadow: var(--press, calc(var(--u) * 1.1)) var(--press, calc(var(--u) * 1.1)) 0 var(--amber);
+}
+
+/* ---------- the phone ---------- */
+
+.phone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--pw);
+  height: var(--ph);
+  padding: calc(var(--pw) * 0.034);
+  border-radius: calc(var(--pw) * 0.15);
+  background: var(--term-panel);
+  box-shadow:
+    inset 0 0 0 calc(var(--u) * 0.18) var(--line-strong),
+    calc(var(--pw) * 0.06) calc(var(--pw) * 0.06) 0 var(--amber);
+}
+.phone .screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--pw) * 0.12);
+  background: var(--term-bg);
+  overflow: hidden;
+}
+.phone .cam {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: calc(var(--pw) * 0.07);
+  width: calc(var(--pw) * 0.045);
+  height: calc(var(--pw) * 0.045);
+  margin-left: calc(var(--pw) * -0.0225);
+  border-radius: 50%;
+  background: var(--hole);
+  box-shadow: 0 0 0 calc(var(--u) * 0.12) var(--line-strong);
+}
+.phone .key {
+  position: absolute;
+  right: calc(var(--pw) * -0.018);
+  width: calc(var(--pw) * 0.018);
+  border-radius: calc(var(--u) * 0.2);
+  background: var(--line-strong);
+}
+.phone .status {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: calc(var(--pw) * 0.055) calc(var(--pw) * 0.1) 0;
+  font: 600 calc(var(--pw) * 0.042) / 1 var(--sans);
+  color: var(--term-fg);
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  font: 500 calc(var(--u) * 2.1) / 1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber-ink);
+  white-space: nowrap;
+}
+.callout.left { flex-direction: row-reverse; }
+.callout .dot { width: calc(var(--u) * 1.1); height: calc(var(--u) * 1.1); border-radius: 50%; background: currentColor; flex: none; }
+.callout .line { height: calc(var(--u) * 0.18); background: currentColor; transform-origin: 0 50%; flex: none; }
+.callout.left .line { transform-origin: 100% 50%; }
+.callout .words { padding: 0 calc(var(--u) * 1.4); }
+.callout b { color: var(--fg); font-weight: 600; }
+.callout em { font-style: normal; color: var(--muted); }

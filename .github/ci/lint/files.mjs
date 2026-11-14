@@ -13,9 +13,9 @@ const PRUNE_DIRS = new Set([
   '.git', 'node_modules', 'dist', 'build', '.expo', '.gradle', '.cxx', '.kotlin',
   '.tamagui', '.astro', '__pycache__', '.playwright-mcp', 'reference', 'web-build',
 ]);
-// Paths ignored by the repo .gitignore files (root, app/, pce/, web/).
+// Paths ignored by the repo .gitignore files (root, app/, pce/, web/, video/).
 const PRUNE_PATHS = new Set([
-  'app/android', 'app/ios',
+  'app/android', 'app/ios', 'video/out',
   'app/modules/phonecando-linux/android/src/linux/libs',
   'app/modules/phonecando-linux/android/src/linux/assets',
   'app/modules/phonecando-linux/android/src/linux/dev-assets',

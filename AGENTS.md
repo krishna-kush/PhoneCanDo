@@ -106,6 +106,17 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   SVG paths). The site's cards, backdrop and `/mascots` page and the app's
   faces (`ui/common/face/`) draw from it. `node --test
   "mascot/test/*.test.mjs"`.
+- `video/` — the intro video for YouTube, LinkedIn and the feeds (own pnpm
+  package; no deps but the site's fonts). `src/timeline/` is the one beat
+  line picture and sound share (138 BPM; a script per scene: its words,
+  moments and sounds), `src/picture/` a page drawn frame by frame from it
+  (reads `theme/tokens.json` and `mascot/` as they are; scenes in
+  `picture/scenes/`, the stage crew's set changes between them in
+  `picture/stagehands/`), `src/sound/` the synthesized music and effects,
+  and `src/render/` headless Chrome over the DevTools protocol plus ffmpeg.
+  `pnpm -C video sound`, then `pnpm -C video render [--format
+  16x9|9x16|1x1] [--draft]` into `video/out/` (ignored); `pnpm -C video
+  preview` to scrub it in a browser.
 - `app/src/state/` — zustand stores: `app.ts` (navigation, prefs and
   telemetry slices in `app/`), `agents.ts` (agents, engine states, the
   active agent), `linux.ts` (envs, images, job progress), `models.ts`
