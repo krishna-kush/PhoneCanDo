@@ -33,6 +33,43 @@ image-kind rules: `agents/AGENTS.md` §4.
 - `userState`: `~/.claude` and `~/.claude.json`. The install
   (`~/.local/share/claude`, `~/.local/bin/claude`) is not in them.
 
+## ACP mode
+
+Claude Code has no ACP mode of its own: `engine.acp` runs the adapter
+`claude-agent-acp` (npm `@agentclientprotocol/claude-agent-acp`, the ACP
+registry's `claude-acp` entry), which the install and update steps add on
+our `node` runtime (it wants Node 22).
+
+- `CLAUDE_CODE_EXECUTABLE` points the adapter at the Claude Code the
+  installer put in `~/.local/bin` (0.106.0 `dist/claude-cli.js` reads it
+  first), so there is one Claude Code, one version and one set of chats.
+  `--omit=optional` keeps npm from also fetching the SDK's own Claude Code
+  build (the trial's install was 402 MB with it).
+- `tools: session`: terminal mode adds the bridge in argv
+  (`--mcp-config`), which the adapter has no way to take; the runner hands
+  it over in session/new instead.
+- `options: {mode: default}`: the adapter opens a chat in `auto`, which
+  needs Claude's safety check and denied our trial's tool call; `default`
+  makes it ask, so the phone asks you.
+- `meta`: `_meta.claudeCode.options.settings` names our settings file. The
+  adapter reads the file and hands it to Claude Code as its `--settings`
+  layer (0.106.0 `dist/session-env.js` `configuredSettings`,
+  `dist/v1/acp-agent.js`), so our hooks run as in terminal mode, your
+  `~/.claude` stays yours, and your user, project and local settings
+  still load.
+- `chat`: `--resume <id>` at 1. The ACP chat id is Claude Code's session
+  id (the chat is `~/.claude/projects/<folder>/<id>.jsonl`), so the
+  terminal opens the chat the background run used.
+- PC trial (2026-11-13, x86_64, adapter 0.106.0, a fake model): full
+  turns, tools over HTTP MCP from session/new, a permission asked with
+  allow once, allow always and reject, back-to-back prompts, and
+  session/load after a restart. Our hooks ran (from a user-level settings
+  file there, not this `_meta` path), a message dropped mid-turn reached
+  the model through `PostToolBatch`, and turns ended at once with our
+  `Stop` waiter (`asyncRewake`) in place.
+- Owed: a phone check (arm64 under proot) with the installed Claude Code
+  and the `_meta` settings path.
+
 ## Events
 
 `--settings` names our `config/settings.json` (seeded to
@@ -76,8 +113,20 @@ connect.
 
 ## Local models
 
-Over `anthropic`, env only:
+Over `anthropic`:
 
+- `--permission-mode default` (the arg): from 2.1.283 Claude Code starts
+  in `auto`, whose safety check runs on Anthropic's server. Through our
+  server it never gets through, so Claude Code asks about every action
+  and offers to leave for accept-edits. `default` (Manual) asks as
+  Claude Code did before `auto`, by your allow rules, with no check to
+  wait on; on its own cloud it keeps starting in `auto`. No env sets the
+  mode, and the flag wins over any `permissions.defaultMode` in your
+  settings (code.claude.com/docs/en/permission-modes), so on a local
+  model it also starts in `default` when you chose another; Shift+Tab
+  still switches. The ACP adapter ignores args it does not know, and its
+  chats already start in `default` (ACP mode, `options`). The one-shot
+  run (`-p`) gets it too, where it is the default anyway.
 - `CLAUDE_CODE_MAX_CONTEXT_TOKENS` is the server's context: Claude Code
   does not know our model ids and would assume 200k. The
   `[claude-code:unrecognized_model]` line on stderr is only a notice.

@@ -35,6 +35,29 @@ extension of ours, `config/phonecando.ts` (with `messages.ts` and
   (`PI_CODING_AGENT_DIR`); our extension stays in `~/.phonecando/pi`.
 - `userState`: `~/.pi/agent`.
 
+## ACP mode
+
+pi has no ACP mode of its own: `engine.acp` runs the adapter `pi-acp`
+(npm `pi-acp`, the ACP registry's `pi-acp` entry), which the install and
+update steps add. It starts pi itself as `pi --mode rpc --no-themes`, and
+only `PI_ACP_PI_COMMAND` changes the program (0.0.34 `dist/index.js`).
+
+- So the steps also write `~/.local/bin/pi-phonecando`, a small `sh`
+  script that runs pi with our extension (`-e`, as the launch does), and
+  `PI_ACP_PI_COMMAND` names it. pi takes extensions from no variable, and
+  the folder it looks in is yours.
+- `tools: config`: `pi-acp` takes no MCP servers in session/new; our
+  extension adds the bridge from the env and reads the inbox folder, as
+  in terminal mode.
+- `chat`: `--session <id>` at 1. `pi-acp` uses pi's own session id as the
+  ACP chat id, and pi opens a session by its full or partial id.
+- `pi-acp` keeps a small map from its chats to pi's session files in
+  `~/.pi/pi-acp/`, shared by the machine's pi agents, so it is not in
+  `userState`.
+- PC trial (2026-11-13, pi-acp 0.0.34): the handshake only; a chat needs a
+  provider key. Owed: a signed-in turn with our extension, and a phone
+  check.
+
 ## Events
 
 - The extension, through `phonecando-event`: `agent_start` raises

@@ -23,9 +23,10 @@ is archived.
   with its own sign-in).
 - `resume` adds `--continue`; with no chat for the folder Kimi starts a
   new one.
-- No `prompt`, so it cannot run scheduled tasks: the TUI takes no first
-  prompt (2.6.1 `apps/kimi-code/src/cli/commands.ts`: an argument is an
-  unknown command), and `-p` answers once without the TUI.
+- No `prompt`, so the TUI takes no scheduled task (ACP mode runs them,
+  below): it takes no first prompt (2.6.1
+  `apps/kimi-code/src/cli/commands.ts`: an argument is an unknown
+  command), and `-p` answers once without the TUI.
 - The window title is the chat's title (cut to 32 characters) or `Kimi
   Code`; `surfaces.chatTitle` skips the default.
 
@@ -37,6 +38,31 @@ is archived.
   folder of its own (`KIMI_CODE_HOME` in its state folder, our config
   seeded there too).
 - `userState`: `~/.kimi-code-agent`.
+
+## ACP mode
+
+`kimi acp` (the ACP registry's `kimi-code` entry; "Run kimi-code as an
+Agent Client Protocol (ACP) server over stdio" in `kimi --help`, 2.6.1).
+
+- The launch's `sh -c` wrapper with only the `exec` changed, so
+  `phonecando-mcp.mjs` first writes the bridge's current URL into
+  `$KIMI_CODE_HOME/mcp.json`.
+- `tools: config`: Kimi's ACP chats load that `mcp.json` too (2.6.1
+  `agent-core-v2` `configLoader.ts` reads `<KIMI_CODE_HOME>/mcp.json`;
+  servers from session/new are added on top). With `session` the runner
+  would leave the bridge out of the env, so the `phonecando` entry the
+  last start wrote there would have no token.
+- No `options`: its ACP chats start in `default`, which asks.
+- `chat`: `--session <id>` (`-S`, "With ID: resume that session"),
+  appended.
+- So Kimi can run scheduled tasks, and an idle agent in ACP mode gets a
+  waking message as a prompt; while it works, messages still wait (no
+  hooks of ours).
+- PC trial (2026-11-13, 2.6.1, a fake model): full turns, tools over HTTP
+  MCP from session/new, session/list, back-to-back prompts, and
+  session/load after a restart; chats in the Kimi folder's `sessions/`.
+- Owed: the bridge from `mcp.json` in ACP mode, resume by id, and a phone
+  check.
 
 ## Events
 

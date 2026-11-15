@@ -40,6 +40,27 @@ from system settings whatever the folder's trust.
   for both.
 - `userState`: `~/.qwen`.
 
+## ACP mode
+
+`qwen --acp` (the ACP registry's `qwen-code` entry; "Starts the agent in
+ACP mode" in `qwen --help`, 0.27.3). The registry also passes
+`--experimental-skills`, which 0.27.3 hides and ignores ("Skills are now
+enabled by default"), so we leave it out.
+
+- `tools: config`: ACP mode reads the same system settings
+  (`QWEN_CODE_SYSTEM_SETTINGS_PATH`), which name the bridge and our hooks.
+- `options: {mode: default}`: its ACP chats start in `auto`, where a
+  model decides which steps run and blocks risky ones with nobody asked;
+  `default` asks before edits and commands, so the phone asks you.
+- `chat`: `--resume <id>` at 1 ("Resume a specific session by its ID").
+- PC trial (2026-11-13, 0.27.3, a fake model through `--auth-type
+  openai`): full turns, tools over HTTP MCP from session/new, a
+  permission asked once `mode` was `default`, and session/load after a
+  restart. Our hooks ran from the system settings file, and a message
+  dropped mid-turn reached the model through `PostToolBatch`.
+- Owed: the bridge from the settings file in ACP mode (the trial handed
+  it over in session/new), resume by id, and a phone check.
+
 ## Events
 
 - Hooks (Claude Code's names): `UserPromptSubmit` working (it fires before

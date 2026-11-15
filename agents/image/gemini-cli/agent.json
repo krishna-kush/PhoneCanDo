@@ -62,7 +62,12 @@
       "cwd": "{{projectDir}}"
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 180 } },
-    "resume": { "args": ["--resume", "latest"], "at": 1 }
+    "resume": { "args": ["--resume", "latest"], "at": 1 },
+    "acp": {
+      "argv": ["/root/.local/bin/gemini", "--acp"],
+      "tools": "config",
+      "chat": { "args": ["--resume", "{{chatId}}"], "at": 1 }
+    }
   },
   "events": [
     {

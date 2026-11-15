@@ -32,6 +32,24 @@ the agent's machine. Shared image-kind rules: `agents/AGENTS.md` §4.
   `copilot/hooks`.
 - `userState`: `~/.copilot`.
 
+## ACP mode
+
+`copilot --acp --no-auto-update` (the ACP registry's `github-copilot-cli`
+entry; "Start as Agent Client Protocol server" in `copilot --help`,
+1.0.110). `--no-auto-update` as in the launch.
+
+- `tools: session`: terminal mode adds the bridge in argv
+  (`--additional-mcp-config`); in ACP mode the runner hands it over in
+  session/new, which Copilot's handshake says takes HTTP MCP servers.
+- No `options`.
+- `chat`: `--resume <id>`, appended as `resume` is ("optionally specify
+  existing session ID").
+- Our hooks sit in Copilot's own hooks folder, so they should run in ACP
+  mode too.
+- PC trial (2026-11-13, 1.0.110): the handshake only; a chat needs
+  sign-in. Owed: a signed-in turn, the hooks in ACP mode, that an ACP
+  chat's id opens with `--resume`, and a phone check.
+
 ## Events
 
 - Hooks: the runner seeds `config/phonecando.json` into `~/.copilot/hooks/`

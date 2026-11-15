@@ -131,6 +131,21 @@
       "args": [
         "--continue"
       ]
+    },
+    "acp": {
+      "argv": [
+        "sh",
+        "-c",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then node \"$KIMI_CODE_HOME/phonecando-mcp.mjs\" \"$KIMI_CODE_HOME/mcp.json\" \"$PHONECANDO_BRIDGE_URL/mcp\" || true; fi; exec /root/.local/bin/kimi acp \"$@\"",
+        "kimi"
+      ],
+      "tools": "config",
+      "chat": {
+        "args": [
+          "--session",
+          "{{chatId}}"
+        ]
+      }
     }
   },
   "events": [

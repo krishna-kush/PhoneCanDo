@@ -70,7 +70,12 @@
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
     "resume": { "args": ["-r"] },
-    "prompt": { "args": ["--text", "{{prompt}}"] }
+    "prompt": { "args": ["--text", "{{prompt}}"] },
+    "acp": {
+      "argv": ["/root/.local/bin/goose", "acp"],
+      "tools": "config",
+      "chat": { "args": ["-r", "--session-id", "{{chatId}}"] }
+    }
   },
   "events": [
     {

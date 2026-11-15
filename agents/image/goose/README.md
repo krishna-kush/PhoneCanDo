@@ -45,6 +45,29 @@ glibc or musl, so Alpine works (with `libgcc`).
   `$GOOSE_PATH_ROOT/config/config.yaml`.
 - `userState`: `~/.config/goose` and `~/.local/share/goose`.
 
+## ACP mode
+
+`goose acp` (the ACP registry's `goose` entry; "Run goose as an ACP agent
+server on stdio" in `goose acp --help`, 1.59.0).
+
+- Not through the launch's `sh -c`: the wrapper only adds `goose
+  configure` when no provider is set, which needs a screen. With none the
+  ACP chat fails and the runner says so; set one up in the terminal
+  first.
+- `tools: config`: `GOOSE_ADDITIONAL_CONFIG_FILES` is in the launch env,
+  so ACP mode reads our config file and its `phonecando` extension too;
+  the runner adds no server in session/new, so there is one `phonecando`.
+- No `options`: its ACP chats start in `auto`, goose's usual mode, which
+  runs tools without asking, as the TUI does.
+- `chat`: `-r --session-id <id>`, appended, so `goose session` resumes
+  that one (`--session-id` "Requires --resume"). ACP chats live in goose's
+  own sessions database (`~/.local/share/goose/sessions/sessions.db`).
+- PC trial (2026-11-13, 1.59.0, a fake model): full turns, tools over HTTP
+  MCP from session/new, back-to-back prompts, and session/load after a
+  restart.
+- Owed: our extension from the config file in ACP mode (the trial handed
+  the bridge over in session/new), resume by id, and a phone check.
+
 ## Events
 
 No hooks. OSC 7501, unprompted, with the usual map. Its bell

@@ -11,9 +11,9 @@ preference.
 ```
 agents/
 ├── kit/            the SDK every kind builds on
-│   ├── kotlin/api/     kit-api: AgentKind, KindHooks, LaunchContext/Spec, AgentConfig, HttpProbe, InboxRequest, EngineEvent
+│   ├── kotlin/api/     kit-api: AgentKind, KindHooks, LaunchContext/Spec, AgentConfig, HttpProbe, InboxRequest, EngineEvent, Capability
 │   ├── kotlin/manifest/ kit-manifest: the manifest model the phone reads + ManifestDecoder (strict types, user rules)
-│   ├── kotlin/render/  kit-render: ManifestKind, templates, launch/client rendering, InboxSeam, KindView
+│   ├── kotlin/render/  kit-render: ManifestKind, templates, launch/client rendering, InboxSeam, KindView, KindCapabilities
 │   ├── kotlin/term/    kit-term: a TUI's output stream: SignalScanner, SignalRules, ScreenRing, ProgramStatus; TermReplies, TermTheme
 │   ├── kotlin/cli/     kit-cli: render-install, render-model for CI (a leaf; ships nowhere)
 │   ├── ts/contract/    the TS view types the app reads (KindView, web adapter, PTY recipe; import type only)
@@ -149,9 +149,10 @@ phonecando-linux <- kit-api   (ProjectDir only: the machine's shell starts in th
     `"$@"`. A task that wants a new chat starts without the resume args.
     A kind gets the block only once its CLI's docs or source show that
     form starts the TUI with the prompt (its README says where); a kind
-    with neither this nor a `wake` cannot run scheduled tasks (KindView
-    `schedules`, kit-api `AgentKind.runsSchedules`). The prompt the runner
-    renders starts with a word, never a `-`.
+    with none of this, a `wake` or an ACP mode (below) cannot run
+    scheduled tasks (KindView `schedules`, kit-api
+    `AgentKind.runsSchedules`). The prompt the runner renders starts with
+    a word, never a `-`.
 - Both styles: `launch.cwd`, where the engine runs (HOME when it names
   none), and `resume {args, at?}`, the args added (at argv index `at`,
   else at the end) when the agent's engine ran before. A TUI launched with
@@ -166,6 +167,56 @@ phonecando-linux <- kit-api   (ProjectDir only: the machine's shell starts in th
   launch, `phonecando-linux` before each shell. Not HOME itself: Claude
   Code never saves its folder trust for HOME (it asks on every start), and
   Aider warns there.
+
+### ACP mode
+
+A `tui` kind may also have `engine.acp` (`kit/ts/manifest/acp.ts`): the
+command that starts the same agent speaking the Agent Client Protocol
+(ACP) on stdin and stdout, with no screen.
+
+- `argv` (required) and `env`: as `launch`'s, never `{{prompt}}` or
+  `{{chatId}}`; an image kind's program is a guest program. The env goes
+  on top of the launch env and the state env, so a kind's settings path
+  and own state folder hold here too. It runs in `launch.cwd`. A launch
+  whose `sh -c` script sets up what ACP mode needs too (Kimi Code's
+  `mcp.json`, Vibe's `VIBE_MCP_SERVERS`) gets an ACP `sh -c` that does the
+  same, with only the `exec` changed.
+- `tools`: how it gets the phone tools. `session` (the default): the
+  runner hands the bridge over in session/new and leaves it out of the
+  env (as `config` when the agent takes no HTTP MCP servers there).
+  `config`: the kind's own settings name the bridge, as in terminal mode.
+  A kind whose settings name it takes `config`: with `session` that entry
+  would find no bridge in the env and sit beside the one from session/new.
+- `options`: session config options (`{id: value}`, at most 8) set on
+  every chat it opens, skipped when the agent has no such option. Claude
+  Code and Qwen Code get `mode: default`: their ACP chats start in `auto`,
+  where a model decides or refuses tools with nobody asked.
+- `meta`: a JSON object sent as `_meta` when a chat opens (its strings are
+  templates, as env values are; at most 4 KiB): the kind's own extension
+  point (Claude Code's adapter takes our settings file there).
+- `chat {args, at?}`: the terminal launch args that open one given chat;
+  exactly one arg is `{{chatId}}`, whole, and `at` is as `resume`'s. After
+  an ACP run the terminal opens that chat in place of the resume args;
+  without `chat` it resumes as usual.
+
+An agent runs in one mode at a time: the terminal (its TUI, what Home
+shows) or ACP. Work that comes while nobody watches (a scheduled task, a
+message that may wake it) runs in ACP mode: the runner starts it there,
+or switches an idle terminal with no view and no jobs, and sends the work
+as a prompt; the agent's questions come to the phone as permission
+prompts. Opening Home switches it back to the terminal on the same chat;
+while an ACP turn still runs, Home shows that run live instead. A kind's
+hooks still run in ACP mode, so messages still reach a busy turn, and an
+idle agent in ACP mode gets a waking message as a prompt. So a kind with
+`engine.acp` runs scheduled tasks and its level is `wakes`: without phone
+tools, other agents' messages still arrive as prompts, but it can't answer
+them or send any.
+
+A kind gets `engine.acp` only once the ACP registry
+(agentclientprotocol.com, Registry) or its own docs name the command. Its
+README's "ACP mode" section says where, why each field is set, what was
+tried (a full turn or the handshake only) and what is still owed (a phone
+check).
 
 ### Local models
 
@@ -220,9 +271,9 @@ when it has unread messages (KindView `inbox: "pull"`).
 
 What a kind has makes its level (kit-api `MessagingLevel`, KindView
 `messaging`, shown in the app and in `agents_list`): `wakes` (an `inbox`
-block with `wake`), `delivered` (an `inbox` block), `inbox` (phone tools
-but no block: it pulls) and `none` (no phone tools: it can neither read
-nor send, and the runner refuses messages to it). A kind whose settings
+block with `wake`, or an ACP mode), `delivered` (an `inbox` block),
+`inbox` (phone tools but no block: it pulls) and `none` (no phone tools:
+it can neither read nor send, and the runner refuses messages to it). A kind whose settings
 live only in a home folder the user also uses (Kimi, Vibe) runs its agent
 with a home folder of our own, so we can add our tools and hooks without
 writing the user's config.
@@ -290,6 +341,8 @@ least one way in:
     file and exits once the file names another or none.
 - `--cancel`: removes `waiter`, so a waiter left running exits (from a
   session-end hook).
+- The first `<Event>` or `--wait` call of each event in an engine's life
+  also reports `@hook` (Checks, below).
 - With no `PHONECANDO_INBOX`, every call exits 0 and does nothing.
 
 ### Instructions and an agent's own state
@@ -394,17 +447,57 @@ rest):
 Origin `user`, stored at `files/state/agent-kinds/user/<id>.json` on the
 phone (at most 64 KiB): an image kind with a `tui` engine and a
 `user.<name>` id, with no hooks, payload, packaged config (`config.dir`,
-`overlay`, `shared`) or web surface, no `PATH` in its launch or state
-env, install and update steps of at most 32 KiB each, and maybe no
-`licence`. The runner
+`overlay`, `shared`) or web surface, no `PATH` in its launch, state or
+ACP env, install and update steps of at most 32 KiB each, and maybe no
+`licence`. It may have an ACP mode (`engine.acp`, §4). The runner
 checks this itself (kit-manifest `UserRules`, runner `agents/user/`) and
 leaves out, and logs, a kind that breaks it.
 
-The app makes them in the Env tab (Custom agents, or Add your own agent
+The app makes them from the drawer (Custom agents, or Add your own agent
 in Choose agent): a form that `app/src/engine/agents/user/build.ts` turns
 into a manifest shaped like Gemini CLI's, or a pasted export; the install
 script is shown before either is saved. A save or delete takes effect at
 once (no restart). The form has phone tools off by default.
+
+### Checks
+
+What a kind declares is not taken on trust: the runner checks each
+capability from what an agent really did (runner `checks/`,
+`app/docs/modules/runner.md` → Checks). The ids are kit-api `Capability`;
+kit-render `KindCapabilities.declared` says which ones a kind has. One it
+doesn't declare is Off. One not seen yet reads Not checked yet, and we
+still use it.
+
+A capability reads Checked once the agent:
+- `tools`: calls the bridge with its token in the terminal; `acpTools`:
+  the same in ACP mode.
+- `messages`: runs one of its `inbox.hooks`, or takes a message (an
+  `@inbox` receipt); a server kind's deliver call answers 2xx.
+  `acpMessages`: the same in ACP mode.
+- `wake`: starts its waiting hook (`--wait`), takes a set that may wake
+  it (`reader`), or answers the wake call with 2xx (`server`).
+- `task`: works on the task it started with (an event, or the task on
+  screen) within two minutes.
+- `state`: has something in its own state folder after its first turn.
+- `acp`: opens an ACP session.
+- `chat`: starts on the chat ACP mode used and stays up.
+
+It reads Not working only on an exact sign: a turn ended with no bridge
+call or no inbox hook, the waiting hook never started, the task start
+quit, and so on.
+
+`phonecando-inbox` tells the runner a hook ran. The first call of each
+event in an engine's life appends `@hook<TAB><Event>` (`--wait`:
+`@hook<TAB><Event><TAB>wait`) to `PHONECANDO_EVENTS`, before anything
+else, even with nothing pending. A marker in the inbox folder's `ran/`
+keeps it to once; the runner empties `ran/` before each launch. So a kind
+whose hook config calls the script needs nothing more.
+
+A check belongs to the exact setting it tested. `KindCapabilities.key` is
+the manifest's `version` and a hash of the parts that capability rests on
+(for `tools`: `phoneTools`, `engine.launch` and `config`). Change one of
+those parts, or ship a new version, and its check reads Not checked yet
+again.
 
 ## 5. Naming
 

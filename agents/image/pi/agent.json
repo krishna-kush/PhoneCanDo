@@ -32,13 +32,17 @@
       "zypper": ["bash", "ca-certificates", "fd", "git", "ripgrep"]
     },
     "steps": [
-      "npm install -g --prefix \"$HOME/.local\" @earendil-works/pi-coding-agent@latest"
+      "npm install -g --prefix \"$HOME/.local\" @earendil-works/pi-coding-agent@latest",
+      "npm install -g --prefix \"$HOME/.local\" pi-acp@latest",
+      "f=\"$HOME/.local/bin/pi-phonecando\"; mkdir -p \"$HOME/.local/bin\"; printf '%s\\n' '#!/bin/sh' '# pi with our PhoneCanDo extension, for pi-acp (PI_ACP_PI_COMMAND). Written by the pi agent install.' 'exec /root/.local/bin/pi -e /root/.phonecando/pi/phonecando.ts \"$@\"' > \"$f.tmp\"; chmod 755 \"$f.tmp\"; mv -f \"$f.tmp\" \"$f\""
     ],
     "timeoutSec": 1800
   },
   "update": {
     "steps": [
-      "npm install -g --prefix \"$HOME/.local\" @earendil-works/pi-coding-agent@latest"
+      "npm install -g --prefix \"$HOME/.local\" @earendil-works/pi-coding-agent@latest",
+      "npm install -g --prefix \"$HOME/.local\" pi-acp@latest",
+      "f=\"$HOME/.local/bin/pi-phonecando\"; mkdir -p \"$HOME/.local/bin\"; printf '%s\\n' '#!/bin/sh' '# pi with our PhoneCanDo extension, for pi-acp (PI_ACP_PI_COMMAND). Written by the pi agent install.' 'exec /root/.local/bin/pi -e /root/.phonecando/pi/phonecando.ts \"$@\"' > \"$f.tmp\"; chmod 755 \"$f.tmp\"; mv -f \"$f.tmp\" \"$f\""
     ]
   },
   "versionCheck": {
@@ -62,7 +66,13 @@
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
     "resume": { "args": ["--continue"], "at": 1 },
-    "prompt": { "args": ["--", "{{prompt}}"] }
+    "prompt": { "args": ["--", "{{prompt}}"] },
+    "acp": {
+      "argv": ["/root/.local/bin/pi-acp"],
+      "env": { "PI_ACP_PI_COMMAND": "/root/.local/bin/pi-phonecando" },
+      "tools": "config",
+      "chat": { "args": ["--session", "{{chatId}}"], "at": 1 }
+    }
   },
   "events": [
     {

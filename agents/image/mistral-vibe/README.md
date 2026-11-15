@@ -41,6 +41,25 @@ run as a TUI in the agent's machine. Shared image-kind rules:
   too). The machine has no keyring, so its keys go to `$VIBE_HOME/.env`.
 - `userState`: `~/.vibe-agent`.
 
+## ACP mode
+
+`vibe-acp` (the ACP registry's `mistral-vibe` entry), a second program in
+the same PyPI package (3.1.1 `entry_points.txt`:
+`vibe-acp=vibe.acp.entrypoint:main`), so `uv tool install` already puts it
+in `~/.local/bin`.
+
+- The launch's `sh -c` wrapper with only the `exec` changed, so it sets
+  `VIBE_MCP_SERVERS` as in terminal mode.
+- `tools: config`: `vibe-acp` takes no MCP servers in session/new (its
+  handshake offers no `mcpCapabilities`), so the bridge comes through
+  that env layer.
+- No `chat`: we have no `vibe` help in hand that names a resume-by-id
+  flag, nor know whether the Rust TUI opens chats `vibe-acp` saved. After
+  an ACP run the terminal resumes the newest chat for the folder.
+- PC trial (2026-11-13, the 3.1.1 release build): the handshake only; a
+  chat needs a Mistral key. Owed: a signed-in turn, the phone tools and
+  `hooks.toml` in ACP mode, and a phone check.
+
 ## Events
 
 Our `hooks.toml` carries only the message hooks (Messages, below); events

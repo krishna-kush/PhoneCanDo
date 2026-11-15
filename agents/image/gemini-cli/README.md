@@ -34,11 +34,12 @@ project ones, and `mcpServers` and `hooks` merge across them, so
   (`GEMINI_CLI_NO_RELAUNCH` stays unset).
 - `resume` adds `--resume latest`; with no saved chat Gemini starts a new
   one.
-- No `prompt`, so it cannot run scheduled tasks: `-i/--prompt-interactive`
-  starts a new chat with a first prompt, but with `--resume latest`
-  (0.68.0) it sends the prompt before the old chat has loaded, so the
-  model never sees that chat and the turn is not saved to it
-  (`ui/AppContainer.tsx` does not wait for `useSessionResume`).
+- No `prompt`, so the TUI takes no scheduled task (ACP mode runs them,
+  below): `-i/--prompt-interactive` starts a new chat with a first
+  prompt, but with `--resume latest` (0.68.0) it sends the prompt before
+  the old chat has loaded, so the model never sees that chat and the turn
+  is not saved to it (`ui/AppContainer.tsx` does not wait for
+  `useSessionResume`).
 - No `chatTitle`: the window title is only the state and the folder.
 
 ## State
@@ -49,6 +50,25 @@ project ones, and `mcpServers` and `hooks` merge across them, so
   sign-in is a file there, not a keychain entry. Our system settings
   (`GEMINI_CLI_SYSTEM_SETTINGS_PATH`) stay one file for both.
 - `userState`: `~/.gemini`.
+
+## ACP mode
+
+`gemini --acp` (the ACP registry's `gemini` entry; "Starts the agent in
+ACP mode" in `gemini --help`, 0.68.0).
+
+- `tools: config`: ACP mode reads the same settings
+  (`GEMINI_CLI_SYSTEM_SETTINGS_PATH`), which name the bridge and our
+  hooks, so the runner adds no server in session/new. The folder's trust
+  (Notes) counts here too.
+- No `options`: its ACP chats start in `default`, which asks before a
+  tool runs.
+- `chat`: `--resume <id>` at 1. Gemini takes a chat's id there as well as
+  `latest` or a number, and an ACP chat is saved under its ACP id (0.68.0:
+  the ACP `newSession` makes the id and the session's config uses it).
+- So Gemini can run scheduled tasks, and an idle agent in ACP mode gets a
+  waking message as a prompt.
+- PC trial (2026-11-13, 0.68.0): the handshake only; a chat needs sign-in.
+  Owed: a signed-in turn, our hooks in ACP mode, and a phone check.
 
 ## Events
 

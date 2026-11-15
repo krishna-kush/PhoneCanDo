@@ -29,6 +29,22 @@ glibc-only, so no Alpine.
   the hub outlives the agent.
 - `userState`: `~/.cline`.
 
+## ACP mode
+
+`cline --acp` (the ACP registry's `cline` entry; "Run in Agent Client
+Protocol (ACP) mode" in `cline --help`, 3.0.74).
+
+- No phone tools and no hooks (below), so `tools` does not apply: ACP
+  mode lets it run a scheduled task while nobody watches, with its
+  questions asked on the phone.
+- No `chat`: `--id <session-id>` resumes a session, but we have not seen
+  whether it opens the TUI without a prompt, nor whether ACP chats use
+  the same ids. After an ACP run the terminal starts a new chat.
+- PC trial (2026-11-13, 3.0.74): the handshake only; a chat needs
+  sign-in. Owed: a signed-in turn (whether it asks before tools, or
+  approves them all as its `--auto-approve` default does), whether ACP
+  mode starts the hub, and a phone check.
+
 ## Events
 
 None. Cline runs hooks (files named after the event, such as
@@ -45,9 +61,9 @@ bridge token would have to be written to disk.
 
 ## Messages
 
-None: with no phone tools (above) it can neither read nor send other
-agents' messages, so a message to it is refused with that reason, and the
-app shows it as "can't read messages".
+With no phone tools (above) it can't send messages or check its inbox. Its
+ACP mode still gets other agents' messages as a prompt while it is idle, so
+its level is `wakes`, but it can't answer them through the tools.
 
 ## Local models
 

@@ -30,6 +30,26 @@ musl).
   `XDG_CONFIG_HOME`, which we keep for the machine.
 - `userState`: `~/.cursor` and `~/.config/cursor`.
 
+## ACP mode
+
+`cursor-agent acp` (the ACP registry's `cursor` entry; a hidden command,
+"Start the Cursor Agent as an ACP (Agent Client Protocol) server").
+
+- No plugin: `--plugin-dir` belongs to the chat command. In the
+  2026.11.11 build only the chat path turns it into plugin folders
+  (`index.js`, `pluginDirPaths`); the `acp` command never passes them on.
+  So ACP mode runs without our hooks: ACP itself reports the run, and
+  messages wait for the run's end (an idle agent gets a waking one as a
+  prompt).
+- `tools: session`: for the same reason the bridge comes in session/new
+  (Cursor's handshake says it takes HTTP MCP servers), not from the
+  plugin's `mcp.json`.
+- No `options`.
+- `chat`: `--resume <chatId>` at 1 (`cursor-agent --help`).
+- PC trial (2026-11-13, 2026.11.11): the handshake only; a chat needs
+  sign-in. Owed: a signed-in turn, that an ACP chat's id opens with
+  `--resume`, and a phone check.
+
 ## Events
 
 The plugin's `hooks/hooks.json`: `beforeSubmitPrompt` working, `stop`

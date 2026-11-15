@@ -132,6 +132,15 @@
         "--",
         "{{prompt}}"
       ]
+    },
+    "acp": {
+      "argv": [
+        "sh",
+        "-c",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then VIBE_MCP_SERVERS='[{\"name\":\"phonecando\",\"transport\":\"streamable-http\",\"url\":\"'\"$PHONECANDO_BRIDGE_URL\"'/mcp\",\"auth\":{\"type\":\"static\",\"api_key_env\":\"PHONECANDO_BRIDGE_TOKEN\"}}]'; export VIBE_MCP_SERVERS; fi; exec /root/.local/bin/vibe-acp \"$@\"",
+        "vibe-acp"
+      ],
+      "tools": "config"
     }
   },
   "events": [

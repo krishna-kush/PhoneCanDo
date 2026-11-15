@@ -63,7 +63,13 @@
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 180 } },
     "resume": { "args": ["--continue"], "at": 1 },
-    "prompt": { "args": ["--prompt-interactive", "{{prompt}}"] }
+    "prompt": { "args": ["--prompt-interactive", "{{prompt}}"] },
+    "acp": {
+      "argv": ["/root/.local/bin/qwen", "--acp"],
+      "tools": "config",
+      "options": { "mode": "default" },
+      "chat": { "args": ["--resume", "{{chatId}}"], "at": 1 }
+    }
   },
   "events": [
     {
