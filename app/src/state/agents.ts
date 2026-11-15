@@ -128,6 +128,11 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
     },
 
     refreshAgents: () => {
+      // Until hydrateAgents has read the stored pick there is none to keep:
+      // a re-read now (the cold start's first AppState 'active' comes before
+      // it) would hand the pick to the first agent, store it and start its
+      // engine. Hydration reads everything anyway.
+      if (!get().hydrated) return;
       const read = readNative();
       // Unchanged records stay the same objects, so the header, the drawer's
       // rows and the faces skip the render this re-read would cost them.

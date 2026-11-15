@@ -71,7 +71,7 @@ export default function AppButton({
       x={sinks ? 'press:2' : undefined}
       y={sinks ? 'press:2' : undefined}
       opacity={`${opacity} press:${sinks ? opacity : 0.7}`}
-      outlineColor="focus-visible:outline-color"
+      outlineColor="focus-visible:primaryHi"
       outlineStyle="focus-visible:solid"
       outlineWidth="focus-visible:2px"
     >

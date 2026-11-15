@@ -127,6 +127,13 @@ const MIN = 60_000;
   t('told: a model only', c.toldText([], ['Qwen']), 'We unloaded Qwen to free up memory.');
   t('ram line', c.ramLine(use), '800 MB free of 8 GB');
   t('ram hint', c.ramHint(0.96 * GB), 'we start to sweat under 960 MB free');
+  t('ram hint under the line', c.ramHint(0.96 * GB, 'warn', 0.8 * GB), 'we start to sweat under 960 MB free');
+  t(
+    'ram hint still sweating past the line',
+    c.ramHint(0.929 * GB, 'warn', 0.958 * GB),
+    "we start to sweat under 929 MB free, and cool off only once there's a bit more room than that",
+  );
+  t('ram hint without a line', c.ramHint(0, 'warn', 0.958 * GB), '');
 
   const w = await import(src('ui/memory/logic/rowText.ts'));
   t('agent line', w.agentLine(rows[1]), 'Claude Code · 300 MB · idle · on Qwen3.5 4B');

@@ -41,6 +41,11 @@ function SheetBody() {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const close = useMemoryStore((s) => s.closeSheet);
+  // Each opening reads the guard now, with what each one takes: the last
+  // reading it sent may be older, and between looks it carries no sizes.
+  useEffect(() => {
+    useMemoryStore.getState().refreshMemory();
+  }, []);
   const view = useMemoryView();
   const { status } = view;
   const level = status.level;

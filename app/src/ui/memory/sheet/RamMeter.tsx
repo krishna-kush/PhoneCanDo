@@ -8,7 +8,7 @@ import type { RamUse } from '../logic/memoryRows';
 // start to worry as a hairline mark, the free and total memory in words.
 export default function RamMeter({ use, level, warnBelowBytes }: { use: RamUse; level: MemoryLevel; warnBelowBytes: number }) {
   const percent = Math.round(use.usedFraction * 1000) / 10;
-  const hint = ramHint(warnBelowBytes);
+  const hint = ramHint(warnBelowBytes, level, use.freeBytes);
   return (
     <YStack gap="1">
       <XStack justifyContent="space-between" gap="2">

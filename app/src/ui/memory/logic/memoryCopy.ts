@@ -95,9 +95,18 @@ export function ramLine(use: RamUse): string {
   return `${formatBytes(use.freeBytes)} free of ${formatBytes(use.totalBytes)}`;
 }
 
-/** Where the guard starts to worry, under the meter. */
-export function ramHint(warnBelowBytes: number): string {
-  return warnBelowBytes > 0 ? `we start to sweat under ${formatBytes(warnBelowBytes)} free` : '';
+/**
+ * Where the guard starts to worry, under the meter. Once worried it calms
+ * down only with some room past that line (the runner's hysteresis), so
+ * while it still sweats with more free than the line, it says so.
+ */
+export function ramHint(warnBelowBytes: number, level: MemoryLevel = 'ok', freeBytes = 0): string {
+  if (!(warnBelowBytes > 0)) return '';
+  const line = formatBytes(warnBelowBytes);
+  if (level !== 'ok' && freeBytes >= warnBelowBytes) {
+    return `we start to sweat under ${line} free, and cool off only once there's a bit more room than that`;
+  }
+  return `we start to sweat under ${line} free`;
 }
 
 /** "A", "A and B", "A, B and C". */

@@ -31,6 +31,8 @@ function tamaguiTheme(t: Tokens) {
     'border-color-focus': t.lineStrong,
     'border-color-press': t.lineStrong,
     'placeholder-color': t.dim,
+    // Tamagui's Button and Input ring a focused control in it.
+    'outline-color': t.primaryHi,
     // Tamagui components reach for shades: 1-3 are surfaces, 10 is the
     // secondary text step, 11-12 the highest contrast text.
     color1: t.bg,

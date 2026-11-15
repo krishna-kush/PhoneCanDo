@@ -73,7 +73,7 @@ export default function AgentRow({ agent, active, still, picking, picked, onSwit
             <PlainText fontSize={16} fontWeight="600" numberOfLines={1} flexShrink={1}>
               {agent.name}
             </PlainText>
-            {active ? <Stamp>on duty</Stamp> : null}
+            {active ? <Stamp>on screen</Stamp> : null}
             <UnreadMark count={unread} />
           </XStack>
           <PlainText fontFamily="mono" fontSize={11} color="dim" numberOfLines={1}>
