@@ -2,7 +2,10 @@
 // beats, then the walk to the hatch and the drop to the next floor. The
 // scroll never sets the clock, only where it is headed: always the end of
 // a beat, a rest, so Little is never left hanging mid-move when the page stops.
+// A chapter's beats run over the front of its part only (STAGE), so Little
+// has dropped through its hatch while its deck is still seen from above.
 
+import { EYE, PITCH } from '../../world/building';
 import type { Floor, Story } from '../../world/frame';
 import { EXIT } from './exit';
 import { at } from './pose';
@@ -12,6 +15,16 @@ export type Timeline = { stretches: Stretch[]; total: number };
 
 // A floor with no chapter of its own: Little lands and goes on down.
 const PASS: Story = { rests: [], leave: 0.5, pose: (_, room) => at(room.hatch), narrate: [] };
+
+/** How far over a floor's deck the camera still is at its chapter's q of 1, world units; every leave comes before that. */
+const CLEAR = 100;
+/**
+ * How much of its part a chapter's q (its rests and leave) runs over. The
+ * camera comes level with a floor's deck at q = 0.5 + EYE / PITCH (cameraY),
+ * and past that the deck is seen from below; a chapter's q of 1 lands CLEAR
+ * short of that, so its drop is done before the deck goes flat.
+ */
+const STAGE = 0.5 + (EYE - CLEAR) / PITCH;
 
 export function makeTimeline(floors: Floor[]): Timeline {
   let start = 0;
@@ -32,7 +45,7 @@ export function goal(tl: Timeline, floor: number): number {
   const n = tl.stretches.length;
   if (!n) return 0;
   const i = Math.min(n - 1, Math.max(0, Math.floor(floor)));
-  const q = floor - i;
+  const q = (floor - i) / STAGE;
   const st = tl.stretches[i];
   let sec = 0;
   for (const [from, rest] of st.story.rests) if (q >= from) sec = rest;

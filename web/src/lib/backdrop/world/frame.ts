@@ -26,7 +26,8 @@ export type View = {
 export type Story = {
   /**
    * Where the story rests: once the scroll reaches q on this floor (0 at its
-   * part's top, 1 at its end) Little plays on to sec and waits there.
+   * part's top, 1 a little before its deck goes flat, timeline.ts) Little
+   * plays on to sec and waits there.
    */
   rests: [q: number, sec: number][];
   /** The q at which it heads for the hatch, after its last rest. */
