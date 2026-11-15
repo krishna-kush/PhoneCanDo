@@ -3,6 +3,7 @@ package com.phonecando.agents.kit.render
 import com.phonecando.agents.kit.LaunchContext
 import com.phonecando.agents.kit.LaunchSpec
 import com.phonecando.agents.kit.ProjectDir
+import com.phonecando.agents.kit.manifest.ChatArgs
 import com.phonecando.agents.kit.manifest.Command
 import com.phonecando.agents.kit.manifest.PromptArgs
 import com.phonecando.agents.kit.manifest.Resume
@@ -33,41 +34,54 @@ data class ClientRecipe(val cmd: List<String>, val env: Map<String, String>, val
 // launch. An engine with no port (a TUI) has no
 // {{port}} or {{serverUrl}}; {{bridgeUrl}} is empty for a kind with no
 // bridge, so a `when` item drops its args. When the agent ran before, the resume args go in
-// at their index, or at the end. A launch with a first prompt adds the
-// kind's prompt args the same way, {{prompt}} filled in as one argv item
-// (the value is never read for placeholders again); both indexes count in
-// the launch's own argv, and where they meet the resume args come first.
+// at their index, or at the end. A launch that opens a given chat (a kind
+// with `engine.acp.chat`, LaunchContext.chatId set) puts the chat args there
+// instead, {{chatId}} filled in as one argv item. A launch with a first
+// prompt adds the kind's prompt args the same way, {{prompt}} filled in as
+// one argv item (neither value is read for placeholders again); all indexes
+// count in the launch's own argv, and where they meet the resume (or chat)
+// args come first.
 // The TUI client's env starts with what any terminal program needs from
 // us, then the kind's: HOME and TMPDIR are the image HOME (as the client
 // always had), TERM and COLORTERM say what our xterm renders.
 object LaunchRenderer {
-  fun engine(command: Command, ctx: LaunchContext, resume: Resume? = null, prompt: PromptArgs? = null): LaunchSpec {
-    val values = buildMap {
-      put("libDir", ctx.libDir)
-      put("home", ctx.home.path)
-      put("tmp", ctx.tmp.path)
-      put("projectDir", ProjectDir.of(ctx.home).path)
-      put("password", ctx.password)
-      put("bridgeUrl", ctx.bridgeUrl)
-      if (ctx.port.isNotEmpty()) {
-        put("port", ctx.port)
-        put("serverUrl", EngineUrl.base(ctx.port))
-      }
-    }
+  fun engine(
+    command: Command,
+    ctx: LaunchContext,
+    resume: Resume? = null,
+    prompt: PromptArgs? = null,
+    chat: ChatArgs? = null,
+  ): LaunchSpec {
+    val values = values(ctx)
     val own = Templates.argv(command.argv, values)
+    val opened = chat?.let { c -> ctx.chatId?.let { id -> (c.at ?: own.size) to filled(c.args, values, ChatArgs.PLACEHOLDER, id) } }
     val inserts = listOfNotNull(
-      resume?.takeIf { ctx.resume }?.let { (it.at ?: own.size) to it.args.map { arg -> Templates.render(arg, values) } },
-      prompt?.let { p -> ctx.prompt?.let { text -> (p.at ?: own.size) to promptArgs(p, values, text) } },
+      opened ?: resume?.takeIf { ctx.resume }?.let { (it.at ?: own.size) to it.args.map { arg -> Templates.render(arg, values) } },
+      prompt?.let { p -> ctx.prompt?.let { text -> (p.at ?: own.size) to filled(p.args, values, PromptArgs.PLACEHOLDER, text) } },
     )
     val argv = if (inserts.isEmpty()) own else insert(own, inserts)
     val cwd = command.cwd?.let { Templates.render(it, values) }
     return LaunchSpec(argv, Templates.env(command.env, values), cwd)
   }
 
-  // The prompt args with {{prompt}} as [text]; the rest are templates as any.
-  private fun promptArgs(prompt: PromptArgs, values: Map<String, String>, text: String): List<String> {
-    val withPrompt = values + (PromptArgs.PLACEHOLDER to text)
-    return prompt.args.map { Templates.render(it, withPrompt) }
+  /** What a launch's templates name: the paths as the program sees them, the password, the bridge and (a server) its port. */
+  fun values(ctx: LaunchContext): Map<String, String> = buildMap {
+    put("libDir", ctx.libDir)
+    put("home", ctx.home.path)
+    put("tmp", ctx.tmp.path)
+    put("projectDir", ProjectDir.of(ctx.home).path)
+    put("password", ctx.password)
+    put("bridgeUrl", ctx.bridgeUrl)
+    if (ctx.port.isNotEmpty()) {
+      put("port", ctx.port)
+      put("serverUrl", EngineUrl.base(ctx.port))
+    }
+  }
+
+  // [args] with {{[name]}} as [value]; the rest are templates as any.
+  private fun filled(args: List<String>, values: Map<String, String>, name: String, value: String): List<String> {
+    val with = values + (name to value)
+    return args.map { Templates.render(it, with) }
   }
 
   // [inserts] (an index in [argv], clamped to it, with its args) put in, in

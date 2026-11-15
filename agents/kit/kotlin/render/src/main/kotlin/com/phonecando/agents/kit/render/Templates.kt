@@ -22,6 +22,8 @@ object Templates {
     "messages", "title",
     // The first prompt (LaunchRenderer), in `engine.prompt` only.
     "prompt",
+    // The chat a terminal launch opens (LaunchRenderer), in `engine.acp.chat` only.
+    "chatId",
   )
 
   private val PLACEHOLDER = Regex("""\{\{([^{}]*)\}\}""")

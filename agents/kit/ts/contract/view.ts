@@ -57,8 +57,11 @@ export type KindView = {
       calls agents_inbox), none (no phone tools: it can neither read nor send). */
   messaging: MessagingLevel;
   /** An agent of it can run scheduled tasks: it starts with one as its first prompt (the manifest's
-      `engine.prompt`), or one can wake it while it is idle (`inbox.wake`). */
+      `engine.prompt`), one can wake it while it is idle (`inbox.wake`), or it runs one in ACP mode. */
   schedules: boolean;
+  /** It has an ACP mode (the manifest's `engine.acp`): the same agent on pipes with no screen, where
+      scheduled tasks and waking messages run while nobody watches; Home switches it back to its TUI. */
+  acp: boolean;
 };
 
 /** How far other agents' messages reach an agent of a kind (kit-api MessagingLevel), best first. */

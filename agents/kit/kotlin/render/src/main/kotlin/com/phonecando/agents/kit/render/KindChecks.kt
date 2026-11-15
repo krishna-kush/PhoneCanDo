@@ -34,20 +34,33 @@ internal object KindChecks {
     val whole = "{{${PromptArgs.PLACEHOLDER}}}"
     val naming = prompt.args.filter { PromptArgs.PLACEHOLDER in Templates.names(it) }
     if (naming != listOf(whole)) throw KindException("$id: engine.prompt.args holds $whole as one whole arg, once")
-    val at = prompt.at ?: return
-    if (at !in 1..MAX_RESUME_AT) throw KindException("$id: engine.prompt.at must be 1..$MAX_RESUME_AT")
+    prompt.at?.let { insertAt(id, "engine.prompt.at", it, argv) }
+  }
+
+  /**
+   * Args that go in at index [at] of the launch's own [argv] ([name] in the
+   * manifest): after the program, and past a shell script's $0, as one of
+   * "$@", when the launch is `sh -c`.
+   */
+  fun insertAt(id: String, name: String, at: Int, argv: List<ArgvItem>) {
+    if (at !in 1..MAX_RESUME_AT) throw KindException("$id: $name must be 1..$MAX_RESUME_AT")
     if ((argv.getOrNull(1) as? ArgvItem.Text)?.template == SHELL_SCRIPT && at < FIRST_SCRIPT_ARG) {
-      throw KindException("$id: engine.prompt.at must be past the shell script's \$0 ($FIRST_SCRIPT_ARG or more), or absent")
+      throw KindException("$id: $name must be past the shell script's \$0 ($FIRST_SCRIPT_ARG or more), or absent")
     }
   }
 
-  // An image kind runs in a Linux image, from a guest command or path.
+  // An image kind runs in a Linux image, from a guest command or path; so
+  // does its ACP mode.
   fun image(manifest: Manifest) {
     val id = manifest.id
     if (manifest.linux != LinuxNeed.REQUIRED) throw KindException("$id: an image kind needs Linux (requires.linux required)")
-    val first = manifest.engine?.launch?.argv?.firstOrNull()
+    guestProgram(id, "argv[0]", manifest.engine?.launch?.argv?.firstOrNull())
+    manifest.engine?.acp?.let { guestProgram(id, "engine.acp.argv[0]", it.argv.firstOrNull()) }
+  }
+
+  private fun guestProgram(id: String, name: String, first: ArgvItem?) {
     if (first !is ArgvItem.Text || "{{" in first.template) {
-      throw KindException("$id: an image kind's argv[0] is a guest command or path, without placeholders")
+      throw KindException("$id: an image kind's $name is a guest command or path, without placeholders")
     }
   }
 

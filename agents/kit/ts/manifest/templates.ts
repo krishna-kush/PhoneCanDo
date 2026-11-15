@@ -3,7 +3,7 @@
 // expansion. {{password}} goes only in env values, so it never shows in a
 // process list, a URL or a log line.
 import { fields, isObject, list, oneOf, record, string, type Add, type Json } from './primitives.ts';
-import { GUEST_PLACEHOLDERS, MAX, PATTERNS, PLACEHOLDERS, SECRET_PLACEHOLDER, STATE_PLACEHOLDER } from './rules.ts';
+import { CHAT_PLACEHOLDER, GUEST_PLACEHOLDERS, MAX, PATTERNS, PLACEHOLDERS, SECRET_PLACEHOLDER, STATE_PLACEHOLDER } from './rules.ts';
 
 const PLACEHOLDER = /\{\{([^{}]*)\}\}/g;
 
@@ -14,6 +14,9 @@ export function template(add: Add, path: string, value: unknown, secret = false)
   for (const [, name] of (value as string).matchAll(PLACEHOLDER)) {
     if (name === STATE_PLACEHOLDER) {
       add(path, 'forbidden', `{{${STATE_PLACEHOLDER}}} goes only in state.env`);
+      named = false;
+    } else if (name === CHAT_PLACEHOLDER) {
+      add(path, 'forbidden', `{{${CHAT_PLACEHOLDER}}} goes only in engine.acp.chat.args`);
       named = false;
     } else if (!PLACEHOLDERS.includes(name)) {
       add(path, 'unknown', `unknown placeholder {{${name}}} (known: ${PLACEHOLDERS.join(', ')})`);

@@ -33,6 +33,18 @@
 # --cancel: removes the waiter file, so a waiter left running exits at its
 # next check (from a hook that runs when the agent's session ends).
 #
+# Each hook event's first call in an engine's life (<Event>, and --wait
+# apart) first tells the runner that the kind's hook ran, for its capability
+# checks, also when nothing is pending: it appends
+#
+#   @hook TAB <Event>          (--wait: @hook TAB <Event> TAB wait)
+#
+# to $PHONECANDO_EVENTS, when that is set. The marker is a folder in the
+# inbox folder, ran/<Event> (--wait: ran/<Event>.wait): mkdir is atomic, so
+# of hooks that run at once only the one that made it writes the line. The
+# runner empties ran/ before each launch. A failure here is silent and
+# changes neither the output nor the exit code.
+#
 # <Event> is 1 to 64 of A-Z a-z 0-9 . _ : -, starting with a letter or
 # digit. With no PHONECANDO_INBOX set, no agent listens: every call exits 0
 # and does nothing. Exit 64 for a bad call.
@@ -56,7 +68,7 @@ mode=once
 case "${1-}" in
   --wait)
     [ $# -eq 3 ] || usage
-    mode=wait
+    mode='wait'
     event="$2"
     timeout="$3"
     case "$timeout" in
@@ -85,6 +97,22 @@ if [ "$mode" = cancel ]; then
   rm -f "$waiter"
   exit 0
 fi
+
+# Once per engine life: the hook for $event ran (see above).
+hook_ran() {
+  hooks="${PHONECANDO_EVENTS-}"
+  [ -n "$hooks" ] || return 0
+  marker="$event"
+  [ "$mode" = once ] || marker="$event.wait"
+  mkdir -p "$inbox/ran" && mkdir "$inbox/ran/$marker" || return 0
+  # The whole line in one printf to an O_APPEND file, as phonecando-event.
+  if [ "$mode" = once ]; then
+    printf '@hook\t%s\n' "$event" >>"$hooks"
+  else
+    printf '@hook\t%s\twait\n' "$event" >>"$hooks"
+  fi
+}
+hook_ran 2>/dev/null
 
 # Claims what is pending for $event and hands it over; returns 1 when there
 # is nothing for it, or another hook claimed it first.

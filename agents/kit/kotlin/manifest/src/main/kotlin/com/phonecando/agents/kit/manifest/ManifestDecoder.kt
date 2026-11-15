@@ -51,6 +51,7 @@ object ManifestDecoder {
       hooks = m.optStrings("hooks"),
       models = m.optObj("models")?.let(::models).orEmpty(),
       inbox = m.optObj("inbox")?.let(InboxDecoder::inbox),
+      json = m.tree,
     )
     if (origin == Origin.USER) UserRules.check(m, manifest)
     return manifest
@@ -86,6 +87,7 @@ object ManifestDecoder {
     readiness = e.optObj("readiness")?.let(::readiness),
     resume = e.optObj("resume")?.let { r -> Resume(r.strings("args"), r.optInt("at")) },
     prompt = e.optObj("prompt")?.let { p -> PromptArgs(p.strings("args"), p.optInt("at")) },
+    acp = e.optObj("acp")?.let(AcpDecoder::acp),
   )
 
   private fun readiness(r: JsonFields) = Readiness(
@@ -101,7 +103,7 @@ object ManifestDecoder {
   )
 
   // Each item is a string, or {"when": "<placeholder>", "args": [...]}.
-  private fun argv(path: String, items: JsonArray): List<ArgvItem> = items.mapIndexed { i, item ->
+  internal fun argv(path: String, items: JsonArray): List<ArgvItem> = items.mapIndexed { i, item ->
     if (item is JsonObject) {
       val w = JsonFields.of("$path/$i", item)
       ArgvItem.When(w.string("when"), w.strings("args"))

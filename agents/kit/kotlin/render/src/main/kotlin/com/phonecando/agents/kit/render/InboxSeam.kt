@@ -7,7 +7,6 @@ import com.phonecando.agents.kit.manifest.InboxEndpoint
 import com.phonecando.agents.kit.manifest.InboxFormat
 import com.phonecando.agents.kit.manifest.InboxHook
 import com.phonecando.agents.kit.manifest.InboxLookup
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -43,7 +42,7 @@ object InboxSeam {
   fun hook(hook: InboxHook, messages: String): String {
     val values = mapOf(MESSAGES to messages)
     val template = hook.template
-    if (template is JsonObject) return fill(template, values).toString()
+    if (template is JsonObject) return JsonTemplates.fill(template, values).toString()
     val text = (template as JsonPrimitive).content
     if (hook.format == InboxFormat.TEXT) return Templates.render(text, values)
     return Templates.render(text, values, ::jsonContent)
@@ -62,13 +61,13 @@ object InboxSeam {
     val values = mapOf(MESSAGES to messages, SESSION to sessionId)
     val url = EngineUrl.base(port) + Templates.render(endpoint.path, values, Templates::uriComponent)
     val headers = linkedMapOf("Content-Type" to "application/json") + SecretForms.headers(auth, password)
-    return InboxRequest(url, headers, endpoint.method, fill(endpoint.body, values).toString())
+    return InboxRequest(url, headers, endpoint.method, JsonTemplates.fill(endpoint.body, values).toString())
   }
 
   /** The call that makes a new chat titled [title] (`inbox.server.create`), with the kind's auth. */
   fun create(create: InboxCreate, auth: Auth?, port: String, password: String, title: String): InboxRequest {
     val headers = linkedMapOf("Content-Type" to "application/json") + SecretForms.headers(auth, password)
-    return InboxRequest(EngineUrl.base(port) + create.path, headers, create.method, fill(create.body, mapOf(TITLE to title)).toString())
+    return InboxRequest(EngineUrl.base(port) + create.path, headers, create.method, JsonTemplates.fill(create.body, mapOf(TITLE to title)).toString())
   }
 
   /** The GET for the agent's newest chat (`inbox.server.latest`), with the kind's auth. */
@@ -76,21 +75,10 @@ object InboxSeam {
     InboxRequest(EngineUrl.base(port) + lookup.path, SecretForms.headers(auth, password), "GET", "")
 
   /** Every string in [element] (an object's values, not its keys), depth first. */
-  fun strings(element: JsonElement): List<String> = when (element) {
-    is JsonObject -> element.values.flatMap(::strings)
-    is JsonArray -> element.flatMap(::strings)
-    is JsonPrimitive -> if (element.isString) listOf(element.content) else emptyList()
-  }
+  fun strings(element: JsonElement): List<String> = JsonTemplates.strings(element)
 
   private fun namesSession(endpoint: InboxEndpoint) =
     (listOf(endpoint.path) + strings(endpoint.body)).any { SESSION in Templates.names(it) }
-
-  // Each string in [element] filled from [values]; keys and other values as they are.
-  private fun fill(element: JsonElement, values: Map<String, String>): JsonElement = when (element) {
-    is JsonObject -> JsonObject(element.mapValues { fill(it.value, values) })
-    is JsonArray -> JsonArray(element.map { fill(it, values) })
-    is JsonPrimitive -> if (element.isString) JsonPrimitive(Templates.render(element.content, values)) else element
-  }
 
   // [text] as a JSON string's content: escaped, without the quotes.
   private fun jsonContent(text: String): String = JsonPrimitive(text).toString().let { it.substring(1, it.length - 1) }

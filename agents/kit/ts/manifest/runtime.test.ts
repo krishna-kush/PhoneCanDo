@@ -73,8 +73,9 @@ describe('engine', () => {
     fails((m) => (m.engine!.auth!.basic.user = 'a:b'), '/engine/auth/basic/user pattern');
   });
 
-  it('reserves acp', () => {
-    fails((m) => ((m.engine as unknown as { acp: object }).acp = {}), '/engine/acp reserved');
+  it('reserves the acp style; an ACP mode is a tui engine\'s (acp.test.ts)', () => {
+    fails((m) => ((m.engine as unknown as { style: string }).style = 'acp'), '/engine/style reserved');
+    fails((m) => (m.engine!.acp = { argv: ['{{libDir}}/liboc-engine.so', 'acp'] }), '/engine/acp forbidden');
   });
 });
 

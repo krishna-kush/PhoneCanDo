@@ -23,10 +23,11 @@ import kotlinx.serialization.json.put
 // own (so a second one can share a machine), and how other agents' messages
 // reach it: pushed into its turns (an `inbox` block) or only pulled with its
 // agents_inbox tool, whether one can wake it, and the level all that makes
-// (MessagingLevel: wakes, delivered, inbox, none), and whether it can run
-// scheduled tasks: it starts with a first prompt (`engine.prompt`) or an
-// idle agent of it can be woken (`inbox.wake`). Never a template or a
-// secret: launches, requests and the TUI client are rendered natively.
+// (MessagingLevel: wakes, delivered, inbox, none), whether it can run
+// scheduled tasks (it starts with a first prompt, `engine.prompt`, an idle
+// agent of it can be woken, `inbox.wake`, or it has an ACP mode), and
+// whether it has an ACP mode (`engine.acp`). Never a template or a secret:
+// launches, requests and the TUI client are rendered natively.
 object KindView {
   fun of(kind: ManifestKind, isDefault: Boolean, libExists: (String) -> Boolean): JsonObject {
     val manifest = kind.manifest
@@ -55,6 +56,7 @@ object KindView {
       put("canWake", kind.canWake)
       put("messaging", kind.messaging.wire)
       put("schedules", kind.runsSchedules)
+      put("acp", kind.speaksAcp)
     }
   }
 

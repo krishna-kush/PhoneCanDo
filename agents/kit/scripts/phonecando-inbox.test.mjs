@@ -1,6 +1,7 @@
 // phonecando-inbox: delivery from pending/ (output, exit code, receipt),
-// the claim race, bad calls, --wait (timeout, wake, newest waiter wins) and
-// --cancel, with every POSIX shell on the host.
+// the claim race, bad calls, --wait (timeout, wake, newest waiter wins),
+// --cancel and the @hook report once per engine life, with every POSIX
+// shell on the host.
 //   node --test agents/kit/scripts/phonecando-inbox.test.mjs
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
@@ -31,7 +32,11 @@ function pending(inbox, files) {
 }
 
 const set = (extra = {}) => ({ ids: '12\n13\n', 'messages.jsonl': '{"id":12}\n{"id":13}\n', 'Stop.out': STOP_OUT, ...extra });
-const receipts = (events) => (existsSync(events) ? readFileSync(events, 'utf8').split('\n').slice(0, -1) : []);
+const lines = (events) => (existsSync(events) ? readFileSync(events, 'utf8').split('\n').slice(0, -1) : []);
+const receipts = (events) => lines(events).filter((l) => l.startsWith('@inbox\t'));
+const hooks = (events) => lines(events).filter((l) => l.startsWith('@hook\t'));
+// What the inbox folder holds besides the hook markers (ran/).
+const left = (inbox) => readdirSync(inbox).filter((name) => name !== 'ran');
 const waiterOf = (inbox) => (existsSync(join(inbox, 'waiter')) ? readFileSync(join(inbox, 'waiter'), 'utf8').trim() : null);
 
 async function until(what, check, ms = 5000) {
@@ -76,7 +81,7 @@ for (const shell of shells) {
       pending(inbox, set());
       assert.deepEqual(run(shell, SCRIPT, ['Stop'], { env }), { code: 0, stdout: STOP_OUT, stderr: '' });
       assert.deepEqual(receipts(events), ['@inbox\t12 13']);
-      assert.deepEqual(readdirSync(inbox), []);
+      assert.deepEqual(left(inbox), []);
       // Delivered once.
       assert.deepEqual(run(shell, SCRIPT, ['Stop'], { env }), { code: 0, stdout: '', stderr: '' });
       assert.deepEqual(receipts(events), ['@inbox\t12 13']);
@@ -112,7 +117,8 @@ for (const shell of shells) {
       assert.equal(runs.filter((r) => r.stdout === STOP_OUT).length, 1);
       assert.equal(runs.filter((r) => r.stdout !== '' && r.stdout !== STOP_OUT).length, 0);
       assert.deepEqual(receipts(events), ['@inbox\t12 13']);
-      assert.deepEqual(readdirSync(inbox), []);
+      assert.deepEqual(hooks(events), ['@hook\tStop']);
+      assert.deepEqual(left(inbox), []);
     });
 
     it('refuses a bad call with 64', (t) => {
@@ -149,7 +155,7 @@ for (const shell of shells) {
       assert.deepEqual([r.code, r.stdout, r.stderr], [2, '', STOP_OUT]);
       assert.ok(r.ms < 6000, `took ${r.ms} ms`);
       assert.deepEqual(receipts(events), ['@inbox\t12 13']);
-      assert.deepEqual(readdirSync(inbox), []);
+      assert.deepEqual(left(inbox), []);
     });
 
     it('--wait: the newest waiter wins', async (t) => {
@@ -189,7 +195,72 @@ for (const shell of shells) {
       rmSync(inbox, { recursive: true });
       const r = await start(shell, SCRIPT, ['--wait', 'Stop', '1'], { env }).done;
       assert.equal(r.code, 0);
-      assert.deepEqual(readdirSync(inbox), []);
+      assert.deepEqual(left(inbox), []);
+    });
+
+    it('reports each hook event once per engine life, also with nothing pending', (t) => {
+      const { inbox, events, env } = scratch(t);
+      for (let i = 0; i < 3; i++) {
+        assert.deepEqual(run(shell, SCRIPT, ['Stop'], { env }), { code: 0, stdout: '', stderr: '' });
+      }
+      assert.deepEqual(run(shell, SCRIPT, ['PostToolUse'], { env }), { code: 0, stdout: '', stderr: '' });
+      assert.deepEqual(lines(events), ['@hook\tStop', '@hook\tPostToolUse']);
+      assert.deepEqual(readdirSync(join(inbox, 'ran')).sort(), ['PostToolUse', 'Stop']);
+      // A new life: the runner empties ran/ before each launch.
+      rmSync(join(inbox, 'ran'), { recursive: true });
+      run(shell, SCRIPT, ['Stop'], { env });
+      assert.deepEqual(hooks(events), ['@hook\tStop', '@hook\tPostToolUse', '@hook\tStop']);
+      // --cancel reports nothing.
+      run(shell, SCRIPT, ['--cancel'], { env });
+      assert.equal(hooks(events).length, 3);
+    });
+
+    it('reports before it delivers, the output and exit code unchanged', (t) => {
+      const { inbox, events, env } = scratch(t);
+      pending(inbox, set({ 'Stop.exit': '2\n' }));
+      assert.deepEqual(run(shell, SCRIPT, ['Stop'], { env }), { code: 2, stdout: '', stderr: STOP_OUT });
+      assert.deepEqual(lines(events), ['@hook\tStop', '@inbox\t12 13']);
+      pending(inbox, set());
+      assert.deepEqual(run(shell, SCRIPT, ['Stop'], { env }), { code: 0, stdout: STOP_OUT, stderr: '' });
+      assert.deepEqual(lines(events), ['@hook\tStop', '@inbox\t12 13', '@inbox\t12 13']);
+    });
+
+    it('reports --wait apart, once, before it starts waiting', async (t) => {
+      const { inbox, events, env } = scratch(t);
+      const waiter = start(shell, SCRIPT, ['--wait', 'Stop', '20'], { env });
+      await until('the wait report', () => hooks(events).length > 0);
+      assert.deepEqual(hooks(events), ['@hook\tStop\twait']);
+      await until('the waiter file', () => waiterOf(inbox) === String(waiter.pid));
+      run(shell, SCRIPT, ['--cancel'], { env });
+      assert.deepEqual((await waiter.done).code, 0);
+      const r = await start(shell, SCRIPT, ['--wait', 'Stop', '1'], { env }).done;
+      assert.deepEqual([r.code, r.stdout, r.stderr], [0, '', '']);
+      run(shell, SCRIPT, ['Stop'], { env });
+      assert.deepEqual(hooks(events), ['@hook\tStop\twait', '@hook\tStop']);
+      assert.deepEqual(readdirSync(join(inbox, 'ran')).sort(), ['Stop', 'Stop.wait']);
+    });
+
+    it('reports nothing, and makes no marker, without PHONECANDO_EVENTS', async (t) => {
+      const { inbox } = scratch(t);
+      const env = { PHONECANDO_INBOX: inbox };
+      assert.deepEqual(run(shell, SCRIPT, ['Stop'], { env }), { code: 0, stdout: '', stderr: '' });
+      const r = await start(shell, SCRIPT, ['--wait', 'Stop', '1'], { env }).done;
+      assert.deepEqual([r.code, r.stdout, r.stderr], [0, '', '']);
+      assert.ok(!existsSync(join(inbox, 'ran')));
+    });
+
+    it('a report that fails is silent and changes nothing', (t) => {
+      const { inbox, events, env } = scratch(t);
+      // An events file it cannot append to.
+      const nowhere = { ...env, PHONECANDO_EVENTS: join(inbox, 'no/such/events') };
+      pending(inbox, set({ 'Stop.exit': '2\n' }));
+      assert.deepEqual(run(shell, SCRIPT, ['Stop'], { env: nowhere }), { code: 2, stdout: '', stderr: STOP_OUT });
+      // No ran/ folder: a file stands in its way.
+      rmSync(join(inbox, 'ran'), { recursive: true, force: true });
+      writeFileSync(join(inbox, 'ran'), '');
+      pending(inbox, set());
+      assert.deepEqual(run(shell, SCRIPT, ['Stop'], { env }), { code: 0, stdout: STOP_OUT, stderr: '' });
+      assert.deepEqual(lines(events), ['@inbox\t12 13']);
     });
   });
 }

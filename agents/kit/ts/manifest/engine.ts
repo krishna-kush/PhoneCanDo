@@ -1,20 +1,19 @@
 // The engine block: its style, launch command, auth (server), readiness,
-// resume args and (tui) first-prompt args. A server engine is ready once its
-// readiness path answers; a tui engine (the agent's own TUI in a PTY) after
-// its first output and some quiet, or after being alive a while, with
-// defaults for both.
+// resume args and (tui) first-prompt args; a tui engine's ACP mode is
+// acp.ts's. A server engine is ready once its readiness path answers; a tui
+// engine (the agent's own TUI in a PTY) after its first output and some
+// quiet, or after being alive a while, with defaults for both.
 import { fields, integer, isObject, list, oneOf, string, type Add, type Json } from './primitives.ts';
 import { ENGINE_STYLES, FIRST_SCRIPT_ARG, MAX, PATTERNS, PROMPT_PLACEHOLDER, READINESS_RULES, SHELL_SCRIPT_FLAG } from './rules.ts';
 import { command, httpBlock, template } from './templates.ts';
 
-const ENGINE_FIELDS = ['style', 'launch', 'auth', 'readiness', 'resume', 'prompt'];
+const ENGINE_FIELDS = ['style', 'launch', 'auth', 'readiness', 'resume', 'prompt', 'acp'];
 const PROMPT = `{{${PROMPT_PLACEHOLDER}}}`;
 
 export function checkEngine(add: Add, engine: unknown) {
-  // acp is named as reserved, not as an unknown field.
-  if (!fields(add, '/engine', engine, [...ENGINE_FIELDS, 'acp'], ['style', 'launch'])) return;
+  if (!fields(add, '/engine', engine, ENGINE_FIELDS, ['style', 'launch'])) return;
   const e = engine as Json;
-  if ('acp' in e) add('/engine/acp', 'reserved', 'the acp engine style is reserved and not in v1');
+  // An engine that speaks only ACP is later work; a tui engine's ACP mode is engine.acp.
   if (e.style === 'acp') add('/engine/style', 'reserved', 'the acp engine style is reserved and not in v1');
   else oneOf(add, '/engine/style', e.style, ENGINE_STYLES);
   if ('launch' in e) {
@@ -103,8 +102,8 @@ function promptArg(add: Add, path: string, value: unknown) {
   template(add, path, value);
 }
 
-// `sh -c <script> …`: the launch's second arg is the shell's -c.
-function runsScript(launch: unknown): boolean {
+/** `sh -c <script> …`: the launch's second arg is the shell's -c. */
+export function runsScript(launch: unknown): boolean {
   return isObject(launch) && Array.isArray(launch.argv) && launch.argv[1] === SHELL_SCRIPT_FLAG;
 }
 

@@ -147,6 +147,28 @@ export interface Engine {
   resume?: Resume;
   /** Tui only. */
   prompt?: PromptArgs;
+  /** Tui only: the same agent speaking ACP on stdin and stdout (acp.ts). */
+  acp?: Acp;
+}
+
+/** How an agent in ACP mode gets the phone tools: the bridge in session/new, or its own config names it. */
+export type AcpTools = 'session' | 'config';
+
+/**
+ * A tui engine's ACP mode: run in `engine.launch.cwd`, its env on top of the
+ * launch env and the agent's state env. No {{prompt}} or {{chatId}} in argv.
+ */
+export interface Acp {
+  argv: TemplateArg[];
+  env?: Record<string, string>;
+  /** Default session. */
+  tools?: AcpTools;
+  /** Session config options set on every chat it opens, by config id (at most 8; ids and values 1 to 64 characters). */
+  options?: Record<string, string>;
+  /** Passed as `_meta` when a chat opens; its strings are templates as env values are (at most 4 KiB). */
+  meta?: Record<string, unknown>;
+  /** Terminal-mode args that open one given chat, in place of the resume args: exactly one is {{chatId}}, whole. */
+  chat?: { args: string[]; at?: number };
 }
 
 /** A rule over a tui engine's PTY output: `match` (a regex over the OSC text) narrows it. */

@@ -17,6 +17,12 @@ data class EngineEvent(
   val childCreated: Boolean = false,
   /** The session's new title, when the event renamed it (kind stays OTHER). */
   val title: String? = null,
+  /**
+   * The host guessed it, no signal said it: a TUI run that showed nothing for
+   * a while counts as STOPPED (an interrupt raises no event of its own). What
+   * must not guess, the capability checks, skips such an event.
+   */
+  val guessed: Boolean = false,
 ) {
   enum class Kind {
     /** Generation activity: step/text/part/message movement. */

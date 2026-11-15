@@ -10,6 +10,8 @@ import com.phonecando.agents.kit.KindHooks
 import com.phonecando.agents.kit.LaunchContext
 import com.phonecando.agents.kit.LaunchSpec
 import com.phonecando.agents.kit.MessagingLevel
+import com.phonecando.agents.kit.manifest.AcpSpec
+import com.phonecando.agents.kit.manifest.AcpTools
 import com.phonecando.agents.kit.manifest.Command
 import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.agents.kit.manifest.EventSource
@@ -36,6 +38,9 @@ import java.io.File
 // Other agents' messages reach a running agent as its `inbox` says
 // (InboxSeam): its hooks print them, or its server takes them. A TUI kind
 // with `engine.prompt` can start with a first prompt (a scheduled task).
+// A TUI kind with `engine.acp` can also run in ACP mode (AcpSeam): the same
+// agent on pipes with no screen, launched through the same steps; its
+// `chat` args let a terminal launch open the chat ACP mode last used.
 // of() refuses a kind this build cannot run (KindChecks throws
 // KindException), so the catalog never holds one.
 class ManifestKind private constructor(
@@ -103,28 +108,60 @@ class ManifestKind private constructor(
 
   private val auth = manifest.engine?.auth
 
+  /** The kind's ACP mode (`engine.acp`); null: it has none. */
+  private val acp: AcpSpec? = manifest.engine?.acp
+
   override fun launch(ctx: LaunchContext): LaunchSpec {
+    val engine = manifest.engine
+    return render(ctx) { seen -> LaunchRenderer.engine(launchCommand, seen, engine?.resume, startPrompt(ctx), acp?.chat) }
+  }
+
+  override val speaksAcp: Boolean get() = acp != null
+
+  override fun acpLaunch(ctx: LaunchContext): LaunchSpec? {
+    val acp = acp ?: return null
+    return render(ctx, top = acp.env) { seen -> LaunchRenderer.engine(AcpSeam.command(acp, launchCommand), seen) }
+  }
+
+  override val acpBridgeInSession: Boolean get() = acp?.tools == AcpTools.SESSION
+
+  override val acpOptions: Map<String, String> get() = acp?.options.orEmpty()
+
+  override fun acpMeta(ctx: LaunchContext): String? =
+    acp?.meta?.let { AcpSeam.meta(it, LaunchRenderer.values(seenBy(ctx))) }
+
+  override val opensChat: Boolean get() = acp?.chat != null
+
+  // One launch, terminal or ACP: [command] renders the kind's command with
+  // the context its program sees (seenBy), then come the agent's state env,
+  // its model, the [top] env (rendered the same way) and, for an image kind,
+  // the image's sh.
+  private fun render(ctx: LaunchContext, top: Map<String, String> = emptyMap(), command: (LaunchContext) -> LaunchSpec): LaunchSpec {
     val state = ownState(ctx.stateDir)
-    if (manifest.type != TYPE_IMAGE) {
-      val spec = LaunchRenderer.engine(launchCommand, ctx, manifest.engine?.resume, startPrompt(ctx))
-      return withModel(state?.let { StateSeam.apply(spec, it, ctx.stateDir!!.path) } ?: spec, ctx)
+    val seen = seenBy(ctx)
+    val rendered = command(seen)
+    val image = manifest.type == TYPE_IMAGE
+    val own = state?.let {
+      StateSeam.apply(rendered, it, if (image) StateSeam.guestPath(ctx.stateDir!!, ctx.home) else ctx.stateDir!!.path)
     }
-    // Everything the program sees is the guest's: {{home}}, {{tmp}},
-    // {{projectDir}} and {{stateDir}}, its runtimes' paths, HOME, TMPDIR and
-    // its cwd, which the image's sh enters (ImageLaunch); the process starts
-    // in HOME.
-    val guest = ctx.copy(home = File(ImageLaunch.GUEST_HOME), tmp = File(ImageLaunch.GUEST_TMP))
-    val rendered = LaunchRenderer.engine(launchCommand, guest, manifest.engine?.resume, startPrompt(ctx))
-    val own = state?.let { StateSeam.apply(rendered, it, StateSeam.guestPath(ctx.stateDir!!, ctx.home)) }
-    val spec = withModel(own ?: rendered, ctx)
-    val image = ctx.image ?: throw KindException("$id: an image kind runs in its image, and none was given")
+    val modelled = withModel(own ?: rendered, ctx)
+    val spec = if (top.isEmpty()) modelled else modelled.copy(env = modelled.env + Templates.env(top, LaunchRenderer.values(seen)))
+    if (!image) return spec
+    val imageDir = ctx.image ?: throw KindException("$id: an image kind runs in its image, and none was given")
     val paths = RuntimeBinding.paths(runtimes, ImageLaunch.GUEST_HOME)
     return LaunchSpec(
-      argv = ImageLaunch.wrap(spec.argv, image, paths, cwd = spec.cwd ?: ImageLaunch.GUEST_HOME, carry = ctx.carry),
+      argv = ImageLaunch.wrap(spec.argv, imageDir, paths, cwd = spec.cwd ?: ImageLaunch.GUEST_HOME, carry = ctx.carry),
       env = spec.env + ImageLaunch.GUEST_DIRS,
       cwd = null,
     )
   }
+
+  // [ctx] as the program sees it. An image kind's sees only the guest:
+  // {{home}}, {{tmp}}, {{projectDir}} and {{stateDir}}, its runtimes' paths,
+  // HOME, TMPDIR and its cwd, which the image's sh enters (ImageLaunch); the
+  // process starts in HOME.
+  private fun seenBy(ctx: LaunchContext): LaunchContext =
+    if (manifest.type != TYPE_IMAGE) ctx else ctx.copy(home = File(ImageLaunch.GUEST_HOME), tmp = File(ImageLaunch.GUEST_TMP))
 
   override val promptsAtStart: Boolean get() = manifest.engine?.prompt != null
 
@@ -198,11 +235,13 @@ class ManifestKind private constructor(
 
   override val canWake: Boolean get() = manifest.inbox?.wake != null
 
+  // An ACP kind's messages can always reach it: an idle agent in ACP mode
+  // gets a waking one as a prompt (canWake stays the manifest's inbox.wake).
   override val messaging: MessagingLevel
     get() = MessagingLevel.of(
       phoneTools = (manifest.phoneTools ?: PhoneTools.NONE) != PhoneTools.NONE,
-      pushed = manifest.inbox != null,
-      wakes = canWake,
+      pushed = manifest.inbox != null || speaksAcp,
+      wakes = canWake || speaksAcp,
     )
 
   override val wakeNeedsWaiter: Boolean get() = manifest.inbox?.wake == InboxWake.HOOK
@@ -302,8 +341,9 @@ class ManifestKind private constructor(
      * pattern that does not compile, more than one event stream, a hook the
      * manifest names that [hooks] lacks, an install without a version
      * check, a state block that does not fit the kind, a userState path
-     * the machine's agents share, an inbox it cannot use (InboxChecks), or
-     * a runtime [runtimes] lacks or provides too old.
+     * the machine's agents share, an inbox it cannot use (InboxChecks), an
+     * ACP mode it cannot run (AcpChecks), or a runtime [runtimes] lacks or
+     * provides too old.
      */
     fun of(manifest: Manifest, hooks: KindHooks?, runtimes: Map<String, RuntimePlugin> = emptyMap()): ManifestKind {
       KindChecks.engine(manifest)
@@ -321,6 +361,7 @@ class ManifestKind private constructor(
       KindChecks.state(manifest)
       KindChecks.userState(manifest)
       InboxChecks.check(manifest)
+      AcpChecks.check(manifest)
       val stream = KindChecks.hooks(manifest, hooks)
       val bound = RuntimeBinding.bind(manifest, runtimes)
       return ManifestKind(manifest, bound, engine.launch!!, readiness, stream?.first, stream?.second)

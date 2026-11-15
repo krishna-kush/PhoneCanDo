@@ -106,10 +106,37 @@ interface AgentKind {
   val promptsAtStart: Boolean get() = false
 
   /**
-   * An agent of it can run a scheduled task: its engine starts with the
-   * task as its first prompt, or the task can wake an idle one ([canWake]).
+   * The kind has an ACP mode (the manifest's `engine.acp`): the same agent
+   * speaking the Agent Client Protocol on stdin and stdout, with no screen.
    */
-  val runsSchedules: Boolean get() = promptsAtStart || canWake
+  val speaksAcp: Boolean get() = false
+
+  /**
+   * The ACP program's argv, env and cwd for this launch (an image kind's
+   * wrapped in its image as [launch]'s is); null when the kind has no ACP
+   * mode. Its env is the launch env, then the agent's state env, its
+   * model's and the ACP mode's own. No resume, prompt or chat args.
+   */
+  fun acpLaunch(ctx: LaunchContext): LaunchSpec? = null
+
+  /** `engine.acp.tools` is session: the bridge goes in session/new (`mcpServers`), not in the env. */
+  val acpBridgeInSession: Boolean get() = false
+
+  /** The session config options set on every chat it opens in ACP mode (`engine.acp.options`), by config id. */
+  val acpOptions: Map<String, String> get() = emptyMap()
+
+  /** `engine.acp.meta` with its placeholders filled from [ctx], as compact JSON text; null when it has none. */
+  fun acpMeta(ctx: LaunchContext): String? = null
+
+  /** The kind has `engine.acp.chat`: a terminal launch can open a given chat ([LaunchContext.chatId]). */
+  val opensChat: Boolean get() = false
+
+  /**
+   * An agent of it can run a scheduled task: its engine starts with the
+   * task as its first prompt, the task can wake an idle one ([canWake]), or
+   * the task runs in ACP mode ([speaksAcp]).
+   */
+  val runsSchedules: Boolean get() = promptsAtStart || canWake || speaksAcp
 }
 
 /** What any engine launch knows, whatever the kind. */
@@ -142,6 +169,12 @@ data class LaunchContext(
    * promptsAtStart: one argv item, never through a shell. Null: none.
    */
   val prompt: String? = null,
+  /**
+   * The chat a terminal launch opens, for a kind that [AgentKind.opensChat]:
+   * its chat args go in instead of the resume args. Null: the resume args
+   * as usual (the newest chat). An ACP launch ignores it.
+   */
+  val chatId: String? = null,
 )
 
 /** The kind's part of a launch: argv[0] is the engine binary; [cwd] null means HOME. */

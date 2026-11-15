@@ -3,8 +3,8 @@
 // runs in the agent's Linux image, so it needs Linux, and its program is a
 // guest command. A user-added kind is an image kind with a TUI the user
 // describes: no code hooks, nothing packaged in the APK, no web UI, no PATH
-// of its own (in its launch or its state folder's env), never the default,
-// and install and update steps of at most 32 KiB each.
+// of its own (in its launch, its ACP mode's or its state folder's env),
+// never the default, and install and update steps of at most 32 KiB each.
 import { checkRuntimeNeeds } from './install.ts';
 import { fields, isObject, list, oneOf, string, utf8Length, type Add, type Json } from './primitives.ts';
 import { CONFIG_NEEDS_DIR, LINUX_NEEDS, MAX, MAX_USER_SCRIPT_BYTES, PATTERNS, USER_RESERVED_ENV } from './rules.ts';
@@ -44,7 +44,8 @@ function checkNative(add: Add, m: Json) {
 }
 
 // The runner starts an image kind's program through the image's shell, so
-// argv[0] is a command on the guest PATH or an absolute guest path.
+// argv[0] (and its ACP mode's) is a command on the guest PATH or an
+// absolute guest path.
 function checkImage(add: Add, m: Json) {
   for (const key of NATIVE_ONLY) {
     if (key in m) add(`/${key}`, 'forbidden', `${key} is for native kinds only`);
@@ -54,10 +55,13 @@ function checkImage(add: Add, m: Json) {
     if (!('linux' in m.requires)) add('/requires/linux', 'required', 'an image kind runs in Linux: required');
     else if (m.requires.linux !== 'required') add('/requires/linux', 'const', 'an image kind runs in Linux: required');
   }
-  const launch = isObject(m.engine) && isObject(m.engine.launch) ? m.engine.launch : null;
-  const program = launch && Array.isArray(launch.argv) ? launch.argv[0] : undefined;
-  if (typeof program === 'string' && !new RegExp(PATTERNS.guestProgram, 'u').test(program)) {
-    add('/engine/launch/argv/0', 'pattern', 'an image kind runs a guest command or an absolute guest path');
+  // Its ACP mode runs in the image the same way.
+  for (const block of ['launch', 'acp']) {
+    const cmd = isObject(m.engine) && isObject(m.engine[block]) ? (m.engine[block] as Json) : null;
+    const program = cmd && Array.isArray(cmd.argv) ? cmd.argv[0] : undefined;
+    if (typeof program === 'string' && !new RegExp(PATTERNS.guestProgram, 'u').test(program)) {
+      add(`/engine/${block}/argv/0`, 'pattern', 'an image kind runs a guest command or an absolute guest path');
+    }
   }
 }
 
@@ -81,8 +85,10 @@ export function checkUser(add: Add, m: Json) {
     if (m.surfaces.home === 'web') add('/surfaces/home', 'forbidden', 'a user-added kind has no web home');
   }
   const launch = isObject(m.engine) && isObject(m.engine.launch) ? m.engine.launch : null;
+  const acp = isObject(m.engine) && isObject(m.engine.acp) ? m.engine.acp : null;
   const state = isObject(m.state) ? m.state : null;
-  for (const [path, env] of [['/engine/launch/env', launch?.env], ['/state/env', state?.env]] as const) {
+  const envs = [['/engine/launch/env', launch?.env], ['/engine/acp/env', acp?.env], ['/state/env', state?.env]] as const;
+  for (const [path, env] of envs) {
     if (!isObject(env)) continue;
     for (const name of Object.keys(env)) {
       if (USER_RESERVED_ENV.includes(name)) add(`${path}/${name}`, 'reserved', `${name} is the host's to set`);

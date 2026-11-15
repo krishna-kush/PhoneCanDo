@@ -514,6 +514,66 @@
         "path": "/inbox/server/create/body/title",
         "code": "unknown"
       }
+    ],
+    "acp-on-server.json": [
+      {
+        "path": "/engine/acp",
+        "code": "forbidden"
+      }
+    ],
+    "acp-chat-no-chat-id.json": [
+      {
+        "path": "/engine/acp/chat/args",
+        "code": "mismatch"
+      }
+    ],
+    "acp-chat-two-chat-ids.json": [
+      {
+        "path": "/engine/acp/chat/args",
+        "code": "mismatch"
+      }
+    ],
+    "acp-argv-chat-id.json": [
+      {
+        "path": "/engine/acp/argv/1",
+        "code": "forbidden"
+      }
+    ],
+    "acp-argv-prompt.json": [
+      {
+        "path": "/engine/acp/argv/1",
+        "code": "unknown"
+      }
+    ],
+    "acp-tools-unknown.json": [
+      {
+        "path": "/engine/acp/tools",
+        "code": "enum"
+      }
+    ],
+    "acp-options-too-many.json": [
+      {
+        "path": "/engine/acp/options",
+        "code": "length"
+      }
+    ],
+    "acp-env-reserved.json": [
+      {
+        "path": "/engine/acp/env/PHONECANDO_BRIDGE_TOKEN",
+        "code": "reserved"
+      }
+    ],
+    "acp-image-argv-host-path.json": [
+      {
+        "path": "/engine/acp/argv/0",
+        "code": "pattern"
+      }
+    ],
+    "user-acp-path.json": [
+      {
+        "path": "/engine/acp/env/PATH",
+        "code": "reserved"
+      }
     ]
   }
 }

@@ -186,11 +186,11 @@ class ManifestKindTest {
         """"web":{"adapter":{"cssVars":{"--z":"bg","--a":"fg"},"authUrl":"/in/","x":[1]}},""" +
         """"chatTitle":"^T (.+)$",""" +
         """"signIn":[{"method":"in-ui","note":"n"}],"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,""" +
-        """"payloadPresent":true,"models":[],"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none","schedules":false},""" +
+        """"payloadPresent":true,"models":[],"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none","schedules":false,"acp":false},""" +
         """{"id":"demo","label":"Demo","version":"1","type":"native","channels":["full"],"stability":"preview",""" +
         """"origin":"bundled","isDefault":true,"home":"tui","web":null,"chatTitle":null,"signIn":[],""" +
         """"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,"payloadPresent":true,"models":[],""" +
-        """"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none","schedules":false}]""",
+        """"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none","schedules":false,"acp":false}]""",
       KindView.list(listOf(web, tui), "demo", libs::contains),
     )
     assertEquals("false", KindView.of(tui, false, libs::contains)["isDefault"].toString())
@@ -366,7 +366,9 @@ class ManifestKindTest {
   @Test fun validFixturesLoad() {
     val valid = File(fixtures, "valid").listFiles().orEmpty()
     assertTrue(
-      valid.map { it.name }.containsAll(listOf("claude-code.json", "codex.json", "gemini-cli.json", "opencode.json", "user-top.json")),
+      valid.map { it.name }.containsAll(
+        listOf("claude-code.json", "claude-code-acp.json", "codex.json", "gemini-cli.json", "opencode.json", "user-top.json", "user-top-acp.json"),
+      ),
     )
     for (f in valid) fixture(f)
   }
@@ -380,6 +382,8 @@ class ManifestKindTest {
       "update-without-install", "install-retries-range", "state-env-empty", "state-without-instructions",
       "state-config-without-config", "user-state-shared", "inbox-server-on-tui", "inbox-template-no-messages",
       "inbox-wake-unsupported", "inbox-json-unquoted", "prompt-on-server", "prompt-not-whole", "inbox-create-placeholder",
+      "acp-on-server", "acp-chat-no-chat-id", "acp-chat-two-chat-ids", "acp-argv-chat-id", "acp-argv-prompt", "acp-tools-unknown",
+      "acp-options-too-many", "acp-image-argv-host-path", "user-acp-path",
     )
     for (name in refused) {
       val e = runCatching { fixture(File(fixtures, "invalid/$name.json")) }.exceptionOrNull()

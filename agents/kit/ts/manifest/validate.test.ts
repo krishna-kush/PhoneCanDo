@@ -4,8 +4,11 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
+  ACP_FIELDS,
+  ACP_TOOLS,
   ANY_FAMILY,
   CHANNELS,
+  CHAT_PLACEHOLDER,
   ENGINE_STYLES,
   EVENT_SOURCES,
   FAMILIES,
@@ -147,6 +150,8 @@ describe('validator and schema agree', () => {
     assert.deepEqual(defs.inboxHook.properties.format.enum, INBOX_FORMATS);
     assert.deepEqual(defs.inboxCall.properties.method.enum, INBOX_METHODS);
     assert.deepEqual(props.inbox.properties.server.properties.create.properties.method.enum, INBOX_METHODS);
+    assert.deepEqual(Object.keys(props.engine.properties.acp.properties), ACP_FIELDS);
+    assert.deepEqual(props.engine.properties.acp.properties.tools.enum, ACP_TOOLS);
   });
 
   it('has the same patterns', () => {
@@ -189,12 +194,23 @@ describe('validator and schema agree', () => {
     assert.equal(props.inbox.properties.server.properties.create.properties.path.pattern, PATTERNS.httpPath);
     assert.equal(defs.promptTemplate.pattern, PATTERNS.promptTemplate);
     assert.equal(props.engine.properties.prompt.properties.args.contains.const, `{{${PROMPT_PLACEHOLDER}}}`);
+    assert.equal(defs.chatTemplate.pattern, PATTERNS.chatTemplate);
+    assert.equal(props.engine.properties.acp.properties.chat.properties.args.contains.const, `{{${CHAT_PLACEHOLDER}}}`);
   });
 
   it('has the same prompt and resume limits', () => {
     assert.equal(props.engine.properties.resume.properties.at.maximum, MAX.resumeAt);
     assert.equal(props.engine.properties.prompt.properties.at.maximum, MAX.resumeAt);
     assert.equal(defs.promptTemplate.maxLength, MAX.template);
+  });
+
+  it('has the same ACP limits', () => {
+    const acp = props.engine.properties.acp.properties;
+    assert.equal(acp.options.maxProperties, MAX.acpOptions);
+    assert.equal(acp.options.propertyNames.maxLength, MAX.text);
+    assert.equal(acp.options.additionalProperties.maxLength, MAX.text);
+    assert.equal(acp.chat.properties.at.maximum, MAX.resumeAt);
+    assert.equal(defs.chatTemplate.maxLength, MAX.template);
   });
 
   it('has the same inbox limits', () => {

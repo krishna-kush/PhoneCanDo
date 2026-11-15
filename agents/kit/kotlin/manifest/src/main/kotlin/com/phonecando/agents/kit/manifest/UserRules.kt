@@ -6,7 +6,7 @@ package com.phonecando.agents.kit.manifest
 // which needs Linux and is never the default; no code hooks, no native
 // payload, no config packaged from assets (`config.dir`, `overlay`,
 // `shared`) and no web surface; no env name the host sets (RESERVED_ENV)
-// in its launch or its state folder's env; install steps and update steps
+// in its launch, its ACP mode's or its state folder's env; install steps and update steps
 // of at most MAX_SCRIPT_BYTES each. Each break throws ManifestException at
 // the JSON pointer of the offending value.
 internal object UserRules {
@@ -35,6 +35,7 @@ internal object UserRules {
       if (manifest.surfaces?.home != HomeSurface.TUI) fail(s.at("home"), "a user kind's Home is its TUI (tui)")
     }
     reservedEnv(engine.optObj("launch")?.optObj("env"))
+    reservedEnv(engine.optObj("acp")?.optObj("env"))
     reservedEnv(m.optObj("state")?.optObj("env"))
     script(m, "install", manifest.install?.steps)
     script(m, "update", manifest.update?.steps)

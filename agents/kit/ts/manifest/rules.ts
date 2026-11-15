@@ -82,6 +82,17 @@ export const PROMPT_PLACEHOLDER = 'prompt';
 export const SHELL_SCRIPT_FLAG = '-c';
 export const FIRST_SCRIPT_ARG = 4;
 
+// A tui engine's ACP mode (`engine.acp`): the same agent speaking the Agent
+// Client Protocol on stdin and stdout, with no screen. Its argv and env are
+// a launch's; `tools` says how it gets the phone tools, `options` are the
+// session config options set on every chat it opens, `meta` goes in as
+// `_meta` when a chat opens, and `chat` holds the terminal-mode args that
+// open one given chat, whose one placeholder {{chatId}} no other template
+// may name.
+export const ACP_FIELDS = ['argv', 'env', 'tools', 'options', 'meta', 'chat'];
+export const ACP_TOOLS = ['session', 'config'];
+export const CHAT_PLACEHOLDER = 'chatId';
+
 // What every agent on a machine shares in HOME, which `userState` (deleted
 // when an agent that kept the kind's defaults leaves a machine that stays)
 // may never name, hold or lie in: the work folder, our own files, keys,
@@ -153,6 +164,8 @@ export const PATTERNS = {
   inboxCreateTemplate: templateOf([INBOX_TITLE]),
   /** A prompt arg: known placeholders, no {{password}}, and {{prompt}}. */
   promptTemplate: templateOf([...PLACEHOLDERS.filter((n) => n !== SECRET_PLACEHOLDER), PROMPT_PLACEHOLDER]),
+  /** An ACP mode's chat arg: known placeholders, no {{password}}, and {{chatId}}. */
+  chatTemplate: templateOf([...PLACEHOLDERS.filter((n) => n !== SECRET_PLACEHOLDER), CHAT_PLACEHOLDER]),
   httpPath: '^/\\S*$',
   jsonPointer: '^(?:/(?:[^~/]|~[01])*)+$',
   envName: '^[A-Za-z_][A-Za-z0-9_]*$',
@@ -211,6 +224,10 @@ export const MAX = {
   major: 9999,
   /** The highest exit code an inbox hook ends with. */
   hookExit: 255,
+  /** The most session config options an ACP mode sets (each id and value at most MAX.text characters). */
+  acpOptions: 8,
+  /** The most UTF-8 bytes an ACP mode's meta holds, as compact JSON. */
+  acpMetaBytes: 4096,
 };
 
 /** Config fields that describe the bundled asset folder, so need config.dir. */

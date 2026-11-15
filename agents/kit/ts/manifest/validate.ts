@@ -7,7 +7,8 @@
 // agents/kit/cli/manifests.mjs. The runtime blocks are in runtime.ts, the
 // install blocks in install.ts, the instructions file and the agent's own
 // state folder in state.ts, how other agents' messages reach it in
-// inbox.ts, the rules per type and origin in kinds.ts. A
+// inbox.ts, a tui engine's ACP mode in acp.ts, the rules per type and
+// origin in kinds.ts. A
 // runtime plugin's manifest has its own validator (runtime-plugin.ts).
 import {
   fields,
@@ -22,6 +23,7 @@ import {
   type Add,
   type Json,
 } from './primitives.ts';
+import { checkAcp } from './acp.ts';
 import { checkInbox } from './inbox.ts';
 import { checkInstall } from './install.ts';
 import { checkRequires, checkType, checkUser } from './kinds.ts';
@@ -89,6 +91,7 @@ export function validate(json: unknown, options: ValidateOptions): ValidationRes
   if ('models' in json) checkModels(add, json.models);
   checkState(add, json);
   checkInbox(add, json);
+  checkAcp(add, json);
 
   checkType(add, json);
   if (user) checkUser(add, json);
