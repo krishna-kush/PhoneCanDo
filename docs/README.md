@@ -71,6 +71,8 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 
 - `guides/testing.md` — app and Linux runtime checks, CI workflows and
   automation test layers.
+- `guides/adding-an-agent.md` — add a coding agent we don't ship: in the
+  app for yourself, or as a kind in `agents/` by pull request.
 
 ## Planning
 

@@ -91,3 +91,81 @@ that works today may start needing one. The Account page lists them
 - [ ] More fun together: other features for a crew of friends, each optional.
 - [ ] Each of these ships with its lines in `docs/accounts.md` (what it keeps,
   for how long) and the site's privacy page before it reaches anyone.
+
+## 4. ACP mode: what comes next (wait for the go)
+
+ACP mode is built (`agents/AGENTS.md` → ACP mode, `app/docs/modules/runner.md`
+→ ACP mode). These come next, built with parallel agents; none starts before
+we say so.
+
+- [ ] Phone test of ACP mode (Update agent first on Claude Code and Pi): a
+  task with the app closed, Home opened mid-run (background view, Stop, back
+  to its own app on the same chat), a permission question (notification
+  Allow/Deny and the in-app dialog), one agent waking another, a kind with no
+  ACP mode still working as before, a custom agent with an ACP command, RAM
+  during a background run. Then the checks: What it can do on an agent page,
+  Check now on Claude Code and on a custom agent, a broken hook showing Not
+  working (one notification, the level dropping, a waiting message saying
+  why), a check that waits for you in the agent's own app (Open <agent>, its
+  one notification, going on once you answer).
+- [x] Checks on the phone for agents without ACP mode, and for what we add
+  on top of ACP (hooks, the "open this chat" flag, phone tools from the
+  agent's own config): each capability reads Checked, Not checked yet, Not
+  working or Off, from exact signals (a bridge request with the agent's token,
+  our inbox script reporting its hook ran, the run's output and exit). A
+  failure shows the first time (the run, the message, one notification, the
+  level shown); Check now runs one short test task.
+- [ ] A guessed stop lets the CPU sleep mid-run: a TUI run that shows
+  nothing for 30 s counts as stopped (TuiEvents.quiet, for Claude Code's
+  Esc, which fires no hook), and that releases the wake lock while the run
+  may still work (seen 2026-11-14: Claude Code's helper agent reading its
+  prompt on a local model). The checks already skip such a guess
+  (`EngineEvent.guessed`); the wake lock and the chat board still take it.
+- [ ] Bring back agents a reboot cut off. After the first unlock
+  (`ScheduleBootReceiver` already re-arms schedules then), restart each
+  agent that had a run going when the phone went down and tell it to go on
+  with its interrupted task, in the same chat (it is on disk). Only agents
+  that were mid-task, and only with your OK: a notification with Continue,
+  or a setting. It needs a record on disk of which runs were going.
+  Today they stay stopped, and a cut-off scheduled run reads failed ("PhoneCanDo
+  was closed before the task finished"). When it ships, update
+  `docs/release/known-limits.md` (its boot receiver and dead-engine lines).
+- [ ] A message may start a stopped agent. Our idle stop stops an idle
+  agent a few minutes after you leave the app (unless Keep running), and a
+  message never starts a stopped one, so other agents can wake it only in
+  those minutes. With "Other agents can wake it" on, start it in ACP mode
+  with the message instead.
+- [ ] Local models re-read the whole prompt too often: on 2026-11-15 each
+  of Claude Code's requests read its 19k-token prompt again (12-15 min on
+  Qwen3.5 0.8B) while its own sub-agent requests took turns with it.
+  Qwen3.5 is a hybrid model, which llama.cpp caches less well; look at its
+  context checkpoints and our `--cache-ram`.
+- [x] Codex's message hooks: a new Codex agent (0.169.0, its install links
+  `/etc/codex/hooks.json`) checks "Messages during its turns" on
+  2026-11-15; the test phone's older one only lacked the link (Update
+  agent makes it). Never link through an `sh -c` launch: the kit puts
+  model args right after the program, so a wrapper breaks Codex on any
+  model we give it.
+- [ ] Small ones: keys typed on a page with no field focused still reach
+  opencode's web page behind it (the WebView keeps Android's input
+  focus); a Run now task says "(once at <its next time>)" instead of when
+  it ran; after Update agent, Home shows "stopped · Restart" instead of
+  starting it again; an agent that ran before a Check now is left stopped
+  after it (start it again on its own model); New agent lists Codex as
+  "Messages · inbox only" though its hooks deliver during turns; the
+  engine notification can keep an old chat's title; Run now leaves a once
+  schedule on; "Other agents can wake it" shows while the agent's level
+  now can't wake (its ACP mode failed), and "Woken while idle" reads Off
+  for kinds that wake only through ACP mode.
+- [ ] goose: its first own-app start asks "Share anonymous usage data…",
+  which stalls Check now (seed the answer in its config); and its install
+  fails on an amazonlinux machine (`No match for argument: ripgrep`).
+- [ ] Telemetry: count those failures for built-in kinds only (kind,
+  capability, CLI version, kind of failure; no text, never a custom kind's
+  id), with its line in `docs/telemetry.md`.
+- [ ] Codex in ACP mode: the `codex-acp` adapter (it ships its own Codex,
+  about 100 MB; see whether it can use the one we install), a trial run, then
+  its `engine.acp` and README section.
+- [ ] CI: a nightly run of each built-in kind's ACP mode against a scripted
+  fake model in a container (the trial kit we used on the PC), so a vendor
+  update that breaks a kind shows up before users see it.
