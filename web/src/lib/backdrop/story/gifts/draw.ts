@@ -1,6 +1,6 @@
 // The gifts' lines (gifts/kinds.ts), drawn in the right margin floor by
 // floor. On the gift's own floor: a socket where the gift is, the line back
-// along the deck to the riser, and a note of where it goes ("↓ CH. 06"). On
+// along the deck to the riser, and a note of where it goes ("↓ CH. 07"). On
 // the floors between: its stretch of the riser, with a collar where it
 // passes each deck. On the tunnel's floor: along the deck to its plug, with
 // a note by the riser of where each came from. Unlit, a faint line in the

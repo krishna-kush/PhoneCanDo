@@ -1,4 +1,4 @@
-// CH. 07, beside the source section: nothing hidden. You open it up: a
+// CH. 08, beside the source section: nothing hidden. You open it up: a
 // blueprint unfolds, FIG. A-07, Little drawn in line-work with its
 // dimensions, and under it the lines of its code, lit one by one as you read
 // them. Little stands by it and lets you.

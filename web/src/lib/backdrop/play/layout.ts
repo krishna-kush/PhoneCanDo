@@ -26,6 +26,7 @@ const LAYOUT: Record<string, Stack[]> = {
   models: [{ at: 0.1, kinds: ['headphones', 'flashlight'] }],
   linux: [{ at: 0.5, kinds: ['hardhat', 'clock'] }],
   crew: [{ at: 0.22, kinds: ['cap'] }],
+  schedules: [{ at: 0.5, kinds: ['notes', 'clock'] }],
   gate: [{ at: 0.6, kinds: ['tophat', 'settings'] }],
   install: [
     { at: 0.12, kinds: ['music'] },

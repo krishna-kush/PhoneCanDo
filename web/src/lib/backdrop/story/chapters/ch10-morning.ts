@@ -1,4 +1,4 @@
-// CH. 09, beside the footer: light, the end. The train comes out into the
+// CH. 10, beside the footer: light, the end. The train comes out into the
 // light: across the page the sun comes up, Mom's house is there on the
 // horizon, and from her window a heart rises. On the phone the queued reply goes (sent ✓) and her
 // answer comes back. Your idea's card, half written on the first floor, now

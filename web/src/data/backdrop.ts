@@ -57,6 +57,14 @@ export const floorWords: Record<string, FloorWords> = {
     ],
     says: ['psst · a note', 'my turn?', 'not alone'],
   },
+  schedules: {
+    title: 'the alarm',
+    lines: [
+      'Before it slept, Little wound the Clock and tucked a note under it: at three, check the build.',
+      'At three the Clock rang. Little got up and did it, all on its own. Nobody had to ask.',
+    ],
+    says: ['at three: check', 'note to self', 'rrring!'],
+  },
   gate: {
     title: 'the key',
     lines: [

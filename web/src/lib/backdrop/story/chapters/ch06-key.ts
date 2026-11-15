@@ -1,4 +1,4 @@
-// CH. 05, beside the gate: the key. Little stands at an open gate with the
+// CH. 06, beside the gate: the key. Little stands at an open gate with the
 // phone behind it, everything it can now do, Mom's note still unanswered
 // beside it, and thinks. Then it pulls the
 // bars down itself, and the only key rises out of the lock and floats out of

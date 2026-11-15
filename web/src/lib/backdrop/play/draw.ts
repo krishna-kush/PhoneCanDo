@@ -10,7 +10,7 @@
 
 import { playWords } from '../../../data/backdrop';
 import { edgeX, scaleAt } from '../camera';
-import { heartUp } from '../story/chapters/ch09-morning';
+import { heartUp } from '../story/chapters/ch10-morning';
 import { makeRoom, type Room } from '../story/room';
 import { SLAB, floorY } from '../world/building';
 import type { Frame } from '../world/frame';

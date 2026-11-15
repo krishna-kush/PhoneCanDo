@@ -1,4 +1,4 @@
-// CH. 06, beside the install steps: the tunnel, the story's dark hour, where
+// CH. 07, beside the install steps: the tunnel, the story's dark hour, where
 // the task and the idea meet. The train goes into the tunnel: the world goes
 // dark in both margins, where only lit things show. No signal. Your touch turns
 // the key (the fingerprint on the phone glows and arms it). Little wakes

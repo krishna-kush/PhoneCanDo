@@ -1,4 +1,4 @@
-// CH. 08, beside the FAQ: how? The apps Little woke come and gather round
+// CH. 09, beside the FAQ: how? The apps Little woke come and gather round
 // it, awake now, a question mark over each. Little answers with three small
 // hops: I asked, I learned, I stayed; at the last the question marks turn to
 // a hop of their own.
