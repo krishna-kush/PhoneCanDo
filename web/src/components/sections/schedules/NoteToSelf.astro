@@ -54,10 +54,11 @@ const add = scheduleTools.find((t) => t.endsWith("_add")) ?? scheduleTools[0];
 )}
 
 <script>
-    import { mountNoteToSelf } from "../../../lib/schedules/noteToSelf";
+    import { whenNear } from "../../../lib/whenNear";
 
+    // Its code loads two sections ahead of it (lib/whenNear.ts).
     const root = document.querySelector<HTMLElement>("[data-nts]");
-    if (root) mountNoteToSelf(root);
+    if (root) whenNear(root, () => void import("../../../lib/schedules/noteToSelf").then(({ mountNoteToSelf }) => mountNoteToSelf(root)));
 </script>
 
 <style is:global>

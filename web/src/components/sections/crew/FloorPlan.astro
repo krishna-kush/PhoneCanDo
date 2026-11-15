@@ -110,10 +110,11 @@ const SPARKLES = Array.from({ length: 40 }, (_, i) => ({
 </figure>
 
 <script>
-    import { mountFloorPlan } from "../../../lib/crew/plan";
+    import { whenNear } from "../../../lib/whenNear";
 
+    // Its code loads two sections ahead of it (lib/whenNear.ts).
     const root = document.querySelector<HTMLElement>("[data-plan]");
-    if (root) mountFloorPlan(root);
+    if (root) whenNear(root, () => void import("../../../lib/crew/plan").then(({ mountFloorPlan }) => mountFloorPlan(root)));
 </script>
 
 <style is:global>

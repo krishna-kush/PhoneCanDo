@@ -86,10 +86,11 @@ const nextTicket = people.filter((p) => p.ticket).length + 1;
 </figure>
 
 <script>
-    import { mountQueue } from "../../../lib/crew/queue";
+    import { whenNear } from "../../../lib/whenNear";
 
+    // Its code loads two sections ahead of it (lib/whenNear.ts).
     const root = document.querySelector<HTMLElement>("[data-queue]");
-    if (root) mountQueue(root);
+    if (root) whenNear(root, () => void import("../../../lib/crew/queue").then(({ mountQueue }) => mountQueue(root)));
 </script>
 
 <style is:global>

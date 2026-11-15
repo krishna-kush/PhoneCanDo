@@ -25,7 +25,8 @@ const offset =
     unit === "px" ? Math.max(logo.shadow.minAssetPx, Math.round(size * logo.shadow.ratio)) : Number((size * logo.shadow.ratio).toFixed(2));
 // Eyes that look aside turn a visor with them; wide ones fill bigger frames.
 const wear = wearOf(look, { gaze: [look.eyes === "look" ? 1 : 0, 0], eyes: look.eyes === "wide" ? "wide" : "dot" });
-const at = (v: number) => `calc(var(--b-s) * ${Number((v / UNIT).toFixed(4))})`;
+// The wear's box in block sides; .bot-wear multiplies by --b-s.
+const at = (v: number) => Number((v / UNIT).toFixed(4));
 ---
 
 <span
@@ -43,7 +44,7 @@ const at = (v: number) => `calc(var(--b-s) * ${Number((v / UNIT).toFixed(4))})`;
             <svg
                 class="bot-wear"
                 viewBox={`${wear.box.x} ${wear.box.y} ${wear.box.w} ${wear.box.h}`}
-                style={`left:${at(wear.box.x)};top:${at(wear.box.y)};width:${at(wear.box.w)};height:${at(wear.box.h)}`}
+                style={`--wx:${at(wear.box.x)};--wy:${at(wear.box.y)};--ww:${at(wear.box.w)};--wh:${at(wear.box.h)}`}
                 set:html={wear.paths}
             />
         )
@@ -106,9 +107,25 @@ const at = (v: number) => `calc(var(--b-s) * ${Number((v / UNIT).toFixed(4))})`;
        the card, the screens' dark for what lies on the block. */
     .bot-wear {
       position: absolute;
+      left: calc(var(--b-s) * var(--wx));
+      top: calc(var(--b-s) * var(--wy));
+      width: calc(var(--b-s) * var(--ww));
+      height: calc(var(--b-s) * var(--wh));
       z-index: 3;
       overflow: visible;
       pointer-events: none;
       --mascot-wear: var(--bot-line, var(--art-fg));
     }
+    /* Paint classes from lib/mascot/svg.ts: f = fill, s = stroke. */
+    .bot-wear path { fill: none; stroke: none; }
+    .bot-wear .fw { fill: var(--mascot-wear, var(--fg)); }
+    .bot-wear .fr { fill: var(--red); }
+    .bot-wear .fa { fill: var(--accent); }
+    .bot-wear .fe { fill: var(--on-primary); }
+    .bot-wear .fd { fill: var(--art-bg); }
+    .bot-wear .sw { stroke: var(--mascot-wear, var(--fg)); }
+    .bot-wear .sr { stroke: var(--red); }
+    .bot-wear .sa { stroke: var(--accent); }
+    .bot-wear .se { stroke: var(--on-primary); }
+    .bot-wear .sd { stroke: var(--art-bg); }
 </style>

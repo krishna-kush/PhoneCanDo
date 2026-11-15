@@ -13,13 +13,10 @@ import { BODY } from './body';
 /** The short side the wear is laid out on. */
 export const UNIT = 100;
 
-const VAR: Record<Color, string> = {
-  wear: 'var(--mascot-wear, var(--fg))',
-  red: 'var(--red)',
-  amber: 'var(--accent)',
-  eye: 'var(--on-primary)',
-  dark: 'var(--art-bg)',
-};
+// Each colour is a one-letter class pair, f<letter> for fill and s<letter>
+// for stroke, painted by Bot.astro's .bot-wear rules (--mascot-wear and the
+// theme's vars): a page of units repeats a short class, not a long style.
+const LETTER: Record<Color, string> = { wear: 'w', red: 'r', amber: 'a', eye: 'e', dark: 'd' };
 
 const n = (v: number) => Number(v.toFixed(2));
 
@@ -33,9 +30,11 @@ export function wearOf(look: Look, stance: Omit<Stance, 'size' | 'body'> = {}): 
   const at = { x: f.front.x, y: f.front.y };
   const paths = f.marks
     .map((m) => {
-      const style = `fill:${m.fill ? VAR[m.fill] : 'none'};stroke:${m.stroke ? VAR[m.stroke] : 'none'};stroke-width:${n(m.width)}`;
+      const paint = [m.fill && `f${LETTER[m.fill]}`, m.stroke && `s${LETTER[m.stroke]}`].filter(Boolean).join(' ');
+      const cls = paint ? ` class="${paint}"` : '';
+      const width = m.stroke ? ` stroke-width="${n(m.width)}"` : '';
       const alpha = m.alpha < 1 ? ` opacity="${m.alpha}"` : '';
-      return `<path d="${pathOf(m)}" style="${style}"${alpha}/>`;
+      return `<path d="${pathOf(m)}"${cls}${width}${alpha}/>`;
     })
     .join('');
   const b = boundsOf([], f.marks);

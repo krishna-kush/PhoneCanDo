@@ -36,6 +36,7 @@ Astro is pinned to 7.3.0 (7.4 needs Node ≥ 22.23.4); bump the two together.
 | The backdrop: The Phone That Could, the story told in the margins behind the sheet, a floor and a chapter per section (wide screens only): Little, unit A-07, inside the phone on the right, where each chapter's gift (the Spark, Linux, the crew, the key) runs as a line down the floors to the tunnel that needs it; the left tells no story: it is a playground of the phone's apps and a few A-series cousins, asleep in stacks, where you tap one awake and throw it at the rest, each with a trick of its own, with a fixture on some floors, and the sun comes up over Mom's house at the end | each chapter's title and lines of the story, what Little, the apps and the Spark say when clicked, Mom's note and the reply, your idea's words, each crew member's part in the tunnel, and the playground's hints and labels (`playWords`): `src/data/backdrop.ts`; the crew are the agent kinds the Models section leads with (`leadCards` in `src/data/agentCards.ts`), handed to the canvas by `Backdrop.astro`; each chapter's scene, when its lines come in and the gift it gives: `src/lib/backdrop/story/chapters/`; the gifts' lines: `src/lib/backdrop/story/gifts/`; the characters: `src/lib/backdrop/story/characters/`; what every unit and card bot wears (hats, ties, glasses): `src/data/wear.ts`; the playground (who lies where, each one's trick, the fixtures, your hand's shake and jiggle): `src/lib/backdrop/play/`; the sunrise and Mom's house: `src/lib/backdrop/story/outside/`; the camera, floors and Little's scroll-driven clock: `src/lib/backdrop/` |
 | Colours (shared with the app) | `theme/tokens.json` |
 | A section's or component's look | the `<style is:global>` at the bottom of its `.astro` file |
+| When a heavy toy's code loads (two sections ahead of it) | `src/lib/whenNear.ts`, called from the toy's `<script>` |
 | Shared pieces: vars, reset, labels, buttons, section scaffolding | `src/styles/` (`global.css` lists them) |
 | Logo, favicons, loader | `theme/logo.json`; `pnpm logos` (repo root) redraws the icon files |
 | Social card | `public/og.png`, hand-built; redo it when the headline changes |
@@ -51,7 +52,9 @@ are `is:global`.
 
 A field manual, not a SaaS page: Instrument Serif display, Geist body, Geist
 Mono labels, signal red and safety amber on warm paper or night ink. Fonts ship
-through `@fontsource`. The page opens in the OS theme and the nav toggle lasts
+through `@fontsource`; after each build `build/subset-fonts.mjs` cuts the four
+first-load files to the characters the site holds, so new copy needs no step.
+The page opens in the OS theme and the nav toggle lasts
 one visit; phone screens and media stay dark in both (`--art-*`).
 
 ## Recordings

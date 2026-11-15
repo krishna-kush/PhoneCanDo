@@ -96,10 +96,11 @@ const DAY = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 </figure>
 
 <script>
-    import { mountRoll } from "../../../lib/schedules/roll";
+    import { whenNear } from "../../../lib/whenNear";
 
+    // Its code loads two sections ahead of it (lib/whenNear.ts).
     const root = document.querySelector<HTMLElement>("[data-roll]");
-    if (root) mountRoll(root);
+    if (root) whenNear(root, () => void import("../../../lib/schedules/roll").then(({ mountRoll }) => mountRoll(root)));
 </script>
 
 <style is:global>
