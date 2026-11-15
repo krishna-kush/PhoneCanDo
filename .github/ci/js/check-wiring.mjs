@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Script wiring gate: the entry points people type still reach real files.
 //
-//   ./manage        loaded as a module with `sh` swapped for a recorder, then
-//                   every dispatchable subcommand is called with valid args;
-//                   each recorded `node <file>`, `<file>.sh` and `pnpm <script>`
+//   ./manage        loaded as a module with scripts/manage/run.py's RECORD
+//                   set, so commands are noted and never run, then every
+//                   dispatchable subcommand is called with valid args; each
+//                   recorded `node <file>`, `<file>.sh` and `pnpm <script>`
 //                   must resolve (nothing is executed). Every COMMANDS entry
-//                   must be documented in its --help text and vice versa.
+//                   must be in its help (scripts/manage/usage.py) and vice versa.
 //   package.json    root/app/web scripts: `node <file>` targets exist and
 //                   `pnpm -C app|web <script>` names a script there.
 //   vectors         every app/scripts/vectors/*.js runs from `check:vectors`
@@ -86,25 +87,26 @@ loader = importlib.machinery.SourceFileLoader("manage", path)
 spec = importlib.util.spec_from_loader("manage", loader)
 m = importlib.util.module_from_spec(spec)
 loader.exec_module(m)
+channels = sys.modules["manage.args"].CHANNELS
+run, usage = sys.modules["manage.run"], sys.modules["manage.usage"]
 calls = []
-def record(cmd, cwd=m.ROOT, env=None):
-    calls.append({"cmd": [str(c) for c in cmd], "cwd": str(cwd)})
-m.sh = record
-m.capture = lambda cmd: ""
+run.RECORD = lambda cmd, cwd: calls.append({"cmd": [str(c) for c in cmd], "cwd": str(cwd)})
 probes = [("check", []), ("logos", []), ("xterm", []), ("prebuild", []), ("prebuild", ["--clean"]),
           ("web", ["dev"]), ("web", ["build"]), ("web", ["preview"]),
           ("release", ["0.0.0", "--dry-run"]), ("build", ["lite"]), ("build", ["full"])]
-probes += [("agent", ["list"]), ("agent", ["check"]), ("agent", ["new", "x", "--native"])]
+probes += [("agent", ["list"]), ("agent", ["check"]), ("agent", ["new", "x", "--native"]),
+           ("agent", ["status"]), ("agent", ["sync", "full"])]
 probes += [("agent", [k, a] + (["out"] if a == "stage" else []))
-           for k, d in m.agent_kinds().items() for a in ("build", "stage", "test")
+           for k, d in m.agent_kinds().items() for a in ("build", "stage", "lock", "test")
            if d.parent.name == "native" or a == "test"]
-probes += [("android", [c]) for c in m.CHANNELS]
+probes += [("android", [c]) for c in channels]
 probes += [("image", ["fetch"]), ("image", ["stage"]), ("image", ["lock", "1"]), ("image", ["build"]),
            ("image", ["stage", "--local"])]
 for name, args in probes:
     if name in m.COMMANDS:
         m.COMMANDS[name](args)
-print(json.dumps({"root": str(m.ROOT), "commands": sorted(m.COMMANDS), "doc": m.__doc__ or "", "calls": calls}))
+doc = "\n".join("./manage " + c for _, commands, _ in usage.GROUPS for c, _ in commands)
+print(json.dumps({"root": str(m.ROOT), "commands": sorted(m.COMMANDS), "doc": doc, "calls": calls}))
 `;
 const py = spawnSync('python3', ['-I', '-B', '-c', PY, join(ROOT, 'manage')], { encoding: 'utf8' });
 if (py.status !== 0) {

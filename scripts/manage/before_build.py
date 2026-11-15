@@ -1,9 +1,11 @@
 """What ./manage build and ./manage release run before an APK build: the
 usage checks, proot, and the agent payloads the APK ships."""
-import subprocess
 import sys
 
-from .common import AGENT_KIT, ROOT, TCE, die, release_env, sh
+from .args import die
+from .env import release_env
+from .paths import AGENT_KIT, ROOT, TCE
+from .run import run, sh
 
 # The agents step's own flags, each followed by kind ids (a,b); build and
 # release pass every other argument on to their script.
@@ -48,7 +50,7 @@ def proot_first(args):
         return
     ensure = ["bash", str(ROOT / "lre" / "proot" / "ensure.sh")]
     if "--dry-run" in args:
-        subprocess.run([*ensure, "--check"], cwd=str(ROOT), env=release_env(), check=False)
+        run([*ensure, "--check"], env=release_env())
         return
     sh(ensure, env=release_env())
 
@@ -65,6 +67,6 @@ def agents_first(args, channels, flags, release=False):
     if release:
         ensure.append("--release")
     if "--dry-run" in args:
-        subprocess.run([*ensure, "--check"], cwd=str(ROOT), env=release_env(), check=False)
+        run([*ensure, "--check"], env=release_env())
         return
     sh(ensure, env=release_env())

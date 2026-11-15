@@ -8,11 +8,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent / "scripts"))
 
 from manage import usage
+from manage.args import channel_arg, die
 from manage.before_build import agents_first, limits_first, proot_first, split_agent_flags
-from manage.common import (
-    AGENT_KIT, AGENTS, APP, IMAGE, IMAGE_LOCK, ROOT, SCRIPTS, TCE, WEB,
-    build_tools, capture, channel_arg, die, release_env, sh,
-)
+from manage.env import build_tools, release_env
+from manage.paths import AGENT_KIT, AGENTS, APP, IMAGE, IMAGE_LOCK, ROOT, SCRIPTS, TCE, WEB
+from manage.run import capture, sh
 
 # What a release ships; build makes one of them.
 RELEASED = ["full", "lite"]
