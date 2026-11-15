@@ -44,6 +44,11 @@ function refresh() {
 // page picked here is built in the render that closes it, and the drawer
 // must not sit open until that page is ready. Its faces hold still once it
 // has slid shut, so that render never redraws the drawer's content.
+// Its panel takes touches only once it has slid open (`settled`):
+// Reanimated's fast path moves the native view but not React's copy of
+// it, which a press measures, so a tap right after the slide was judged
+// where the slide began and dropped. Turning touches on is the React
+// commit that writes the panel's real place back.
 export default function AppDrawer() {
   const t = useTheme();
   const { width } = useWindowDimensions();
@@ -54,6 +59,7 @@ export default function AppDrawer() {
   const [mounted, setMounted] = useState(open);
   // Its faces move while it is on screen: from the open until the slide shut ends.
   const [awake, setAwake] = useState(open);
+  const [settled, setSettled] = useState(false);
 
   // Built ahead of the first tap: when the JS thread first goes idle after
   // launch, so it never costs Home's first frames.
@@ -66,10 +72,13 @@ export default function AppDrawer() {
     const slideOpen = () => {
       shown.value = withTiming(1, { duration: OPEN_MS, easing: EMPHASIZED }, (finished) => {
         'worklet';
-        if (finished) scheduleOnRN(refresh);
+        if (!finished) return;
+        scheduleOnRN(setSettled, true);
+        scheduleOnRN(refresh);
       });
     };
     const slideShut = () => {
+      setSettled(false);
       // Shut from wherever a drag or the back gesture left it.
       shown.value = shown.value * (1 - PULL * drawerPull.value);
       drawerPull.value = 0;
@@ -85,11 +94,13 @@ export default function AppDrawer() {
         slideShut();
         return;
       }
-      // A TUI home keeps the keyboard up for its hidden input.
+      // A TUI home keeps the keyboard up for its hidden input; a web home's
+      // page lets go of it by itself (chat/useWebBlur.ts).
       Keyboard.dismiss();
       // Already mounted unless the first open beat the idle mount.
       setMounted(true);
       setAwake(true);
+      setSettled(false);
       slideOpen();
     });
   }, [shown]);
@@ -144,6 +155,8 @@ export default function AppDrawer() {
             panel,
           ]}
           accessibilityViewIsModal
+          // box-only while sliding: a tap on the panel lands on it, not on the scrim behind.
+          pointerEvents={settled ? 'auto' : 'box-only'}
         >
           <DrawerContent still={!awake} />
         </Animated.View>
