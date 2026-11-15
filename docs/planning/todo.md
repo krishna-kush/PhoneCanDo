@@ -92,7 +92,7 @@ that works today may start needing one. The Account page lists them
 - [ ] Each of these ships with its lines in `docs/accounts.md` (what it keeps,
   for how long) and the site's privacy page before it reaches anyone.
 
-## 4. ACP mode: what comes next (wait for the go)
+## 5. ACP mode: what comes next (wait for the go)
 
 ACP mode is built (`agents/AGENTS.md` → ACP mode, `app/docs/modules/runner.md`
 → ACP mode). These come next, built with parallel agents; none starts before

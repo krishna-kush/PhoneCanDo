@@ -44,7 +44,7 @@ log="${RUNNER_TEMP:-/tmp}/sdkmanager.log"
 # (platforms;android-37.0) while the catalog says compileSdk = "37". Newer
 # sdkmanager builds list packages as platforms/android-N, older ones with ';'.
 platform="platforms;android-$compile"
-if ! "$sdkmanager" --list 2>/dev/null | grep -qE "^ *platforms[;/]android-$compile[[:space:]|]"; then
+if ! "$sdkmanager" --list 2>/dev/null | grep -qE "^ *platforms[;/]android-${compile}[[:space:]|]"; then
   platform="platforms;android-$compile.0"
 fi
 packages=("ndk;$ndk" "cmake;$cmake" "$platform" "build-tools;$tools")
