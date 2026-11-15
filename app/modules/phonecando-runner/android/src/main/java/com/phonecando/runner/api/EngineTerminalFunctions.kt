@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Base64
 import com.phonecando.agents.kit.term.TermTheme
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.engine.tui.HomeStarts
 import com.phonecando.runner.engine.tui.TerminalThemes
 import com.phonecando.runner.engine.tui.TerminalViewException
 import expo.modules.kotlin.exception.CodedException
@@ -20,10 +21,12 @@ import expo.modules.kotlin.modules.ModuleDefinitionBuilder
 // (TerminalViewException).
 internal fun ModuleDefinitionBuilder.engineTerminalFunctions(context: () -> Context) {
   // { viewerId, rows, cols }: the PTY's size now. A new attach replaces the
-  // last viewer, whose next read throws detached.
+  // last viewer, whose next read throws detached. From here the view says
+  // whether someone watches, not the start Home asked for (HomeStarts).
   Function("engineTerminalAttach") { agentId: String ->
     viewing {
       val attached = Engines.get(context()).attachTerminal(agentId)
+      HomeStarts.attached(agentId)
       mapOf("viewerId" to attached.viewerId, "rows" to attached.rows, "cols" to attached.cols)
     }
   }

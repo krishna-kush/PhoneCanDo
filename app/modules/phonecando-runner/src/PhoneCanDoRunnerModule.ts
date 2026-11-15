@@ -1,9 +1,13 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
 import type {
+  NativeAcpEvent,
+  NativeAcpSnapshot,
   NativeAgent,
+  NativeAgentChecks,
   NativeBridgePrompt,
   NativeClientRecipe,
+  NativeEngineMode,
   NativeEngineStatus,
   NativeInstallPlan,
   NativeKeepAsk,
@@ -13,6 +17,7 @@ import type {
   NativeLaunchTarget,
   NativeMemoryStatus,
   NativeMessage,
+  NativeMessagingLevel,
   NativeModelServerLog,
   NativeOpenUrlAction,
   NativePromptReading,
@@ -34,12 +39,25 @@ import type { TelemetryNativeSnapshot } from './telemetry.types';
 
 export type { EngineHealth, NativeCrash, TelemetryNativeSnapshot } from './telemetry.types';
 export type {
+  NativeAcpEvent,
+  NativeAcpItem,
+  NativeAcpOption,
+  NativeAcpPermission,
+  NativeAcpSnapshot,
   NativeAgent,
+  NativeAgentChecks,
   NativeAutoStop,
   NativeBridgePrompt,
+  NativeCapabilityCheck,
+  NativeCapabilityId,
+  NativeCheckRow,
+  NativeCheckRun,
+  NativeCheckState,
+  NativeCheckStep,
   NativeClientRecipe,
   NativeDelivery,
   NativeDeliveryStatus,
+  NativeEngineMode,
   NativeEngineStatus,
   NativeInstallPlan,
   NativeKeepAsk,
@@ -52,6 +70,7 @@ export type {
   NativeMemoryModel,
   NativeMemoryStatus,
   NativeMessage,
+  NativeMessagingLevel,
   NativeModelServerLog,
   NativeOpenUrlAction,
   NativePromptReading,
@@ -82,6 +101,10 @@ type RunnerEvents = {
   phonecandoMessages(e: { unread: Record<string, number> }): void;
   /** The schedules or their runs changed (added, edited, removed, fired). */
   phonecandoSchedules(e: Record<string, never>): void;
+  /** An agent's ACP turn moved: an item, busy, a permission question or its end. */
+  phonecandoAcp(e: NativeAcpEvent): void;
+  /** An agent's checks or its Check now run changed (state, part, step, a row, movement, reading); read agentChecks again. */
+  phonecandoChecks(e: { agentId: string }): void;
 };
 
 declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
@@ -96,6 +119,8 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   resolveUnlock(requestId: string, ok: boolean): boolean;
   resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean;
   resolveOpenUrl(requestId: string, action: NativeOpenUrlAction): boolean;
+  /** Answers a permission prompt with one of its options, or null to cancel it; false when it is gone or the answer is not one it offers. */
+  resolvePermission(requestId: string, optionId: string | null): boolean;
   isUiAutomationConnected(): boolean;
   openAccessibilitySettings(): string;
   isAccessibilityServiceEnabled(): boolean;
@@ -114,7 +139,12 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   promptReading(): NativePromptReading | null;
   /** Null when the model's server never ran. Absent from native builds older than the Server log page. */
   modelServerLog?(modelId: string): Promise<NativeModelServerLog | null>;
-  startEngine(agentId: string): Promise<{ port: string | null }>;
+  /**
+   * Starts the agent's engine in a mode (terminal by default). Live in the
+   * other mode, it switches, or rejects acp_busy (an ACP turn runs) or
+   * terminal_in_use (someone has its terminal open, a run or jobs going).
+   */
+  startEngine(agentId: string, mode?: NativeEngineMode): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;
   /** Stops the agents on the model first, then its server; resolves with the agents it stopped. */
@@ -165,6 +195,18 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   isAnyEngineAlive(): boolean;
   touchEngine(agentId: string): void;
   engineStatus(agentId: string): NativeEngineStatus;
+  /** The agent's ACP turn now; null when it runs in terminal mode or not at all. */
+  acpSnapshot(agentId: string): NativeAcpSnapshot | null;
+  /** Stops its running ACP turn; false when none runs. */
+  acpCancel(agentId: string): boolean;
+  /** The agent's capability checks, its level now and its last Check now; null for an agent or kind we don't know. */
+  agentChecks(agentId: string): NativeAgentChecks | null;
+  /** Every kind's messaging level now, by kind id (a capability found not working drops it). */
+  kindLevels(): Record<string, NativeMessagingLevel>;
+  /** Check now: restarts the agent with a short test task, in its parts, testing every capability when full, else only those not checked yet; null when it started, else why not. */
+  checkNow(agentId: string, full: boolean): string | null;
+  /** Cancel check: stops the agent's engine; false when no check of it runs. */
+  checkCancel(agentId: string): boolean;
   engineStatuses(): NativeEngineStatus[];
   engineHealth(agentId: string): string;
   listKinds(): string;

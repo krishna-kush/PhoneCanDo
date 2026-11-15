@@ -17,17 +17,23 @@ interface AgentsView {
   /** The kind's label ("Claude Code"); its id when this build has no such kind. */
   fun kindLabel(kind: String): String
 
-  /** Whether an idle agent of [kind] can be woken (its manifest's `inbox.wake`). */
+  /** Whether an idle agent of [kind] can be woken (its manifest's `inbox.wake`, or an ACP mode). */
   fun kindCanWake(kind: String): Boolean
 
-  /** How far messages reach an agent of [kind] (kit MessagingLevel); NONE for a kind this build lacks. */
+  /**
+   * How far messages reach an agent of [kind] now (kit MessagingLevel): what
+   * the kind declares, lower when a check found a capability not working;
+   * NONE for a kind this build lacks.
+   */
   fun kindLevel(kind: String): MessagingLevel
 
   /**
-   * Whether [agent] can be woken now as far as its kind goes: a kind that
-   * wakes only through a hook it leaves waiting after a turn (`inbox.wake`
-   * "hook", for as long as its manifest lets that hook wait) has that hook
-   * alive. True for every other kind.
+   * Whether [agent] can be woken now as far as its kind goes: a kind with
+   * an ACP mode is idle in it, or in terminal mode with nobody watching and
+   * no jobs (it switches); else a kind that wakes only through a hook it
+   * leaves waiting after a turn (`inbox.wake` "hook", for as long as its
+   * manifest lets that hook wait) has that hook alive. True for every other
+   * kind.
    */
   fun wakeReady(agent: AgentRecord): Boolean = true
 

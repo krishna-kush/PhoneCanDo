@@ -15,11 +15,17 @@ import android.text.format.DateFormat
 import android.util.Log
 import com.phonecando.models.jobs.JobTarget
 import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.checks.Checks
+import com.phonecando.runner.checks.fanout.CheckFanOut
+import com.phonecando.runner.checks.now.CheckNow
+import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.EngineRequests
 import com.phonecando.runner.engine.EngineStartError
 import com.phonecando.runner.engine.EngineStartException
+import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.engine.work.WorkWatch
 import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.notify.AppForeground
@@ -46,21 +52,20 @@ import java.util.concurrent.RejectedExecutionException
 // requests (ACTION_START from the module's startEngine, one at a time on
 // its own thread), holds for jobs (ACTION_HOLD, jobs/JobsAnchor), shows
 // one notification listing the running agents' chats, the agents kept up
-// by what they left running (with Stop: ACTION_STOP_AGENT), the engines
-// starting, the model server reading a prompt and the jobs, keeps the CPU
-// awake while any of that works (power/WorkLock), and stops itself once
-// nothing has run for 10 s (stopIfIdle).
-// It is in the foreground only while there is something to list: with
-// engines that only run, it stays a plain service with no notification
-// (render). Then, with the app away, Android may stop it about a minute
-// later, and the idle engines with it (onDestroy), as the work watch's
-// idle stop would; the app starts its agent again when it comes back. A
-// run going, a job (also one just started: WorkWatch's starting) or Keep
-// running all list, so they hold the process. So does a start that ended
-// with the app away (an alarm's), until its first run shows: away, Android
-// lets the service back into the foreground only in an exemption's window,
-// and a scheduled prompt comes seconds after the engine is ready
-// (awaitingRun).
+// by what they left running (with Stop: ACTION_STOP_JOB for one job,
+// ACTION_STOP_AGENT for the agent with all of it), the engines
+// starting, the model server reading a prompt and the jobs (with none of
+// that, the agents ready), keeps the CPU awake while any of that works
+// (power/WorkLock), and stops itself once nothing has run for 10 s
+// (stopIfIdle).
+// It is in the foreground while anything of ours runs, idle engines too
+// (render). Out of the foreground with the app away, Android stops a plain
+// service about a minute later, and the engines with it (onDestroy),
+// before the work watch's idle stop would; and away, it lets the service
+// back into the foreground only in an exemption's window (an alarm's), so
+// a run that a message wakes later would get none (seen on the phone).
+// How long an agent runs is the idle stop's and Keep running's call
+// (engine/work/), never this service's.
 // Nothing restarts it: every command answers START_NOT_STICKY, and a
 // null-intent restart starts nothing (the app ensures its engines again
 // when it comes to the foreground).
@@ -80,10 +85,18 @@ class PhoneCanDoServeService : Service() {
   // Main thread only: the agents whose start runs, one entry per start.
   private val starting = ArrayList<String>()
 
-  // Main thread only: agents whose start ended with the app away, each
-  // until its first run shows or its epoch-ms deadline (RUN_WAIT_MS); they
-  // list as starting.
-  private val awaitingRun = HashMap<String, Long>()
+  // Main thread only: the jobs a Stop from the notification ends now (root
+  // pid → name), each a "Stopping …" line, and those it ended, kept off
+  // their agent's line until a look no longer finds them.
+  private val endingJobs = LinkedHashMap<Int, String>()
+  private val endedJobs = HashSet<Int>()
+
+  // Main thread only: what the last Stop from the notification ended
+  // ("opencode stopped"): the notification says so in place of its last
+  // lines while the service lingers with nothing left running. A start,
+  // anything to list or leaving the foreground clears it.
+  private var ended: String? = null
+  private var doneShown: String? = null
 
   // Main thread only: startForeground took, and nothing left the foreground since.
   private var foreground = false
@@ -131,6 +144,9 @@ class PhoneCanDoServeService : Service() {
     // Normally done by TelemetryInitProvider at process start; repeated here
     // (idempotent) so engine counters never depend on it.
     TelemetryRecorder.install(applicationContext)
+    // Before any engine starts: the capability checks hear every launch.
+    Checks.init(this)
+    CheckFanOut.install(this)
     notification = ServiceNotification(this).also { it.createChannel() }
     workLock = WorkLock(this)
     starts = Executors.newSingleThreadExecutor { r ->
@@ -149,18 +165,20 @@ class PhoneCanDoServeService : Service() {
       ACTION_START -> {
         val agentId = intent.getStringExtra(EXTRA_AGENT_ID)
         val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
-        if (agentId.isNullOrEmpty()) {
-          EngineRequests.complete(requestId, failure("no agent given"))
-        } else {
-          runStart(agentId, requestId, requestedAt(intent))
+        val mode = EngineMode.of(intent.getStringExtra(EXTRA_MODE))
+        when {
+          agentId.isNullOrEmpty() -> EngineRequests.complete(requestId, failure("no agent given"))
+          mode == null -> EngineRequests.complete(requestId, failure("no such mode"))
+          else -> runStart(agentId, requestId, requestedAt(intent), mode)
         }
       }
       ACTION_STOP_AGENT -> intent.getStringExtra(EXTRA_AGENT_ID)?.takeIf { it.isNotEmpty() }?.let(::runStop)
+      ACTION_STOP_JOB -> runStopJob(intent)
     }
     // Every startForegroundService() wants a startForeground() back, also
-    // with nothing to list: render then leaves the foreground again. A
+    // with nothing running: render then leaves the foreground again. A
     // Stop from the notification comes by startService and wants none.
-    if (intent?.action != ACTION_STOP_AGENT) goForeground()
+    if (intent?.action != ACTION_STOP_AGENT && intent?.action != ACTION_STOP_JOB) goForeground()
     // ACTION_HOLD (a job runs), a null-intent restart or nothing to
     // do: start nothing; stay while an engine or a job runs.
     render()
@@ -168,18 +186,18 @@ class PhoneCanDoServeService : Service() {
     return START_NOT_STICKY
   }
 
-  private fun runStart(agentId: String, requestId: String?, requestedAt: Long) {
+  private fun runStart(agentId: String, requestId: String?, requestedAt: Long, mode: EngineMode) {
+    ended = null
     starting += agentId
     requestId?.let(pendingRequests::add)
     val supervisor = Engines.get(this)
     try {
       starts.execute {
-        val result = runCatching { supervisor.start(agentId, requestedAt) }
+        val result = runCatching { supervisor.start(agentId, requestedAt, mode) }
         EngineRequests.complete(requestId, result)
         main.post {
           starting.remove(agentId)
           requestId?.let(pendingRequests::remove)
-          if (result.isSuccess) awaitRun(agentId)
           render()
           stopIfIdle()
         }
@@ -191,39 +209,43 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
-  // A start that ended with the app away came from an alarm (a scheduled
-  // run, restart or wake): its run begins seconds later, when only the
-  // foreground still held lets it run. With the app in front nothing waits.
-  private fun awaitRun(agentId: String) {
-    if (AppForeground.isForeground(this)) return
-    awaitingRun[agentId] = System.currentTimeMillis() + RUN_WAIT_MS
-    main.postDelayed(renderAgain, RUN_WAIT_MS + 100)
-  }
-
-  private val renderAgain = Runnable {
-    render()
-    stopIfIdle()
-  }
-
-  // The agents still waiting for their first run, less those whose run
-  // shows (a chat or a work line), whose engine is gone or whose wait is
-  // up; none with the app in front, which may take the foreground back any
-  // time.
-  private fun awaited(chats: List<ChatBoard.Chat>, work: List<WorkLines.Line>, live: List<String>): Set<String> {
-    if (awaitingRun.isEmpty()) return emptySet()
-    if (AppForeground.isForeground(this)) awaitingRun.clear()
-    val now = System.currentTimeMillis()
-    awaitingRun.entries.removeAll { (id, until) ->
-      now >= until || id !in live || chats.any { it.agentId == id } || work.any { it.agentId == id }
-    }
-    return awaitingRun.keys
-  }
-
   // The notification's Stop on an agent kept up: it and its jobs end, on
   // their own thread (up to 3 s); the engine's status tells the app.
   private fun runStop(agentId: String) {
     Log.i(TAG, "stop from the notification: $agentId")
-    Thread({ Engines.get(this).stop(agentId) }, "phonecando-engine-stop").apply {
+    val name = AgentStores.get(this).get(agentId)?.name ?: agentId
+    Thread({
+      Engines.get(this).stop(agentId)
+      main.post {
+        ended = "$name stopped"
+        render()
+      }
+    }, "phonecando-engine-stop").apply {
+      isDaemon = true
+      start()
+    }
+  }
+
+  // The notification's Stop on one job: it and what is under it end on
+  // their own thread (up to 3 s, JobEnd), the agent and its other jobs
+  // stay; "Stopping …" until then, "… stopped" after.
+  private fun runStopJob(intent: Intent) {
+    val agentId = intent.getStringExtra(EXTRA_AGENT_ID)?.takeIf { it.isNotEmpty() } ?: return
+    val pid = intent.getIntExtra(EXTRA_JOB_PID, 0).takeIf { it > 0 } ?: return
+    val job = WorkWatch.Job(intent.getStringExtra(EXTRA_JOB_NAME) ?: "the job", pid, intent.getLongExtra(EXTRA_JOB_START, 0L))
+    val watch = Engines.work() ?: return
+    if (pid in endingJobs) return
+    endingJobs[pid] = job.name
+    render()
+    Thread({
+      watch.stopJob(agentId, job)
+      main.post {
+        endingJobs.remove(pid)
+        endedJobs += pid
+        ended = "${job.name} stopped"
+        render()
+      }
+    }, "phonecando-job-stop").apply {
       isDaemon = true
       start()
     }
@@ -233,6 +255,17 @@ class PhoneCanDoServeService : Service() {
     this,
     agentId.hashCode(),
     Intent(this, PhoneCanDoServeService::class.java).setAction(ACTION_STOP_AGENT).putExtra(EXTRA_AGENT_ID, agentId),
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+  )
+
+  private fun stopJobIntent(agentId: String, job: WorkWatch.Job): PendingIntent = PendingIntent.getService(
+    this,
+    "$agentId/${job.pid}".hashCode(),
+    Intent(this, PhoneCanDoServeService::class.java).setAction(ACTION_STOP_JOB)
+      .putExtra(EXTRA_AGENT_ID, agentId)
+      .putExtra(EXTRA_JOB_PID, job.pid)
+      .putExtra(EXTRA_JOB_START, job.startTicks)
+      .putExtra(EXTRA_JOB_NAME, job.name),
     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
   )
 
@@ -319,11 +352,13 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
-  // The notification while something happens, in the foreground. With
-  // nothing to list it goes: at once with the app in front, which may
-  // bring it back any time; away, only after LINGER_MS of still nothing,
-  // as stopIfIdle waits, since work often follows at once (the old
-  // notification stays meanwhile).
+  // The notification while anything of ours runs, in the foreground (an
+  // idle engine too, as ready). With nothing running it goes: at once
+  // with the app in front, which may bring it back any time; away, only
+  // after LINGER_MS of still nothing, as stopIfIdle waits, since work
+  // often follows at once (meanwhile it says how it ended, the last Stop's
+  // "… stopped" or NOTHING_LEFT, never the old lines and their Stop
+  // buttons).
   private fun render() {
     if (timedOut) return
     holdCpu()
@@ -331,9 +366,27 @@ class PhoneCanDoServeService : Service() {
     if (content == null) {
       if (!foreground) return
       main.removeCallbacks(leaveWhenStillQuiet)
-      if (AppForeground.isForeground(this)) leaveForeground() else main.postDelayed(leaveWhenStillQuiet, LINGER_MS)
+      if (AppForeground.isForeground(this)) {
+        leaveForeground()
+        return
+      }
+      // Lingering: how it ended in place of the last lines, whose Stop
+      // buttons would stop nothing now.
+      val text = ended ?: NOTHING_LEFT
+      if (text != doneShown) {
+        doneShown = text
+        try {
+          getSystemService(NotificationManager::class.java).notify(ServiceNotification.NOTIFICATION_ID, notification.done(text))
+        } catch (e: Exception) {
+          Log.w(TAG, "notification update failed", e)
+        }
+      }
+      main.postDelayed(leaveWhenStillQuiet, LINGER_MS)
       return
     }
+    // Something still runs (other agents ready): the lines say what is left.
+    ended = null
+    doneShown = null
     main.removeCallbacks(leaveWhenStillQuiet)
     if (!foreground) {
       goForeground(content)
@@ -348,18 +401,22 @@ class PhoneCanDoServeService : Service() {
 
   private val leaveWhenStillQuiet = Runnable { if (content() == null) leaveForeground() }
 
-  // The service stays; its notification goes.
+  // Nothing of ours runs: the notification goes, and the service with it
+  // once stopIfIdle's wait is over.
   private fun leaveForeground() {
     stopForeground(STOP_FOREGROUND_REMOVE)
     foreground = false
+    ended = null
+    doneShown = null
   }
 
   // The CPU stays awake while a chat works, a model server reads a prompt,
-  // a job runs or an agent's job does something (power/WorkLock).
+  // a job runs, an agent's job does something or a Check now runs
+  // (power/WorkLock).
   private fun holdCpu() {
     if (timedOut) return
     val supervisor = Engines.peek()
-    val need = JobsAnchor.anyRunning() ||
+    val need = JobsAnchor.anyRunning() || CheckNow.running() ||
       supervisor?.chats()?.any { it.state == ChatBoard.State.WORKING } == true ||
       supervisor?.promptReading() != null ||
       Engines.work()?.states()?.values?.any { it.active } == true
@@ -368,7 +425,8 @@ class PhoneCanDoServeService : Service() {
 
   // The chats the engines are busy with, each with its agent's name, the
   // agents kept up by their jobs, the agents starting, the prompt a model
-  // server reads, the model jobs and the Linux jobs; null for none.
+  // server reads, the model jobs and the Linux jobs; with none of those,
+  // the engines running, as ready; null when nothing runs.
   private fun content(): Notification? {
     val supervisor = Engines.peek()
     val agents = AgentStores.get(this).all()
@@ -377,7 +435,13 @@ class PhoneCanDoServeService : Service() {
     val chats = supervisor?.chats().orEmpty()
     val working = chats.filter { it.state == ChatBoard.State.WORKING }.mapTo(HashSet()) { it.agentId }
     val clock = DateFormat.getTimeFormat(this)
-    val work = WorkLines.of(Engines.work()?.states()?.values.orEmpty(), working, names) { clock.format(Date(it)) }
+    // Only agents whose engine still runs: the last look may be older than
+    // a stop, and its lines (with their Stop buttons) would come back.
+    val live = running.toSet()
+    val states = Engines.work()?.states()?.values.orEmpty().filter { it.agentId in live }
+    // A job ended here stays off its line until a look no longer finds it.
+    endedJobs.retainAll(states.flatMap { s -> s.refs.map { it.pid } }.toSet())
+    val work = WorkLines.of(states, working, names, endingJobs.keys + endedJobs) { clock.format(Date(it)) }
     val transfers = JobsAnchor.modelJobs().map {
       TransferLines.of(it.label, it.target.kind == JobTarget.Kind.IMPORT, it.done, it.total)
     }
@@ -385,8 +449,14 @@ class PhoneCanDoServeService : Service() {
       agents.firstOrNull { it.imageId == image }?.name
     }
     val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read, it.total) }
-    val starts = (starting + awaited(chats, work, running)).map { names[it] ?: it }.distinct()
-    return notification.build(chats, names, running, transfers, reading, linux, work, starts, ::stopIntent)
+    val starts = starting.map { names[it] ?: it }.distinct()
+    // A Stop asked (here or in the app): "Stopping …" under a progress bar
+    // until the engine is down.
+    val stopping = supervisor?.statuses()?.filter { it.state == EngineState.STOPPING }?.map { it.agentId }.orEmpty()
+    return notification.build(
+      chats, names, running, transfers, reading, linux, work, starts, ::stopIntent, stopping,
+      ::stopJobIntent, endingJobs.values.toList(),
+    )
   }
 
   private fun failure(detail: String): Result<Int> =
@@ -400,20 +470,31 @@ class PhoneCanDoServeService : Service() {
     // The notification's Stop on an agent kept up by its jobs (EXTRA_AGENT_ID).
     const val ACTION_STOP_AGENT = "com.phonecando.runner.STOP_AGENT"
 
+    // The notification's Stop on one job alone (EXTRA_AGENT_ID and the job's
+    // root process: EXTRA_JOB_PID, EXTRA_JOB_START; EXTRA_JOB_NAME for its lines).
+    const val ACTION_STOP_JOB = "com.phonecando.runner.STOP_JOB"
+    const val EXTRA_JOB_PID = "jobPid"
+    const val EXTRA_JOB_START = "jobStart"
+    const val EXTRA_JOB_NAME = "jobName"
+
+    // What the notification says while it lingers with nothing running and
+    // no Stop of ours ended anything.
+    private const val NOTHING_LEFT = "Nothing running now"
+
     // A time-limit stop's reason on the engines' statuses (onTimeout), like
     // the memory guard's MemoryRules.STOPPED_REASON.
     const val TIME_LIMIT_REASON = "time_limit: Android ended our time in the background"
     const val EXTRA_AGENT_ID = "agentId"
     const val EXTRA_REQUEST_ID = "requestId"
     const val EXTRA_REQUESTED_AT = "requestedAtElapsed"
+
+    // The mode to start in (EngineMode.wire, "acp"); absent: terminal.
+    const val EXTRA_MODE = "mode"
     private const val MAX_REQUEST_AGE_MS = 10 * 60_000L
 
     // How long the service stays once nothing runs (stopIfIdle), and in
-    // the foreground once nothing happens with the app away (render).
+    // the foreground with the app away (render).
     private const val LINGER_MS = 10_000L
-
-    // How long a start that ended with the app away waits for its first run (awaitingRun).
-    private const val RUN_WAIT_MS = 120_000L
 
     // The runner's own prefs file: the launch target waiting for the app
     // (notify/LaunchTargets), the notification-permission ask, the

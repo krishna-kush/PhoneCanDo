@@ -7,7 +7,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-// Every row of the table a due task decides by.
+// Every row of the table a due task decides by, for kinds with and without an ACP mode.
 class FireRulesTest {
   // A TUI kind that takes a start prompt and wakes through a hook.
   private val tui = FireRules.State(
@@ -61,6 +61,46 @@ class FireRulesTest {
     assertEquals(Action.RESTART_WITH_PROMPT, FireRules.decide(ready(tui.copy(chat = ChatMode.NEW))))
     assertEquals(Action.RESTART_WITH_PROMPT, FireRules.decide(ready(tui.copy(wakeReady = false))))
     assertEquals(Action.RESTART_WITH_PROMPT, FireRules.decide(ready(tui.copy(kindWakes = false))))
+  }
+
+  // A TUI kind with an ACP mode (and a hook wake of its own).
+  private val acp = tui.copy(acp = true)
+
+  @Test fun anAcpKindRunsSchedulesWhateverElseItHas() {
+    assertTrue(FireRules.kindRuns(kindPrompts = false, kindWakes = false, acp = true))
+    val bare = acp.copy(kindPrompts = false, kindWakes = false)
+    assertEquals(Action.START_ACP_WITH_PROMPT, FireRules.decide(bare))
+  }
+
+  @Test fun aStoppedAcpKindStartsInAcpModeWithTheTask() {
+    assertEquals(Action.START_ACP_WITH_PROMPT, FireRules.decide(acp))
+    assertEquals(Action.START_ACP_WITH_PROMPT, FireRules.decide(acp.copy(chat = ChatMode.NEW, appInFront = true, jobs = true)))
+  }
+
+  @Test fun anAcpKindStartingStoppingOrBusyWaits() {
+    assertEquals(Action.WAIT_IDLE, FireRules.decide(acp.copy(engine = Engine.STARTING)))
+    assertEquals(Action.WAIT_IDLE, FireRules.decide(acp.copy(engine = Engine.STOPPING)))
+    assertEquals(Action.WAIT_IDLE, FireRules.decide(ready(acp.copy(mode = FireRules.Mode.ACP), idle = false)))
+    assertEquals(Action.WAIT_IDLE, FireRules.decide(ready(acp, idle = false)))
+  }
+
+  @Test fun idleInAcpModeTakesTheTaskAsAPrompt() {
+    val inAcp = ready(acp.copy(mode = FireRules.Mode.ACP))
+    assertEquals(Action.PROMPT_ACP, FireRules.decide(inAcp))
+    assertEquals(Action.PROMPT_ACP, FireRules.decide(inAcp.copy(chat = ChatMode.NEW, jobs = true, appInFront = true, viewer = true)))
+  }
+
+  @Test fun idleInTerminalModeSwitchesWhenNobodyWatchesElseItsHookTakesItElseAsks() {
+    assertEquals(Action.SWITCH_TO_ACP_WITH_PROMPT, FireRules.decide(ready(acp)))
+    assertEquals(Action.SWITCH_TO_ACP_WITH_PROMPT, FireRules.decide(ready(acp.copy(chat = ChatMode.NEW))))
+    // Someone uses it, or it left jobs: its waiting hook takes the task in place.
+    assertEquals(Action.WAKE, FireRules.decide(ready(acp.copy(viewer = true))))
+    assertEquals(Action.WAKE, FireRules.decide(ready(acp.copy(appInFront = true))))
+    assertEquals(Action.WAKE, FireRules.decide(ready(acp.copy(jobs = true))))
+    // No hook waiting, a new chat, or no hook wake at all: it asks.
+    assertEquals(Action.ASK_USER, FireRules.decide(ready(acp.copy(viewer = true, wakeReady = false))))
+    assertEquals(Action.ASK_USER, FireRules.decide(ready(acp.copy(appInFront = true, chat = ChatMode.NEW))))
+    assertEquals(Action.ASK_USER, FireRules.decide(ready(acp.copy(jobs = true, kindWakes = false))))
   }
 
   @Test fun otherwiseItAsks() {

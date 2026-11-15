@@ -17,11 +17,14 @@ import java.nio.file.Files
 // swaps it in (the old one renamed away, then the new one renamed into
 // place, then the old one removed), so a reader's `mv pending claimed.$$`
 // gets one whole set or none. Everything else in the folder (the kit
-// script's own files: `waiter`, its claimed.* while it runs) is left alone,
-// except that prepare() at an engine start removes claimed.*, our own
-// half-done folders and the `waiter` an earlier life left behind: that
-// life's hooks were stopped with its engine, and a `waiter` left over would
-// read as a hook ready to wake the new one (waiterAlive). Pure JVM.
+// script's own files: `waiter`, its claimed.* while it runs, ran/ with a
+// mark per hook event that reported itself this life, `@hook`, for the
+// capability checks) is left alone, except that prepare() at an engine
+// start removes claimed.*, our own half-done folders, ran/ and the `waiter`
+// an earlier life left behind: that life's hooks were stopped with its
+// engine, a `waiter` left over would read as a hook ready to wake the new
+// one (waiterAlive), and each hook reports again in the new life
+// (clearRan, also before a relaunch). Pure JVM.
 class InboxFolder(val dir: File) {
   val pending: File get() = File(dir, PENDING)
 
@@ -29,6 +32,9 @@ class InboxFolder(val dir: File) {
 
   /** A hook is waiting to wake the agent (phonecando-inbox --wait wrote its pid to `waiter`). */
   fun waiterAlive(): Boolean = File(dir, WAITER).isFile
+
+  /** The ids in pending/ now; empty when there is none (claimed, read or cleared meanwhile). */
+  fun pendingIds(): Set<Long> = HashSet<Long>().also { idsIn(File(pending, IDS), it) }
 
   /** Replaces pending/ with [files] (name to content) and, when [wake], the wake mark. */
   fun write(files: Map<String, String>, wake: Boolean) {
@@ -61,15 +67,20 @@ class InboxFolder(val dir: File) {
     val out = HashSet<Long>()
     for (child in dir.listFiles().orEmpty()) {
       if (!child.name.startsWith(CLAIMED) || Files.isSymbolicLink(child.toPath())) continue
-      val ids = File(child, IDS)
-      if (Files.isSymbolicLink(ids.toPath()) || !ids.isFile || ids.length() > MAX_IDS_BYTES) continue
-      try {
-        ids.readText(Charsets.UTF_8).split('\n', ' ', '\t').mapNotNullTo(out) { it.trim().toLongOrNull() }
-      } catch (_: java.io.IOException) {
-        // Gone meanwhile: handed over.
-      }
+      idsIn(File(child, IDS), out)
     }
     return out
+  }
+
+  // The ids an ids file lists, into [out]; a link, a file too long or one
+  // gone meanwhile (handed over) adds none.
+  private fun idsIn(ids: File, out: MutableSet<Long>) {
+    if (Files.isSymbolicLink(ids.toPath()) || !ids.isFile || ids.length() > MAX_IDS_BYTES) return
+    try {
+      ids.readText(Charsets.UTF_8).split('\n', ' ', '\t').mapNotNullTo(out) { it.trim().toLongOrNull() }
+    } catch (_: java.io.IOException) {
+      // Gone meanwhile.
+    }
   }
 
   /** No pending/ (read or delivered meanwhile). */
@@ -79,14 +90,17 @@ class InboxFolder(val dir: File) {
     if (pending.renameTo(gone)) TreeDelete.of(gone)
   }
 
-  /** The folder made; claimed.* and our own half-done folders from an earlier engine life removed. */
+  /** The folder made; claimed.*, ran/ and our own half-done folders from an earlier engine life removed. */
   fun prepare() {
     dir.mkdirs()
     for (child in dir.listFiles().orEmpty()) {
       val name = child.name
-      if (name.startsWith(CLAIMED) || name.startsWith(NEXT) || name.startsWith(OLD) || name == WAITER) TreeDelete.of(child)
+      if (name.startsWith(CLAIMED) || name.startsWith(NEXT) || name.startsWith(OLD) || name == WAITER || name == RAN) TreeDelete.of(child)
     }
   }
+
+  /** No ran/: each hook event reports itself again (`@hook`) in the next engine life. */
+  fun clearRan() = TreeDelete.of(File(dir, RAN))
 
   companion object {
     const val PENDING = "pending"
@@ -97,6 +111,9 @@ class InboxFolder(val dir: File) {
     const val TEXT = "messages.txt"
     const val OUT = ".out"
     const val EXIT = ".exit"
+
+    /** The hooks' once-per-life marks (phonecando-inbox), emptied before each launch. */
+    const val RAN = "ran"
     private const val CLAIMED = "claimed."
     private const val NEXT = ".pending-next."
     private const val OLD = ".pending-old."

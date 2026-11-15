@@ -6,8 +6,9 @@ import android.util.Log
 
 // Keeps the CPU awake while something of ours works and the screen may be
 // off: a chat working, a model server reading a prompt, a model or Linux job
-// (download, import, setup, install), or an agent's job doing something
-// (engine/work/WorkMeter: a dev server waiting for requests is not). The
+// (download, import, setup, install), an agent's job doing something
+// (engine/work/WorkMeter: a dev server waiting for requests is not), or a
+// Check now running (at most its 30 minutes). The
 // foreground service keeps our process alive, but not the CPU: without this
 // the phone sleeps under a running agent and it crawls. Never held for an
 // idle agent. Each hold lasts TIMEOUT_MS and is renewed while needed (the

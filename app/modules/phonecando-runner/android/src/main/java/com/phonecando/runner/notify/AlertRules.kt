@@ -12,6 +12,9 @@ import com.phonecando.agents.kit.EngineEvent.Kind
 //   any session, since a child's question holds up its parent too.
 // - The same alert for the same session is not repeated until that session
 //   moves again (WORKING), so a verdict seen twice alerts once.
+// - A WAITING alert is over once its session moves on (WORKING: answered,
+//   from the notice or the app; a verdict, STOPPED or GONE): Due.waitOver,
+//   so its notice goes unless a new alert takes the slot.
 // - An event without a session never alerts; neither does an interrupted
 //   run (the user stopped it; the kind maps it to OTHER).
 // - Nothing posts while PhoneCanDo is in front: `inFront` is asked only
@@ -25,8 +28,12 @@ class AlertRules(private val maxChildren: Int = MAX_CHILDREN) {
     WAITING("Waiting for your answer."),
   }
 
-  /** An alert an event calls for, and whether it posts (PhoneCanDo is not in front). */
-  data class Due(val alert: Alert, val post: Boolean)
+  /**
+   * An alert an event calls for (null: none), and whether it posts
+   * (PhoneCanDo is not in front); [waitOver]: the WAITING alert its session
+   * gave is over.
+   */
+  data class Due(val alert: Alert?, val post: Boolean, val waitOver: Boolean = false)
 
   private class AgentState {
     // Oldest first, so the oldest is dropped past the cap.
@@ -36,9 +43,12 @@ class AlertRules(private val maxChildren: Int = MAX_CHILDREN) {
 
   private val agents = HashMap<String, AgentState>()
 
-  /** The alert this event calls for, posted or not, or null. */
-  fun onEvent(agentId: String, event: EngineEvent, inFront: () -> Boolean): Due? =
-    due(agentId, event)?.let { Due(it, post = !inFront()) }
+  /** The alert this event calls for, posted or not, and whether a wait is over; null for neither. */
+  fun onEvent(agentId: String, event: EngineEvent, inFront: () -> Boolean): Due? {
+    val (alert, over) = due(agentId, event)
+    if (alert == null) return if (over) Due(null, post = false, waitOver = true) else null
+    return Due(alert, post = !inFront(), waitOver = over)
+  }
 
   /** A new engine life: what the last one saw no longer applies. */
   @Synchronized
@@ -46,15 +56,17 @@ class AlertRules(private val maxChildren: Int = MAX_CHILDREN) {
     agents.remove(agentId)
   }
 
+  // The alert due, and whether the session's WAITING alert is over.
   @Synchronized
-  private fun due(agentId: String, event: EngineEvent): Alert? {
-    val session = event.sessionId ?: return null
+  private fun due(agentId: String, event: EngineEvent): Pair<Alert?, Boolean> {
+    val session = event.sessionId ?: return null to false
     val state = agents.getOrPut(agentId) { AgentState() }
     if (event.childCreated) {
       state.children += session
       if (state.children.size > maxChildren) state.children.remove(state.children.first())
-      return null
+      return null to false
     }
+    val over = state.last == (Alert.WAITING to session) && event.kind in MOVED_ON
     val alert = when (event.kind) {
       Kind.FINISHED -> Alert.FINISHED.takeIf { session !in state.children }
       Kind.FAILED -> Alert.FAILED.takeIf { session !in state.children }
@@ -68,15 +80,22 @@ class AlertRules(private val maxChildren: Int = MAX_CHILDREN) {
         if (state.last?.second == session) state.last = null
         null
       }
-      Kind.STOPPED, Kind.OTHER -> null
-    } ?: return null
+      Kind.STOPPED -> {
+        if (over) state.last = null
+        null
+      }
+      Kind.OTHER -> null
+    } ?: return null to over
     val key = alert to session
-    if (state.last == key) return null
+    if (state.last == key) return null to over
     state.last = key
-    return alert
+    return alert to over
   }
 
   private companion object {
     const val MAX_CHILDREN = 256
+
+    // What moves a session on from waiting for your answer.
+    val MOVED_ON = setOf(Kind.WORKING, Kind.FINISHED, Kind.FAILED, Kind.STOPPED, Kind.GONE)
   }
 }

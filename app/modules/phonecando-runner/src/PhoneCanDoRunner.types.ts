@@ -1,6 +1,8 @@
 // Shapes the native module returns (Kotlin: api/AgentFunctions.kt,
 // api/EngineFunctions.kt, api/InstallFunctions.kt, api/UserKindFunctions.kt, bridge/BridgePrompts.kt,
-// prompts/OpenUrlRegistry.kt, notify/LaunchTarget.kt, api/MessageFunctions.kt).
+// prompts/OpenUrlRegistry.kt, prompts/PermissionRegistry.kt, notify/LaunchTarget.kt,
+// api/MessageFunctions.kt, api/AcpFunctions.kt, acp/AcpAppEvents.kt,
+// api/ChecksFunctions.kt).
 // The app reads them through app/src/engine/, which types them as its own
 // records.
 export type { EngineHealth, NativeCrash, TelemetryNativeSnapshot } from './telemetry.types';
@@ -31,12 +33,18 @@ export type NativeInstallPlan = { script: string; timeoutSec: number; phases: st
 /** The kind's version check: argv to run in the machine (its runtimes on PATH) and the pattern whose group 1 is the version. */
 export type NativeVersionCheck = { argv: string[]; pattern: string };
 
+/** How an agent's engine runs: its TUI on our terminal, or ACP mode (pipes, no screen). */
+export type NativeEngineMode = 'terminal' | 'acp';
+
 export type NativeEngineStatus = {
   agentId: string;
   state: 'stopped' | 'starting' | 'ready' | 'stopping' | 'died' | 'failed';
   port: string | null;
   error: string | null;
   lastUsedAt: number | null;
+  mode: NativeEngineMode;
+  /** An ACP turn is running; always false in terminal mode. */
+  busy: boolean;
 };
 
 /** The model server reading a prompt for agents bound to it with a run going (models/prompt/PromptReading.kt). */
@@ -76,20 +84,69 @@ export type NativeTerminalTheme = {
 
 export type NativeBridgePrompt = {
   requestId: string;
-  kind: 'unlock' | 'accessibility' | 'open_url';
+  kind: 'unlock' | 'accessibility' | 'open_url' | 'permission';
   agentId: string;
   agentName: string;
   reason: string;
   /** An open_url prompt's link (http or https, at most 2 KiB); absent for the others. */
   url?: string;
+  /** A permission prompt's question: what the agent asks to do (the tool call's title). */
+  title?: string;
+  /** A permission prompt's tool kind (ACP's read, edit, execute, ...), null when the agent names none. */
+  toolKind?: string | null;
+  /** A permission prompt's answers, one button each; resolvePermission(requestId, optionId). */
+  options?: NativeAcpOption[];
 };
+
+/** One answer to a permission question; kind is ACP's allow_once, allow_always, reject_once or reject_always. */
+export type NativeAcpOption = { optionId: string; name: string; kind: string };
+
+/** A permission question an agent in ACP mode waits on; requestId is what resolvePermission takes. */
+export type NativeAcpPermission = {
+  requestId: string;
+  title: string;
+  toolKind: string | null;
+  options: NativeAcpOption[];
+};
+
+/**
+ * One thing an ACP turn shows, by id (a later one with the same id
+ * replaces it): the agent's words, its thinking, a tool step with its
+ * status (ACP's pending, in_progress, completed, failed), or its plan.
+ */
+export type NativeAcpItem =
+  | { id: string; type: 'text'; text: string }
+  | { id: string; type: 'thought'; text: string }
+  | { id: string; type: 'tool'; title: string; kind?: string | null; status?: string | null }
+  | { id: string; type: 'plan'; entries: string[] };
+
+/** An agent's ACP turn now (acpSnapshot): its chat, whether a turn runs, what it showed, the open question. */
+export type NativeAcpSnapshot = {
+  chatId: string | null;
+  busy: boolean;
+  items: NativeAcpItem[];
+  permission: NativeAcpPermission | null;
+};
+
+/**
+ * What an ACP turn does, as it happens (the phonecandoAcp event). turnEnd's
+ * stopReason is ACP's (end_turn, cancelled, refusal, max_tokens,
+ * max_turn_requests); error is set when the agent answered the prompt with
+ * an error.
+ */
+export type NativeAcpEvent =
+  | { agentId: string; type: 'item'; item: NativeAcpItem }
+  | { agentId: string; type: 'busy'; busy: boolean }
+  | { agentId: string; type: 'permission'; permission: NativeAcpPermission }
+  | { agentId: string; type: 'permissionGone'; requestId: string }
+  | { agentId: string; type: 'turnEnd'; stopReason: string | null; error: string | null };
 
 /** What the user did with an open_url prompt: opened it, had native copy it, or Not now. */
 export type NativeOpenUrlAction = 'open' | 'copy' | 'dismiss';
 
-/** Where opening the app should land: a tab and, when the reason is one agent, that agent. */
+/** Where opening the app should land: a tab and, when the reason is one agent, that agent ('checks': its checks). */
 export type NativeLaunchTarget = {
-  tab: 'home' | 'env' | 'settings';
+  tab: 'home' | 'env' | 'settings' | 'checks';
   agentId: string | null;
 };
 
@@ -274,3 +331,91 @@ export type NativeSchedulePatch = { text?: string; timing?: NativeScheduleTiming
 export type NativeScheduleResult = { ok: true; schedule: NativeSchedule } | { ok: false; reason: string; code: string };
 
 export type NativeRunNowResult = { ok: true } | { ok: false; reason: string; code: string };
+
+/** A capability an agent may have (kit Capability's wire ids). */
+export type NativeCapabilityId =
+  | 'tools'
+  | 'messages'
+  | 'wake'
+  | 'task'
+  | 'state'
+  | 'acp'
+  | 'acpTools'
+  | 'acpMessages'
+  | 'chat';
+
+/** Checked, not checked yet, not working, or off (not declared, or not this agent's). */
+export type NativeCheckState = 'checked' | 'unchecked' | 'failed' | 'off';
+
+/** How far messages reach an agent (kit MessagingLevel). */
+export type NativeMessagingLevel = 'wakes' | 'delivered' | 'inbox' | 'none';
+
+/**
+ * One capability as the agent reads it now: when it was last checked or
+ * found not working (epoch ms), on which CLI version, and for a failure
+ * its code and what to do.
+ */
+export type NativeCapabilityCheck = {
+  id: NativeCapabilityId;
+  state: NativeCheckState;
+  cliVersion?: string;
+  at?: number;
+  code?: string;
+  detail?: string;
+};
+
+/** What a running check's part does now. */
+export type NativeCheckStep = 'starting' | 'reading' | 'answer' | 'working' | 'waiting' | 'checking';
+
+/**
+ * Where one capability's test stands in a check: its part hasn't started
+ * (queued), it runs with no verdict yet (testing), a verdict came during
+ * its part (answered: read the capability's state), none came (unknown) or
+ * no part can test it (skipped); why for unknown and skipped.
+ */
+export type NativeCheckRow = {
+  id: NativeCapabilityId;
+  part: number;
+  status: 'queued' | 'testing' | 'answered' | 'unknown' | 'skipped';
+  why?: string;
+};
+
+/**
+ * An agent's last Check now: its state since startedAt, when anything last
+ * moved (epoch ms), the part it is on (1-based, of parts) and that part's
+ * mode; while running its step, and how much of the prompt a local model
+ * has read while that is the step (total: when the server says); detail
+ * says why it got stuck or failed; rows, part by part, the capabilities it
+ * tests.
+ */
+export type NativeCheckRun = {
+  state: 'running' | 'done' | 'stuck' | 'cancelled' | 'failed';
+  startedAt: number;
+  movedAt: number;
+  part: number;
+  parts: number;
+  partMode: 'acp' | 'terminal';
+  step?: NativeCheckStep;
+  reading?: { read: number; total?: number };
+  detail?: string;
+  rows: NativeCheckRow[];
+};
+
+/**
+ * An agent's checks (agentChecks): every capability in kit order, the
+ * messaging level that works now, its last Check now, whether its kind
+ * can take Check now at all (checkNowWhy says why not), how many parts
+ * Check now would run (0 when it can't), and whether it runs on our check
+ * model (a stand-in that answers at once) rather than the agent's own.
+ */
+export type NativeAgentChecks = {
+  capabilities: NativeCapabilityCheck[];
+  levelNow: NativeMessagingLevel;
+  run: NativeCheckRun | null;
+  checkNow: boolean;
+  checkNowWhy?: string;
+  parts: number;
+  /** What Check the rest would run (only what isn't checked yet): its parts and the ids it tests; null: nothing left it can test. */
+  rest: { parts: number; ids: NativeCapabilityId[] } | null;
+  checkModel: boolean;
+};

@@ -29,15 +29,18 @@ engine's HOME.
   loads; it resolves the agents it stopped, which stay stopped.
   `promptReading()` and the `phonecandoPromptReading` event (`{reading}`)
   give the prompt a model server reads now.
-- `api/EngineFunctions.kt`: `startEngine(agentId)`, `stopEngine`,
+- `api/EngineFunctions.kt`: `startEngine(agentId, mode?)`, `stopEngine`,
   `stopAllEngines`, `isAnyEngineAlive`, `touchEngine`, `engineStatus`,
   `engineStatuses`, `isEngineIdle` (the kind's idle rule, no job left
   running and not kept running; see Jobs and the idle stop) and
   `engineHealth` (`ok|starting|http-N|error:…`, one probe; a TUI engine
   answers by its state). Every change is the `phonecandoEngineState` event
-  (`EngineStatus`). `startEngine` resolves `{port}` (null for a TUI engine)
-  once the process runs; an engine already starting or ready resolves at
-  once. It rejects with an `EngineStartError` code (`records.ts`).
+  (`EngineStatus`, with `mode` and `busy`: see ACP mode). `startEngine`
+  resolves `{port}` (null for a TUI engine or ACP mode) once the process
+  runs; an engine already starting or ready in that `mode` (`terminal`, the
+  default, or `acp`) resolves at once. It rejects with an `EngineStartError`
+  code (`records.ts`), at once for a mode switch it may not make
+  (`acp_busy`, `terminal_in_use`).
 - `api/InstallFunctions.kt` (see Installing an agent), all synchronous:
   `guestUnset`, `installPlan`, `updatePlan`, `versionCheck` and
   `recordInstall`. A refusal's code, also the start of its message, is
@@ -165,7 +168,9 @@ for a scheduled task (Schedules) leaves its first prompt in
 `engine/StartPrompts` (dropped after 2 minutes unused); `plan()` takes it,
 and the launch adds the kind's `engine.prompt` args with the task as one
 argv item, after the resume args. A task for a new chat starts without
-the resume args.
+the resume args. `acpChat` is the chat the agent's ACP mode last worked in
+(see ACP mode): the next terminal launch clears it, and for a kind with
+`engine.acp.chat` opens it instead of the resume args.
 
 Only an engine whose kind names its phone tools (`phoneTools` `plugin`,
 `mcp:config` or `mcp:argv`; `engine/BridgeAccess.kt`) gets the bridge: its
@@ -184,8 +189,9 @@ agent's next start. A delete is refused while an agent is of that kind.
 
 ## opencode (the native kind)
 
-Its payload (`liboc-engine.so`, `liboc-opentui.so`) ships as `jniLibs`
-(`extractNativeLibs=true`) and runs directly: INTERP is the OS linker,
+Its payload (`liboc-engine.so`, `liboc-opentui.so`) ships as `jniLibs`,
+extracted at install (`expo.useLegacyPackaging=true`, set by
+`app/plugins/withExtractNativeLibs.js`), and runs directly: INTERP is the OS linker,
 bionic system libs only. Build and stage: `agents/native/opencode/docs/`.
 
 Its `agent.json` is the recipe: `liboc-engine.so serve --port <port>
@@ -363,6 +369,95 @@ with `waitForEngine` (`src/engine/connection.ts`). It never talks to an
 engine itself: the web UI's sign-in URL and the TUI's recipe come from this
 module (`pairWebUi`, `clientRecipe`).
 
+### ACP mode
+
+A TUI kind with `engine.acp` (`agents/AGENTS.md` → ACP mode) can also run
+as the same agent speaking the Agent Client Protocol on stdin and stdout,
+with no screen. An agent runs in one mode at a time, in its one engine
+slot (`EngineMode`): `terminal` (its TUI, what Home shows) or `acp`. We
+start ACP mode only for work that comes while nobody watches: a scheduled
+task, or a message that may wake it (see Messages, Schedules). Opening Home
+asks for the terminal again, on the same chat.
+
+- **Start.** `start(agentId, requestedAt, mode)`, from `startEngine`'s
+  `mode` or the start intent's `EXTRA_MODE` (`acp`; absent is terminal). A
+  kind without `engine.acp` is refused in ACP mode. The plan prepares HOME
+  as for its TUI (kit scripts, events file, inbox folder: its hooks still
+  run) and takes the start's task (`StartPrompts`) whatever the kind's
+  `engine.prompt`, as its driver sends it. The launch is the kind's
+  `acpLaunch` (launch env, state env, model env, then `engine.acp.env`; an
+  image kind through its image's sh) as a plain process
+  (`engine/acp/AcpSpawner`): its stdin and stdout are ACP's, its stderr
+  goes to `<image>/logs/engine-<agentId>.log`. Its env has no terminal
+  values, and with `tools` `session` no bridge either: the bridge goes in
+  each chat instead.
+- **Driver** (`engine/acp/AcpAgent`, over `AcpConnection`: one JSON-RPC
+  message per line, a reader thread, one write at a time; it never logs a
+  message, as chats carry the bridge token). It sends `initialize` (we
+  offer no file system, no terminal, no sign-in through one), then opens
+  the chat (`AcpChats`): a task that wants a chat of its own gets
+  `session/new`; anything else the kept `acpChat` (where ACP mode last
+  worked with no terminal launch since, or what a Check now gave back),
+  else the newest chat (`session/list` for the work folder, newest
+  `updatedAt`), reopened with
+  `session/load` or `session/resume`, else a new one. Each carries the
+  folder as the agent sees it, the kind's rendered `meta` as `_meta` and,
+  with `tools` `session` and an agent that takes MCP over HTTP, the bridge
+  as an HTTP MCP server (`<bridge>/mcp`, the agent's token as a bearer
+  header); an agent without HTTP MCP gets no phone tools in ACP mode, so a
+  kind like that sets `tools` `config`. The chat's id is kept as the
+  agent's `acpChat`, and the kind's `options` are set where the agent
+  offers them (`session/set_config_option`). A start with a chat of its
+  own also notes the chat it would have gone back to (`chatBefore`: the
+  kept `acpChat`, else the newest `session/list` names), which Check now
+  gives back (see Checks). Then it is ready
+  (`AcpReady`: within the kind's `readiness.output.timeoutSec`, else
+  120 s); a chat it cannot open (a sign-in it wants) fails the start with
+  why. Once ready it sends the start's task as its first prompt.
+- **Turns.** One prompt at a time. While a turn runs, its updates fold into
+  items (`AcpTurn`: text and thoughts merged per message, tool steps, the
+  plan; at most 200 items and 64 Ki characters a turn; a reopened chat's
+  replay shows nothing), its permission questions wait for an answer (from
+  the app or a notice, see Notifications) and `cancel` answers them
+  cancelled. Any other request of the agent's (`fs/*`, `terminal/*`) is
+  refused. `AcpEngines.of(agentId)` is the ready driver for the rest of
+  the runner, and `AcpEngines.listener` hears every item, question, busy
+  change and turn end.
+- **Busy.** From its start until the turn of the work it came for ends:
+  starting, the start's task, or (with none) up to a minute after ready
+  for a waking message's prompt (`waitingForWork`: a prompt is still
+  taken then). `EngineStatus.busy` says so (always false in terminal
+  mode), with a status event on each change.
+- **Events.** Its turn's course is the engine events of a TUI's one chat
+  (`AcpEvents`, session `tui`): a prompt sent is working, a question
+  waiting, its answer working, the end by its stop reason (`end_turn`
+  finished, `cancelled` stopped, `refusal`, `max_tokens`,
+  `max_turn_requests` or an error failed). So alerts, the chat board and a
+  run's end work as in terminal mode. The events file is still read, but
+  only for links (`@open`) and receipts (`@inbox`): ACP says how the run
+  goes, not the hooks.
+- **Idle.** Never with a turn running or a question open; then the kind's
+  `quietSec`, with what the agent last sent counting as its output. Every
+  message from it marks it used.
+- **Exit.** Any exit we did not ask for is `died`, with its exit code and
+  the last line of its stderr (redacted); it never relaunches without its
+  resume args. A stop closes its stdin first, then stops it as any engine.
+  Its turn ends then, with an error.
+- **Switch** (`ModeSwitch`, in `start` and synchronously in `startEngine`).
+  The terminal while ACP mode is busy or asks a question is refused
+  `acp_busy` (Home keeps showing the turn); ACP mode while a viewer shows
+  the TUI (`EngineTerminal.hasViewer`: attached and on screen with the app
+  in front), a run of it is working or waiting, or it has jobs running or
+  is kept running is refused `terminal_in_use`. Messages and Schedules
+  also count a terminal start the app asked for (`startEngine`, Home
+  opening it) as a viewer until a view attaches, at most 2 minutes, with
+  the app in front (`engine/tui/HomeStarts`), so they never ask for the
+  switch under a Home that is still opening. Otherwise the engine stops
+  as a user stop would, and the start goes on in the other mode. A
+  terminal launch then opens the chat ACP mode left (`acpChat`, for a kind
+  with `engine.acp.chat`; a task that wants its own chat wins), and falls
+  back without it as without resume args (`ResumeFallback`).
+
 ## Local model servers
 
 An agent of a kind with a `models` block (`agents/AGENTS.md` → Engine
@@ -385,8 +480,10 @@ files are `phonecando-models`' (`models.md`); the runner serves them
   random key per start in `LLAMA_API_KEY` (never the argv), one slot, the
   context lme-host plans (`models.md` → Context; the kind's
   `{{contextWindow}}` is what the server got) and `--cache-ram` from what
-  that leaves. The plan goes to logcat (`PhoneCanDoModels`); a plan past
-  the RAM budget is logged, never refused. It tells `ModelsHost` what each
+  that leaves, at most the KV cache's size (`lme/docs/README.md` → RAM
+  gate and context). The plan goes to logcat (`PhoneCanDoModels`: the
+  context, the prompt cache and what the server holds in all once that
+  fills); a plan past the RAM budget is logged, never refused. It tells `ModelsHost` what each
   serves, so each model's card shows its server's own context. The start
   waits for `/health` (up to 5 min), so the agent stays `starting` while
   its model loads, and the service's start thread waits with it. Each
@@ -403,7 +500,12 @@ files are `phonecando-models`' (`models.md`); the runner serves them
   `model_unavailable` while it still loads for another agent, which is
   rare as starts run one at a time). Each engine's hold on its model ends
   with it (a stop, a failed start, a death), and the last one stops that
-  server (SIGTERM, SIGKILL after 3 s). `stopModel` stops its agents first,
+  server (SIGTERM, SIGKILL after 3 s). A mode switch (ACP mode) keeps it:
+  the engine in the new mode joins the server still up, with its prompt
+  cache, instead of loading the model and reading the agent's prompt
+  again; if that start does not happen, or runs on no model of its own (a
+  Check now's), the kept hold ends then. An agent holds one model:
+  acquiring another ends its hold on the first. `stopModel` stops its agents first,
   then the server, also while it loads. A server that exits by itself
   takes its agents down (`died`, `model_unavailable`): their engines had
   its URL and key.
@@ -465,12 +567,18 @@ themselves, the runner stops one after a countdown. Every number is in
   When it runs out, one agent is stopped; then 10 s for memory to settle,
   and if still not ok a fresh 30 s (15 s critical) for the next. Back at
   ok the episode ends and the next starts with the full minute.
-- **Who goes.** Never the agent on screen while the app is in front (the
-  one `setOpenChat` names); agents with no run going (their kind's idle
-  rule) first, and of those the ones with no job left running and not kept
-  running (Jobs and the idle stop) first, least recently used first, then
-  working ones the same way. The notice names the jobs that went with an
-  agent ("Claude Code (with npm run dev)").
+- **Who goes** (`MemoryVictims.kt`, pure). Never one at work while an
+  idle one can go: agents with no run going (their kind's idle rule; an
+  engine still starting counts as working, its model may be loading for
+  the task it was started for) first, and of those the ones with no job
+  left running and not kept running (Jobs and the idle stop) first. Among
+  equals, a stop that frees what the phone is short of (back to the ok
+  line) goes first, least recently used first; else the one that frees
+  the most. A stop frees the agent's processes plus each model only it
+  holds (its server goes with it). The agent on screen while the app is in
+  front (the one `setOpenChat` names) is spared, unless the one to go
+  instead is at work; alone, or at work, it never goes. The notice names
+  the jobs that went with an agent ("Claude Code (with npm run dev)").
   With nothing it may stop it keeps warning with no countdown. A stop is a
   user's stop (`stopped`, error `low_memory: stopped to free memory`), so
   a model server goes with its last holder.
@@ -482,6 +590,10 @@ themselves, the runner stops one after a countdown. Every number is in
   `VmRSS`, summed over the processes tagged with the agent, or with
   `model-server` and the model id) is read only while the level is not ok
   or when the app asks.
+- **Models stay clear of it.** lme-host sizes a model's start, prompt
+  cache included, to leave free 16% of total RAM (where the guard is back
+  at ok) plus 512 MiB for the agent's engine, so a model never starts the
+  countdown by itself (`MemoryHeadroomTest` keeps the two in step).
 - **To the app.** `phonecandoMemory` (`MemoryStatus.toMap`) on every level
   or countdown change, after an automatic stop (`lastAutoStop`: what it
   stopped, agents and the models that went with them) and on every look
@@ -604,12 +716,12 @@ lists the chats the agents are busy with, the agents kept up by a job they
 left running or are starting, by Keep running, by their own ask or at work
 unseen (`WorkLines.kt`, each with a Stop: `ACTION_STOP_AGENT`), the
 engines starting, the model server reading a prompt, the model jobs and
-the Linux jobs with their share done
-(`notify/ServiceNotification.kt`, `ReadingLines.kt`, `TransferLines.kt`,
-`LinuxJobLines.kt`, channel `phonecando-engine`; see Notifications), keeps
-the CPU awake while any of that works (`power/WorkLock.kt`; see Jobs and
-the idle stop) and stops itself once neither an engine nor a job has run
-for 10 s. The wait
+the Linux jobs with their share done, or, with none of that, the agents
+ready (`notify/ServiceNotification.kt`, `ReadingLines.kt`,
+`TransferLines.kt`, `LinuxJobLines.kt`, `ReadyLines.kt`, channel
+`phonecando-engine`; see Notifications), keeps the CPU awake while any of
+that works (`power/WorkLock.kt`; see Jobs and the idle stop) and stops
+itself once neither an engine nor a job has run for 10 s. The wait
 matters: work often follows at once (an agent's install starts as its
 machine's setup ends), by then the app may be in the background, and there
 Android refuses a new start of the service, so the next job would run
@@ -617,28 +729,27 @@ unheld and the process freeze (seen on the phone before the wait). Every
 command answers `START_NOT_STICKY` and a null-intent restart starts
 nothing.
 
-It is in the foreground, with its notification, only while there is
-something to list: engines that only run show nothing. Each
-`startForegroundService` still gets its `startForeground` (with an empty
-notification when nothing lists, which Android 12+ holds back for some
-seconds), then `render` leaves the foreground (`stopForeground`, the
-service stays): at once with the app in front, where it may come back any
-time, and after the same 10 s of still nothing with the app away, where
-Android refuses a later `startForeground` just as it refuses a new start.
-Away and out of the foreground, the process is a plain service's: Android
-stops the service about a minute later and the idle engines with it
-(`onDestroy`), as the idle stop would, and the app starts its agent again
-when it comes back. Whatever must not freeze lists, so it holds the
-foreground: a run going (also the chat on screen), a job left running, one
-the agent just started (`WorkWatch` starting: a run that ends pokes the
-watch, and so does the app leaving the screen, from the runner module's
-`OnActivityEntersBackground`, while Android still allows the foreground),
-Keep running or an ask, an agent whose kind raises no chat events while it
-is not idle, an engine starting, a model or Linux job. A start that ends
-with the app away (an alarm's: a scheduled run, restart or wake) still
-lists as starting until that agent's first run shows, 2 min at most: its
-prompt comes seconds after the engine is ready, and by then the alarm's
-window to take the foreground is over (seen on the phone: the run froze).
+It is in the foreground, with its notification, while anything of ours
+runs: an engine (idle ones too, listed as ready, which also covers the
+model servers, as each runs only while an agent holds it), an engine
+starting, a model or Linux job. Out of the foreground with the app away,
+the process is a plain service's: Android stops the service about a
+minute later ("Stopping service due to app idle") and every engine with
+it (`onDestroy`), before the idle stop would; and away, Android lets the
+service back into the foreground only in an exemption's window (an
+alarm's), so work that starts later (a message that wakes an agent, Run
+now and then leaving the app) was refused (`Background started FGS:
+Disallowed`; both seen on Android 16). Staying in the foreground
+changes nothing about how long an agent runs: the idle stop, Keep
+running and the memory guard decide that (see Jobs and the idle stop), and
+the notification only names what runs. Each `startForegroundService`
+gets its `startForeground` (with an empty notification when nothing runs
+yet, which Android 12+ holds back for some seconds). Once nothing runs at
+all, `render` leaves the foreground (`stopForeground`): at once with the
+app in front, where it may come back any time, and after the same 10 s of
+still nothing with the app away, where Android refuses a later
+`startForeground` just as it refuses a new start; the service then stops
+(`stopIfIdle`).
 
 `JobsAnchor` listens to the models module's jobs and to `LinuxHost`'s
 (their begin and end at once, their progress at most every 2 s). When a
@@ -687,8 +798,9 @@ Everything an agent posts goes on the `phonecando-agent` channel through
 notification never replaces another's. Per agent, one slot (id 4500)
 holds its "come back to me" notice, the `/app` return notice or an alert
 (below), so there is never more than one; its own posts (`/notify`) take
-4600-8695, one per title, its prompts 9000-9255 and its links to open
-9300-9363. The engine service (4101), its time-limit notice (4102, on the
+4600-8695, one per title, its prompts 9000-9255, its links to open
+9300-9363, a due task 9400 (Schedules) and its permission questions
+9500-9563. The engine service (4101), its time-limit notice (4102, on the
 agents' channel; see Foreground service and lifetime), the update notice
 (4202) and the memory guard's notice (4301, on the agents' channel; see
 Memory guard) are untagged.
@@ -720,8 +832,14 @@ Memory guard) are untagged.
   your answer", "Stopped with an error", "Done"), waiting first and newest
   first within a state; collapsed, the counts ("1 waiting for your answer ·
   2 working"), and only the counts on the lock screen (public version).
-  With nothing to list there is no notification (see Foreground service
-  and lifetime). `notify/ChatBoard.kt` (pure) keeps the
+  With no chat, job, start or stop to list but engines running, it is one
+  quiet line naming them, "Claude Code, opencode ready" (three names at
+  most, then "and 2 more"; `notify/ReadyLines.kt`, pure), with no buttons,
+  on the same low-importance channel (no sound), and "2 agents ready" on
+  the lock screen; a tap opens the app, on that agent's Home when one
+  runs. It is what keeps the service in the foreground (see Foreground
+  service and lifetime). With nothing running there is no notification.
+  `notify/ChatBoard.kt` (pure) keeps the
   board from the same events as the alerts: a top-level session shows from
   its first activity; done and error stay until the user opens that
   agent's chat (`dismissAgentAlert`) or its engine stops or dies, at most
@@ -755,7 +873,13 @@ Memory guard) are untagged.
   `form.created`) alert; a subagent's child session (its `session.created`
   has a parent) never alerts on its verdict; an interrupted run
   (`STOPPED`) never alerts; the same alert for the same session comes once
-  until that session moves again. Nothing posts while PhoneCanDo is in
+  until that session moves again. A waiting alert is over once its session
+  moves on (`WORKING`: answered, from a notice or the app; a verdict,
+  `STOPPED` or `GONE`): it goes, unless a new alert takes the slot, and
+  only while the slot still shows it (not the `/app` return notice). While
+  a Check now runs for the agent, or its engine is not released yet
+  (`CheckNow.owns`), nothing alerts and no finished run goes to the app:
+  the check's own notices say how it went. Nothing posts while PhoneCanDo is in
   front (an activity on screen). The alert goes in the agent's slot,
   titled with its name: "Finished. Tap to see the result.", "Stopped with
   an error. Tap to see what happened." or "Waiting for your answer."; a new
@@ -784,13 +908,49 @@ Memory guard) are untagged.
   goes when the prompt ends. The same link from the same agent while one
   waits adds nothing; an agent keeps at most four (a new one pushes out
   its oldest), and its links go when its engine stops.
+- **Permission questions** (`prompts/PermissionPrompts`,
+  `PermissionRegistry`): an agent in ACP mode asks before a tool runs
+  (`session/request_permission`; see Engines → ACP mode). The question
+  becomes a `permission` prompt beside the bridge's (`pendingPrompts`, the
+  `phonecandoBridgePrompt` event) with `title` (what it asks to do),
+  `toolKind` and `options` (`[{optionId, name, kind}]`, kind ACP's
+  `allow_once`, `allow_always`, `reject_once` or `reject_always`); its
+  `requestId` is the ACP driver's, unique in the process, the same one the
+  background view shows (`acpSnapshot`, the `phonecandoAcp` event). The
+  app answers with `resolvePermission(requestId, optionId | null)` (null
+  cancels it; false when it is gone or the answer is not one it offered).
+  While PhoneCanDo is not in front it is also a notification ("Asks for
+  your OK: <what>") whose tap opens the agent's Home, with two buttons:
+  Allow (the first `allow_once` answer, else the first `allow_*`; Android
+  12+ asks for the phone to be unlocked first) and Deny (the first
+  `reject_*` answer, else cancel). The buttons go to
+  `PermissionActionReceiver` (not exported; our own `PendingIntent`s, one
+  identifier per question and answer). The question and its notification
+  go when it is answered, the agent takes it back, its turn ends or its
+  engine stops. The run's own alert ("Waiting for your answer.") still
+  goes up in the agent's slot beside it, and goes once the question is
+  answered (Agent alerts).
+- **ACP turns for the app** (`acp/`): `AcpRelay` is the one
+  `AcpEngines.listener`, set once per process when messaging is first
+  made (every engine start makes it first) or the app's module is. It
+  sends items, busy and turn ends to the app as the `phonecandoAcp` event
+  (`AcpAppEvents`: `{agentId, type:"item", item}`, `{agentId,
+  type:"busy", busy}`, `{agentId, type:"permission", permission}`,
+  `{agentId, type:"permissionGone", requestId}`, `{agentId,
+  type:"turnEnd", stopReason, error}`; an item's updates within 150 ms go
+  as one, and every other event first sends the items that wait),
+  questions to the permission prompts, a turn's end to Schedules and no
+  turn running to Messages. `api/AcpFunctions.kt`: `acpSnapshot(agentId)`
+  (`AcpSnapshot.toMap`, null in terminal mode or not running),
+  `acpCancel(agentId)` (false when no turn runs) and `resolvePermission`.
 
 ## Messages
 
 Agents talk to each other through the bridge's `agents_*` tools
 (`bridge.md` → Agent messages): any agent may list and message any other
 on the phone. How far a message reaches an agent is its kind's level
-(kit `MessagingLevel`: wakes, delivered, inbox, none; `AgentsView.kindLevel`):
+(kit `MessagingLevel`: wakes, delivered, inbox, none; `AgentsView.kindLevel`;
+a kind with an ACP mode and phone tools is wakes):
 a message to an agent whose kind has no phone tools (none) is refused,
 and logged so with the reason, never queued for good; a kind that wakes
 through a hook it leaves waiting after a turn (`inbox.wake` "hook") can be
@@ -826,11 +986,13 @@ inbox folder's IO).
   unread that fit about 8 KB (at least one) and ends with "N more agent
   messages waiting: call agents_inbox." when some wait, as hook runners
   cut long context and a printed message counts as read.
-- **Delivery** (`Mailbox` over a `Courier`, `delivery/InboxCourier`), as
-  the kind's `inbox` block says (`KindInbox`, over the kit's
+- **Delivery** (`Mailbox` over `delivery/RoutingCourier`): for a kind
+  with an ACP mode, the way `AcpRoute` (pure) picks by what its engine
+  does now (below); for every other agent the `InboxCourier`, as the
+  kind's `inbox` block says (`KindInbox`, over the kit's
   `ManifestKind.inbox`, `renderInboxHook` and `inboxRequest`), again on
-  every new message, engine start and ready, chat-board change, read and
-  receipt:
+  every new message, engine start and ready, chat-board change, read,
+  receipt and ACP turn end:
   - hooks or a reader: `<home>/.phonecando/inbox-<agentId>/pending/`
     (`InboxFolder`; `PHONECANDO_INBOX` names the folder, `/root/…` for an
     image kind): `ids`, `messages.jsonl` (one item per line, with its
@@ -853,14 +1015,49 @@ inbox folder's IO).
     or start (15 s after a failure).
   - no block: nothing; the agent pulls with `agents_inbox`, and every MCP
     result tells it when some wait.
+- **ACP delivery** (a kind with `engine.acp`; Engines → ACP mode). Its
+  hooks and reader still run in ACP mode, so a set may still reach a
+  running turn; a prompt is the floor that wakes an idle one:
+  - ACP mode ready, no turn running, and the set may wake it: its folder
+    is cleared (a hook mid-turn must not print it again) and the set goes
+    in as one prompt (`AcpCourier`: in a new chat titled as the task when
+    a scheduled task asks for one, else the current chat): delivered,
+    woken. An engine started for a message is busy until its first
+    prompt (`waitingForWork`) and takes it. A refused prompt is tried
+    again on the next turn end, ready or chat-board change (15 s after a
+    refusal). A runner notice (a scheduled task) another hand-over took
+    between its logging and its own (the messages thread, as a turn
+    ended) reports how that one went (`Mailbox.notice`).
+  - ACP mode, a turn running or a set that may not wake it: its folder
+    when its hooks or reader read one (claimed mid-turn or next turn),
+    else it waits (`agents_inbox`). A set left in the folder of an agent
+    in ACP mode never carries the `wake` mark (`AcpRoute.folderWake`): a
+    waiting hook (Claude Code's `Stop` with `--wait`) or a reader (pi's
+    `pending/wake`) would start a turn outside ACP. In ACP mode only our
+    prompt wakes it.
+  - terminal mode ready, idle, nobody with its terminal open (nor Home
+    opening it: Engines → ACP mode → Switch), no jobs and not kept
+    running, and the set may wake it: we ask its engine to
+    switch to ACP mode (`EngineStarts`, mode ACP) and the sender hears
+    woken (`Handover.SWITCHING`, still queued); once ACP mode is ready
+    the set goes in as a prompt. Asked again only after 30 s; a switch
+    that never came, or that Android refused, leaves sets to the folder
+    as today for 10 minutes.
+  - anything else (terminal mode with the user watching, a run or jobs;
+    starting or stopping): the folder as today, the `wake` mark too in
+    terminal mode, so a waiting hook may still wake it in place.
+  An ACP turn counts as working for its state (`LiveAgentsView.presence`)
+  even before the chat board shows it. `agents_list`'s `canWake` follows:
+  idle in ACP mode or free to switch counts as ready to wake.
 - **Waking.** A set may wake its agent when one of its messages is direct
   (or a notice that may wake), asked for it under 10 minutes ago, has hop
   under 2, and its agent has "Other agents can wake it" on (`wakeable`,
-  `setAgentWakeable`), is of a kind with `inbox.wake`, runs (a stopped
+  `setAgentWakeable`), is of a kind with `inbox.wake` or an ACP mode, runs (a stopped
   engine is never started), has no run going and no question waiting,
   and was woken under 6 times this hour (the budget is read back from the
   log on start). The agent was woken when such a set was claimed while it
-  had no run going, or its server took the wake call. From then until
+  had no run going, its server took the wake call, or it went in as an
+  ACP prompt. From then until
   that run ends (it leaves the working chats, its engine stops, or no run
   shows within a minute) it is `startedByAgent` (`WakeTracker`): the screen
   line refuses it the screen unless the line handed it over, and what it
@@ -898,13 +1095,14 @@ the store's files, the alarm, the receivers and `LiveFireState`).
   makes the task yours (`by` user). Off, an agent's "Can schedule itself"
   (`SelfScheduling`, runner prefs, on by default) refuses its
   `schedule_add`; it may only cancel what it set. A kind with neither a
-  start prompt nor a wake cannot run tasks (kit `runsSchedules`) and gets
-  none.
+  start prompt nor a wake nor an ACP mode cannot run tasks (kit
+  `runsSchedules`) and gets none.
 - **Store** (`ScheduleStore`, `ScheduleRuns`, `StateFile`):
   `files/state/schedules.json` (the schedules and their waiting firings,
   written whole and atomically) and `files/state/schedule-runs.jsonl`
   (`{seq, scheduleId, agentId, agentName, text (first 200), by, dueAt,
-  firedAt, late, outcome, detail?}`, the newest 200). Deleting an agent
+  firedAt, late, outcome, detail?, open?}`, the newest 200; `open` while
+  the start or ACP turn the run began still goes). Deleting an agent
   drops its schedules; its runs stay under its name.
 - **The alarm** (`ScheduleAlarms`): one AlarmManager alarm for the soonest
   time the book needs (a due time, a retry, a busy deadline), armed again
@@ -925,7 +1123,13 @@ the store's files, the alarm, the receivers and `LiveFireState`).
 
   | Agent | Action |
   | --- | --- |
-  | engine stopped, kind takes `engine.prompt` | start with the task as its first prompt (`started`) |
+  | **kind with an ACP mode:** engine stopped | start in ACP mode with the task as its first prompt (`started`) |
+  | engine starting or stopping, or busy (an ACP turn, a run, a question) | wait until idle; 2 h past due `busy` |
+  | ready in ACP mode, idle | the task as its next prompt (`woke`) |
+  | ready in terminal mode, idle, nobody with its terminal open, no jobs, not kept running, app not in front | switch to ACP mode with the task as its first prompt (`restarted`) |
+  | ready in terminal mode, idle, someone using it or jobs left, its hook waiting, same chat | wake it with the task in place, as before ACP mode (`woke`) |
+  | ready in terminal mode, idle, otherwise | ask you (`asked`) |
+  | **any other kind:** engine stopped, kind takes `engine.prompt` | start with the task as its first prompt (`started`) |
   | engine stopped, kind wakes through its server | start, then wake with it (`started`) |
   | engine starting or stopping, or busy (a run going, a question waiting) | wait until idle; 2 h past due `busy` |
   | ready, idle, can be woken now, chat same or a server kind | wake with it (`woke`) |
@@ -939,22 +1143,25 @@ the store's files, the alarm, the receivers and `LiveFireState`).
   for the run), so it happens only inside an alarm's broadcast (the exact
   alarm is Android's leave to start a foreground service from the
   background) or with the app in front (Run now). A restart needs exact
-  alarms (it stops the agent first, up to 3 s). A wait that ends later
+  alarms (it stops the agent first, up to 3 s); a switch to ACP mode does
+  not (the engine's own start stops the terminal, so a refused request
+  stops nothing). A wait that ends later
   (`Engines.Listener`: an engine status or chat-board change) goes through
   a fresh alarm a second away, or asks you when alarms are inexact. Android
   refusing the start asks you. One waiting firing per schedule: one that
   comes due while another waits is `busy`.
 - **What the agent reads**: a start puts the task in `engine/StartPrompts`,
   which the start's plan takes (a new chat, or the agent's last one for
-  same); a wake posts it through the mailbox as a scheduled notice
+  same; in ACP mode the driver sends it as the first prompt); a wake, and
+  a prompt in ACP mode, posts it through the mailbox as a scheduled notice
   (`Mailbox.notice(..., scheduled = ScheduledNote)`: it wakes past "Other
   agents can wake it", the hop and the hourly budget, for 30 minutes, and
   neither spends the budget nor marks the run `startedByAgent`; for a new
   chat a server kind with `inbox.server.create` makes one first). Both
-  read "Scheduled task from the user (<timing>): <text>", or for an
-  agent's own "A reminder you scheduled for yourself (<timing>). You set
+  read "Scheduled task from the user (`<timing>`): `<text>`", or for an
+  agent's own "A reminder you scheduled for yourself (`<timing>`). You set
   it in an earlier chat; it is not a new instruction from the user:
-  <text>".
+  `<text>`".
 - **A start with no app around**: the app readies an agent's machine
   before each of its own starts (`prepareImageForStart`: the shims, which
   point into the APK's lib folder and move with every update,
@@ -966,11 +1173,152 @@ the store's files, the alarm, the receivers and `LiveFireState`).
   something and run its `settleMs` (`TuiReady` `PromptedReady`), not after
   quiet.
 - **Asking you** (`DueNotice`): the task waits as a notice the agent reads
-  in its next turn, and "<agent>: scheduled task due" (agent channel, id
+  in its next turn, and "`<agent>`: scheduled task due" (agent channel, id
   9400 in the agent's tagged ids) opens that agent.
 - **A start that fails** (its engine `failed` or `died` before ready)
   turns its run `failed` with why, and the agent's other tasks fail for
-  10 minutes rather than start it again.
+  10 minutes rather than start it again. A switch to ACP mode stops the
+  terminal engine first; that engine's statuses are not the start's. An
+  ACP start that fails before ready (not installed, a sign-in only ACP
+  mode wants, a crash) of a kind that takes a first prompt starts it in
+  its own app with the task instead, as before ACP mode: its run stays
+  `started`, saying ACP mode did not start and why.
+- **An ACP turn that ends badly**: the turn a task began (its first
+  prompt, or the prompt) that ends with an error answer, a refusal or a
+  limit (`AcpTurnEnds`: `refusal`, `max_tokens`, `max_turn_requests`), or
+  whose engine dies mid-turn, turns its run `failed` with why (the turn's
+  end comes through `acp/AcpRelay` on the scheduler's thread, after the
+  firing that began it). A turn you stop (`cancelled`) leaves the run as
+  it was.
+- **A run Android cut off**: a run stays `open` from its start until its
+  engine is ready (a terminal start) or the ACP turn it began ends. Android
+  may close PhoneCanDo meanwhile (the memory killer), and that start or
+  turn goes with it. The first `Firing` of a process turns every run still
+  open `failed` ("PhoneCanDo was closed before the task finished"; the
+  schedule's `lastRun` too while it is its newest) and never runs it again:
+  missed runs are never replayed, the agent may have taken the task
+  already, and a start that ran the phone out of memory would only do so
+  again. The next due time runs as usual.
+
+## Checks
+
+What a kind's file says an agent can do is checked against what its
+engine lives show (`checks/`). Each capability (kit `Capability`: tools,
+messages, wake, task, state, acp, acpTools, acpMessages, chat) reads
+**checked**, **unchecked** (not checked yet; still used as set up),
+**failed** (not working) or **off** (not declared, kit
+`KindCapabilities.declared`; `state` is off too for an agent that keeps no
+state of its own). Nothing is guessed: a rule fires on an exact signal or
+records nothing.
+
+- **Signals** (`Checks`, each returns at once; `life/LifeWatcher` decides
+  on one thread of its own). An engine life runs from a launch (the slot
+  adopting its process; a start, or a `ResumeFallback` relaunch, which is
+  a life of its own) to its exit, stop or failed start. Before each launch
+  spawns, the supervisor empties the inbox folder's `ran/`, so each hook
+  reports again. S1: an authenticated bridge request (`BridgeServer`'s
+  `onCall`), counted for the life's mode. S2: `@hook\t<Event>[\twait]` in
+  the events file (`phonecando-inbox`, once per hook event per life;
+  `EventLine.Hook`), read in terminal and ACP mode alike. S3: `@inbox`
+  receipts, and the ids of the last wake-marked set `InboxCourier` wrote.
+  S4: the supervisor's launch, READY, every engine event, ACP's chat
+  opening or `onAcpFailed`, the ACP turn end (`acp/AcpRelay`), an exit
+  (code, died, the TUI's screen tail, whether you typed in it), a
+  relaunch and a stop; the ones that change the slot are told under its
+  lock, so two lives never mix. S5: the TUI's screen (64 KiB of its ring,
+  escapes and control bytes stripped, all whitespace removed) holds the
+  task's needle, looked at every 2 s inside the task window. S6: the
+  agent's own state folder changed after the launch (our seeding and the
+  machine note in its instructions file don't count; `life/StateProbe`).
+  S7: a server kind's answer to a deliver or wake call (2xx, 4xx, 5xx).
+- **Rules** (`rules/CheckRules`, pure, clock injected; the table is its
+  header). Successes come from S1 (tools, acpTools), S2/S3 (messages,
+  acpMessages, wake), S7, a WORKING event or S5 within 2 minutes of a
+  launch with a task, S6 at the first turn end, ACP opening its chat, and
+  a terminal launch on ACP's chat that raises an event or stays up 30 s
+  after READY. Failures come 10 s (`GRACE_MS`) after a turn end (a
+  terminal FINISHED or an ACP `end_turn`) while the life is still up
+  (`no_contact` for MCP tools, `no_hook`, `no_waiter`, `empty_state`),
+  from a reader's wake-marked set unanswered for a minute and still
+  pending (`no_receipt`), S7 4xx/5xx (`http_<status>`), a quit inside the
+  task window you didn't type into (`quit_ok`, `quit_error` with the
+  screen's last lines), `onAcpFailed` (`acp_failed`) and a relaunch
+  without ACP's chat (`chat_refused`). `rules/LevelNow` drops the declared
+  messaging level to what works (wakes needs wake or acp, delivered
+  messages or acp, inbox tools); `agents_list` and the app show it.
+- **Store** (`store/`): one record per kind and capability in
+  `files/state/checks.json` (`{version: 1, kinds: {<kindId>: {<capability>:
+  {state, key, cliVersion, at, agentId, code, detail, notified}}}}`). The
+  newest signal wins; the same finding again only moves on `at`,
+  `cliVersion` and `agentId`. A record belongs to its setting (`key`, kit
+  `KindCapabilities.key`: the manifest version and a hash of the parts the
+  capability rests on), so an edited or updated kind reads unchecked
+  again; the CLI version is shown, not matched. A failure whose
+  `key|cliVersion|code` differs from `notified` is the first: it gets the
+  one notification (`checks/fanout/`). Every record kept goes to
+  `Checks.onChange` (a `task` failure fails the scheduled run that
+  started it, `schedule/Firing`).
+
+**Check now** (`checks/now/`, the agent page's checks): restarts the agent
+with one short test task that asks for no tools ("PhoneCanDo check: reply
+with just the word done. Don't use any tools."; tools are checked by their
+start-up connection) as its first prompt. While the check runs, each start
+of its engine runs it on the check model (`checks/now/model/`) when its
+kind takes a model (its `models` block, as for a local model;
+`CheckNow.modelFor`, from `EngineSupervisor.start`): a stand-in on loopback
+that answers every turn with "done" at once, never a tool call, in
+Anthropic Messages, OpenAI Chat Completions or OpenAI Responses. So no
+model's speed or answer decides a check, no model loads into RAM and no
+account pays for it; a kind with no `models` block asks its own model. The
+stand-in stops once no check runs, and an engine on it never outlives its
+check: it stops at the end, and with its terminal on screen starts again on
+its own model. It runs in parts: a kind with an ACP mode
+runs it there first in a new chat (testing acp, acpTools, acpMessages, and
+state when the agent keeps its own), then (with `engine.prompt` or
+`engine.acp.chat`) in its own app on that same chat (tools, messages, wake,
+task, chat), with the task again or, without `engine.prompt`, none
+(messages and wake skipped, as they need a turn; the part ends 31 s after
+ready, once `chat` is judged); any other kind runs one part in its own
+app. Only declared capabilities are rows; Check the rest (the default once
+anything is checked) leaves out the checked ones and drops a part with
+nothing left, except an ACP part whose chat part 2 still tests (it then only
+opens that chat and ends once ready), and part 2 with no ACP part before it
+takes a new chat. Check all again runs every row. The signals above judge each
+part like any other run; each verdict answers its row (`Checks.onChange`
+fires for every finding of a life, also one equal to the record kept). A
+part ends as soon as all its rows are answered (an ACP part's turn is
+cancelled, the next part starts at once), else 11 s after its turn end,
+leaving the rest unknown. Any turn end counts there (`LifeEvent.TurnEnded`
+says finished, failed or stopped: a terminal FAILED or STOPPED event after
+it worked, an ACP error, other stop reason or cancel); only a finished one
+feeds the rules, and a failed or stopped one says so in its rows' reason.
+A STOPPED the quiet screen guessed (`EngineEvent.guessed`, TuiEvents) never
+counts: the run may still work where the screen shows nothing. A tick each second reads its step (starting,
+reading the prompt, waiting for your answer, working, waiting for you in
+its own app, checking) and whether anything moved (engine state, prompt
+tokens read, ACP items, the engine's last output or event, bridge calls and
+hook reports; in its own app, its terminal on your screen too). In its own
+app, nothing moving for 1 minute while it works is a wait for you, not a
+stop: it may be asking you something there (a sign-in, a folder to trust).
+The page says so in a dialog with Open <agent> (Home, its own app); once
+the app is not in front, one notification does the same; any move ends the
+wait. While a check runs the service keeps the CPU awake (power/WorkLock),
+so it goes on with the screen off. Home shows a bar over the agent while its check runs, back to the
+check ("Check done · See results" when it ends there). The run is done after
+the last part, failed when an engine ends first, stuck when an ACP part
+moved nothing for 3 minutes (not while a question waits) or after 30
+minutes in any part, or cancelled (Cancel check stops its engine). Done,
+stuck or failed, it stops the engine it started unless its terminal is on
+screen (on the check model, see above), and with the app not in front one
+notification says how it went
+(it replaces a wait's; the run's own end alert stays quiet, see
+Notifications). Ended or cancelled, it gives the agent back the chat it
+was in before the check (`ChatsBefore`: its kept `acpChat` when the check
+began, else the ACP part's `chatBefore`) as its `acpChat`, so its next
+own-app start opens that chat, not the check's. With neither (no ACP part
+and no kept chat, or an agent that cannot list its chats) nothing is
+known, and its resume args go back to its newest chat: the check's. While a check runs, an ACP permission question is
+rejected at once with no prompt (`acp/AcpRelay` asks `CheckNow.rejects`).
 
 ## Agent images (engine side)
 

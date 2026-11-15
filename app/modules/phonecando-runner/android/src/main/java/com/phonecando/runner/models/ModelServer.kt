@@ -31,9 +31,13 @@ import kotlin.concurrent.thread
 // waits for /health to answer ready (Readiness: a 4B model took 27 s on our
 // test phone). Every agent bound to the same model shares its server
 // (ModelSlotPolicy). Each agent's lease ends with its engine (a stop, a
-// failed start, a death); the last one of a model stops its server
-// (SIGTERM, SIGKILL after the grace). stop(modelId) ends one whoever holds
-// it, also while it loads (the supervisor stops its agents first). A
+// failed start, a death), but not with a mode switch: the supervisor keeps
+// it for the engine in the new mode, which joins the server still up (and
+// its prompt cache) instead of loading the model again. An agent holds one
+// model: acquiring another ends its hold on the first. The last lease of a
+// model stops its server (SIGTERM, SIGKILL after the grace).
+// stop(modelId) ends one whoever holds it, also while it loads (the
+// supervisor stops its agents first). A
 // server that dies by itself takes its agents down with it (onDied): their
 // engines have its old URL and key. Each server writes its own log
 // ([logFile] of its model id). Its process carries PHONECANDO_AGENT=
@@ -70,6 +74,8 @@ internal class ModelServer(
    * lease then.
    */
   fun acquire(agentId: String, model: ModelRecord): ServedEndpoint {
+    // One model per agent: a hold kept across a mode switch on a model it no longer has ends here.
+    releaseIf(agentId) { it.model.id != model.id }
     val previous: ModelRun?
     val orphans: Set<String>
     val mine: ModelRun
@@ -128,9 +134,12 @@ internal class ModelServer(
   }
 
   /** [agentId]'s engine is gone: its lease on its model ends, and the last holder stops that server. A loading one sees it and gives up. */
-  fun release(agentId: String) {
+  fun release(agentId: String) = releaseIf(agentId) { true }
+
+  // Ends [agentId]'s lease when its run is [which]; the last holder stops that server.
+  private fun releaseIf(agentId: String, which: (ModelRun) -> Boolean) {
     val ending = synchronized(lock) {
-      val run = runs.values.firstOrNull { agentId in it.leases } ?: return
+      val run = runs.values.firstOrNull { agentId in it.leases }?.takeIf(which) ?: return
       run.leases.remove(agentId)
       if (run.leases.isNotEmpty()) return
       runs.remove(run.model.id)
@@ -200,7 +209,7 @@ internal class ModelServer(
     val plan = LlamaCppRuntime.plan(
       LaunchRequest(mine.model, modelFile(mine.model).absolutePath, exe.absolutePath, device(), port, key),
     )
-    Log.i(LOG_TAG, "model $id: context ${plan.contextSize}, prompt cache ${plan.promptCacheMiB} MiB, ${plan.ram}")
+    Log.i(LOG_TAG, "model $id: context ${plan.contextSize}, prompt cache ${plan.promptCacheMiB} MiB, ${plan.totalBytes / MIB} MiB in all, ${plan.ram}")
     if (plan.ram is RamVerdict.OverBudget) Log.w(LOG_TAG, "model $id runs past the RAM budget at its chosen context")
     val log = logFile(id)
     log.parentFile?.mkdirs()
@@ -280,6 +289,7 @@ internal class ModelServer(
     private const val LOG_TAG = "PhoneCanDoModels"
     private const val PROBE_CONNECT_MS = 2_000
     private const val PROBE_READ_MS = 5_000
+    private const val MIB = 1L shl 20
 
     /** A model's server log name: model-server-<id>.log, the id kept to a-z, 0-9 and dashes (ModelIds allows no more). */
     fun logName(modelId: String): String =

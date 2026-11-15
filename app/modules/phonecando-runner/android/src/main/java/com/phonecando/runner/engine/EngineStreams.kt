@@ -7,6 +7,7 @@ import com.phonecando.agents.kit.render.ManifestKind
 import com.phonecando.agents.kit.term.SignalRules
 import com.phonecando.runner.TelemetryRecorder
 import com.phonecando.runner.TelemetrySwitch
+import com.phonecando.runner.engine.acp.AcpAgent
 import com.phonecando.runner.engine.events.EventFileTail
 import com.phonecando.runner.engine.events.EventSink
 import com.phonecando.runner.engine.events.EventTimers
@@ -22,9 +23,14 @@ import java.io.File
 // rules (TuiEvents), which also carry its chat title, together with its
 // events file (events/: the kit scripts' lines, through the kind's hook map
 // to the same events, links to open as open_url prompts, which go when
-// the stream stops, and `@inbox` receipts as other agents' messages read,
-// messages/); a kind with hooks also has a run that shows nothing for a
-// while end as stopped (TuiEvents.quiet).
+// the stream stops, `@inbox` receipts as other agents' messages read,
+// messages/, and `@hook` lines, an inbox hook that ran, for the checks);
+// a kind with hooks also has a run that shows nothing for a
+// while end as stopped (TuiEvents.quiet). An ACP engine's events come
+// from its driver (AcpAgent: its turns, AcpEvents); its hooks still write
+// the events file, but ACP says how its run goes, so only their links,
+// receipts and `@hook` lines are read there. Every event also goes to the
+// capability checks (checks/: a turn's end, a task that started).
 // Activity (any event the kind maps to something other than OTHER, so not
 // heartbeats or catalog updates) marks the agent used, which keeps a working
 // engine from being stopped to make room for another, whether or not
@@ -47,6 +53,10 @@ internal class EngineStreams(
   private val dropUrls: (agentId: String) -> Unit,
   private val inboxRead: (agentId: String, ids: List<Long>) -> Unit = { _, _ -> },
   private val runEnded: (agentId: String) -> Unit = {},
+  /** Every event of every stream, for the checks (checks/). */
+  private val checkEvent: (agentId: String, event: EngineEvent) -> Unit = { _, _ -> },
+  /** An `@hook` line: one of the kind's inbox hooks ran ([wait]: its waiting form), for the checks. */
+  private val hookRan: (agentId: String, event: String, wait: Boolean) -> Unit = { _, _, _ -> },
 ) {
   // "<agentId> <sessionId>" already counted; bounded, oldest dropped first.
   private val createdSeen = object : LinkedHashMap<String, Boolean>() {
@@ -75,25 +85,8 @@ internal class EngineStreams(
     }
     terminal.listen(events::onSignals)
     val hooks = HookMap.of(kind)
-    val sink = EventSink(
-      hooks,
-      events::raise,
-      onOpen = { url ->
-        try {
-          openUrl(agentId, url)
-        } catch (e: Exception) {
-          Log.w(TAG, "link to open not handled", e)
-        }
-      },
-      onInbox = { ids ->
-        try {
-          inboxRead(agentId, ids)
-        } catch (e: Exception) {
-          Log.w(TAG, "inbox receipt not handled", e)
-        }
-      },
-    )
-    val tail = EventFileTail(eventsFile, sink::accept).start()
+    val lines = sink(agentId, hooks, events::raise)
+    val tail = EventFileTail(eventsFile, lines::accept).start()
     // Hooks may never say a run ended (an interrupt): a quiet screen does.
     val quiet = if (hooks.isEmpty()) null else EventTimers.every(QUIET_CHECK_MS) { events.quiet(terminal.lastOutputAt) }
     return EventSource {
@@ -104,7 +97,59 @@ internal class EngineStreams(
     }
   }
 
+  /** An ACP engine's events: its driver's, and the links and receipts in [eventsFile] from now on. */
+  fun openAcp(agentId: String, acp: AcpAgent, eventsFile: File): EventSource {
+    alerts.reset(agentId)
+    acp.events = { event ->
+      try {
+        onEvent(agentId, event)
+      } catch (e: Exception) {
+        Log.w(TAG, "engine event not handled", e)
+      }
+    }
+    val lines = sink(agentId, emptyMap()) {}
+    val tail = EventFileTail(eventsFile, lines::accept).start()
+    return EventSource {
+      acp.events = null
+      tail.stop()
+      dropUrls(agentId)
+    }
+  }
+
+  // An events file's lines: names through [hooks] to [raise], links to
+  // open, inbox receipts, hooks that ran.
+  private fun sink(agentId: String, hooks: Map<String, EngineEvent.Kind>, raise: (EngineEvent.Kind) -> Unit) = EventSink(
+    hooks,
+    raise,
+    onOpen = { url ->
+      try {
+        openUrl(agentId, url)
+      } catch (e: Exception) {
+        Log.w(TAG, "link to open not handled", e)
+      }
+    },
+    onInbox = { ids ->
+      try {
+        inboxRead(agentId, ids)
+      } catch (e: Exception) {
+        Log.w(TAG, "inbox receipt not handled", e)
+      }
+    },
+    onHook = { event, wait ->
+      try {
+        hookRan(agentId, event, wait)
+      } catch (e: Exception) {
+        Log.w(TAG, "hook line not handled", e)
+      }
+    },
+  )
+
   private fun onEvent(agentId: String, event: EngineEvent) {
+    try {
+      checkEvent(agentId, event)
+    } catch (e: Exception) {
+      Log.w(TAG, "engine event not checked", e)
+    }
     if (event.sessionCreated && TelemetrySwitch.isEnabled()) countCreated(agentId, event.sessionId)
     if (event.kind != EngineEvent.Kind.OTHER || event.sessionCreated) onActivity(agentId)
     alerts.onEvent(agentId, event)

@@ -2,15 +2,22 @@ package com.phonecando.runner.messages
 
 import android.content.Context
 import android.util.Log
+import com.phonecando.runner.acp.AcpRelay
+import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.bridge.ScreenNotices
+import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.engine.acp.AcpEngines
+import com.phonecando.runner.engine.image.ImageDir
+import com.phonecando.runner.messages.delivery.AcpCourier
 import com.phonecando.runner.messages.delivery.InboxCourier
 import com.phonecando.runner.messages.delivery.InboxFolder
 import com.phonecando.runner.messages.delivery.KindInbox
-import com.phonecando.runner.engine.image.ImageDir
+import com.phonecando.runner.messages.delivery.RoutingCourier
+import com.phonecando.runner.schedule.EngineStarts
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -19,18 +26,23 @@ import java.util.concurrent.atomic.AtomicBoolean
 // what feeds it: engine starts (EngineLauncher: the inbox folder and its
 // pending set), engine statuses and chat-board changes (Engines.Listener:
 // ready hands a server its set, gone ends a woken run, the board ends
-// woken runs and hands sets again), receipts from the events files, and the
-// screen line's notices (ScreenMessages). Everything but the start runs on
-// one thread of its own, so a slow post to an engine never holds a stream
-// or the bridge's screen ticker; a burst of board changes is handled once.
+// woken runs and hands sets again), an ACP turn ending (AcpRelay: a set
+// that waits may go in now), receipts from the events files, and the
+// screen line's notices (ScreenMessages). Sets go through RoutingCourier:
+// as a prompt to an agent in ACP mode (AcpCourier), else as the kind's
+// `inbox` says (InboxCourier). Making it also sets the process's one ACP
+// listener (AcpRelay), as every engine start makes it first.
+// Everything but the start runs on one thread of its own, so a slow post
+// to an engine never holds a stream or the bridge's screen ticker; a burst
+// of board changes is handled once.
 class Messages private constructor(context: Context) {
   private val app = context.applicationContext ?: context
   val view = LiveAgentsView(app)
   private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "phonecando-messages").apply { isDaemon = true } }
   private val boardDirty = AtomicBoolean(false)
 
-  private val courier = InboxCourier(
-    plan = { agent -> KindCatalogs.get(app).get(agent.kind)?.let(KindInbox::of) },
+  private val inbox = InboxCourier(
+    plan = ::inboxPlan,
     folder = { agent ->
       if (KindCatalogs.get(app).get(agent.kind)?.inbox == null) {
         null
@@ -40,6 +52,14 @@ class Messages private constructor(context: Context) {
     },
     seat = view::serverSeat,
     onError = ::warn,
+  )
+
+  private val courier = RoutingCourier(
+    inbox = inbox,
+    acp = AcpCourier(AcpEngines::of, onError = ::warn),
+    look = view::acpLook,
+    folder = { agent -> inboxPlan(agent)?.folder == true },
+    switchToAcp = { agent -> EngineStarts(app).start(agent.id, mode = EngineMode.ACP) == null },
   )
 
   val mailbox = Mailbox(
@@ -73,7 +93,10 @@ class Messages private constructor(context: Context) {
 
   init {
     Engines.addListener(listener)
+    AcpRelay.install(app)
   }
+
+  private fun inboxPlan(agent: AgentRecord) = KindCatalogs.get(app).get(agent.kind)?.let(KindInbox::of)
 
   /** The engine of [agentId] starts (EngineLauncher.plan, on the start thread): its inbox folder and pending set. */
   fun engineStarting(agentId: String) = mailbox.engineStarting(agentId)
@@ -83,6 +106,9 @@ class Messages private constructor(context: Context) {
     val presence = view.presence(agentId)
     later { mailbox.receipt(agentId, ids, presence) }
   }
+
+  /** [agentId]'s ACP turn is over (AcpRelay): a set that waits may go in as its next prompt. */
+  fun acpIdle(agentId: String) = later { mailbox.engineReady(agentId) }
 
   /** The agent is deleted: its messages and its wake state go (its folder goes with its files, AgentFiles). */
   fun forget(agentId: String) = mailbox.forget(agentId)

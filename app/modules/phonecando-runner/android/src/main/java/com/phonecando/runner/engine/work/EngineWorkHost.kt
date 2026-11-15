@@ -5,6 +5,7 @@ import android.util.Log
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.bridge.Bridge
+import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.EngineSupervisor
 import com.phonecando.runner.notify.AppForeground
@@ -36,7 +37,8 @@ internal class EngineWorkHost(private val context: Context, private val engines:
           kept = keep.isOn(status.agentId),
           ask = asks.get(status.agentId),
           running = status.agentId in working,
-          reportsChats = kind == null || kind.manifest.events.isNotEmpty(),
+          // ACP mode reports its turns whatever the kind's events say.
+          reportsChats = kind == null || status.mode == EngineMode.ACP || kind.manifest.events.isNotEmpty(),
         )
       }
   }

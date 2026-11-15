@@ -106,4 +106,47 @@ class ScheduleStoreTest {
       ScheduleJs.of(again.newest(1).single()),
     )
   }
+
+  @Test fun runsLeftOpenByAnEarlierProcessFail() {
+    val log = File(dir, "state/schedule-runs.jsonl")
+    val runs = ScheduleRuns(StateFile(log))
+    fun add(id: String, outcome: RunOutcome, open: Boolean) = runs.add { seq ->
+      ScheduleRun(seq, id, "a1", "Builder", "task", SetBy.USER, dueAt = 1, firedAt = 2, late = false, outcome = outcome, open = open)
+    }
+    val started = add("s1", RunOutcome.STARTED, open = true)
+    val settled = add("s2", RunOutcome.WOKE, open = true)
+    val older = add("s3", RunOutcome.STARTED, open = true)
+    add("s3", RunOutcome.BUSY, open = false)
+    val failed = add("s4", RunOutcome.STARTED, open = true)
+    runs.settle(settled.seq)
+    runs.update(failed.seq, RunOutcome.FAILED, "the agent did not start")
+    // Only an open run says so, to the app too.
+    assertEquals(true, ScheduleJs.of(runs.newest(5).last())["open"])
+    assertNull(ScheduleJs.of(runs.newest(1).single())["open"])
+
+    // The process died: the next one reads them back and fails what is still open.
+    val again = ScheduleRuns(StateFile(log))
+    val closed = again.closeOpen("PhoneCanDo was closed before the task finished")
+    assertEquals(listOf(started.seq to true, older.seq to false), closed.map { (run, newest) -> run.seq to newest })
+    val bySeq = ScheduleRuns(StateFile(log)).newest(10).associateBy { it.seq }
+    assertEquals(RunOutcome.FAILED, bySeq.getValue(started.seq).outcome)
+    assertEquals("PhoneCanDo was closed before the task finished", bySeq.getValue(started.seq).detail)
+    assertEquals(RunOutcome.WOKE, bySeq.getValue(settled.seq).outcome)
+    assertEquals("the agent did not start", bySeq.getValue(failed.seq).detail)
+    assertTrue(bySeq.values.none { it.open })
+    assertTrue(again.closeOpen("x").isEmpty())
+  }
+
+  @Test fun aRunHandedToItsOwnAppStaysOpenUntilItsStartEnds() {
+    val runs = ScheduleRuns(StateFile(File(dir, "state/schedule-runs.jsonl")))
+    val run = runs.add { seq ->
+      ScheduleRun(seq, "s1", "a1", "Builder", "task", SetBy.USER, dueAt = 1, firedAt = 2, late = false, outcome = RunOutcome.STARTED, open = true)
+    }
+    // ACP mode did not start: its own app took the task, and the run goes on.
+    val moved = runs.update(run.seq, RunOutcome.STARTED, "ACP mode did not start (x), so its own app took the task", open = true)
+    assertEquals(true, moved?.open)
+    assertEquals("ACP mode did not start (x), so its own app took the task", moved?.detail)
+    runs.settle(run.seq)
+    assertTrue(runs.newest(1).none { it.open })
+  }
 }

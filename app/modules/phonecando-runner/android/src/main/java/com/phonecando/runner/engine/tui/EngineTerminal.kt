@@ -28,7 +28,10 @@ import java.util.concurrent.CountDownLatch
 // and theme reports. The terminal is focused while its viewer says it
 // shows the program (focus), so with no viewer, or one off screen, it is
 // not: a TUI that notifies only while unfocused does so whenever nobody
-// looks. Answers due before the PTY is bound go out at bind.
+// looks. Answers due before the PTY is bound go out at bind. hasViewer
+// says whether someone looks now: a viewer that shows it (a viewer left
+// attached by an app gone to the background, or a JS reload that never
+// detached, does not count).
 // Pure apart from the HostedPty it is bound to.
 internal class EngineTerminal(
   rows: Int,
@@ -43,6 +46,9 @@ internal class EngineTerminal(
   private val exited = CountDownLatch(1)
   private var size = Size(rows, cols)
   private var viewer: String? = null
+
+  // The viewer shows the program (focus); a new viewer counts as showing it until it says.
+  private var shown = false
   private val queue = ByteQueue()
   private var ended = false
 
@@ -63,6 +69,9 @@ internal class EngineTerminal(
   /** Epoch ms of a viewer's first write (the user's first input); null before it. Job detection reads it (engine/work/). */
   @Volatile var firstInputAt: Long? = null
     private set
+
+  /** A viewer is attached and shows the program (on screen, the app in front): someone looks at it now. */
+  val hasViewer: Boolean get() = synchronized(lock) { viewer != null && shown }
 
   /** The window title the program last set (OSC 0/2); null before it set one. */
   @Volatile var windowTitle: String? = null
@@ -131,6 +140,7 @@ internal class EngineTerminal(
   fun attach(viewerId: String): Size = synchronized(lock) {
     if (ended) throw TerminalViewException(TerminalViewException.NOT_RUNNING, "the engine has ended")
     viewer = viewerId
+    shown = true
     queue.clear()
     queue.add(ring.replay())
     size
@@ -168,7 +178,10 @@ internal class EngineTerminal(
   /** Whether [viewerId] shows the program now; from a viewer that is not the current one, or after the end, nothing. */
   fun focus(viewerId: String, shown: Boolean) {
     synchronized(answerLock) {
-      if (!holds(viewerId)) return
+      synchronized(lock) {
+        if (viewer != viewerId) return
+        this.shown = shown
+      }
       answer(replies.focus(shown))
     }
   }
@@ -184,6 +197,7 @@ internal class EngineTerminal(
       synchronized(lock) {
         if (viewer != viewerId) return
         viewer = null
+        shown = false
         queue.clear()
       }
       answer(replies.focus(false))

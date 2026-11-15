@@ -1,5 +1,7 @@
 package com.phonecando.runner.messages
 
+import com.phonecando.runner.agents.AgentRecord
+import com.phonecando.runner.messages.delivery.Courier
 import com.phonecando.runner.messages.delivery.Handover
 import org.json.JSONObject
 import org.junit.After
@@ -217,6 +219,24 @@ class MailboxTest {
     assertEquals(5, box.policy.wakesLeft("c"))
   }
 
+  @Test fun aSwitchToAcpModeKeepsItQueuedAndSaysItWakes() {
+    courier.answers["b"] = Handover.SWITCHING
+    val sent = box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    assertEquals(SendStatus.WOKEN, sent.results.single().status)
+    assertEquals(1, box.unread("b"))
+    assertEquals(MessageRules.WAKES_PER_HOUR, box.policy.wakesLeft("b"))
+    // Ready in ACP mode: the prompt takes it, and that is the wake.
+    courier.answers["b"] = Handover.WOKE
+    box.engineReady("b")
+    assertEquals(0, box.unread("b"))
+    assertTrue(box.recent(1).single().deliveryTo("b")!!.woke)
+    assertEquals(MessageRules.WAKES_PER_HOUR - 1, box.policy.wakesLeft("b"))
+    // A scheduled task's notice to an agent that switches counts as woken.
+    courier.answers["b"] = Handover.SWITCHING
+    val task = ScheduledNote("s1", ScheduledNote.BY_USER, newChat = false, timing = "daily at 09:00")
+    assertTrue(box.notice("b", "deploy", wake = true, scheduled = task)!!.woke)
+  }
+
   @Test fun aClaimedSetIsDeliveredAndLeftOut() {
     box.send(a, "Tester", "one", replyTo = null, wake = false)
     courier.claims["b"] = setOf(1L)
@@ -268,6 +288,31 @@ class MailboxTest {
     assertNull(parcel.newChat)
     assertTrue(parcel.text.contains("Scheduled task from the user (once at 2026-11-14 09:00): deploy"))
     assertNull(box.notice("nobody", "x"))
+  }
+
+  @Test fun aNoticeAnotherHandOverTookFirstSaysItWoke() {
+    // The messages thread (an ACP turn ended) hands the set over between
+    // the notice going in the log and the notice's own hand-over, which
+    // then finds nothing unread.
+    courier.answers["b"] = Handover.WOKE
+    lateinit var racing: Mailbox
+    var raced = false
+    val first = object : Courier by courier {
+      override fun claimed(agent: AgentRecord): Set<Long> {
+        if (!raced) {
+          raced = true
+          racing.engineReady(agent.id)
+        }
+        return courier.claimed(agent)
+      }
+    }
+    racing = Mailbox(MessageLog(MessageStore(file), { now }), view, first, { now })
+    val task = ScheduledNote("s1", ScheduledNote.BY_USER, newChat = false, timing = "once at 2026-11-14 09:00")
+    val noticed = racing.notice("b", "deploy", wake = true, scheduled = task)!!
+    assertEquals(1, courier.handed.size)
+    assertEquals(Handover.WOKE, noticed.handover)
+    assertTrue(noticed.woke)
+    assertTrue(racing.recent(1).single().deliveryTo("b")!!.woke)
   }
 
   @Test fun aDeletedAgentsMessagesGoAndTheLogKeepsWhatItSent() {

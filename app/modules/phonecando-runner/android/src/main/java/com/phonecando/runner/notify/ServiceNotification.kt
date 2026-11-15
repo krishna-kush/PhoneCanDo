@@ -6,21 +6,26 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import com.phonecando.runner.R
+import com.phonecando.runner.engine.work.WorkWatch
 
-// The foreground service's one notification, there only while something
-// happens: the chats the agents are busy with, one line each, the chat,
-// then its agent, then its state (ChatBoard), then the agents kept up by a
+// The foreground service's one notification, there while anything of ours
+// runs: the chats the agents are busy with, one line each, the chat,
+// then its agent, then its state (ChatBoard), then the agents stopping
+// (under a running progress bar), then the agents kept up by a
 // job they left running or are starting, by Keep running or at work
-// unseen (WorkLines, each with a Stop button for the first MAX_STOPS),
+// unseen (WorkLines; Stop buttons for each job alone and for the agent
+// with all of it, MAX_ACTIONS at most, as Android shows no more),
 // then the agents starting, then a model server reading a prompt
 // (ReadingLines), then the model downloads and imports running
-// (TransferLines), then the Linux jobs (LinuxJobLines). An engine that
-// only runs never shows: with nothing to list there is no notification
-// (build gives null) and the service leaves the foreground. Chat titles,
-// jobs and model, system and agent names stay off the lock screen: the
-// public version only counts. Tapping opens the app; on that agent's Home
-// when every chat listed belongs to one agent (or, with none, one engine
-// runs).
+// (TransferLines), then the Linux jobs (LinuxJobLines). Engines that only
+// run get one quiet line with no buttons (ReadyLines): away from the app,
+// Android stops a service out of the foreground about a minute later, and
+// the agents with it. Only with nothing running at all is there no
+// notification (build gives null) and the service leaves the foreground.
+// Chat titles, jobs and model, system and agent names stay off the lock
+// screen: the public version only counts. Tapping opens the app; on that
+// agent's Home when every chat listed belongs to one agent (or, with none,
+// one engine runs).
 internal class ServiceNotification(private val context: Context) {
   fun createChannel() {
     context.getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -34,7 +39,13 @@ internal class ServiceNotification(private val context: Context) {
    * line while a model server reads a prompt; [linuxJobs]: LinuxJobLines of
    * the Linux jobs; [work]: WorkLines of the agents kept up; [starting]: the
    * names of the agents whose engines start; [stop]: the intent that stops
-   * one of those agents. Null when there is nothing to list.
+   * one of those agents; [stopping]: the ids of the agents a Stop was asked
+   * of whose engines still run, each a "Stopping …" line in place of its
+   * job's, with no Stop button, under a running progress bar, so a stop
+   * that takes a few seconds never looks hung; [stopJob]: the intent that
+   * stops one job alone; [endingJobs]: the names of the jobs being
+   * stopped, a "Stopping …" line each under the same bar. With none of
+   * that, the agents in [running] as ready; null when nothing runs.
    */
   fun build(
     chats: List<ChatBoard.Chat>,
@@ -46,21 +57,27 @@ internal class ServiceNotification(private val context: Context) {
     work: List<WorkLines.Line> = emptyList(),
     starting: List<String> = emptyList(),
     stop: (String) -> PendingIntent? = { null },
+    stopping: Collection<String> = emptyList(),
+    stopJob: (String, WorkWatch.Job) -> PendingIntent? = { _, _ -> null },
+    endingJobs: List<String> = emptyList(),
   ): Notification? {
-    val extra = work.map { it.text } + starting.map { "Starting $it" } + listOfNotNull(reading) + transfers + linuxJobs
-    if (chats.isEmpty() && extra.isEmpty()) return null
+    val kept = work.filter { it.agentId !in stopping }
+    val ending = stopping.map { "Stopping ${names[it] ?: it}…" } + endingJobs.map { "Stopping $it…" }
+    val extra = ending + kept.map { it.text } + starting.map { "Starting $it" } + listOfNotNull(reading) + transfers + linuxJobs
+    if (chats.isEmpty() && extra.isEmpty() && running.isEmpty()) return null
     val agent = chats.map { it.agentId }.distinct().singleOrNull()
       ?: running.singleOrNull()?.takeIf { chats.isEmpty() }
     val tap = agent?.let { LaunchTargets.tap(context, LaunchTarget("home", it)) } ?: launchIntent()
+    if (chats.isEmpty() && extra.isEmpty()) return ready(running.map { names[it] ?: it }, tap)
     val counts = listOf(
-      summary(chats), WorkLines.count(work), startingCount(starting), if (reading != null) READING else "",
-      transferCount(transfers), linuxCount(linuxJobs),
+      summary(chats), stoppingCount(ending), WorkLines.count(kept), startingCount(starting),
+      if (reading != null) READING else "", transferCount(transfers), linuxCount(linuxJobs),
     )
     val summary = counts.filter { it.isNotEmpty() }.joinToString(" · ")
     val builder = base(tap)
-    for (line in work.take(MAX_STOPS)) {
-      val intent = stop(line.agentId) ?: continue
-      builder.addAction(Notification.Action.Builder(null, "Stop ${line.name}", intent).build())
+    if (ending.isNotEmpty()) builder.setProgress(0, 0, true)
+    for ((label, intent) in stops(kept, stop, stopJob).take(MAX_ACTIONS)) {
+      builder.addAction(Notification.Action.Builder(null, label, intent).build())
     }
     when {
       chats.isEmpty() && extra.size == 1 -> builder.setContentTitle("PhoneCanDo").setContentText(extra[0])
@@ -85,13 +102,42 @@ internal class ServiceNotification(private val context: Context) {
     return builder.setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(public).build()
   }
 
+  // Engines run and nothing else lists: one quiet line ("Claude Code,
+  // opencode ready"), no buttons; the lock screen gets the count.
+  private fun ready(agents: List<String>, tap: PendingIntent?): Notification {
+    val public = base(tap).setContentTitle("PhoneCanDo").setContentText(ReadyLines.count(agents.size)).build()
+    return base(tap).setContentTitle("PhoneCanDo").setContentText(ReadyLines.of(agents))
+      .setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(public).build()
+  }
+
   /**
-   * What startForeground shows when there is nothing to list: Android
-   * wants one for every start of the service, which then leaves the
-   * foreground at once. Android 12 and later hold a new foreground
-   * service's notification back for some seconds, so it is not seen.
+   * What startForeground shows when nothing runs (yet): Android wants one
+   * for every start of the service, which then leaves the foreground at
+   * once. Android 12 and later hold a new foreground service's
+   * notification back for some seconds, so it is not seen.
    */
   fun quiet(): Notification = base(launchIntent()).setContentTitle("PhoneCanDo").build()
+
+  /**
+   * What the notification shows once nothing is left running, for the few
+   * seconds the service stays before it goes ("opencode stopped"), in
+   * place of the last lines and their Stop buttons.
+   */
+  fun done(text: String): Notification = base(launchIntent()).setContentTitle("PhoneCanDo").setContentText(text).build()
+
+  // The Stop buttons, line by line: each of its jobs alone ("Stop python3
+  // -m http.server"), then the agent with all of it ("Stop opencode").
+  private fun stops(
+    lines: List<WorkLines.Line>,
+    stop: (String) -> PendingIntent?,
+    stopJob: (String, WorkWatch.Job) -> PendingIntent?,
+  ): List<Pair<String, PendingIntent>> = lines.flatMap { line ->
+    line.jobs.mapNotNull { job -> stopJob(line.agentId, job)?.let { "Stop ${job.name}" to it } } +
+      listOfNotNull(stop(line.agentId)?.let { "Stop ${line.name}" to it })
+  }
+
+  // "1 stopping": no names.
+  private fun stoppingCount(stopping: List<String>): String = if (stopping.isEmpty()) "" else "${stopping.size} stopping"
 
   // "1 agent starting": no names.
   private fun startingCount(starting: List<String>): String = when (starting.size) {
@@ -149,6 +195,6 @@ internal class ServiceNotification(private val context: Context) {
     private const val MAX_LINES = 5
 
     // Stop buttons for the agents kept up; Android shows three actions at most.
-    private const val MAX_STOPS = 2
+    private const val MAX_ACTIONS = 3
   }
 }

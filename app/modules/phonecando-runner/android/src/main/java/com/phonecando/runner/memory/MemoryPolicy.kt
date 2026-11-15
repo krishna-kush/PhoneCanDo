@@ -11,7 +11,8 @@ import com.phonecando.runner.memory.MemoryRules.WARN_PERCENT
 
 // What the memory guard decides, one look at a time: how close the phone
 // is to running out (a MemoryLevel, with hysteresis on the way back to
-// ok), when the runner stops an agent by itself, and which one. An episode
+// ok) and when the runner stops an agent by itself (which one is
+// MemoryVictims). An episode
 // runs from leaving ok until back at ok; the countdown, the settling after
 // a stop and the count of stops belong to it. The numbers are MemoryRules;
 // MemoryGuard feeds it readings and does the stopping. Pure.
@@ -23,6 +24,9 @@ object MemoryPolicy {
     val warn = maxOf(r.totalBytes * WARN_PERCENT / 100, r.thresholdBytes + WARN_MARGIN)
     return Lines(warn, r.thresholdBytes + CRITICAL_MARGIN, warn + r.totalBytes * OK_HYSTERESIS_PERCENT / 100)
   }
+
+  /** What [r] is short of being ok again (the hysteresis included); 0 when it is not short. */
+  fun short(r: MemoryReading): Long = (lines(r).okFrom - r.availBytes).coerceAtLeast(0)
 
   /** The level of [r], coming from [previous]: leaving warn or critical takes the hysteresis. */
   fun level(r: MemoryReading, previous: MemoryLevel): MemoryLevel {
@@ -51,10 +55,10 @@ object MemoryPolicy {
     val stopAt: Long? get() = warnStopAt?.let { w -> minOf(w, criticalStopAt ?: w) }
   }
 
-  /** The next state, and whether to stop the agent victim() picked now (the state then settles). */
+  /** The next state, and whether to stop the agent MemoryVictims.victim picked now (the state then settles). */
   data class Step(val state: State, val stop: Boolean)
 
-  /** One look: [level] now (level()); [canStop]: victim() found an agent. */
+  /** One look: [level] now (level()); [canStop]: MemoryVictims.victim found an agent. */
   fun step(state: State, level: MemoryLevel, canStop: Boolean, now: Long): Step {
     if (level == MemoryLevel.OK) return Step(State(), false)
     var s = state.copy(level = level)
@@ -72,22 +76,4 @@ object MemoryPolicy {
 
   /** Nothing of ours runs any more: no countdown; the level and the episode stay until the next look. */
   fun idle(state: State): State = state.copy(warnStopAt = null, criticalStopAt = null, settleUntil = null)
-
-  /**
-   * An engine starting or ready. [working]: a run is going (its kind's idle
-   * rule says it is not idle); [busy]: it left a job running (a dev server,
-   * a download) or the user keeps it running.
-   */
-  data class Candidate(val agentId: String, val working: Boolean, val lastUsedAt: Long?, val busy: Boolean = false)
-
-  /**
-   * The agent to stop next: never [keep] (the one open on screen while the
-   * app is in front); agents with no run going first, and of those the ones
-   * with no job left, least recently used first; then working ones the same
-   * way. Null: none may be stopped.
-   */
-  fun victim(agents: List<Candidate>, keep: String?): String? =
-    agents.filter { it.agentId != keep }
-      .minWithOrNull(compareBy<Candidate>({ it.working }, { it.busy }, { it.lastUsedAt ?: 0L }, { it.agentId }))
-      ?.agentId
 }

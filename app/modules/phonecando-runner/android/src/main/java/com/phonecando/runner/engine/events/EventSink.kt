@@ -6,19 +6,21 @@ import com.phonecando.agents.kit.EngineEvent
 // kind's hook map (`events[].hook.map`, name to working, waiting, finished,
 // failed or stopped) lists raises that engine event; `@open` hands its link
 // on to the open_url prompt, which checks it (prompts/OpenUrl); `@inbox`
-// hands the message ids on as read (messages/). Anything else is dropped.
-// Pure.
+// hands the message ids on as read (messages/); `@hook` says an inbox hook
+// ran (checks/). Anything else is dropped. Pure.
 internal class EventSink(
   private val map: Map<String, EngineEvent.Kind>,
   private val onEvent: (EngineEvent.Kind) -> Unit,
   private val onOpen: (url: String) -> Unit,
   private val onInbox: (ids: List<Long>) -> Unit = {},
+  private val onHook: (event: String, wait: Boolean) -> Unit = { _, _ -> },
 ) {
   fun accept(line: String) {
     when (val parsed = EventLine.parse(line)) {
       is EventLine.Named -> map[parsed.name]?.let(onEvent)
       is EventLine.Open -> onOpen(parsed.url)
       is EventLine.Inbox -> onInbox(parsed.ids)
+      is EventLine.Hook -> onHook(parsed.event, parsed.wait)
       null -> {}
     }
   }

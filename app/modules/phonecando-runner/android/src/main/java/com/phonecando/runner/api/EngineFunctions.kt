@@ -7,11 +7,13 @@ import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.runner.PhoneCanDoServeService
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
+import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.EngineRequests
 import com.phonecando.runner.engine.EngineStartError
 import com.phonecando.runner.engine.EngineStartException
 import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.Engines
+import com.phonecando.runner.engine.tui.HomeStarts
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
 import kotlin.concurrent.thread
@@ -21,17 +23,35 @@ import kotlin.concurrent.thread
 // queue is one thread shared by every module, and a stop can take 3 s.
 internal fun ModuleDefinitionBuilder.engineFunctions(context: () -> Context) {
   // Resolves { port } once the service launched the process and a server
-  // engine's port is known (EngineSupervisor.start); a TUI engine has no
-  // port (null). An engine already starting or ready, of either style,
-  // resolves at once and is only marked used. Rejects with the
-  // EngineStartError code as the error code and at the start of the message.
-  AsyncFunction("startEngine") { agentId: String, promise: Promise ->
+  // engine's port is known (EngineSupervisor.start); a TUI engine, or one
+  // in ACP mode, has no port (null). [mode]: "terminal" (also when left
+  // out) or "acp" (EngineMode). An engine already starting or ready in that
+  // mode, of either style, resolves at once and is only marked used. One
+  // running in the other mode is switched (stopped, then started in this
+  // one) unless ModeSwitch refuses, which rejects at once: acp_busy or
+  // terminal_in_use. Rejects with the EngineStartError code as the error
+  // code and at the start of the message. A terminal start the app asks
+  // for counts as watched until its view attaches (HomeStarts).
+  AsyncFunction("startEngine") { agentId: String, mode: String?, promise: Promise ->
+    val want = EngineMode.of(mode)
+    if (want == null) {
+      rejectStart(promise, EngineStartException(EngineStartError.START_FAILED, "no such mode: $mode"))
+      return@AsyncFunction
+    }
     val ctx = context()
     val engines = Engines.get(ctx)
-    if (engines.isLive(agentId)) {
+    if (engines.isLive(agentId, want)) {
+      if (want == EngineMode.TERMINAL && !engines.hasViewer(agentId)) HomeStarts.asked(agentId)
       engines.touch(agentId)
       promise.resolve(mapOf("port" to engines.livePort(agentId)?.toString()))
+      return@AsyncFunction
+    }
+    // Live in the other mode: whether it may switch now, so a refusal comes back at once.
+    val refused = engines.switchRefusal(agentId, want)
+    if (refused != null) {
+      rejectStart(promise, refused)
     } else {
+      if (want == EngineMode.TERMINAL) HomeStarts.asked(agentId)
       val requestId = EngineRequests.register { result ->
         result.fold(
           onSuccess = { promise.resolve(mapOf("port" to it?.toString())) },
@@ -44,6 +64,7 @@ internal fun ModuleDefinitionBuilder.engineFunctions(context: () -> Context) {
         .putExtra(PhoneCanDoServeService.EXTRA_REQUEST_ID, requestId)
         // Boot time (telemetry) runs from this request.
         .putExtra(PhoneCanDoServeService.EXTRA_REQUESTED_AT, SystemClock.elapsedRealtime())
+      if (want != EngineMode.TERMINAL) intent.putExtra(PhoneCanDoServeService.EXTRA_MODE, want.wire)
       try {
         ctx.startForegroundService(intent)
       } catch (e: Exception) {

@@ -4,6 +4,7 @@ import com.phonecando.agents.kit.term.ScreenRing
 import com.phonecando.agents.kit.term.Signal
 import com.phonecando.agents.kit.term.TermTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -146,6 +147,24 @@ class EngineTerminalTest {
     t.focus("v2", true)
     t.detach("v2")
     assertEquals(listOf("\u001b[O", "\u001b[I", "\u001b[O"), pty.written)
+  }
+
+  @Test fun someoneLooksOnlyWhileAViewerShowsIt() {
+    val t = terminal()
+    assertFalse(t.hasViewer)
+    t.attach("v1")
+    // A fresh viewer counts as looking until it says.
+    assertTrue(t.hasViewer)
+    t.focus("v1", false)
+    assertFalse("attached in an app gone to the background", t.hasViewer)
+    t.focus("v1", true)
+    assertTrue(t.hasViewer)
+    // Only the current viewer's word counts.
+    t.attach("v2")
+    t.focus("v1", false)
+    assertTrue(t.hasViewer)
+    t.detach("v2")
+    assertFalse(t.hasViewer)
   }
 
   @Test fun noViewerMeansUnfocused() {

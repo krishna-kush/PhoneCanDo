@@ -20,7 +20,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 // Run now and engine changes run on one thread of its own, so a restart's
 // stop (up to ~3 s) never holds a broadcast thread or the bridge; engine
 // statuses are read on the thread that changed them (Firing.onStatus), a
-// burst of engine changes is decided once.
+// burst of engine changes is decided once. An ACP turn's end comes on the
+// same thread, after the firing that began it.
 class Schedules private constructor(context: Context) {
   private val app = context.applicationContext ?: context
   private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "phonecando-schedules").apply { isDaemon = true } }
@@ -71,6 +72,11 @@ class Schedules private constructor(context: Context) {
     return null
   }
 
+  /** An ACP turn of [agentId] ended (acp/AcpRelay): a task's run fails when it ended badly. */
+  fun acpTurnEnded(agentId: String, stopReason: String?, error: String?) = later({}) {
+    firing.onAcpTurnEnd(agentId, stopReason, error)
+  }
+
   /** Exact alarms are allowed ("Alarms & reminders"). */
   fun exactAlarms(): Boolean = alarms.exact()
 
@@ -92,7 +98,7 @@ class Schedules private constructor(context: Context) {
     val label = KindCatalogs.get(app).get(agent.kind)?.displayName ?: agent.kind
     return ScheduleBook.Result.Refused(
       ScheduleBook.UNSUPPORTED,
-      "$label cannot run scheduled tasks: it neither starts with a prompt nor can be woken",
+      "$label cannot run scheduled tasks: it neither starts with a prompt nor can be woken, and has no ACP mode",
     )
   }
 

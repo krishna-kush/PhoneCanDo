@@ -4,6 +4,7 @@ import android.util.Log
 import com.phonecando.runner.TelemetryRecorder
 import com.phonecando.runner.agents.AgentDirectory
 import com.phonecando.runner.bridge.mcp.McpTool
+import com.phonecando.runner.checks.Checks
 import fi.iki.elonen.NanoHTTPD
 import java.io.IOException
 
@@ -12,7 +13,8 @@ import java.io.IOException
 // the HTTP framing, bound to 127.0.0.1 only (nothing on the network/LAN can
 // reach it). Every request needs the bearer token its engine got at launch;
 // the token names the calling agent, and BridgeEntry decides the rest (the
-// HTTP routes through BridgeRouter, MCP at /mcp).
+// HTTP routes through BridgeRouter, MCP at /mcp). Each authenticated call
+// is also the capability checks' bridge contact (checks/: S1).
 class BridgeServer private constructor(
   port: Int,
   agents: AgentDirectory,
@@ -22,7 +24,18 @@ class BridgeServer private constructor(
   onCall: (agentId: String) -> Unit,
   unread: (agentId: String) -> Int,
 ) : NanoHTTPD("127.0.0.1", port) {
-  private val entry = BridgeEntry(agents, router, tools, serverVersion, onCall, unread, ::countToolCall)
+  private val entry = BridgeEntry(
+    agents,
+    router,
+    tools,
+    serverVersion,
+    onCall = { agentId ->
+      Checks.bridgeCall(agentId)
+      onCall(agentId)
+    },
+    unread = unread,
+    onRoute = ::countToolCall,
+  )
 
   override fun serve(session: IHTTPSession): Response {
     val method = session.method.name

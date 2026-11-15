@@ -17,6 +17,11 @@ class ModelSlotPolicyTest {
     assertEquals(Decision.Reuse, ModelSlotPolicy.decide(Wanted(alive = true, ready = true, heldByOthers = true), 4, 1))
   }
 
+  @Test fun aHoldKeptAcrossAModeSwitchIsJoinedAgain() {
+    // The agent's own lease is no other holder: the engine in the new mode joins, at the cap too.
+    assertEquals(Decision.Reuse, ModelSlotPolicy.decide(Wanted(alive = true, ready = true, heldByOthers = false), 1, 1))
+  }
+
   @Test fun anotherModelLoadedIsNoReasonToRefuse() {
     assertEquals(Decision.Start, ModelSlotPolicy.decide(null, 3, null))
   }

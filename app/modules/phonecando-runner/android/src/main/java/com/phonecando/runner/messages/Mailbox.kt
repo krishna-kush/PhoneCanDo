@@ -19,8 +19,9 @@ import java.util.concurrent.TimeUnit
 //   notice.
 // - deliver: an agent's oldest unread, as many as fit one hand-over
 //   (Parcels), to the Courier, one agent at a time (a gate per agent):
-//   posted (delivered), woken (delivered, woke) or held in its inbox folder
-//   (still unread). The parcel may wake the agent when one of its unread
+//   posted (delivered), woken (delivered, woke: also an ACP prompt), held
+//   in its inbox folder, or waiting for its engine's switch to ACP mode
+//   (both still unread). The parcel may wake the agent when one of its unread
 //   messages passes MessagePolicy.wakeRefusal. Again on
 //   every engine start, chat-board change (a server's chat showed up; an
 //   agent went idle, so a wake may apply now), read and receipt.
@@ -44,7 +45,12 @@ class Mailbox(
 ) {
   data class SendResult(val id: Long?, val results: List<Sent>)
 
-  /** How a notice went: [woke] its server took the wake call, or its hook or reader has a set that wakes it. */
+  /**
+   * How a notice went: [woke] its server took the wake call or it went in
+   * as an ACP prompt (ours, or another hand-over that took it first), its
+   * hook or reader has a set that wakes it, or its engine switches to ACP
+   * mode to take it.
+   */
   data class Noticed(val handover: Handover, val woke: Boolean)
 
   /** Messages taken from an inbox (now read), and whether more are unread. */
@@ -143,11 +149,20 @@ class Mailbox(
    */
   fun notice(agentId: String, text: String, wake: Boolean = false, scheduled: ScheduledNote? = null): Noticed? {
     val agent = agents.get(agentId) ?: return null
-    log.add { id -> noticeTo(id, agent, MessageText.clean(text), wake, scheduled) }
+    val notice = log.add { id -> noticeTo(id, agent, MessageText.clean(text), wake, scheduled) }
     capUnread(agent)
     val out = deliver(agentId)
     changed()
-    val woke = out.handover == Handover.WOKE || (out.handover == Handover.HELD && out.parcel?.wake == true)
+    // Another hand-over (the messages thread, as an ACP turn ended) may
+    // have taken it between the log and ours, which then found nothing:
+    // its own delivery says how it went.
+    val mine = log.get(notice.id)?.deliveryTo(agentId)
+    val taken = mine?.status == DeliveryStatus.DELIVERED || mine?.status == DeliveryStatus.READ
+    if (mine != null && taken && out.parcel?.ids?.contains(notice.id) != true) {
+      return Noticed(if (mine.woke) Handover.WOKE else Handover.POSTED, mine.woke)
+    }
+    val waking = out.handover == Handover.HELD || out.handover == Handover.SWITCHING
+    val woke = out.handover == Handover.WOKE || (waking && out.parcel?.wake == true)
     return Noticed(out.handover, woke)
   }
 
@@ -271,7 +286,7 @@ class Mailbox(
           }
         }
         Handover.HELD -> parcels[agentId] = parcel
-        Handover.NONE -> parcels.remove(agentId)
+        Handover.SWITCHING, Handover.NONE -> parcels.remove(agentId)
       }
       return Outcome(handover, presence, parcel)
     }

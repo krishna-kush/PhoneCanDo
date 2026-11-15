@@ -55,7 +55,8 @@ class TuiEventsTest {
     now += TuiEvents.QUIET_MS
     events.quiet(now - TuiEvents.QUIET_MS)
     events.quiet(now - TuiEvents.QUIET_MS)
-    assertEquals(listOf(EngineEvent(Kind.WORKING, TuiEvents.SESSION), EngineEvent(Kind.STOPPED, TuiEvents.SESSION)), seen)
+    // Stopped by a guess, so what must not guess (the checks) can skip it.
+    assertEquals(listOf(EngineEvent(Kind.WORKING, TuiEvents.SESSION), EngineEvent(Kind.STOPPED, TuiEvents.SESSION, guessed = true)), seen)
     // A run that finished stays finished.
     seen.clear()
     events.raise(Kind.FINISHED)

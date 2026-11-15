@@ -6,6 +6,8 @@ import org.json.JSONObject
 // oldest first, the newest RUNS_KEPT kept. Held in memory and written whole
 // (StateFile) on every change; a run's outcome can change after it was
 // logged (a start that failed). seq goes on from the highest in the file.
+// A run left open (ScheduleRun.open) by an earlier process was cut off with
+// it: closeOpen fails it.
 // A deleted agent's runs stay, under the name it had. Thread-safe; pure
 // apart from the file.
 class ScheduleRuns(
@@ -40,14 +42,39 @@ class ScheduleRuns(
     return run
   }
 
-  /** The run [seq] came to [outcome] after all; null when it is no longer kept. */
+  /** The run [seq] came to [outcome] after all (no longer open unless [open]); null when it is no longer kept. */
   @Synchronized
-  fun update(seq: Long, outcome: RunOutcome, detail: String?): ScheduleRun? {
+  fun update(seq: Long, outcome: RunOutcome, detail: String?, open: Boolean = false): ScheduleRun? {
     val i = runs.indexOfFirst { it.seq == seq }
     if (i < 0) return null
-    runs[i] = runs[i].copy(outcome = outcome, detail = detail)
+    runs[i] = runs[i].copy(outcome = outcome, detail = detail, open = open)
     save()
     return runs[i]
+  }
+
+  /** The start or turn the run [seq] began is over: its outcome stands. */
+  @Synchronized
+  fun settle(seq: Long) {
+    val i = runs.indexOfFirst { it.seq == seq }
+    if (i < 0 || !runs[i].open) return
+    runs[i] = runs[i].copy(open = false)
+    save()
+  }
+
+  /**
+   * Every run still open, failed with [detail]: on a process's first look
+   * they were an earlier process's, cut off with it. The runs closed, each
+   * with whether it is still its schedule's newest.
+   */
+  @Synchronized
+  fun closeOpen(detail: String): List<Pair<ScheduleRun, Boolean>> {
+    val closed = runs.indices.filter { runs[it].open }.map { i ->
+      runs[i] = runs[i].copy(outcome = RunOutcome.FAILED, detail = detail, open = false)
+      runs[i]
+    }
+    if (closed.isEmpty()) return emptyList()
+    save()
+    return closed.map { run -> run to (runs.last { it.scheduleId == run.scheduleId }.seq == run.seq) }
   }
 
   /** The newest [limit], newest first. */

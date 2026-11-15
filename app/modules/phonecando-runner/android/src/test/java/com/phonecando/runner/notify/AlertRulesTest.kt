@@ -71,6 +71,31 @@ class AlertRulesTest {
     assertEquals(Alert.WAITING, on("a", Kind.WAITING, "s1"))
   }
 
+  @Test fun anAnsweredWaitIsOver() {
+    assertEquals(Alert.WAITING, on("a", Kind.WAITING, "s1"))
+    // Answered (permission.replied, or an ACP answer): its notice goes, nothing new posts.
+    assertEquals(AlertRules.Due(null, post = false, waitOver = true), due("a", Kind.WORKING, "s1"))
+    // Once, and only for the session that waited.
+    assertNull(due("a", Kind.WORKING, "s1"))
+    on("a", Kind.WAITING, "s2")
+    assertNull(due("a", Kind.WORKING, "s1"))
+    // A verdict right after the wait posts in its place.
+    assertEquals(AlertRules.Due(Alert.FINISHED, post = true, waitOver = true), due("a", Kind.FINISHED, "s2"))
+  }
+
+  @Test fun aWaitIsOverWhenItsRunStopsOrGoes() {
+    on("a", Kind.WAITING, "s1")
+    assertEquals(true, due("a", Kind.STOPPED, "s1")?.waitOver)
+    assertEquals(Alert.WAITING, on("a", Kind.WAITING, "s1"))
+    assertEquals(true, due("a", Kind.GONE, "s1")?.waitOver)
+    on("a", Kind.WAITING, "s1")
+    // A title, say: still waiting.
+    assertNull(due("a", Kind.OTHER, "s1"))
+    // In front, the verdict does not post: the wait's notice still goes.
+    inFront = true
+    assertEquals(AlertRules.Due(Alert.FAILED, post = false, waitOver = true), due("a", Kind.FAILED, "s1"))
+  }
+
   @Test fun inFrontNothingPostsAndTheAlertCountsAsGiven() {
     inFront = true
     assertNull(on("a", Kind.FINISHED, "s1"))

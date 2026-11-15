@@ -1,5 +1,6 @@
 package com.phonecando.runner.engine
 
+import com.phonecando.runner.engine.acp.AcpAgent
 import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.tui.EngineTerminal
 
@@ -33,8 +34,14 @@ internal class EngineSlot(val agentId: String) {
   /** What the running process was launched with; volatile, as the bridge reads its kind without the lock. */
   @Volatile var plan: LaunchPlan? = null
 
-  /** A TUI engine's terminal, which viewers attach to; null for a server engine. */
+  /** A TUI engine's terminal, which viewers attach to; null for a server engine or ACP mode. */
   @Volatile var terminal: EngineTerminal? = null
+
+  /** How it runs, or last ran (EngineMode); set at each start. */
+  @Volatile var mode = EngineMode.TERMINAL
+
+  /** Its ACP driver while it runs in ACP mode; null otherwise. */
+  @Volatile var acp: AcpAgent? = null
 
   /** Relaunches on a fresh port after a 401 during this start (EngineWatch). */
   var squatRelaunches = 0
@@ -51,5 +58,14 @@ internal class EngineSlot(val agentId: String) {
     port = port?.takeIf { state == EngineState.STARTING || state == EngineState.READY }?.toString(),
     error = error,
     lastUsedAt = usedAt(),
+    mode = mode,
+    busy = acpBusy(),
   )
+
+  // In ACP mode it is busy from its start (it starts only for work) until
+  // that work's turn ends (AcpAgent.busy).
+  private fun acpBusy(): Boolean {
+    if (mode != EngineMode.ACP) return false
+    return state == EngineState.STARTING || (state == EngineState.READY && acp?.busy == true)
+  }
 }

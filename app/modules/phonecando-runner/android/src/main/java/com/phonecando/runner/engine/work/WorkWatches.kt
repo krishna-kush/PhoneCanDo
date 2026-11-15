@@ -11,6 +11,7 @@ import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.EngineSupervisor
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.proc.DetailScanner
+import com.phonecando.runner.engine.proc.OsSignals
 import com.phonecando.runner.engine.proc.ProcFields
 import java.io.File
 
@@ -28,6 +29,9 @@ internal object WorkWatches {
     val uid = Process.myUid()
     val pid = Process.myPid()
     checkClock(hz)
+    // A Stop of one job runs on its own thread: a scanner of its own.
+    val jobScanner = DetailScanner(hz = hz, sinceBoot = SystemClock::elapsedRealtime)
+    val jobEnd = JobEnd(scan = { jobScanner.scan(uid, pid) }, signals = OsSignals)
     val watch = WorkWatch(
       host = EngineWorkHost(context, engines),
       scan = { scanner.scan(uid, pid) },
@@ -35,12 +39,19 @@ internal object WorkWatches {
       onLook = onLook,
       log = { Log.i(TAG, it) },
       onError = { Log.w(TAG, "work look failed", it) },
+      endJob = { job ->
+        Log.i(TAG, "[phonecando-work] ${job.agentId} stop of job ${job.pid} from the notification")
+        jobEnd.end(job)
+      },
     )
     Engines.addListener(object : Engines.Listener {
       private var working = emptySet<String>()
 
+      // An engine starting, or down (its jobs went with it): a look at once,
+      // so the notification's line for them comes and goes with it, not up
+      // to POLL_MS later.
       override fun onStatus(status: EngineStatus) {
-        if (status.state == EngineState.STARTING) watch.poke()
+        if (status.state == EngineState.STARTING || !status.state.live) watch.poke()
         if (!status.state.live) KeepAsks.shared.clear(status.agentId)
       }
 

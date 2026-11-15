@@ -17,8 +17,9 @@ import org.json.JSONObject
 // reach it (kit MessagingLevel: none means it can't read them, so a send
 // to it is refused); canWake whether a direct message with wake: true
 // would start its run now if it is idle (its switch, its kind and, for a
-// kind that wakes through a waiting hook, that hook alive, its engine
-// running, its wakes left this hour).
+// kind that wakes through a waiting hook, that hook alive; for a kind with
+// an ACP mode, idle in it or free to switch to it; its engine running, its
+// wakes left this hour).
 // screen: who holds the screen (or has it reserved), who waits, and the
 // caller's place in line (1-based; null when not in it). Pure.
 object Directory {

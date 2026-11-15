@@ -9,7 +9,8 @@ data class Sent(val to: String, val status: SendStatus, val reason: String? = nu
 
 // What a sender hears about one recipient of its message: delivered (in the
 // recipient's chat), woken (its run starts to read it: its server took the
-// wake, or its waiting hook or reader finds the wake mark within a second),
+// wake or it went in as an ACP prompt, its waiting hook or reader finds the
+// wake mark within a second, or its engine switches to ACP mode for it),
 // or queued with when it gets it, by what the recipient is doing, and for an
 // idle one why it was not woken or how to wake it; a kind that only pulls
 // reads it when it next calls agents_inbox. Pure.
@@ -32,6 +33,7 @@ object SendReport {
       Handover.WOKE -> return Sent(name, SendStatus.WOKEN)
       Handover.POSTED -> return Sent(name, SendStatus.DELIVERED)
       Handover.HELD -> if (wakeRefusal == null && folderWakes) return Sent(name, SendStatus.WOKEN, "it was idle; it wakes to read this")
+      Handover.SWITCHING -> return Sent(name, SendStatus.WOKEN, "it was idle; it starts in the background to read this")
       Handover.NONE -> {}
     }
     if (!pushed) return Sent(name, SendStatus.QUEUED, "nothing is pushed to it; it reads this when it next calls agents_inbox")

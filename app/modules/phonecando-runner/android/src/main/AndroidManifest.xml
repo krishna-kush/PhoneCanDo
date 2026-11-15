@@ -67,6 +67,12 @@
     <receiver
       android:name="com.phonecando.runner.schedule.ScheduleAlarmReceiver"
       android:exported="false" />
+    <!-- Allow and Deny on an agent's permission question in ACP mode
+         (prompts/PermissionActionReceiver.kt): only our own PendingIntents
+         send it. -->
+    <receiver
+      android:name="com.phonecando.runner.prompts.PermissionActionReceiver"
+      android:exported="false" />
     <!-- Arms that alarm again (schedule/ScheduleBootReceiver.kt). Not
          exported: system_server sends all of these as the system uid, which
          reaches a receiver that is not exported (ActivityManager's

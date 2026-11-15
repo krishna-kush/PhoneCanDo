@@ -97,6 +97,23 @@ class AgentStoreTest {
     assertTrue(store().get(a.id)!!.wakeable)
   }
 
+  @Test fun anAcpChatIsKeptUntilCleared() {
+    val s = store()
+    val a = s.create("qwen-code", "Q", "i1")
+    assertNull(a.acpChat)
+    s.setAcpChat(a.id, "chat-1")
+    assertEquals("chat-1", store().get(a.id)!!.acpChat)
+    s.setAcpChat("nope", "x")
+    s.clearAcpChat(a.id)
+    assertNull(store().get(a.id)!!.acpChat)
+    // Written as JSON null; a record without the field reads as none.
+    assertTrue(JSONObject(file.readText()).getJSONArray("agents").getJSONObject(0).isNull("acpChat"))
+    val bare = JSONObject(file.readText())
+    bare.getJSONArray("agents").getJSONObject(0).remove("acpChat")
+    file.writeText(bare.toString())
+    assertNull(store().get(a.id)!!.acpChat)
+  }
+
   @Test fun anInstalledVersionIsKept() {
     val s = store()
     val a = s.create("user.gemini", "Gemini", "i1")

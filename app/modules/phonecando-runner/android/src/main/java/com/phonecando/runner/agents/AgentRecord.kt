@@ -42,6 +42,13 @@ data class AgentRecord(
      * its run while it is idle (messages/). On by default.
      */
     val wakeable: Boolean = true,
+    /**
+     * The chat its ACP mode last worked in (engine/acp/); null when none.
+     * The next terminal launch of a kind with `engine.acp.chat` opens it
+     * and clears it; ACP mode goes back to it when the agent cannot list
+     * its chats.
+     */
+    val acpChat: String? = null,
 )
 
 /** Read access to the agents, for the bridge (caller identity) and redaction. */

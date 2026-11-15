@@ -3,8 +3,12 @@ package com.phonecando.runner
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import com.phonecando.runner.acp.AcpAppEvents
+import com.phonecando.runner.acp.AcpRelay
+import com.phonecando.runner.api.acpFunctions
 import com.phonecando.runner.api.agentFunctions
 import com.phonecando.runner.api.agentModelFunctions
+import com.phonecando.runner.api.checksFunctions
 import com.phonecando.runner.api.clipboardFunctions
 import com.phonecando.runner.api.engineFunctions
 import com.phonecando.runner.api.engineTerminalFunctions
@@ -21,6 +25,7 @@ import com.phonecando.runner.api.scheduleFunctions
 import com.phonecando.runner.api.shareFunctions
 import com.phonecando.runner.api.userKindFunctions
 import com.phonecando.runner.bridge.BridgePrompts
+import com.phonecando.runner.checks.fanout.ChecksEvents
 import com.phonecando.runner.controllock.ControlLocks
 import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
@@ -28,6 +33,7 @@ import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.memory.MemoryStatus
 import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.prompts.OpenUrlPrompts
+import com.phonecando.runner.prompts.PermissionPrompts
 import com.phonecando.runner.schedule.ScheduleEvents
 import com.phonecando.runner.schedule.Schedules
 import expo.modules.kotlin.modules.Module
@@ -48,8 +54,9 @@ class PhoneCanDoRunnerModule : Module() {
 
     // Bridge -> JS: a prompt for the user from an agent (BridgePrompts
     // shape: requestId, kind, agentId, agentName, reason; an open_url
-    // prompt, prompts/OpenUrlPrompts, adds url). pendingPrompts covers the
-    // moments JS was not attached.
+    // prompt, prompts/OpenUrlPrompts, adds url; a permission prompt,
+    // prompts/PermissionPrompts, adds title, toolKind and options).
+    // pendingPrompts covers the moments JS was not attached.
     fun emitBridgePrompt(prompt: Map<String, Any?>) {
       instance?.sendEvent("phonecandoBridgePrompt", prompt)
     }
@@ -96,7 +103,10 @@ class PhoneCanDoRunnerModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("PhoneCanDoRunner")
-    Events("phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory", "phonecandoMessages", "phonecandoRunFinished", ScheduleEvents.NAME)
+    Events(
+      "phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory",
+      "phonecandoMessages", "phonecandoRunFinished", ScheduleEvents.NAME, AcpAppEvents.NAME, ChecksEvents.NAME,
+    )
 
     OnCreate {
       instance = this@PhoneCanDoRunnerModule
@@ -117,12 +127,16 @@ class PhoneCanDoRunnerModule : Module() {
       // alarm again (gone after a force-stop until something reads them).
       ScheduleEvents.listener = { sendEvent(ScheduleEvents.NAME, emptyMap<String, Any?>()) }
       appContext.reactContext?.let { Schedules.get(it) }
+      // ACP turns tell the app and the rest of the runner what they do
+      // (also set when messaging is made, before any engine starts).
+      appContext.reactContext?.let { AcpRelay.install(it) }
     }
     OnDestroy {
       Engines.removeListener(engineListener)
       if (instance === this@PhoneCanDoRunnerModule) {
         instance = null
         ScheduleEvents.listener = null
+        ChecksEvents.sink = null
       }
     }
     // The app leaves the screen (its activity pauses): a fresh look at
@@ -157,6 +171,8 @@ class PhoneCanDoRunnerModule : Module() {
     memoryFunctions { context() }
     keepRunningFunctions { context() }
     messageFunctions({ context() }) { sendEvent("phonecandoMessages", it) }
+    acpFunctions({ context() }) { sendEvent(AcpAppEvents.NAME, it) }
+    checksFunctions({ context() }) { sendEvent(ChecksEvents.NAME, it) }
     scheduleFunctions { context() }
     pickFunctions { appContext.currentActivity }
 
@@ -210,13 +226,15 @@ class PhoneCanDoRunnerModule : Module() {
     // Prompts for the user from agents: the ones a bridge request waits on
     // (biometric unlock, accessibility setup), one per asking request, then
     // the links agents asked the phone to open (open_url, nothing waits on
-    // those). The app is the only caller; no agent process can reach these.
+    // those), then the questions agents in ACP mode ask before a tool runs
+    // (permission; resolvePermission, api/AcpFunctions). The app is the
+    // only caller; no agent process can reach these.
     // resolveAccessibility's `guided`: the screen the user opened is a
     // restricted-settings guide step. The bridge keeps waiting for the
     // service either way; `guided` only makes its answer say
     // `restricted: sideload`.
     Function("pendingPrompts") {
-      BridgePrompts.pending() + OpenUrlPrompts.pending()
+      BridgePrompts.pending() + OpenUrlPrompts.pending() + PermissionPrompts.pending()
     }
 
     Function("resolveUnlock") { requestId: String, ok: Boolean ->

@@ -148,6 +148,23 @@ class MemoryGuardTest {
     assertEquals(listOf("warn:15000"), alerts.posted)
   }
 
+  @Test fun anIdleAgentOnScreenGoesBeforeOneAtWorkInTheBackground() {
+    host.agents += MemoryAgent("a1", null, working = false, lastUsedAt = 900, modelId = null)
+    host.agents += MemoryAgent("a2", null, working = true, lastUsedAt = 100, modelId = "qwen")
+    host.models += MemoryModel("qwen", "Qwen", null, listOf("a2"), ready = true)
+    host.open = "a1"
+    host.foreground = true
+    avail = 500 * MIB
+    guard.tick()
+    // a2 frees far more (its model goes with it), but it is at work.
+    assertEquals("a1", told.last().nextStopAgentId)
+    now += 60_000
+    assertEquals(0L, guard.tick())
+    assertEquals(listOf("a1"), host.stopped)
+    // In front: the sheet says it, nothing is posted.
+    assertTrue(alerts.posted.isEmpty())
+  }
+
   @Test fun aWarningNothingCameOfGoesWhenMemoryIsBack() {
     twoAgents()
     avail = 500 * MIB

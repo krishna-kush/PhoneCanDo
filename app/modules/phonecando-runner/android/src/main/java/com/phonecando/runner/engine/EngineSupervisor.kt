@@ -12,17 +12,27 @@ import com.phonecando.runner.agents.install.InstallGate
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.bridge.Bridge
 import com.phonecando.runner.bridge.BridgeHandle
+import com.phonecando.runner.checks.Checks
+import com.phonecando.runner.checks.now.CheckNow
+import com.phonecando.runner.checks.rules.CheckRules
+import com.phonecando.runner.engine.acp.AcpAgent
+import com.phonecando.runner.engine.acp.AcpExit
+import com.phonecando.runner.engine.acp.AcpProcess
+import com.phonecando.runner.engine.acp.AcpReady
 import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.proc.OsSignals
 import com.phonecando.runner.engine.proc.ProcessReaper
 import com.phonecando.runner.engine.ready.HttpReady
 import com.phonecando.runner.engine.ready.TuiReady
 import com.phonecando.runner.engine.spawn.TuiProcess
+import com.phonecando.runner.engine.tui.EngineTerminal
+import com.phonecando.runner.engine.tui.HomeStarts
 import com.phonecando.runner.engine.tui.TerminalViewException
 import com.phonecando.runner.engine.tui.TerminalViewers
 import com.phonecando.runner.engine.work.KeepRunning
 import com.phonecando.runner.limits.RunLimits
 import com.phonecando.runner.messages.Messages
+import com.phonecando.runner.messages.delivery.InboxFolder
 import com.phonecando.runner.memory.MemoryRules
 import com.phonecando.runner.models.ModelServer
 import com.phonecando.runner.models.ModelServerKeys
@@ -61,6 +71,14 @@ import kotlin.concurrent.withLock
 // exit; an engine that dies is marked died and its handle dropped, so
 // the next start launches it again (nothing restarts it by itself); a TUI
 // that exits 0 just stopped.
+// An agent runs in one mode at a time (EngineMode): a start in the other
+// mode stops the engine first, unless ModeSwitch refuses (acp_busy,
+// terminal_in_use); its hold on its model stays, so the model is not
+// loaded again for the new mode. In ACP mode (a kind with engine.acp) its driver
+// (engine/acp/AcpAgent) speaks ACP on the process's pipes: ready once it
+// opened its chat (AcpReady), then it sends the start's task; it is idle
+// only with no turn and no question open; any exit we did not ask for is
+// a death, with the last line of its stderr, and never relaunches.
 // A TUI engine's terminal stays with its slot while it runs; viewers attach
 // to it through `terminals`. Stop: ask the engine to end (SIGTERM, or a
 // TUI's hang-up) and SIGTERM every process tagged with its agent id, wait
@@ -68,6 +86,12 @@ import kotlin.concurrent.withLock
 // agent within that one wait. The lock guards slot state only: seeding,
 // spawning and waiting run outside it, and `gen` settles the races that
 // leaves open. Blocking calls run off the main thread.
+// Each launch is a new engine life for the capability checks
+// (checks/Checks): its inbox folder's ran/ goes before the spawn, so each
+// hook reports again, and the life starts as the slot adopts the process;
+// its readiness, events, ACP opening or failure, exit, relaunch and end go
+// there too, those that change the slot under the lock, so a racing start
+// or stop never mixes up two lives.
 internal class EngineSupervisor(
   private val context: Context,
   private val store: AgentStore,
@@ -95,8 +119,13 @@ internal class EngineSupervisor(
     chats = chats,
     openUrl = { agentId, url -> OpenUrlPrompts.raise(context, store, agentId, url) },
     dropUrls = { agentId -> OpenUrlPrompts.end(context, agentId) },
-    inboxRead = { agentId, ids -> Messages.get(context).receipt(agentId, ids) },
+    inboxRead = { agentId, ids ->
+      Checks.receipt(agentId, ids)
+      Messages.get(context).receipt(agentId, ids)
+    },
     runEnded = Bridge::runEnded,
+    checkEvent = Checks::engineEvent,
+    hookRan = Checks::hookRan,
   )
 
   /** The viewers of the TUI engines' terminals (the engineTerminal* functions). */
@@ -152,6 +181,45 @@ internal class EngineSupervisor(
   /** Whether the agent's engine is starting or ready and its process runs, whatever its style. */
   fun isLive(agentId: String): Boolean = lock.withLock { slots[agentId]?.let(::running) == true }
 
+  /** isLive, in [mode]. */
+  fun isLive(agentId: String, mode: EngineMode): Boolean =
+    lock.withLock { slots[agentId]?.let { running(it) && it.mode == mode } == true }
+
+  /** A viewer shows the agent's TUI now (EngineTerminal.hasViewer); false in ACP mode or when it does not run. */
+  fun hasViewer(agentId: String): Boolean = slots[agentId]?.terminal?.hasViewer == true
+
+  /** The agent's ACP driver while its engine is ready in ACP mode (AcpEngines.of); null otherwise. */
+  fun acpAgent(agentId: String): AcpAgent? =
+    slots[agentId]?.takeIf { it.state == EngineState.READY && it.mode == EngineMode.ACP }?.acp
+
+  /**
+   * Why a start in [mode] would be refused now (ModeSwitch: the engine runs
+   * in the other mode and cannot stop yet); null when it may go ahead. A
+   * look at its jobs reads /proc, so off the main thread.
+   */
+  fun switchRefusal(agentId: String, mode: EngineMode): EngineStartException? {
+    val live = liveAs(agentId, mode) ?: return null
+    val refused = ModeSwitch.decide(mode, live) as? ModeSwitch.Decision.Refuse ?: return null
+    return EngineStartException(refused.error, refused.detail)
+  }
+
+  // How the engine runs now, for a start in [want] (ModeSwitch); null
+  // when it does not run. Its jobs are looked at only when they count.
+  private fun liveAs(agentId: String, want: EngineMode): ModeSwitch.Live? {
+    val slot = slots[agentId]?.takeIf { lock.withLock { running(it) } } ?: return null
+    if (slot.mode == want) return ModeSwitch.Live(slot.mode)
+    return when (slot.mode) {
+      EngineMode.ACP -> ModeSwitch.Live(EngineMode.ACP, acpBusy = slot.acp.let { it == null || it.busy || it.asking })
+      EngineMode.TERMINAL -> ModeSwitch.Live(
+        EngineMode.TERMINAL,
+        // A terminal Home asked for counts as watched until its view attaches (tui/HomeStarts).
+        viewer = slot.terminal?.hasViewer == true || HomeStarts.pending(agentId),
+        chatBusy = chats.busy(agentId),
+        jobs = Engines.work()?.busyNow(agentId) == true,
+      )
+    }
+  }
+
   private fun running(slot: EngineSlot): Boolean =
     (slot.state == EngineState.STARTING || slot.state == EngineState.READY) && slot.process?.isAlive == true
 
@@ -173,7 +241,23 @@ internal class EngineSupervisor(
   fun isIdle(agentId: String, kind: ManifestKind): Boolean {
     if (agentId in chats.working()) return false
     val slot = slots[agentId]
-    return kind.isIdle(slot?.lastEventAt, slot?.terminal?.lastOutputAt, System.currentTimeMillis())
+    // ACP mode: never with a turn running or a question open; what the
+    // agent last sent counts as its output.
+    val acp = slot?.let { if (it.mode == EngineMode.ACP) it.acp else null }
+    if (acp != null && (acp.busy || acp.asking)) return false
+    val output = if (acp != null) acp.lastHeardAt else slot?.terminal?.lastOutputAt
+    return kind.isIdle(slot?.lastEventAt, output, System.currentTimeMillis())
+  }
+
+  /**
+   * Epoch ms of the engine's last sign of work in this life: an activity
+   * event, its TUI's output, or in ACP mode what it last sent; null for
+   * none. Check now reads it to tell a slow run from a stuck one.
+   */
+  fun lastSignAt(agentId: String): Long? {
+    val slot = slots[agentId] ?: return null
+    val output = if (slot.mode == EngineMode.ACP) slot.acp?.lastHeardAt else slot.terminal?.lastOutputAt
+    return listOfNotNull(slot.lastEventAt, output).maxOrNull()
   }
 
   /**
@@ -188,10 +272,15 @@ internal class EngineSupervisor(
 
   /** A new viewer of the agent's TUI engine's terminal; throws not_running when it has none. */
   fun attachTerminal(agentId: String): TerminalViewers.Attached {
-    val terminal = lock.withLock {
-      slots[agentId]?.takeIf { it.state == EngineState.STARTING || it.state == EngineState.READY }?.terminal
-    } ?: throw TerminalViewException(TerminalViewException.NOT_RUNNING, "the agent's engine is not a running TUI")
-    return terminals.attach(terminal)
+    val (terminal, mode) = lock.withLock {
+      val slot = slots[agentId]?.takeIf { it.state == EngineState.STARTING || it.state == EngineState.READY }
+      slot?.terminal to slot?.mode
+    }
+    val tui = terminal ?: throw TerminalViewException(
+      TerminalViewException.NOT_RUNNING,
+      if (mode == EngineMode.ACP) "the agent works in the background (ACP mode)" else "the agent's engine is not a running TUI",
+    )
+    return terminals.attach(tui)
   }
 
   // An engine event that is activity: the engine is used, and not idle.
@@ -205,14 +294,23 @@ internal class EngineSupervisor(
 
   // ---- start -------------------------------------------------------------
 
-  /** A server engine's port, null for a TUI's; throws EngineStartException. Blocks (seeding, a possible eviction). */
-  fun start(agentId: String, requestedAt: Long): Int? {
+  /**
+   * A server engine's port, null for a TUI's or ACP mode's; throws
+   * EngineStartException. Running in the other [mode], it stops first
+   * (ModeSwitch). Blocks (seeding, a possible eviction or switch).
+   */
+  fun start(agentId: String, requestedAt: Long, mode: EngineMode = EngineMode.TERMINAL): Int? {
     val record = store.get(agentId) ?: throw EngineStartException(EngineStartError.START_FAILED, "unknown agent")
     val kind = KindCatalogs.get(context).get(record.kind)
       ?: throw EngineStartException(EngineStartError.START_FAILED, "unknown agent kind ${record.kind}")
+    if (mode == EngineMode.ACP && !kind.speaksAcp) {
+      throw EngineStartException(EngineStartError.START_FAILED, "${kind.displayName} has no ACP mode")
+    }
     InstallGate.check(kind, record)
-    models.check(record, kind)
-    val gen = when (val seat = takeSeat(agentId)) {
+    // A Check now runs it on the check model when its kind takes one: its own model is not asked.
+    val checkModel = CheckNow.modelFor(agentId, kind)
+    if (checkModel == null) models.check(record, kind)
+    val gen = when (val seat = takeSeat(agentId, mode)) {
       is Seat.Running -> return seat.port
       is Seat.Taken -> seat.gen
     }
@@ -221,7 +319,11 @@ internal class EngineSupervisor(
       // Processes of this agent now are leftovers (a dead engine's
       // children, an engine from an earlier app process): end them first.
       reaper.stop(emptyList(), setOf(agentId))
-      val plan = launcher.plan(record, kind, requestedAt).copy(model = models.endpoint(record, kind))
+      val base = launcher.plan(record, kind, requestedAt, mode)
+      val own = if (checkModel == null) models.endpoint(record, kind) else null
+      // Not on a model of its own this time (a Check now's, or none set now): a hold kept across a mode switch ends.
+      if (own == null) models.release(agentId)
+      val plan = base.copy(model = checkModel ?: own)
       val bridgeUrl = bridgeFor(kind)
       if (kind.style == EngineStyle.SERVER) {
         val alloc = ports.allocate(record.port?.toIntOrNull())
@@ -231,6 +333,7 @@ internal class EngineSupervisor(
           Log.w(TAG, "port ${record.port} taken, $agentId moves to ${alloc.port}")
         }
       }
+      clearHookMarks(agentId, plan)
       val proc = launcher.spawn(plan, port, bridgeUrl)
       if (!adopt(agentId, gen, plan, proc, port)) {
         reaper.stop(listOf(proc), setOf(agentId))
@@ -258,18 +361,40 @@ internal class EngineSupervisor(
     data class Taken(val gen: Int) : Seat()
   }
 
-  // Already running: its port. Otherwise marks the slot starting once the
-  // policy admits it, stopping an idle engine first when it says so.
-  private fun takeSeat(agentId: String): Seat {
+  // Already running in [mode]: its port. Running in the other mode: stops
+  // it when ModeSwitch lets it, else refuses; a switch keeps the agent's
+  // hold on its model, so the engine in the new mode joins its server still
+  // up (and its prompt cache) instead of loading the model again. Otherwise
+  // marks the slot starting once the policy admits it, stopping an idle
+  // engine first when it says so.
+  private fun takeSeat(agentId: String, mode: EngineMode): Seat {
+    var kept = false
+    try {
+      return seat(agentId, mode) { kept = true }
+    } catch (e: Exception) {
+      // The new mode does not start: a hold the switch kept ends (the last one stops its server).
+      if (kept && lock.withLock { slots[agentId]?.state?.let(::up) } != true) models.release(agentId)
+      throw e
+    }
+  }
+
+  // takeSeat's loop; [onSwitched] once it stopped the engine in the other mode, its model kept.
+  private fun seat(agentId: String, mode: EngineMode, onSwitched: () -> Unit): Seat {
+    var switches = 0
     while (true) {
       var evict: String? = null
       var started: Pair<Int, EngineStatus>? = null
+      var other = false
       lock.withLock {
         val slot = slots.getOrPut(agentId) { EngineSlot(agentId) }
         awaitSettled(slot)
         if ((slot.state == EngineState.STARTING || slot.state == EngineState.READY) && slot.process != null) {
-          slot.lastUsedAt = System.currentTimeMillis()
-          return Seat.Running(slot.port)
+          if (slot.mode == mode) {
+            slot.lastUsedAt = System.currentTimeMillis()
+            return Seat.Running(slot.port)
+          }
+          other = true
+          return@withLock
         }
         val seats = slots.values
           .filter { it !== slot && (it.state == EngineState.STARTING || it.state == EngineState.READY) }
@@ -278,6 +403,8 @@ internal class EngineSupervisor(
         when (val decision = EnginePolicy.admit(seats, System.currentTimeMillis(), cap)) {
           EnginePolicy.Admission.Admit -> {
             slot.state = EngineState.STARTING
+            slot.mode = mode
+            slot.acp = null
             slot.gen++
             slot.port = null
             slot.error = null
@@ -300,6 +427,14 @@ internal class EngineSupervisor(
         emit(status)
         return Seat.Taken(gen)
       }
+      if (other) {
+        if (switches++ >= MAX_SWITCHES) throw EngineStartException(EngineStartError.START_FAILED, "it kept changing modes")
+        switchRefusal(agentId, mode)?.let { throw it }
+        Log.i(TAG, "switching $agentId to ${mode.wire} mode")
+        terminate(setOf(agentId), EngineState.STOPPED, null, keepModel = true)
+        onSwitched()
+        continue
+      }
       evict?.let {
         Log.i(TAG, "stopping idle engine $it to make room for $agentId")
         stop(it)
@@ -320,30 +455,58 @@ internal class EngineSupervisor(
 
   // The launched process becomes the slot's, unless a stop came in between.
   private fun adopt(agentId: String, gen: Int, plan: LaunchPlan, proc: EngineProcess, port: Int?): Boolean {
+    var acp: AcpAgent? = null
     val status = lock.withLock {
       val slot = slots[agentId] ?: return false
       if (slot.gen != gen || slot.state != EngineState.STARTING) return false
       slot.process = proc
       slot.port = port
       slot.plan = plan
-      slot.terminal = (proc as? TuiProcess)?.terminal
+      slot.mode = plan.mode
+      val terminal = (proc as? TuiProcess)?.terminal
+      slot.terminal = terminal
+      acp = (proc as? AcpProcess)?.let { driver(agentId, it, plan) }
+      slot.acp = acp
+      Checks.launched(agentId, plan) { terminal?.let(::screenOf) }
       slot.watch = watch(slot, proc, plan, port).also { it.start() }
       settled.signalAll()
       slot.status()
     }
     emit(status)
+    acp?.open()
     return true
   }
+
+  // An ACP engine's driver, told back here: a failed opening fails the
+  // start, a turn's start and end change its status, what it hears marks
+  // it used.
+  private fun driver(agentId: String, proc: AcpProcess, plan: LaunchPlan) = AcpAgent(
+    agentId = agentId,
+    process = proc,
+    start = plan.prompt?.let { StartPrompt(it, plan.newChat) },
+    storedChat = { store.get(agentId)?.acpChat },
+    saveChat = { store.setAcpChat(agentId, it) },
+    hooks = object : AcpAgent.Hooks {
+      override fun onFailed(reason: String) = onAcpFailed(agentId, proc, reason)
+
+      override fun onBusy(busy: Boolean) = emit(status(agentId))
+
+      override fun onHeard() = touch(agentId)
+    },
+  )
 
   // A server is ready when its health probe answers; a TUI by its kind's
   // readiness, and only an exit other than 0 is its death.
   private fun watch(slot: EngineSlot, proc: EngineProcess, plan: LaunchPlan, port: Int?): EngineWatch {
     val terminal = (proc as? TuiProcess)?.terminal
+    val acp = slot.acp
+    // Any exit of a server or an ACP engine is a death; a TUI's only other than 0.
     val dies = { status: Int -> terminal == null || status != 0 }
-    val ready = if (terminal != null) {
-      TuiReady.of(checkNotNull(plan.kind.tuiReadiness), { terminal.lastOutputAt }, System.currentTimeMillis(), plan.prompt != null)
-    } else {
-      HttpReady(plan.kind.healthProbe(checkNotNull(port).toString(), plan.record.password))
+    val ready = when {
+      acp != null -> AcpReady({ acp.isReady }, AcpReady.timeoutOf(plan.kind))
+      terminal != null ->
+        TuiReady.of(checkNotNull(plan.kind.tuiReadiness), { terminal.lastOutputAt }, System.currentTimeMillis(), plan.prompt != null)
+      else -> HttpReady(plan.kind.healthProbe(checkNotNull(port).toString(), plan.record.password))
     }
     return EngineWatch(
       agentId = slot.agentId,
@@ -363,6 +526,7 @@ internal class EngineSupervisor(
   }
 
   private fun fail(agentId: String, gen: Int, e: EngineStartException) {
+    var closing: AcpAgent? = null
     val status = lock.withLock {
       val slot = slots[agentId] ?: return
       if (slot.gen != gen || slot.state != EngineState.STARTING) return
@@ -371,9 +535,13 @@ internal class EngineSupervisor(
       slot.port = null
       slot.process = null
       slot.terminal = null
+      slot.acp?.let { closing = it }
+      slot.acp = null
+      Checks.ended(agentId, failed = true, detail = e.message)
       settled.signalAll()
       slot.status()
     }
+    closing?.close("its start failed")
     models.release(agentId)
     Log.w(TAG, "engine $agentId failed to start: ${e.message}")
     emit(status)
@@ -423,15 +591,30 @@ internal class EngineSupervisor(
   // ---- watch callbacks (watch threads) ----------------------------------
 
   private fun onHealthy(agentId: String, proc: EngineProcess) {
-    val status = lock.withLock {
+    val acp = lock.withLock {
       val slot = slots[agentId] ?: return
       if (slot.process !== proc || slot.state != EngineState.STARTING) return
       slot.state = EngineState.READY
       openStream(slot)
-      slot.status()
+      slot.acp
     }
+    Checks.ready(agentId)
+    // In ACP mode ready means its chat opened (AcpReady).
+    if (acp != null) Checks.acpOpened(agentId)
+    // ACP mode: its first prompt now that its events are heard, before
+    // anyone hears it is ready, so the task goes first.
+    acp?.begin()
     markRan(agentId)
-    emit(status)
+    emit(status(agentId))
+  }
+
+  // An ACP engine that could not open its chat (it wants a sign-in, say)
+  // cannot work: its start fails with why, unless it is no longer this one.
+  private fun onAcpFailed(agentId: String, proc: AcpProcess, reason: String) {
+    if (lock.withLock { slots[agentId]?.let { it.process !== proc || it.state != EngineState.STARTING } != false }) return
+    Log.w(TAG, "ACP engine $agentId failed: $reason")
+    Checks.acpFailed(agentId, reason)
+    terminate(setOf(agentId), EngineState.FAILED, reason)
   }
 
   // Another engine answered on our port, so ours never bound it: relaunch
@@ -510,11 +693,13 @@ internal class EngineSupervisor(
       slot.process = null
       slot.watch = null
       slot.terminal = null
+      Checks.relaunched(agentId, status)
     }
     restarting?.let(::emit)
     Log.w(TAG, "engine $agentId exited with $status ${if (afterReady) "before any event" else "before it was ready"}, resuming; launching it again without its resume args")
     reaper.stop(listOf(proc), setOf(agentId))
     try {
+      clearHookMarks(agentId, plan)
       val next = launcher.spawn(plan, null, bridgeFor(plan.kind), counted = false)
       if (!adopt(agentId, gen, plan, next, null)) reaper.stop(listOf(next), setOf(agentId))
     } catch (e: Exception) {
@@ -530,27 +715,63 @@ internal class EngineSupervisor(
 
   // An exit nobody asked for: died, or (a TUI that exited 0) stopped.
   private fun onExited(agentId: String, proc: EngineProcess, code: Int, died: Boolean) {
+    // An ACP engine has no screen: the last line it wrote to stderr says why.
+    val reason = if (proc is AcpProcess) AcpExit.reason(code, stderrTail(proc)) else "exited with code $code"
+    // A TUI's screen and whether you typed in it, for its task's check.
+    val terminal = (proc as? TuiProcess)?.terminal
+    val screen = terminal?.let(::screenOf)
+    var closing: AcpAgent? = null
     val status = lock.withLock {
       val slot = slots[agentId] ?: return
       // A stop that is under way settles the slot itself.
       if (slot.process !== proc || slot.state == EngineState.STOPPING) return
+      Checks.exited(agentId, code, died, reason, screen, typed = terminal?.firstInputAt != null)
       slot.watch = null
       slot.events?.stop()
       slot.events = null
       slot.process = null
       slot.terminal = null
+      closing = slot.acp
+      slot.acp = null
       slot.port?.let(ports::release)
       slot.port = null
       slot.state = if (died) EngineState.DIED else EngineState.STOPPED
-      slot.error = if (died) "exited with code $code" else null
+      slot.error = if (died) reason else null
       settled.signalAll()
       slot.status()
     }
+    closing?.close("the agent exited")
     models.release(agentId)
     chats.detach(agentId)
     phoneControlGone(agentId)
     emit(status)
     afterEngineGone()
+  }
+
+  // The end of a TUI's screen ring, for the checks; null when it cannot be read.
+  private fun screenOf(terminal: EngineTerminal): ByteArray? = try {
+    terminal.tail(CheckRules.SCREEN_BYTES).first
+  } catch (_: Exception) {
+    null
+  }
+
+  // Before a launch spawns: the hooks' marks of the last life go
+  // (InboxFolder ran/), so each reports once more in the new one (checks/).
+  private fun clearHookMarks(agentId: String, plan: LaunchPlan) {
+    try {
+      InboxFolder.of(plan.image.home, agentId).clearRan()
+    } catch (e: Exception) {
+      Log.w(TAG, "hook marks of $agentId not cleared", e)
+    }
+  }
+
+  // The redacted end of an ACP engine's stderr; null when it cannot be read.
+  private fun stderrTail(proc: AcpProcess): String? = try {
+    proc.outputTail(STDERR_WINDOW_BYTES)?.let { (window, cut) ->
+      TelemetryRecorder.redactedTail(window, midFile = cut, secrets = PathRedactor.agentSecrets(store.all(), KindCatalogs.get(context)))
+    }
+  } catch (_: Exception) {
+    null
   }
 
   // The model server of these agents ended by itself: their engines can no
@@ -610,11 +831,13 @@ internal class EngineSupervisor(
   }
 
   // agentIds null: all agents, and processes tagged with any agent id.
-  private fun terminate(agentIds: Set<String>?, final: EngineState, error: String?) {
+  // [keepModel]: their holds on their models stay (a mode switch's stop).
+  private fun terminate(agentIds: Set<String>?, final: EngineState, error: String?, keepModel: Boolean = false) {
     val engines = ArrayList<EngineProcess>()
     val ending = ArrayList<Pair<EngineSlot, Int>>()
     val others = ArrayList<EngineSlot>()
     val stopping = ArrayList<EngineStatus>()
+    val drivers = ArrayList<AcpAgent>()
     lock.withLock {
       val targets = if (agentIds == null) slots.values.toList() else agentIds.mapNotNull { slots[it] }
       for (slot in targets) {
@@ -628,6 +851,7 @@ internal class EngineSupervisor(
             slot.watch = null
             slot.events?.stop()
             slot.events = null
+            slot.acp?.let(drivers::add)
             slot.process?.let(engines::add)
             ending += slot to slot.gen
             stopping += slot.status()
@@ -637,6 +861,8 @@ internal class EngineSupervisor(
       }
     }
     stopping.forEach(::emit)
+    // An ACP turn ends with its engine; closing its stdin lets it end first.
+    drivers.forEach { it.close("the agent was stopped") }
     ending.forEach { (slot, _) ->
       chats.detach(slot.agentId)
       phoneControlGone(slot.agentId)
@@ -645,17 +871,19 @@ internal class EngineSupervisor(
     // agent's hold ends below, once its engine is gone.
     if (agentIds == null) models.stopAll()
     reaper.stop(engines, agentIds)
-    ending.forEach { (slot, _) -> models.release(slot.agentId) }
+    if (!keepModel) ending.forEach { (slot, _) -> models.release(slot.agentId) }
     val ended = ArrayList<EngineStatus>()
     lock.withLock {
       for ((slot, gen) in ending) {
         if (slot.gen != gen || slot.state != EngineState.STOPPING) continue
         slot.process = null
         slot.terminal = null
+        slot.acp = null
         slot.port?.let(ports::release)
         slot.port = null
         slot.state = final
         slot.error = error
+        Checks.ended(slot.agentId, failed = final != EngineState.STOPPED, detail = error)
         ended += slot.status()
       }
       settled.signalAll()
@@ -701,11 +929,12 @@ internal class EngineSupervisor(
     if (slot.events != null) return
     val plan = slot.plan ?: return
     val terminal = slot.terminal
+    val acp = slot.acp
     slot.events = try {
-      if (terminal != null) {
-        streams.openTui(slot.agentId, plan.kind, terminal, plan.eventsFile)
-      } else {
-        streams.open(slot.agentId, plan.kind, slot.port ?: return, plan.record.password)
+      when {
+        acp != null -> streams.openAcp(slot.agentId, acp, plan.eventsFile)
+        terminal != null -> streams.openTui(slot.agentId, plan.kind, terminal, plan.eventsFile)
+        else -> streams.open(slot.agentId, plan.kind, slot.port ?: return, plan.record.password)
       }
     } catch (e: Exception) {
       Log.w(TAG, "event stream start failed", e)
@@ -726,6 +955,12 @@ internal class EngineSupervisor(
 
     fun agents(count: Int) = if (count == 1) "an agent is" else "$count agents are"
     const val MAX_SQUAT_RELAUNCHES = 2
+
+    // Stops for a mode switch one start makes at most (another start may switch it back meanwhile).
+    const val MAX_SWITCHES = 2
+
+    // Of an ACP engine's stderr, read for the line that says why it died.
+    const val STDERR_WINDOW_BYTES = 16 * 1024
     // Longest a start or stop waits for another call on the same engine.
     const val SETTLE_WAIT_MS = ProcessReaper.GRACE_MS + 3_000L
   }

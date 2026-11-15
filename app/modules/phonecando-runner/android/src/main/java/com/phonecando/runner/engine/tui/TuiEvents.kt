@@ -12,7 +12,8 @@ import com.phonecando.agents.kit.term.SignalRules
 // TUI's first event creates, so the title known then follows each event; a
 // new title goes out at once. A run left working with nothing on screen
 // for QUIET_MS (quiet) is over: an interrupt raises no event of its own
-// (Claude Code's Esc fires no hook), so it ends as stopped. Pure; the clock
+// (Claude Code's Esc fires no hook), so it ends as stopped, a guess the
+// event says it is (EngineEvent.guessed). Pure; the clock
 // is injected for tests.
 internal class TuiEvents(
   private val rules: SignalRules,
@@ -41,9 +42,9 @@ internal class TuiEvents(
 
   /** An event of the TUI's one chat, with its title when known. */
   @Synchronized
-  fun raise(kind: EngineEvent.Kind) {
+  fun raise(kind: EngineEvent.Kind, guessed: Boolean = false) {
     workingAt = if (kind == EngineEvent.Kind.WORKING) clock() else null
-    onEvent(EngineEvent(kind, SESSION))
+    onEvent(EngineEvent(kind, SESSION, guessed = guessed))
     title?.let { onEvent(titleEvent(it)) }
   }
 
@@ -51,7 +52,7 @@ internal class TuiEvents(
   @Synchronized
   fun quiet(lastOutputAt: Long?) {
     val since = maxOf(workingAt ?: return, lastOutputAt ?: 0L)
-    if (clock() - since >= QUIET_MS) raise(EngineEvent.Kind.STOPPED)
+    if (clock() - since >= QUIET_MS) raise(EngineEvent.Kind.STOPPED, guessed = true)
   }
 
   private fun chatTitle(windowTitle: String): String? =

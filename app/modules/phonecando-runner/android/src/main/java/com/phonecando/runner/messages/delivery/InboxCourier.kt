@@ -3,6 +3,7 @@ package com.phonecando.runner.messages.delivery
 import com.phonecando.agents.kit.InboxCall
 import com.phonecando.agents.kit.InboxRequest
 import com.phonecando.runner.agents.AgentRecord
+import com.phonecando.runner.checks.Checks
 import java.util.concurrent.ConcurrentHashMap
 
 /** A running server engine's way in: its port, password, and the chat to post to (null: none known yet). */
@@ -28,6 +29,10 @@ data class ServerSeat(val port: String, val password: String, val sessionId: Str
 //   yet, no engine, or a failure: they stay queued, and a retry (an engine
 //   start, a chat showing up) waits RETRY_MS after a failure.
 // - no `inbox` block: nothing; the agent pulls with agents_inbox.
+// The capability checks (checks/) hear each server answer to a deliver or
+// wake call ([served]; no answer at all is never told) and each set that
+// may wake the agent left in its folder ([wakeSet], with a look at the
+// ids still pending there).
 // IO through the injected folder, seat and post.
 class InboxCourier(
   private val plan: (AgentRecord) -> InboxPlan?,
@@ -37,6 +42,8 @@ class InboxCourier(
   private val clock: () -> Long = System::currentTimeMillis,
   private val onError: (String, Throwable) -> Unit = { _, _ -> },
   private val fetch: (InboxRequest) -> Pair<Int, String> = { it.exchange(CONNECT_MS, READ_MS) },
+  private val served: (agentId: String, call: InboxCall, status: Int) -> Unit = Checks::served,
+  private val wakeSet: (agentId: String, ids: List<Long>, pending: () -> Set<Long>) -> Unit = Checks::wakeSetWritten,
 ) : Courier {
   // The ids of the set last written to each agent's pending/.
   private val written = ConcurrentHashMap<String, List<Long>>()
@@ -63,6 +70,7 @@ class InboxCourier(
       folder(agent)?.let { inbox ->
         inbox.write(files(p, parcel), parcel.wake)
         written[agent.id] = parcel.ids
+        if (parcel.wake) wakeSet(agent.id, parcel.ids, inbox::pendingIds)
         result = Handover.HELD
       }
     }
@@ -90,6 +98,7 @@ class InboxCourier(
       onError("inbox post to ${agent.id} failed", e)
       -1
     }
+    if (status >= 0) served(agent.id, call, status)
     if (status in 200..299) {
       failedAt.remove(agent.id)
       return if (waking) Handover.WOKE else Handover.POSTED

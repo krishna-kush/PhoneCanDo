@@ -17,18 +17,26 @@ enum class Handover {
   /** Posted into its chat by its server (delivered). */
   POSTED,
 
-  /** Its server's wake call took it: a run started (delivered, woke). */
+  /** Its server's wake call took it, or it went in as an ACP prompt: a run started (delivered, woke). */
   WOKE,
 
   /** Left in its inbox folder for its hooks or its own reader (still queued until the receipt). */
   HELD,
+
+  /**
+   * It may wake an idle agent whose kind has an ACP mode, now in terminal
+   * mode with nobody watching: we asked its engine to switch to ACP mode,
+   * and the set goes in as a prompt once that is ready (still queued).
+   */
+  SWITCHING,
 
   /** Nothing can take it now: a kind that only pulls (agents_inbox), or a server with no chat yet. */
   NONE,
 }
 
 // Hands an agent its messages the way its kind takes them (the manifest's
-// `inbox`; InboxCourier). The mailbox calls it for one agent at a time
+// `inbox`; InboxCourier), or as a prompt in ACP mode (AcpCourier), as
+// RoutingCourier picks. The mailbox calls it for one agent at a time
 // (never twice at once for the same agent), outside its own lock.
 interface Courier {
   /**

@@ -32,6 +32,10 @@ data class EngineStatus(
   val error: String?,
   /** Epoch ms of the last start, engine event, bridge call or touch. */
   val lastUsedAt: Long?,
+  /** The mode it runs in, or last ran in (EngineMode). */
+  val mode: EngineMode = EngineMode.TERMINAL,
+  /** An ACP turn is running (engine/acp/); always false in terminal mode. */
+  val busy: Boolean = false,
 ) {
   fun toMap(): Map<String, Any?> = mapOf(
     "agentId" to agentId,
@@ -39,6 +43,8 @@ data class EngineStatus(
     "port" to port,
     "error" to error,
     "lastUsedAt" to lastUsedAt?.toDouble(),
+    "mode" to mode.wire,
+    "busy" to busy,
   )
 }
 
@@ -64,6 +70,12 @@ enum class EngineStartError(val code: String) {
    * which, fit for the UI.
    */
   MODEL_UNAVAILABLE("model_unavailable"),
+
+  /** A start in terminal mode while the agent's ACP turn runs or asks you something (ModeSwitch). */
+  ACP_BUSY("acp_busy"),
+
+  /** A start in ACP mode while its TUI is on screen, in a run or has jobs running (ModeSwitch). */
+  TERMINAL_IN_USE("terminal_in_use"),
 }
 
 /** A refused start: the message starts with the code, so JS can read it from either. */

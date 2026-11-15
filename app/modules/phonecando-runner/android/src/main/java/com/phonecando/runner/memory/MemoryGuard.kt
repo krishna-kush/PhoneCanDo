@@ -9,8 +9,9 @@ import kotlin.concurrent.withLock
 // engine or a model server runs it looks every POLL_MS (and at once on
 // poke: an engine starting, Android's memory callbacks): reads the phone's
 // memory, asks MemoryPolicy for the level and the countdown, and when that
-// runs out stops the agent MemoryPolicy.victim picks (Host.stop, as a user
-// stop, so its model server goes with its last holder). One agent per stop.
+// runs out stops the agent MemoryVictims.victim picks (Host.stop, as a user
+// stop, so its model server goes with its last holder), weighing what each
+// stop frees against what the phone is short of. One agent per stop.
 // Each process's bytes are read only while the level is not ok, or when the
 // app asks (status). It tells [onChange] on every level or countdown change,
 // after a stop and on every look while not ok. With the app in the
@@ -94,7 +95,9 @@ internal class MemoryGuard(
     val reading = system()
     val s = state
     val level = reading?.let { MemoryPolicy.level(it, s.level) } ?: s.level
-    return build(reading, level, s, host.agents(), host.models(), readBytes = true)
+    val agents = host.agents()
+    val models = host.models()
+    return build(reading, level, s, agents, models, bytes(agents, models))
   }
 
   private fun loop() {
@@ -134,7 +137,7 @@ internal class MemoryGuard(
       val idle = MemoryPolicy.idle(state)
       if (idle != state) {
         state = idle
-        tell(build(system(), idle.level, idle, emptyList(), emptyList(), readBytes = false))
+        tell(build(system(), idle.level, idle, emptyList(), emptyList(), null))
       }
       return null
     }
@@ -147,9 +150,12 @@ internal class MemoryGuard(
       return MemoryRules.POLL_MS
     }
     val agents = host.agents()
+    val models = host.models()
+    // Back at ok, nobody is stopped: no process is read.
+    val bytes = if (level == MemoryLevel.OK) null else bytes(agents, models)
     val foreground = host.foreground()
     val keep = if (foreground) host.openAgent() else null
-    val victim = MemoryPolicy.victim(agents.map(::candidate), keep)
+    val victim = MemoryVictims.victim(candidates(agents, models, bytes), keep, MemoryPolicy.short(reading))
     val step = MemoryPolicy.step(state, level, victim != null, now)
     state = step.state
     if (step.stop && victim != null) {
@@ -167,7 +173,7 @@ internal class MemoryGuard(
       warned = true
     }
     // Not ok: told on every look, with each process's bytes.
-    tell(build(reading, level, state, agents, host.models(), readBytes = true, victim = victim))
+    tell(build(reading, level, state, agents, models, bytes, victim))
     val next = listOfNotNull(state.stopAt, state.settleUntil).minOrNull() ?: return MemoryRules.POLL_MS
     return (next - now).coerceIn(1L, MemoryRules.POLL_MS)
   }
@@ -192,7 +198,7 @@ internal class MemoryGuard(
 
   private fun tellIfChanged(reading: MemoryReading, level: MemoryLevel, s: MemoryPolicy.State) {
     if (told == Told(level, s.stopAt, null)) return
-    tell(build(reading, level, s, host.agents(), host.models(), readBytes = false))
+    tell(build(reading, level, s, host.agents(), host.models(), null))
   }
 
   private fun tell(status: MemoryStatus) {
@@ -200,25 +206,32 @@ internal class MemoryGuard(
     onChange(status)
   }
 
-  private fun candidate(a: MemoryAgent) = MemoryPolicy.Candidate(a.agentId, a.working, a.lastUsedAt, a.busy)
+  // Each process's bytes (a couple of small files each); null with nothing of ours, or unread.
+  private fun bytes(agents: List<MemoryAgent>, models: List<MemoryModel>): ProcessMemory.Owners? =
+    if (agents.isNotEmpty() || models.isNotEmpty()) runCatching(owners).getOrNull() else null
 
+  private fun candidates(agents: List<MemoryAgent>, models: List<MemoryModel>, bytes: ProcessMemory.Owners?) = agents.map {
+    MemoryVictims.Candidate(it.agentId, it.working, it.lastUsedAt, it.busy, MemoryVictims.freed(it.agentId, bytes, models))
+  }
+
+  // [bytes] null: told without them.
   private fun build(
     reading: MemoryReading?,
     level: MemoryLevel,
     s: MemoryPolicy.State,
     agents: List<MemoryAgent>,
     models: List<MemoryModel>,
-    readBytes: Boolean,
+    bytes: ProcessMemory.Owners?,
     victim: String? = null,
   ): MemoryStatus {
-    val bytes = if (readBytes && (agents.isNotEmpty() || models.isNotEmpty())) runCatching(owners).getOrNull() else null
     val stopAt = s.stopAt
     val next = when {
       stopAt == null -> null
       victim != null -> victim
-      else -> MemoryPolicy.victim(
-        agents.map(::candidate),
+      else -> MemoryVictims.victim(
+        candidates(agents, models, bytes),
         if (host.foreground()) host.openAgent() else null,
+        reading?.let(MemoryPolicy::short) ?: 0L,
       )
     }
     return MemoryStatus(

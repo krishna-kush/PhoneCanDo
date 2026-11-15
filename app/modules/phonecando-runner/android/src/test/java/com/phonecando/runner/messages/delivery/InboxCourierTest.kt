@@ -15,7 +15,8 @@ import java.nio.file.Files
 // The inbox folder as the kit script reads it (pending/ with ids,
 // messages.jsonl, messages.txt, <Event>.out, <Event>.exit and wake, swapped
 // whole), what an engine start cleans, a claim found before its receipt,
-// and a server engine's deliver and wake calls.
+// a server engine's deliver and wake calls, and what the capability checks
+// hear of them.
 class InboxCourierTest {
   private val home = Files.createTempDirectory("inbox").toFile()
   private val b = agent("b", "Tester")
@@ -87,6 +88,8 @@ class InboxCourierTest {
     File(dir, "claimed.99").mkdirs()
     File(dir, ".pending-next.5").mkdirs()
     File(dir, "waiter").apply { parentFile.mkdirs() }.writeText("42\n")
+    // The hooks' marks of the last life: each reports again in the next.
+    File(dir, "ran/Stop.wait").mkdirs()
     // A link in a claimed folder is removed, never followed.
     val outside = File(home, "keep.txt").apply { writeText("keep") }
     Files.createSymbolicLink(File(dir, "claimed.99/link").toPath(), home.toPath())
@@ -94,6 +97,56 @@ class InboxCourierTest {
     // The earlier life's waiter went with its engine: none waits for the new one.
     assertEquals(emptySet<String>(), dir.list()!!.toSet())
     assertEquals("keep", outside.readText())
+  }
+
+  @Test fun clearRanTakesOnlyTheHooksMarks() {
+    val dir = File(home, ".phonecando/inbox-b")
+    courier(Plan(reader = true)).handOver(b, parcel)
+    File(dir, "ran/UserPromptSubmit").mkdirs()
+    folder.clearRan()
+    assertEquals(setOf("pending"), dir.list()!!.toSet())
+    // None there: nothing to do.
+    folder.clearRan()
+  }
+
+  @Test fun theChecksHearAWakeSetAndWhatIsStillPending() {
+    val sets = ArrayList<Pair<String, List<Long>>>()
+    var pending: () -> Set<Long> = { emptySet() }
+    val c = InboxCourier({ Plan(reader = true) }, { folder }, { null }, wakeSet = { agentId, ids, look ->
+      sets += agentId to ids
+      pending = look
+    })
+    c.handOver(b, parcel.copy(wake = false))
+    assertTrue(sets.isEmpty())
+    c.handOver(b, parcel)
+    assertEquals(listOf("b" to listOf(3L, 4L)), sets)
+    assertEquals(setOf(3L, 4L), pending())
+    // Claimed by its reader (or read another way): no longer pending.
+    c.clear(b)
+    assertEquals(emptySet<Long>(), pending())
+  }
+
+  @Test fun theChecksHearEachServerAnswerButNoneForNoAnswer() {
+    val heard = ArrayList<Pair<InboxCall, Int>>()
+    var status = 200
+    val seat = ServerSeat("4096", "pw-b", "ses_1")
+    val c = InboxCourier(
+      { Plan(server = true, wakesByServer = true) },
+      { folder },
+      { seat },
+      { if (status < 0) throw java.io.IOException("refused") else status },
+      served = { agentId, call, code ->
+        assertEquals("b", agentId)
+        heard += call to code
+      },
+    )
+    c.handOver(b, parcel)
+    c.handOver(b, parcel.copy(wake = false))
+    status = 503
+    c.handOver(b, parcel.copy(wake = false))
+    status = -1
+    c.handOver(b, parcel.copy(wake = false))
+    assertEquals(listOf(InboxCall.WAKE to 200, InboxCall.DELIVER to 200, InboxCall.DELIVER to 503), heard)
   }
 
   @Test fun aReaderKindGetsTheFolderToo() {

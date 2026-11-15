@@ -4,6 +4,7 @@ import android.content.Context
 import com.phonecando.agents.kit.EngineEvent
 import com.phonecando.runner.PhoneCanDoRunnerModule
 import com.phonecando.runner.agents.AgentDirectory
+import com.phonecando.runner.checks.now.CheckNow
 
 // An agent's alert from its engine's event stream (EngineStreams): finished,
 // failed or waiting for your answer, as AlertRules decides, posted only
@@ -11,7 +12,10 @@ import com.phonecando.runner.agents.AgentDirectory
 // (AgentNotices.SLOT, shared with the /app return notice), titled with the
 // agent's name: a new alert replaces the last, and after the first sound
 // it updates quietly until the user has seen it. A tap opens that agent's
-// Home; showing the agent's chat takes it down (dismiss).
+// Home; showing the agent's chat takes it down (dismiss). A waiting alert
+// goes once its question is answered (from the notice or the app) or its
+// run moves on, unless a new alert takes the slot; the slot is left alone
+// when it shows anything else by then (the /app return notice).
 // A top-level run that finished also goes to the app, in front or not
 // (phonecandoRunFinished): the app's "Having fun?" card counts them.
 // An agent that asks while it is driving the phone (`drivingScreen`: it
@@ -19,9 +23,14 @@ import com.phonecando.runner.agents.AgentDirectory
 // forward on its Home, so the question is in front of the user instead of
 // behind the app being automated. The alert still goes up first: Android
 // may block the background start, and the chat showing takes it down.
+// While a Check now runs for the agent its runs are the check's: no alert
+// and no finished run for the app; the check's own notices (CheckNotices)
+// say how it went.
 internal class AgentAlerts(
   private val context: Context,
   private val agents: AgentDirectory,
+  /** A Check now runs for the agent, or its engine is not released yet (CheckNow.owns). */
+  private val checking: (agentId: String) -> Boolean = CheckNow::owns,
   private val drivingScreen: (agentId: String) -> Boolean,
 ) {
   private val rules = AlertRules()
@@ -29,7 +38,12 @@ internal class AgentAlerts(
 
   fun onEvent(agentId: String, event: EngineEvent) {
     val due = rules.onEvent(agentId, event) { AppForeground.isForeground(context) } ?: return
-    val alert = due.alert
+    val alert = due.alert?.takeUnless { checking(agentId) }
+    // A wait answered or moved on: its notice goes, unless a new alert takes the slot.
+    if (due.waitOver && !(alert != null && due.post)) {
+      notices.cancelShowing(agentId, AgentNotices.SLOT, AlertRules.Alert.WAITING.text)
+    }
+    if (alert == null) return
     if (alert == AlertRules.Alert.FINISHED) event.sessionId?.let { PhoneCanDoRunnerModule.emitRunFinished(agentId, it) }
     if (!due.post) return
     val name = agents.get(agentId)?.name ?: return

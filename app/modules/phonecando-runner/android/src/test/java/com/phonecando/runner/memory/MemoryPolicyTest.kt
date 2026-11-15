@@ -3,7 +3,6 @@ package com.phonecando.runner.memory
 import com.phonecando.runner.memory.MemoryLevel.CRITICAL
 import com.phonecando.runner.memory.MemoryLevel.OK
 import com.phonecando.runner.memory.MemoryLevel.WARN
-import com.phonecando.runner.memory.MemoryPolicy.Candidate
 import com.phonecando.runner.memory.MemoryPolicy.State
 import com.phonecando.runner.memory.MemoryRules.MIB
 import org.junit.Assert.assertEquals
@@ -13,8 +12,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // The memory guard's decisions, short of a phone: the numbers, the levels
-// and their hysteresis, the countdowns through an episode, and who is
-// stopped first.
+// and their hysteresis, and the countdowns through an episode (who is
+// stopped first: MemoryVictimsTest).
 class MemoryPolicyTest {
   // Our 8 GB test phone reports about 7.2 GiB; a threshold of 216 MiB.
   private val total = 7_372 * MIB
@@ -64,6 +63,12 @@ class MemoryPolicyTest {
     assertEquals(OK, MemoryPolicy.level(between, OK))
     assertEquals(WARN, MemoryPolicy.level(MemoryReading(total, lines.okFrom - 1, threshold, false), WARN))
     assertEquals(OK, MemoryPolicy.level(MemoryReading(total, lines.okFrom, threshold, false), WARN))
+  }
+
+  @Test fun shortIsWhatItTakesToBeOkAgain() {
+    assertEquals(0L, MemoryPolicy.short(reading(4_000)))
+    assertEquals(0L, MemoryPolicy.short(MemoryReading(total, lines.okFrom, threshold, false)))
+    assertEquals(lines.okFrom - 500 * MIB, MemoryPolicy.short(reading(500)))
   }
 
   @Test fun criticalEasesToWarnAtOnce() {
@@ -163,36 +168,5 @@ class MemoryPolicyTest {
     assertNull(idle.settleUntil)
     assertEquals(WARN, idle.level)
     assertEquals(1, idle.stops)
-  }
-
-  @Test fun victimsWithoutARunFirstThenLeastRecentlyUsed() {
-    val agents = listOf(
-      Candidate("busy-old", working = true, lastUsedAt = 100),
-      Candidate("quiet-new", working = false, lastUsedAt = 900),
-      Candidate("quiet-old", working = false, lastUsedAt = 200),
-      Candidate("busy-new", working = true, lastUsedAt = 800),
-    )
-    assertEquals("quiet-old", MemoryPolicy.victim(agents, null))
-    assertEquals("quiet-new", MemoryPolicy.victim(agents.filter { it.agentId != "quiet-old" }, null))
-    assertEquals("busy-old", MemoryPolicy.victim(agents.filter { !it.agentId.startsWith("quiet") }, null))
-    // Never used counts as oldest.
-    assertEquals("never", MemoryPolicy.victim(agents + Candidate("never", false, null), null))
-  }
-
-  @Test fun agentsWithAJobLeftGoAfterThoseWithNothing() {
-    val agents = listOf(
-      Candidate("server-old", working = false, lastUsedAt = 100, busy = true),
-      Candidate("nothing-new", working = false, lastUsedAt = 900),
-      Candidate("working", working = true, lastUsedAt = 50),
-    )
-    assertEquals("nothing-new", MemoryPolicy.victim(agents, null))
-    assertEquals("server-old", MemoryPolicy.victim(agents.filter { it.agentId != "nothing-new" }, null))
-  }
-
-  @Test fun theAgentOnScreenIsNeverStopped() {
-    val agents = listOf(Candidate("open", false, 1), Candidate("other", true, 999))
-    assertEquals("other", MemoryPolicy.victim(agents, keep = "open"))
-    assertNull(MemoryPolicy.victim(listOf(Candidate("open", false, 1)), keep = "open"))
-    assertNull(MemoryPolicy.victim(emptyList(), null))
   }
 }

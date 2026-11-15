@@ -72,4 +72,18 @@ class ResumeFallbackTest {
     assertFalse(ResumeFallback.applies(plan(tui(""), ranBefore = true), 1))
     assertFalse(ResumeFallback.applies(plan(TestKinds.catalog.get("opencode")!!, ranBefore = true), 1))
   }
+
+  @Test fun aLaunchThatOpenedAnAcpChatFallsBackWithoutIt() {
+    val opened = plan(resuming, ranBefore = false).copy(chatId = "s1")
+    assertTrue(ResumeFallback.applies(opened, 1))
+    val again = ResumeFallback.without(opened)
+    assertEquals(null, again.chatId)
+    assertFalse(ResumeFallback.applies(again, 1))
+  }
+
+  @Test fun acpModeNeverFallsBack() {
+    val acp = plan(resuming, ranBefore = true).copy(mode = EngineMode.ACP)
+    assertFalse(ResumeFallback.applies(acp, 1))
+    assertFalse(ResumeFallback.appliesAfterReady(acp, 1, sawEvent = false))
+  }
 }

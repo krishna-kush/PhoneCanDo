@@ -17,6 +17,12 @@ class LaunchTargetTest {
     assertEquals(LaunchTarget("home", "a1").key, LaunchTarget.of("home", "a1").key)
   }
 
+  @Test fun checksLandsOnTheAgentsChecks() {
+    assertEquals(LaunchTarget("checks", "a1"), LaunchTarget.of("checks", "a1"))
+    assertEquals(LaunchTarget.CHECKS, LaunchTarget.of(LaunchTarget.CHECKS, "a1").tab)
+    assertNotEquals(LaunchTarget("checks", "a1").key, LaunchTarget("home", "a1").key)
+  }
+
   @Test fun mapIsWhatJsReads() {
     assertEquals(mapOf("tab" to "env", "agentId" to null), LaunchTarget("env", null).toMap())
   }

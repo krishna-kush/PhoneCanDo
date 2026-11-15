@@ -112,6 +112,20 @@ class AgentStore(
   /** Whether other agents' messages may wake it (AgentRecord.wakeable). */
   fun setWakeable(id: String, wakeable: Boolean): AgentRecord = update(id) { it.copy(wakeable = wakeable) }
 
+  /** The chat its ACP mode works in (AgentRecord.acpChat); a no-op when unchanged or for no such agent. */
+  fun setAcpChat(id: String, chatId: String) = changeAcpChat(id, chatId)
+
+  /** It has no ACP chat to open any more (a terminal launch opened it); a no-op when it has none. */
+  fun clearAcpChat(id: String) = changeAcpChat(id, null)
+
+  private fun changeAcpChat(id: String, chatId: String?) {
+    synchronized(lock) {
+      val current = loaded().firstOrNull { it.id == id } ?: return
+      if (current.acpChat == chatId) return
+      update(id) { it.copy(acpChat = chatId) }
+    }
+  }
+
   private fun update(id: String, change: (AgentRecord) -> AgentRecord): AgentRecord = synchronized(lock) {
     val list = loaded()
     val index = list.indexOfFirst { it.id == id }
@@ -209,6 +223,7 @@ class AgentStore(
           model = if (o.isNull("model")) null else o.optString("model", "").ifEmpty { null },
           ownState = o.optBoolean("ownState", false),
           wakeable = o.optBoolean("wakeable", true),
+          acpChat = if (o.isNull("acpChat")) null else o.optString("acpChat", "").ifEmpty { null },
         )
       }
       return out
@@ -231,7 +246,8 @@ class AgentStore(
             .put("installedVersion", a.installedVersion ?: JSONObject.NULL)
             .put("model", a.model ?: JSONObject.NULL)
             .put("ownState", a.ownState)
-            .put("wakeable", a.wakeable),
+            .put("wakeable", a.wakeable)
+            .put("acpChat", a.acpChat ?: JSONObject.NULL),
         )
       }
       return JSONObject().put("agents", array).toString(2)
