@@ -1,8 +1,11 @@
 // Custom agent kinds: the form as a manifest the runner loads as a user
-// kind (src/engine/agents/user/build.ts, with words.ts, steps.ts, ids.ts
-// and form.ts), what the review step reads out of one (review.ts), a pasted
-// import (imports.ts), the pages' words (src/ui/env/logic/customAgentText.ts)
-// and the way back to New agent once one is saved there (state/app/stack.ts).
+// kind (src/engine/agents/user/build.ts, with words.ts, steps.ts, ids.ts,
+// install.ts and form.ts), what the review step reads out of one
+// (review.ts), a pasted import (imports.ts), the pages' words
+// (src/ui/env/logic/customAgentText.ts: needed and optional marks among
+// them), More settings (src/ui/env/custom-agents/logic/moreSettings.ts),
+// the ACP command (engine.acp) and the way back to New agent once one is
+// saved there (state/app/stack.ts).
 // Every manifest built here must
 // pass the kit's validator for origin user. Imports the real pure modules
 // (Node 22.18+ strips their types), so these cannot drift.
@@ -27,6 +30,8 @@ const user = (p) => src('engine/agents/user', p);
   const { stepsOf, scriptOf } = await import(user('steps.ts'));
   const { userKindId } = await import(user('ids.ts'));
   const { emptyForm, formOf, formLevel } = await import(user('form.ts'));
+  const install = await import(user('install.ts'));
+  const more = await import(src('ui/env/custom-agents/logic/moreSettings.ts'));
   const { buildUserManifest } = await import(user('build.ts'));
   const { reviewOf } = await import(user('review.ts'));
   const { parseImport } = await import(user('imports.ts'));
@@ -59,12 +64,20 @@ const user = (p) => src('engine/agents/user', p);
 
   // --- build: a new kind -------------------------------------------------
   const empty = buildUserManifest(emptyForm(), { base: null, taken: [] });
-  t('an empty form names what is missing', empty.ok ? [] : empty.problems.map((p) => p.field), ['name', 'command']);
+  t('an empty form names what is missing', empty.ok ? [] : empty.problems.map((p) => p.field), ['name', 'command', 'installPackage']);
+  t('each needed field, empty, says so plainly', empty.ok ? [] : empty.problems.map((p) => p.text), ['Give it a name.', 'Say what starts the agent.', 'Name the npm package.']);
+  const emptyPy = buildUserManifest({ ...emptyForm(), install: 'python' }, { base: null, taken: [] });
+  const emptyScript = buildUserManifest({ ...emptyForm(), install: 'script' }, { base: null, taken: [] });
+  t('an empty package or script says so too', [emptyPy.problems.map((p) => p.text)[2], emptyScript.problems.map((p) => p.text)[2]], [
+    'Name the Python package.', 'Write the install steps, or pick Nothing to install.',
+  ]);
+  t('a new form installs an npm package', [emptyForm().install, emptyForm().installPackage], ['npm', '']);
 
   const aider = {
     ...emptyForm(),
     name: 'Aider',
     command: '/root/.local/bin/aider --no-auto-commits',
+    install: 'script',
     script: 'python3 -m pip install --user --break-system-packages aider-chat\n\nrm -rf /root/.cache/pip',
     packages: 'python3 python3-pip, git',
     familyPackages: { apk: 'python3 py3-pip git', pacman: '' },
@@ -95,7 +108,7 @@ const user = (p) => src('engine/agents/user', p);
   t('its text is the manifest, pretty', built.ok && JSON.parse(built.text), built.manifest);
   t('the form reads back from it', formOf(built.manifest), { ...aider, packages: 'python3 python3-pip git', familyPackages: { apk: 'python3 py3-pip git' } });
 
-  const bare = buildUserManifest({ ...emptyForm(), name: 'top', command: 'top' }, { base: null, taken: [] });
+  const bare = buildUserManifest({ ...emptyForm(), name: 'top', command: 'top', install: 'none' }, { base: null, taken: [] });
   t('no install: no update, no version check', bare.ok && ['install', 'update', 'versionCheck'].map((k) => k in bare.manifest), [false, false, false]);
   t('no bell: no events', bare.ok && 'events' in bare.manifest, false);
 
@@ -103,15 +116,15 @@ const user = (p) => src('engine/agents/user', p);
   t('a version command and pattern of its own', own.ok && own.manifest.versionCheck, { argv: ['aider', '-V', 'x y'], pattern: 'v(\\S+)' });
 
   // --- build: Node.js and the phone tools --------------------------------
-  const node = buildUserManifest({ ...emptyForm(), name: 'Codex', command: 'codex', script: 'npm i -g --prefix "$HOME/.local" @openai/codex', needsNode: true }, { base: null, taken: [] });
+  const node = buildUserManifest({ ...emptyForm(), name: 'Codex', command: 'codex', install: 'script', script: 'npm i -g --prefix "$HOME/.local" @openai/codex', needsNode: true }, { base: null, taken: [] });
   t('Node.js 22 goes in first', node.ok && node.manifest.requires, { linux: 'required', runtimes: ['node>=22'] });
-  t('Node.js alone is an install', buildUserManifest({ ...emptyForm(), name: 'n', command: 'node', needsNode: true }, { base: null, taken: [] }).ok, true);
+  t('Node.js alone is an install', buildUserManifest({ ...emptyForm(), name: 'n', command: 'node', install: 'none', needsNode: true }, { base: null, taken: [] }).ok, true);
 
   const mcp = '{"mcpServers":{"phone":{"url":"${PHONECANDO_BRIDGE_URL}/mcp","headers":{"Authorization":"Bearer ${PHONECANDO_BRIDGE_TOKEN}"}}}}';
-  const toolsOn = (command) => buildUserManifest({ ...emptyForm(), name: 'x', command, phoneTools: true }, { base: null, taken: [] });
+  const toolsOn = (command) => buildUserManifest({ ...emptyForm(), name: 'x', command, install: 'none', phoneTools: true }, { base: null, taken: [] });
   t('phone tools on, in its config', toolsOn('x').manifest.phoneTools, 'mcp:config');
   t('phone tools on, in its command', toolsOn(`x --mcp-config '${mcp}'`).manifest.phoneTools, 'mcp:argv');
-  const offButUsed = buildUserManifest({ ...emptyForm(), name: 'x', command: `x --mcp-config '${mcp}'` }, { base: null, taken: [] });
+  const offButUsed = buildUserManifest({ ...emptyForm(), name: 'x', command: `x --mcp-config '${mcp}'`, install: 'none' }, { base: null, taken: [] });
   t('the bridge in the command needs phone tools on', offButUsed.ok ? [] : offButUsed.problems.map((p) => p.field), ['phoneTools']);
 
   // --- build: problems land on their fields -------------------------------
@@ -158,7 +171,7 @@ const user = (p) => src('engine/agents/user', p);
   const tracked = { ...base, update: { steps: base.install.steps } };
   const moreSteps = buildUserManifest({ ...formOf(tracked), script: 'pipx install aider-chat' }, { base: tracked, taken: [] });
   t('an update that ran the install steps follows them', moreSteps.manifest.update, { steps: ['pipx install aider-chat'] });
-  const noInstall = buildUserManifest({ ...formOf(tracked), script: '', packages: '', familyPackages: {}, needsNode: false }, { base: { ...tracked, requires: { linux: 'required' } }, taken: [] });
+  const noInstall = buildUserManifest({ ...formOf(tracked), install: 'none', script: '', packages: '', familyPackages: {}, needsNode: false, needsPython: false }, { base: { ...tracked, requires: { linux: 'required' } }, taken: [] });
   t('taking out the install takes its update and check', ['install', 'update', 'versionCheck'].map((k) => k in noInstall.manifest), [false, false, false]);
   const bellBack = buildUserManifest({ ...formOf(renamed.manifest), bellWaits: true }, { base: renamed.manifest, taken: [] });
   t('the bell rule goes first in the PTY rules', bellBack.manifest.events[0], { pty: { rules: [{ on: 'bel', event: 'waiting' }, { on: 'osc9', event: 'finished' }] } });
@@ -175,6 +188,7 @@ const user = (p) => src('engine/agents/user', p);
     versionCommand: '/root/.local/bin/aider --version',
     env: [],
     phoneTools: false,
+    acpCommand: null,
   });
   t('an update that is the install is not shown twice', reviewOf(built.manifest).updateSteps, null);
 
@@ -208,7 +222,7 @@ const user = (p) => src('engine/agents/user', p);
   t('no step below: unchanged', stack.returnWithKind([{ key: 1, route: { name: 'custom-agents' } }], 'user.x', 9), [{ key: 1, route: { name: 'custom-agents' } }]);
 
   // --- messages from other agents -----------------------------------------
-  const hooky = { ...emptyForm(), name: 'Hooky', command: 'hooky', phoneTools: true };
+  const hooky = { ...emptyForm(), name: 'Hooky', command: 'hooky', install: 'none', phoneTools: true };
   t('no hook, phone tools: inbox only', formLevel(hooky), 'inbox');
   t('no hook, no tools: none', formLevel({ ...hooky, phoneTools: false }), 'none');
   t('a hook: delivered', formLevel({ ...hooky, messageEvent: 'AfterTool' }), 'delivered');
@@ -225,6 +239,203 @@ const user = (p) => src('engine/agents/user', p);
   const bad = buildUserManifest({ ...hooky, messageEvent: 'no spaces allowed' }, { base: null, taken: [] });
   t('a bad hook name lands on its field', !bad.ok && bad.problems.some((p) => p.field === 'messageEvent'), true);
   t('the hook command names the event', text.messageHookCommand('AfterTool').endsWith('sh /root/.phonecando/bin/phonecando-inbox AfterTool'), true);
+
+  // --- ACP mode -------------------------------------------------------------
+  t('a new form has no ACP command', emptyForm().acpCommand, '');
+  const qwen = { ...emptyForm(), name: 'Qwen', command: '/root/.local/bin/qwen', install: 'none', acpCommand: '/root/.local/bin/qwen --acp' };
+  const acpBuilt = buildUserManifest(qwen, { base: null, taken: [] });
+  t('the ACP command is engine.acp', acpBuilt.ok && acpBuilt.manifest.engine, {
+    style: 'tui',
+    launch: { argv: ['/root/.local/bin/qwen'], cwd: '{{projectDir}}' },
+    acp: { argv: ['/root/.local/bin/qwen', '--acp'] },
+  });
+  t('it passes the user rules with ACP', acpBuilt.ok && validate(acpBuilt.manifest, { origin: 'user' }).problems, []);
+  t('the form reads the ACP command back', acpBuilt.ok && formOf(acpBuilt.manifest).acpCommand, '/root/.local/bin/qwen --acp');
+  t('the review shows it', acpBuilt.ok && reviewOf(acpBuilt.manifest).acpCommand, '/root/.local/bin/qwen --acp');
+  t('no ACP command: none in the review', reviewOf(built.manifest).acpCommand, null);
+  const config = buildUserManifest({ ...qwen, phoneTools: true }, { base: null, taken: [] });
+  t('phone tools in its config: the bridge stays in its env', config.ok && config.manifest.engine.acp, { argv: ['/root/.local/bin/qwen', '--acp'], tools: 'config' });
+  const acpBase = {
+    ...acpBuilt.manifest,
+    engine: { ...acpBuilt.manifest.engine, acp: { argv: ['/root/.local/bin/qwen', '--acp'], tools: 'session', options: { mode: 'default' }, chat: { args: ['--resume', '{{chatId}}'] } } },
+  };
+  const acpEdit = buildUserManifest({ ...formOf(acpBase), acpCommand: "/root/.local/bin/qwen --acp --yolo" }, { base: acpBase, taken: [] });
+  t('an edit keeps the rest of the acp block', acpEdit.ok && acpEdit.manifest.engine.acp, {
+    argv: ['/root/.local/bin/qwen', '--acp', '--yolo'], tools: 'session', options: { mode: 'default' }, chat: { args: ['--resume', '{{chatId}}'] },
+  });
+  const acpSame = buildUserManifest(formOf(acpBase), { base: acpBase, taken: [] });
+  t('an unchanged edit keeps the acp block as it was', acpSame.ok && acpSame.manifest, acpBase);
+  const acpGone = buildUserManifest({ ...formOf(acpBase), acpCommand: '  ' }, { base: acpBase, taken: [] });
+  t('an emptied ACP command drops the block', acpGone.ok && 'acp' in acpGone.manifest.engine, false);
+  t('an open quote in it', fields({ acpCommand: "aider 'x" }), ['acpCommand']);
+  t('a relative program in it', fields({ acpCommand: 'bin/aider --acp' }), ['acpCommand']);
+  t('a prompt placeholder in it', fields({ acpCommand: '/root/.local/bin/aider {{prompt}}' }), ['acpCommand']);
+  const acpBridged = buildUserManifest({ ...qwen, acpCommand: `/root/.local/bin/qwen --acp --mcp-config '${mcp}'` }, { base: null, taken: [] });
+  t('the bridge in the ACP command needs phone tools on', acpBridged.ok ? [] : acpBridged.problems.map((p) => p.field), ['acpCommand']);
+  const acpArgvTools = buildUserManifest({ ...qwen, phoneTools: true, command: `/root/.local/bin/qwen --mcp-config '${mcp}'`, acpCommand: `/root/.local/bin/qwen --acp --mcp-config '${mcp}'` }, { base: null, taken: [] });
+  t('the bridge in the ACP command: the bridge stays in its env', acpArgvTools.ok && acpArgvTools.manifest.engine.acp.tools, 'config');
+  const argvOnly = buildUserManifest({ ...qwen, phoneTools: true, command: `/root/.local/bin/qwen --mcp-config '${mcp}'` }, { base: null, taken: [] });
+  t('the bridge only in the TUI command: the runner hands it over', argvOnly.ok && 'tools' in argvOnly.manifest.engine.acp, false);
+  t('ACP wakes it, phone tools or not', [formLevel({ ...hooky, acpCommand: 'x' }), formLevel({ ...hooky, acpCommand: 'x', phoneTools: false }), formLevel({ ...hooky, acpCommand: '  ' })], ['wakes', 'wakes', 'inbox']);
+  t('the review line', [text.acpReviewLine('x').startsWith('Tasks that come'), text.acpReviewLine(null).startsWith('None')], [true, true]);
+
+  // --- how it installs: the presets (install.ts) ----------------------------
+  const NPM = (spec) => `npm install -g --prefix "$HOME/.local" ${spec}`;
+  const UV = (spec) => [`UV_LINK_MODE=copy uv tool install --force --python 3.12 ${spec}`, 'uv cache clean'];
+  t('npm: the latest, one line', install.presetSteps('npm', ' @qwen-code/qwen-code '), [NPM('@qwen-code/qwen-code@latest')]);
+  t('npm: a version of its own stays', install.presetSteps('npm', '@scope/cli@1.2.3'), [NPM('@scope/cli@1.2.3')]);
+  t('Python: the latest, then the cache cleaned', install.presetSteps('python', 'aider-chat'), UV('aider-chat@latest'));
+  t('Python: a version of its own stays', install.presetSteps('python', 'aider-chat==0.86.1'), UV('aider-chat==0.86.1'));
+  t('the runtime each way needs', install.INSTALL_WAYS.map(install.presetRuntime), ['node', 'python', null, null]);
+  t('package problems', [
+    install.packageProblem('npm', ' '),
+    install.packageProblem('python', ''),
+    install.packageProblem('npm', '@scope/cli') == null,
+    install.packageProblem('python', 'aider-chat==0.86') == null,
+    ...['a b', 'x;rm -rf /', '$(id)', '--force', 'x>1', '{{port}}'].map((pkg) => install.packageProblem('npm', pkg) != null),
+  ], ['Name the npm package.', 'Name the Python package.', true, true, true, true, true, true, true, true]);
+
+  // --- how it installs: an edit reads it back -----------------------------
+  t('no steps: nothing to install', install.detectInstall([], ['node']), { way: 'none', pkg: '' });
+  t('our npm line, on Node.js: npm', install.detectInstall([NPM('@qwen-code/qwen-code@latest')], ['node']), { way: 'npm', pkg: '@qwen-code/qwen-code' });
+  t('a version of its own reads back', install.detectInstall([NPM('cli@1.2')], ['node']), { way: 'npm', pkg: 'cli@1.2' });
+  t('our uv steps, on python: Python', install.detectInstall(UV('aider-chat@latest'), ['python']), { way: 'python', pkg: 'aider-chat' });
+  t('our uv steps as Mistral Vibe has them: Python', install.detectInstall(UV('mistral-vibe@latest'), ['python']), { way: 'python', pkg: 'mistral-vibe' });
+  t('the uv install without the clean: a script', install.detectInstall(UV('aider-chat@latest').slice(0, 1), ['python']), { way: 'script', pkg: '' });
+  t('our line without its runtime: a script', install.detectInstall([NPM('cli@latest')], ['python']), { way: 'script', pkg: '' });
+  t('our steps and one more: a script', [
+    install.detectInstall([...UV('mistral-vibe@latest'), 'rm -rf /root/.cache'], ['python']).way,
+    install.detectInstall([NPM('x@latest'), 'npm cache clean --force'], ['node']).way,
+  ], ['script', 'script']);
+  t('a line of its own: a script', [
+    install.detectInstall(['npm i -g --prefix "$HOME/.local" @openai/codex'], ['node']).way,
+    install.detectInstall([`${NPM('x@latest')} && rm -rf /root/.npm`], ['node']).way,
+    install.detectInstall([NPM('x;y@latest')], ['node']).way,
+  ], ['script', 'script', 'script']);
+
+  // --- how it installs: the command we fill in ----------------------------
+  t('the program a package installs', ['@qwen-code/qwen-code', '@scope/cli@1.2', 'aider-chat==0.86', 'cline', ' ', '@solo'].map(install.programOf), [
+    'qwen-code', 'cli', 'aider-chat', 'cline', '', 'solo',
+  ]);
+  t('the command filled in', [install.commandGuess('@google/gemini-cli'), install.commandGuess('')], ['/root/.local/bin/gemini-cli', '']);
+  const typed = (pkg, from = emptyForm()) => install.changeInstall(from, { installPackage: pkg });
+  const q1 = { ...emptyForm(), ...typed('@qwen-code/qwen') };
+  t('the command follows the package', [q1.command, typed('@qwen-code/qwen-code', q1).command], ['/root/.local/bin/qwen', '/root/.local/bin/qwen-code']);
+  t('one typed by hand stays', typed('@qwen-code/qwen-code', { ...q1, command: '/root/.local/bin/qwen --yolo' }).command, '/root/.local/bin/qwen --yolo');
+  t('a package cleared clears the command we filled in', typed('', q1).command, '');
+  const toPython = install.changeInstall(q1, { install: 'python' });
+  t('npm to Python: the command still follows, no switch turns on', [toPython.install, toPython.command, toPython.needsPython, toPython.needsNode], ['python', '/root/.local/bin/qwen', false, false]);
+  const toScript = install.changeInstall(q1, { install: 'script' });
+  t('a package turned into a script keeps its line and runtime', [toScript.script, toScript.needsNode, toScript.command], [NPM('@qwen-code/qwen@latest'), true, '/root/.local/bin/qwen']);
+  const ownScript = install.changeInstall({ ...q1, script: 'make install' }, { install: 'script' });
+  t('a script already typed stays', [ownScript.script, ownScript.needsNode], ['make install', false]);
+  t('nothing to install keeps the command', install.changeInstall(q1, { install: 'none' }).command, '/root/.local/bin/qwen');
+
+  // --- how it installs: build with each ------------------------------------
+  const qwenNpm = { ...emptyForm(), name: 'Qwen Code', install: 'npm', installPackage: '@qwen-code/qwen-code', command: '/root/.local/bin/qwen' };
+  const npmBuilt = buildUserManifest(qwenNpm, { base: null, taken: [] });
+  t('npm: its line, Node.js 22, the update and the check', npmBuilt.ok && [npmBuilt.manifest.requires, npmBuilt.manifest.install, npmBuilt.manifest.update, npmBuilt.manifest.versionCheck], [
+    { linux: 'required', runtimes: ['node>=22'] },
+    { steps: [NPM('@qwen-code/qwen-code@latest')] },
+    { steps: [NPM('@qwen-code/qwen-code@latest')] },
+    { argv: ['/root/.local/bin/qwen', '--version'], pattern: '(\\d+(?:\\.\\d+)+)' },
+  ]);
+  t('npm: it passes the user rules', npmBuilt.ok && validate(npmBuilt.manifest, { origin: 'user' }).problems, []);
+  t('npm: the form reads it back', npmBuilt.ok && formOf(npmBuilt.manifest), qwenNpm);
+  const npmSame = buildUserManifest(formOf(npmBuilt.manifest), { base: npmBuilt.manifest, taken: [] });
+  t('npm: an unchanged edit is the kind as it was', npmSame.ok && npmSame.manifest, npmBuilt.manifest);
+  const aiderPy = { ...emptyForm(), name: 'Aider', install: 'python', installPackage: 'aider-chat', command: '/root/.local/bin/aider' };
+  const pyBuilt = buildUserManifest(aiderPy, { base: null, taken: [] });
+  t('Python: its line and the python runtime', pyBuilt.ok && [pyBuilt.manifest.requires, pyBuilt.manifest.install], [
+    { linux: 'required', runtimes: ['python'] },
+    { steps: UV('aider-chat@latest') },
+  ]);
+  t('Python: it passes the user rules', pyBuilt.ok && validate(pyBuilt.manifest, { origin: 'user' }).problems, []);
+  t('Python: the form reads it back', pyBuilt.ok && formOf(pyBuilt.manifest), aiderPy);
+  const pySame = buildUserManifest(formOf(pyBuilt.manifest), { base: pyBuilt.manifest, taken: [] });
+  t('Python: an unchanged edit is the kind as it was', pySame.ok && pySame.manifest, pyBuilt.manifest);
+  const none = buildUserManifest({ ...qwenNpm, install: 'none' }, { base: null, taken: [] });
+  t('nothing to install: no install, no runtime', none.ok && [none.manifest.requires, 'install' in none.manifest], [{ linux: 'required' }, false]);
+  const both = buildUserManifest({ ...qwenNpm, needsPython: true }, { base: null, taken: [] });
+  t('npm with the Python switch on: both runtimes', both.ok && both.manifest.requires.runtimes, ['node>=22', 'python']);
+  const npmNewerBase = { ...npmBuilt.manifest, requires: { linux: 'required', runtimes: ['node>=24'] } };
+  const npmNewer = buildUserManifest(formOf(npmNewerBase), { base: npmNewerBase, taken: [] });
+  t('npm: a newer Node.js the kind had stays', npmNewer.ok && npmNewer.manifest, npmNewerBase);
+  const npmToPy = buildUserManifest({ ...formOf(npmBuilt.manifest), install: 'python', installPackage: 'qwen-code' }, { base: npmBuilt.manifest, taken: [] });
+  t('npm to Python in an edit: Node.js goes, python comes', npmToPy.ok && [npmToPy.manifest.requires.runtimes, npmToPy.manifest.install.steps, npmToPy.manifest.update.steps], [
+    ['python'], UV('qwen-code@latest'), UV('qwen-code@latest'),
+  ]);
+  t('a package that is missing or bad lands on its field', [
+    fields({ install: 'npm', installPackage: '' }),
+    fields({ install: 'python', installPackage: 'a b' }),
+    fields({ install: 'npm', installPackage: 'x'.repeat(1100) }),
+  ], [['installPackage'], ['installPackage'], ['installPackage']]);
+  t('a script with no steps is a problem', fields({ install: 'script', script: ' \n ' }), ['script']);
+  t('a package install ignores the script it hides', buildUserManifest({ ...qwenNpm, script: 'echo {{port}}' }, { base: null, taken: [] }).ok, true);
+
+  // --- how it installs: an old kind with a script of its own stays a script --
+  t('an old kind with its own steps reads as a script', [formOf(base).install, formOf(base).script, formOf(base).installPackage], ['script', scriptOf(steps), '']);
+  const codexOld = { ...node.manifest, id: 'user.codex' };
+  t('a one-line script of its own stays one', [formOf(codexOld).install, formOf(codexOld).script, formOf(codexOld).needsNode], ['script', 'npm i -g --prefix "$HOME/.local" @openai/codex', true]);
+  const codexSame = buildUserManifest(formOf(codexOld), { base: codexOld, taken: [] });
+  t('it saves back as it was', codexSame.ok && codexSame.manifest, codexOld);
+  const runtimesOrder = { ...base, requires: { ...base.requires, runtimes: ['python>=3', 'node>=24'] } };
+  const orderSame = buildUserManifest(formOf(runtimesOrder), { base: runtimesOrder, taken: [] });
+  t('runtimes keep their order in an edit', orderSame.ok && orderSame.manifest.requires.runtimes, ['python>=3', 'node>=24']);
+
+  // --- More settings (moreSettings.ts) ---------------------------------------
+  t('More settings holds only form fields', more.MORE_FIELDS.every((f) => f in emptyForm()), true);
+  const P = (...fs) => fs.map((field) => ({ field, text: 'x' }));
+  t('a problem in More settings opens it', [more.moreHasProblem(P('titlePattern')), more.moreHasProblem(P('name', null, 'acpCommand'))], [true, false]);
+  t('how many More settings are set', [
+    more.moreSetCount(emptyForm()),
+    more.moreSetCount({ ...emptyForm(), packages: ' curl ', bellWaits: true, familyPackages: { apk: ' ' } }),
+    more.moreSetCount(formOf(base)),
+    more.moreSetCount({ ...emptyForm(), install: 'npm', needsNode: true }),
+    more.moreSetCount({ ...emptyForm(), install: 'script', needsNode: true }),
+  ], [0, 2, 6, 0, 1]);
+  t('the review names our Python', ['python', 'python>=3'].map(text.runtimeName), ['Python 3.12 and uv', 'Python 3 or newer']);
+
+  // --- the form's words ------------------------------------------------------
+  t('a choice for each way', Object.keys(text.INSTALL_CHOICES), install.INSTALL_WAYS);
+  t('the command hint says where a guess came from', [text.commandHint('npm').startsWith('Filled in'), text.commandHint('script').startsWith('What starts')], [true, true]);
+  t('More settings: what is in it, how many are set', [text.MORE_WHAT.startsWith('Packages'), text.moreCount(0), text.moreCount(2)], [true, '', '2 set']);
+  t('the line under the title', text.FORM_NEEDS, 'Name, how it installs and the command are needed. The rest is optional.');
+
+  // --- needed and optional --------------------------------------------------
+  const tagged = (tag) => Object.keys(emptyForm()).filter((f) => text.FIELD_TAGS[f] === tag);
+  t('needed: name, the install and its package or script, the command', tagged('needed'), ['name', 'command', 'install', 'installPackage', 'script']);
+  t('optional: the ACP command and every text field in More settings', tagged('optional'), [
+    'packages', 'familyPackages', 'versionCommand', 'versionPattern', 'titlePattern', 'messageEvent', 'messageJson', 'acpCommand',
+  ]);
+  t('a switch has no mark (off is safe)', Object.keys(emptyForm()).filter((f) => typeof emptyForm()[f] === 'boolean').map((f) => text.FIELD_TAGS[f] ?? null), [null, null, null, null, null]);
+  t('everything in More settings is optional or a switch', more.MORE_FIELDS.every((f) => text.FIELD_TAGS[f] !== 'needed'), true);
+  t('the mark as drawn and as spoken', [text.tagText('needed'), text.tagText('optional'), text.spokenLabel('Name', 'needed'), text.spokenLabel('Phone tools')], [
+    '· needed', '· optional', 'Name, needed', 'Phone tools',
+  ]);
+
+  // --- what an optional field means left empty -------------------------------
+  const fieldsOf = (pred) => Object.keys(emptyForm()).filter(pred);
+  const helpOf = (f) => text.fieldHelp(f, '/root/.local/bin/qwen');
+  t('every optional field says what empty means', fieldsOf((f) => text.FIELD_TAGS[f] === 'optional' && !helpOf(f)), []);
+  t('a needed field has no help', fieldsOf((f) => text.FIELD_TAGS[f] === 'needed' && helpOf(f) != null), []);
+  t('a text field: If empty…', fieldsOf((f) => text.FIELD_TAGS[f] === 'optional' && !helpOf(f).empty.startsWith('If ')), []);
+  t('switches say what off means', ['phoneTools', 'bellWaits', 'needsNode', 'needsPython'].map((f) => helpOf(f)?.empty.startsWith('Off: ')), [true, true, true, true]);
+  t('exit 2 has its own note, no help', helpOf('messageExit2'), null);
+  t('the version command names the program', [helpOf('versionCommand').empty, text.fieldHelp('versionCommand', '').empty], [
+    'If empty: we run /root/.local/bin/qwen --version.', 'If empty: we run its program --version.',
+  ]);
+  t('the ideas that need it get more', ['acpCommand', 'messageEvent'].map((f) => typeof helpOf(f).more), ['string', 'string']);
+  t('ACP: what empty means and what ACP is', [
+    helpOf('acpCommand').empty.startsWith('If empty: no background mode.'),
+    helpOf('acpCommand').more.startsWith('ACP (Agent Client Protocol)'),
+  ], [true, true]);
+  t('the hints leave empty to the help', [text.MESSAGE_EVENT_HINT, text.MESSAGE_JSON_HINT].map((h) => h.includes('Empty:')), [false, false]);
+  t('the note under the ACP command and its guide', [
+    text.ACP_NONE_NOTE.startsWith('No ACP mode? PhoneCanDo is source-available'),
+    text.ADD_AGENT_GUIDE.url,
+    text.openElsewhere('https://x.example'),
+  ], [true, 'https://github.com/krishna-kush/PhoneCanDo/blob/HEAD/docs/guides/adding-an-agent.md', 'Open https://x.example in a browser.']);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

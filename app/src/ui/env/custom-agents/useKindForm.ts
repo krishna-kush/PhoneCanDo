@@ -9,6 +9,8 @@ type Ready = { text: string; review: KindReview };
 
 const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
+export type KindForm = ReturnType<typeof useKindForm>;
+
 // The custom agent form's state and its two steps: edit the fields (a new
 // kind's, empty, or the saved kind's for an edit), then review what the
 // kind runs and save it. `review` builds the manifest (the kit's rules),
@@ -21,32 +23,34 @@ export function useKindForm(kindId: string | null) {
   const [ready, setReady] = useState<Ready | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const set = <K extends keyof UserAgentForm>(key: K, value: UserAgentForm[K]) => {
-    setForm((f) => ({ ...f, [key]: value }));
-    setProblems((ps) => ps.filter((p) => p.field !== key));
+  /** Several fields at once; their problems go. */
+  const patch = (values: Partial<UserAgentForm>) => {
+    setForm((f) => ({ ...f, ...values }));
+    setProblems((ps) => ps.filter((p) => p.field == null || !(p.field in values)));
   };
 
-  const review = () => {
+  const set = <K extends keyof UserAgentForm>(key: K, value: UserAgentForm[K]) => patch({ [key]: value } as Partial<UserAgentForm>);
+
+  /** The problems that keep it from the review step; empty when it shows. */
+  const review = (): FormProblem[] => {
     useKindsStore.getState().readUserKinds();
     const taken = useKindsStore.getState().userKinds.map((k) => k.id);
     const built = buildUserManifest(form, { base: loaded?.base ?? null, taken });
-    if (!built.ok) {
-      setProblems(built.problems);
-      return;
-    }
+    const fail = (ps: FormProblem[]) => {
+      setProblems(ps);
+      return ps;
+    };
+    if (!built.ok) return fail(built.problems);
     try {
       const native = checkKind(built.text);
-      if (native.length > 0) {
-        setProblems(native.map((text) => ({ field: null, text })));
-        return;
-      }
+      if (native.length > 0) return fail(native.map((text) => ({ field: null, text })));
     } catch (e) {
-      setProblems([{ field: null, text: errorText(e) }]);
-      return;
+      return fail([{ field: null, text: errorText(e) }]);
     }
     setProblems([]);
     setSaveError(null);
     setReady({ text: built.text, review: reviewOf(built.manifest) });
+    return [];
   };
 
   const edit = useCallback(() => setReady(null), []);
@@ -64,5 +68,5 @@ export function useKindForm(kindId: string | null) {
     return null;
   };
 
-  return { missing: kindId != null && loaded == null, form, set, problems, ready, review, edit, save, saveError };
+  return { missing: kindId != null && loaded == null, form, set, patch, problems, ready, review, edit, save, saveError };
 }

@@ -1,28 +1,32 @@
 import { YStack } from 'tamagui';
 import AppInput from '../../common/AppInput';
-import PlainText from '../../common/PlainText';
+import type { FieldHelp, FieldTag } from '../logic/customAgentText';
 import Note from '../parts/Note';
+import FieldLabel from './FieldLabel';
 
 type Props = {
   label: string;
+  /** Needed or optional, after the label (FIELD_TAGS). */
+  tag?: FieldTag;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   /** One line under the field about what goes in it. */
   hint?: string;
+  /** What it means left empty: its info button, after the title (help/). */
+  help?: FieldHelp | null;
   problems?: readonly string[];
   /** A script or JSON: several lines, monospaced. */
   code?: boolean;
 };
 
-// One field of the custom agent form: its label, the input, a hint and
-// what is wrong with it. Code fields grow with their lines.
-export default function FormField({ label, value, onChange, placeholder, hint, problems = [], code }: Props) {
+// One field of the custom agent form: its label, mark and info button, the
+// input, a hint and what is wrong with it. Code fields grow with their
+// lines.
+export default function FormField({ label, tag, value, onChange, placeholder, hint, help, problems = [], code }: Props) {
   return (
     <YStack gap="2">
-      <PlainText fontSize={15} fontWeight="600">
-        {label}
-      </PlainText>
+      <FieldLabel label={label} tag={tag} help={help} />
       <AppInput
         value={value}
         onChangeText={onChange}

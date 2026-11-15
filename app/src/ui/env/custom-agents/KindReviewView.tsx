@@ -2,12 +2,12 @@ import { YStack } from 'tamagui';
 import type { KindReview } from '../../../engine/agents/user/review';
 import PlainText from '../../common/PlainText';
 import SectionTitle from '../../common/SectionTitle';
-import { familyName, PHONE_TOOLS_OFF, runtimeName } from '../logic/customAgentText';
+import { acpReviewLine, familyName, PHONE_TOOLS_OFF, runtimeName } from '../logic/customAgentText';
 import Note from '../parts/Note';
 
 // What a custom agent runs, before it is saved or imported: the command
 // that starts it, everything its install does in the machine, its update,
-// its version check and whether it gets the phone tools.
+// its version check, whether it gets the phone tools and its ACP mode.
 export default function KindReviewView({ review }: { review: KindReview }) {
   const installs = review.runtimes.length > 0 || review.packages.length > 0 || review.installSteps.length > 0;
   return (
@@ -54,6 +54,10 @@ export default function KindReviewView({ review }: { review: KindReview }) {
 
       <SectionTitle>Phone tools</SectionTitle>
       <Note>{review.phoneTools ? 'On: it gets the bridge and its token, and can use the phone tools.' : PHONE_TOOLS_OFF}</Note>
+
+      <SectionTitle>ACP mode</SectionTitle>
+      {review.acpCommand ? <Code text={review.acpCommand} /> : null}
+      <Note>{acpReviewLine(review.acpCommand)}</Note>
     </>
   );
 }

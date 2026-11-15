@@ -1,9 +1,11 @@
 // The custom agent form as a manifest (agent.json) the runner loads as a
 // user kind: an image kind whose engine is its own TUI, made the way our
 // image kinds are (Gemini CLI): its program run in the agent's machine from
-// the project folder, the install the form describes (Node.js, packages,
-// steps, run again as the update), its version check, the bell rule, the
-// chat title and its phone tools. An edit starts from the kind's manifest
+// the project folder, the install the form describes (its runtimes,
+// packages, steps: a package's, install.ts, or the user's script;
+// run again as the update), its version check, the bell rule, the
+// chat title, its phone tools and its ACP mode (the command that runs the
+// same agent on pipes with no screen). An edit starts from the kind's manifest
 // (`base`) and keeps every field the form does not cover (sign-in notes,
 // hook events, readiness, a distinct update…), and its id. The result has
 // passed the kit's validator for origin user; the runner checks it again
@@ -18,15 +20,16 @@ import { validate } from '../../../../../agents/kit/ts/manifest/validate.ts';
 import {
   DEFAULT_VERSION_PATTERN,
   FORM_FAMILIES,
-  NODE_MAJOR,
-  NODE_RUNTIME,
+  FORM_RUNTIMES,
   isBellRule,
   namesBridge,
+  needsRuntime,
   runtimeIdOf,
   textArgv,
   type UserAgentForm,
 } from './form.ts';
 import { userKindId } from './ids.ts';
+import { isPreset, packageProblem, presetSteps } from './install.ts';
 import { stepsOf } from './steps.ts';
 import { splitList, splitWords } from './words.ts';
 
@@ -66,6 +69,7 @@ const FIELD_OF: [string, FormField][] = [
   ['/surfaces/chatTitle', 'titlePattern'],
   ['/phoneTools', 'phoneTools'],
   ['/inbox', 'messageEvent'],
+  ['/engine/acp', 'acpCommand'],
 ];
 
 function fieldOf(path: string): FormField | null {
@@ -86,22 +90,35 @@ export function buildUserManifest(form: UserAgentForm, { base, taken }: BuildOpt
   else if (command.words.length === 0) add('command', 'Say what starts the agent.');
   const version = splitWords(form.versionCommand);
   if (!version.ok) add('versionCommand', 'A quote is not closed.');
-  const steps = stepsOf(form.script);
+  const acp = splitWords(form.acpCommand);
+  if (!acp.ok) add('acpCommand', 'A quote is not closed.');
+  // The steps: a package's (install.ts), the user's script, or none. A problem
+  // with them is the package's when we wrote them.
+  const way = form.install;
+  const stepsField: FormField = isPreset(way) ? 'installPackage' : 'script';
+  const pkgProblem = isPreset(way) ? packageProblem(way, form.installPackage) : null;
+  if (pkgProblem) add('installPackage', pkgProblem);
+  const steps = way === 'script' ? stepsOf(form.script) : isPreset(way) && !pkgProblem ? presetSteps(way, form.installPackage) : [];
+  if (way === 'script' && steps.length === 0) add('script', 'Write the install steps, or pick Nothing to install.');
   steps.forEach((step, i) => {
-    if (step.length > MAX.template) {
-      add('script', `Step ${i + 1} is longer than ${MAX.template} characters. Split it with a blank line.`);
-    }
+    if (step.length <= MAX.template) return;
+    if (isPreset(way)) add('installPackage', 'The package name is too long.');
+    else add('script', `Step ${i + 1} is longer than ${MAX.template} characters. Split it with a blank line.`);
   });
   if (utf8Length(steps.join('\n')) > MAX_USER_SCRIPT_BYTES) {
     add('script', `The script is longer than ${MAX_USER_SCRIPT_BYTES / 1024} KiB.`);
   }
-  if (!command.ok || !version.ok || problems.length > 0) return { ok: false, problems };
+  if (!command.ok || !version.ok || !acp.ok || problems.length > 0) return { ok: false, problems };
 
   const argv = command.words;
   const launchEnv = isObject(base?.engine) && isObject(base.engine.launch) ? base.engine.launch.env : null;
   const bridged = namesBridge([...argv, ...(isObject(launchEnv) ? Object.values(launchEnv).map(String) : [])]);
   if (bridged && !form.phoneTools) {
     add('phoneTools', 'The command uses the phone tools (PHONECANDO_BRIDGE_…). Turn phone tools on, or take that out.');
+    return { ok: false, problems };
+  }
+  if (namesBridge(acp.words) && !form.phoneTools) {
+    add('acpCommand', 'The ACP command uses the phone tools (PHONECANDO_BRIDGE_…). Turn phone tools on, or take that out.');
     return { ok: false, problems };
   }
 
@@ -117,13 +134,15 @@ export function buildUserManifest(form: UserAgentForm, { base, taken }: BuildOpt
   setSurfaces(m, form.titlePattern.trim());
   setInbox(m, form);
   m.phoneTools = !form.phoneTools ? 'none' : namesBridge(argv) ? 'mcp:argv' : 'mcp:config';
+  setAcp(m, acp.words);
   if (base && JSON.stringify(m) !== JSON.stringify(base)) m.version = nextVersion(base.version);
 
   const result = validate(m, { origin: 'user' });
   for (const p of result.problems) {
     // A version command left empty is the command's program: its problem is the command's.
+    // Steps we wrote are the package's.
     const named = fieldOf(p.path);
-    const field = named === 'versionCommand' && version.words.length === 0 ? 'command' : named;
+    const field = named === 'versionCommand' && version.words.length === 0 ? 'command' : named === 'script' ? stepsField : named;
     add(field, field ? p.detail : `${p.path || '/'}: ${p.detail}`);
   }
   const text = `${JSON.stringify(m, null, 2)}\n`;
@@ -150,20 +169,39 @@ function setInbox(m: Json, form: UserAgentForm) {
   m.inbox = { hooks: { [event]: hook } };
 }
 
-// Linux, and Node.js 22 or newer when the form asks for it; other runtimes stay.
+// Linux, and each runtime of the form's (FORM_RUNTIMES: Node.js 22 or
+// newer, Python) when the form asks for it, where the base kind had it: a
+// need it had that is new enough stays as it was (node>=24), one that is
+// not is replaced, a new one goes first. Other runtimes stay.
 function setRequires(m: Json, form: UserAgentForm) {
   const requires = objectOr(m.requires);
   requires.linux = 'required';
   const runtimes = Array.isArray(requires.runtimes) ? requires.runtimes : [];
-  const node = runtimes.find((need) => runtimeIdOf(need) === NODE_RUNTIME && Number(String(need).split('>=')[1]) >= NODE_MAJOR);
-  const others = runtimes.filter((need) => runtimeIdOf(need) !== NODE_RUNTIME);
-  const next = form.needsNode ? [node ?? `${NODE_RUNTIME}>=${NODE_MAJOR}`, ...others] : others;
+  const kept: unknown[] = [];
+  const placed = new Set<string>();
+  for (const need of runtimes) {
+    const runtime = FORM_RUNTIMES.find((r) => r.id === runtimeIdOf(need));
+    if (!runtime) kept.push(need);
+    else if (needsRuntime(form, runtime) && meets(need, runtime) && !placed.has(runtime.id)) {
+      kept.push(need);
+      placed.add(runtime.id);
+    }
+  }
+  const added = FORM_RUNTIMES.filter((r) => needsRuntime(form, r) && !placed.has(r.id)).map((r) =>
+    r.major == null ? r.id : `${r.id}>=${r.major}`,
+  );
+  const next = [...added, ...kept];
   if (next.length > 0) requires.runtimes = next;
   else delete requires.runtimes;
   m.requires = requires;
 }
 
-// An install when the form has steps, packages or Node.js; its update runs
+// A need (`node>=24`) that gives the runtime at the major the form asks for.
+function meets(need: unknown, runtime: (typeof FORM_RUNTIMES)[number]): boolean {
+  return runtime.major == null || Number(String(need).split('>=')[1]) >= runtime.major;
+}
+
+// An install when the form has steps, packages or runtimes; its update runs
 // the same steps unless the base kind had an update of its own.
 function setInstall(m: Json, form: UserAgentForm, steps: string[], versionArgv: string[], base: Json | null) {
   const packages: Record<string, string[]> = {};
@@ -173,7 +211,7 @@ function setInstall(m: Json, form: UserAgentForm, steps: string[], versionArgv: 
     const list = splitList(form.familyPackages[family] ?? '');
     if (list.length > 0) packages[family] = list;
   }
-  if (steps.length === 0 && Object.keys(packages).length === 0 && !form.needsNode) {
+  if (steps.length === 0 && Object.keys(packages).length === 0 && !FORM_RUNTIMES.some((r) => needsRuntime(form, r))) {
     delete m.install;
     delete m.update;
     delete m.versionCheck;
@@ -205,6 +243,24 @@ function setEngine(m: Json, argv: string[]) {
   if (!('cwd' in launch)) launch.cwd = '{{projectDir}}';
   engine.launch = launch;
   m.engine = engine;
+}
+
+// Its ACP mode: the command the form gives, every other field of the base
+// kind's acp block kept while there is one; no command, no ACP mode. A new
+// block's phone tools come the way its TUI gets them: the agent's own
+// config or the command names the bridge (`config`, the bridge stays in its
+// env); else the runner hands the bridge in the chat it opens (`session`,
+// the kit's default).
+function setAcp(m: Json, argv: string[]) {
+  const engine = m.engine as Json;
+  if (argv.length === 0) {
+    delete engine.acp;
+    return;
+  }
+  const acp = objectOr(engine.acp);
+  acp.argv = argv;
+  if (!('tools' in acp) && (namesBridge(argv) || m.phoneTools === 'mcp:config')) acp.tools = 'config';
+  engine.acp = acp;
 }
 
 // The bell rule in or out; every other event source and rule stays where it is.

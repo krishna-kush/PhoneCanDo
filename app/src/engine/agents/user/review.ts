@@ -1,8 +1,8 @@
 // What a custom agent kind runs on the phone, read out of its manifest for
 // the review step before a save or an import: the command that starts it,
 // what its install puts in the machine (runtimes, packages per family, its
-// steps), what its update runs, its env and whether it gets the phone
-// tools. Pure (zero RN imports).
+// steps), what its update runs, its env, whether it gets the phone tools
+// and what starts it in ACP mode. Pure (zero RN imports).
 import { isObject, type Json } from '../../../../../agents/kit/ts/manifest/primitives.ts';
 import { textArgv } from './form.ts';
 import { joinWords } from './words.ts';
@@ -24,11 +24,14 @@ export type KindReview = {
   /** NAME=value for each env value it sets. */
   env: string[];
   phoneTools: boolean;
+  /** The words that start it in ACP mode; null without one. */
+  acpCommand: string | null;
 };
 
 export function reviewOf(m: Json): KindReview {
   const engine = isObject(m.engine) ? m.engine : {};
   const launch = isObject(engine.launch) ? engine.launch : {};
+  const acpArgv = isObject(engine.acp) ? textArgv(engine.acp.argv) : [];
   const install = isObject(m.install) ? m.install : {};
   const packages = isObject(install.packages) ? install.packages : {};
   const requires = isObject(m.requires) ? m.requires : {};
@@ -46,5 +49,6 @@ export function reviewOf(m: Json): KindReview {
     versionCommand: check && check.length > 0 ? joinWords(check) : null,
     env: isObject(launch.env) ? Object.entries(launch.env).map(([name, value]) => `${name}=${String(value)}`) : [],
     phoneTools: typeof m.phoneTools === 'string' && m.phoneTools !== 'none',
+    acpCommand: acpArgv.length > 0 ? joinWords(acpArgv) : null,
   };
 }
