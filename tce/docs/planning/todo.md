@@ -28,8 +28,11 @@ Every Cloudflare write is stated as an exact command and waits for an explicit y
 - [ ] `tce/` in `security.yml`'s pnpm audit; `tce-ok` required on `prod`.
 - [ ] Decide `OPENCODE_DISABLE_MODELS_FETCH` (the engine re-downloads a 2 MB
   model catalog every 5 minutes).
-- [ ] Anti-abuse hardening, deferred for now: `workers.dev` off, a zone
-  rate rule, a daily ingest budget, key attestation.
+- [ ] Anti-abuse hardening, the rest: a daily ingest budget (a Durable
+  Object capping D1 writes, with room left for forget), key attestation,
+  and Workers Paid only together with the budget. Done for 1.0:
+  `workers.dev` and preview URLs off (`wrangler.jsonc`) and the zone's rate
+  limit on `api.phonecando.app` (Cloudflare dashboard, not in this repo).
 - [ ] Play Data safety form before any Play release.
 
 ## Backup (when near the limit)

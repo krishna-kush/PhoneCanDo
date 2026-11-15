@@ -164,7 +164,9 @@ describe('hosts/cloudflare/wrangler.jsonc', () => {
     assert.equal(raw.compatibility_date, '2026-11-01');
     assert.equal(raw.main, 'index.ts');
     assert.ok(existsSync(resolve(HERE, raw.main)));
-    for (const key of ['route', 'routes', 'workers_dev', 'preview_urls', 'account_id']) {
+    // workers_dev and preview_urls are set, to false: left out, wrangler turns
+    // workers.dev on (see the next test).
+    for (const key of ['route', 'routes', 'account_id']) {
       assert.ok(!(key in raw), `${key} must stay out of the config (domains are managed outside it)`);
     }
   });
@@ -253,10 +255,13 @@ describe('hosts/cloudflare/wrangler.jsonc', () => {
   it('turns on Workers Logs and allows the site origins to post hits', () => {
     // Invocation logs would persist request headers (client IP); they must stay off.
     assert.deepEqual(raw.observability, { enabled: true, logs: { enabled: true, invocation_logs: false } });
-    assert.deepEqual(parseOriginList(raw.vars['ALLOWED_ORIGINS']), [
-      'https://phonecando.app',
-      'https://phonecando.krishnakumarkush.workers.dev',
-    ]);
+    assert.deepEqual(parseOriginList(raw.vars['ALLOWED_ORIGINS']), ['https://phonecando.app']);
+  });
+
+  it('answers on our own domains only, never workers.dev or a preview URL', () => {
+    // The zone's rate limit guards phonecando.app; a workers.dev address would bypass it.
+    assert.equal(raw.workers_dev, false);
+    assert.equal(raw.preview_urls, false);
   });
 
   it('answers the API on api.phonecando.app only', () => {
