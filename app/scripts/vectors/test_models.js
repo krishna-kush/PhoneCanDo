@@ -232,13 +232,13 @@ const model = (over) => ({
   t('button, chosen', cx.contextButtonText(model({ contextChoice: 65_536 })), 'Context: 64k');
   t(
     'automatic says it follows free memory',
-    cx.automaticNote(model({ autoContext: 33_792 })),
-    'The most this phone can spare when the model starts, from the memory free then: 33k now.',
+    cx.automaticNote(model({ autoContext: 32_768 })),
+    'Up to 64k, as much as this phone can spare when the model starts, and at least 32k when it fits: 32k now.',
   );
   t(
     'automatic while its server runs says what it runs with',
-    cx.automaticNote(model({ autoContext: 16_384, serving: true, servedContext: 210_944 })),
-    'The most this phone can spare when the model starts, from the memory free then: running with 206k now.',
+    cx.automaticNote(model({ autoContext: 32_768, serving: true, servedContext: 65_536 })),
+    'Up to 64k, as much as this phone can spare when the model starts, and at least 32k when it fits: running with 64k now.',
   );
   t('choose note', cx.chooseNote({ min: 16_384, max: 262_144, step: 1_024 }), 'From 16k to 256k. More context takes more RAM.');
   const r = { min: 16_384, max: 262_144, step: 1_024 };

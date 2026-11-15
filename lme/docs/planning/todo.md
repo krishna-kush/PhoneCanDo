@@ -20,6 +20,10 @@ slot.
       (`LocalModelBinding`).
 - [x] Several system messages on Qwen3.5: our fold patch
       (`lme/docs/README.md` → The system-message fold).
+- [x] Claude Code's tool search on Qwen3.5 (error 500, "Unexpected item
+      type in content."): the same fallback writes tool references as
+      text; checked against the pinned Qwen3.5 and LFM3 templates. Phone
+      check owed.
 - [x] Device checks on Qwen3.5-0.8B: opencode, Claude Code (patched
       server), Qwen Code and Aider through the Model section.
 - [ ] Warm the prompt cache once after load (the agent's system prompt).
@@ -32,9 +36,16 @@ slot.
 - [ ] Safety net: `stage.sh` compares the staged `INPUTS` with this tree's
       digest (pins, script, patches) and says when the staged lib is out
       of date, as `lre/proot/ensure.sh` does for proot.
-- [ ] Claude Code refuses a 16k context ("Prompt is too long"; its own
-      prompt is about 12.6k): when automatic falls to the floor, its Model
-      section could say so before the start fails.
+- [x] Claude Code refuses a 16k context ("Prompt is too long"; its own
+      prompt is 13-20k): automatic now starts at 32k whenever the budget
+      holds it, up to 64k, and keeps 16% of RAM plus 512 MiB free (the
+      memory guard's ok line and the agent's engine).
+- [ ] Device check: automatic on the 0.8B stays at 32-64k across starts,
+      and the phone stays out of the memory guard's warning; the server's
+      resident size against the plan's `totalBytes` (the compute buffer
+      is still not counted).
+- [ ] A per-kind least context (Claude Code 32k) if a kind ever needs
+      more than the 32k automatic gives.
 - [ ] Codex on a local model: its `models` block waits for the first CI
       run of `local-models.yml`.
 - [ ] Device check: later replies, Qwen3.5 4B, RAM and heat over a long

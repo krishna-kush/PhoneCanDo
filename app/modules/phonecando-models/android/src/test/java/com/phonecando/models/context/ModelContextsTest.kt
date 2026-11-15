@@ -45,17 +45,17 @@ class ModelContextsTest {
   @Test
   fun `automatic is what a start would pick now, reduced on this phone`() {
     val view = ModelContexts.view(moto, four, null)
-    assertEquals(ContextView(33_792, 33_792, null, ContextRange(16_384, 262_144), false, view.ram), view)
+    assertEquals(ContextView(32_768, 32_768, null, ContextRange(16_384, 262_144), false, view.ram), view)
     assertEquals(RamCheck.Verdict.FITS, view.ram.verdict)
-    // Less free memory: less context, never below the floor.
-    assertEquals(16_384, ModelContexts.view(moto.copy(availableRamBytes = 2 * gib), four, null).served)
+    // Less free memory: still 32k, which the budget holds.
+    assertEquals(32_768, ModelContexts.view(moto.copy(availableRamBytes = 2 * gib), four, null).served)
   }
 
   @Test
   fun `a chosen context is served as chosen, and automatic still shows what it would pick`() {
     val view = ModelContexts.view(moto, four.copy(context = 65_536), null)
     assertEquals(65_536, view.served)
-    assertEquals(33_792, view.auto)
+    assertEquals(32_768, view.auto)
     assertEquals(65_536L, view.choice)
     assertEquals(RamCheck.Verdict.OVER_BUDGET, view.ram.verdict)
   }
@@ -67,7 +67,7 @@ class ModelContextsTest {
     val view = ModelContexts.view(busy, four, ServingModel(four.id, 33_792))
     assertTrue(view.serving)
     assertEquals(33_792, view.served)
-    assertEquals(16_384, view.auto)
+    assertEquals(32_768, view.auto)
     assertEquals(RamCheck(RamCheck.Verdict.FITS, 2_740_937_888 + 1_107_296_256, 3_872_016_350), view.ram)
     // Another model's server says nothing about this one.
     assertFalse(ModelContexts.view(busy, four, ServingModel("other", 262_144)).serving)

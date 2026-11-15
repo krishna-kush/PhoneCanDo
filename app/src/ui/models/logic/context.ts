@@ -32,7 +32,7 @@ export function contextButtonText(m: Pick<LocalModel, 'contextChoice'>): string 
  */
 export function automaticNote(m: Pick<LocalModel, 'autoContext' | 'serving' | 'servedContext' | 'contextChoice'>): string {
   const now = m.serving && m.contextChoice == null ? `running with ${contextText(m.servedContext)}` : contextText(m.autoContext);
-  return `The most this phone can spare when the model starts, from the memory free then: ${now} now.`;
+  return `Up to 64k, as much as this phone can spare when the model starts, and at least 32k when it fits: ${now} now.`;
 }
 
 /** What choosing means: "From 16k to 256k. More context takes more RAM." */

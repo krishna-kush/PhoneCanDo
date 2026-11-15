@@ -20,8 +20,8 @@ class RamGateTest {
     /**
      * The table: phones by the total RAM they report (GiB), our suggested
      * models at the 16k floor every model gets (the larger automatic
-     * context we pick only when it fits never changes a verdict:
-     * LlamaCppRuntimeTest). A change of [RamRules] shows here.
+     * context we pick only when the budget holds it never changes a
+     * verdict: LlamaCppRuntimeTest). A change of [RamRules] shows here.
      */
     @Test
     fun `the table`() {
@@ -50,9 +50,12 @@ class RamGateTest {
         assertEquals(6, RamRules.OFFERED_FROM_GB)
         assertEquals(8, RamRules.WARN_BELOW_GB)
         assertEquals(50, RamRules.BUDGET_PERCENT)
+        assertEquals(16, RamRules.KEEP_FREE_PERCENT)
         assertEquals(512, RamRules.FREE_MARGIN_MIB)
         val moto = Phones.MOTO_G96.totalRamBytes
         assertEquals(3_872_016_350, RamGate.budget(moto))
+        // 16% of 7.2 GiB and 512 MiB: 1.65 GiB kept free at a start.
+        assertEquals(1_775_916_144, RamGate.keepFree(moto))
         assertEquals(RamVerdict.Fits(3_277_808_800, 3_872_016_350), RamGate.check(moto, need(QWEN_4B)))
         assertEquals(RamVerdict.Refused(6_217_393_376, 3_872_016_350), RamGate.check(moto, need(QWEN_9B)))
     }
@@ -79,14 +82,16 @@ class RamGateTest {
         val mib = 1L shl 20
         val moto = Phones.MOTO_G96.totalRamBytes
         val budget = RamGate.budget(moto)
-        // Plenty free: the budget is the bound. Little free: what is free, less 512 MiB. None: nothing.
+        // Plenty free: the budget is the bound. Little free: what is free, less what we keep free. None: nothing.
         assertEquals(budget, RamGate.spare(moto, 6 * gib))
-        assertEquals(2 * gib - 512 * mib, RamGate.spare(moto, 2 * gib))
-        assertEquals(0, RamGate.spare(moto, 100 * mib))
-        // Whole MiB of what is left; none when the model takes it all or more.
-        assertEquals(100, RamGate.promptCacheMiB(budget, budget - 100 * mib - 5))
-        assertEquals(0, RamGate.promptCacheMiB(budget, budget - mib + 1))
-        assertEquals(0, RamGate.promptCacheMiB(budget, budget + gib))
+        assertEquals(2 * gib - RamGate.keepFree(moto), RamGate.spare(moto, 2 * gib))
+        assertEquals(0, RamGate.spare(moto, gib))
+        // Whole MiB of what is left, at most the KV cache's size; none when the model takes it all or more.
+        assertEquals(100, RamGate.promptCacheMiB(budget, budget - 100 * mib - 5, gib))
+        assertEquals(64, RamGate.promptCacheMiB(budget, budget - gib, 64 * mib))
+        assertEquals(0, RamGate.promptCacheMiB(budget, budget - mib + 1, gib))
+        assertEquals(0, RamGate.promptCacheMiB(budget, budget + gib, gib))
+        assertEquals(0, RamGate.promptCacheMiB(budget, budget - gib, 0))
     }
 
     @Test

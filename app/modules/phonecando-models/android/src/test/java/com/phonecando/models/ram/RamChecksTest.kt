@@ -54,10 +54,10 @@ class RamChecksTest {
     // Qwen3.5 9B: not even 16k of KV cache fits an 8 GB phone's budget.
     val nine = RamChecks.of(moto, LlamaCppRuntime.contextPlan(moto, 5_680_522_464, qwen, 262_144, null))
     assertEquals(RamCheck(RamCheck.Verdict.TOO_BIG, 6_217_393_376, 3_872_016_350), nine)
-    // Qwen3.5 4B: 33k of KV cache (1.03 GiB) is the most that fits, so that is what it needs.
+    // Qwen3.5 4B: Automatic gives it 32k of KV cache (1 GiB), the least it starts with when the budget holds it.
     val four = LlamaCppRuntime.contextPlan(moto, 2_740_937_888, qwen, 262_144, null)
-    assertEquals(33_792, four.context)
-    assertEquals(RamCheck(RamCheck.Verdict.FITS, 2_740_937_888 + 1_107_296_256, 3_872_016_350), RamChecks.of(moto, four))
+    assertEquals(32_768, four.context)
+    assertEquals(RamCheck(RamCheck.Verdict.FITS, 2_740_937_888 + 1_073_741_824, 3_872_016_350), RamChecks.of(moto, four))
     // On an unsupported phone, whatever the plan says.
     assertEquals(RamCheck.Verdict.UNSUPPORTED, RamChecks.of(moto.copy(abi = "x86_64"), four).verdict)
   }

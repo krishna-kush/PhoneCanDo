@@ -140,7 +140,7 @@ export type LocalModel = {
    * now (the chosen one, or automatic).
    */
   servedContext: number;
-  /** What automatic picks now: the most the phone can spare from the memory free now, up to the trained context. */
+  /** What automatic picks now: as much as the phone can spare from the memory free now, up to 64k (and the trained context), at least 32k when it fits. */
   autoContext: number;
   /** The context the user chose; null: automatic. */
   contextChoice: number | null;

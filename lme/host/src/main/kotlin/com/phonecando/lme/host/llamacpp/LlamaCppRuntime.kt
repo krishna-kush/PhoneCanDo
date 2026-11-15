@@ -31,7 +31,8 @@ import com.phonecando.lme.host.ram.RamVerdict
  * off`: on a phone CPU it costs minutes per turn), no web UI. On a phone the
  * prompts it keeps in RAM besides the slot's (`--cache-ram`, in MiB; the
  * pinned server's default is 8192, 0 turns it off) are capped by what the
- * RAM gate leaves after the files and the KV cache. The key goes through
+ * RAM gate leaves after the files and the KV cache, and at the KV cache's
+ * size, so the plan counts all it may hold. The key goes through
  * the environment (`LLAMA_API_KEY`), never the command line, where any app
  * could read it from `/proc`.
  */
@@ -76,6 +77,7 @@ object LlamaCppRuntime : ModelRuntime {
             endpoint = server.endpoint,
             contextSize = server.contextSize,
             promptCacheMiB = sizing.promptCacheMiB,
+            totalBytes = sizing.totalBytes,
             threads = threads,
             ram = sizing.ram,
         )
@@ -137,26 +139,28 @@ object LlamaCppRuntime : ModelRuntime {
 
     /**
      * How a model of [sizeBytes] with [kvCache], trained for [trained]
-     * tokens, is served on [device] now. [chosen] null: automatic, the
-     * largest context its files plus KV cache fit in what the phone can
-     * spare now ([RamGate.spare]), from the floor up to [trained]
-     * ([ContextSizing]), gated against the budget. Else that context
-     * (brought into the model's [ContextRange]), which may pass the budget
-     * but not the phone's total RAM. The prompt cache gets what is left of
-     * the spare memory. [plan] serves this; a host shows the same.
+     * tokens, is served on [device] now. [chosen] null: automatic
+     * ([ContextSizing.automatic]: the most its files plus KV cache fit in
+     * what the phone can spare now, [RamGate.spare], up to 64k; at least
+     * 32k when the budget holds it), gated against the budget. Else that
+     * context (brought into the model's [ContextRange]), which may pass the
+     * budget but not the phone's total RAM. The prompt cache gets what is
+     * left of the spare memory, at most the KV cache's size. [plan] serves
+     * this; a host shows the same.
      */
     fun contextPlan(device: DeviceInfo, sizeBytes: Long, kvCache: KvCacheShape, trained: Long?, chosen: Long?): ContextPlan {
         val total = device.totalRamBytes
         val spare = RamGate.spare(total, device.availableRamBytes)
         val range = ContextRange.of(trained)
-        val context = chosen?.let(range::coerce) ?: ContextSizing.automatic(spare, sizeBytes, range) { kvBytes(kvCache, it) }
-        val need = memoryNeed(sizeBytes, kvCache, context)
+        val kv = { context: Long -> kvBytes(kvCache, context) }
+        val context = chosen?.let(range::coerce) ?: ContextSizing.automatic(RamGate.budget(total), spare, sizeBytes, range, kv)
+        val need = sizeBytes + kv(context)
         return ContextPlan(
             context = context,
             automatic = chosen == null,
             range = range,
             needBytes = need,
-            promptCacheMiB = RamGate.promptCacheMiB(spare, need),
+            promptCacheMiB = RamGate.promptCacheMiB(spare, need, kv(context)),
             ram = RamGate.check(total, need, chosen = chosen != null),
         )
     }

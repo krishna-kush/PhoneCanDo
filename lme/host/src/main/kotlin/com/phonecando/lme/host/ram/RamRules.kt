@@ -8,10 +8,13 @@ package com.phonecando.lme.host.ram
  * - a model may take at most half the phone's RAM (the budget): its files
  *   plus its KV cache at the planned context; the rest is Android's, the
  *   agent's and the other apps'
- * - what it may take at a start is also bounded by the memory free then
- *   (`MemoryInfo.availMem`) less [FREE_MARGIN_MIB], kept for the agent's
- *   own engine and so Android does not run short: that bound sizes the
- *   automatic context and the server's prompt cache, never a verdict
+ * - what it may take at a start, its prompt cache included, is also bounded
+ *   by the memory free then (`MemoryInfo.availMem`) less what we keep free:
+ *   [KEEP_FREE_PERCENT] of the total, where the runner's memory guard is
+ *   back at ok (its warning line, 12%, plus 4% it waits for), and
+ *   [FREE_MARGIN_MIB] for the agent's own engine. So a model never starts
+ *   the guard's countdown by itself. That bound sizes the automatic context
+ *   and the server's prompt cache, never a verdict
  * - a context the user chose may pass the budget (with a warning), never
  *   the phone's total RAM
  *
@@ -24,6 +27,7 @@ object RamRules {
     const val OFFERED_FROM_GB = 6
     const val WARN_BELOW_GB = 8
     const val BUDGET_PERCENT = 50
+    const val KEEP_FREE_PERCENT = 16
     const val FREE_MARGIN_MIB = 512L
 
     /** Marketed RAM sizes in GB, smallest first. */

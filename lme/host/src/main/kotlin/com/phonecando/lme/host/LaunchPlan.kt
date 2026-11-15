@@ -13,6 +13,8 @@ import com.phonecando.lme.host.ram.RamVerdict
  * @property contextSize the context it starts with (the endpoint's
  *   context window)
  * @property promptCacheMiB the cap on its prompt cache in RAM, 0 for none
+ * @property totalBytes what it holds once that cache fills: files, KV
+ *   cache and prompt cache
  * @property ram the verdict the plan passed: [RamVerdict.Tight] means the
  *   UI should warn before starting, [RamVerdict.OverBudget] that a chosen
  *   context takes more than the budget
@@ -24,10 +26,11 @@ data class LaunchPlan(
     val endpoint: ServedEndpoint,
     val contextSize: Long,
     val promptCacheMiB: Long,
+    val totalBytes: Long,
     val threads: Int,
     val ram: RamVerdict,
 ) {
     override fun toString(): String =
         "LaunchPlan(argv=$argv, env=${env.keys}, healthUrl=$healthUrl, endpoint=$endpoint, " +
-            "contextSize=$contextSize, promptCacheMiB=$promptCacheMiB, threads=$threads, ram=$ram)"
+            "contextSize=$contextSize, promptCacheMiB=$promptCacheMiB, totalBytes=$totalBytes, threads=$threads, ram=$ram)"
 }

@@ -71,19 +71,27 @@ The numbers live in `RamRules` (`host/ram/`); the context in
 - **Budget**: half the phone's RAM. A model is refused when its files plus
   its KV cache at the planned context pass it.
 - **Spare now**: the budget, bounded by the memory free (`availMem`) less
-  512 MiB for the agent's own engine and Android. It sizes the automatic
-  context and the prompt cache, never a verdict.
-- **Automatic context**: the trained context when files plus its KV cache
-  fit the spare memory, else the most whole 1024-token steps that do;
-  never below 16k (an agent's prompt is about 15k tokens) or the trained
-  context if that is less.
+  what we keep free: 16% of total RAM (where the runner's memory guard is
+  back at ok: its 12% warning line plus 4%) and 512 MiB for the agent's
+  own engine. So a model, prompt cache included, never starts the guard's
+  countdown by itself. It sizes the automatic context and the prompt
+  cache, never a verdict.
+- **Automatic context**: the most whole 1024-token steps whose files plus
+  KV cache fit the spare memory, up to 64k (a phone CPU reads a few
+  thousand tokens a minute, so a session never fills more) or the trained
+  context if that is less; at least 32k whenever the budget holds it,
+  whatever is free (agents' own prompts run 13-20k tokens, so at 16k they
+  cannot work; short of memory, the guard stops idle agents first); never
+  below 16k or the trained context if that is less.
 - **Chosen context** (per model, 16k to the trained context): may pass the
   budget, with a warning, never the phone's RAM.
-- **Prompt cache** (`--cache-ram`, MiB): what is left after files and KV
-  cache. Below the trained context that is a few MiB, so the cache is in
-  effect off: a request with another prefix (opencode's title request)
-  pushes the agent's prompt out of the one slot, and the next turn reads
-  it again.
+- **Prompt cache** (`--cache-ram`, MiB): what the spare memory leaves
+  after files and KV cache, at most the KV cache's size (room to keep the
+  agent's prompt while a request with another prefix, opencode's title
+  request, takes the one slot). The plan counts it: `totalBytes` is what
+  the server holds once it fills. Short of spare memory it is a few MiB,
+  in effect off, and the next turn after such a request reads the prompt
+  again.
 
 ## The system-message fold
 
@@ -96,8 +104,16 @@ allows one system message, first. The patch is a fallback in
 
 - The server first renders the messages as sent, so a template that takes
   them (Gemma 4 and others) renders exactly as before.
-- Only when that fails does it render again with the system messages
-  folded, and that error, if any, is the one reported.
+- Only when that fails does it render again with the messages made plain
+  (tool references as text, then the fold), and that error, if any, is the
+  one reported.
+- Tool references: Claude Code's tool search answers with `tool_reference`
+  parts, the deferred tools it found, and Qwen3.5's template refuses them
+  ("Unexpected item type in content."), so a turn failed as soon as the
+  model searched. A run of them becomes one text part, "Tool loaded:
+  <name>" a line per tool. Qwen3.5's template lists every tool up front,
+  deferred or not, so the line says all the reference did; a template
+  that knows them (LFM3's) renders them as sent and never gets here.
 - The fold: the leading run of system messages becomes one, their text a
   blank line apart. A later one becomes user text ("[System note]" and its
   text) at the end of the user or tool message before it, else at the

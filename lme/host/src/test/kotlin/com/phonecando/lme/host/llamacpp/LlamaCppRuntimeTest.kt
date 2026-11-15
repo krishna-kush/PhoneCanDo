@@ -30,7 +30,7 @@ class LlamaCppRuntimeTest {
     private fun auto(m: ModelRecord, device: DeviceInfo) = LlamaCppRuntime.contextPlan(device, m)
 
     @Test
-    fun `the spike's server on our test phone, with the context the 4B fits and its prompt cache cap`() {
+    fun `the spike's server on our test phone, the 4B at the least automatic context with no room for a prompt cache`() {
         val plan = LlamaCppRuntime.plan(request())
         assertEquals(
             listOf(
@@ -39,25 +39,26 @@ class LlamaCppRuntimeTest {
                 "--alias", "qwen3-5-4b-q4-k-m",
                 "--host", "127.0.0.1",
                 "--port", "8099",
-                "--ctx-size", "33792",
+                "--ctx-size", "32768",
                 "--parallel", "1",
                 "--threads", "4",
                 "--jinja",
                 "--reasoning", "off",
                 "--no-ui",
-                "--cache-ram", "22",
+                "--cache-ram", "0",
             ),
             plan.argv,
         )
         assertEquals(mapOf("LLAMA_API_KEY" to key), plan.env)
         assertEquals("http://127.0.0.1:8099/health", plan.healthUrl)
         assertEquals(
-            ServedEndpoint("http://127.0.0.1:8099", "qwen3-5-4b-q4-k-m", key, 33_792, setOf(WireApi.OPENAI_CHAT, WireApi.OPENAI_RESPONSES, WireApi.ANTHROPIC)),
+            ServedEndpoint("http://127.0.0.1:8099", "qwen3-5-4b-q4-k-m", key, 32_768, setOf(WireApi.OPENAI_CHAT, WireApi.OPENAI_RESPONSES, WireApi.ANTHROPIC)),
             plan.endpoint,
         )
-        // Files plus 33k of KV cache (8 layers x 4 heads x 512 values x 2 bytes x 33792) against half of 7.2 GiB.
-        assertEquals(RamVerdict.Fits(2_740_937_888 + 1_107_296_256, 3_872_016_350), plan.ram)
-        assertEquals(22, plan.promptCacheMiB)
+        // Files plus 32k of KV cache (8 layers x 4 heads x 512 values x 2 bytes x 32768) against half of 7.2 GiB.
+        assertEquals(RamVerdict.Fits(2_740_937_888 + 1_073_741_824, 3_872_016_350), plan.ram)
+        assertEquals(0, plan.promptCacheMiB)
+        assertEquals(2_740_937_888 + 1_073_741_824, plan.totalBytes)
         assertEquals(4, plan.threads)
     }
 
@@ -70,21 +71,29 @@ class LlamaCppRuntimeTest {
     }
 
     @Test
-    fun `the whole trained context when it fits, else the most that fits in steps of 1024`() {
+    fun `automatic is the most that fits what is spare up to 64k, and at least 32k when the budget holds it`() {
         val idle = Phones.MOTO_G96_IDLE
-        // Qwen3.5 0.8B: 256k of KV cache is 3 GiB, and with its files that still fits the 3.87 GB budget.
+        // 5 GiB free, less what we keep free (16% of 7.2 GiB and 512 MiB), within the 3.87 GB budget.
+        assertEquals(3_592_792_976, RamGate.spare(idle.totalRamBytes, idle.availableRamBytes))
+        // Qwen3.5 0.8B (256k trained): 64k, the most we start with; its prompt cache gets one more KV cache's worth.
         val small = auto(Phones.QWEN_08B, idle)
-        assertEquals(262_144, small.context)
-        assertFalse(small.reduced)
-        assertEquals(3_753_742_592, small.needBytes)
-        assertEquals(112, small.promptCacheMiB)
-        // Gemma 4 E2B (128k trained) and Qwen3.5 4B (256k): the most whole steps that fit.
-        assertEquals(121_856, auto(Phones.GEMMA_E2B, idle).context)
+        assertEquals(65_536, small.context)
+        assertTrue(small.reduced)
+        assertEquals(1_337_823_488, small.needBytes)
+        assertEquals(768, small.promptCacheMiB)
+        assertEquals(2_143_129_856, small.totalBytes)
+        // Gemma 4 E2B (128k trained): 64k too, the rest of what is spare to its prompt cache.
+        val gemma = auto(Phones.GEMMA_E2B, idle)
+        assertEquals(65_536, gemma.context)
+        assertTrue(gemma.totalBytes <= RamGate.spare(idle.totalRamBytes, idle.availableRamBytes))
+        // Qwen3.5 4B: what is spare holds 25k, but an agent needs 32k, and the budget holds that.
         val four = auto(Phones.QWEN_4B, idle)
-        assertEquals(33_792, four.context)
+        assertEquals(32_768, four.context)
         assertTrue(four.reduced)
-        assertEquals(0, four.context % ContextSizing.STEP)
         assertTrue(four.needBytes <= RamGate.budget(idle.totalRamBytes))
+        assertEquals(0, four.promptCacheMiB)
+        // A phone whose budget holds the 4B at 30k but not 32k: the most whole steps it holds.
+        assertEquals(30_720, auto(Phones.QWEN_4B, Phones.withRam(7.0)).context)
         // Qwen3.5 9B: not even the floor fits, and the floor is what the gate refuses.
         val nine = auto(Phones.QWEN_9B, idle)
         assertEquals(16_384, nine.context)
@@ -93,33 +102,34 @@ class LlamaCppRuntimeTest {
     }
 
     @Test
-    fun `bigger phones get more, up to the trained context`() {
+    fun `bigger phones get more, up to 64k`() {
         fun contexts(device: DeviceInfo) = listOf(Phones.QWEN_08B, Phones.GEMMA_E2B, Phones.QWEN_4B, Phones.QWEN_9B).map { auto(it, device).context }
-        assertEquals(listOf(262_144L, 121_856, 33_792, 16_384), contexts(Phones.MOTO_G96_IDLE))
-        assertEquals(listOf(262_144L, 131_072, 99_328, 16_384), contexts(Phones.withRam(11.2)))
-        assertEquals(listOf(262_144L, 131_072, 161_792, 71_680), contexts(Phones.withRam(15.0)))
+        assertEquals(listOf(65_536L, 65_536, 32_768, 16_384), contexts(Phones.MOTO_G96_IDLE))
+        assertEquals(listOf(65_536L, 65_536, 65_536, 16_384), contexts(Phones.withRam(11.2)))
+        assertEquals(listOf(65_536L, 65_536, 65_536, 65_536), contexts(Phones.withRam(15.0)))
         assertIs<RamVerdict.Refused>(auto(Phones.QWEN_9B, Phones.withRam(11.2)).ram)
         assertIs<RamVerdict.Fits>(auto(Phones.QWEN_9B, Phones.withRam(15.0)).ram)
     }
 
     @Test
-    fun `what is free now bounds the automatic context, never below the floor`() {
-        // The Moto g96 as we read it with apps open: 2.7 GiB free, less our 512 MiB margin.
+    fun `what is free now bounds the automatic context, never below 32k when the budget holds it`() {
+        // The Moto g96 as we read it with apps open: 2.7 GiB free, less the 1.65 GiB we keep free.
         val busy = Phones.MOTO_G96
-        assertEquals(2_356_551_680, RamGate.spare(busy.totalRamBytes, busy.availableRamBytes))
+        assertEquals(1_117_506_448, RamGate.spare(busy.totalRamBytes, busy.availableRamBytes))
         val small = auto(Phones.QWEN_08B, busy)
-        assertEquals(147_456, small.context)
-        assertEquals(11, small.promptCacheMiB)
-        // The 4B does not fit what is free even at the floor: it keeps the floor, and the budget's verdict.
+        assertEquals(47_104, small.context)
+        assertEquals(5, small.promptCacheMiB)
+        assertTrue(small.totalBytes <= RamGate.spare(busy.totalRamBytes, busy.availableRamBytes))
+        // The 4B does not fit what is free even at the floor: it gets 32k, which the budget holds, and no prompt cache.
         val four = auto(Phones.QWEN_4B, busy)
-        assertEquals(16_384, four.context)
-        assertEquals(RamVerdict.Fits(3_277_808_800, 3_872_016_350), four.ram)
+        assertEquals(32_768, four.context)
+        assertEquals(RamVerdict.Fits(3_814_679_712, 3_872_016_350), four.ram)
         assertEquals(0, four.promptCacheMiB)
         val plan = LlamaCppRuntime.plan(request(Phones.QWEN_4B, busy))
-        assertEquals(16_384, plan.endpoint.contextWindow)
+        assertEquals(32_768, plan.endpoint.contextWindow)
         assertEquals(listOf("--cache-ram", "0"), plan.argv.takeLast(2))
-        // Nothing free at all: still the floor.
-        assertEquals(16_384, auto(Phones.QWEN_08B, busy.copy(availableRamBytes = 0)).context)
+        // Nothing free at all: still 32k.
+        assertEquals(32_768, auto(Phones.QWEN_08B, busy.copy(availableRamBytes = 0)).context)
     }
 
     @Test
@@ -137,22 +147,27 @@ class LlamaCppRuntimeTest {
     }
 
     @Test
-    fun `the automatic context never changes a verdict, and the prompt cache stays in the budget`() {
-        for (gib in listOf(3.6, 5.5, 6.5, 7.21, 11.2, 11.6, 15.0)) {
+    fun `the automatic context never changes a verdict, and the prompt cache stays in what is spare`() {
+        val mib = 1L shl 20
+        for (gib in listOf(3.6, 5.5, 6.5, 7.0, 7.21, 11.2, 11.6, 15.0)) {
             for (free in listOf(0.5, 2.7, 5.0, gib)) {
                 val device = Phones.withRam(gib, free)
                 val total = device.totalRamBytes
+                val budget = RamGate.budget(total)
                 val spare = RamGate.spare(total, device.availableRamBytes)
                 for (m in listOf(Phones.QWEN_08B, Phones.QWEN_4B, Phones.GEMMA_E2B, Phones.QWEN_9B)) {
                     val what = "${m.id} on $gib GiB, $free free"
-                    val floor = LlamaCppRuntime.memoryNeed(m.sizeBytes, m.shape.kvCache, ContextSizing.FLOOR)
+                    fun need(context: Long) = LlamaCppRuntime.memoryNeed(m.sizeBytes, m.shape.kvCache, context)
                     val plan = auto(m, device)
-                    assertEquals(RamGate.check(total, floor)::class, plan.ram::class, what)
-                    assertTrue(plan.context in ContextSizing.FLOOR..m.shape.contextLength!!, what)
-                    if (plan.context > ContextSizing.FLOOR) assertTrue(plan.needBytes <= spare, what)
-                    if (plan.ram is RamVerdict.Fits || plan.ram is RamVerdict.Tight) {
-                        assertTrue(plan.needBytes + plan.promptCacheMiB * (1L shl 20) <= RamGate.budget(total), what)
-                    }
+                    assertEquals(RamGate.check(total, need(ContextSizing.FLOOR))::class, plan.ram::class, what)
+                    assertTrue(plan.context in ContextSizing.FLOOR..ContextSizing.AUTO_MOST, what)
+                    // Past 32k only as far as what is spare goes; 32k whenever the budget holds it.
+                    if (plan.context > ContextSizing.AUTO_LEAST) assertTrue(plan.needBytes <= spare, what)
+                    if (need(ContextSizing.AUTO_LEAST) <= budget) assertTrue(plan.context >= ContextSizing.AUTO_LEAST, what)
+                    // The prompt cache: at most the KV cache's size, and only out of what is spare.
+                    assertTrue(plan.promptCacheMiB * mib <= plan.needBytes - m.sizeBytes, what)
+                    if (plan.promptCacheMiB > 0) assertTrue(plan.totalBytes <= spare, what)
+                    if (plan.ram is RamVerdict.Fits || plan.ram is RamVerdict.Tight) assertTrue(plan.totalBytes <= budget, what)
                 }
             }
         }
@@ -171,10 +186,12 @@ class LlamaCppRuntimeTest {
         assertFalse(chosen.automatic)
         assertFalse(chosen.reduced)
 
-        // Less than automatic leaves the prompt cache more room.
+        // Less than automatic leaves the prompt cache more room, from what is spare.
         val less = auto(Phones.QWEN_4B.copy(context = 16_384), moto)
         assertEquals(RamVerdict.Fits(3_277_808_800, 3_872_016_350), less.ram)
-        assertEquals((3_872_016_350 - 3_277_808_800) / (1L shl 20), less.promptCacheMiB)
+        assertEquals((3_592_792_976 - 3_277_808_800) / (1L shl 20), less.promptCacheMiB)
+        // At most the KV cache's size: 16k of the 0.8B's is 192 MiB.
+        assertEquals(192, auto(Phones.QWEN_08B.copy(context = 16_384), moto).promptCacheMiB)
 
         // The 9B at the floor: refused when automatic, over the budget but allowed when chosen.
         val nine = LlamaCppRuntime.plan(request(Phones.QWEN_9B.copy(context = 16_384)))
@@ -208,6 +225,7 @@ class LlamaCppRuntimeTest {
             val sizing = auto(gemma, device)
             assertEquals(sizing.context, plan.contextSize)
             assertEquals(sizing.promptCacheMiB, plan.promptCacheMiB)
+            assertEquals(sizing.totalBytes, plan.totalBytes)
             assertEquals(sizing.ram, plan.ram)
             assertEquals(LlamaCppRuntime.memoryNeed(gemma.sizeBytes, gemma.shape.kvCache, sizing.context), (plan.ram as RamVerdict.Fits).needBytes)
         }

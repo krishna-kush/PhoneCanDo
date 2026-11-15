@@ -22,7 +22,7 @@ object Phones {
             .split(' ').toSet(),
     )
 
-    /** Our test phone with little else running: more free than its budget, so the budget is the bound. */
+    /** Our test phone with little else running: 5 GiB free, so what we keep free leaves 3.59 GB of its 3.87 GB budget. */
     val MOTO_G96_IDLE = MOTO_G96.copy(availableRamBytes = 5 * GIB)
 
     /** A phone reporting [gib] of RAM with [freeGib] free (by default all of it: the budget is the bound). */
