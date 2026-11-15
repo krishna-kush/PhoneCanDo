@@ -28,7 +28,9 @@ in `accounts/core/ops/`, numbers in `accounts/core/limits.ts`, tables in
 - **Never linked to usage stats.** The account holds no device or install ID,
   and the usage stats hold no account.
 - **Delete account** (Settings → Account) deletes all of it at once. **Sign
-  out** ends only that phone's session.
+  out** ends only that phone's session. Without the app, ask by email from
+  the account's address (`https://phonecando.app/delete-account/`); we
+  delete it within 30 days.
 
 ## Where it goes
 

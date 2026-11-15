@@ -4,7 +4,8 @@
 
 /**
  * The line beside each part of the page. Keys are section ids, or the first
- * class where there is none: the hero, the footer, the 404's main.
+ * class where there is none: the hero, the footer, the 404's and the
+ * delete-account page's main.
  */
 export const sceneLines: Record<string, string> = {
   hero: 'on duty',
@@ -19,6 +20,7 @@ export const sceneLines: Record<string, string> = {
   source: 'go on · read me',
   footer: 'end of manual',
   missing: '404 · lost too',
+  del: 'sad to see you go',
   // The privacy note.
   note: 'psst · privacy',
   tldr: 'tl;dr · got it',

@@ -1,0 +1,175 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import Mascot from '../components/Mascot.astro';
+import { site } from '../data/site';
+
+// How to delete the optional Google sign-in's account, with or without the
+// app (the web page app stores ask for). What the account keeps is
+// docs/accounts.md and the privacy note's Extras; change them together.
+const accounts = `${site.repo}/blob/HEAD/docs/accounts.md`;
+const ask = `mailto:${site.email.support}?subject=${encodeURIComponent('Delete my PhoneCanDo account')}`;
+---
+
+<Base
+  title={`Delete your account · ${site.name}`}
+  description="How to delete your PhoneCanDo account and everything it keeps, from the app or without it."
+>
+  <div class="page">
+    <Nav />
+
+    <main class="del">
+      <div class="del-copy">
+        <p class="eyebrow">
+          <span class="dot" aria-hidden="true"></span>
+          Account · Delete
+        </p>
+        <h1>Leaving is <em>one tap.</em></h1>
+        <p class="hero-sub">
+          Signing in is optional, and PhoneCanDo works the same without it. Delete the account
+          and <strong>everything it keeps goes at once</strong>, on our server and on every phone
+          signed in to it.
+        </p>
+
+        <ol class="del-ways">
+          <li>
+            <p class="del-where">With the app</p>
+            <p>
+              Open <b>Settings → Account</b> and tap <b>Delete account</b>. It is gone right away.
+            </p>
+          </li>
+          <li>
+            <p class="del-where">Without the app</p>
+            <p>
+              Write to <a href={ask}>{site.email.support}</a> from the Google account's email
+              address and ask us to delete it. We delete it within 30 days and write back when it
+              is done.
+            </p>
+          </li>
+        </ol>
+
+        <p class="del-note">
+          Usage stats never meet the account. Delete those in the app with{" "}
+          <b>Settings → Privacy → Delete my data</b>; see <a href="/privacy/">the privacy note</a>.
+        </p>
+      </div>
+
+      <figure class="del-plate">
+        <div class="del-head">
+          <p class="fig-label">FIG. DEL — What goes</p>
+          <span class="stamp">All of it</span>
+        </div>
+        <div class="del-sheet">
+          <dl class="del-rows">
+            <div><dt>Account</dt><dd>Google's number for it, your email, when you first signed in and last used it</dd></div>
+            <div><dt>Phones</dt><dd>every phone's session; each one is signed out</dd></div>
+            <div><dt>Links</dt><dd>the codes of the share links you made</dd></div>
+            <div><dt>Settings</dt><dd>the synced settings, like the theme and the caps</dd></div>
+            <div><dt>Kept</dt><dd class="del-red">nothing from the account</dd></div>
+          </dl>
+        </div>
+        <figcaption class="del-foot">
+          <span>Every field: <a href={accounts} target="_blank" rel="noreferrer">accounts schema</a></span>
+          <span>Plate 000 / exit</span>
+        </figcaption>
+      </figure>
+    </main>
+
+    <Footer />
+  </div>
+  <Mascot />
+</Base>
+
+<style is:global>
+  .del {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    gap: clamp(36px, 6vw, 80px);
+    align-items: center;
+    padding: clamp(56px, 8vh, 92px) var(--pad) clamp(72px, 10vh, 112px);
+    overflow: clip;
+  }
+  .del-ways {
+    display: grid;
+    gap: 14px;
+    margin: 26px 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: del;
+  }
+  .del-ways li {
+    position: relative;
+    padding: 14px 16px 14px 48px;
+    border: 1px solid var(--line-2);
+    background: var(--panel-2);
+    counter-increment: del;
+  }
+  .del-ways li::before {
+    content: counter(del);
+    position: absolute;
+    top: 13px;
+    left: 16px;
+    font: 400 22px/1 var(--serif);
+    color: var(--red);
+  }
+  .del-ways p { margin: 0; color: var(--muted); }
+  .del-where {
+    margin-bottom: 4px !important;
+    font: 500 9px/1.6 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint) !important;
+  }
+  .del a { color: var(--fg); border-bottom: 1px solid var(--line-2); }
+  .del a:hover { color: var(--red); border-bottom-color: var(--red); }
+  .del-note { margin-top: 20px; font-size: 13px; color: var(--muted); }
+
+  .del-plate { width: 100%; max-width: 400px; margin: 0 0 0 auto; }
+  .del-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .del-sheet {
+    padding: clamp(20px, 3vw, 28px) clamp(18px, 3vw, 26px) 22px;
+    border: 1px solid var(--line-2);
+    background-color: var(--panel-2);
+    box-shadow: 5px 5px 0 var(--accent);
+  }
+  .del-rows { margin: 0; border-top: 1px solid var(--line); }
+  .del-rows div {
+    display: grid;
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .del-rows dt {
+    font: 500 8px/1.65 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .del-rows dd { margin: 0; font: 400 10.5px/1.65 var(--mono); color: var(--muted); }
+  .del-rows .del-red { color: var(--red); }
+  .del-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    font: 500 8px/1.4 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .del-foot a { border-bottom: 1px solid var(--line-2); }
+
+  @media (max-width: 860px) {
+    .del { grid-template-columns: 1fr; gap: 40px; }
+    .del-plate { max-width: 440px; margin-inline: auto; }
+  }
+</style>

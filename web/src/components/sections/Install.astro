@@ -214,6 +214,27 @@ const pcScripts = [
 </section>
 
 <script>
+    // A share link (/i/<code>) lands here as /?i=<code>: the download
+    // buttons carry the code on so /v1/dl credits the link, the hero says a
+    // friend sent it, and on Android a button opens the app through the same
+    // link (the app counts the install). Pattern: tce/core/share.ts.
+    const code = new URLSearchParams(location.search).get("i");
+    if (code && /^[a-km-np-z2-9]{8}$/.test(code)) {
+        for (const a of document.querySelectorAll<HTMLAnchorElement>('a[href*="/v1/dl/"]')) {
+            const url = new URL(a.href);
+            url.searchParams.set("i", code);
+            a.href = url.href;
+        }
+        const friend = document.querySelector<HTMLElement>("[data-friend]");
+        if (friend) friend.hidden = false;
+        const open = document.querySelector<HTMLAnchorElement>("[data-open-app]");
+        if (open && /Android/i.test(navigator.userAgent)) {
+            const back = encodeURIComponent(location.href);
+            open.href = `intent://phonecando.app/i/${code}#Intent;scheme=https;package=com.phonecando.app;S.browser_fallback_url=${back};end`;
+            open.hidden = false;
+        }
+    }
+
     // The computer commands open on the visitor's OS, guessed from the
     // browser; the tabs switch it.
     const picker = document.querySelector<HTMLElement>("[data-os-picker]");

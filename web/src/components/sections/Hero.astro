@@ -45,6 +45,13 @@ import { site } from "../../data/site";
                 See it work
             </a>
         </div>
+        <!-- Shown only on a share link's page (/?i=<code>); Install.astro's
+             script fills it in. -->
+        <p class="hero-friend" data-friend hidden>
+            <b>A friend sent you this.</b> Your download counts on their link,
+            never who you are.
+            <a class="hero-friend-open" data-open-app hidden>Have it already? Open PhoneCanDo</a>
+        </p>
         <p class="hero-note">
             <span>No account needed</span>
             <span>No PC</span>
@@ -152,6 +159,25 @@ import { site } from "../../data/site";
       text-transform: uppercase;
       color: var(--faint);
     }
+    .hero-friend {
+      margin-top: 18px;
+      padding: 10px 14px;
+      border-left: 2px solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .hero-friend[hidden] { display: none; }
+    .hero-friend b { color: var(--fg); font-weight: 600; }
+    .hero-friend-open {
+      display: block;
+      margin-top: 6px;
+      font: 500 10px/1.6 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .hero-friend-open[hidden] { display: none; }
     .hero-note span { display: inline-flex; align-items: center; gap: 7px; }
     .hero-note span::before {
       content: '';

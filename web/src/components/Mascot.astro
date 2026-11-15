@@ -95,7 +95,7 @@ const vars = [
     const GRAVITY = 0.0022;
     const BOUNCE = 0.6;
     const page = document.querySelector<HTMLElement>('.page');
-    const sections = [...document.querySelectorAll<HTMLElement>('main > section, main.missing, .page > footer')].map(
+    const sections = [...document.querySelectorAll<HTMLElement>('main > section, main.missing, main.del, .page > footer')].map(
       (el): [HTMLElement, string] => [el, el.id || el.classList[0] || '']
     );
 
