@@ -136,12 +136,20 @@ function offPile(toy: Toy, toys: Toy[], place: Place): { dir: number; hop: boole
   const level = Math.round((place.deckAt(i, toy.d) - toy.y) / SIZE);
   if (level <= 0) return null;
   const climb = level >= PILE;
-  // Where it would stand at p: on the highest of those there no higher than it.
+  // Those it could stand on, on its floor and no higher than it, and how high each would put it.
+  const under: Toy[] = [];
+  const heights: number[] = [];
+  for (const o of toys) {
+    if (o === toy || o.held || o.chute >= 0 || o.dig >= 0 || floorOf(o.y) !== i || o.y < toy.y - SIZE / 2) continue;
+    under.push(o);
+    heights.push(Math.round((place.deckAt(i, o.d) - o.y) / SIZE) + 1);
+  }
+  // Where it would stand at p: on the highest of those there.
   const pileAt = (p: number) => {
     let n = 0;
-    for (const o of toys) {
-      if (o === toy || o.held || o.chute >= 0 || o.dig >= 0 || floorOf(o.y) !== i || Math.abs(o.d - p) >= SIZE || o.y < toy.y - SIZE / 2) continue;
-      n = Math.max(n, Math.round((place.deckAt(i, o.d) - o.y) / SIZE) + 1);
+    for (let k = 0; k < under.length; k++) {
+      if (Math.abs(under[k].d - p) >= SIZE) continue;
+      n = Math.max(n, heights[k]);
     }
     return n;
   };

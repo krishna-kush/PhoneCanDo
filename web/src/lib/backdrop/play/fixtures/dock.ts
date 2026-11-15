@@ -17,13 +17,21 @@ const MOST = 4;
 /** Slower than this, an app can settle into a square; knocked faster, it comes out. */
 const SETTLE = 140;
 
+// Each dock's squares as last worked out, and for what margin: the physics
+// asks many times a frame, and the margin rarely changes.
+const laid = new WeakMap<Dock, { span: number; at: readonly number[] }>();
+
 /** The squares' middles along the dock, in a margin [span] wide. */
-export function slots(fx: Dock, span: number): number[] {
+export function slots(fx: Dock, span: number): readonly number[] {
+  const known = laid.get(fx);
+  if (known && known.span === span) return known.at;
   const a = across(span, fx.at);
   const b = across(span, fx.to);
   const n = clamp(Math.floor((b - a) / SLOT), 1, MOST);
   const mid = (a + b) / 2;
-  return Array.from({ length: n }, (_, k) => mid + (k - (n - 1) / 2) * SLOT);
+  const at = Array.from({ length: n }, (_, k) => mid + (k - (n - 1) / 2) * SLOT);
+  laid.set(fx, { span, at });
+  return at;
 }
 
 /** Keeps a toy standing on the deck of floor [i] in its square, or settles it into the nearest free one in reach. */

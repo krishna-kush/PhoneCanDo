@@ -36,11 +36,46 @@ const SERIF = "'Instrument Serif', Georgia, serif";
 // Depth fog: full ink on the page plane, a third of it at the board.
 const fog = (z: number) => Math.min(1, Math.max(0.3, 1 - (z - 150) / 2000));
 
+/**
+ * How far past its points a stroke [width] wide can reach, screen px: a
+ * mitred corner at most, and a px of anti-aliasing. A fill reaches 2.
+ */
+export const reach = (width: number) => width * 5 + 2;
+
+/** A screen box: left, top, right, bottom. */
+type Box = [number, number, number, number];
+
+/** Whether a screen box, grown by [pad], lies wholly outside [view]; never, without one. */
+export const outside = (view: Box | null, x0: number, y0: number, x1: number, y1: number, pad: number) =>
+  view !== null && (x1 + pad < view[0] || x0 - pad > view[2] || y1 + pad < view[1] || y0 - pad > view[3]);
+
+/** Whether every one of [points], grown by [pad], lies outside [view]. */
+function allOutside(view: Box | null, points: Dot[], pad: number) {
+  if (view === null) return false;
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const p of points) {
+    if (p.x < x0) x0 = p.x;
+    if (p.x > x1) x1 = p.x;
+    if (p.y < y0) y0 = p.y;
+    if (p.y > y1) y1 = p.y;
+  }
+  return outside(view, x0, y0, x1, y1, pad);
+}
+
 export class Pen {
   /** Multiplies every alpha drawn: a fading thing sets it, then puts it back. */
   alpha = 1;
   /** Fade with depth; the board's pulses turn it off to stay bright. */
   haze = true;
+  /**
+   * The screen box its canvas shows, CSS px (left, top, right, bottom); null
+   * until boot.ts sizes it. A thing drawn wholly outside it would set no
+   * pixel, so it is skipped: most of what the floors hold is off screen.
+   */
+  view: Box | null = null;
 
   constructor(
     readonly ctx: CanvasRenderingContext2D,
@@ -84,9 +119,11 @@ export class Pen {
   /** An open line through world points, faded by the first one's depth. */
   poly(points: readonly P3[], color: string, width = 1, dash?: number[]) {
     if (points.length < 2) return;
+    const at = points.map(([x, y, z]) => this.at(x, y, z));
+    if (allOutside(this.view, at, reach(width))) return;
     const ctx = this.ctx;
     this.fade(points[0][2]);
-    this.trace(points.map(([x, y, z]) => this.at(x, y, z)), false);
+    this.trace(at, false);
     ctx.setLineDash(dash ?? []);
     ctx.lineWidth = width;
     ctx.strokeStyle = color;
@@ -96,9 +133,11 @@ export class Pen {
 
   /** A closed shape through world points. */
   shape(points: readonly P3[], fill?: Fill, stroke?: string, width = 1) {
+    const at = points.map(([x, y, z]) => this.at(x, y, z));
+    if (allOutside(this.view, at, stroke ? reach(width) : 2)) return;
     const ctx = this.ctx;
     this.fade(points[0][2]);
-    this.trace(points.map(([x, y, z]) => this.at(x, y, z)), true);
+    this.trace(at, true);
     if (fill) {
       ctx.fillStyle = fill;
       ctx.fill();
@@ -116,6 +155,7 @@ export class Pen {
     const sw = w * a.s;
     const sh = h * a.s;
     if (sw <= 0 || sh <= 0) return;
+    if (outside(this.view, a.x, a.y, a.x + sw, a.y + sh, stroke ? reach(1) : 2)) return;
     const ctx = this.ctx;
     this.fade(z);
     if (fill) {
@@ -148,6 +188,7 @@ export class Pen {
     const btr = p(x + w, y, z + d);
     const bbr = p(x + w, y + h, z + d);
     const bbl = p(x, y + h, z + d);
+    if (allOutside(this.view, [ftl, ftr, fbr, fbl, btl, btr, bbr, bbl], faces.stroke ? reach(1) : 2)) return;
     const ctx = this.ctx;
     this.fade(z);
     const face = (pts: Dot[], fill?: Fill) => {
@@ -174,6 +215,8 @@ export class Pen {
   glow(x: number, y: number, z: number, r: number, color: string, k: number) {
     if (k <= 0.005) return;
     const a = this.at(x, y, z);
+    const rs = r * a.s;
+    if (outside(this.view, a.x - rs, a.y - rs, a.x + rs, a.y + rs, 2)) return;
     this.ctx.globalAlpha = Math.min(1, k * this.alpha);
     drawGlow(this.ctx, color, a.x, a.y, r * a.s);
   }
@@ -185,10 +228,12 @@ export class Pen {
   /** Part of a circle facing the camera, from angle a0 to a1 (radians, clockwise from 3 o'clock). */
   arc(x: number, y: number, z: number, r: number, a0: number, a1: number, fill?: string, stroke?: string, width = 1) {
     const a = this.at(x, y, z);
+    const rs = Math.max(0.1, r * a.s);
+    if (outside(this.view, a.x - rs, a.y - rs, a.x + rs, a.y + rs, stroke ? reach(width) : 2)) return;
     const ctx = this.ctx;
     this.fade(z);
     ctx.beginPath();
-    ctx.arc(a.x, a.y, Math.max(0.1, r * a.s), a0, a1);
+    ctx.arc(a.x, a.y, rs, a0, a1);
     if (fill) {
       ctx.fillStyle = fill;
       ctx.fill();
@@ -203,10 +248,13 @@ export class Pen {
   /** Part of an ellipse facing the camera, its radii across and down, angles as arc's. */
   ellipse(x: number, y: number, z: number, rx: number, ry: number, a0: number, a1: number, fill?: string, stroke?: string, width = 1) {
     const a = this.at(x, y, z);
+    const sx = Math.max(0.1, rx * a.s);
+    const sy = Math.max(0.1, ry * a.s);
+    if (outside(this.view, a.x - sx, a.y - sy, a.x + sx, a.y + sy, stroke ? reach(width) : 2)) return;
     const ctx = this.ctx;
     this.fade(z);
     ctx.beginPath();
-    ctx.ellipse(a.x, a.y, Math.max(0.1, rx * a.s), Math.max(0.1, ry * a.s), 0, a0, a1);
+    ctx.ellipse(a.x, a.y, sx, sy, 0, a0, a1);
     if (fill) {
       ctx.fillStyle = fill;
       ctx.fill();
@@ -261,6 +309,13 @@ export class Pen {
     const a = this.at(x, y, z);
     const px = Math.max(type.min ?? 0, (type.px ?? 9) * a.s);
     if (px < 3.5) return;
+    // No glyph is wider than 2em, whatever the font, and none reaches 2.5em
+    // off its baseline (the font is set rounded, a touch bigger than px);
+    // turned, the line keeps within that much of its anchor.
+    let across = text.length * (px * 2 + Math.abs((type.track ?? 0) * px)) + px * 2;
+    let down = px * 2.5;
+    if (type.turn) across = down = across + down;
+    if (outside(this.view, a.x - across, a.y - down, a.x + across, a.y + down, 2)) return;
     const ctx = this.ctx;
     this.fade(z);
     this.font(px, type);

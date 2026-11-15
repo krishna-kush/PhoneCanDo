@@ -139,6 +139,8 @@ export function startBackdrop(root: HTMLElement) {
       if (c.height !== ph) c.height = ph;
     }
     pass.floorsLayer.key = '';
+    // What the canvas shows, on screen: its pens skip whatever lies wholly outside.
+    pass.pen.view = pass.floorsLayer.pen.view = [pass.origin, 0, pass.origin + css, ph / view.dpr];
   };
 
   const measure = () => {

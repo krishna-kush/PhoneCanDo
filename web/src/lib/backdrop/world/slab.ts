@@ -4,7 +4,7 @@
 // margin: the floor's number and name on the left, its motto on the right.
 
 import { project, scaleAt } from '../camera';
-import type { Pen } from '../paint/pen';
+import { outside, reach, type Pen } from '../paint/pen';
 import { DEEP, SLAB, floorY } from './building';
 import type { Frame } from './frame';
 import { spans } from './reach';
@@ -49,6 +49,11 @@ export function drawSlab(f: Frame, i: number, pen: Pen) {
 
 function drawDeckGrid(f: Frame, pen: Pen, y: number, x0: number, x1: number) {
   const { cam, view } = f;
+  // Every line lies on the deck, between its front edge and the board on
+  // screen: with all of that off the canvas, none of them would show.
+  const front = pen.at(0, y, 0).y;
+  const back = pen.at(0, y, DEEP).y;
+  if (outside(pen.view, -Infinity, Math.min(front, back), Infinity, Math.max(front, back), reach(1))) return;
   const ink = pen.pal.ink;
   const was = pen.alpha;
   pen.alpha = was * 0.2;
@@ -69,6 +74,9 @@ function drawDeckGrid(f: Frame, pen: Pen, y: number, x0: number, x1: number) {
 function drawRuler(f: Frame, pen: Pen, y: number) {
   const { cam } = f;
   const ctx = pen.ctx;
+  // Every tick hangs from the face's top edge, at most 8px down it.
+  const edge = pen.at(0, y, 0).y;
+  if (outside(pen.view, -Infinity, edge, Infinity, edge + 8, reach(1))) return;
   // On the page plane a world unit is a screen px: one path for every tick.
   ctx.globalAlpha = 0.7;
   ctx.beginPath();

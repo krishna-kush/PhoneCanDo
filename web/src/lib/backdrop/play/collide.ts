@@ -30,15 +30,21 @@ export function wake(toy: Toy) {
   toy.squashV -= 4;
 }
 
+// Going through a deck or digging in the pit, it is below the deck, and
+// climbing out it is in a hurry: nobody meets it. Nothing here changes that.
+const apart = (t: Toy) => t.chute >= 0 || t.dig >= 0 || t.climbing;
+
 /** Pushes apart every two that overlap on one floor, waking a sleeper hit hard enough. */
 export function collide(toys: Toy[], h: number, out: Happenings) {
+  const away = toys.map(apart);
+  // Each one's floor, kept up as the pushing below moves them up and down.
+  const floors = toys.map((t) => floorOf(t.y));
   for (let a = 0; a < toys.length; a++) {
+    const p = toys[a];
+    if (away[a]) continue;
     for (let b = a + 1; b < toys.length; b++) {
-      const p = toys[a];
       const q = toys[b];
-      // Going through a deck or digging in the pit, it is below the deck, and climbing out it is in a hurry: nobody meets it.
-      const apart = (t: Toy) => t.chute >= 0 || t.dig >= 0 || t.climbing;
-      if (apart(p) || apart(q) || floorOf(p.y) !== floorOf(q.y)) continue;
+      if (away[b] || floors[a] !== floors[b]) continue;
       const dx = q.d - p.d;
       const dy = q.y - p.y;
       const ox = SIZE - Math.abs(dx);
@@ -49,10 +55,14 @@ export function collide(toys: Toy[], h: number, out: Happenings) {
         const [top, under] = dy < 0 ? [q, p] : [p, q];
         meet(top, under, top.vy - under.vy, out);
         if (top.held) {
-          if (!under.grounded) under.y += oy;
+          if (!under.grounded) {
+            under.y += oy;
+            floors[under === p ? a : b] = floorOf(under.y);
+          }
           continue;
         }
         top.y -= oy;
+        floors[top === p ? a : b] = floorOf(top.y);
         if (top.vy > 0) top.vy = 0;
         top.grounded = true;
         top.vx += (under.vx - top.vx) * (1 - Math.exp(-FRICTION * h));
