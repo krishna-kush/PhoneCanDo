@@ -9,8 +9,11 @@ name: Agent payloads
 #             warning, never a gate);
 #   build     cross-builds with the kind's build/build.sh (toolchains from
 #             agent.json, versions from build/pins.env), stages the payload
-#             with agents/kit/native/stage.mjs, checks it with verify-elf.sh
-#             and uploads `<prefix>-payload-arm64` (opencode: `oc-payload-arm64`);
+#             with agents/kit/native/stage.mjs (stamped with its INPUTS,
+#             inputs.mjs), checks it with verify-elf.sh and uploads
+#             `<prefix>-payload-arm64` (opencode: `oc-payload-arm64`) and the
+#             marker `<prefix>-payload-inputs-<INPUTS>` `./manage build`
+#             finds it by;
 #   contract  the artifact round trip a consumer (android.yml) relies on.
 # Optional per-kind helpers the build leg runs when present: ci/sources.sh
 # <workdir> (upstream clones), ci/check-toolchain.sh <ndk-root>, ci/verify.env
@@ -300,10 +303,24 @@ jobs:
           bash "$KIND/build/build.sh" "$WORK"
           echo "minutes=$(( (SECONDS - start + 59) / 60 ))" >> "$GITHUB_OUTPUT"
 
-      - name: Stage (agents/kit/native/stage.mjs, linkage guard)
+      # The sources this build is of (agents/kit/native/inputs.mjs): stage.mjs
+      # stamps the payload with it, and the marker artifact below lets
+      # `./manage build` find this build by it without downloading anything.
+      - name: Inputs digest
+        id: inputs
         env:
           WORK: ${{ steps.runner.outputs.dir }}
-        run: node agents/kit/native/stage.mjs "$ID" "$WORK/out" "$RUNNER_TEMP/payload"
+        run: |
+          set -euo pipefail
+          digest="$(node agents/kit/native/inputs.mjs "$ID")"
+          echo "$digest" > "$WORK/out/INPUTS"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Inputs: \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stage (agents/kit/native/stage.mjs, linkage guard, stamp)
+        env:
+          WORK: ${{ steps.runner.outputs.dir }}
+        run: node agents/kit/native/stage.mjs "$ID" "$WORK/out" "$RUNNER_TEMP/payload" --source "github run $GITHUB_RUN_ID ${GITHUB_SHA::7}"
 
       - name: ELF identity and SHA256SUMS
         run: bash agents/kit/native/verify-elf.sh sums "$RUNNER_TEMP/payload" "$KIND/agent.json" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -315,6 +332,16 @@ jobs:
         with:
           name: ${{ matrix.prefix }}-payload-arm64
           path: ${{ runner.temp }}/payload/
+          retention-days: 14
+          if-no-files-found: error
+
+      # Found by name: <prefix>-payload-inputs-<digest> is a build of exactly
+      # those sources (agents/kit/native/github.mjs).
+      - name: Upload the inputs marker
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.prefix }}-payload-inputs-${{ steps.inputs.outputs.digest }}
+          path: ${{ runner.temp }}/payload/INPUTS
           retention-days: 14
           if-no-files-found: error
 
@@ -371,8 +398,8 @@ jobs:
       - name: Layout and checksums a consumer relies on
         run: |
           set -euo pipefail
-          # Exactly the manifest's payload.libs plus SHA256SUMS.
-          want="$( { jq -r '.payload.libs[].name' "agents/native/$ID/agent.json"; echo SHA256SUMS; } | LC_ALL=C sort)"
+          # Exactly the manifest's payload.libs plus the stamp (agents/kit/native/stamp.mjs).
+          want="$( { jq -r '.payload.libs[].name' "agents/native/$ID/agent.json"; printf '%s\n' SHA256SUMS INPUTS SOURCE; } | LC_ALL=C sort)"
           cd "$RUNNER_TEMP/payload"
           ls -la
           got="$(find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort)"

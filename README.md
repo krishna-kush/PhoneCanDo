@@ -60,26 +60,23 @@ stay local; the app's network calls are listed in
 
 ## Quick start
 
-**Requirements:** Node 22, pnpm 11, Android SDK + NDK r28c, Zig 0.16, Bun 1.4.2,
-and ~15 GB disk for the opencode build.
+**Requirements:** Node 22, pnpm 11, the Android SDK, and `gh` signed in to fetch
+CI's opencode payload. Building that payload here also needs NDK r28c, Zig 0.16,
+Bun 1.4.2 and ~15 GB disk.
 
-The opencode payload is not in git, and the app build does not build it. Build it
-once with the bootstrap scripts:
+The opencode payload is not in git, and the app build does not build it. CI builds
+it from the pins; `./manage agent sync` stages the one that matches them: the
+staged one when it does, else GitHub's build (kept 14 days), else a build here.
 
 ```sh
 pnpm -C app install
-
-# Payload: Bun 1.4.2, NDK r28c, Zig 0.16. The workdir needs oc-v2/
-# (pinned upstream clone) and the env vars; full steps:
-# agents/native/opencode/docs/README.md
-./manage agent opencode build /path/to/workdir
-./manage agent opencode stage /path/to/workdir/out
-
+./manage agent sync          # ./manage agent status only shows it
 pnpm -C app android:full
 ```
 
-See [`agents/native/opencode/docs/build.md`](agents/native/opencode/docs/build.md) for the exact
-toolchain, patches and verification.
+`./manage build` and `./manage release` do this step themselves. See
+[`agents/native/opencode/docs/build.md`](agents/native/opencode/docs/build.md) for building
+it here: the exact toolchain, patches and verification.
 
 ## Channels
 

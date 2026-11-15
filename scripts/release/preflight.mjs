@@ -1,11 +1,14 @@
 // Before anything is written or built: is the commit we release clean,
-// pushed and green on GitHub, and is the Linux that full and lite will ship
-// (proot, the Default image) exactly the verified, locked one? The gates run
-// in order, each one that can (a dirty tree still gets its CI table), and
-// the verdict says whether the release may go on. No IO of its own: git, gh
-// and the staged Linux files come in as objects (io/git.mjs, io/gh.mjs,
-// io/linux.mjs), so the tests run all of it on fakes.
+// pushed and green on GitHub, is the Linux that full and lite will ship
+// (proot, the Default image) exactly the verified, locked one, and is every
+// native agent payload they ship the build of this tree's sources? The gates
+// run in order, each one that can (a dirty tree still gets its CI table), and
+// the verdict says whether the release may go on. No IO of its own: git, gh,
+// the staged Linux files and the staged agent payloads come in as objects
+// (io/git.mjs, io/gh.mjs, io/linux.mjs, io/agents.mjs), so the tests run all
+// of it on fakes.
 
+import { payloadsGate } from './agents/payloads.mjs';
 import { classifyChecks } from './ci/classify.mjs';
 import { imageGate } from './linux/image.mjs';
 import { prootGate } from './linux/proot.mjs';
@@ -16,6 +19,8 @@ import { dirtyEntries, parsePorcelain } from './worktree.mjs';
  *   git, gh          io/git.mjs and io/gh.mjs objects (or fakes)
  *   linux            io/linux.mjs object (or a fake): the staged proot and
  *                    Default image, pins.env and lock.json
+ *   agents           io/agents.mjs object (or a fake): the staged native
+ *                    agent payloads and this tree's INPUTS
  *   repo             owner/name on GitHub
  *   allowDirty       repo-relative paths that may be edited in place
  *                    (--upload-only: the version files the first run bumped)
@@ -25,10 +30,10 @@ import { dirtyEntries, parsePorcelain } from './worktree.mjs';
  *   withoutLinux     --without-linux: no proot or image staged is fine
  *                    (whatever is staged is still checked)
  * }
- * -> { head, sha, gates, ci, proot, image, proceed, refusals, overridden, notes }
- *    proot { version, libs: { name: sha256 } } and image { version, sha256,
- *    release, info } describe what ships; null for what does not (or was
- *    refused)
+ * -> { head, sha, gates, ci, proot, image, agents, proceed, refusals, overridden, notes }
+ *    proot { version, libs: { name: sha256 } }, image { version, sha256,
+ *    release, info } and agents [{ id, version, inputs, source }] describe
+ *    what ships; null for what does not (or was refused)
  */
 export function runPreflight(ctx) {
   const state = { head: ctx.git.head() };
@@ -39,8 +44,9 @@ export function runPreflight(ctx) {
 
 // In order; a gate reads what earlier ones left in `state` and returns
 // { id, title, ok, overridable, summary, detail?, overrideNote? } or null when
-// it cannot apply. The Linux gates (linux/) never yield to --allow-red-ci.
-const GATES = [treeGate, pushedGate, ciGate, prootGate, imageGate];
+// it cannot apply. The Linux gates (linux/) and the agents gate (agents/)
+// never yield to --allow-red-ci.
+const GATES = [treeGate, pushedGate, ciGate, prootGate, imageGate, payloadsGate];
 
 const short = (sha) => sha.slice(0, 12);
 

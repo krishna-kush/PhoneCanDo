@@ -191,6 +191,8 @@ jobs:
           expect_usage_error agent opencode
           expect_usage_error agent nope build
           expect_usage_error agent new x
+          expect_usage_error agent status desktop
+          expect_usage_error build full --rebuild
           expect_usage_error apk info /nonexistent.apk
           expect_usage_error device push
 

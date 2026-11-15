@@ -1,160 +1,43 @@
 #!/usr/bin/env python3
-"""PhoneCanDo: one entry point for the repo's scripts.
-
-  ./manage release 0.1.2 --notes "What changed."   build full + lite, draft GitHub release
-  ./manage release 0.1.2 --notes "..." --publish   same, then publish
-  ./manage release 0.1.2 --dry-run                 check env, edits, CI and Linux payloads, no build
-  ./manage release 0.1.2 --upload-only [--publish] re-upload staged assets, no build
-  ./manage release 0.1.2 --allow-red-ci            release despite red CI (noted in the release notes)
-  ./manage release 0.1.2 --without-linux           full + lite with no proot/Default image staged
-  ./manage build lite|full [--clean]               signed local APK -> dist/<channel>/
-  ./manage prebuild [--clean]                      re-apply config plugins to app/android
-  ./manage android lite|full|play                  dev build + install on the adb device
-  ./manage check                                   tsc + key/reconcile vectors
-  ./manage logos                                   regenerate brand assets from theme/
-  ./manage xterm                                   re-inline the terminal page bundle
-  ./manage web dev|build                           the website
-  ./manage agent list|check                        agent kinds (agents/): list, or validate manifests + folders
-  ./manage agent new <id> --native|--image         scaffold agents/<type>/<id>/ from agents/kit/cli/templates/
-  ./manage agent <id> build [workdir]              native payload build (agents/native/<id>/build/build.sh)
-  ./manage agent <id> stage <build-out> [dest]     copy a built payload into the app (agents/kit/native/stage.mjs)
-  ./manage agent <id> test                         the kind's Kotlin tests, then the agents/ TS tests
-  ./manage image fetch|stage                       locked Default env image -> dist/images/ -> app assets
-  ./manage image build|stage --local               unlocked local image -> dist/images/local/ -> debug builds only
-  ./manage image lock <run-id>                     lock what a green lre-image run published
-  ./manage apk info <file.apk>                     package, version, channel, signer, a11y
-  ./manage device push <file.apk>                  copy to /sdcard/Download/phonecando/
-  ./manage device log                              logcat for update / install / Play Protect
-  ./manage stats [--d1]                            GitHub download counts; --d1 adds D1 usage (cf CLI)
-  ./manage limits [--strict]                       usage vs the Cloudflare free plan (warns at 70%)
-  ./manage data [--days N] [--testers] [--report]  usage data from Cloudflare, interactive in a terminal
-
-Defaults: GITHUB_REPO from app/src/engine/updates.ts, PHONECANDO_RELEASE_ENV
-from the repo-root .env (release signing, TCE_READ_TOKEN; .env.example lists
-the keys), ANDROID_HOME from /opt/android-sdk.
-build and release run the limits check and print the data report first;
-neither ever blocks them.
-Never runs git itself; release-android.mjs runs read-only git (rev-parse,
-status) in its preflight.
-"""
-import os
+"""PhoneCanDo: one entry point for the repo's scripts. ./manage help lists every
+command, grouped (scripts/manage/usage.py)."""
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-APP = ROOT / "app"
-WEB = ROOT / "web"
-SCRIPTS = ROOT / "scripts"
-TCE = ROOT / "tce"
-CHANNELS = ("lite", "full", "play")
-# Agent kinds: agents/<native|image>/<id>/agent.json, the kit's CLI in
-# agents/kit/cli/ and the payload staging in agents/kit/native/.
-AGENTS = ROOT / "agents"
-AGENT_KIT = AGENTS / "kit"
-# The baked Default env image: its build and its lock (lock/<action>.sh).
-IMAGE = ROOT / "lre" / "images" / "default"
-IMAGE_LOCK = IMAGE / "lock"
+sys.path.insert(0, str(Path(__file__).resolve().parent / "scripts"))
 
+from manage import usage
+from manage.before_build import agents_first, limits_first, proot_first, split_agent_flags
+from manage.common import (
+    AGENT_KIT, AGENTS, APP, IMAGE, IMAGE_LOCK, ROOT, SCRIPTS, TCE, WEB,
+    build_tools, capture, channel_arg, die, release_env, sh,
+)
 
-def sh(cmd, cwd=ROOT, env=None):
-    print("$ " + " ".join(cmd), flush=True)
-    r = subprocess.run(cmd, cwd=str(cwd), env=env or os.environ.copy())
-    if r.returncode != 0:
-        sys.exit(r.returncode)
-
-
-def capture(cmd):
-    return subprocess.run(cmd, capture_output=True, text=True, check=False).stdout
-
-
-def die(msg):
-    print(f"manage: {msg}", file=sys.stderr)
-    sys.exit(2)
-
-
-def local_env_file():
-    # The repo-root .env (gitignored) holds the release signing settings and
-    # TCE_READ_TOKEN. The old ~/.config path is used only while .env is absent.
-    local = ROOT / ".env"
-    legacy = Path.home() / ".config/phonecando/release.env"
-    return local if local.exists() or not legacy.exists() else legacy
-
-
-def release_env():
-    env = os.environ.copy()
-    env.setdefault("ANDROID_HOME", "/opt/android-sdk")
-    env.setdefault("PHONECANDO_RELEASE_ENV", str(local_env_file()))
-    if "GITHUB_REPO" not in env:
-        m = re.search(r"const REPO = '([^']+)'", (APP / "src/engine/updates.ts").read_text())
-        if m:
-            env["GITHUB_REPO"] = m.group(1)
-    return env
-
-
-def build_tools():
-    sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT") or "/opt/android-sdk"
-    bt = Path(sdk) / "build-tools"
-    versions = sorted(
-        (p for p in bt.iterdir() if re.fullmatch(r"\d+(\.\d+)+", p.name)),
-        key=lambda p: [int(x) for x in p.name.split(".")],
-    )
-    if not versions:
-        die(f"no build-tools under {bt}")
-    return versions[-1]
-
-
-def channel_arg(args):
-    if not args or args[0] not in CHANNELS:
-        die(f"channel must be one of {', '.join(CHANNELS)}")
-    return args[0]
-
-
-def limits_first():
-    # The free-plan check (tce/scripts/check-limits.mjs) and the usage data
-    # report (tce/scripts/data.mjs --report, aggregates only) run on every
-    # build. Never blocks: a failure or a missing node only prints a note
-    # before the build goes on.
-    for name, script, args in (("limits check", "check-limits.mjs", []), ("data report", "data.mjs", ["--report"])):
-        try:
-            sh(["node", str(TCE / "scripts" / script), *args], env=release_env())
-        except SystemExit:
-            print(f"manage: {name} failed; continuing", file=sys.stderr)
-        except OSError as e:
-            print(f"manage: {name} skipped ({e}); continuing", file=sys.stderr)
-
-
-def proot_first(args):
-    # Full and lite carry the proot staged in the app. lre/proot/ensure.sh
-    # checks it was built from this tree's lre/proot and, after asking,
-    # builds and stages one when it is missing or out of date. A dry run only
-    # reports; --without-linux ships none and --upload-only builds nothing.
-    if "--without-linux" in args or "--upload-only" in args:
-        return
-    ensure = ["bash", str(ROOT / "lre" / "proot" / "ensure.sh")]
-    if "--dry-run" in args:
-        subprocess.run([*ensure, "--check"], cwd=str(ROOT), env=release_env(), check=False)
-        return
-    sh(ensure, env=release_env())
+# What a release ships; build makes one of them.
+RELEASED = ["full", "lite"]
 
 
 def cmd_release(args):
     if not args or args[0].startswith("--"):
         die("usage: manage release <version> [--notes TEXT] [--publish] [--dry-run] "
-            "[--upload-only] [--allow-red-ci] [--without-linux]")
+            "[--upload-only] [--allow-red-ci] [--without-linux] [--rebuild <ids>] [--download <ids>]")
+    flags, rest = split_agent_flags(args[1:])
     limits_first()
-    proot_first(args[1:])
-    sh(["node", str(SCRIPTS / "release-android.mjs"), "--version", args[0], *args[1:]], env=release_env())
+    proot_first(rest)
+    agents_first(rest, RELEASED, flags, release=True)
+    sh(["node", str(SCRIPTS / "release-android.mjs"), "--version", args[0], *rest], env=release_env())
 
 
 def cmd_build(args):
     ch = channel_arg(args)
     if ch == "play":
         die("play is a later feature; build lite or full")
+    flags, rest = split_agent_flags(args[1:])
     limits_first()
-    proot_first(args[1:])
-    sh(["node", str(SCRIPTS / "build-android.mjs"), ch, *args[1:]], env=release_env())
+    proot_first(rest)
+    agents_first(rest, [ch], flags)
+    sh(["node", str(SCRIPTS / "build-android.mjs"), ch, *rest], env=release_env())
 
 
 def cmd_prebuild(args):
@@ -190,18 +73,29 @@ def agent_kinds():
             if p.parent.parent.name in ("native", "image")}
 
 
-AGENT_USAGE = ("usage: manage agent list|check | new <id> --native|--image "
-               "| <id> build|stage|test [args]")
+AGENT_USAGE = ("usage: manage agent list|check | status|sync [channel...] | new <id> --native|--image "
+               "| <id> build|stage|lock|test [args]")
+NATIVE = AGENT_KIT / "native"
 
 
 def cmd_agent(args):
-    # list/check/new go to the kit's CLI (agents/kit/cli/); <id> build|stage|test
-    # act on one kind. The ids new/list/check/kit are reserved, so they never
-    # shadow a kind.
+    # list/check/new go to the kit's CLI (agents/kit/cli/), status and sync
+    # to the payloads' ensure step (agents/kit/native/ensure.mjs: status only
+    # reports, sync makes them current, as build does first); <id>
+    # build|stage|lock|test act on one kind. The ids new/list/check/status/
+    # sync/kit are reserved, so they never shadow a kind.
     if not args:
         die(AGENT_USAGE)
     if args[0] in ("list", "check"):
         sh(["node", str(AGENT_KIT / "cli" / f"{args[0]}.mjs"), *args[1:]])
+        return
+    if args[0] in ("status", "sync"):
+        flags, channels = split_agent_flags(args[1:])
+        channels = channels or RELEASED
+        if any(ch not in ("full", "lite", "play") for ch in channels) or (flags and args[0] == "status"):
+            die("usage: manage agent status [channel...] | sync [channel...] [--rebuild <ids>] [--download <ids>]")
+        check = ["--check"] if args[0] == "status" else []
+        sh(["node", str(NATIVE / "ensure.mjs"), *check, *channels, *flags], env=release_env())
         return
     if args[0] == "new":
         if len(args) < 3 or "--native" not in args and "--image" not in args:
@@ -209,19 +103,21 @@ def cmd_agent(args):
         sh(["node", str(AGENT_KIT / "cli" / "new.mjs"), *args[1:]])
         return
     kinds = agent_kinds()
-    if args[0] not in kinds or len(args) < 2 or args[1] not in ("build", "stage", "test"):
+    if args[0] not in kinds or len(args) < 2 or args[1] not in ("build", "stage", "lock", "test"):
         die(f"{AGENT_USAGE}; kinds: {', '.join(kinds) or 'none'}")
     kind_id, action, rest = args[0], args[1], args[2:]
     folder = kinds[kind_id]
     native = folder.parent.name == "native"
-    if action in ("build", "stage") and not native:
+    if action in ("build", "stage", "lock") and not native:
         die(f"{kind_id} is an image kind: it installs into the Linux image, nothing to {action}")
     if action == "build":
-        sh([str(folder / "build" / "build.sh"), *rest])
+        sh(["node", str(NATIVE / "build.mjs"), kind_id, *rest])
     elif action == "stage":
         if not rest:
             die(f"usage: manage agent {kind_id} stage <build-out> [dest]")
-        sh(["node", str(AGENT_KIT / "native" / "stage.mjs"), kind_id, *rest])
+        sh(["node", str(NATIVE / "stage.mjs"), kind_id, *rest])
+    elif action == "lock":
+        sh(["node", str(NATIVE / "lock.mjs"), kind_id])
     else:
         if (folder / "kotlin" / "build.gradle.kts").exists():
             sh([str(AGENTS / "gradlew"), f":{kind_id}:test"], cwd=AGENTS)
@@ -251,11 +147,11 @@ def cmd_apk(args):
         die(f"no such file: {apk}")
     bt = build_tools()
     badging = capture([str(bt / "aapt"), "dump", "badging", str(apk)])
-    pkg = next((l for l in badging.splitlines() if l.startswith("package:")), "package: ?")
+    pkg = next((line for line in badging.splitlines() if line.startswith("package:")), "package: ?")
     manifest = capture([str(bt / "aapt"), "dump", "xmltree", str(apk), "AndroidManifest.xml"])
     chan = re.search(r'com\.phonecando\.channel.*?\n.*?android:value.*?"([a-z]+)"', manifest, re.S)
     certs = capture([str(bt / "apksigner"), "verify", "--print-certs", str(apk)])
-    signer = next((l.strip() for l in certs.splitlines() if "SHA-256" in l), "signer: ?")
+    signer = next((line.strip() for line in certs.splitlines() if "SHA-256" in line), "signer: ?")
     print(pkg)
     print(f"channel: {chan.group(1) if chan else '?'}")
     print(f"accessibility service: {'yes' if 'BIND_ACCESSIBILITY_SERVICE' in manifest else 'no'}")
@@ -278,7 +174,6 @@ def cmd_device(args):
             "PackageInstaller:V", "PackageManager:I", "Finsky:I"])
     else:
         die("usage: manage device push <file.apk> | log")
-
 
 
 def cmd_stats(args):
@@ -321,7 +216,7 @@ COMMANDS = {
 
 def main(argv):
     if not argv or argv[0] in ("-h", "--help", "help"):
-        print(__doc__.strip())
+        print(usage.render())
         return
     fn = COMMANDS.get(argv[0])
     if fn is None:

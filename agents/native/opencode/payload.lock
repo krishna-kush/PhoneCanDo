@@ -1,0 +1,4 @@
+# The agent.json version and the build sources (INPUTS, agents/kit/native/inputs.mjs)
+# it was cut from. Changed build/ or payload.libs: bump the version, then
+# ./manage agent <id> lock. agents/kit/cli/check.mjs keeps the two in step.
+2.0.26-android-phonecando.1 86e43bc542ab43f288011685225fa4218828ab18c2186789759fb8ca617d3704

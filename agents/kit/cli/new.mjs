@@ -5,10 +5,12 @@
 // Writes agents/<type>/<id>/ with every __ID__ and __PREFIX__ filled in. A
 // native kind's prefix defaults to the id without dashes. Refuses reserved,
 // malformed or taken ids and prefixes, and a folder that already exists; the
-// new agent.json must pass the validator before anything is written.
+// new agent.json must pass the validator before anything is written. A native
+// kind also gets its payload.lock (../native/lock.mjs).
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { LOCK_FILE, writeLock } from '../native/lock.mjs';
 import { formatProblem, KIND_FOLDERS, REPO_ROOT, scanManifests } from './manifests.mjs';
 import { PATTERNS, RESERVED_IDS, RESERVED_PREFIXES } from '../ts/manifest/rules.ts';
 import { validate } from '../ts/manifest/validate.ts';
@@ -65,7 +67,12 @@ export function scaffold({ id, type, prefix, root = REPO_ROOT }) {
     writeFileSync(path, text);
     chmodSync(path, mode);
   }
-  return files.map(({ rel }) => relative(root, join(dest, rel)));
+  const written = files.map(({ rel }) => relative(root, join(dest, rel)));
+  if (type === 'native') {
+    writeLock({ id, dir: dest, manifest });
+    written.push(relative(root, join(dest, LOCK_FILE)));
+  }
+  return written;
 }
 
 export function main(argv, { log = console.log, error = console.error } = {}) {

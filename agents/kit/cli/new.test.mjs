@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { lockProblems } from '../native/lock.mjs';
 import { scanManifests } from './manifests.mjs';
 import { main, scaffold } from './new.mjs';
 
@@ -26,6 +27,8 @@ test('a native kind: filled-in manifest, executable scripts, clean folder rules'
   assert.equal(statSync(join(r, 'agents/native/demo-cli/build/build.sh')).mode & 0o111, 0o111);
   assert.ok(!readFileSync(join(r, 'agents/native/demo-cli/README.md'), 'utf8').includes('__'));
   assert.deepEqual(scanManifests({ root: r }).problems, []);
+  assert.ok(written.includes('agents/native/demo-cli/payload.lock'));
+  assert.deepEqual(lockProblems(scanManifests({ root: r }).entries[0]), []);
 });
 
 test('an image kind, and --prefix for a native one', (t) => {

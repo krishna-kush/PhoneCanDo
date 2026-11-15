@@ -21,7 +21,9 @@ agents/
 │   │                   runtime-plugin.ts (the runtime.json validator), one-shot.ts (one-shot.json)
 │   ├── schema/         agent.schema.json, runtime.schema.json + valid/invalid fixtures
 │   ├── scripts/        phonecando-event, phonecando-open, phonecando-inbox: POSIX sh a kind's hooks call in the guest
-│   ├── native/         stage.mjs (stage a payload by its manifest), verify-elf.sh
+│   ├── native/         a native payload's way into the APK: inputs (the sources digest), build, stage
+│   │                   (by its manifest, stamped), state, github (CI's builds), choose + ensure (before
+│   │                   an APK build), lock (payload.lock), verify-elf.sh
 │   └── cli/            check, list (CI matrices), new (scaffolds), manifests loader, check-deps
 ├── builtin/        the ONLY place code hooks are registered (Kotlin BuiltinHooks)
 ├── shared/         kind-neutral code packaged into kinds (phone-tools/ + part.json), and
@@ -37,7 +39,8 @@ everything about that kind:
 - `NOTICE.md`
 - config assets
 - `one-shot.json` with a `models` block (CI only, never packaged; §4)
-- native only: `build/` (build.sh, pins.env, patches) and `ci/`
+- native only: `build/` (build.sh, pins.env, patches), `ci/` and
+  `payload.lock` (§2, Native payloads)
 - optional `kotlin/` hooks
 - docs
 
@@ -51,8 +54,8 @@ An image kind with no code has exactly the shape a user-added agent has.
 - packaging: `app/modules/phonecando-runner/android/agents.gradle` syncs
   `assets/agents/<id>/` per channel and adds `src/agents/<id>/libs` to the
   jniLibs of each channel the manifest lists
-- staging: `kit/native/stage.mjs` copies `payload.libs[].from` to `name`
-  and checks linkage
+- staging: `kit/native/stage.mjs` copies `payload.libs[].from` to `name`,
+  checks linkage and stamps the payload
 - CI: `kit/cli/list.mjs --matrix` feeds `agent-payload.yml`
 - the APK audit (`scripts/apk-audit.mjs`, `.github/ci/android/audit-apk.mjs`):
   listed libs and configs present, unlisted ones absent
@@ -62,6 +65,33 @@ An image kind with no code has exactly the shape a user-added agent has.
 
 Never hardcode a kind's lib, asset or config name anywhere else; read the
 manifest. Run `node kit/cli/check.mjs` after any manifest change.
+
+### Native payloads
+
+A native kind's payload is never in git; `kit/native/` gets it into the APK.
+
+- INPUTS (`inputs.mjs`): one sha256 over the kind's `build/` folder
+  (pins.env, build.sh, patches) and its `payload.libs` names, what decides
+  the bytes. Docs, `ci/` and the web adapter are not in it.
+- The stamp (`stamp.mjs`): a staged payload keeps `SHA256SUMS`, `INPUTS` and
+  `SOURCE` (where it came from) next to its libs; AGP packages only `*.so`.
+  It is current (`state.mjs`) when its libs match `SHA256SUMS` and its
+  `INPUTS` equals this tree's; builds are rarely byte-identical, so a build
+  here and CI's build of the same sources are both current.
+- Where a payload comes from (`ensure.mjs`, which `./manage build` and
+  `./manage release` run first; `./manage agent status` shows it and
+  `./manage agent sync` runs it for dev builds): the
+  staged one when current, else GitHub's build of these sources (CI uploads
+  `<prefix>-payload-inputs-<INPUTS>` beside `<prefix>-payload-arm64`, so
+  `github.mjs` finds one by name, kept 14 days), else a build here
+  (`build.mjs`: the kind's `ci/sources.sh <workdir>` when it has one, then
+  `build/build.sh <workdir>`, into `dist/agents/<id>/<INPUTS>/`). A release
+  prefers CI's build over a current one built here, and its preflight
+  refuses a payload that is not current.
+- `payload.lock`: the `version` and the INPUTS it was cut from.
+  `kit/cli/check.mjs` fails when the sources changed and the version did
+  not, so two builds never carry one version; bump it (opencode: the `.N`
+  in `pins.env` and `agent.json`), then `./manage agent <id> lock`.
 
 ## 3. Dependency law
 
@@ -507,8 +537,8 @@ again.
   artifact is `<prefix>-payload-arm64`. Inside the folder, files carry no
   prefix.
 - Reserved prefixes: `phonecando`, `proot`, `llama`. Reserved ids: `new`,
-  `list`, `check`, `kit`, `runtimes`, `shared` (`assets/agents/<id>/`
-  would collide). Prefixes and ids are unique. A runtime's folder is its id too.
+  `list`, `check`, `status`, `sync` (`./manage agent <verb>`), `kit`, `runtimes`,
+  `shared` (`assets/agents/<id>/` would collide). Prefixes and ids are unique. A runtime's folder is its id too.
 - Upstream names stay frozen (`opencode.json`, `OPENCODE_*`,
   `~/.config/opencode/`).
 
@@ -538,7 +568,8 @@ again.
 3. Add code hooks only when data can't say it. Register them with one line
    each in `builtin/kotlin/.../BuiltinHooks.kt`.
 4. Run the checks in §8. For native kinds, also run
-   `./manage agent <id> build|stage`.
+   `./manage agent <id> build --stage` (the scaffold wrote `payload.lock`;
+   lock again whenever the version changes).
 5. CI path filters (repo `AGENTS.md` rule 11) already cover `agents/**`
    through `agents.yml`, `agent-payload.yml` and `android.yml`. A new input
    outside `agents/` needs its own filter line.
@@ -548,5 +579,5 @@ again.
 - `cd agents && ./gradlew build`: kit, hooks, kinds' JVM tests.
 - `pnpm -C agents check`: typecheck, the dependency law, node tests.
 - `node kit/cli/check.mjs` (`./manage agent check`): kind and runtime
-  manifests and folder rules.
+  manifests, folder rules and native kinds' `payload.lock`.
 - `pnpm -C app exec tsc --noEmit` and `pnpm check:vectors`: the app side.

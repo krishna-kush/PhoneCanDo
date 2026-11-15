@@ -30,6 +30,7 @@ import { makeApkReader } from './release/io/apk.mjs';
 import { askYes, red, yellow } from './release/io/ask.mjs';
 import { makeGh } from './release/io/gh.mjs';
 import { makeGit } from './release/io/git.mjs';
+import { makeAgents } from './release/io/agents.mjs';
 import { digest, makeLinux } from './release/io/linux.mjs';
 import { makeProotSource } from './release/io/proot-source.mjs';
 import { expectedLinuxEntries, linuxEntryProblems } from './release/linux/apk.mjs';
@@ -141,6 +142,7 @@ function main() {
     git: makeGit({ cwd: ROOT }),
     gh: makeGh(),
     linux,
+    agents: makeAgents({ root: ROOT }),
     repo,
     allowDirty: args.uploadOnly ? VERSION_FILES.map((file) => relative(ROOT, file)) : [],
     builtFrom: args.uploadOnly ? readSourceCommit(stage) : undefined,

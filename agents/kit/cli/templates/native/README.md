@@ -15,9 +15,12 @@ TODO before this kind ships:
   `ci/sources.sh`, `ci/check-toolchain.sh`, `ci/verify.env`; see
   `agents/native/opencode/ci/` for each.
 
-Build and stage from the repo root:
+Build and stage from the repo root (the workdir defaults to
+`dist/agents/__ID__/<INPUTS>/`):
 
 ```sh
-./manage agent __ID__ build /path/to/workdir
-./manage agent __ID__ stage /path/to/workdir/out
+./manage agent __ID__ build --stage
 ```
+
+A change to `build/` or `payload.libs` needs a new `version` in `agent.json`,
+then `./manage agent __ID__ lock`.

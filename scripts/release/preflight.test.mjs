@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { fakeAgents, okPayload } from './agents/fixtures.mjs';
 import { fakeLinux, NOT_STAGED, okProot, okRelease, okRun, RELEASE, RUN_ID } from './linux/fixtures.mjs';
 import { runPreflight } from './preflight.mjs';
 import { preflightReport } from './report.mjs';
@@ -49,7 +50,7 @@ function redCi(name = 'ci-ok') {
 }
 
 const preflight = (over = {}) =>
-  runPreflight({ git: fakeGit(), gh: fakeGh(), linux: fakeLinux(), repo: REPO, allowDirty: [], overrides: [], ...over });
+  runPreflight({ git: fakeGit(), gh: fakeGh(), linux: fakeLinux(), agents: fakeAgents(), repo: REPO, allowDirty: [], overrides: [], ...over });
 
 test('clean, pushed, green, Linux verified: go, and the report says so', () => {
   const gh = fakeGh();
@@ -62,6 +63,7 @@ test('clean, pushed, green, Linux verified: go, and the report says so', () => {
     ['ci', true],
     ['proot', true],
     ['image', true],
+    ['agents', true],
   ]);
   assert.deepEqual(result.notes, []);
   assert.deepEqual(gh.asked, [
@@ -78,7 +80,18 @@ test('clean, pushed, green, Linux verified: go, and the report says so', () => {
   assert.match(text, /pce-ok\s+pce\.yml\s+not run\s+gate\s+warn\s+workflow did not run/);
   assert.match(text, /proot\s+ok: proot 5\.1\.107\.102 staged/);
   assert.match(text, /Image\s+ok: Default image 20261107-e541287e is the locked one/);
+  assert.match(text, /Agents\s+ok: opencode 2\.0\.26-android-phonecando\.1 \(github run 7 abc1234\)/);
   assert.match(text, /Preflight passed\.$/);
+});
+
+test('an outdated agent payload refuses the release, never overridden', () => {
+  const stale = okPayload();
+  stale.stamp.inputs = null;
+  const result = preflight({ agents: fakeAgents([stale]), overrides: ['ci'] });
+  assert.equal(result.proceed, false);
+  assert.deepEqual(result.overridden, []);
+  assert.match(result.refusals[0], /^Agents: opencode is outdated: no INPUTS/);
+  assert.equal(result.agents, null);
 });
 
 test('Linux refusals are never overridden by --allow-red-ci, and get no red-CI hint', () => {

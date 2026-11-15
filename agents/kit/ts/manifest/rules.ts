@@ -119,7 +119,7 @@ export const SHARED_HOME_PARENTS = ['.local', '.local/share', '.local/state', '.
 // (assets/agents/<id>/) would collide with the kit's scripts, the runtimes'
 // or the shared parts'; prefixes that would collide with our own libraries
 // in the APK lib dir.
-export const RESERVED_IDS = ['new', 'list', 'check', 'kit', 'runtimes', 'shared'];
+export const RESERVED_IDS = ['new', 'list', 'check', 'status', 'sync', 'kit', 'runtimes', 'shared'];
 export const RESERVED_PREFIXES = ['phonecando', 'proot', 'llama'];
 export const USER_ID_PREFIX = 'user.';
 export const MAX_USER_MANIFEST_BYTES = 64 * 1024;

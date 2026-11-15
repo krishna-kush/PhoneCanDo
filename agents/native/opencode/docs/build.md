@@ -26,24 +26,38 @@ overridable by env; none are host-specific.
 
 ## Quickstart
 
-```sh
-WORK=/path/to/v2build
-mkdir -p "$WORK"
-git clone --depth 1 --branch v2.0.26 \
-  https://github.com/anomalyco/opencode.git "$WORK/oc-v2"
+Most of the time you don't build it: `./manage agent sync` stages CI's build of
+these pins (agent-payload.yml, kept 14 days). To build it here:
 
+```sh
 export ANDROID_NDK_HOME=/path/to/android-ndk-r28c
 export ZIG_BIN=/path/to/zig
 
-./agents/native/opencode/build/build.sh "$WORK"
-node agents/kit/native/stage.mjs opencode "$WORK/out"
+./manage agent opencode build --stage
 
 pnpm -C app android:full
 ```
 
-`agents/native/opencode/build/build.sh` defaults `OPENCODE_WORKTREE` to `$WORK/oc-v2`,
-clones `anomalyco/opentui` at `OPENTUI_VERSION` into `$WORK/`, and writes to
-`$WORK/out`.
+That is `agents/kit/native/build.mjs`: `ci/sources.sh` clones the pinned
+upstream trees into the workdir (`dist/agents/opencode/<INPUTS>/`, one per set
+of sources), `build/build.sh` builds into its `out/` with the pins' INPUTS
+beside the files, and `--stage` stages them stamped
+(`agents/kit/native/stage.mjs`). A build of the same sources is found again
+and not redone (`--force` redoes it).
+
+By hand, the same build is:
+
+```sh
+WORK=/path/to/v2build
+git clone --depth 1 --branch v2.0.26 \
+  https://github.com/anomalyco/opencode.git "$WORK/oc-v2"
+./agents/native/opencode/build/build.sh "$WORK"
+```
+
+`build/build.sh` defaults `OPENCODE_WORKTREE` to `$WORK/oc-v2`, clones
+`anomalyco/opentui` at `OPENTUI_VERSION` into `$WORK/`, and writes to
+`$WORK/out`. Its output carries no INPUTS, so a payload staged from it counts
+as outdated until it is built through the kit.
 
 ## What the patches change
 
@@ -108,6 +122,9 @@ the rest of the list above (`verify-elf.sh deep`, with
 
 ## Updating to a newer opencode
 
+`WORK` is a workdir with the upstream clone in `oc-v2/`: any folder a
+`./manage agent opencode build` made under `dist/agents/opencode/`.
+
 ```sh
 TAG=v2.0.27   # replace with the new tag; must still have the pair-era API
 git -C "$WORK/oc-v2" fetch --depth 1 origin tag "$TAG"
@@ -124,9 +141,13 @@ pnpm -C app android:full
 ```
 
 Values in the env win over `pins.env`, so a bump can be tried before it is
-written down. Once it builds, put the new values in
+written down (a try staged this way counts as outdated: its output has no
+INPUTS). Once it builds, put the new values in
 `agents/native/opencode/build/pins.env`, the `version` in
-`agents/native/opencode/agent.json` and the versions in these docs;
+`agents/native/opencode/agent.json` and the versions in these docs, then
+`./manage agent opencode lock`. A patch change with no upstream bump still
+needs a new version: raise the `.N` of `-android-phonecando.N` (`./manage
+agent check` fails until you do);
 `agents/native/opencode/ci/pins.sh` (CI's check job) names whichever was
 missed.
 

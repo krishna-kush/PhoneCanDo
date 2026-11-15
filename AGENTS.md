@@ -221,7 +221,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   (`cd agents && ./gradlew build`) and own pnpm package
   (`pnpm -C agents check`); read `agents/AGENTS.md` (dependency law,
   naming, adding a kind). opencode's payload build and docs:
-  `agents/native/opencode/{build,docs}/` (`./manage agent opencode build|stage`).
+  `agents/native/opencode/{build,docs}/`; `./manage agent sync` stages the
+  payload that matches the pins (CI's build, or `./manage agent opencode
+  build --stage`), and `./manage build|release` do it first.
   `reference/` is a gitignored local-clone area, not a build input.
 - `pce/` — separate Gradle phone-control engine (PCE) build owned by PhoneCanDo;
   read `pce/AGENTS.md`, plan in `pce/docs/planning/plan.md`, work in

@@ -2,11 +2,15 @@
 //   node --test agents/kit/native/stage.test.mjs
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { defaultDest, stagePayload } from './stage.mjs';
+import { readStamp } from './stamp.mjs';
+import { stagedState } from './state.mjs';
+
+const INPUTS_HEX = 'a'.repeat(64);
 
 const manifest = {
   id: 'demo',
@@ -83,4 +87,55 @@ test('the linkage guard refuses a host (glibc) binary', { skip: !hasReadelf && '
     () => stagePayload({ manifest: one, from: '/', dest: join(dir, 'libs'), log: quiet }),
     /failed the linkage guard/,
   );
+});
+
+test('writes the stamp: SHA256SUMS of what it staged, the build\'s INPUTS, and SOURCE', (t) => {
+  const dir = scratch(t);
+  writeFileSync(join(dir, 'demo.bin'), 'engine bytes');
+  writeFileSync(join(dir, 'libui.so'), 'ui');
+  writeFileSync(join(dir, 'INPUTS'), `${INPUTS_HEX}\n`);
+  const dest = join(dir, 'libs');
+  stagePayload({ manifest, from: dir, dest, checkLinkage: false, log: quiet });
+  const stamp = readStamp(dest, manifest);
+  assert.equal(stamp.inputs, INPUTS_HEX);
+  assert.match(stamp.source, /^built on this PC \d{4}-\d{2}-\d{2}$/);
+  assert.equal(stagedState(stamp, INPUTS_HEX).state, 'current');
+});
+
+test('--source names where it came from; an artifact\'s own SOURCE is kept', (t) => {
+  const dir = scratch(t);
+  writeFileSync(join(dir, 'libdm-engine.so'), 'e');
+  writeFileSync(join(dir, 'libdm-ui.so'), 'u');
+  writeFileSync(join(dir, 'SOURCE'), 'github run 7 abc1234\n');
+  const dest = join(dir, 'libs');
+  stagePayload({ manifest, from: dir, dest, staged: true, checkLinkage: false, log: quiet });
+  assert.equal(readStamp(dest, manifest).source, 'github run 7 abc1234');
+  stagePayload({ manifest, from: dir, dest, staged: true, source: 'by hand', checkLinkage: false, log: quiet });
+  assert.equal(readStamp(dest, manifest).source, 'by hand');
+});
+
+test('no INPUTS in the build: staged, but outdated, and an old INPUTS is not left behind', (t) => {
+  const dir = scratch(t);
+  writeFileSync(join(dir, 'demo.bin'), 'e');
+  writeFileSync(join(dir, 'libui.so'), 'u');
+  const dest = join(dir, 'libs');
+  mkdirSync(dest);
+  writeFileSync(join(dest, 'INPUTS'), `${INPUTS_HEX}\n`);
+  stagePayload({ manifest, from: dir, dest, checkLinkage: false, log: quiet });
+  const stamp = readStamp(dest, manifest);
+  assert.equal(stamp.inputs, null);
+  assert.equal(stagedState(stamp, INPUTS_HEX).state, 'outdated');
+});
+
+test('an artifact lib that does not match its SHA256SUMS is refused before copying', (t) => {
+  const dir = scratch(t);
+  writeFileSync(join(dir, 'libdm-engine.so'), 'e');
+  writeFileSync(join(dir, 'libdm-ui.so'), 'u');
+  writeFileSync(join(dir, 'SHA256SUMS'), `${'0'.repeat(64)}  libdm-engine.so\n${'0'.repeat(64)}  libdm-ui.so\n`);
+  const dest = join(dir, 'libs');
+  assert.throws(
+    () => stagePayload({ manifest, from: dir, dest, staged: true, checkLinkage: false, log: quiet }),
+    /libdm-engine\.so does not match the artifact's SHA256SUMS/,
+  );
+  assert.throws(() => statSync(dest));
 });

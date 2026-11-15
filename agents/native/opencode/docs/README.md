@@ -3,7 +3,8 @@
 The app ships ~200 MB of native opencode payload that is not in git:
 `liboc-engine.so` (the engine, Bun) and `liboc-opentui.so` (the TUI
 renderer, Zig), both bionic aarch64. The app build does **not** build it:
-run `./manage agent opencode build|stage` first (it stages into
+run `./manage agent sync` first (CI's build of the pins, or a build here
+with `./manage agent opencode build --stage`; either stages into
 `app/modules/phonecando-runner/android/src/agents/opencode/libs/arm64-v8a/`),
 then build the app. Steps, patches, checks and version bumps: `build.md`.
 Pinned in `../build/pins.env`: `--branch v2.0.26`, Bun 1.4.2, NDK r28c,

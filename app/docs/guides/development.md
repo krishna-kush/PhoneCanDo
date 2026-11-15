@@ -38,7 +38,7 @@ loop and the app build, then staged (all gitignored):
 
 - opencode: `../../../agents/native/opencode/docs/README.md` and
   `../../../agents/native/opencode/docs/build.md`
-  (`./manage agent opencode build|stage`), into the runner module's
+  (`./manage agent sync`: CI's build of the pins, or one built here), into the runner module's
   `src/agents/opencode/libs/`, which each channel in its manifest picks up.
 - proot and its loader: `lre/proot/` (`build-android.sh`, `verify.sh`,
   `stage.sh`), into `phonecando-linux`'s `src/linux/libs/`.
