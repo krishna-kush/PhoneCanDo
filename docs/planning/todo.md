@@ -60,7 +60,22 @@ Before play ships:
 - [ ] On the phone, check whether a busy agent stalls while the screen is
   off (we hold no wake lock; the service keeps the process, not the CPU).
 
-## 3. Account: coming features (optional, need sign-in)
+## 3. Packs: the key and the first signed packs
+
+1.0 ships without a pack key, so release builds refuse every pack
+(`docs/release/known-limits.md`). When the first packs are ready:
+
+- [ ] Make the Ed25519 key (`pce/docs/modules/pack.md`, Key workflow): the
+  private half offline with two backups, like the release key; the public
+  half as `phonecando_pack_public_key` in the runner's
+  `src/uiauto/res/values/pack_key.xml` (empty today; debug builds override
+  it with the test key in `src/debug/`).
+- [ ] Write and sign the first packs and their manifest, host them on a
+  static HTTPS address (a GitHub release is enough), and test
+  `mobile_pack refresh` and `run` on a release build.
+- [ ] Ship the key in an app update, and drop the known-limits line.
+
+## 4. Account: coming features (optional, need sign-in)
 
 Sign-in (Settings → Account, `accounts/`, `docs/accounts.md`) is in place so
 these can come later. Each one needs an account and stays optional: nothing

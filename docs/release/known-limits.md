@@ -67,8 +67,11 @@ These are not scheduled work unless they are also listed in
 - opencode 2.0.26 has no `ctx.permission.assert`, and Code Mode's `execute`
   bypasses top-level permission rules for plugin tools. The app-side biometric
   master switch is the gate until opencode is bumped.
-- The debug build uses a test-only pack public key; a release must set
-  `phonecando_pack_public_key` and keep the private key offline.
+- Release builds ship without a pack key, so `mobile_pack` refuses every
+  pack ("No trusted pack public key is configured"); agents drive apps with
+  the other phone tools. No packs are published yet; the key arrives with
+  the first ones (`docs/planning/todo.md`, Packs). Debug builds use a
+  test-only key.
 - The bridge bearer is per agent (made with the agent, kept for its
   lifetime) and loopback-only. `open`/`share` work only while the app is
   foreground; clipboard reads report `available:false` to background apps
