@@ -72,7 +72,7 @@ export class Pen {
   haze = true;
   /**
    * The screen box its canvas shows, CSS px (left, top, right, bottom); null
-   * until boot.ts sizes it. A thing drawn wholly outside it would set no
+   * until boot/canvas.ts sizes it. A thing drawn wholly outside it would set no
    * pixel, so it is skipped: most of what the floors hold is off screen.
    */
   view: Box | null = null;

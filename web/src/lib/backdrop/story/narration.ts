@@ -13,6 +13,8 @@ const BASE = 250;
 const MAX_H = 330;
 const INSET = 18;
 const MAX_W = 320;
+/** How wide a margin the words take in full, with their inset each side. */
+export const COLUMN = MAX_W + INSET * 2;
 /** Seconds between one word and the next coming in, and for each to fade up. */
 const WORD = 0.07;
 const FADE = 0.4;

@@ -16,6 +16,9 @@ const WALK = 1.1;
 const OPEN = 1.45;
 const DROP = 2.2;
 
+/** How much of the floor below Little has dropped [s] seconds after setting off for the hatch, 0 to 1. */
+export const dropped = (s: number) => (s < OPEN ? 0 : s < DROP ? span(s, OPEN, DROP) ** 2 : 1);
+
 /** Where the hatch is in a margin [margin] px wide: near the front of the deck. */
 export const hatchSpot = (margin: number): Spot => ({ out: Math.round(Math.min(80, Math.max(28, margin * 0.2))), z: 72 });
 
@@ -29,7 +32,7 @@ export function leaving(from: Pose, hatch: Spot, s: number): Pose {
   }
   if (s < DROP) {
     const k = span(s, OPEN, DROP);
-    return at(hatch, { up: -PITCH * k * k, sx: 0.9, sy: 1.14, eyes: 'wide', gaze: [0, -1], kit, falling: k });
+    return at(hatch, { up: -PITCH * dropped(s), sx: 0.9, sy: 1.14, eyes: 'wide', gaze: [0, -1], kit, falling: k });
   }
   const k = span(s, DROP, EXIT);
   return at(hatch, { up: -PITCH, sx: 1 + 0.26 * arch(k), sy: 1 - 0.26 * arch(k), eyes: k < 0.6 ? 'shut' : 'dot', kit, landing: k });

@@ -61,11 +61,11 @@ export function draw(room: Room) {
   const { pen, sec, t } = room;
   const { pal } = pen;
   const { apps, centre } = layout(room);
-  // The apps walk in from the margin's edge, one after another, and gather.
+  // The apps walk in from past the view's edge, one after another, and gather.
   const order = apps.map((a, k) => ({ ...a, k })).sort((a, b) => b.z - a.z);
   for (const a of order) {
     const come = easeInOut(span(sec, 0.3 + a.k * 0.3, 1.5 + a.k * 0.3));
-    const out = mix(room.margin + 40, a.out, come);
+    const out = mix(room.offstage, a.out, come);
     const cheer = sec > ANSWERED - 0.4 ? span(sec, ANSWERED - 0.4 + a.k * 0.08, ANSWERED + 0.2 + a.k * 0.08) : 0;
     const b = standApp(room, a.kind, out, a.z, SIZE, {
       awake: 1,

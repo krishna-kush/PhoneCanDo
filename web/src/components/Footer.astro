@@ -36,6 +36,7 @@ const home = Astro.site.origin;
       <a href={site.releases} target="_blank" rel="noreferrer">Releases</a>
       <a href="/#install">Install</a>
       <a href="/#faq">FAQ</a>
+      <a href="/story/" class="footer-story">The story</a>
       <a href="/privacy/">Privacy</a>
       <a href="/delete-account/">Delete account</a>
     </nav>
@@ -158,6 +159,12 @@ const home = Astro.site.origin;
     color: var(--faint);
   }
   .colophon .serial { margin-left: auto; text-align: right; white-space: nowrap; }
+
+  /* The story has its own page only where it can't be told in the margins
+     (components/Backdrop.astro); from 1440px it is beside the sheet. */
+  @media (min-width: 1440px) {
+    .footer-story { display: none; }
+  }
 
   @media (max-width: 760px) {
     .footer-inner { grid-template-columns: 1fr; }

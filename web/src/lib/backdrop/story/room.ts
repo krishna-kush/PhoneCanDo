@@ -11,7 +11,7 @@ import { hash } from '../seed';
 import { SHADOW, type Eyes, type Facing, type Look, type Shape } from '../species/look';
 import { STILL, blinking, breathe, jump } from '../species/motion';
 import { floorY } from '../world/building';
-import type { Actor, Frame } from '../world/frame';
+import { marginOf, type Actor, type Frame } from '../world/frame';
 import type { Kind } from './characters/crew';
 import { drawA07 } from './a07/draw';
 import { hatchSpot } from './a07/exit';
@@ -50,6 +50,8 @@ export type Room = {
   y: number;
   /** This margin's width on screen. */
   margin: number;
+  /** The `out` just past the view's edge on this side, where whoever walks in starts, unseen. */
+  offstage: number;
   key: string;
   /** Seconds into Little's chapter on this floor: 0 until it lands, the chapter's length once it has gone. */
   sec: number;
@@ -117,11 +119,11 @@ export function makeRoom(f: Frame, i: number, side: Side): Room {
   const { pen, cam, view } = f;
   const key = f.floors[i].key;
   const sheet = side < 0 ? view.left : view.right;
-  const margin = side < 0 ? view.left : view.w - view.right;
+  const margin = marginOf(view, side);
   const y = floorY(i);
 
   const x = (out: number, z: number) => edgeX(cam, sheet, side, out, z);
-  const otherMargin = side < 0 ? view.w - view.right : view.left;
+  const otherMargin = marginOf(view, side < 0 ? 1 : -1);
   const other = {
     margin: otherMargin,
     x: (out: number, z: number) => edgeX(cam, side < 0 ? view.right : view.left, side < 0 ? 1 : -1, out, z),
@@ -206,9 +208,10 @@ export function makeRoom(f: Frame, i: number, side: Side): Room {
     side,
     y,
     margin,
+    offstage: (side < 0 ? view.left : view.w - view.right) + 40,
     key,
     sec: secOn(f.timeline, i, f.clock),
-    hatch: hatchSpot(view.w - view.right),
+    hatch: hatchSpot(marginOf(view, 1)),
     actor: f.actor?.i === i ? f.actor : null,
     crew: f.crew,
     clickable: (name, box, says, [cx, cy, cz]) => {

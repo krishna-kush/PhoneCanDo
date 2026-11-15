@@ -16,6 +16,9 @@ export type FloorWords = {
   says: string[];
 };
 
+/** The story's name, over its own page (pages/story.astro). */
+export const storyTitle = 'The Phone That Could';
+
 export const floorWords: Record<string, FloorWords> = {
   hero: {
     title: 'a phone',

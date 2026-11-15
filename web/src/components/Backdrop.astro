@@ -6,28 +6,29 @@
 // story: it is a playground of the phone's apps (lib/backdrop/play/). Drawn into the margins, a
 // canvas each, under the page, so it lives where A-01 does: wide screens
 // only. Its script is only fetched once the screen is wide enough, after the
-// page has settled, so a phone never downloads it.
+// page has settled, so a phone never downloads it; narrower screens get the
+// story on a page of its own (pages/story.astro), from the footer.
 //
 // The crew Little meets are the agent kinds the Models section leads with,
 // each in its card's look; only their names and looks reach the page.
-import { leadCards } from '../data/agentCards';
-
-const crew = leadCards.map(({ label, look }) => ({ label, ...look }));
+import { backdropCrew } from '../data/agentCards';
 ---
 
-<div class="backdrop" aria-hidden="true" data-crew={JSON.stringify(crew)}>
+<div class="backdrop" aria-hidden="true" data-crew={backdropCrew}>
   <canvas data-side="left"></canvas>
   <canvas data-side="right"></canvas>
 </div>
 
 <script>
+  import { WIDE } from '../lib/backdrop/wide';
+
   const root = document.querySelector<HTMLElement>('.backdrop');
-  const wide = matchMedia('(min-width: 1440px)');
+  const wide = matchMedia(WIDE);
   let started = false;
   const start = () => {
     if (started || !root) return;
     started = true;
-    import('../lib/backdrop/boot').then(({ startBackdrop }) => startBackdrop(root));
+    import('../lib/backdrop/boot/margins').then(({ startBackdrop }) => startBackdrop(root));
   };
   // Once the page has settled: the story can wait a moment, the page can't.
   const soon = () => ('requestIdleCallback' in window ? requestIdleCallback(start, { timeout: 1500 }) : setTimeout(start, 300));
@@ -48,7 +49,7 @@ const crew = leadCards.map(({ label, look }) => ({ label, ...look }));
       display: block;
       pointer-events: none;
     }
-    /* Each as wide as its margin (boot.ts sets it). */
+    /* Each as wide as its margin (boot/canvas.ts sets it). */
     .backdrop canvas {
       position: absolute;
       top: 0;

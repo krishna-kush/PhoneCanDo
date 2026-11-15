@@ -1,7 +1,7 @@
 // The crew: the agent kinds the Models section leads with (data/agentCards.ts),
 // each a cousin in its card's look (its design for its part in the story,
-// its shape, which ink in front, its eyes), with its name. Backdrop.astro hands
-// them over on the canvas, so no manifest reaches the page.
+// its shape, which ink in front, its eyes), with its name. The pages hand
+// them over on the canvas (backdropCrew), so no manifest reaches the page.
 
 import type { DesignId } from '../../../../../../mascot/designs.ts';
 import { hash } from '../../seed';

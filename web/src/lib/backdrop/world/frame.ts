@@ -1,5 +1,5 @@
-// One frame's state: everything a drawing step reads. boot.ts fills it in
-// before each frame; the steps never touch the DOM.
+// One frame's state: everything a drawing step reads. boot/loop.ts fills it
+// in before each frame; the steps never touch the DOM.
 
 import type { Camera } from '../camera';
 import type { Pen } from '../paint/pen';
@@ -20,7 +20,17 @@ export type View = {
   /** The sheet's edges on screen. */
   left: number;
   right: number;
+  /**
+   * On the story page there is no sheet: one canvas fills the view and the
+   * story is told in a band this wide down its middle, which both margins
+   * take as theirs, `out` from its edges inwards (right is then the band's
+   * left edge and left its right). Null beside the sheet.
+   */
+  band: number | null;
 };
+
+/** How wide a margin is: from the sheet's edge out to the view's, or the band on the story page. */
+export const marginOf = (view: View, side: Side) => view.band ?? (side < 0 ? view.left : view.w - view.right);
 
 /** Little's chapter on a floor (story/a07/). */
 export type Story = {

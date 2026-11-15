@@ -44,7 +44,8 @@ export function drawSlab(f: Frame, i: number, pen: Pen) {
   pen.line([x0, y, 0], [x1, y, 0], pal.ink);
   pen.line([x0, y + SLAB, 0], [x1, y + SLAB, 0], pal.line2);
   drawRuler(f, pen, y);
-  if (f.side < 0) drawPlates(f, pen, i, y + SLAB / 2);
+  // In the left margin, or on the story page's one canvas.
+  if (f.side < 0 || f.view.band !== null) drawPlates(f, pen, i, y + SLAB / 2);
 }
 
 function drawDeckGrid(f: Frame, pen: Pen, y: number, x0: number, x1: number) {

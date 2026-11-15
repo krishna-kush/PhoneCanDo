@@ -1,0 +1,102 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import { backdropCrew } from '../data/agentCards';
+import { floorWords, storyTitle } from '../data/backdrop';
+import { site } from '../data/site';
+import { chapterKeys } from '../lib/backdrop/story/floors';
+import { WIDE } from '../lib/backdrop/wide';
+
+// The backdrop's story on a page of its own, for screens too narrow for the
+// margins it is told in beside the home page's sheet (components/Backdrop.astro).
+// The footer links here below 1440px; at 1440px and up this page sends you
+// home, where the story already is. A section per chapter, as tall as its
+// lines need scrolling through, is a floor of the canvas behind
+// (lib/backdrop/boot/story.ts), which draws the words; the sections hold
+// them as text too, for screen readers.
+const floors = chapterKeys.map((key) => ({ key, ...floorWords[key] }));
+---
+
+<Base
+  title={`${storyTitle} · ${site.name}`}
+  description="A phone on a nightstand, a small unit named Little inside it, and the night it learned to help: the story told behind PhoneCanDo's site, floor by floor."
+>
+  <script is:inline define:vars={{ wide: WIDE }}>
+    // Before anything paints: on a wide screen the story is beside the home page.
+    const query = matchMedia(wide);
+    if (query.matches) location.replace('/');
+    query.addEventListener('change', (e) => e.matches && location.replace('/'));
+  </script>
+  <div class="story-stage" aria-hidden="true" data-crew={backdropCrew}>
+    <canvas></canvas>
+  </div>
+  <Nav />
+  <main class="story-floors" data-floors>
+    <h1 class="story-quiet">{storyTitle}</h1>
+    {
+      floors.map(({ key, title, lines, coda }) => (
+        <section class="story-floor" data-floor={key} style={`--lines: ${lines.length}`}>
+          <h2 class="story-quiet">{title}</h2>
+          {lines.map((line) => (
+            <p class="story-quiet">{line}</p>
+          ))}
+          {coda && <p class="story-quiet">{coda}</p>}
+        </section>
+      ))
+    }
+  </main>
+</Base>
+
+<script>
+  import { WIDE } from '../lib/backdrop/wide';
+
+  const root = document.querySelector<HTMLElement>('.story-stage');
+  const track = document.querySelector<HTMLElement>('[data-floors]');
+  // Loaded, not bundled with the page: it is most of the page's weight.
+  if (root && track && !matchMedia(WIDE).matches) import('../lib/backdrop/boot/story').then(({ startStory }) => startStory(root, track));
+</script>
+
+<style is:global>
+  /* The world fills the view behind everything; the floors scroll over it
+     and let every tap through to it, so a tap on someone reaches them. As
+     tall as the view with the browser's bars away, so the world holds still
+     while they slide in and out over its foot. */
+  .story-stage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    height: 100vh;
+    height: 100lvh;
+    overflow: hidden;
+  }
+  .story-stage canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .story-floors {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+  }
+  /* A floor scrolls for a while before its first line and a little more for each line after. */
+  .story-floor {
+    height: calc(70vh + var(--lines) * 30vh);
+    height: calc(70svh + var(--lines) * 30svh);
+  }
+  .story-quiet {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>

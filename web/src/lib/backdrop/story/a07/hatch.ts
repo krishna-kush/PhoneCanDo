@@ -5,14 +5,14 @@
 
 import { edgeX } from '../../camera';
 import { SLAB, floorY } from '../../world/building';
-import type { Frame } from '../../world/frame';
+import { marginOf, type Frame } from '../../world/frame';
 import { HATCH, hatchOpen, hatchSpot } from './exit';
 
 export function drawHatch(f: Frame, i: number) {
   if (i >= f.floors.length - 1) return;
   const { pen, cam, view } = f;
   const { pal } = pen;
-  const spot = hatchSpot(view.w - view.right);
+  const spot = hatchSpot(marginOf(view, 1));
   const x = edgeX(cam, view.right, 1, spot.out, spot.z);
   const { leaveAt } = f.timeline.stretches[i];
   const a = f.actor;

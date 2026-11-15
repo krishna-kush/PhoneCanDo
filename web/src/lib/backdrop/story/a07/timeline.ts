@@ -7,7 +7,7 @@
 
 import { EYE, PITCH } from '../../world/building';
 import type { Floor, Story } from '../../world/frame';
-import { EXIT } from './exit';
+import { EXIT, dropped } from './exit';
 import { at } from './pose';
 
 export type Stretch = { start: number; length: number; leaveAt: number | null; story: Story };
@@ -24,7 +24,7 @@ const CLEAR = 100;
  * and past that the deck is seen from below; a chapter's q of 1 lands CLEAR
  * short of that, so its drop is done before the deck goes flat.
  */
-const STAGE = 0.5 + (EYE - CLEAR) / PITCH;
+export const STAGE = 0.5 + (EYE - CLEAR) / PITCH;
 
 export function makeTimeline(floors: Floor[]): Timeline {
   let start = 0;
@@ -61,6 +61,13 @@ export function find(tl: Timeline, clock: number): { i: number; sec: number } {
     if (clock < st.start + st.length || i === last) return { i, sec: Math.min(st.length, Math.max(0, clock - st.start)) };
   }
   return { i: 0, sec: 0 };
+}
+
+/** Where Little is at [clock], as a floor number: i on floor i, going on to i + 1 as it drops through the hatch. */
+export function depth(tl: Timeline, clock: number): number {
+  const { i, sec } = find(tl, clock);
+  const st = tl.stretches[i];
+  return st && st.leaveAt !== null && sec > st.leaveAt ? i + dropped(sec - st.leaveAt) : i;
 }
 
 /** Seconds into floor i's stretch: 0 until Little lands there, its length once it has gone. */

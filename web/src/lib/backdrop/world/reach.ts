@@ -6,10 +6,11 @@
 import { scaleAt, unproject } from '../camera';
 import type { Frame } from './frame';
 
-/** World x stretch the margin being drawn covers at depth z. */
+/** World x stretch the margin being drawn covers at depth z: on the story page, the whole view. */
 export function spans(f: Frame, z: number): [number, number][] {
   const { cam, view } = f;
   const x = (screen: number) => unproject(cam, screen, 0, z).x;
+  if (view.band !== null) return [[x(0), x(view.w)]];
   return [f.side < 0 ? [x(0), x(view.left)] : [x(view.right), x(view.w)]];
 }
 

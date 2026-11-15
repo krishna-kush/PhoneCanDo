@@ -16,7 +16,9 @@
 // cut out; the story's words, which the dark never covers; and callouts
 // over everything.
 // Screen points are the same in both passes: each canvas's transform puts
-// its own margin where it is on screen.
+// its own margin where it is on screen. On the story page there is one pass,
+// the right margin's, over the whole view (View band): it draws the far
+// scenes of both margins, so the sun still comes up over Mom's house.
 
 import { scaleAt } from '../camera';
 import { glowSprite } from '../paint/glow';
@@ -58,7 +60,10 @@ function drawPass(f: Frame, pass: Pass, pieces: Piece[]) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   if (!pieces.length) return;
   ctx.setTransform(view.dpr, 0, 0, view.dpr, -pass.origin * view.dpr, 0);
-  f.floors.forEach((floor, i) => floor.scene.far?.(makeRoom(f, i, pass.side)));
+  const far: Side[] = view.band === null ? [pass.side] : [1, -1];
+  f.floors.forEach((floor, i) => {
+    for (const side of far) floor.scene.far?.(makeRoom(f, i, side));
+  });
   drawMotes(f);
   drawFloors(f, pass, pieces);
   for (const [kind, i] of pieces) if (kind === 'slab') (pass.side > 0 ? drawHatch : drawChute)(f, i);

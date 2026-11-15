@@ -181,3 +181,10 @@ export const firstPull = (defaultCard ?? cards.find((c) => c.builtIn) ?? cards[0
 
 /** The kinds the lead names, in its order: the default, then NAMED, four at most. */
 export const leadCards = leadIds.map((id) => cards.find((c) => c.id === id)).filter((c): c is AgentCard => c != null);
+
+/**
+ * The lead kinds as the backdrop's canvas takes them, its data-crew
+ * (lib/backdrop/story/characters/crew.ts): each one's name and look, and
+ * nothing else of its manifest.
+ */
+export const backdropCrew = JSON.stringify(leadCards.map(({ label, look }) => ({ label, ...look })));

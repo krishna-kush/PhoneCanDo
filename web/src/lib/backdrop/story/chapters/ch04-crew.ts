@@ -96,13 +96,13 @@ export function draw(room: Room) {
   drawScreen(pen, screen.x + 2, screen.y + 3, sz - 0.5, WATCH.w - 4, WATCH.h - 6, 3);
   room.light(screen.x + WATCH.w / 2, screen.y + WATCH.h / 2, sz, 60);
 
-  // The crew walk in from the margin's edge, one after another, side on,
+  // The crew walk in from past the view's edge, one after another, side on,
   // naming themselves as they come; at night all but the first lie down, and
   // the first turns its back to us, to the screen.
   const order = crew.map((kind, k) => ({ kind, k, spot: places[k] })).sort((a, b) => b.spot.z - a.spot.z);
   for (const { kind, k, spot } of order) {
     const walkIn = easeInOut(span(sec, arrives(k), arrives(k) + 1.2));
-    const out = mix(room.margin + 40, spot.out, walkIn);
+    const out = mix(room.offstage, spot.out, walkIn);
     const walking = walkIn > 0 && walkIn < 1;
     const asleep = k > 0 && sec >= liesDown(k);
     const watching = k === 0 && sec > CAUGHT;

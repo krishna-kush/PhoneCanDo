@@ -104,12 +104,12 @@ export function draw(room: Room) {
     if (sec >= RISEN - 0.2) room.light(x + MACHINE.w / 2, y + MACHINE.h / 2, pit.z, 80);
   }
 
-  // The Diggers: walking in from the margin's edge, then digging by turns,
+  // The Diggers: walking in from past the view's edge, then digging by turns,
   // dirt flying with each stroke, and a hop when the machine is up.
   DIGGERS.forEach((look, k) => {
     const spot = diggers[k];
     const walkIn = easeInOut(span(sec, 0.4 + k * 0.3, ARRIVED - 0.3 + k * 0.2));
-    const out = mix(room.margin + 40, spot.out, walkIn);
+    const out = mix(room.offstage, spot.out, walkIn);
     const digging = sec > ARRIVED && sec < DUG;
     const stroke = digging ? ((sec - ARRIVED) / SHOVEL + k * 0.5) % 1 : 0;
     const j = digging ? jump(stroke, 10) : jump(span(sec, RISEN, CHEERED), 22);

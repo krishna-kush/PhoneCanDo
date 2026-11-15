@@ -29,6 +29,9 @@ const scenes: Record<string, Scene> = {
   footer: morning,
 };
 
+/** The parts with a chapter, in the story's order: the story page's floors (pages/story.astro). */
+export const chapterKeys = Object.keys(scenes);
+
 const quiet: Scene = { draw: () => {} };
 
 export const sceneFor = (key: string): Scene => scenes[key] ?? quiet;

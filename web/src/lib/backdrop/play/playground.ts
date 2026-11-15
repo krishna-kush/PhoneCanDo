@@ -2,8 +2,9 @@
 // the toys, the one in your hand or your hand on the empty floor, the
 // floors' fixtures and when each lock was last opened, the messages in
 // flight, jiggle mode, the run of sleepers the last throw woke, and the
-// floor the camera is on. boot.ts moves it on before each frame and hands
-// it the pointer; world/render.ts draws it (play/draw.ts).
+// floor the camera is on. boot/loop.ts moves it on before each frame and
+// boot/margins.ts hands it the pointer; world/render.ts draws it
+// (play/draw.ts).
 
 import { scaleAt, type Camera } from '../camera';
 import { floorY } from '../world/building';
