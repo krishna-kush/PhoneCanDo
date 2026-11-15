@@ -1,11 +1,13 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Pressable } from 'react-native';
 import { XStack, YStack } from 'tamagui';
 import type { AgentMessage } from '../../engine/messages/types';
+import { useChecksStore } from '../../state/checks';
 import PlainText from '../common/PlainText';
 import Badge from '../env/parts/Badge';
 import { messageTime } from './logic/messagesCopy';
 import { deliveryLines, replyText, routeLine, type ReplyRef } from './logic/messageView';
+import { waitReasonLines } from './logic/waitReason';
 
 type Props = {
   message: AgentMessage;
@@ -21,12 +23,16 @@ type Props = {
 // One message: who sent it to whom and when, the message it answers (a tap
 // goes to it), its text (selectable, to copy a path or a command out of
 // it) and each recipient's status: waiting, delivered, read or refused
-// with the reason, and whether it woke the agent. A runner notice (the
-// screen queue) is set apart in the secondary ink.
+// with the reason, and whether it woke the agent. A recipient still
+// waiting whose messages we saw not working gets a line why (the page
+// reads those agents' checks). A runner notice (the screen queue) is set
+// apart in the secondary ink.
 function MessageCard({ message, reply, onReply, flash, now }: Props) {
   const notice = message.notice;
   const route = routeLine(message);
   const time = messageTime(message.sentAt, now);
+  const checks = useChecksStore((s) => s.byAgent);
+  const why = useMemo(() => waitReasonLines(message, checks), [message, checks]);
   return (
     <YStack
       borderWidth={1}
@@ -61,6 +67,11 @@ function MessageCard({ message, reply, onReply, flash, now }: Props) {
         <YStack gap={2}>
           {deliveryLines(message).map((line) => (
             <PlainText key={line.key} fontFamily="mono" fontSize={11} color={line.tone}>
+              {line.text}
+            </PlainText>
+          ))}
+          {why.map((line) => (
+            <PlainText key={`why-${line.key}`} fontSize={13} color="primary">
               {line.text}
             </PlainText>
           ))}

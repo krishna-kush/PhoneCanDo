@@ -20,13 +20,18 @@ import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
 import RootError from './src/diagnostics/RootError';
 import SafeRoot from './src/ui/common/SafeRoot';
 import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
+import PermissionDialog from './src/ui/chat/background/PermissionDialog';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
 import KeyboardTracker from './src/ui/common/keyboard/KeyboardTracker';
 import MemoryGuard from './src/ui/memory/MemoryGuard';
 import RecommendCard from './src/ui/recommend/RecommendCard';
+import HelloSheet from './src/ui/starter/HelloSheet';
+import ShiftCard from './src/ui/starter/ShiftCard';
+import ShiftSignals from './src/ui/starter/ShiftSignals';
 import { useAgentsStore } from './src/state/agents';
 import { useAppStore } from './src/state/app';
+import { useChecksStore } from './src/state/checks';
 import { useLinuxStore } from './src/state/linux';
 import { useMemoryStore } from './src/state/memory';
 import { useModelsStore } from './src/state/models';
@@ -77,8 +82,9 @@ export default function App() {
     // Where to land when the app opens for a reason: a tap on an agent's
     // notification (its alert, its own post, its prompt, its return notice)
     // or an agent bringing the app back (mobile_return). The target names
-    // Home, the agent's page ('env') or Settings and, when the reason is one
-    // agent, that agent, which becomes the active one. An open terminal
+    // Home, the agent's page ('env'), what it can do ('checks': its page,
+    // then its checks) or Settings and, when the reason is one agent, that
+    // agent, which becomes the active one. An open terminal
     // stays on top whatever the target (stack.ts towardHome). The event
     // covers the app in front; the pref covers a cold or resumed start.
     // Until the agents are read, a switch would be undone by the stored
@@ -93,6 +99,10 @@ export default function App() {
       if (target.tab === 'settings') app.push({ name: 'settings' });
       if (target.tab === 'env') {
         app.push(target.agentId ? { name: 'agent', agentId: target.agentId } : { name: 'systems' });
+      }
+      if (target.tab === 'checks' && target.agentId) {
+        app.push({ name: 'agent', agentId: target.agentId });
+        app.push({ name: 'agent-checks', agentId: target.agentId });
       }
     };
     const takeLaunchTarget = () => {
@@ -124,6 +134,9 @@ export default function App() {
     useModelsStore.getState().hydrateModels();
     // The RAM warning listens from launch: it may need to speak first.
     useMemoryStore.getState().hydrateMemory();
+    // Each kind's messaging level now, which the kind list and the
+    // messages rows show.
+    useChecksStore.getState().hydrateChecks();
     void Promise.allSettled([hydrate(), useAgentsStore.getState().hydrateAgents()]).finally(() => {
       takeLaunchTarget();
       // Usage stats: deferred and fire-and-forget, never on the boot path.
@@ -181,6 +194,8 @@ export default function App() {
                     <YStack flex={1}>
                       <HomeHeader />
                       <HomeScreen />
+                      {/* While the first shift runs: how far along, the next job. */}
+                      <ShiftCard />
                       {/* Now and then, after a run finished in front of you. */}
                       <RecommendCard />
                     </YStack>
@@ -189,12 +204,16 @@ export default function App() {
                 <AppDrawer />
                 {/* Over Home, the pages and the drawer: the RAM warning. */}
                 <MemoryGuard />
+                {/* Once, as the first agent comes up: hello, and the first shift's offer. */}
+                <HelloSheet />
+                <ShiftSignals />
               </View>
             )}
           </SafeRoot>
           <UnlockDialog />
           <AccessibilityDialog />
           <OpenUrlDialog />
+          <PermissionDialog />
           <UpdateDialog />
         </SafeAreaProvider>
         </KeyboardProvider>

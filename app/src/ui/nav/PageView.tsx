@@ -4,6 +4,7 @@ import AgentInstallLogPage from '../env/agent/AgentInstallLogPage';
 import AgentInstallPage from '../env/agent/AgentInstallPage';
 import AgentMachinePage from '../env/agent/AgentMachinePage';
 import AgentModelPage from '../env/agent/AgentModelPage';
+import AgentChecksPage from '../env/agent/checks/AgentChecksPage';
 import AgentMascotPage from '../env/agent/mascot/AgentMascotPage';
 import AgentPage from '../env/agent/AgentPage';
 import CustomAgentForm from '../env/custom-agents/CustomAgentForm';
@@ -48,6 +49,8 @@ function PageView({ route }: { route: Route }) {
       return <AgentInstallLogPage agentId={route.agentId} />;
     case 'agent-mascot':
       return <AgentMascotPage agentId={route.agentId} />;
+    case 'agent-checks':
+      return <AgentChecksPage agentId={route.agentId} />;
     case 'new-agent':
       return <ChooseAgent target={route.target ?? null} picked={route.picked ?? null} />;
     case 'new-agent-place':

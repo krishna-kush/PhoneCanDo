@@ -44,7 +44,7 @@ export default function AgentScheduleRows({ agent }: { agent: Agent }) {
       />
       <YStack paddingHorizontal="2" paddingBottom="2">
         <PlainText fontSize={13} color="muted">
-          {howTasksReachText(agentKind(agent.kind).canWake)}
+          {howTasksReachText(agentKind(agent.kind))}
         </PlainText>
       </YStack>
       {canSetScheduleItself() ? <ScheduleItselfRow agentId={agent.id} /> : null}

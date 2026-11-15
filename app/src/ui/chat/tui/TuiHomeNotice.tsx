@@ -1,13 +1,15 @@
 import { Text, YStack } from 'tamagui';
 import AppButton from '../../common/AppButton';
+import type { AgentId } from '../../../engine/agents/records';
 import WakingLine from '../../common/face/WakingLine';
 import LogoLoader from '../../common/LogoLoader';
 import type { TuiPhase } from './tuiPhase';
 
 type Props = {
+  agentId: AgentId;
   /** The kind's label ("top"). */
   label: string;
-  phase: Exclude<TuiPhase, { name: 'attached' }>;
+  phase: Exclude<TuiPhase, { name: 'attached' | 'background' }>;
   /** Starts the engine again and reattaches. */
   onRestart: () => void;
 };
@@ -17,7 +19,7 @@ type Props = {
 // A program that ended on screen gets a bar over the foot of its last
 // screen instead (over the extra keys, which have nothing to type into), so
 // the screen keeps its size and stays readable.
-export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
+export default function TuiHomeNotice({ agentId, label, phase, onRestart }: Props) {
 
   if (phase.name === 'starting') {
     return (
@@ -26,7 +28,7 @@ export default function TuiHomeNotice({ label, phase, onRestart }: Props) {
         <Text color="fg" fontFamily="mono">
           Starting {label}…
         </Text>
-        <WakingLine />
+        <WakingLine agentId={agentId} />
       </YStack>
     );
   }

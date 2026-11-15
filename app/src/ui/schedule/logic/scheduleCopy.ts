@@ -32,18 +32,23 @@ export function cannotRunText(kindLabel: string): string {
 }
 
 /** A kind's schedules in a word, beside its messages level (Choose agent). */
-export function scheduleTag(kind: { schedules: boolean; canWake: boolean }): string {
+export function scheduleTag(kind: { schedules: boolean; canWake: boolean; acp: boolean }): string {
   if (!kind.schedules) return 'No schedules';
-  return kind.canWake ? 'Schedules · wakes or starts it' : 'Schedules · starts it';
+  return kind.canWake || kind.acp ? 'Schedules · wakes or starts it' : 'Schedules · starts it';
 }
 
 /**
  * How a task reaches an agent whose kind can run them, under its
- * Schedules row: a kind that can be woken takes it in its chat while
- * idle; one that can only start with a task is restarted with it.
+ * Schedules row: a kind with an ACP mode runs it in the background when
+ * nobody uses the agent, else asks you; a kind that can be woken takes it
+ * in its chat while idle; one that can only start with a task is
+ * restarted with it.
  */
-export function howTasksReachText(canWake: boolean): string {
-  return canWake
+export function howTasksReachText(kind: { canWake: boolean; acp: boolean }): string {
+  if (kind.acp) {
+    return "A task runs in the background: it starts the agent if it's stopped, or reaches it while it's idle and you're not using it. While you use it, an idle agent takes the task in its own app when it can; otherwise it asks you. If it's busy, the task waits for its run to end.";
+  }
+  return kind.canWake
     ? "A task starts it if it's stopped and wakes it if it's idle. If it's busy, the task waits for its run to end."
     : "A task starts it if it's stopped. It can't be woken while it runs, so the task waits until it's idle, then restarts it with the task, or asks you if it left jobs running.";
 }

@@ -1,6 +1,7 @@
 import { XStack, YStack } from 'tamagui';
 import type { Offer } from '../../../engine/agents/offers';
 import { agentKind } from '../../../engine/agents/registry';
+import { useKindLevel } from '../../../state/checks';
 import { levelTag } from '../../messages/logic/levels';
 import { scheduleTag } from '../../schedule/logic/scheduleCopy';
 import { blockedText, offerBadges } from '../logic/agentChoice';
@@ -10,14 +11,15 @@ import PlainText from '../../common/PlainText';
 type Props = { offer: Offer; selected: boolean; onSelect: () => void };
 
 // One kind in the Choose agent step: a radio mark, its name and badges,
-// how far other agents' messages reach it (its level) and whether and how
+// how far other agents' messages reach it (its level now: what its file
+// says, lowered by what we saw not working) and whether and how
 // scheduled tasks reach it. A blocked kind is dimmed, cannot be picked,
 // and says why in their place.
 export default function KindOption({ offer, selected, onSelect }: Props) {
   const reason = blockedText(offer.blocked);
   const badges = offerBadges(offer);
   const kind = agentKind(offer.id);
-  const level = kind.messaging;
+  const level = useKindLevel(offer.id);
   const tasks = scheduleTag(kind);
   const disabled = reason != null;
 

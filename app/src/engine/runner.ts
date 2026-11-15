@@ -32,7 +32,9 @@ import type {
   NativeVersionCheck,
 } from '../../modules/phonecando-runner/src/PhoneCanDoRunner.types';
 import type { NativeCrash, TelemetryNativeSnapshot } from '../../modules/phonecando-runner/src/telemetry.types';
-import type { AgentId } from './agents/records';
+import { asOptions } from './acp/parse';
+import type { AcpOption } from './acp/types';
+import type { AgentId, EngineMode } from './agents/records';
 
 export type { NativeCrash, TelemetryNativeSnapshot };
 
@@ -80,7 +82,8 @@ export type RunnerModule = {
   promptReading(): NativePromptReading | null;
   /** Null when the model's server never ran. Absent from native builds older than the Server log page. */
   modelServerLog?(modelId: string): Promise<NativeModelServerLog | null>;
-  startEngine(agentId: string): Promise<{ port: string | null }>;
+  /** No mode: the terminal. A native build from before ACP mode takes no mode. */
+  startEngine(agentId: string, mode?: EngineMode): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(): Promise<void>;
   isAnyEngineAlive(): boolean;
@@ -117,6 +120,15 @@ export type RunnerModule = {
   resolveUnlock(requestId: string, ok: boolean): boolean;
   resolveAccessibility(requestId: string, ok: boolean, guided: boolean): boolean;
   resolveOpenUrl(requestId: string, action: NativeOpenUrlAction): boolean;
+  /** ACP mode (engine/acp/, which checks what these return). Absent from native builds older than ACP mode. */
+  acpSnapshot?(agentId: string): unknown;
+  acpCancel?(agentId: string): boolean;
+  resolvePermission?(requestId: string, optionId: string | null): boolean;
+  /** Capability checks (engine/checks/, which checks what these return). Absent from native builds older than checks. */
+  agentChecks?(agentId: string): unknown;
+  kindLevels?(): unknown;
+  checkNow?(agentId: string, full: boolean): unknown;
+  checkCancel?(agentId: string): unknown;
   consumeLaunchTarget(): NativeLaunchTarget | null;
   guestUnset(agentId: string): string[];
   installPlan(agentId: string, family: string): NativeInstallPlan | null;
@@ -278,17 +290,20 @@ export function isPhoneInUse(): boolean {
   }
 }
 
-// Where the app should land: Home, the agent's page or Settings and, when
-// the reason is one agent (a tap on its notification or alert, its return
+// Where the app should land: Home, the agent's page, what the agent can do
+// (its checks, from a "isn't working" notice) or Settings and, when the
+// reason is one agent (a tap on its notification or alert, its return
 // after phone control, its prompt), that agent. Native binds it when the app opens, so each
 // notification opens its own agent.
-export type LaunchTarget = { tab: NativeLaunchTarget['tab']; agentId: AgentId | null };
+export type LaunchTab = 'home' | 'env' | 'checks' | 'settings';
 
-const LAUNCH_TABS: readonly string[] = ['home', 'env', 'settings'];
+export type LaunchTarget = { tab: LaunchTab; agentId: AgentId | null };
+
+const LAUNCH_TABS: readonly string[] = ['home', 'env', 'checks', 'settings'];
 
 function asLaunchTarget(raw: NativeLaunchTarget | null | undefined): LaunchTarget | null {
   if (!raw || !LAUNCH_TABS.includes(raw.tab)) return null;
-  return { tab: raw.tab, agentId: raw.agentId || null };
+  return { tab: raw.tab as LaunchTab, agentId: raw.agentId || null };
 }
 
 // The target waiting for the app (a cold or resumed start), read and
@@ -311,18 +326,49 @@ export function onLaunchTarget(listener: (target: LaunchTarget) => void): Sub {
 }
 
 // A prompt for the user from an agent: biometric unlock for phone control or
-// accessibility setup (its request waits for the answer), or a link it wants
-// opened (a sign-in, through the kit's phonecando-open). One per request,
-// each with its own requestId.
+// accessibility setup (its request waits for the answer), a link it wants
+// opened (a sign-in, through the kit's phonecando-open), or a tool step an
+// agent in ACP mode asks about (answered with engine/acp/'s
+// resolvePermission). One per request, each with its own requestId.
 export type BridgePrompt = {
   requestId: string;
-  kind: 'unlock' | 'accessibility' | 'open_url';
+  kind: 'unlock' | 'accessibility' | 'open_url' | 'permission';
   agentId: AgentId;
   agentName: string;
+  /** Why it asks; empty when it gives no reason (a permission prompt). */
   reason: string;
   /** The http(s) link of an open_url prompt; absent for the others. */
   url?: string | null;
+  /** A permission prompt's tool step, as the agent titles it, and its kind (execute, edit…). */
+  title?: string;
+  toolKind?: string | null;
+  /** A permission prompt's answers, one button each. */
+  options?: AcpOption[];
 };
+
+const PROMPT_KINDS: readonly string[] = ['unlock', 'accessibility', 'open_url', 'permission'];
+
+// What native sends, checked: a kind we don't know, or a prompt without an
+// id, is dropped; a missing reason reads as none.
+function asBridgePrompt(value: unknown): BridgePrompt | null {
+  const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+  const text = (v: unknown) => (typeof v === 'string' ? v : '');
+  if (!raw || !text(raw.requestId) || !PROMPT_KINDS.includes(text(raw.kind))) return null;
+  const prompt: BridgePrompt = {
+    requestId: text(raw.requestId),
+    kind: raw.kind as BridgePrompt['kind'],
+    agentId: text(raw.agentId),
+    agentName: text(raw.agentName),
+    reason: text(raw.reason),
+  };
+  if (typeof raw.url === 'string') prompt.url = raw.url;
+  if (prompt.kind === 'permission') {
+    prompt.title = text(raw.title);
+    prompt.toolKind = text(raw.toolKind) || null;
+    prompt.options = asOptions(raw.options);
+  }
+  return prompt;
+}
 
 /** What the user did with an open_url prompt: opened it (we already did), copied it (native puts it on the clipboard), or Not now. */
 export type OpenUrlAction = NativeOpenUrlAction;
@@ -330,7 +376,7 @@ export type OpenUrlAction = NativeOpenUrlAction;
 /** Every prompt still waiting (made while the app was closed, too). */
 export function pendingPrompts(): BridgePrompt[] {
   try {
-    return load().pendingPrompts();
+    return (load().pendingPrompts() as unknown[]).map(asBridgePrompt).filter((p): p is BridgePrompt => p != null);
   } catch {
     return [];
   }
@@ -338,7 +384,10 @@ export function pendingPrompts(): BridgePrompt[] {
 
 /** A new prompt while the app runs; pendingPrompts covers the rest. */
 export function onBridgePrompt(listener: (prompt: BridgePrompt) => void): Sub {
-  return onRunnerEvent<BridgePrompt>('phonecandoBridgePrompt', listener);
+  return onRunnerEvent<unknown>('phonecandoBridgePrompt', (raw) => {
+    const prompt = asBridgePrompt(raw);
+    if (prompt) listener(prompt);
+  });
 }
 
 /** An agent's top-level run that finished well (its engine's verdict), heard while JS runs. */

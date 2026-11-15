@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,settings,accessibility,models,memory,messages,schedule,recommend,account,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,models,memory,messages,schedule,recommend,account,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -65,11 +65,20 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `usePtySession.ts`, `useMirrorInput.ts`, `useInitialInput.ts`,
   `useViewFocus.ts` (hooks) + `sessionRecipe.ts` (agent TUI client or
   image shell) + `ExtraKeysBar.tsx`, `FolderPicker.tsx`. Home (`chat/HomeScreen.tsx`) is the kind's web UI or,
-  for a TUI-style kind, its TUI (`chat/tui/`).
-  `env/` holds the agent pages (`agent/`), New agent (`new-agent/`;
+  for a TUI-style kind, its TUI (`chat/tui/`), or while it runs in ACP mode
+  its background run and the app-wide permission dialog (`chat/background/`).
+  `env/` holds the agent pages (`agent/`; What it can do, each
+  capability checked or not and Check now, is `agent/checks/`, pure copy
+  in `agent/checks/logic/`), New agent (`new-agent/`;
   `new-env/` downloads a Linux), Systems (`list/`) and Custom agents
   (`custom-agents/`); pure parts in `env/logic/`. `setup/` is first
-  launch (the first agent and its machine). Settings and About are
+  launch (the first agent and its machine). `starter/` is the first
+  shift, a newcomer's guide: the hello sheet once the first agent is up,
+  the Home card and drawer row while it runs, its page of missions (each
+  ticked when `ShiftSignals.tsx` sees it happen, any skipped; long ones
+  ask before they show how), dares and the finale's earned mascot
+  (`copy.ts`, `logic/dares.ts`, `reward.ts` pure; which missions and the
+  marks are `state/logic/starter/`). Settings and About are
   app-wide only: Phone control sits on Settings itself, then a hub of rows
   (`settings/logic/hub.ts`), each opening its own page (`settings/pages/`),
   the run caps among them.
@@ -86,7 +95,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `agents/user/` (the user's own kinds); `sharing.ts` (clipboard, share
   sheet); `messages/` agent messages (the log, unread counts, the screen
   queue, the wake switch); `schedule/` schedules (the list, the runs log,
-  exact alarms, "Can schedule itself"); `apiHost.ts` our API host; `account/` the
+  exact alarms, "Can schedule itself"); `acp/` an agent's ACP turn (snapshot,
+  Stop, permission answers); `checks/` capability checks (an agent's
+  checks, each kind's messaging level now, Check now); `apiHost.ts` our API host; `account/` the
   optional Google sign-in (`modules/phonecando-account`; the session token
   stays native); `share/` share links' counts and codes' random bytes.
   Screens stay dumb.
@@ -100,7 +111,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 - `mascot/` — the A-series mascots' one spec (own package, pure TS, zero
   deps), built on `theme/logo.json`: the body and its five shapes
   (`body.ts`), the parts a unit wears (`parts/{hat,neck,face}/`, a file
-  each), the designs (`designs.ts`: a new design is a line), random picks
+  each), the designs (`designs.ts`: a new design is a line; `EARNED` ones
+  are never picked at random, the app unlocks them), random picks
   (`pick.ts`) and the layout every side draws from (`layout/figure.ts`:
   blocks, eyes and marks, face on, side on or from behind; `layout/path.ts`
   SVG paths). The site's cards, backdrop and `/mascots` page and the app's
@@ -138,7 +150,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   fun?" card's runs, last ask and answer), `share.ts` (the links this
   phone shared, what they did), `account.ts` (who is signed in),
   `settingsSync.ts` (when each synced setting last changed here),
-  `mascots.ts` (each agent's mascot, picked at random); multi-step
+  `mascots.ts` (each agent's mascot, picked at random), `starter.ts`
+  (the first shift's marks and reward), `checks.ts` (each kind's level
+  now, the watched agents' checks); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay
   native, never in JS state.
 - `app/modules/{phonecando-terminal,phonecando-runner,phonecando-linux,phonecando-models,phonecando-back-gesture,phonecando-network,phonecando-account}/` —
@@ -173,8 +187,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   background unless kept running or asked to stay up (`KeepAsks`, the
   `agents_keep_running` tool), pure `AgentWork` and `ReclaimPolicy`),
   `limits/` the run
-  caps, `memory/` the memory guard (pure `MemoryPolicy`, numbers in
-  `MemoryRules`), `jobs/` the jobs anchor (keeps the `specialUse` service
+  caps, `memory/` the memory guard (pure `MemoryPolicy` and
+  `MemoryVictims`, which agent to stop; numbers in `MemoryRules`),
+  `jobs/` the jobs anchor (keeps the `specialUse` service
   up while model and Linux jobs run), `power/` the wake lock while work
   runs, `bridge/` the loopback bridge (per-agent tokens, prompts, screen
   lease).

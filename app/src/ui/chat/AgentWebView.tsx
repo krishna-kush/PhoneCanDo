@@ -7,6 +7,7 @@ import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { lastPage, rememberPage, restoreUrl } from './lastPage';
 import { useOpenChat } from './useOpenChat';
+import { useWebBlur } from './useWebBlur';
 import { setWebBackHandler, setWebHomeHandler } from './webNavigation';
 import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
@@ -28,7 +29,8 @@ import { useTheme } from '../common/globals';
 // walks the web history and the header menu has a Home action, so a session
 // never strands the user; the TUI (`TerminalScreen`) is untouched — the
 // header menu switches views. Theme and embed scripts come from the kind's web adapter
-// (webAdapter.ts).
+// (webAdapter.ts). While a page or the drawer covers it, its page holds no
+// text focus (useWebBlur.ts).
 export default function AgentWebView({ agent }: { agent: Agent }) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +54,8 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   // Null for a kind without a web UI: pairing then fails with a message.
   const webUi = useMemo(() => (kind.web ? webUiFor(kind.web.adapter) : null), [kind]);
   useOpenChat(agent.id, chatId);
+  // Covered by a page or the drawer, the page lets go of the keyboard.
+  useWebBlur(web);
 
   // The web UI owns its history and its project-list home. Chrome calls these
   // handlers so Android Back and the Home menu item never strand the user in
@@ -154,7 +158,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
         <Text color="fg" fontFamily="mono">
           Loading web UI…
         </Text>
-        <WakingLine />
+        <WakingLine agentId={agent.id} />
       </YStack>
     );
   }

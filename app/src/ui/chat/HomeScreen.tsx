@@ -1,6 +1,7 @@
 import { Text, YStack } from 'tamagui';
 import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent } from '../../state/agents';
+import CheckHomeBar from '../env/agent/checks/CheckHomeBar';
 import AgentWebView from './AgentWebView';
 import InstallHome from './InstallHome';
 import AgentTuiHome from './tui/AgentTuiHome';
@@ -13,6 +14,8 @@ import { useEngineTouch } from './useEngineTouch';
 // port), then reopens the page the agent was last on; a TUI view attaches
 // to the engine's terminal and the replay restores its screen. An agent not
 // installed in its machine yet (a kind with an install) shows that install.
+// While a check runs, of this agent or another, a bar over it leads back to
+// that check.
 export default function HomeScreen() {
   const agent = useActiveAgent();
   useEngineTouch(agent?.id ?? null);
@@ -26,7 +29,16 @@ export default function HomeScreen() {
       </YStack>
     );
   }
-  if (agent.needsInstall) return <InstallHome key={agent.id} agent={agent} />;
-  if (agentKind(agent.kind).home === 'tui') return <AgentTuiHome key={agent.id} agent={agent} />;
-  return <AgentWebView key={agent.id} agent={agent} />;
+  return (
+    <YStack flex={1}>
+      <CheckHomeBar activeId={agent.id} />
+      {agent.needsInstall ? (
+        <InstallHome key={agent.id} agent={agent} />
+      ) : agentKind(agent.kind).home === 'tui' ? (
+        <AgentTuiHome key={agent.id} agent={agent} />
+      ) : (
+        <AgentWebView key={agent.id} agent={agent} />
+      )}
+    </YStack>
+  );
 }

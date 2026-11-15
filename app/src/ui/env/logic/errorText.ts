@@ -101,6 +101,8 @@ const START_TEXT: Record<EngineStartError, string> = {
   model_unavailable: "This agent's local model can't run right now.",
   too_many_models:
     "You're at your cap for local models loaded at once. Stop one on the Models page, or raise the cap in Settings → Agents & models.",
+  acp_busy: "It's working on a task in the background. Its terminal opens on Home when the task ends.",
+  terminal_in_use: "Its terminal is in use, so it can't take a task in the background now.",
 };
 
 export function startErrorText(code: EngineStartError): string {

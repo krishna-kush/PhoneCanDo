@@ -329,10 +329,12 @@ const at = (d, h, m) => Date.UTC(2026, 10, d, h, m);
 
   // --- how tasks reach a kind (Choose agent, agent page) ---------------------------------
   const k2 = await import(src('ui/schedule/logic/scheduleCopy.ts'));
-  t('tag: wakes', k2.scheduleTag({ schedules: true, canWake: true }), 'Schedules · wakes or starts it');
-  t('tag: starts only', k2.scheduleTag({ schedules: true, canWake: false }), 'Schedules · starts it');
-  t('tag: none', k2.scheduleTag({ schedules: false, canWake: false }), 'No schedules');
-  t('a kind that can only start says a running agent is restarted', k2.howTasksReachText(false).includes('restarts it'), true);
+  t('tag: wakes', k2.scheduleTag({ schedules: true, canWake: true, acp: false }), 'Schedules · wakes or starts it');
+  t('tag: an ACP mode wakes too', k2.scheduleTag({ schedules: true, canWake: false, acp: true }), 'Schedules · wakes or starts it');
+  t('tag: starts only', k2.scheduleTag({ schedules: true, canWake: false, acp: false }), 'Schedules · starts it');
+  t('tag: none', k2.scheduleTag({ schedules: false, canWake: false, acp: false }), 'No schedules');
+  t('a kind that can only start says a running agent is restarted', k2.howTasksReachText({ canWake: false, acp: false }).includes('restarts it'), true);
+  t('an ACP mode runs it in the background, in its own app while you use it, else asks you', k2.howTasksReachText({ canWake: true, acp: true }).includes('takes the task in its own app when it can; otherwise it asks you'), true);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

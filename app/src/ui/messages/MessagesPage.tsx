@@ -5,6 +5,7 @@ import type { AgentId } from '../../engine/agents/records';
 import type { AgentMessage } from '../../engine/messages/types';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
+import { useChecksStore } from '../../state/checks';
 import { useMessagesStore, useUnread } from '../../state/messages';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PageHeader from '../common/PageHeader';
@@ -14,6 +15,7 @@ import { usePageActive } from '../nav/pageActive';
 import { useSlidIn, useSlidInList } from '../nav/slidIn';
 import { emptyText, MESSAGES_INTRO, unreadText } from './logic/messagesCopy';
 import { messagesFor, replyRef } from './logic/messageView';
+import { waitingAgents } from './logic/waitReason';
 import LevelsCard from './LevelsCard';
 import MessageCard from './MessageCard';
 import ScreenQueueBar from './ScreenQueueBar';
@@ -78,6 +80,16 @@ export default function MessagesPage({ agentId }: Props) {
   }, [flash]);
 
   const shown = useMemo(() => messagesFor(log, agentId), [log, agentId]);
+
+  // The agents a shown message still waits for: their checks say why it
+  // waits (MessageCard). One key, so a re-read log with the same waits
+  // keeps the watch.
+  const waiting = useMemo(() => [...new Set(shown.flatMap(waitingAgents))].sort().join('\n'), [shown]);
+  useEffect(() => {
+    if (!ready || !waiting) return;
+    return useChecksStore.getState().watchChecks(waiting.split('\n'));
+  }, [ready, waiting]);
+
   const replies = useMemo(() => {
     const ids = new Set(shown.map((m) => m.id));
     return new Map(shown.map((m) => [m.id, replyRef(m, log, ids)]));

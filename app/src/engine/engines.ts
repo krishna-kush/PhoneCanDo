@@ -8,7 +8,7 @@
 // manifest. Reads answer empty where the native module is absent; changes
 // throw.
 import type { PtyRecipe } from '../../../agents/kit/ts/contract/pty.ts';
-import type { Agent, AgentId, EngineStartError, EngineStatus } from './agents/records';
+import type { Agent, AgentId, EngineMode, EngineStartError, EngineStatus } from './agents/records';
 import type { AgentKindId } from './agents/registry';
 import type { ImageId } from './linux/types';
 import { getPrefix, isRunnerAvailable, nativeRunner, onRunnerEvent } from './runner';
@@ -95,6 +95,8 @@ const START_ERRORS: EngineStartError[] = [
   'agent_not_installed',
   'model_unavailable',
   'too_many_models',
+  'acp_busy',
+  'terminal_in_use',
 ];
 
 /** Any start rejection as an EngineStartFailure (native puts the code first in the message). */
@@ -110,11 +112,14 @@ export function asStartFailure(e: unknown): EngineStartFailure {
 /**
  * Starts the agent's engine, or finds it running. Resolves once the process
  * runs and its port is known (it may still be booting: waitForEngine).
- * Rejects with an EngineStartFailure.
+ * Rejects with an EngineStartFailure. Without a mode it is the terminal: an
+ * engine live in ACP mode switches back, unless its turn still runs
+ * (acp_busy).
  */
-export async function startEngine(agentId: AgentId): Promise<{ port: string | null }> {
+export async function startEngine(agentId: AgentId, mode?: EngineMode): Promise<{ port: string | null }> {
   try {
-    return await nativeRunner().startEngine(agentId);
+    const m = nativeRunner();
+    return await (mode ? m.startEngine(agentId, mode) : m.startEngine(agentId));
   } catch (e) {
     throw asStartFailure(e);
   }
@@ -154,19 +159,26 @@ export function setOpenChat(agentId: AgentId | null, sessionId: string | null, t
 }
 
 export function engineStatus(agentId: AgentId): EngineStatus {
-  if (!isRunnerAvailable()) return { agentId, state: 'stopped', port: null, error: null, lastUsedAt: null };
-  return nativeRunner().engineStatus(agentId);
+  if (!isRunnerAvailable()) {
+    return { agentId, state: 'stopped', mode: 'terminal', busy: false, port: null, error: null, lastUsedAt: null };
+  }
+  return withMode(nativeRunner().engineStatus(agentId));
 }
 
 /** Every agent's engine, in agent order. */
 export function engineStatuses(): EngineStatus[] {
   if (!isRunnerAvailable()) return [];
-  return nativeRunner().engineStatuses();
+  return nativeRunner().engineStatuses().map(withMode);
 }
 
-/** Every engine change (start, ready, died, stopped, failed). */
+/** Every engine change (start, ready, died, stopped, failed, an ACP turn's start and end). */
 export function onEngineState(listener: (status: EngineStatus) => void): { remove(): void } {
-  return onRunnerEvent<EngineStatus>('phonecandoEngineState', listener);
+  return onRunnerEvent<Omit<EngineStatus, 'mode' | 'busy'>>('phonecandoEngineState', (e) => listener(withMode(e)));
+}
+
+// A native build from before ACP mode sends no mode and no busy: terminal, idle.
+function withMode(raw: Omit<EngineStatus, 'mode' | 'busy'> & { mode?: unknown; busy?: unknown }): EngineStatus {
+  return { ...raw, mode: raw.mode === 'acp' ? 'acp' : 'terminal', busy: raw.busy === true };
 }
 
 /** A fresh one-time URL that signs a WebView in to the agent's web UI. Rejects when the engine is down. */

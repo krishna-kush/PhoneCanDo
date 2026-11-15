@@ -10,6 +10,8 @@ type Props = {
   confirmLabel?: string;
   /** The button that only closes it, when "Cancel" says too little (the choice it leaves you with). */
   cancelLabel?: string;
+  /** Red for a delete or a restart; primary for a way on that undoes nothing. */
+  confirmVariant?: 'danger' | 'primary';
   onConfirm: () => void;
 };
 
@@ -24,6 +26,7 @@ export default function ConfirmDialog({
   message,
   confirmLabel = 'Delete',
   cancelLabel = 'Cancel',
+  confirmVariant = 'danger',
   onConfirm,
 }: Props) {
   return (
@@ -58,7 +61,7 @@ export default function ConfirmDialog({
             <AppButton variant="secondary" flex={1} onPress={onClose}>
               {cancelLabel}
             </AppButton>
-            <AppButton variant="danger" flex={1} onPress={onConfirm}>
+            <AppButton variant={confirmVariant} flex={1} onPress={onConfirm}>
               {confirmLabel}
             </AppButton>
           </XStack>

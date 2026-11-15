@@ -1,14 +1,18 @@
 import { useState } from 'react';
+import type { AgentId } from '../../../engine/agents/records';
+import { useAgentsStore } from '../../../state/agents';
 import { wakingLine } from './lines';
+import { agentSerial } from './mood';
 import PlainText from '../PlainText';
 
-// A-01's caption under a loader while an agent starts: one line per start,
-// under the plain words, never instead of them.
-export default function WakingLine() {
+// The starting agent's caption under a loader, by its own serial (A-04):
+// one line per start, under the plain words, never instead of them.
+export default function WakingLine({ agentId }: { agentId: AgentId }) {
   const [seed] = useState(() => Math.floor(Math.random() * 1000));
+  const serial = useAgentsStore((s) => agentSerial(s.agents, agentId));
   return (
     <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase">
-      {`A-01 · ${wakingLine(seed)}`}
+      {`${serial} · ${wakingLine(seed)}`}
     </PlainText>
   );
 }

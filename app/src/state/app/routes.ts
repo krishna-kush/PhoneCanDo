@@ -41,6 +41,8 @@ export type Route =
   | { name: 'agent-install-log'; agentId: AgentId }
   /** The agent's mascot: its design, shape and which ink is in front, to pick. */
   | { name: 'agent-mascot'; agentId: AgentId }
+  /** What the agent can do: each capability, whether we have seen it work, and Check now. */
+  | { name: 'agent-checks'; agentId: AgentId }
   /**
    * New agent, step 1: which kind, and its model. With `target` the place is
    * set already (New agent here, Android only) and this step makes it;

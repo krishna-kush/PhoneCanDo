@@ -4,6 +4,9 @@
 // the runner's service and resolves with its port (the service owns ports:
 // the agent's last-good one, else a free one). Calls for the same agent
 // while one is in flight share it; different agents start independently.
+// An engine ready in ACP mode (work that came while nobody watched) is
+// asked for its terminal: native switches it back, or refuses acp_busy
+// while its turn still runs (Home shows that turn meanwhile).
 import type { AgentId, EngineStartError } from './agents/records';
 import { asStartFailure, engineStatus, startEngine, touchEngine } from './engines';
 import { isRunnerAvailable } from './runner';
@@ -30,7 +33,7 @@ async function ensure(agentId: AgentId): Promise<EnsureResult> {
   if (!isRunnerAvailable()) return { status: 'unavailable', port: null };
   const now = engineStatus(agentId);
   // A TUI engine has no port: ready alone means it runs.
-  if (now.state === 'ready') {
+  if (now.state === 'ready' && now.mode !== 'acp') {
     touchEngine(agentId);
     return { status: 'already-running', port: now.port };
   }

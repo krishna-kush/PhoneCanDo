@@ -1,6 +1,7 @@
 import { type ComponentRef, type ReactNode, useRef, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { YStack } from 'tamagui';
+import { ScreenEndContext } from './screenEnd';
 import { createViewport, ViewportContext } from './viewport/viewport';
 
 type Props = {
@@ -17,10 +18,12 @@ const SCROLL_EVENT_MS = 100;
 
 // Full-screen column: 16dp padding, 12dp gaps. `scroll` wraps content in a
 // ScrollView for list screens (Home / Project / Env / Settings) so short
-// phones don't clip the form.
+// phones don't clip the form; a line that turns up at its foot can scroll
+// itself into view (screenEnd.ts).
 export default function Screen({ children, scroll = true, fabClearance = true, viewport = false }: Props) {
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const [feed] = useState(() => (viewport && scroll ? createViewport(scrollRef) : null));
+  const [showEnd] = useState(() => () => scrollRef.current?.scrollToEnd({ animated: true }));
   if (!scroll) {
     return (
       <YStack flex={1} backgroundColor="bg" padding="4" gap="3" paddingBottom={fabClearance ? 96 : undefined}>
@@ -44,7 +47,9 @@ export default function Screen({ children, scroll = true, fabClearance = true, v
         onScroll={feed ? (e) => feed.scrolled(e.nativeEvent.contentOffset.y) : undefined}
         scrollEventThrottle={feed ? SCROLL_EVENT_MS : undefined}
       >
-        {feed ? <ViewportContext.Provider value={feed}>{children}</ViewportContext.Provider> : children}
+        <ScreenEndContext.Provider value={showEnd}>
+          {feed ? <ViewportContext.Provider value={feed}>{children}</ViewportContext.Provider> : children}
+        </ScreenEndContext.Provider>
       </ScrollView>
     </YStack>
   );

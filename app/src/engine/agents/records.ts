@@ -34,9 +34,20 @@ export type Agent = {
 
 export type EngineState = 'stopped' | 'starting' | 'ready' | 'stopping' | 'died' | 'failed';
 
+/**
+ * How the engine runs: its TUI on our PTY (what Home shows), or ACP mode
+ * (the same agent over pipes, no screen) for work that comes while nobody
+ * watches. One at a time; a kind with `engine.acp` (KindView `acp`) has both.
+ */
+export type EngineMode = 'terminal' | 'acp';
+
 export type EngineStatus = {
   agentId: AgentId;
   state: EngineState;
+  /** Terminal unless it runs in ACP mode (a native build from before ACP sends none). */
+  mode: EngineMode;
+  /** An ACP turn is running (a prompt sent, no answer yet); false in terminal mode. */
+  busy: boolean;
   /** The loopback port while starting or ready. */
   port: string | null;
   /** Why the last start failed or the engine died. */
@@ -58,4 +69,8 @@ export type EngineStartError =
   /** Its local model cannot serve it; the message says why (gone, too big, ...). */
   | 'model_unavailable'
   /** Its local model is not loaded and the user's cap on models at once is reached. */
-  | 'too_many_models';
+  | 'too_many_models'
+  /** It runs in ACP mode with a turn (or its permission question) still going: the terminal waits. */
+  | 'acp_busy'
+  /** ACP mode was asked for while its terminal is in use (shown, a run working, or jobs). */
+  | 'terminal_in_use';

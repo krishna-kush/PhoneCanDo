@@ -8,6 +8,7 @@ import { useHomeInFront } from '../../nav/homeInFront';
 import TerminalView from '../../terminal/TerminalView';
 import { engineTransport } from '../../terminal/transport/engine';
 import { useOpenTuiChat } from '../../terminal/useOpenTuiChat';
+import BackgroundRunView from '../background/BackgroundRunView';
 import TuiHomeNotice from './TuiHomeNotice';
 import { useTuiEngine } from './useTuiEngine';
 
@@ -18,10 +19,12 @@ import { useTuiEngine } from './useTuiEngine';
 // the replay restores its screen. A program that ends while shown keeps
 // its last screen on view, read-only, under the stopped notice: it often
 // says why it stopped. HomeScreen mounts one per active agent. Nothing else
-// opens this PTY: the header offers a shell in the machine.
+// opens this PTY: the header offers a shell in the machine. While the
+// engine runs in ACP mode (a task that came while nobody watched) there is
+// no PTY: its run shows instead, until the terminal comes back.
 export default function AgentTuiHome({ agent }: { agent: Agent }) {
   const kind = agentKind(agent.kind);
-  const { phase, run, restart, onEnd } = useTuiEngine(agent.id);
+  const { phase, run, busy, restart, onEnd } = useTuiEngine(agent.id);
   // In front: Home with no page over it.
   const inFront = useHomeInFront();
   const attached = phase.name === 'attached';
@@ -44,8 +47,9 @@ export default function AgentTuiHome({ agent }: { agent: Agent }) {
     else setTermTitle('');
   }, [attached, run]);
 
+  if (phase.name === 'background') return <BackgroundRunView agentId={agent.id} name={agent.name} busy={busy} />;
   const lastScreen = phase.name === 'stopped' && phase.screen;
-  if (!attached && !lastScreen) return <TuiHomeNotice label={kind.label} phase={phase} onRestart={restart} />;
+  if (!attached && !lastScreen) return <TuiHomeNotice agentId={agent.id} label={kind.label} phase={phase} onRestart={restart} />;
   return (
     <YStack flex={1}>
       <TerminalView
@@ -56,7 +60,7 @@ export default function AgentTuiHome({ agent }: { agent: Agent }) {
         onTitle={setTermTitle}
         onEnd={onEnd}
       />
-      {phase.name !== 'attached' ? <TuiHomeNotice label={kind.label} phase={phase} onRestart={restart} /> : null}
+      {phase.name !== 'attached' ? <TuiHomeNotice agentId={agent.id} label={kind.label} phase={phase} onRestart={restart} /> : null}
     </YStack>
   );
 }
