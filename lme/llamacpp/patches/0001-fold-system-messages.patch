@@ -1,22 +1,33 @@
 Ours (PhoneCanDo), not from llama.cpp. When a chat template refuses the
-messages as sent, folds the system messages and renders once more, so a
-template that allows one system message, first, takes requests with more.
+messages as sent, makes them plain and renders once more: tool references
+become text and the system messages are folded, so a strict template takes
+what agents send.
 
 Codex (Responses API) starts with two developer messages, which the server
 maps to system, and Claude Code (Anthropic /v1/messages) sends its
 environment block as a system message after the user turn. Qwen3.5's
 template allows one system message, first, and raises "System message must
 be at the beginning" otherwise, so every request from either failed.
+Claude Code's tool search also answers with tool_reference parts (the
+deferred tools it found), which Qwen3.5's template refuses ("Unexpected
+item type in content."), so a turn failed as soon as the model searched.
 
 common_chat_templates_apply, which chat completions, Responses and
 Anthropic messages all reach, renders the messages as sent first: a
-template that takes them (Gemma 4, Llama 3.x, Qwen3, GLM, Mistral and
-others) renders exactly as before. Only if that throws (the template's
-raise arrives wrapped differently per path, so any error counts) does it
-render once more with the system messages folded, after developer is
-mapped to system; that attempt's error, if any, is the one reported, and
-everything it returns (prompt, grammar, parser) comes from the attempt
-that rendered. The fold:
+template that takes them (Gemma 4, Llama 3.x, Qwen3, GLM, Mistral, LFM3
+with its tool references and others) renders exactly as before. Only if
+that throws (the template's raise arrives wrapped differently per path, so
+any error counts) does it render once more with the messages made plain,
+after developer is mapped to system; that attempt's error, if any, is the
+one reported, and everything it returns (prompt, grammar, parser) comes
+from the attempt that rendered.
+
+Tool references: a run of them becomes one text part, "Tool loaded:
+<name>" a line per tool, on lines of its own. A template that refuses
+them (Qwen3.5's) also lists every tool up front, deferred or not, so the
+line says all the reference did.
+
+The fold:
 - the leading run of system messages becomes one, their text a blank line
   apart;
 - a later one becomes "[System note]\n<text>": at the end of the user or
@@ -28,7 +39,7 @@ that rendered. The fold:
 
 --- a/common/chat.cpp
 +++ b/common/chat.cpp
-@@ -1161,6 +1161,84 @@
+@@ -1161,6 +1161,117 @@
      }
  }
  
@@ -110,31 +121,65 @@ that rendered. The fold:
 +    messages = std::move(out);
 +}
 +
++// PhoneCanDo patch, on that same second attempt: a tool_reference part (a tool
++// search's result naming a deferred tool; Claude Code sends them) becomes text,
++// "Tool loaded: <name>", a line per tool. A template that knows tool_reference
++// (LFM3's) renders the messages as sent and never gets here; one that refuses
++// it (Qwen3.5's: "Unexpected item type in content.") also lists every tool up
++// front, deferred or not, so the line says all the reference did.
++static void tool_references_as_text(json & messages) {
++    for (auto & msg : messages) {
++        if (!msg.contains("content") || !msg.at("content").is_array()) {
++            continue;
++        }
++        const json & parts = msg.at("content");
++        json         out   = json::array();
++        for (size_t i = 0; i < parts.size();) {
++            if (parts.at(i).value("type", "") != "tool_reference") {
++                out.push_back(parts.at(i++));
++                continue;
++            }
++            // a run of references is one text part, on lines of its own
++            std::string text = out.empty() ? "" : "\n";
++            for (bool first = true; i < parts.size() && parts.at(i).value("type", "") == "tool_reference"; i++) {
++                text += (first ? "" : "\n") + std::string("Tool loaded: ") + parts.at(i).value("name", "");
++                first = false;
++            }
++            if (i < parts.size()) {
++                text += "\n";
++            }
++            out.push_back({ {"type", "text"}, {"text", text} });
++        }
++        msg["content"] = std::move(out);
++    }
++}
++
  
  // if first message is system and template does not support it, merge it with next message
  static void system_message_not_supported(json & messages) {
-@@ -1464,7 +1542,8 @@
+@@ -1464,7 +1575,8 @@
  }
  
  static common_chat_params common_chat_templates_apply_jinja(const struct common_chat_templates *        tmpls,
 -                                                            const struct common_chat_templates_inputs & inputs) {
 +                                                            const struct common_chat_templates_inputs & inputs,
-+                                                            bool                                        fold_system) {
++                                                            bool                                        plain) {
      autoparser::generation_params params;
      params.tools = common_chat_tools_to_json_oaicompat(inputs.tools);
      const auto & tmpl =
-@@ -1518,6 +1597,10 @@
+@@ -1518,6 +1630,11 @@
          workaround::map_developer_role_to_system(params.messages);
      }
  
-+    if (fold_system) {
++    if (plain) {
++        workaround::tool_references_as_text(params.messages);
 +        workaround::fold_system_messages(params.messages);
 +    }
 +
      if (!tmpl.original_caps().supports_system_role) {
          workaround::system_message_not_supported(params.messages);
      }
-@@ -1678,8 +1761,20 @@
+@@ -1678,8 +1795,21 @@
  common_chat_params common_chat_templates_apply(const struct common_chat_templates *        tmpls,
                                                 const struct common_chat_templates_inputs & inputs) {
      GGML_ASSERT(tmpls != nullptr);
@@ -146,14 +191,15 @@ that rendered. The fold:
 +    // PhoneCanDo patch: the messages as sent first, so a template that takes
 +    // them renders exactly as before. Only if that throws (a template's raise
 +    // arrives wrapped differently per path, so any error counts), once more
-+    // with the system messages folded (workaround::fold_system_messages); that
++    // with them made plain: tool references as text, then the system messages
++    // folded (workaround::tool_references_as_text, fold_system_messages); that
 +    // attempt's error, if any, is the one reported. Everything returned (the
 +    // prompt, grammar and parser) comes from the one attempt that rendered.
 +    try {
-+        return common_chat_templates_apply_jinja(tmpls, inputs, /* fold_system = */ false);
++        return common_chat_templates_apply_jinja(tmpls, inputs, /* plain = */ false);
 +    } catch (const std::exception &) {
 +    }
-+    return common_chat_templates_apply_jinja(tmpls, inputs, /* fold_system = */ true);
++    return common_chat_templates_apply_jinja(tmpls, inputs, /* plain = */ true);
  }
  
  std::string common_chat_prompt::str() const {
