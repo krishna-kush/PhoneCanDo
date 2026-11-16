@@ -16,9 +16,11 @@ const GRADLE_BLOCK = block(
   '    ',
   `    // Debug builds (the dev loop) need no secrets: without the env the
     // release config borrows the debug keystore, and the build stops once
-    // its task graph holds a release task of this app.
+    // its task graph holds a release task of this app, unless
+    // PHONECANDO_SIGN_LATER=1 says apksigner signs it with the release key
+    // afterwards (the GitHub release's build job, which never holds the key).
     def releaseStore = System.getenv("PHONECANDO_STORE_FILE")
-    if (releaseStore == null) {
+    if (releaseStore == null && System.getenv("PHONECANDO_SIGN_LATER") != "1") {
         gradle.taskGraph.whenReady { graph ->
             def releaseTask = graph.allTasks.find { it.path.startsWith(":app:") && it.name.contains("Release") }
             if (releaseTask != null) {

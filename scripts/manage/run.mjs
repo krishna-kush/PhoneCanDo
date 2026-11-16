@@ -31,6 +31,12 @@ export function run(cmd, options = {}) {
   spawn(cmd, options);
 }
 
+/** Waits ms milliseconds; recording, it does not wait. */
+export function pause(ms) {
+  if (record) return;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 /** A command's stdout ('' when it cannot run). */
 export function capture(cmd) {
   if (record) return '';

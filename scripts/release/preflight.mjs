@@ -29,6 +29,9 @@ import { dirtyEntries, parsePorcelain } from './worktree.mjs';
  *   overrides        gate ids allowed to fail (--allow-red-ci: 'ci')
  *   withoutLinux     --without-linux: no proot or image staged is fine
  *                    (whatever is staged is still checked)
+ *   stagedChecked    --sign-staged: the build that staged these APKs checked
+ *                    proot, the image and the agents (the GitHub release's
+ *                    build job), so only tree, pushed and CI run here
  * }
  * -> { head, sha, gates, ci, proot, image, agents, proceed, refusals, overridden, notes }
  *    proot { version, libs: { name: sha256 } }, image { version, sha256,
@@ -38,7 +41,7 @@ import { dirtyEntries, parsePorcelain } from './worktree.mjs';
 export function runPreflight(ctx) {
   const state = { head: ctx.git.head() };
   state.sha = ctx.builtFrom ?? state.head;
-  const gates = GATES.map((gate) => gate(ctx, state)).filter(Boolean);
+  const gates = (ctx.stagedChecked ? COMMIT_GATES : GATES).map((gate) => gate(ctx, state)).filter(Boolean);
   return { ...state, gates, ...verdict(gates, ctx.overrides ?? []) };
 }
 
@@ -46,7 +49,8 @@ export function runPreflight(ctx) {
 // { id, title, ok, overridable, summary, detail?, overrideNote? } or null when
 // it cannot apply. The Linux gates (linux/) and the agents gate (agents/)
 // never yield to --allow-red-ci.
-const GATES = [treeGate, pushedGate, ciGate, prootGate, imageGate, payloadsGate];
+const COMMIT_GATES = [treeGate, pushedGate, ciGate];
+const GATES = [...COMMIT_GATES, prootGate, imageGate, payloadsGate];
 
 const short = (sha) => sha.slice(0, 12);
 

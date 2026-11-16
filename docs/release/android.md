@@ -45,6 +45,9 @@ Debug builds keep the debug keystore; only `release` uses this key.
 
 ## Release
 
+This builds on your computer. `./manage release <ver> --via-github` builds
+the same release on GitHub's runners instead: `github-release.md`.
+
 Prerequisites:
 
 - The repo-root `.env` holds the signing settings (or `PHONECANDO_RELEASE_ENV`

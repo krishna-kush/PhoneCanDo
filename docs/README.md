@@ -94,6 +94,9 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 - `release/known-limits.md` — cross-module limits and not-yet features.
 - `release/android.md` — signed APK releases, keys, versionCode and the
   in-app updater.
+- `release/github-release.md` — releasing from GitHub Actions
+  (`./manage release <ver> --via-github`): what it needs, its three jobs,
+  the pull request with the release's files.
 - `pce/docs/release/known-limits.md` — PCE-internal limits.
 
 ## Related trees

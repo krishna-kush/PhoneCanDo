@@ -1,0 +1,333 @@
+name: Release
+
+# Builds, signs and drafts a GitHub release on GitHub's runners: the same
+# scripts/release-android.mjs a local `./manage release` runs, with the same
+# preflight (clean tree, pushed commit, CI, proot, image, agents), so a
+# release from here and one from a laptop come out the same. Started only by
+# hand, on prod, by `./manage release <ver> --via-github` or from the Actions
+# tab. docs/release/github-release.md says what it needs set up.
+#
+# Building and signing are two jobs, so the release key never sits next to
+# third-party code; a third opens the pull request with the changed files:
+#   build  stages what the APKs ship, builds and checks them with
+#          `--sign-later` (the debug key signs for now; Gradle, the Android
+#          plugins and the npm packages run here) and hands the staged
+#          release on as an artifact. No secrets.
+#   sign   in the `release` environment, whose four secrets only it can
+#          read and only after a reviewer approves: re-signs the staged
+#          APKs with the release key (`--sign-staged`), checks the signer and
+#          uploads the draft. It runs only our scripts (no npm packages),
+#          Node, the SDK's apksigner and gh. The key is written to the
+#          runner's temp folder and deleted after, whatever happened.
+#   pr     commits the version files and release.json to release/v<version>
+#          and opens a pull request to prod. Only git and gh; no secrets.
+# Inputs reach the shell only through env, never pasted into a script.
+#
+# Staged as a local release stages them: opencode from CI's build of its
+# pins (agents/kit/native/ensure.mjs), proot built from its pins
+# (lre/proot/ensure.sh), llama-server from CI's build of its pins, the
+# Default image from lre/images/default/lock.json. The pr job then opens a
+# pull request with the four files the release changed (the version files
+# and web/src/data/release.json), to merge after publishing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, e.g. 1.0.0
+        required: true
+        type: string
+      notes:
+        description: Update dialog and release notes (empty means "Release v<version>")
+        required: false
+        default: ''
+        type: string
+      label:
+        description: What the release calls itself
+        required: false
+        default: stable
+        type: choice
+        options: [stable, beta, alpha]
+      allow_red_ci:
+        description: Release although CI on the commit is red or unfinished (the notes say so)
+        required: false
+        default: false
+        type: boolean
+      publish:
+        description: Publish the release at once instead of leaving a draft
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# One release at a time; never cancel one halfway through its uploads.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  EXPO_NO_GIT_STATUS: '1'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: build v${{ inputs.version }} (no key)
+    if: ${{ github.ref == 'refs/heads/prod' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      # CI's opencode and llama-server builds.
+      actions: read
+      # The preflight reads CI's checks on the commit.
+      checks: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the inputs
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Bad version::'$VERSION' is not a version like 1.0.0"
+            exit 1
+          fi
+          echo "Releasing v$VERSION from $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Free disk space
+        run: bash .github/ci/android/free-disk.sh
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Generate app/android (expo prebuild)
+        run: bash .github/ci/android/prebuild.sh
+      - name: NDK, CMake and Gradle sizing
+        run: bash .github/ci/android/toolchain.sh
+
+      # proot's own NDK (lre/proot/pins.env), as proot.yml builds it.
+      - name: proot's NDK version
+        id: proot-pins
+        run: echo "ndk=$(sed -n 's/^NDK_VERSION=//p' lre/proot/pins.env)" >> "$GITHUB_OUTPUT"
+      - name: Set up proot's NDK
+        id: ndk
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
+        with:
+          ndk-version: ${{ steps.proot-pins.outputs.ndk }}
+          add-to-path: false
+      - name: Stage proot (built from lre/proot's pins)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: bash lre/proot/ensure.sh --yes
+
+      - name: Stage the agent payloads (CI's build of their pins)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: node agents/kit/native/ensure.mjs --yes --release full lite
+      - name: Stage llama-server (CI's build of lme/llamacpp's pins)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/ci/release/stage-llama-server.sh "$RUNNER_TEMP/llamacpp"
+      - name: Stage the locked Default image
+        run: |
+          set -euo pipefail
+          bash lre/images/default/lock/fetch.sh "$RUNNER_TEMP/images"
+          bash lre/images/default/lock/stage.sh "$RUNNER_TEMP/images"
+
+      - name: Build and stage (scripts/release-android.mjs --sign-later)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+          NOTES: ${{ inputs.notes }}
+          LABEL: ${{ inputs.label }}
+          ALLOW_RED_CI: ${{ inputs.allow_red_ci }}
+        # --accept-all: no terminal here to ask about the Default image's age
+        # or proot behind upstream; both still print in this log.
+        run: |
+          set -euo pipefail
+          args=(--version "$VERSION" --label "$LABEL" --sign-later --accept-all)
+          if [ -n "$NOTES" ]; then args+=(--notes "$NOTES"); fi
+          if [ "$ALLOW_RED_CI" = true ]; then args+=(--allow-red-ci); fi
+          node scripts/release-android.mjs "${args[@]}"
+
+      # The staged release (APKs, latest.json, proot's source, the commit
+      # it was built from) and the version files it bumped, for the sign job.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-staged
+          path: |
+            dist/release/v${{ inputs.version }}/
+            app/app.json
+            app/package.json
+            app/src/engine/updates.ts
+          retention-days: 1
+          if-no-files-found: error
+
+  sign:
+    name: sign and draft v${{ inputs.version }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      # The draft release and its assets.
+      contents: write
+      # The preflight reads CI's checks on the commit.
+      checks: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Node only: no package install, so no third-party code runs here.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Download the staged release
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-staged
+          path: .
+
+      # The release key from the environment's secrets, readable by this job
+      # only, into files only this user can read. Values are quoted (%q) so
+      # any character survives the `source` the release scripts do.
+      - name: Release key
+        env:
+          STORE_BASE64: ${{ secrets.PHONECANDO_STORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PHONECANDO_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PHONECANDO_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PHONECANDO_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in STORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error title=Missing secret::PHONECANDO_$name is not set in the release environment (docs/release/github-release.md)"
+              exit 1
+            fi
+          done
+          umask 077
+          store="$RUNNER_TEMP/release.jks"
+          printf '%s' "$STORE_BASE64" | base64 -d > "$store"
+          # The key is there under its alias, and both passwords open it.
+          keytool -list -keystore "$store" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" > /dev/null
+          {
+            printf 'PHONECANDO_STORE_FILE=%q\n' "$store"
+            printf 'PHONECANDO_STORE_PASSWORD=%q\n' "$STORE_PASSWORD"
+            printf 'PHONECANDO_KEY_ALIAS=%q\n' "$KEY_ALIAS"
+            printf 'PHONECANDO_KEY_PASSWORD=%q\n' "$KEY_PASSWORD"
+          } > "$RUNNER_TEMP/release-signing.env"
+
+      - name: Sign and draft (scripts/release-android.mjs --sign-staged)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPO: ${{ github.repository }}
+          PHONECANDO_RELEASE_ENV: ${{ runner.temp }}/release-signing.env
+          VERSION: ${{ inputs.version }}
+          ALLOW_RED_CI: ${{ inputs.allow_red_ci }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          args=(--version "$VERSION" --sign-staged)
+          if [ "$ALLOW_RED_CI" = true ]; then args+=(--allow-red-ci); fi
+          if [ "$PUBLISH" = true ]; then args+=(--publish); fi
+          node scripts/release-android.mjs "${args[@]}"
+
+      - name: Remove the release key
+        if: ${{ always() }}
+        run: rm -f "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/release-signing.env"
+
+      # What a local release leaves changed in the tree, for the pr job.
+      - name: Collect the changed files
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/release-files"
+          for f in app/app.json app/package.json app/src/engine/updates.ts web/src/data/release.json; do
+            mkdir -p "$out/$(dirname "$f")"
+            cp "$f" "$out/$f"
+          done
+          cp "dist/release/v$VERSION/latest.json" "$out/latest.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: ${{ runner.temp }}/release-files/
+          retention-days: 7
+          if-no-files-found: error
+
+  # The four files the release changed, as a pull request to prod from
+  # release/v<version>: merging it after publishing deploys the site with the
+  # new version and the APKs' hashes. Runs only git and gh; no secrets.
+  pr:
+    name: pull request with v${{ inputs.version }}'s files
+    needs: sign
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # The release/v<version> branch.
+      contents: write
+      pull-requests: write
+    steps:
+      # Credentials kept: this job pushes the branch.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - name: Download the changed files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: ${{ runner.temp }}/release-files
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          PUBLISH: ${{ inputs.publish }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          files=(app/app.json app/package.json app/src/engine/updates.ts web/src/data/release.json)
+          for f in "${files[@]}"; do cp "$RUNNER_TEMP/release-files/$f" "$f"; done
+          branch="release/v$VERSION"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git add "${files[@]}"
+          git commit -m "chore(release): v$VERSION, so the app, the updater and the site name the published release"
+          # A rerun replaces the branch; its open pull request follows.
+          git push --force origin "$branch"
+          if [ "$PUBLISH" = true ]; then
+            when="v$VERSION is published: merge this to put it on the site."
+          else
+            when="Merge this after publishing v$VERSION (gh release edit v$VERSION --draft=false): the site's download links point at its files."
+          fi
+          body="$when
+
+          The version files and web/src/data/release.json (both APKs' size and sha256), from $RUN_URL."
+          url="$(gh pr list --head "$branch" --state open --json url -q '.[0].url')"
+          if [ -n "$url" ]; then
+            gh pr edit "$url" --body "$body"
+          else
+            url="$(gh pr create --base prod --head "$branch" --title "Releasing v$VERSION" --body "$body")"
+          fi
+          echo "Pull request: $url" >> "$GITHUB_STEP_SUMMARY"
