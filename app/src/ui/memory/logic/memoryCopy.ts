@@ -125,6 +125,9 @@ export function toldText(agentNames: readonly string[], modelNames: readonly str
   return `Nap time for ${nameList(agentNames)}: we stopped ${them}${models} to free up memory. Start ${them} again whenever you like.`;
 }
 
+/** The warning with nothing of ours to list. */
+export const NOTHING_RUNNING = 'Nothing of ours is running right now: no agents, no local models.';
+
 /** Settings' RAM guard card: the level in a few words. */
 export function guardTitle(level: MemoryLevel): string {
   if (level === 'critical') return 'Nearly out of memory';

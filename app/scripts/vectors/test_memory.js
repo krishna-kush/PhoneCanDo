@@ -152,6 +152,55 @@ const MIN = 60_000;
   );
   t('confirm button', [w.modelStopAll(1), w.modelStopAll(3)], ['Stop both', 'Stop them all']);
   t('agents box line', w.agentsBoxLine(2, 900 * MB), '2 agents running · 900 MB together');
+  t('next-up stamp', [w.nextTag(null), w.nextTag(42), w.nextTag(0)], ['next up', 'next up · 0:42', 'tucking in']);
+  t('the whole view is the rows', r.memoryView(status, info).agents, rows);
+
+  // --- the figure: who holds what ---------------------------------------------
+  const m = await import(src('ui/memory/logic/ramMap.ts'));
+  const round = (x) => Math.round(x * 1e4) / 1e4;
+  const map = m.ramMap(use, rows, models);
+  t(
+    'blocks: models, agents biggest first, then the rest',
+    map.blocks.map((b) => [b.key, b.ink, round(b.start), round(b.width)]),
+    [
+      ['model:qwen', 'model', 0, 0.3625],
+      ['agent:a1', 'agent', 0.3625, 0.075],
+      ['agent:a2', 'next', 0.4375, 0.0375],
+      ['other', 'other', 0.475, 0.425],
+    ],
+  );
+  t('the map ends where used memory does', round(map.blocks.at(-1).start + map.blocks.at(-1).width), use.usedFraction);
+  t('group totals as read', [map.models, map.agents, round(map.other / GB), map.free, map.hasNext], [2.9 * GB, 900 * MB, 3.4, 0.8 * GB, true]);
+  t('a row\'s share is its block', [round(m.shareOf(map, m.agentKey('a1'))), m.shareOf(map, m.agentKey('gone'))], [0.075, 0]);
+  const over = m.ramMap(r.ramUse({ totalBytes: 4 * GB, availBytes: 2 * GB, warnBelowBytes: 0 }), rows, models);
+  t(
+    'ours read as more than is used: scaled to fit, nothing else',
+    [round(over.blocks.reduce((n, b) => n + b.width, 0)), over.blocks.some((b) => b.ink === 'other'), over.other],
+    [0.5, false, 0],
+  );
+  t('nothing of ours: only the rest', m.ramMap(use, [], []).blocks.map((b) => b.key), ['other']);
+
+  const x = await import(src('ui/memory/logic/mapText.ts'));
+  t('readout', x.ramReadout(use), { free: '800 MB', of: 'free of 8 GB', used: '90% used' });
+  t(
+    'key: ours by kind, who is next, the rest, free',
+    x.mapKey(map, 'Bob').map((e) => [e.ink, e.label, e.bytes]),
+    [
+      ['model', 'local models', '2.9 GB'],
+      ['agent', 'agents', '900 MB'],
+      ['next', 'next up: Bob', ''],
+      ['other', 'Android & other apps', '3.4 GB'],
+      ['free', 'free', '800 MB'],
+    ],
+  );
+  t('key with nothing of ours', x.mapKey(m.ramMap(use, [], []), null).map((e) => e.ink), ['other', 'free']);
+
+  const fz = await import(src('ui/memory/logic/fuse.ts'));
+  t(
+    'the fuse burns down',
+    [fz.fuseLit(60, 60), fz.fuseLit(30, 60), fz.fuseLit(1, 60), fz.fuseLit(0, 60), fz.fuseLit(5, 0)],
+    [24, 12, 1, 0, 24],
+  );
 
   // --- the caps -------------------------------------------------------------
   const k = await import(src('ui/settings/logic/caps.ts'));

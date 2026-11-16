@@ -1,9 +1,9 @@
 // The RAM warning's rows in words: each agent's and model's details, the
-// boxes' lines and a model's Stop, which says first which agents go with
-// it. Pure (zero RN imports).
+// next-up stamp, the boxes' lines and a model's Stop, which says first
+// which agents go with it. Pure (zero RN imports).
 import type { MemoryLevel } from '../../../engine/memory';
 import { formatBytes } from '../../env/logic/format.ts';
-import { agentCount, nameList } from './memoryCopy.ts';
+import { agentCount, clock, nameList } from './memoryCopy.ts';
 import type { AgentRow, ModelRow } from './memoryRows.ts';
 
 function bytes(n: number | null): string {
@@ -22,6 +22,12 @@ export function modelLine(row: ModelRow): string {
   const n = row.agentNames.length;
   const on = n === 0 ? 'no agents on it' : `${agentCount(n)} on it`;
   return [bytes(row.bytes), row.ready ? 'loaded' : 'loading', on].filter((part) => part.length > 0).join(' · ');
+}
+
+/** The stamp on the agent the countdown would stop, with its clock while it runs. */
+export function nextTag(seconds: number | null): string {
+  if (seconds == null) return 'next up';
+  return seconds <= 0 ? 'tucking in' : `next up · ${clock(seconds)}`;
 }
 
 /** The agents box's line: how many and what they take together. */

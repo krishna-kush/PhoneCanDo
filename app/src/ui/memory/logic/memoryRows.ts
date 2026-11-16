@@ -2,7 +2,8 @@
 // records: each running agent (its name and kind, what it takes, working
 // or idle, whether the countdown would stop it) and each loaded local model
 // (what it takes, the agents on it), biggest first, and the phone's memory
-// as used and free. Pure (zero RN imports).
+// as used and free, all of it as one view (memoryView). Pure (zero RN
+// imports).
 import type { AgentId } from '../../../engine/agents/records';
 import type { MemoryStatus } from '../../../engine/memory';
 
@@ -83,6 +84,19 @@ export function modelRows(status: MemoryStatus, info: Readonly<Record<AgentId, A
 export function totalBytes(rows: readonly { bytes: number | null }[]): number | null {
   const known = rows.filter((r) => r.bytes != null);
   return known.length === 0 ? null : known.reduce((sum, r) => sum + (r.bytes ?? 0), 0);
+}
+
+/** Everything the RAM warning shows from one reading, with the app's names on it. */
+export type MemoryView = {
+  status: MemoryStatus;
+  info: Readonly<Record<AgentId, AgentInfo>>;
+  agents: AgentRow[];
+  models: ModelRow[];
+  ram: RamUse | null;
+};
+
+export function memoryView(status: MemoryStatus, info: Readonly<Record<AgentId, AgentInfo>>): MemoryView {
+  return { status, info, agents: agentRows(status, info), models: modelRows(status, info), ram: ramUse(status) };
 }
 
 /** The phone's memory as used and free; null when the guard has not measured it. */
