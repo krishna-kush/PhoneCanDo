@@ -1,129 +1,96 @@
 import { useState } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { ScrollView, useWindowDimensions } from 'react-native';
+import { XStack } from 'tamagui';
 import { SHAPES } from '../../../../../../mascot/body.ts';
-import { DESIGNS, designOf, EARNED } from '../../../../../../mascot/designs.ts';
 import type { Look } from '../../../../../../mascot/look.ts';
 import { useAppStore } from '../../../../state/app';
 import { useMascotsStore } from '../../../../state/mascots';
 import { useStarterStore } from '../../../../state/starter';
-import AppButton from '../../../common/AppButton';
-import AgentFace from '../../../common/face/AgentFace';
 import { useAgentLook } from '../../../common/face/useAgentLook';
 import PageHeader from '../../../common/PageHeader';
-import PlainText from '../../../common/PlainText';
 import Screen from '../../../common/Screen';
 import SectionTitle from '../../../common/SectionTitle';
 import { usePageActive } from '../../../nav/pageActive';
-import { lockedLabel } from '../../../starter/copy';
-import { isEarned } from '../../../starter/reward';
 import AgentGone from '../AgentGone';
 import { useAgentRecords } from '../useAgentRecords';
-import { inkLabel, MASCOT_TITLE, SHAPE_LABEL, SURPRISE, wornLine } from './copy';
+import { MASCOT_TITLE, SHAPE_LABEL, SHAPE_TITLE, WARDROBE_TITLE } from './copy';
 import MascotChoice from './MascotChoice';
+import MascotStage from './stage/MascotStage';
+import { useShuffle } from './stage/useShuffle';
+import Wardrobe from './wardrobe/Wardrobe';
 
-// An agent's Mascot page: its face big, with the design's name and what it
-// wears, then its shape, which ink is in front and every design there is
-// (mascot/designs.ts), each shown as it would look; or Surprise me for one
-// at random. A pick shows at once wherever its face does. An earned design
-// comes last, locked (a tap opens the first shift) until it is earned.
+// The page's own padding, which its scrolling part reaches past so it
+// scrolls to the screen's edges.
+const EDGE = 16;
+
+// An agent's Mascot page, a fitting room: the stage stays at the top with
+// the face big (stage/), and under it scroll the five shapes and the
+// wardrobe, every design there is (mascot/designs.ts), each shown as it
+// would look. A pick shows at once wherever its face does. An earned design
+// hangs last, locked (a tap opens the first shift) until it is earned.
 export default function AgentMascotPage({ agentId }: { agentId: string }) {
   const { agent } = useAgentRecords(agentId);
   const look = useAgentLook(agentId);
   const active = usePageActive();
   const push = useAppStore((s) => s.push);
-  const earned = useStarterStore((s) => s.shift.earned);
+  const { width } = useWindowDimensions();
   const [hop, setHop] = useState(0);
+  const bump = () => setHop((n) => n + 1);
+  const shuffle = useShuffle(() => {
+    useMascotsStore.getState().surprise(agentId);
+    bump();
+  });
   if (!agent) return <AgentGone />;
 
   const { mascot } = look;
-  const design = designOf(mascot.design);
   const choose = (change: Partial<Look>) => {
+    shuffle.stop();
     useMascotsStore.getState().setLook(agentId, { ...mascot, ...change });
-    setHop((n) => n + 1);
+    bump();
   };
-  const surprise = () => {
-    useMascotsStore.getState().surprise(agentId);
-    setHop((n) => n + 1);
+  const openShift = () => {
+    useStarterStore.getState().start();
+    push({ name: 'starter' });
   };
 
   return (
-    <Screen>
+    <Screen scroll={false} fabClearance={false}>
       <PageHeader kicker={`${look.serial} · ${agent.name}`} title={MASCOT_TITLE} />
-      <XStack alignItems="center" gap="3">
-        <AgentFace mood={look.mood} mascot={mascot} size={56} hop={hop} still={!active} />
-        <YStack flex={1} minWidth={0} gap={2}>
-          <PlainText fontSize={18} fontWeight="600" numberOfLines={1}>
-            {design?.name ?? ''}
-          </PlainText>
-          <PlainText fontSize={13} color="muted">
-            {wornLine(design)}
-          </PlainText>
-        </YStack>
-        <AppButton variant="ghost" onPress={surprise}>
-          {SURPRISE}
-        </AppButton>
-      </XStack>
-
-      <SectionTitle>Shape</SectionTitle>
-      <XStack flexWrap="wrap" gap="2">
-        {SHAPES.map((shape) => (
-          <MascotChoice
-            key={shape}
-            label={SHAPE_LABEL[shape]}
-            mascot={{ ...mascot, shape }}
-            selected={shape === mascot.shape}
-            onSelect={() => choose({ shape })}
-          />
-        ))}
-      </XStack>
-
-      <SectionTitle>In front</SectionTitle>
-      <XStack flexWrap="wrap" gap="2">
-        {[false, true].map((swap) => (
-          <MascotChoice
-            key={String(swap)}
-            label={inkLabel(swap)}
-            mascot={{ ...mascot, swap }}
-            selected={swap === mascot.swap}
-            onSelect={() => choose({ swap })}
-          />
-        ))}
-      </XStack>
-
-      <SectionTitle>Design</SectionTitle>
-      <XStack flexWrap="wrap" gap="2">
-        {DESIGNS.map((d) => (
-          <MascotChoice
-            key={d.id}
-            label={d.name}
-            mascot={{ ...mascot, design: d.id }}
-            selected={d.id === mascot.design}
-            onSelect={() => choose({ design: d.id })}
-          />
-        ))}
-        {EARNED.map((d) =>
-          isEarned(d.id, earned) ? (
+      <MascotStage
+        mascot={shuffle.preview ?? mascot}
+        hop={hop}
+        still={!active}
+        onHop={bump}
+        onSwap={() => choose({ swap: !mascot.swap })}
+        onSurprise={shuffle.start}
+      />
+      <ScrollView
+        style={{ flex: 1, marginHorizontal: -EDGE, marginBottom: -EDGE }}
+        contentContainerStyle={{ paddingHorizontal: EDGE, paddingBottom: EDGE, gap: 12 }}
+      >
+        <SectionTitle>{SHAPE_TITLE}</SectionTitle>
+        <XStack gap="2">
+          {SHAPES.map((shape) => (
             <MascotChoice
-              key={d.id}
-              label={d.name}
-              mascot={{ ...mascot, design: d.id }}
-              selected={d.id === mascot.design}
-              onSelect={() => choose({ design: d.id })}
+              key={shape}
+              label={SHAPE_LABEL[shape]}
+              mascot={{ ...mascot, shape }}
+              size={20}
+              selected={shape === mascot.shape}
+              still={!active}
+              onSelect={() => choose({ shape })}
             />
-          ) : (
-            <MascotChoice
-              key={d.id}
-              label={lockedLabel(d.name)}
-              mascot={{ ...mascot, design: d.id }}
-              selected={false}
-              onSelect={() => {
-                useStarterStore.getState().start();
-                push({ name: 'starter' });
-              }}
-            />
-          ),
-        )}
-      </XStack>
+          ))}
+        </XStack>
+        <SectionTitle>{WARDROBE_TITLE}</SectionTitle>
+        <Wardrobe
+          estimate={width - 2 * EDGE}
+          mascot={mascot}
+          still={!active}
+          onPick={(design) => choose({ design })}
+          onLocked={openShift}
+        />
+      </ScrollView>
     </Screen>
   );
 }
