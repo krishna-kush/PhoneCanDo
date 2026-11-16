@@ -1,12 +1,10 @@
 package com.phonecando.models.context
 
-import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.device.DeviceInfo
 import com.phonecando.lme.api.model.ModelRecord
+import com.phonecando.lme.api.serve.MeasuredMemory
 import com.phonecando.lme.host.context.ContextRange
 import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
-import com.phonecando.lme.host.ram.RamGate
-import com.phonecando.lme.host.ram.RamVerdict
 import com.phonecando.models.ram.RamCheck
 import com.phonecando.models.ram.RamChecks
 import com.phonecando.models.serving.ServingModel
@@ -31,43 +29,33 @@ data class ContextView(
 )
 
 /**
- * The Context setting's reads and checks over lme-host's context plan
- * (LlamaCppRuntime.contextPlan): the view on a model's card, the verdict
- * for a context on the slider, and whether a choice may be saved. Pure.
+ * A model's context as its card shows it, over lme-host's context plan
+ * (LlamaCppRuntime.contextPlan, with the model's own serving choices).
+ * Choosing one is the Memory setting's (memory/ModelMemory.kt). Pure.
  */
 object ModelContexts {
-  /** [record] on [info] now; [serving] its running server, if any (another model's is ignored). */
-  fun view(info: DeviceInfo, record: ModelRecord, serving: ServingModel?): ContextView {
-    val auto = LlamaCppRuntime.contextPlan(info, record.copy(context = null))
+  /**
+   * [record] on [info] now; [serving] its running server, if any (another
+   * model's is ignored); [measured] what its server measured of itself
+   * here (null: the estimate); [storageFreeBytes] free where its chats would
+   * be kept (null: they stay in RAM).
+   */
+  fun view(
+    info: DeviceInfo,
+    record: ModelRecord,
+    serving: ServingModel?,
+    measured: MeasuredMemory? = null,
+    storageFreeBytes: Long? = null,
+  ): ContextView {
+    fun plan(r: ModelRecord) = LlamaCppRuntime.contextPlan(info, r, measured, storageFreeBytes)
+    val auto = plan(record.copy(context = null))
     val running = serving?.takeIf { it.modelId == record.id }?.contextSize
     val (served, ram) = when {
-      running != null -> running to RamChecks.of(info, need(record, running), chosen = record.context != null)
-      record.context != null -> LlamaCppRuntime.contextPlan(info, record).let { it.context to RamChecks.of(info, it) }
+      // What it takes served with that context, its KV cache and checkpoints as its choices plan them.
+      running != null -> running to RamChecks.of(info, plan(record.copy(context = running)).needBytes, chosen = record.context != null, share = record.serve.ramShare)
+      record.context != null -> plan(record).let { it.context to RamChecks.of(info, it) }
       else -> auto.context to RamChecks.of(info, auto)
     }
     return ContextView(served, auto.context, record.context, auto.range, running != null, ram)
   }
-
-  /** The verdict for [record] served with [context] tokens as the user would choose it: the slider's line. */
-  fun check(info: DeviceInfo, record: ModelRecord, context: Long): RamCheck =
-    RamChecks.of(info, LlamaCppRuntime.contextPlan(info, record.copy(context = context)))
-
-  /**
-   * Whether [context] may be saved for [record] (null, automatic, always
-   * may): within its range and, though it may pass the budget, not past the
-   * phone's RAM.
-   *
-   * @throws IllegalArgumentException outside the model's range
-   * @throws LmeException.NotEnoughMemory past the phone's RAM
-   */
-  fun requireAllowed(info: DeviceInfo, record: ModelRecord, context: Long?) {
-    if (context == null) return
-    val range = ContextRange.of(record.shape.contextLength)
-    require(context in range) { "a context from ${range.min} to ${range.max} tokens" }
-    val plan = LlamaCppRuntime.contextPlan(info, record.copy(context = context))
-    if (plan.ram is RamVerdict.Refused) throw LmeException.NotEnoughMemory(plan.needBytes, RamGate.budget(info.totalRamBytes))
-  }
-
-  private fun need(record: ModelRecord, context: Long): Long =
-    LlamaCppRuntime.memoryNeed(record.sizeBytes, record.shape.kvCache, context)
 }

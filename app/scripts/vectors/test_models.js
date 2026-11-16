@@ -228,8 +228,6 @@ const model = (over) => ({
   t('no line for a chosen context', cx.reducedLine(model({ servedContext: 65_536, contextChoice: 65_536 })), '');
   t('no line when the trained context is unknown', cx.reducedLine(model({ contextLength: null })), '');
   t('no line for a model trained for less than the floor', cx.reducedLine(model({ contextLength: 8_192, servedContext: 8_192 })), '');
-  t('button, automatic', cx.contextButtonText(model({})), 'Context: auto');
-  t('button, chosen', cx.contextButtonText(model({ contextChoice: 65_536 })), 'Context: 64k');
   t(
     'automatic says it follows free memory',
     cx.automaticNote(model({ autoContext: 32_768 })),

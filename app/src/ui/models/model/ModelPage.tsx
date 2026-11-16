@@ -14,16 +14,16 @@ import { modelLine, sourceText } from '../logic/modelText';
 import { usersOf } from '../logic/usage';
 import ModelPanel from '../parts/ModelPanel';
 import DeleteModel from './DeleteModel';
-import ModelContext from './ModelContext';
+import ModelMemory from './ModelMemory';
 import UsedBy from './UsedBy';
 
 // One model on the phone, opened from its card on the Models page: what it
 // is (size, context, source, dates, a line when we serve it with less
 // context than it was trained for, its RAM verdict), Stop while it is
 // loaded (its running agents stop first, and it asks first when there are
-// any), its Context setting, the agents set to it (each opens its page),
-// its server's log, its Hugging Face repository and Delete (refused while
-// an agent is set to it).
+// any), its Memory setting (its context among its choices), the agents
+// set to it (each opens its page), its server's log, its Hugging Face
+// repository and Delete (refused while an agent is set to it).
 export default function ModelPage({ modelId }: { modelId: string }) {
   const model = useModelsStore((s) => s.models.find((m) => m.id === modelId));
   const agents = useAgentsStore((s) => s.agents);
@@ -56,7 +56,7 @@ export default function ModelPage({ modelId }: { modelId: string }) {
         {model.serving ? (
           <StopModelButton modelId={model.id} name={model.name} agentNames={users.filter(running).map((a) => a.name)} />
         ) : null}
-        <ModelContext model={model} />
+        <ModelMemory model={model} />
       </ModelPanel>
       <UsedBy users={users} />
       <YStack borderWidth={1} borderColor="line" backgroundColor="panel">

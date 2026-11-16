@@ -4,6 +4,7 @@ import com.phonecando.lme.api.device.CpuCore
 import com.phonecando.lme.api.device.DeviceInfo
 import com.phonecando.lme.api.model.KvCacheShape
 import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
+import com.phonecando.lme.host.ram.ServerMemory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -52,10 +53,12 @@ class RamChecksTest {
   fun `a served model counts its KV cache at the context it would get here`() {
     val qwen = KvCacheShape(16_384, 0, null)
     // Qwen3.5 9B: not even 16k of KV cache fits an 8 GB phone's budget.
-    val nine = RamChecks.of(moto, LlamaCppRuntime.contextPlan(moto, 5_680_522_464, qwen, 262_144, null))
+    // The files alone (as our suggestions count), no copies or compute.
+    fun files(bytes: Long) = ServerMemory.filesOnly(bytes)
+    val nine = RamChecks.of(moto, LlamaCppRuntime.contextPlan(moto, 5_680_522_464, qwen, 262_144, null, memory = files(5_680_522_464)))
     assertEquals(RamCheck(RamCheck.Verdict.TOO_BIG, 6_217_393_376, 3_872_016_350), nine)
     // Qwen3.5 4B: Automatic gives it 32k of KV cache (1 GiB), the least it starts with when the budget holds it.
-    val four = LlamaCppRuntime.contextPlan(moto, 2_740_937_888, qwen, 262_144, null)
+    val four = LlamaCppRuntime.contextPlan(moto, 2_740_937_888, qwen, 262_144, null, memory = files(2_740_937_888))
     assertEquals(32_768, four.context)
     assertEquals(RamCheck(RamCheck.Verdict.FITS, 2_740_937_888 + 1_073_741_824, 3_872_016_350), RamChecks.of(moto, four))
     // On an unsupported phone, whatever the plan says.

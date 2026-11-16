@@ -1,6 +1,6 @@
-// A model's context in words, and the Context setting's slider. Pure (zero
-// RN imports). k is 1024 tokens, as model makers write it: 16k is 16,384,
-// 256k is 262,144.
+// A model's context in words, and the Context choice's slider (under its
+// Memory setting). Pure (zero RN imports). k is 1024 tokens, as model
+// makers write it: 16k is 16,384, 256k is 262,144.
 import type { Agent, EngineStatus } from '../../../engine/agents/records';
 import type { ContextRange, LocalModel } from '../../../engine/models/types';
 
@@ -19,11 +19,6 @@ type ContextFields = Pick<LocalModel, 'servedContext' | 'contextLength' | 'conte
 export function reducedLine(m: ContextFields): string {
   if (m.contextChoice != null || m.contextLength == null || !(m.servedContext < m.contextLength)) return '';
   return `Context ${contextText(m.servedContext)} of ${contextText(m.contextLength)}: reduced so it runs well on this phone`;
-}
-
-/** The Context button: "Context: auto" or "Context: 64k". */
-export function contextButtonText(m: Pick<LocalModel, 'contextChoice'>): string {
-  return m.contextChoice == null ? 'Context: auto' : `Context: ${contextText(m.contextChoice)}`;
 }
 
 /**
@@ -78,9 +73,12 @@ export function runningOn(
     .map((a) => a.name);
 }
 
-/** Under Save while agents run on the model: "Saving restarts Main and Work, which run on this model." */
-export function restartNote(names: string[]): string {
+/**
+ * While agents run on the model, under what restarts it: "Saving restarts Main and Work, which run on this
+ * model." `by` names the act ("Changing it" for a switch with no Save).
+ */
+export function restartNote(names: string[], by = 'Saving'): string {
   if (names.length === 0) return '';
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-  return `Saving restarts ${list}, which ${names.length === 1 ? 'runs' : 'run'} on this model.`;
+  return `${by} restarts ${list}, which ${names.length === 1 ? 'runs' : 'run'} on this model.`;
 }

@@ -3,8 +3,8 @@ package com.phonecando.models.api
 import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.model.ModelRecord
 import com.phonecando.models.ModelsHost
-import com.phonecando.models.context.ModelContexts
 import com.phonecando.models.errors.ModelErrorCode
+import com.phonecando.models.memory.ModelMemory
 import com.phonecando.models.picker.FilePicker
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.functions.Queues
@@ -27,30 +27,54 @@ internal fun ModuleDefinitionBuilder.modelFunctions(host: () -> ModelsHost, pick
     coded {
       val h = host()
       val device = h.device.read()
-      val serving = h.serving.current()
-      h.store.models().map { record -> record.toMap(device, serving.firstOrNull { it.modelId == record.id }) }
+      val source = h.serving
+      val serving = source.current()
+      h.store.models().map { record ->
+        record.toMap(device, serving.firstOrNull { it.modelId == record.id }, source.measured(record), source.chatStorageFree(record))
+      }
     }
   }
 
-  // The RAM verdict for a model served with `context` tokens as the user
-  // would choose it (the Context setting's slider, live): cheap, sync.
-  Function("contextCheck") { modelId: String, context: Double ->
+  // What a model gets on this phone with these Memory choices (`context`
+  // null for automatic): the setting's line, live as they change. Cheap,
+  // sync.
+  Function("memoryCheck") { modelId: String, context: Double?, memory: Map<String, Any?> ->
     coded {
       val h = host()
-      ModelContexts.check(h.device.read(), model(h, modelId), context.toLong()).toMap()
+      val record = model(h, modelId)
+      val source = h.serving
+      val serving = source.current().firstOrNull { it.modelId == modelId }
+      val serve = serveChoices(memory, record.serve.detailedLog)
+      ModelMemory.view(h.device.read(), record, context?.toLong(), serve, serving, source.measured(record), source.chatStorageFree(record)).toMap()
     }
   }
 
-  // Saves the context a model is served with (tokens, or null for
-  // automatic) on its record. A running server keeps its own until it
-  // starts again: JS then restarts the agents on it (the runner's
-  // stopModelAgents). Rejects not_enough_memory past the phone's RAM.
-  AsyncFunction("setModelContext") { modelId: String, context: Double?, promise: Promise ->
+  // Saves how a model is served: its context (tokens, or null for
+  // automatic) and the rest of its Memory choices. A running server keeps
+  // its own until it starts again: JS then restarts the agents on it (the
+  // runner's stopModelAgents). Rejects not_enough_memory when the model
+  // would not run.
+  AsyncFunction("setModelMemory") { modelId: String, context: Double?, memory: Map<String, Any?>, promise: Promise ->
     val h = host()
     runAsync(h, promise) {
+      val record = model(h, modelId)
       val chosen = context?.toLong()
-      ModelContexts.requireAllowed(h.device.read(), model(h, modelId), chosen)
-      h.store.setContext(modelId, chosen)
+      val serve = serveChoices(memory, record.serve.detailedLog)
+      ModelMemory.requireAllowed(h.device.read(), record, chosen, serve, h.serving.measured(record))
+      h.store.setServing(modelId, chosen, serve)
+      h.changed()
+      null
+    }
+  }
+
+  // Turns a model's detailed server log on or off (its Server log page):
+  // its next start logs at trace level with the slots' token diffs, prompt
+  // text included. JS restarts the agents on it, as for Memory.
+  AsyncFunction("setModelDetailedLog") { modelId: String, on: Boolean, promise: Promise ->
+    val h = host()
+    runAsync(h, promise) {
+      val record = model(h, modelId)
+      h.store.setServing(modelId, record.context, record.serve.copy(detailedLog = on))
       h.changed()
       null
     }

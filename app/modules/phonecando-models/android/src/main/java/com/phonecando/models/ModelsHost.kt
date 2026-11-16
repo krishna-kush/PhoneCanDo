@@ -57,7 +57,7 @@ class ModelsHost private constructor(context: Context) {
     Thread(task, "phonecando-models").apply { isDaemon = true }
   }
 
-  /** The models the runner's model servers serve now (it sets this when it starts). */
+  /** What the runner's model servers know: the models they serve now, their measurements, chats on storage (it sets this when it starts). */
   @Volatile
   var serving: ServingSource = ServingSource.NONE
 

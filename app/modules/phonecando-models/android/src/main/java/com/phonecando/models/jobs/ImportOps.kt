@@ -22,7 +22,8 @@ class ImportOps(private val host: ModelsHost, private val resolver: ContentResol
     val job = host.jobs.begin(JobTarget(JobTarget.Kind.IMPORT, "import-${counter.incrementAndGet()}"), name)
     host.run(job) { reporter ->
       val input = resolver.openInputStream(uri) ?: throw IOException("the picked file cannot be opened")
-      input.use { host.store.import(it, name, size, reporter, job.cancel) }
+      // Its server measures itself here soon, so its page counts the truth before its first start.
+      host.serving.measureSoon(input.use { host.store.import(it, name, size, reporter, job.cancel) })
     }
     return job
   }

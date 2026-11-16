@@ -1,6 +1,7 @@
 package com.phonecando.models.catalog
 
 import com.phonecando.lme.api.LmeException
+import com.phonecando.lme.api.device.DeviceInfo
 import com.phonecando.lme.api.model.ModelDates
 import com.phonecando.lme.catalog.HfCatalog
 import com.phonecando.lme.catalog.ModelVariant
@@ -9,7 +10,10 @@ import com.phonecando.lme.catalog.SearchPage
 import com.phonecando.lme.catalog.filters.ModelFilters
 import com.phonecando.lme.catalog.parameters.ParameterCount
 import com.phonecando.lme.catalog.suggested.Suggested
+import com.phonecando.lme.catalog.suggested.SuggestedModel
+import com.phonecando.lme.host.context.ContextPlan
 import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
+import com.phonecando.lme.host.ram.ServerMemory
 import com.phonecando.lme.store.download.DownloadRequest
 import com.phonecando.lme.store.download.RemoteFile
 import com.phonecando.models.ModelsHost
@@ -28,7 +32,13 @@ class CatalogOps(private val host: ModelsHost) {
   private val kept = KeptPages()
   private val listings = RepoListings(host.executor)
 
-  /** Our suggestions, best first; no network. Their verdicts count the KV cache at the automatic context here. */
+  /**
+   * Our suggestions, best first; no network. Their verdicts count the files
+   * and the KV cache at the automatic context here, as the phone sizes we
+   * publish for them do (suggested.json): not the weights a server copies
+   * or its compute buffer, which no phone has measured for them yet. Once
+   * on the phone, a model is measured and its card counts the truth.
+   */
   fun suggested(): List<Map<String, Any?>> {
     val device = host.device.read()
     val local = local()
@@ -41,7 +51,7 @@ class CatalogOps(private val host: ModelsHost) {
         "file" to fileMap(s.file),
         "sizeBytes" to s.file.sizeBytes.toDouble(),
         "dates" to datesMap(s.origin.dates),
-        "ram" to RamChecks.of(device, LlamaCppRuntime.contextPlan(device, s.file.sizeBytes, s.kvCache, s.contextLength, null)).toMap(),
+        "ram" to RamChecks.of(device, filesPlan(device, s)).toMap(),
         "onPhone" to local.model(s.file.sha256),
         "downloadId" to local.download(s.file.sha256),
       )
@@ -137,6 +147,9 @@ class CatalogOps(private val host: ModelsHost) {
   }
 
   private fun local() = LocalMatch(host.store.models(), host.store.downloads())
+
+  private fun filesPlan(device: DeviceInfo, s: SuggestedModel): ContextPlan =
+    LlamaCppRuntime.contextPlan(device, s.file.sizeBytes, s.kvCache, s.contextLength, null, memory = ServerMemory.filesOnly(s.file.sizeBytes))
 
   private fun pageMap(hub: HfCatalog, page: SearchPage): Map<String, Any?> {
     origins.lookUp(hub, page.hits)

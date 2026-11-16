@@ -66,7 +66,10 @@ class DownloadOps(private val host: ModelsHost) {
     host.resumeList.add(id)
     host.run(job) { reporter ->
       try {
-        retries.run(reporter, job.cancel) { host.store.download(id, host.tokens.read(), reporter, job.cancel) }
+        retries.run(reporter, job.cancel) {
+          // Its server measures itself here soon, so its page counts the truth before its first start.
+          host.serving.measureSoon(host.store.download(id, host.tokens.read(), reporter, job.cancel))
+        }
         host.resumeList.remove(id)
       } catch (e: Throwable) {
         // It stays on the list only for what a later start can fix: a network that stayed down.

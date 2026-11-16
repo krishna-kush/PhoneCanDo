@@ -28,6 +28,59 @@ export type RamCheck = {
 /** The contexts a model may be served with, in tokens: whole steps from min, the last one max (its trained context). */
 export type ContextRange = { min: number; max: number; step: number };
 
+/** How much of the phone's RAM a model may take: about a third, a half or two thirds. */
+export type RamShare = 'less' | 'normal' | 'more';
+
+/** The KV cache's size per value: half (8-bit) only when the model needs it, full, or half. */
+export type KvCacheChoice = 'auto' | 'full' | 'half';
+
+/** A model's Memory choices besides its context; a number null is Auto. */
+export type MemoryChoices = {
+  ramShare: RamShare;
+  kvCache: KvCacheChoice;
+  /** Chats its server keeps in RAM besides the one it works on. */
+  savedPrompts: number | null;
+  /** Context checkpoints (snapshots) per chat, for a model with recurrent or sliding-window layers. */
+  checkpoints: number | null;
+  threads: number | null;
+};
+
+/** What a model gets on this phone with some Memory choices, from our planner: the setting's line. */
+export type MemoryPlan = {
+  context: number;
+  halfKvCache: boolean;
+  /** Saved chats its prompt cache holds now (each a chat at half the context). */
+  savedPrompts: number;
+  /** Null for a model that gets none. */
+  checkpoints: number | null;
+  threads: number;
+  /** What its server holds once its saved chats fill. */
+  totalBytes: number;
+  /** The memory free now, not the RAM share, keeps it from more context or saved chats. */
+  freeMemoryLimits: boolean;
+  ram: RamCheck;
+  /** Chats kept on storage instead of RAM, at most (savedPrompts is then 0); 0 when they stay in RAM. */
+  storedChats: number;
+  /** The numbers count what its server measured of itself on this phone; false: an estimate until its first start. */
+  measured: boolean;
+};
+
+/** A number the Memory setting offers, from min to max, with what Auto picks. */
+export type MemoryCount = { min: number; max: number; auto: number };
+
+/** What the Memory setting may offer for a model on this phone. */
+export type ModelTraits = {
+  savedPrompts: MemoryCount;
+  /** Null for a model with no recurrent or sliding-window layers: it gets no checkpoints. */
+  checkpoints: MemoryCount | null;
+  /** Its heads allow a half-size (8-bit) KV cache. */
+  halfKvCache: boolean;
+  /** 1 to the phone's cores; Auto: its big cores. */
+  threads: MemoryCount;
+  /** What each RAM share lets it take on this phone. */
+  budgets: Record<RamShare, number>;
+};
+
 /** One file of a model as Hugging Face lists it. */
 export type CatalogFile = { path: string; sizeBytes: number; sha256: string | null };
 
@@ -151,6 +204,13 @@ export type LocalModel = {
   /** Saved with its download; an import's from its header's base model when we know it; else null. */
   dates: ModelDates | null;
   ram: RamCheck;
+  /** Its Memory choices as saved. */
+  memory: MemoryChoices;
+  /** Its server logs in detail from its next start (the Server log page's switch). */
+  detailedLog: boolean;
+  /** What a start would get now with its saved choices (while it runs, the memory its server holds counts as free). */
+  plan: MemoryPlan;
+  traits: ModelTraits;
 };
 
 /** A download in flight or paused (an app restart, a cancel, a network that stayed down). */

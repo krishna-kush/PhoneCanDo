@@ -21,9 +21,10 @@ import type {
   ModelProgress,
   CatalogFile,
   LocalModel,
+  MemoryChoices,
+  MemoryPlan,
   ModelDates,
   ModelFilters,
-  RamCheck,
   RepoModels,
   RepoSizes,
   SearchPage,
@@ -37,8 +38,9 @@ type ModelsModule = {
   suggestedModels(): SuggestedModel[];
   listModels(): LocalModel[];
   listDownloads(): ModelDownload[];
-  contextCheck(modelId: string, context: number): RamCheck;
-  setModelContext(modelId: string, context: number | null): Promise<null>;
+  memoryCheck(modelId: string, context: number | null, memory: MemoryChoices): MemoryPlan;
+  setModelMemory(modelId: string, context: number | null, memory: MemoryChoices): Promise<null>;
+  setModelDetailedLog(modelId: string, on: boolean): Promise<null>;
   searchModels(query: string, filters: Record<string, string | boolean>, limit: number): Promise<SearchPage>;
   nextModelsPage(cursor: string): Promise<SearchPage>;
   repoModels(repo: string): Promise<RepoModels>;
@@ -168,17 +170,26 @@ export function listDownloads(): ModelDownload[] {
   return load() ? sync((m) => m.listDownloads()) : [];
 }
 
-/** A model's RAM verdict served with `context` tokens as the user would choose it: the Context setting's slider. */
-export function contextCheck(modelId: string, context: number): RamCheck {
-  return sync((m) => m.contextCheck(modelId, context));
+/**
+ * What a model gets on this phone with `context` (null: automatic) and `memory` as the user would choose them: the
+ * Memory setting's line, live.
+ */
+export function memoryCheck(modelId: string, context: number | null, memory: MemoryChoices): MemoryPlan {
+  return sync((m) => m.memoryCheck(modelId, context, memory));
 }
 
 /**
- * Saves the context a model is served with (tokens, or null for automatic). A running server keeps its own until
- * it starts again (state/flows/modelContext.ts restarts its agents). Rejects not_enough_memory past the phone's RAM.
+ * Saves how a model is served: its context (tokens, or null for automatic) and its Memory choices. A running server
+ * keeps its own until it starts again (state/flows/modelMemory.ts restarts its agents). Rejects not_enough_memory
+ * when the model would not run.
  */
-export async function setModelContext(modelId: string, context: number | null): Promise<void> {
-  await callAsync((m) => m.setModelContext(modelId, context));
+export async function setModelMemory(modelId: string, context: number | null, memory: MemoryChoices): Promise<void> {
+  await callAsync((m) => m.setModelMemory(modelId, context, memory));
+}
+
+/** Turns a model's detailed server log on or off from its next start (state/flows/modelMemory.ts restarts it). */
+export async function setModelDetailedLog(modelId: string, on: boolean): Promise<void> {
+  await callAsync((m) => m.setModelDetailedLog(modelId, on));
 }
 
 /** Deletes a model or a pending download and its files (a running download is stopped first). */

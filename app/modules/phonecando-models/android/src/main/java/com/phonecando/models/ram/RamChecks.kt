@@ -2,6 +2,7 @@ package com.phonecando.models.ram
 
 import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.device.DeviceInfo
+import com.phonecando.lme.api.model.RamShare
 import com.phonecando.lme.host.context.ContextPlan
 import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
 import com.phonecando.lme.host.ram.RamGate
@@ -30,7 +31,7 @@ data class RamCheck(val verdict: Verdict, val needBytes: Long, val budgetBytes: 
 /**
  * lme's RAM gate for the screens: the device check, and a verdict per model
  * from what it needs. A model on the phone and a suggestion need their
- * files plus the KV cache at the context its server would get here
+ * files plus one prompt's state at the context its server would get here
  * (LlamaCppRuntime.contextPlan); a Hugging Face variant before its
  * download, its file sizes alone. A context the user chose may pass the
  * budget (over_budget), never the phone's RAM. Pure.
@@ -48,10 +49,10 @@ object RamChecks {
     return DeviceCheck(true, null)
   }
 
-  /** A model that needs [needBytes]; [chosen]: at a context the user chose. */
-  fun of(info: DeviceInfo, needBytes: Long, chosen: Boolean = false): RamCheck {
+  /** A model that needs [needBytes]; [chosen]: at a context the user chose; [share]: the RAM it may take. */
+  fun of(info: DeviceInfo, needBytes: Long, chosen: Boolean = false, share: RamShare = RamShare.NORMAL): RamCheck {
     if (!device(info).supported) return RamCheck(RamCheck.Verdict.UNSUPPORTED, needBytes, 0)
-    return from(RamGate.check(info.totalRamBytes, needBytes, chosen), needBytes)
+    return from(RamGate.check(info.totalRamBytes, needBytes, chosen, share), needBytes)
   }
 
   /** The verdict a context plan carries. */

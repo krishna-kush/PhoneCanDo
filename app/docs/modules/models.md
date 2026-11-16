@@ -25,10 +25,14 @@ Typed in `src/engine/models/native.ts` (the seam) and
 - On the phone: `listModels()` (each with its context and RAM verdict),
   `listDownloads()` (pending downloads) and `deleteModel(id)` (a model or a
   pending download; a running download is stopped first).
-- Context: `contextCheck(modelId, context)` (sync: the verdict for that
-  choice) and `setModelContext(modelId, context | null)` (null:
-  automatic; rejects `not_enough_memory` past the phone's RAM). A running
-  server keeps its context until it starts again.
+- Memory: `memoryCheck(modelId, context | null, memory)` (sync: what our
+  planner gives for those choices on this phone, the setting's live line),
+  `setModelMemory(modelId, context | null, memory)` (null: automatic;
+  rejects a choice the setting does not offer, and `not_enough_memory`
+  when the model would not run) and `setModelDetailedLog(modelId, on)`.
+  Each model in `listModels()` carries its saved `memory` choices, its
+  `detailedLog`, its `plan` now and its `traits` (what may be chosen
+  here). A running server keeps its own until it starts again.
 - Hugging Face: `suggestedModels()` (no network), `searchModels(query,
   filters, limit)` and `nextModelsPage(cursor)` (by default chat models
   most downloaded in the last 30 days; the last 24 pages read are kept for
@@ -62,8 +66,11 @@ never a secret or a signed URL.
 
 `files/models/` is lme's `ModelLayout`. `ModelsHost` (one per process)
 owns the one `ModelStore` over it and sweeps a killed import's leftovers
-once, before any job. The runner reads the store through `ModelsHost` and
-never writes it.
+once, before any job. The runner reads the store through `ModelsHost`; it
+writes only two things of its own beside a model's files, both gone with
+the model: what its server measured of itself (`<id>/.memory.json`) and
+its chats kept on storage (`<id>/.chats/`), see `runner.md` → Local model
+servers.
 
 ## Model dates
 
@@ -107,27 +114,50 @@ More reads up to three Hub pages of 100, stopping once 10 match.
 phone: close other apps first), `over_budget` (a chosen context takes more
 than the phone can spare: it runs, and Android may stop the model
 server), `too_big` or `unsupported`, with what the model needs against the
-budget. A model on the phone and a suggestion count files plus KV cache at
-the context its server would get; automatic never changes a verdict (when
-even 16k does not fit, it is `too_big`). A Hugging Face variant counts its
-files alone, since its header is not on the phone yet. The screens offer
-no download of a model that cannot run here, and the runner refuses to
-serve one.
+budget. A model on the phone counts what its server holds (its weights,
+read in place and copied into the CPU's own layouts, and its compute
+buffer: what the runner measured on this phone, through
+`ModelsHost.serving.measured`, else lme's estimate until it has) plus
+one prompt's state (KV cache, recurrent state, context checkpoints:
+`lme/docs/README.md` → RAM gate and context) at the context its server
+would get; automatic never changes a verdict (when even 16k does not
+fit, it is `too_big`). The runner measures a model soon after its
+download or import, so the estimate rarely shows for long. A suggestion
+counts its files plus one prompt's state alone, as the phone sizes we
+publish for it (`suggested.json`) do, until those come from phones'
+measurements; so a suggestion may read as fitting where the same model
+on the phone, measured, does not (the 4B on an 8 GB phone:
+`lme/docs/planning/todo.md` → Open questions). A Hugging Face variant counts its files alone, since its
+header is not on the phone yet. The screens offer no download of a model
+that cannot run here, and the runner refuses to serve one.
 
-## Context
+## Context and memory
 
-`context/ModelContexts.kt` reads lme-host's `contextPlan` (the rule:
+`context/ModelContexts.kt` (the card's context) and `memory/ModelMemory.kt`
+(the Memory setting's traits, line and checks) read lme-host's
+`contextPlan`, which takes the model's choices as inputs (the rule:
 `lme/docs/README.md` → RAM gate and context).
 
 - **Automatic** (the default). A start decides with the memory free then,
   so it can pick otherwise than the card showed; the Automatic choice says
   so.
-- **Chosen**: kept on the model in `models.json` (`context`), for every
-  agent on it.
+- **Chosen**: kept on the model in `models.json` (`context`, and `serve`
+  for the rest: RAM share, KV cache size, saved prompts, checkpoints,
+  threads, detailed log), for every agent on it. The ranges and what Auto
+  picks come from lme's `RamRules` through the model's `traits`; the app
+  writes no number of its own.
 - **On the card**: while its server runs, its own context (the runner
   sets `ModelsHost.serving` to every model it serves, since the server's
   memory would make a new pick look smaller); else what a start would get
-  now.
+  now. While its server runs, the Memory line counts what that server took
+  from free memory as free, since a change restarts it first: its plan's
+  `heldBytes` at the start (all but the file pages it reads in place,
+  which are mapped from storage), which the runner passes with each
+  `ServingModel`.
+- **Chats on storage**: with room on storage the plan keeps chats there
+  (up to 4 per model) instead of in the RAM prompt cache, and gives that
+  RAM to the context; `ModelsHost.serving.chatStorageFree` says how much
+  is free (null once saving failed this run: chats back in RAM).
 
 ## Jobs
 
@@ -175,13 +205,17 @@ model saying whether it is loaded and how many agents use it; Import),
 Suggested, Hugging Face with a repository's variants, and the token. A
 model's card opens its own page (`model/ModelPage.tsx`): its facts, Stop
 while it is loaded (which stops the agents on it first and asks before
-when there are any), Context, Used by (the agents set to it, running ones
+when there are any), Memory, Used by (the agents set to it, running ones
 first, each opening its page), Server log, its Hugging Face repository,
 and Delete, refused while an agent is set to the model. Server log
 (`model/ModelLogPage.tsx`) shows the end of its server's log as its last
 start wrote it (the runner's `modelServerLog`, at most 128 KiB of whole
 lines), re-read every 2 s while the memory guard's reading lists the
-model (loading or loaded). The list opens
+model (loading or loaded), under the model's Detailed log switch
+(`model/DetailedLogRow.tsx`, off by default; a change restarts the model,
+whose next start logs each request's cache choices and the text where a
+prompt first changes, so its note says the log then holds prompt text).
+The list opens
 on the most downloaded chat models; typing searches after a pause. Sort
 and Filters (a sheet: Size, License, chat models only) are two half-width
 buttons with a wrapping line of the filters that are on; nothing scrolls
@@ -197,12 +231,30 @@ why.
 
 A card says "Context 48k of 256k: reduced so it runs well on this phone"
 when automatic serves less than the trained context (k is 1024 tokens, as
-model makers write it); so does the agent's Model section. The Context
-setting (`context/ContextSetting.tsx`) is Automatic, or a slider over
-whole 1024-token steps with its verdict live and a line on the speed cost
-(`SPEED_NOTE`). Save is off past the phone's RAM; a save restarts the
-agents on the model (`state/flows/modelContext.ts`), which brings the
-server up with the new context.
+model makers write it); so does the agent's Model section. The Memory
+setting (`memory/MemorySetting.tsx`, opened from the model page's
+Memory button) is "RAM it may use" (Less, Normal, More, each with what it
+lets the model take here) with our planner's line under it, live ("On
+this phone: context 32k · 2 chats saved · 3.3 GB"; under it a line when
+fewer than 2 chats fit, since chats that take turns need 2, and "Limited
+by free memory now: stopping other agents or apps gives it more." when
+free memory, not the share, is the limit; with chats on storage, "chats
+on storage" and "Chats that take turns are kept on storage (up to 4), so
+switching between them takes about a second." in place of the saved
+chats in RAM; "half-size notes" when the plan uses them; and "about"
+before the size, with a line saying so, until the model's server has
+measured itself here), then Advanced,
+folded, each Auto by default: Context (`context/ContextSetting.tsx`:
+Automatic, or a slider over whole 1024-token steps, with a line on the
+speed cost, `SPEED_NOTE`), Note size (Auto, Full, and Half where the
+model's heads allow it), Saved chats (with how many fit now beside its
+value: "Auto: 2 · none fit now"; while chats go to storage, a line first
+that the RAM count is then only for when storage runs short), Snapshots (only for a model with
+recurrent or sliding-window layers) and CPU threads, as chip rows. Save is
+off while the planner says the model would not run; a save restarts the
+agents on the model (`state/flows/modelMemory.ts`), which brings the
+server up with the new plan. Its words and choices are
+`logic/memory.ts`, checked by `scripts/vectors/test_model_memory.js`.
 
 While the model reads a prompt for the agent in front, the app bar shows
 "Reading prompt · 33%", the share of the new tokens read so far, rounded

@@ -3,6 +3,7 @@ package com.phonecando.models.api
 import com.phonecando.lme.api.device.DeviceInfo
 import com.phonecando.lme.api.model.ModelRecord
 import com.phonecando.lme.api.model.ModelSource
+import com.phonecando.lme.api.serve.MeasuredMemory
 import com.phonecando.lme.catalog.RepoFile
 import com.phonecando.lme.catalog.known.KnownBases
 import com.phonecando.lme.host.context.ContextRange
@@ -10,6 +11,7 @@ import com.phonecando.lme.host.context.ContextSizing
 import com.phonecando.lme.host.ram.RamGate
 import com.phonecando.lme.store.download.PendingDownload
 import com.phonecando.models.context.ModelContexts
+import com.phonecando.models.memory.ModelMemory
 import com.phonecando.models.ram.RamChecks
 import com.phonecando.models.serving.ServingModel
 
@@ -17,9 +19,14 @@ import com.phonecando.models.serving.ServingModel
 // in app/src/engine/models/types.ts). Numbers go out as doubles: a JS number
 // holds any file size we will ever see.
 
-/** [serving]: this model's running server, if any (its card shows that server's context). */
-internal fun ModelRecord.toMap(device: DeviceInfo, serving: ServingModel?): Map<String, Any?> {
-  val view = ModelContexts.view(device, this, serving)
+/**
+ * [serving]: this model's running server, if any (its card shows that
+ * server's context); [measured]: what its server measured of itself here
+ * (null: the estimate); [storageFreeBytes]: free where its chats would be
+ * kept (null: they stay in RAM).
+ */
+internal fun ModelRecord.toMap(device: DeviceInfo, serving: ServingModel?, measured: MeasuredMemory? = null, storageFreeBytes: Long? = null): Map<String, Any?> {
+  val view = ModelContexts.view(device, this, serving, measured, storageFreeBytes)
   return mapOf(
     "id" to id,
     "name" to name,
@@ -40,6 +47,10 @@ internal fun ModelRecord.toMap(device: DeviceInfo, serving: ServingModel?): Map<
     "addedAt" to addedAtMillis.toDouble(),
     "dates" to datesMap(KnownBases.dates(this)),
     "ram" to view.ram.toMap(),
+    "memory" to serve.toMap(),
+    "detailedLog" to serve.detailedLog,
+    "plan" to ModelMemory.view(device, this, context, serve, serving, measured, storageFreeBytes).toMap(),
+    "traits" to ModelMemory.traits(device, this).toMap(),
   )
 }
 
