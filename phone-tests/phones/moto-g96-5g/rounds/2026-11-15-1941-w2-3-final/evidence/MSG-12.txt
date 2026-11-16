@@ -1,0 +1,10 @@
+The hop-limit step, sent 19:48:05. A-01 called:
+agents_send({ to: "opencode 8", text: "thanks", replyTo: 45, wake: true })
+-> {"id":47,"results":[{"to":"opencode 8","status":"delivered"}]}   (no reason)
+
+messages.jsonl, trimmed:
+47: from opencode to opencode 8, "thanks", replyTo 45, hop 0, wake true
+    delivery: queued, then delivered, woke false, started false, reason null
+
+A-12 was idle, but its notification still said "Working" (since 19:52:41
+it read "Send pong message to opencode agent — opencode 8 · Working").

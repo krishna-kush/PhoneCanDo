@@ -1,0 +1,10 @@
+Schedule runs log (files/state), 2026-11-14 evening. Fields trimmed;
+local times added from firedAt.
+
+seq 7   17:19  Claude Code  "Reply with just the word ok."                outcome asked: it could not be woken
+seq 8   17:29  opencode     "Hi"                                          outcome woke
+seq 9   18:15  Claude Code  "Reply with just the word ok."                outcome restarted
+seq 10  18:19  Claude Code  "Create a file named deny-test.txt ..."       outcome restarted
+
+seq 7 is bug 4 in the results: the task was delivered with woke=true and
+ran, yet the log says "asked".

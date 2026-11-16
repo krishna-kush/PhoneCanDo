@@ -1,0 +1,12 @@
+messages.jsonl, trimmed (agent ids left out). A-01 is "opencode", A-12 is
+"opencode 8".
+
+44: from opencode to opencode 8, "reply to me with the word hi", replyTo null, hop 0, wake true
+    delivery: delivered, woke true, started true          (sent 19:45:31, delivered 19:45:34)
+45: from opencode 8 to opencode, "hi", replyTo 44, hop 1, wake true
+    delivery: queued, then delivered, woke true, started false   (19:45:38)
+
+A-01's tool result for 44:
+{"id":44,"results":[{"to":"opencode 8","status":"woken","reason":"it was stopped; it starts in the background to read this. Its answer can take minutes (a local model may take several), so don't wait for it: end your turn, and its answer wakes you."}]}
+
+Messages page: 45 "hi" -> "delivered · woke opencode"; 44 -> "delivered · started opencode 8".

@@ -1,0 +1,19 @@
+A-01's three agents_send results (prompt sent 19:16:21), read from A-01's
+own chat records:
+
+id 41: {"to":"Claude Code","status":"woken","reason":"it was stopped; it starts in the background to read this. Its answer can take minutes (a local model may take several), so don't wait for it: end your turn, and its answer wakes you."}
+id 42: {"status":"queued","reason":"it is starting; it gets this once it runs"}
+id 43: same as 42
+
+messages.jsonl, deliveries of 41 to 43 (one start, delivered together):
+41: {"status":"delivered","woke":true,"started":true,"at":1794750403395}
+42: {"status":"delivered","woke":true,"started":true,"at":1794750403395}
+43: {"status":"delivered","woke":true,"started":true,"at":1794750403395}
+(1794750403395 is 2026-11-15 19:16:43)
+
+0.8B model log (fresh server):
+task 1  prompt eval time =   6992.42 ms /   987 tokens
+task 3  prompt eval time = 195705.38 ms / 13641 tokens (14.35 ms per token, 69.70 tokens per second)
+        seen 19:20:35, about 3 min 40 s after the send
+
+A-04 was not stopped at the 3-minute mark while the model read.

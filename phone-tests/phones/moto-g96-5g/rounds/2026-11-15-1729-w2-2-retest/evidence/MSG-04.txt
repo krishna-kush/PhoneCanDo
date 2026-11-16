@@ -1,0 +1,10 @@
+logcat after the wake of 18:26:58 (message 39):
+
+18:30:08.747 W PhoneCanDoAcp: turn of f27f4968232b7c11 went silent: cancelled
+18:30:08.749 I PhoneCanDoAcp: f27f4968232b7c11: turn ended: It said nothing for 3 minutes, so we stopped it. Open it: it may be waiting for you there (to sign in or to trust its folder), or it hit a usage limit.
+18:30:08.775 W PhoneCanDoEngines: ACP engine f27f4968232b7c11 stopped: its turn went silent
+
+Shade at 18:30: PhoneCanDo Full Dev, "Gemini CLI" / "It said nothing for 3
+minutes, so we stopped it. Open it: it may be waiting for…"
+
+Gemini never answered "hi".

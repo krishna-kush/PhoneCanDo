@@ -1,0 +1,22 @@
+0.8B model server log (saved 18:34). Times are the server's uptime
+(minutes.seconds.ms). Turn A sent 17:34:07, B 17:46:51, C 17:52:11.
+
+load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+
+Turn A (A-04 after /clear)
+4.23.163  selected slot by LRU, n_tokens = 0, t_last = -1
+10.03.818 task 1   | prompt eval time = 339794.89 ms / 14376 tokens (23.64 ms per token, 42.31 tokens per second)
+
+Turn B (A-10 after /new)
+17.08.458 selected slot by LRU, n_tokens = 14384
+20.12.331 task 190 | prompt eval time = 183512.38 ms /  9664 tokens (18.99 ms per token, 52.66 tokens per second)
+
+Turn C (A-04, same chat)
+22.27.363 selected slot by LRU, n_tokens = 9666
+24.42.516 task 293 | prompt eval time =  65209.18 ms /  1384 tokens (47.12 ms per token, 21.22 tokens per second)
+
+Right after: Claude Code's compaction request, read from the start
+24.42.972 selected slot by LRU, n_tokens = 16468
+31.53.835 task 1078 | prompt eval time = 430490.22 ms / 14875 tokens (28.94 ms per token, 34.55 tokens per second)
+
+No "exceeds", "checkpoint" or "forcing" line in the whole log.

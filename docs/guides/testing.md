@@ -15,6 +15,9 @@
 - PTY core on the host: `sh app/modules/phonecando-terminal/android/src/test/c/run.sh`.
 - On-device: logcat `[phonecando-kb]` / `[phonecando-size]`, plus
   `adb exec-out screencap` for any layout claim.
+- Phone tests: `../../phone-tests/` (the cases, each phone's dated rounds,
+  the latest result per case in `status.md`); read its README's warning
+  first.
 
 ## Linux runtime checks
 

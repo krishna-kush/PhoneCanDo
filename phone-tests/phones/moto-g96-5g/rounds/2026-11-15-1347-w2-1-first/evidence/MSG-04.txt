@@ -1,0 +1,12 @@
+From the tester's notes. A-01 sent the waking message at 14:09:42.
+
+14:09:52 logcat: Gemini's engine started
+14:09:56 logcat PhoneCanDoAcp: "session/load failed: Internal error"; nothing after it
+14:10    notification "New chat / Gemini CLI · Working"
+14:21    Gemini's node processes at 0% CPU (5.9 s CPU time in all)
+14:21:58 notification "Gemini CLI · Stopped with an error" ("1 stopped with an error"); no reply came
+14:24    opening Gemini's Home showed its folder-trust question
+         ("Do you trust the files in this folder?"); left unanswered
+14:25    What it can do: Opens the ACP chat after "Not working: It quit with
+         exit 42 when started on the chat ACP mode used, so it opened a new
+         chat instead."

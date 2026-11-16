@@ -1,0 +1,11 @@
+2026-11-16. A-01 mid-turn on ten `sleep 100` runs (sent 03:43:20, working
+from 03:43:45). adb reboot at 03:51; I unlocked the phone.
+
+Shade dumps after the unlock (PhoneCanDo's lines only):
+"opencode: cut off mid-task"
+"The phone restarted while it worked on “Ten sequential sleep 100 runs”. Continue in the same chat?"
+"Continue"
+
+Continue tapped 04:04:36. A-01's Home then showed
+"Ten sequential sleep 100 runs · opencode · Working", and its session list
+showed that chat busy.

@@ -71,12 +71,17 @@ Kotlin library API. The library API is in `pce/docs/api/`.
 
 - `guides/testing.md` — app and Linux runtime checks, CI workflows and
   automation test layers.
+- `../phone-tests/README.md` — tests on a real phone: the cases, each
+  phone's dated rounds and the latest result per case (`status.md`); run by
+  an AI tester so far, so read its warning first.
 - `guides/adding-an-agent.md` — add a coding agent we don't ship: in the
   app for yourself, or as a kind in `agents/` by pull request.
 
 ## Planning
 
-- `planning/todo.md` — open app work (R8 for release builds).
+- `planning/todo.md` — open app work (R8 for release builds, Play's
+  background work, packs, account features, ACP mode and what the phone
+  tests found).
 - `planning/automation.md` — automation phases, non-goals and cross-product
   roadmap.
 - `research/` — background notes and open questions.

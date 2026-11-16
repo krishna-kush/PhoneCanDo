@@ -1,0 +1,15 @@
+agents_send results in A-01, from the tester's notes.
+
+18:14 send (message 37):
+{"id":37,"results":[{"to":"Gemini CLI","status":"queued","reason":"it is stopped; it gets this when it next runs (not started: the phone is short of memory)"}]}
+
+18:16 the tester stopped A-10 (idle). MemAvailable before: 1.54 GB.
+
+18:18 retry (message 38): queued again, "not started: the phone is short
+of memory". MemAvailable about 1.51 GB; running: A-01, A-04 and the 0.8B's
+server.
+
+18:24 the tester stopped A-04. MemAvailable 3.0 GB.
+
+18:26:58 third send (message 39): "this time the wake worked: Gemini CLI was
+stopped and started in the background to read it" (A-01's words).

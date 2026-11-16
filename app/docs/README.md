@@ -16,20 +16,30 @@ limits) stay in the repo-root `docs/` tree.
 ## Modules
 
 - [`modules/runner.md`](modules/runner.md) — engine host: agents and kinds,
-  engines (server or TUI), installs, the local model servers, run limits
-  and the memory guard, the foreground service, notifications and
-  telemetry counters.
+  engines (server or TUI, and ACP mode), installs, the local model servers
+  (their measured memory, chats on storage), run limits and the memory
+  guard, the foreground service, notifications, messages, schedules,
+  cut-off runs, checks and telemetry counters.
 - [`modules/terminal.md`](modules/terminal.md) — JNI PTY, xterm renderer,
   input/sizing contract and terminal sessions (agent TUI or image shell).
 - [`modules/chat.md`](modules/chat.md) — Home: the active agent's web UI or
   TUI, the navigation around it (page stack, drawer, Back), the RAM
   warning over it and the agents' messages page.
 - [`modules/models.md`](modules/models.md) — local models: files, Hugging
-  Face, downloads and imports, RAM verdicts, context and the token.
+  Face, downloads and imports, RAM verdicts, context and the Memory
+  setting, and the token.
 - [`modules/bridge.md`](modules/bridge.md) — loopback bridge, per-agent tokens,
   prompts, screen lease, `mobile_*` tools, trust gate and flavors.
 - [`modules/automation.md`](modules/automation.md) — PCE host integration, routes
   and current status.
+
+## Testing
+
+- [`../../phone-tests/README.md`](../../phone-tests/README.md) — phone tests
+  (repo root): what has been tried on a real phone, on which build and
+  agents, and what is not tested yet (run by an AI tester so far: read its
+  warning first), and how to start a new round. Latest results:
+  [`../../phone-tests/status.md`](../../phone-tests/status.md).
 
 ## Related
 

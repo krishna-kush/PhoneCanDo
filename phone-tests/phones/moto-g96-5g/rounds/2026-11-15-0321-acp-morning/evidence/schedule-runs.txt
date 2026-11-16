@@ -1,0 +1,13 @@
+Schedule runs log (files/state), 2026-11-15 morning. Fields trimmed;
+local times added from firedAt. This log is the only detail kept from the
+morning's schedule tests.
+
+seq 15  03:31  Claude Code  "Reply with just the word ok."  outcome restarted
+seq 16  03:52  Claude Code  "Reply with just the word ok."  outcome restarted
+seq 17  03:52  Claude Code  "Reply with just the word ok."  outcome woke
+seq 18  04:55  Claude Code  "Reply with just the word ok."  outcome failed: PhoneCanDo was closed before the task finished
+seq 19  05:53  Claude Code  "Reply with just the word ok."  outcome woke
+seq 20  05:58  Claude Code  "Reply with just the word ok."  outcome woke
+
+Which test seq 18 belongs to was not noted. The summary counted every
+schedule case as passed.

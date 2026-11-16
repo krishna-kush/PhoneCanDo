@@ -1,0 +1,24 @@
+MODEL-13: chats that take turns come back from storage (same turns as MODEL-02)
+
+logcat -s PhoneCanDoModels, streamed by the first tester from 07:58 (the phone's
+buffer no longer holds these lines at 09:13):
+  11-16 08:02:54.896 I/PhoneCanDoModels(12781): model qwen3-5-0-8b-q4-k-m: context 32768, prompt cache 0 MiB, 1296 MiB in all (measured), chats on storage 4, Fits(needBytes=1359298560, budgetBytes=3872014300)
+  11-16 08:02:59.942 I/PhoneCanDoModels(12781): model qwen3-5-0-8b-q4-k-m ready for e9c9dd5619d5e113
+Turn B sent 08:09:35 (A-10):
+  11-16 08:09:38.399 I/PhoneCanDoModels(12781): model qwen3-5-0-8b-q4-k-m: chat a0518cde kept on storage
+Turn C sent 08:13:05.8 (A-04):
+  11-16 08:13:06.658 I/PhoneCanDoModels(12781): model qwen3-5-0-8b-q4-k-m: chat 64f9d3df kept on storage
+  11-16 08:13:07.050 I/PhoneCanDoModels(12781): model qwen3-5-0-8b-q4-k-m: chat a0518cde loaded back from storage
+After turn C's second request:
+  11-16 08:23:35.598 I/PhoneCanDoModels(12781): model qwen3-5-0-8b-q4-k-m: chat a0518cde kept on storage
+
+Model log at turn C (server clock; [clock time]):
+  10.12.142 load_slot_ch: restored 3 context checkpoint(s) from .chats/a0518cde….bin   [08:13:07.0]
+  10.12.254 task 206 | processing task                                                 [08:13:07.2]
+  10.34.109 task 206 | prompt processing, n_tokens = 861, progress = 0.97, t = 21.86 s
+  11.05.968 task 206 | prompt eval time = 35351.67 ms / 1377 tokens                   [08:14:01]
+  11.05.968 task 206 |        eval time = 18362.21 ms /  133 tokens
+
+Turn C's first read: 1377 tokens taking 35.4 s, not a few dozen; output began
+only after it. Its answer came from task 4476 (MODEL-02.txt), a new prompt read
+from the start: 16787 tokens, done 08:30:07.

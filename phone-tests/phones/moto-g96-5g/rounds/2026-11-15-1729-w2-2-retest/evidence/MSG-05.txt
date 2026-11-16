@@ -1,0 +1,3 @@
+agents_send result in A-01, second waking message, 18:31:26:
+
+{"id":40,"results":[{"to":"Gemini CLI","status":"queued","reason":"it is stopped; it gets this when it next runs (not started: it failed under 10 minutes ago (its last turn said nothing for 3 minutes, so we stopped it))"}]}

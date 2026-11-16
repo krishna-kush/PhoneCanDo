@@ -1,0 +1,10 @@
+Schedule runs log (files/state), 2026-11-14 afternoon. Fields trimmed;
+local times added from firedAt.
+
+seq 1  14:58  Claude Code  "Reply with just the word ok."         outcome started
+seq 2  15:10  Claude Code  "Reply with just the word ok."         outcome failed: the agent's turn ended with an error: the agent was stopped
+seq 3  15:20  Claude Code  "Create a file named acp-test.txt ..." outcome failed: the agent's turn ended with an error: the agent was stopped
+seq 4  15:25  Claude Code  "Create a file named acp-test.txt ..." outcome asked
+seq 5  15:44  Claude Code  "Reply with just the word ok."         outcome started
+
+Which of the two failed runs was the app-closed test was not noted.

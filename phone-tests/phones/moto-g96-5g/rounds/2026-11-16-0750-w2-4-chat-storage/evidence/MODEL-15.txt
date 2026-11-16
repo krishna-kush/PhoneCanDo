@@ -1,0 +1,21 @@
+MODEL-15: app opened 07:58:40 (process up since the 07:45:47 install)
+
+adb logcat -s PhoneCanDoModels | grep -i measured
+  11-16 07:58:49.069 I/PhoneCanDoModels(12781): model qwen3-5-0-8b-q4-k-m measured at 41984 (f16) in 640 ms: read in place 200 MiB, copied 549 MiB, state 511 MiB, compute 76 MiB
+  11-16 07:58:49.795 I/PhoneCanDoModels(12781): model qwen3-5-4b-q4-k-m measured at 16384 (q8_0) in 696 ms: read in place 500 MiB, copied 2778 MiB, state 324 MiB, compute 95 MiB
+
+0.8B model page, 08:00 (screenshot; dumps fail on model pages):
+  "Fits this phone" / "Needs 1.4 GB of RAM; this phone can spare 3.9 GB."
+0.8B Memory, 08:00:
+  "On this phone: context 32k · chats on storage · 1.4 GB"
+  "Chats that take turns are kept on storage (up to 4), so switching between them takes about a second."
+  "Limited by free memory now: stopping other agents or apps gives it more."
+
+4B model page and Memory, 08:01 (noted as is):
+  "Too big for this phone" / "Needs 4.1 GB of RAM; this phone can spare 3.9 GB."
+  "On this phone: context 16k · chats on storage · half-size notes · 4.1 GB"
+  "Chats that take turns are kept on storage (up to 4), so switching between them takes about a second."
+  Measured parts: 500 + 2778 + 324 + 95 = 3697 MiB.
+Models page, Suggested card for Qwen3.5 4B at the same time:
+  "Fits this phone" / "Needs 3.6 GB of RAM; this phone can spare 3.9 GB." / "On this phone."
+Left both Memory pages with Back, nothing changed or saved.

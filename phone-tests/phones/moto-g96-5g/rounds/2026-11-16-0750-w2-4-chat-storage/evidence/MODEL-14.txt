@@ -1,0 +1,18 @@
+MODEL-14: adb shell run-as com.phonecando.app.full.dev ls -la files/models/qwen3-5-0-8b-q4-k-m/.chats/
+
+08:24 (first tester, right after the 08:23:35 save):
+  drwx------ 2 u0_a416 u0_a416      3452 2026-11-16 08:23 .
+  drwx------ 3 u0_a416 u0_a416      3452 2026-11-16 08:02 ..
+  -rw------- 1 u0_a416 u0_a416 220056476 2026-11-16 08:13 64f9d3dff006a0ccc8ae19e93b5a852f.bin
+  -rw------- 1 u0_a416 u0_a416 322805132 2026-11-16 08:23 a0518cde65867f2a9cc7107b6f1f05f6.bin
+  -rw------- 1 u0_a416 u0_a416       120 2026-11-16 08:02 shape
+
+09:14 (second tester, after the server saved its last chat to a .tmp at 08:32:19 and exited):
+  drwx------ 2 u0_a416 u0_a416      3452 2026-11-16 08:32 .
+  drwx------ 3 u0_a416 u0_a416      3452 2026-11-16 08:02 ..
+  -rw------- 1 u0_a416 u0_a416 287581372 2026-11-16 08:32 2c57aa6da1c1b773a38a298d5ae053c6.bin
+  -rw------- 1 u0_a416 u0_a416 220056476 2026-11-16 08:13 64f9d3dff006a0ccc8ae19e93b5a852f.bin
+  -rw------- 1 u0_a416 u0_a416 322805132 2026-11-16 08:23 a0518cde65867f2a9cc7107b6f1f05f6.bin
+  -rw------- 1 u0_a416 u0_a416       120 2026-11-16 08:02 shape
+
+No .tmp file in either listing.

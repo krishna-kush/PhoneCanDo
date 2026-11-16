@@ -1,0 +1,12 @@
+2026-11-16 03:21, the first app start after the dev app's process died
+overnight (no reboot). New notice:
+"opencode 8: cut off mid-task"
+"Android closed PhoneCanDo while it worked on “Send pong message to opencode agent”. Continue in the same chat?"
+Not tapped.
+
+A-12 had been idle since 19:58 the evening before: its chat showed no new
+turn, only its notification still said "Working".
+
+After the 03:51 reboot the shade offered it again, next to A-01's notice:
+"opencode 8: cut off mid-task"
+"The phone restarted while it worked on “Send pong message to opencode agent”. Continue in the same chat?"

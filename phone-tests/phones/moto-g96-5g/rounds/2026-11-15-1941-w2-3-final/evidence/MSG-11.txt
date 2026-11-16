@@ -1,0 +1,11 @@
+messages.jsonl, trimmed (agent ids left out).
+
+46: from opencode to opencode 8, "Got it ��� thanks, hi received. Nothing else needed from you.", replyTo 45, hop 2, wake true
+    delivery: queued, then delivered, woke false, started false, reason null   (19:45:42)
+
+A-01 sent 46 by itself, in the turn that 45 woke:
+agents_send({to:"opencode 8", text:"Got it — thanks, hi received. Nothing else needed from you.", replyTo:45})
+-> {"id":46,"results":[{"to":"opencode 8","status":"delivered"}]}
+
+The tool call had a real em dash; the log holds three U+FFFD characters
+(bytes EF BF BD, three times).

@@ -1,0 +1,8 @@
+From the tester's notes, turn A of MODEL-02.
+
+14:58:24 turn A sent; 14:58:29 screen off (keyevent 223)
+14:58:24 PhoneCanDoPower: "holding the CPU awake for work"
+No "letting the CPU sleep" line while the turn worked.
+14:59 notification: "1 chat" / "1 working · reading the prompt"
+15:04 the screen-off had locked the phone; I unlocked it. Screen-off was
+skipped for turns B and C.

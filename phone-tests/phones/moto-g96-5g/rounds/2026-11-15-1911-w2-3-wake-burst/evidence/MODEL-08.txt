@@ -1,0 +1,9 @@
+0.8B model log after MSG-08's prompt (from the tester's notes):
+
+task 3    prompt eval time = 195705.38 ms / 13641 tokens   (the woken turn's prompt)
+task 216  prompt eval time = 101032.29 ms /  8651 tokens   (a side request; ~19:22)
+task 218  prompt eval time = 236508.73 ms / 15004 tokens   (back on the main chat: read in full again; ended ~19:27:20)
+task 317  prompt eval time = 117520.07 ms /  9058 tokens   (~19:29:20)
+
+With room for one saved chat, saving the side request pushed out the main
+chat, so task 218 read all of it again.

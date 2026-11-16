@@ -1,0 +1,22 @@
+0.8B model server log, test 2 (saved 13:45). Times are the server's
+uptime (minutes.seconds.ms). Turn A sent 13:31:02, B 13:36:04, C 13:40:34.
+
+Turn A (A-04 after /clear)
+64.33.427 selected slot by LCP similarity, f_sim_best = 0.823 (> 0.100 thold), f_keep = 0.613
+66.06.475 task 2293 | prompt eval time =  92461.51 ms /  4407 tokens
+
+Turn B (A-10, a fresh chat)
+69.36.246 selected slot by LRU, n_tokens = 14380
+69.36.259 W alloc: - prompt state size 245.909 MiB exceeds cache size limit 180.000 MiB, skipping
+71.57.871 task 2351 | prompt eval time = 141377.47 ms /  9831 tokens
+
+Turn C (A-04, same chat as A)
+74.05.558 selected slot by LRU, n_tokens = 9833
+74.05.563 W alloc: - prompt state size 211.786 MiB exceeds cache size limit 180.000 MiB, skipping
+78.02.571 task 2434 | prompt eval time = 236485.12 ms / 14398 tokens
+
+On screen: A "Hello!" (1m 34s), B "Hello!" (2m 22s), C "Goodbye!" (3m 58s).
+
+The PC kept a copy of the model log once a minute from 12:10. Its copy
+from 12:27:18 holds the server run before this round (n_ctx_slot = 65536),
+saved when the server restarted.

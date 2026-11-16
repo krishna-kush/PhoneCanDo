@@ -1,0 +1,12 @@
+A-04: /clear, then "Say ok." sent 18:22:43.
+
+Shade at 18:23, PhoneCanDo Full Dev (silent group):
+collapsed: "1 chat · now" / "1 working · reading the prompt"
+expanded:  "1 chat" / "New chat · Claude Code · Working" /
+           "Qwen3.5-0.8B · reading the prompt, 14%, 2.0k of 14.4k tokens"
+
+The 0.8B's log for the same request (uptime minutes.seconds.ms):
+52.59.470 selected slot by LRU, n_tokens = 14877
+52.59.478 W alloc: - making room for prompt cache entry, removing oldest entry (size = 156.728 MiB)
+52.59.531 W alloc: - making room for prompt cache entry, removing oldest entry (size = 199.230 MiB)
+53.25     prompt processing, n_tokens = 2048, progress = 0.14 (read from the start again)

@@ -1,0 +1,15 @@
+0.8B model server log (saved 15:06). Times are the server's uptime
+(minutes.seconds.ms). Turn A sent 14:58:24, turn B 15:05:36.
+
+load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+
+Turn A (A-04 after /clear)
+1.22.734 selected slot by LRU, n_tokens = 0, t_last = -1
+6.27.122 task 1 | prompt eval time = 302525.80 ms / 14376 tokens (21.04 ms per token, 47.52 tokens per second)
+
+Turn B (A-10, a new chat)
+8.36.047 selected slot by LRU, n_tokens = 14384
+8.36.059 W alloc: - prompt state size 245.956 MiB exceeds cache size limit 88.000 MiB, skipping
+
+Turn A's chat was not saved, so turn C would read it again. Turn C was not
+run. The Memory page agreed: "no chats saved".

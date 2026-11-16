@@ -1,0 +1,37 @@
+MODEL-02: turns A, B and C on the 0.8B (run 08:03-08:30 by the first tester; lines re-read at 09:13)
+
+Model log: files/logs/model-server-qwen3-5-0-8b-q4-k-m.log, saved whole at 08:26 and
+again at 09:13 (274 lines). Its times count from the server's start, 08:02:54.9
+(logcat "context 32768 ... chats on storage 4" at 08:02:54.896); the clock time
+is added in [ ]. Paths shortened to .chats/<file>.
+
+Turn A, A-04 (Claude Code), after /clear at 08:03:42, sent 08:04:11:
+  4.52.028 task 0 | prompt eval time = 215218.53 ms / 14376 tokens          [08:07:47]
+  4.52.028 task 0 |        eval time =    143.62 ms /     2 tokens
+  screen: "● Hello" / "Brewed for 3m 36s"
+
+Turn B, A-10 (Codex), after /new at 08:09:04, sent 08:09:35:
+  6.43.490 save_slot_ch: appended 3 context checkpoint(s) (57.798 MiB) to .chats/a0518cde….tmp   [08:09:38]
+  9.01.613 task 123 | prompt eval time = 137801.00 ms / 9664 tokens          [08:11:57]
+  screen: "• Hello!" / "Worked for 2m 21s"
+
+Turn C, A-04, same chat, sent 08:13:05.8:
+  10.11.750 save_slot_ch: appended 4 context checkpoint(s) (77.064 MiB) to .chats/64f9d3df….tmp  [08:13:06.6]
+  10.12.142 load_slot_ch: restored 3 context checkpoint(s) from .chats/a0518cde….bin             [08:13:07.0]
+  10.34.109 task 206 | prompt processing, n_tokens = 861, progress = 0.97, t = 21.86 s
+  11.05.968 task 206 | prompt eval time = 35351.67 ms / 1377 tokens          [08:14:01]
+  11.05.968 task 206 |        eval time = 18362.21 ms /  133 tokens
+  20.39.810 task 370 | prompt eval time = 16975.26 ms /  600 tokens          [08:23:35]
+  20.39.810 task 370 |        eval time = 556646.11 ms / 3817 tokens
+  20.40.667 save_slot_ch: appended 3 context checkpoint(s) (57.798 MiB) to .chats/a0518cde….tmp  [08:23:35.6]
+  20.59.080 task 4476 | prompt processing, n_tokens = 2048, progress = 0.12 (read from the start)
+  27.12.320 task 4476 | prompt eval time = 390811.87 ms / 16787 tokens        [08:30:07]
+  27.12.320 task 4476 |        eval time =    728.14 ms /     3 tokens
+  29.24.112 save_slot_ch: appended 3 context checkpoint(s) (57.798 MiB) to .chats/2c57aa6d….tmp  [08:32:19]
+  29.24.117 srv operator(): cleaning up before exit...                                         [08:32:19]
+
+A-04's screen at 08:12:58, before turn C (screenshot): "6297% until auto-compact" by the input box.
+A-04's screen at 08:14:59 (screenshot), under "Now say goodbye in one short line.":
+  "✻ Compacting conversation… (1m 52s)" / "6297% until auto-compact"  (no answer yet)
+
+"exceeds cache size limit" in the whole log: 0 lines. "forcing" or "removing": 0 lines.
