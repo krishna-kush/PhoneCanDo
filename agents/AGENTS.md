@@ -129,7 +129,16 @@ phonecando-linux <- kit-api   (ProjectDir only: the machine's shell starts in th
 
 - **server**: a loopback HTTP server on its own port. It needs
   `readiness.http`; `auth`, `events[].sse` (with its parser hook),
-  `chats.title` and a web Home are server-only.
+  `chats` and a web Home are server-only.
+  - `chats.title.http {path, json}`: GET a chat's title (`{{sessionId}}`
+    in the path), the string at the JSON pointer `json`.
+  - `chats.active.http {path, json}`: GET the chats running now; at the
+    JSON pointer `json` an object keyed by chat id, or an array of chat
+    ids. When a chat has shown working with no activity for
+    `idle.quietSec` (60 s without an idle rule), the runner asks, and each
+    working chat the answer does not name ends as a guessed stop: a lost
+    verdict, or an event the parser took for work that started none,
+    never leaves a chat working for good. `chats` needs one of the two.
 - **tui**: the kind's own TUI on a PTY the runner keeps. It runs on when
   you leave the tab or the app, its screen comes back when you return, and
   the Home tab shows it. It has no port, so none of the server blocks.
@@ -237,10 +246,12 @@ as a prompt; the agent's questions come to the phone as permission
 prompts. Opening Home switches it back to the terminal on the same chat;
 while an ACP turn still runs, Home shows that run live instead. A kind's
 hooks still run in ACP mode, so messages still reach a busy turn, and an
-idle agent in ACP mode gets a waking message as a prompt. So a kind with
-`engine.acp` runs scheduled tasks and its level is `wakes`: without phone
-tools, other agents' messages still arrive as prompts, but it can't answer
-them or send any.
+idle agent in ACP mode gets a waking message as a prompt; a stopped one
+is started in ACP mode for it (with "Other agents can wake it" on and room
+on the phone), as is a stopped agent of a kind that wakes through its
+server. So a kind with `engine.acp` runs scheduled tasks and its level is
+`wakes`: without phone tools, other agents' messages still arrive as
+prompts, but it can't answer them or send any.
 
 A kind gets `engine.acp` only once the ACP registry
 (agentclientprotocol.com, Registry) or its own docs name the command. Its
@@ -254,7 +265,9 @@ check).
 (`openai-chat`, `openai-responses`, `anthropic`, in the order it prefers
 them), the `env` it sets and the `args` that go right after its program,
 filled from the model server (`{{baseUrl}}`, `{{model}}`,
-`{{contextWindow}}`; `{{modelKey}}` only in env). The runner uses the
+`{{contextWindow}}`; `{{modelKey}}` only in env). `{{baseUrl}}` may be the
+runner's go-between in front of the server, which keeps chats on storage;
+it passes every request through with the same key. The runner uses the
 first API the server serves (kit-render `ModelSeam`); a kind with no
 `models` is not offered a local model.
 

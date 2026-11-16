@@ -168,8 +168,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   download and import jobs, the HF token in Keystore) and packages
   `libllama-server.so` on every channel (staged by `lme/llamacpp/stage.sh`);
   the runner's model servers (`runner/models/`, one per loaded model, shared
-  by its agents; `LocalModelBinding.kt` the one join) serve a model to an
-  agent. `phonecando-back-gesture` runs the
+  by its agents; `LocalModelBinding.kt` the one join; `measure/` the
+  server's own dry run of its memory, `chats/` the go-between that keeps
+  chats that take turns on storage, `prompt/` the prompt-reading watch)
+  serve a model to an agent. `phonecando-back-gesture` runs the
   back gesture's steps on the UI thread while a page or the drawer is open
   and tells JS the commit (optional: without it Back still works).
   `phonecando-account` is the optional Google sign-in (Credential Manager,
@@ -202,12 +204,25 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   exact when allowed; at a task's time it starts the agent with the task
   as its first prompt (the manifest's `engine.prompt`), wakes it or asks
   you; pure `NextRun`, `DueRules`, `FireRules`, numbers in `ScheduleRules`).
+  `cutoff/` brings back runs a reboot, an update or a dead engine cut off
+  (the runs going in `files/state/cut-off-runs.json`; after boot or the
+  next start, one notice per agent; Continue starts it in the same chat
+  with a note to go on; pure `CutOffRules`, `CutOffLook`, `BringRules`,
+  `CutOffText`).
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
 - `docs/README.md` — repo docs map; `app/docs/README.md` — app/engine docs.
   Read `app/docs/modules/*.md` and `app/docs/context.md` before
   touching native/IME/sizing/automation code. `research/` holds background notes
   and open questions.
+- `phone-tests/` — tests on a real phone, run by an AI tester over adb so far
+  (read the warning in its `README.md`): `cases/` (the tests, one file per
+  area, IDs never reused),
+  `phones/<phone>/rounds/<YYYY-MM-DD-HHMM>-<build>-<slug>/` (each round's
+  plan, prompt, results and evidence, frozen once written),
+  `status.md` (the latest result per case and phone), `builds.md`, and
+  `tester/` (the AI tester's standing rules and prompt). Pick the next
+  round's cases from `status.md`.
 - `agents/` — every coding-agent kind, one folder each: `kit/` (the SDK:
   contracts, manifest schema + validator, payload staging, conformance,
   `./manage agent new`), `native/<id>/` (built by us for Android, in the

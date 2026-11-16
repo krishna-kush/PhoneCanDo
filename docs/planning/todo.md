@@ -98,7 +98,7 @@ ACP mode is built (`agents/AGENTS.md` → ACP mode, `app/docs/modules/runner.md`
 → ACP mode). These come next, built with parallel agents; none starts before
 we say so.
 
-- [ ] Phone test of ACP mode (Update agent first on Claude Code and Pi): a
+- [x] Phone test of ACP mode (Update agent first on Claude Code and Pi): a
   task with the app closed, Home opened mid-run (background view, Stop, back
   to its own app on the same chat), a permission question (notification
   Allow/Deny and the in-app dialog), one agent waking another, a kind with no
@@ -106,8 +106,10 @@ we say so.
   during a background run. Then the checks: What it can do on an agent page,
   Check now on Claude Code and on a custom agent, a broken hook showing Not
   working (one notification, the level dropping, a waiting message saying
-  why), a check that waits for you in the agent's own app (Open <agent>, its
+  why), a check that waits for you in the agent's own app (`Open <agent>`, its
   one notification, going on once you answer).
+  Done by an AI tester on 2026-11-14 and 15; what each round found, and what
+  is not tested yet, is in `phone-tests/` (`status.md`, and each round in `phones/`).
 - [x] Checks on the phone for agents without ACP mode, and for what we add
   on top of ACP (hooks, the "open this chat" flag, phone tools from the
   agent's own config): each capability reads Checked, Not checked yet, Not
@@ -115,40 +117,56 @@ we say so.
   our inbox script reporting its hook ran, the run's output and exit). A
   failure shows the first time (the run, the message, one notification, the
   level shown); Check now runs one short test task.
-- [ ] A guessed stop lets the CPU sleep mid-run: a TUI run that shows
-  nothing for 30 s counts as stopped (TuiEvents.quiet, for Claude Code's
-  Esc, which fires no hook), and that releases the wake lock while the run
-  may still work (seen 2026-11-14: Claude Code's helper agent reading its
-  prompt on a local model). The checks already skip such a guess
-  (`EngineEvent.guessed`); the wake lock and the chat board still take it.
-- [ ] Bring back agents a reboot cut off. After the first unlock
-  (`ScheduleBootReceiver` already re-arms schedules then), restart each
-  agent that had a run going when the phone went down and tell it to go on
-  with its interrupted task, in the same chat (it is on disk). Only agents
-  that were mid-task, and only with your OK: a notification with Continue,
-  or a setting. It needs a record on disk of which runs were going.
-  Today they stay stopped, and a cut-off scheduled run reads failed ("PhoneCanDo
-  was closed before the task finished"). When it ships, update
-  `docs/release/known-limits.md` (its boot receiver and dead-engine lines).
-- [ ] A message may start a stopped agent. Our idle stop stops an idle
+- [x] A guessed stop let the CPU sleep mid-run: a TUI run that showed
+  nothing for 30 s counted as stopped (TuiEvents.quiet, for Claude Code's
+  Esc, which fires no hook), and that released the wake lock while the run
+  could still work (seen 2026-11-14: Claude Code's helper agent reading its
+  prompt on a local model). Now a quiet run counts as stopped 30 s after
+  you typed into it (only you can type an Esc), else only after 30 min of
+  nothing (a hook that never fired); `app/docs/modules/runner.md` → TUI
+  engines. The checks skip such a guess (`EngineEvent.guessed`).
+- [x] Bring back agents a reboot cut off. Built (`runner/cutoff/`,
+  `app/docs/modules/runner.md` → Cut-off runs): a run cut off by a reboot,
+  an update, Android closing PhoneCanDo or its engine dying gets one notice
+  per agent, and Continue starts the agent again in the same chat with a
+  note to go on. Runs older than a day, or whose agent showed no sign of
+  work for an hour, are not offered. `docs/release/known-limits.md` says
+  what it can't do. Phone-tested 2026-11-16: a reboot, then Continue
+  (BACK-01, Pass). Android killing the app (BACK-02) failed on a falsely
+  working opencode chat, fixed in W2-4 and not run again yet; BACK-03 to
+  BACK-06 are not run yet (`phone-tests/status.md`).
+- [x] A message may start a stopped agent. Our idle stop stops an idle
   agent a few minutes after you leave the app (unless Keep running), and a
-  message never starts a stopped one, so other agents can wake it only in
-  those minutes. With "Other agents can wake it" on, start it in ACP mode
-  with the message instead.
-- [ ] Local models re-read the whole prompt too often: on 2026-11-15 each
+  message never started a stopped one, so other agents could wake it only
+  in those minutes. With "Other agents can wake it" on, it now starts in
+  ACP mode with the message. An answer to a waking message wakes the agent
+  that asked (MSG-10, MSG-11), and a waking message that didn't wake says
+  why (MSG-12 failed on W2-3 on a falsely working opencode chat; fixed in
+  W2-4, not run again yet).
+- [x] Local models re-read the whole prompt too often: on 2026-11-15 each
   of Claude Code's requests read its 19k-token prompt again (12-15 min on
   Qwen3.5 0.8B) while its own sub-agent requests took turns with it.
-  Qwen3.5 is a hybrid model, which llama.cpp caches less well; look at its
-  context checkpoints and our `--cache-ram`.
+  Qwen3.5 is a hybrid model, which llama.cpp caches less well. First fixed
+  2026-11-15 in our launch plan, with no llama.cpp patch: checkpoints are
+  capped and counted, and half-size notes come in when RAM is short. Then
+  on 2026-11-16 chats that take turns went to storage: a go-between in the
+  runner (`runner/models/chats/`) saves the slot's chat before another
+  chat takes it and loads the right one back, up to 4 per model; the RAM
+  prompt cache (every request saves the slot and loads the best saved
+  prompt) now serves only a phone short of storage (`lme/docs/README.md` →
+  RAM gate and context). Phone-tested 2026-11-16 (MODEL-13): the chat came
+  back from storage 1.3 s after the send, and the turn read 1,377 tokens
+  instead of 14,398 (its Fail is against the case's old "a few dozen
+  tokens": the round's review note).
 - [x] Codex's message hooks: a new Codex agent (0.169.0, its install links
   `/etc/codex/hooks.json`) checks "Messages during its turns" on
   2026-11-15; the test phone's older one only lacked the link (Update
   agent makes it). Never link through an `sh -c` launch: the kit puts
   model args right after the program, so a wrapper breaks Codex on any
   model we give it.
-- [ ] Small ones: keys typed on a page with no field focused still reach
+- [x] Small ones: keys typed on a page with no field focused still reach
   opencode's web page behind it (the WebView keeps Android's input
-  focus); a Run now task says "(once at <its next time>)" instead of when
+  focus); a Run now task says `(once at <its next time>)` instead of when
   it ran; after Update agent, Home shows "stopped · Restart" instead of
   starting it again; an agent that ran before a Check now is left stopped
   after it (start it again on its own model); New agent lists Codex as
@@ -169,3 +187,50 @@ we say so.
 - [ ] CI: a nightly run of each built-in kind's ACP mode against a scripted
   fake model in a container (the trial kit we used on the PC), so a vendor
   update that breaks a kind shows up before users see it.
+- [ ] Found by the 2026-11-15 and 16 phone tests (`phone-tests/status.md`):
+  - [ ] Claude Code on a local model compacted its chat at about 16k of a
+    32k context, and the compaction request read the whole prompt again.
+    On 2026-11-16 it compacted at once in a turn whose chat came back from
+    storage in 1.3 s (3,817 tokens written in 9.3 min, then a new
+    16,787-token prompt read in 6.5 min: 17 min in all), so it is now the
+    biggest slowdown left. Find out why it compacts so early (what context
+    size it believes it has), without turning its compaction off.
+  - [x] With one saved chat (8 GB phones), a third chat pushed the saved
+    one out. Chats that take turns now go to storage, up to 4 per model
+    (`runner/models/chats/`, see above); a phone short of storage still
+    keeps them in RAM, with that limit.
+  - [ ] Check records are kept per kind, so one agent's failed check lowers a
+    newer agent's level; keep them per agent.
+  - [x] lme didn't count llama.cpp's working memory (compute buffers, about
+    0.1-0.5 GB) in a plan's total. Now each model server's memory is
+    measured by llama.cpp's own dry run before it starts (compute buffer
+    and repacked weights included; `runner/models/measure/`, lme's
+    `FitBreakdown`), kept per model and phone. Phone-tested 2026-11-16
+    (MODEL-15).
+  - [x] An opencode chat that got a message without a run stayed on
+    "Working". Fixed in W2-4: opencode's inbox events no longer count as
+    working, and a server kind's working chats are checked against the
+    chats its server says run (`chats.active`). Not run again on the phone
+    yet (MSG-12, BACK-02).
+  - [x] An em dash in an `agents_send` text was stored as three replacement
+    characters. Fixed in W2-4: bridge request bodies are read as UTF-8.
+  - [ ] A woken opencode turn can land in an old session, which then shows
+    a duration like "4,651m 37s" (MSG-10).
+  - [ ] A Run now task in opencode shows no bubble of its own; the reply sits
+    under the earlier turn.
+  - [ ] After the drawer closes, keys typed on Home reach opencode's box only
+    after a tap; the header tap sometimes misses the drawer while the
+    keyboard is up.
+  - [ ] Esc in Claude Code's own app during a check is only a guessed stop,
+    which the checks skip, so the check's 30-minute limit ends it.
+- [ ] llama.cpp: what to change when it gives better tools (the `--fit`
+  bug with repacked weights, a memory endpoint, a disk cache that would
+  replace our chat-saving go-between, `--no-repack`, the v1.0.0 bump) is
+  listed in `lme/docs/planning/todo.md` → Waiting on llama.cpp.
+- [ ] A model list that can't be read: rebuild it from the model files
+  already on the phone (re-read each header, re-hash) instead of breaking
+  the Models page, so a format change never costs a download again.
+- [ ] `./manage build`: stage a llama-server built from the current pin
+  (staged, else CI's `llamacpp-android-arm64`, else built here), warn how
+  far the pin is behind llama.cpp's newest release, and ask whether to
+  switch (default no), as the agent payloads do.

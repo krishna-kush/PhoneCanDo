@@ -11,7 +11,9 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
   stops the least recently used one; optional caps in Settings), its own
   loopback port, password and bridge token. Engines are
   auth-first and quiet when idle; a dead engine is relaunched by the next
-  start. Agent records live in `files/state/agents.json`.
+  start, and a run cut off mid-task (a reboot, an update, a dead engine)
+  is offered back with Continue. Agent records live in
+  `files/state/agents.json`.
 - Home is the active agent's pair-loaded web UI, re-paired on every switch;
   the header switches agents. The terminal tab is the agent's TUI, or a
   shell in its image, over the own JNI PTY. Sessions and projects live in
@@ -22,8 +24,9 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
   message when it is theirs) and full/lite/play channel split are live.
 - Agents list and message each other on the whole phone (`agents_*` tools on
   the bridge; delivery through each kind's hooks, plugin or server; waking an
-  idle agent behind a per-agent switch) and the app's Messages page shows
-  what they send. Built and unit-tested, not yet tried on a device.
+  idle agent behind a per-agent switch, which may also start a stopped
+  one) and the app's Messages page shows what they send. Tried on our test
+  phone by an AI tester (`../../phone-tests/status.md`).
 - The `play` channel builds but is a later feature: nothing is released from
   it and it is untested on a device.
 - The sideload path is device-proven (2026-11-03, Android 16, India): lite
@@ -88,5 +91,7 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
 ## Work tracking
 
 - `research/` — background notes and open questions.
+- `../planning/todo.md` — open app work.
+- `../../phone-tests/status.md` — the latest phone-test result per case.
 - `pce/docs/planning/todo.md` — open PCE work.
 - `../release/known-limits.md` — cross-module limits.
