@@ -7,7 +7,7 @@
 #           manager we know (the unknown-family path)
 #   prep    what the agent must run before the install command on this
 #           distro, the rest of the line (ripgrep is in EPEL on RHEL-likes)
-debian:11 apt
+# debian:11 is gone: past its end of life, its security mirror 404s packages.
 ubuntu:20.04 apt
 almalinux:latest dnf dnf install -y epel-release
 amazonlinux:latest dnf
