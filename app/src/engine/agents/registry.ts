@@ -43,13 +43,6 @@ export function reloadKinds(): void {
   unknown.clear();
 }
 
-/** The kind a fresh install starts with (the one the runner marks default). */
-export function defaultAgentKind(): AgentKindId {
-  const kind = allKinds().find((k) => k.isDefault);
-  if (!kind) throw new Error('no agent kinds: the native runner is unavailable');
-  return kind.id;
-}
-
 /**
  * The kind with this id. An agent of a kind this build does not ship gets a
  * stand-in: named by its id, with no web UI and no chat titles, so screens

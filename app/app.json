@@ -59,8 +59,8 @@
       "./plugins/withReleaseSigning.js",
       "expo-asset",
       "expo-font",
-      "expo-status-bar",
-      "./plugins/withSplash.js"
+      "./plugins/withSplash.js",
+      "./plugins/withBaselineProfile.js"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

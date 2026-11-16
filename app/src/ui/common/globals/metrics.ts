@@ -6,5 +6,4 @@ export const HIT = {
   buttonH: 52,
   inputH: 52,
   headerH: 60,
-  fabSize: 64,
 } as const;

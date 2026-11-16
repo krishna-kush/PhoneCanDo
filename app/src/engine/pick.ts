@@ -4,9 +4,6 @@
 // (pickAvailable says which, so a form can offer typing instead).
 import { isRunnerAvailable, nativeRunner } from './runner';
 
-export type PickedDate = { year: number; month: number; day: number };
-export type PickedTime = { hour: number; minute: number };
-
 export function pickAvailable(): boolean {
   if (!isRunnerAvailable()) return false;
   try {

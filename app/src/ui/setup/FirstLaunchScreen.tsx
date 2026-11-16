@@ -28,7 +28,7 @@ export default function FirstLaunchScreen() {
   const where = progress.failedStep ? `Setup stopped while ${stepLabel(progress.failedStep).toLowerCase()}. ` : '';
 
   return (
-    <Screen fabClearance={false}>
+    <Screen pillClearance={false}>
       <YStack flex={1} justifyContent="center" gap="4" paddingVertical="6">
         {failed || choosing ? <LogoMark size={18} /> : <LogoLoader size={18} />}
         <Text fontSize={24} fontWeight="700">

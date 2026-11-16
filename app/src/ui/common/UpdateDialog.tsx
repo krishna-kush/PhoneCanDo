@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
+import { errorMessage } from '../../engine/errors/message';
 import { useAppStore } from '../../state/app';
 import {
   canInstallUpdates,
@@ -15,6 +16,7 @@ import {
 } from '../../engine/updates';
 import { track } from '../../engine/telemetry';
 import { offerAtLaunch } from '../../state/logic/updateOffer';
+import { formatBytes } from '../env/logic/format';
 import AppButton from './AppButton';
 
 type Phase =
@@ -27,14 +29,6 @@ type Phase =
   | 'installing'
   | 'ready'
   | 'error';
-
-function mb(bytes?: number): string {
-  return bytes && bytes > 0 ? `${Math.round(bytes / 1048576)} MB` : '';
-}
-
-function errText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
 
 // How long after launch the background check waits, so it never slows the start.
 const LAUNCH_CHECK_MS = 2000;
@@ -81,7 +75,7 @@ export default function UpdateDialog() {
     } catch (e) {
       if (ctrl.signal.aborted) return;
       track('update.check.failed', { manual: true });
-      setError(`Could not reach GitHub: ${errText(e)}`);
+      setError(`Could not reach GitHub: ${errorMessage(e)}`);
       setPhase('error');
     }
   }
@@ -162,7 +156,7 @@ export default function UpdateDialog() {
         return;
       }
       track('update.failed', { stage: 'download' });
-      setError(errText(e));
+      setError(errorMessage(e));
       setPhase('error');
     } finally {
       abortRef.current = null;
@@ -192,7 +186,7 @@ export default function UpdateDialog() {
       setPhase('ready');
     } catch (e) {
       track('update.failed', { stage: 'install' });
-      setError(errText(e));
+      setError(errorMessage(e));
       setPhase('error');
     }
   }
@@ -225,7 +219,7 @@ export default function UpdateDialog() {
     <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
       <YStack
         flex={1}
-        backgroundColor="rgba(0,0,0,0.6)"
+        backgroundColor="scrimSoft"
         alignItems="center"
         justifyContent="center"
         padding="5"
@@ -255,7 +249,7 @@ export default function UpdateDialog() {
               </Text>
               <Text fontSize={13} color="color10">
                 {manifest
-                  ? `Full build ${manifest.version}${manifest.size ? ` · ${mb(manifest.size)}` : ''}. Android asks once to allow installs from PhoneCanDo, then confirms.`
+                  ? `Full build ${manifest.version}${manifest.size ? ` · ${formatBytes(manifest.size)}` : ''}. Android asks once to allow installs from PhoneCanDo, then confirms.`
                   : 'Fetching the latest release…'}
               </Text>
               <XStack gap="2" marginTop="2">
@@ -276,7 +270,7 @@ export default function UpdateDialog() {
               </Text>
               <Text fontSize={15} color="color10">
                 {manifest
-                  ? `PhoneCanDo ${current.version} → ${manifest.version}${manifest.size ? ` · ${mb(manifest.size)}` : ''}`
+                  ? `PhoneCanDo ${current.version} → ${manifest.version}${manifest.size ? ` · ${formatBytes(manifest.size)}` : ''}`
                   : `Asking GitHub for anything newer than ${current.version}…`}
               </Text>
               {manifest?.notes ? (
@@ -322,7 +316,7 @@ export default function UpdateDialog() {
                 Downloading {lite ? 'the full build' : 'update'}
               </Text>
               <Text fontSize={15} color="color10">
-                {pct}%{progress.total > 0 ? ` · ${mb(progress.written)} of ${mb(progress.total)}` : ''}
+                {pct}%{progress.total > 0 ? ` · ${formatBytes(progress.written)} of ${formatBytes(progress.total)}` : ''}
               </Text>
               <YStack height={6} backgroundColor="line" width="100%">
                 <YStack height={6} backgroundColor="primary" width={`${pct}%`} />

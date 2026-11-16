@@ -12,11 +12,6 @@ export type { BackGestureEvent };
 
 let uiRuntimeReady = false;
 
-/** Whether this build reports the gesture's progress (else Back arrives as one press). */
-export function backGestureAvailable(): boolean {
-  return BackGesture != null;
-}
-
 /** While on, Back comes to onBackGesture (and the step worklet) instead of React Native's BackHandler. */
 export function setBackGestureEnabled(enabled: boolean): void {
   try {

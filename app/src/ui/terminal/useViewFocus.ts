@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
+import { useEffect } from 'react';
+import { useAppActive } from '../common/useAppActive';
 import type { PtyTransport } from './transport/types';
 
 // Tells an open transport whether the view shows its program: on screen
@@ -8,13 +8,7 @@ import type { PtyTransport } from './transport/types';
 // while unfocused does so whenever nobody looks. Told once the transport
 // is open (after an attach's replay) and on every change.
 export function useViewFocus(transport: PtyTransport | null, active: boolean) {
-  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => setAppActive(state === 'active'));
-    return () => sub.remove();
-  }, []);
-
+  const appActive = useAppActive();
   const shown = active && appActive;
   useEffect(() => {
     if (!transport?.focus) return;

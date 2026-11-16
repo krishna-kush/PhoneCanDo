@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { type ModelServerLog, modelServerLog } from '../../../engine/models/serverLog';
+import { usePageActive } from '../../nav/pageActive';
 
 export type ModelServerLogRead =
   | { state: 'reading' }
@@ -12,10 +13,12 @@ export type ModelServerLogRead =
 const LIVE_MS = 2000;
 
 // The end of the model's server log, read when the page opens and, while
-// the model is loaded ([live]), every LIVE_MS; a read that finds the log
-// as it was (same size and time) draws nothing new.
+// the model is loaded ([live]) and the page is in front, every LIVE_MS; a
+// read that finds the log as it was (same size and time) draws nothing new.
 export function useModelServerLog(modelId: string, live: boolean): ModelServerLogRead {
   const [result, setResult] = useState<ModelServerLogRead>({ state: 'reading' });
+  const active = usePageActive();
+  const following = live && active;
 
   useEffect(() => {
     let alive = true;
@@ -34,12 +37,12 @@ export function useModelServerLog(modelId: string, live: boolean): ModelServerLo
         },
       );
     void read();
-    const timer = live ? setInterval(() => void read(), LIVE_MS) : null;
+    const timer = following ? setInterval(() => void read(), LIVE_MS) : null;
     return () => {
       alive = false;
       if (timer) clearInterval(timer);
     };
-  }, [modelId, live]);
+  }, [modelId, following]);
 
   return result;
 }

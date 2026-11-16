@@ -12,7 +12,7 @@ export default function AgentInstallPage({ agentId }: { agentId: string }) {
   const { desk } = useAgentLook(agentId);
   if (!agent) return <AgentGone />;
   return (
-    <Screen scroll={false} fabClearance={false}>
+    <Screen scroll={false} pillClearance={false}>
       <PageHeader kicker={`${desk} · ${agent.name}`} title="Install" />
       <InstallSection agent={agent} image={image} />
     </Screen>

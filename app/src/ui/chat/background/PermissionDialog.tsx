@@ -30,7 +30,7 @@ export default function PermissionDialog() {
 
   return (
     <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={() => answer(null)}>
-      <YStack flex={1} backgroundColor="rgba(0,0,0,0.6)" alignItems="center" justifyContent="center" padding="5">
+      <YStack flex={1} backgroundColor="scrimSoft" alignItems="center" justifyContent="center" padding="5">
         <YStack
           backgroundColor="panel"
           borderWidth={1}

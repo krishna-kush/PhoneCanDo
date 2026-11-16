@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { Text, YStack } from 'tamagui';
+import { errorMessage } from '../../engine/errors/message';
 import { useActiveAgent } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { agentHome } from '../../engine/engines';
@@ -34,7 +35,7 @@ export default function FolderPicker() {
       setRoot(home);
       setCwd(folderExists(agent.projectDir) ? agent.projectDir : home);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
     // Keyed by id and image, not the record: every refresh re-creates records.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -46,7 +47,7 @@ export default function FolderPicker() {
       setEntries(listSubfolders(cwd));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [cwd]);
 

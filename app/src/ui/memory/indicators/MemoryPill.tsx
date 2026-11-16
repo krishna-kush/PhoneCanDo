@@ -14,7 +14,7 @@ import { useCountdown } from '../useCountdown';
 // bar of its own: a pill floating at the foot of the page with A-01
 // sweating and the countdown; a tap opens the warning again. Home and a
 // terminal page carry the bar chip instead (MemoryChip.tsx). Pages keep
-// room at their foot (Screen's FAB clearance), so it hides nothing for
+// room at their foot (Screen's pillClearance), so it hides nothing for
 // good; it steps aside while the keyboard is up or the drawer is open.
 export default function MemoryPill() {
   const level = useMemoryStore((s) => s.status.level);

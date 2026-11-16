@@ -41,3 +41,29 @@ export function keepUnchangedMap<T>(prev: Readonly<Record<string, T>>, next: Rec
   }
   return same ? (prev as Record<string, T>) : kept;
 }
+
+/** `prev` with `id` set to `value`; `prev` itself when that entry is already equal. */
+export function withUnchangedEntry<T>(prev: Readonly<Record<string, T>>, id: string, value: T): Record<string, T> {
+  const was = prev[id];
+  return was !== undefined && sameValue(was, value) ? (prev as Record<string, T>) : { ...prev, [id]: value };
+}
+
+function isRecordList(v: unknown): v is { id: string }[] {
+  return Array.isArray(v) && v.every((r) => typeof r === 'object' && r !== null && typeof (r as { id?: unknown }).id === 'string');
+}
+
+/**
+ * Only the fields of `next` that differ from `prev`, for a store's `set`
+ * after a whole re-read: an equal field is left out (its subscribers skip
+ * the render) and a changed list of records keeps its unchanged records.
+ */
+export function changedFields<T extends object>(prev: NoInfer<T>, next: T): Partial<T> {
+  const changed: Partial<T> = {};
+  for (const key of Object.keys(next) as (keyof T)[]) {
+    const was = prev[key];
+    const now = next[key];
+    if (sameValue(was, now)) continue;
+    changed[key] = (isRecordList(was) && isRecordList(now) ? keepUnchangedList(was, now) : now) as T[keyof T];
+  }
+  return changed;
+}

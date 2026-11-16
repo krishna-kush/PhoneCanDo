@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
+import { useEffect } from 'react';
 import type { AgentId } from '../../engine/agents/records';
 import { setOpenChat } from '../../engine/engines';
+import { useAppActive } from '../common/useAppActive';
 import { useHomeInFront } from '../nav/homeInFront';
 
 // Tells the runner which chat is on screen, so a run that ends there is
@@ -11,12 +11,7 @@ import { useHomeInFront } from '../nav/homeInFront';
 // none.
 export function useOpenChat(agentId: AgentId, sessionId: string | null) {
   const inFront = useHomeInFront();
-  const [active, setActive] = useState(AppState.currentState === 'active');
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => setActive(state === 'active'));
-    return () => sub.remove();
-  }, []);
+  const active = useAppActive();
 
   const open = inFront && active ? sessionId : null;
   useEffect(() => {

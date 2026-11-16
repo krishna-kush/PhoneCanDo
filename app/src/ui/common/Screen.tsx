@@ -7,8 +7,11 @@ import { createViewport, ViewportContext } from './viewport/viewport';
 type Props = {
   children: ReactNode;
   scroll?: boolean;
-  /** Reserve room for the absolute FAB so the last row never hides under it. */
-  fabClearance?: boolean;
+  /**
+   * Keep room at the foot for the memory pill (MemoryPill.tsx), so it never
+   * hides the last row for good.
+   */
+  pillClearance?: boolean;
   /** Tells rows when they scroll into view (viewport/useSeenOnce); a scrolling page only. */
   viewport?: boolean;
 };
@@ -21,13 +24,13 @@ const SCROLL_EVENT_MS = 100;
 // phones don't clip the form; a line that turns up at its foot can scroll
 // itself into view (screenEnd.ts). No scrollbar: our pages are short and
 // wear their own look (an agent's chat and terminal keep theirs).
-export default function Screen({ children, scroll = true, fabClearance = true, viewport = false }: Props) {
+export default function Screen({ children, scroll = true, pillClearance = true, viewport = false }: Props) {
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const [feed] = useState(() => (viewport && scroll ? createViewport(scrollRef) : null));
   const [showEnd] = useState(() => () => scrollRef.current?.scrollToEnd({ animated: true }));
   if (!scroll) {
     return (
-      <YStack flex={1} backgroundColor="bg" padding="4" gap="3" paddingBottom={fabClearance ? 96 : undefined}>
+      <YStack flex={1} backgroundColor="bg" padding="4" gap="3" paddingBottom={pillClearance ? 96 : undefined}>
         {children}
       </YStack>
     );
@@ -39,7 +42,7 @@ export default function Screen({ children, scroll = true, fabClearance = true, v
         style={{ flex: 1 }}
         contentContainerStyle={{
           padding: 16,
-          paddingBottom: fabClearance ? 104 : 16,
+          paddingBottom: pillClearance ? 104 : 16,
           gap: 12,
           flexGrow: 1,
         }}

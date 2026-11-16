@@ -52,6 +52,11 @@ import tamaguiConfig from './tamagui.config';
 // not just React Native's first content, which is our blank wait.
 holdSplash();
 
+// The first frame waits on these two reads (prefs, the agents), so they go
+// out now, before App's first render and ahead of every other stored read,
+// and run while the effect below makes its synchronous native reads.
+const boot = Promise.allSettled([useAppStore.getState().hydrate(), useAgentsStore.getState().hydrateAgents()]);
+
 export default function App() {
   const scheme = useScheme();
   const t = useTheme();
@@ -61,7 +66,6 @@ export default function App() {
     'GeistMono-Regular': require('./assets/fonts/GeistMono-Regular.ttf'),
     'GeistMono-Bold': require('./assets/fonts/GeistMono-Bold.ttf'),
   });
-  const hydrate = useAppStore((s) => s.hydrate);
   const prefsHydrated = useAppStore((s) => s.hydrated);
   const agentsHydrated = useAgentsStore((s) => s.hydrated);
   const hasAgents = useAgentsStore((s) => s.agents.length > 0);
@@ -137,11 +141,12 @@ export default function App() {
     useModelsStore.getState().hydrateModels();
     // The RAM warning listens from launch: it may need to speak first.
     useMemoryStore.getState().hydrateMemory();
-    // Each kind's messaging level now, which the kind list and the
-    // messages rows show.
-    useChecksStore.getState().hydrateChecks();
-    void Promise.allSettled([hydrate(), useAgentsStore.getState().hydrateAgents()]).finally(() => {
+    void boot.finally(() => {
       takeLaunchTarget();
+      // Each kind's messaging level now, which the kind list and the
+      // messages rows show; nothing on Home does, so it waits for the
+      // first frame.
+      requestIdleCallback(() => useChecksStore.getState().hydrateChecks());
       // Usage stats: deferred and fire-and-forget, never on the boot path.
       void useAppStore.getState().startTelemetry();
       setTimeout(startActiveAgent, 500);
@@ -161,7 +166,7 @@ export default function App() {
       launchSub.remove();
       sub.remove();
     };
-  }, [hydrate]);
+  }, []);
 
   // Keep the first frame blank, under the splash, rather than flash the
   // system font (if loading fails, render anyway: the fallback is the old

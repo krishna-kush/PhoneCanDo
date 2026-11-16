@@ -96,5 +96,3 @@ export type Route =
   /** Which folder the active agent's terminal UI opens in. */
   | { name: 'folder-picker' }
   | { name: 'terminal'; session: TerminalSession };
-
-export type RouteName = Route['name'];

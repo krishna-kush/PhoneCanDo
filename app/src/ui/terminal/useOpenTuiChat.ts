@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
+import { useEffect } from 'react';
 import { chatTitleOf } from '../../engine/agents/chatTitle';
 import type { AgentId } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { agentById, setOpenChat } from '../../engine/engines';
+import { useAppActive } from '../common/useAppActive';
 
 // The TUI's counterpart of useOpenChat (ui/chat): an agent TUI in front
 // tells the runner which chat it shows, so a run that ends there is seen.
@@ -14,13 +14,7 @@ import { agentById, setOpenChat } from '../../engine/engines';
 // Linux shell or a TUI off screen. A title naming no chat or the app in
 // the background reports none.
 export function useOpenTuiChat(agentId: AgentId | null, terminalTitle: string) {
-  const [active, setActive] = useState(AppState.currentState === 'active');
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => setActive(state === 'active'));
-    return () => sub.remove();
-  }, []);
-
+  const active = useAppActive();
   const agent = agentId ? agentById(agentId) : undefined;
   const title = agent && active ? chatTitleOf(agentKind(agent.kind).chatTitle, terminalTitle) : null;
   const shownId = agent?.id ?? null;

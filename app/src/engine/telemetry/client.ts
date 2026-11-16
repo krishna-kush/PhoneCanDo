@@ -5,6 +5,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type AdapterClient } from '../../../../tce/client/index.ts';
 import { API_HOST, DEV_API_HOST } from '../apiHost';
+import { errorMessage } from '../errors/message';
 import { cryptoModule } from './crypto';
 import { log } from './log';
 import { envPort, netPort } from './ports';
@@ -42,7 +43,7 @@ export function getClient(): AdapterClient | null {
       timeoutMs: NET_TIMEOUT_MS,
     });
   } catch (e) {
-    log.error('client setup failed', { error: e instanceof Error ? e.message : String(e) });
+    log.error('client setup failed', { error: errorMessage(e) });
     client = null;
   }
   return client;

@@ -5,6 +5,7 @@
 // session is gone (signed out elsewhere, account deleted, 180 days unused):
 // the phone forgets it and reads as signed out.
 import { apiBase } from '../apiHost';
+import { errorMessage } from '../errors/message';
 import { GOOGLE_WEB_CLIENT_ID } from './config';
 import { accountModule, type AccountProfile, type SignInError } from './native';
 import {
@@ -70,7 +71,7 @@ export async function signIn(): Promise<AccountResult<{ profile: AccountProfile;
     if (!r.ok) return failed(r.error, r.message);
     return { ok: true, value: { profile: r.profile, account: parseAccount(r.account) } };
   } catch (e) {
-    return failed('failed', e instanceof Error ? e.message : String(e));
+    return failed('failed', errorMessage(e));
   }
 }
 
@@ -82,7 +83,7 @@ async function call(method: 'GET' | 'POST' | 'PUT', path: string, body?: unknown
   try {
     res = await m.request(apiBase(), method, path, body === undefined ? null : JSON.stringify(body));
   } catch (e) {
-    return failed('failed', e instanceof Error ? e.message : String(e));
+    return failed('failed', errorMessage(e));
   }
   if (res.status === 0) return failed('network');
   const json = parseJson(res.body);

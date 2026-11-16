@@ -9,6 +9,7 @@ import { useChecksStore } from '../../state/checks';
 import { useMessagesStore, useUnread } from '../../state/messages';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PageHeader from '../common/PageHeader';
+import { useNow } from '../common/time/useNow';
 import TextAction from '../drawer/select/TextAction';
 import Note from '../env/parts/Note';
 import { usePageActive } from '../nav/pageActive';
@@ -48,7 +49,7 @@ export default function MessagesPage({ agentId }: Props) {
   const screen = useMessagesStore((s) => s.screen);
   const replaceTop = useAppStore((s) => s.replaceTop);
   const [ready, setReady] = useState(false);
-  const now = useNow(active);
+  const now = useNow(active, TICK_MS);
   const list = useRef<FlatList<AgentMessage>>(null);
   const [flash, setFlash] = useState<number | null>(null);
   const wasActive = useRef(false);
@@ -176,16 +177,4 @@ function AgentHead({ agentId, onAll }: { agentId: AgentId; onAll: () => void }) 
 function EmptyLine({ agentId }: { agentId: AgentId | null }) {
   const name = useAgentsStore((s) => (agentId ? (s.agents.find((a) => a.id === agentId)?.name ?? null) : null));
   return <EmptyInbox text={emptyText(agentId ? (name ?? 'this agent') : null)} />;
-}
-
-/** Now, moved on every half minute while `on`. */
-function useNow(on: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!on) return;
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), TICK_MS);
-    return () => clearInterval(id);
-  }, [on]);
-  return now;
 }

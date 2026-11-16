@@ -5,6 +5,7 @@
 // launch on a higher versionCode records update.installed.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, type AppStateStatus } from 'react-native';
+import { errorMessage } from '../errors/message';
 import { getTelemetrySnapshot } from '../runner';
 import { currentClient, getClient } from './client';
 import { DEV_LOCAL_KEY, flags } from './flags';
@@ -38,7 +39,7 @@ function onAppState(state: AppStateStatus): void {
       startInterval();
     }
   } catch (e) {
-    log.warn('lifecycle hook failed', { error: e instanceof Error ? e.message : String(e) });
+    log.warn('lifecycle hook failed', { error: errorMessage(e) });
   }
 }
 
@@ -112,7 +113,7 @@ let started: Promise<TelemetryState> | null = null;
 export function startTelemetry(): Promise<TelemetryState> {
   if (!started) {
     started = boot().catch((e) => {
-      log.error('start failed', { error: e instanceof Error ? e.message : String(e) });
+      log.error('start failed', { error: errorMessage(e) });
       mirrorEnabled();
       flags.ready = true;
       emit();

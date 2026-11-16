@@ -15,12 +15,13 @@ import {
   stopEngine,
 } from '../engine/engines';
 import { ensureEngine, type EnsureResult } from '../engine/ensureEngine';
+import { errorMessage } from '../engine/errors/message';
 import { prepareImageForStart } from '../engine/linux/native';
 import type { ImageId } from '../engine/linux/types';
 import { isRunnerAvailable } from '../engine/runner';
 import { inOrder, readOrder } from './logic/agentOrder';
 import { agentsOn } from './flows/logic/machineTenants';
-import { keepUnchangedList, keepUnchangedMap } from './logic/keepUnchanged';
+import { keepUnchangedList, keepUnchangedMap, withUnchangedEntry } from './logic/keepUnchanged';
 
 const ACTIVE_AGENT_KEY = 'phonecando.activeAgent.v1';
 const ORDER_KEY = 'phonecando.agentOrder.v1';
@@ -66,12 +67,20 @@ function pickActive(agents: Agent[], wanted: AgentId | null): AgentId | null {
   return agents[0]?.id ?? null;
 }
 
-async function readStoredOrder(): Promise<AgentId[]> {
+/** The stored pick and order, in one read: launch waits on it. */
+async function readStored(): Promise<{ active: string | null; order: AgentId[] }> {
+  let active: string | null = null;
+  let rawOrder: string | null = null;
   try {
-    return readOrder(JSON.parse((await AsyncStorage.getItem(ORDER_KEY)) ?? '[]'));
+    [[, active], [, rawOrder]] = await AsyncStorage.multiGet([ACTIVE_AGENT_KEY, ORDER_KEY]);
   } catch {
-    // unreadable or malformed: the runner's order
-    return [];
+    // unreadable: the first agent, in the runner's order
+  }
+  try {
+    return { active, order: readOrder(JSON.parse(rawOrder ?? '[]')) };
+  } catch {
+    // malformed: the runner's order
+    return { active, order: [] };
   }
 }
 
@@ -84,15 +93,11 @@ async function persistActive(id: AgentId | null): Promise<void> {
   }
 }
 
-function errorText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
 export const useAgentsStore = create<AgentsState>((set, get) => {
   const syncStatus = (id: AgentId) => {
     try {
       const status = engineStatus(id);
-      set((s) => ({ statuses: { ...s.statuses, [id]: status } }));
+      set((s) => ({ statuses: withUnchangedEntry(s.statuses, id, status) }));
     } catch {
       // native bridge absent: events keep the rest current
     }
@@ -111,7 +116,7 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
       try {
         await prepareAgentImage(agent);
       } catch (e) {
-        return { status: 'start-failed:image_not_ready', port: null, error: errorText(e) };
+        return { status: 'start-failed:image_not_ready', port: null, error: errorMessage(e) };
       }
     }
     const res = await ensureEngine(id);
@@ -127,17 +132,11 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
     order: [],
 
     hydrateAgents: async () => {
-      let stored: string | null = null;
-      try {
-        stored = await AsyncStorage.getItem(ACTIVE_AGENT_KEY);
-      } catch {
-        // unreadable: fall back to the first agent
-      }
       if (!subscribed) {
         subscribed = true;
-        onEngineState((status) => set((s) => ({ statuses: { ...s.statuses, [status.agentId]: status } })));
+        onEngineState((status) => set((s) => ({ statuses: withUnchangedEntry(s.statuses, status.agentId, status) })));
       }
-      const order = await readStoredOrder();
+      const { active: stored, order } = await readStored();
       const read = readNative();
       const agents = inOrder(read.agents, order);
       const activeAgentId = pickActive(agents, stored);

@@ -11,6 +11,7 @@ import {
   type LinuxStatus,
 } from '../engine/linux/native';
 import type { Env, Image, LinuxProgress } from '../engine/linux/types';
+import { changedFields } from './logic/keepUnchanged';
 import {
   applyProgress,
   EMPTY_PROGRESS,
@@ -66,7 +67,7 @@ export const useLinuxStore = create<LinuxState>((set, get) => ({
     set({ status: getLinuxStatus(), ...readRecords(), hydrated: true });
   },
 
-  refreshLinux: () => set(readRecords()),
+  refreshLinux: () => set(changedFields(get(), readRecords())),
 }));
 
 /** The running job's last event for an env or image, if one runs. */

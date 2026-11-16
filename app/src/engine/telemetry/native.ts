@@ -9,6 +9,7 @@
 // (lastStderrTail) is never read here: only sendReport() reads it, from
 // native, which keeps it until the next unexpected exit.
 import type { AdapterClient } from '../../../../tce/client/index.ts';
+import { errorMessage } from '../errors/message';
 import {
   consumeTelemetrySnapshot,
   getTelemetrySnapshot,
@@ -37,7 +38,7 @@ function readNative(read: (epoch: number) => Promise<void>): Promise<void> {
     try {
       await read(nativeEpoch);
     } catch (e) {
-      log.warn('native counters unreadable', { error: e instanceof Error ? e.message : String(e) });
+      log.warn('native counters unreadable', { error: errorMessage(e) });
     }
   });
   nativeChain = run;

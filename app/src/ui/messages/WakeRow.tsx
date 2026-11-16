@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Agent } from '../../engine/agents/records';
+import { errorMessage } from '../../engine/errors/message';
 import { isWakeable, setAgentWakeable } from '../../engine/messages/native';
 import { useAgentsStore } from '../../state/agents';
 import SwitchRow from '../common/rows/SwitchRow';
@@ -20,7 +21,7 @@ export default function WakeRow({ agent, blocked }: { agent: Agent; blocked: str
       setAgentWakeable(agent.id, !on);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
     refreshAgents();
   };

@@ -72,7 +72,7 @@ function PageLayer({ layerKey, page, home, width }: Props) {
     return { opacity: scrimOpacity(role, m) };
   }, [layerKey]);
   const layer = useMemo(() => [StyleSheet.absoluteFill, { backgroundColor: t.bg }, style], [t.bg, style]);
-  const dim = useMemo(() => [StyleSheet.absoluteFill, { backgroundColor: '#000' }, scrim], [scrim]);
+  const dim = useMemo(() => [StyleSheet.absoluteFill, { backgroundColor: t.scrim }, scrim], [t.scrim, scrim]);
 
   return (
     <Animated.View style={layer} pointerEvents="box-none">

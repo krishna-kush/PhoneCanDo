@@ -7,6 +7,7 @@
 // keeps running. Bytes cross as base64. Reaches the native module through
 // runner.ts only.
 import type { AgentId } from './agents/records';
+import { errorMessage } from './errors/message';
 import { nativeRunner } from './runner';
 
 export type TerminalViewerId = string;
@@ -85,6 +86,6 @@ export function engineTerminalTheme(theme: EngineTerminalTheme): void {
 /** The end a native error names (its code, or in its message), or null for any other failure. */
 export function engineTerminalEnd(e: unknown): EngineTerminalEnd | null {
   const raw = (e as { code?: unknown } | null)?.code;
-  const message = e instanceof Error ? e.message : String(e);
+  const message = errorMessage(e);
   return ENDS.find((c) => c === raw) ?? ENDS.find((c) => message.includes(c)) ?? null;
 }

@@ -15,6 +15,7 @@ import {
   engineTerminalWrite,
   type TerminalViewerId,
 } from '../../../engine/engineTerminal';
+import { errorMessage } from '../../../engine/errors/message';
 import { PtyEndError, type PtyTransport } from './types';
 
 export function engineTransport(agentId: AgentId): PtyTransport {
@@ -65,7 +66,7 @@ export function engineTransport(agentId: AgentId): PtyTransport {
 // is not there to show: `ended`. A takeover is `detached`.
 function asEnd(e: unknown): Error {
   const end = engineTerminalEnd(e);
-  const message = e instanceof Error ? e.message : String(e);
+  const message = errorMessage(e);
   if (end === 'detached') return new PtyEndError('detached', message);
   if (end) return new PtyEndError('ended', message);
   return e instanceof Error ? e : new Error(message);

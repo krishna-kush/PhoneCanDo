@@ -2,12 +2,12 @@ import { useCallback, useState } from 'react';
 import { buildUserManifest, type FormProblem } from '../../../engine/agents/user/build';
 import { emptyForm, type UserAgentForm } from '../../../engine/agents/user/form';
 import { reviewOf, type KindReview } from '../../../engine/agents/user/review';
+import { errorMessage } from '../../../engine/errors/message';
 import { checkKind, kindForEdit, saveKind } from '../../../state/flows/userKinds';
 import { useKindsStore } from '../../../state/kinds';
 
 type Ready = { text: string; review: KindReview };
 
-const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 export type KindForm = ReturnType<typeof useKindForm>;
 
@@ -45,7 +45,7 @@ export function useKindForm(kindId: string | null) {
       const native = checkKind(built.text);
       if (native.length > 0) return fail(native.map((text) => ({ field: null, text })));
     } catch (e) {
-      return fail([{ field: null, text: errorText(e) }]);
+      return fail([{ field: null, text: errorMessage(e) }]);
     }
     setProblems([]);
     setSaveError(null);
@@ -63,7 +63,7 @@ export function useKindForm(kindId: string | null) {
       if (saved.ok) return saved.id;
       setSaveError(saved.problems.join('\n'));
     } catch (e) {
-      setSaveError(errorText(e));
+      setSaveError(errorMessage(e));
     }
     return null;
   };

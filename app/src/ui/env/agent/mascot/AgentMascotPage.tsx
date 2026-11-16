@@ -44,7 +44,7 @@ export default function AgentMascotPage({ agentId }: { agentId: string }) {
   };
 
   return (
-    <Screen scroll={false} fabClearance={false}>
+    <Screen scroll={false} pillClearance={false}>
       <PageHeader kicker={`${look.desk} · ${agent.name}`} title={MASCOT_TITLE} />
       <MascotStage
         mascot={mascot}

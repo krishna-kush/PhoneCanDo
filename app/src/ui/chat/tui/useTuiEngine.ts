@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
 import type { AgentId } from '../../../engine/agents/records';
 import type { EnsureResult } from '../../../engine/ensureEngine';
+import { errorMessage } from '../../../engine/errors/message';
 import { useAgentsStore } from '../../../state/agents';
+import { useAppActive } from '../../common/useAppActive';
 import { useHomeInFront } from '../../nav/homeInFront';
 import type { PtyEnd } from '../../terminal/transport/types';
 import { SETTLE_MS, tuiPhase, wantsTerminal, type TuiStart } from './tuiPhase';
@@ -44,7 +45,7 @@ export function useTuiEngine(agentId: AgentId) {
           if (!cancelled) setStart(startOutcome(res));
         },
         (e: unknown) => {
-          if (!cancelled) setStart({ kind: 'failed', error: e instanceof Error ? e.message : String(e) });
+          if (!cancelled) setStart({ kind: 'failed', error: errorMessage(e) });
         },
       );
     return () => {
@@ -98,13 +99,4 @@ function startOutcome(res: EnsureResult): TuiStart {
   if (res.status === 'start-failed:acp_busy') return { kind: 'busy' };
   if (res.status.startsWith('start-failed')) return { kind: 'failed', error: res.error ?? res.status };
   return { kind: 'ok' };
-}
-
-function useAppActive(): boolean {
-  const [active, setActive] = useState(AppState.currentState === 'active');
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (next) => setActive(next === 'active'));
-    return () => sub.remove();
-  }, []);
-  return active;
 }

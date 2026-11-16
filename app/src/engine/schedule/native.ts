@@ -7,6 +7,7 @@
 // (no schedules, nothing saved).
 import type { AgentId } from '../agents/records';
 import type { AgentKindId } from '../agents/registry';
+import { errorMessage } from '../errors/message';
 import { isRunnerAvailable, nativeRunner, onRunnerEvent, type RunnerModule } from '../runner';
 import { asExact, asResult, asRunNow, asRuns, asSchedules } from './parse';
 import type {
@@ -24,10 +25,6 @@ export const RUNS_KEPT = 200;
 
 /** Why a change was refused where this build has no schedules. */
 const NOT_HERE = 'This version of the app has no schedules.';
-
-function errorText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
 
 function runner(): Partial<RunnerModule> {
   if (!isRunnerAvailable()) return {};
@@ -67,7 +64,7 @@ export async function addSchedule(spec: ScheduleSpec): Promise<ScheduleResult> {
   try {
     return asResult(await m.addSchedule(spec), "Couldn't add it.");
   } catch (e) {
-    return { ok: false, reason: errorText(e) };
+    return { ok: false, reason: errorMessage(e) };
   }
 }
 
@@ -77,7 +74,7 @@ export async function updateSchedule(id: ScheduleId, patch: SchedulePatch): Prom
   try {
     return asResult(await m.updateSchedule(id, patch), "Couldn't save it.");
   } catch (e) {
-    return { ok: false, reason: errorText(e) };
+    return { ok: false, reason: errorMessage(e) };
   }
 }
 
@@ -99,7 +96,7 @@ export async function runScheduleNow(id: ScheduleId): Promise<RunNowResult> {
   try {
     return asRunNow(await m.runScheduleNow(id), "Couldn't run it.");
   } catch (e) {
-    return { ok: false, reason: errorText(e) };
+    return { ok: false, reason: errorMessage(e) };
   }
 }
 

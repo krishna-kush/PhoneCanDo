@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { parseImport } from '../../../engine/agents/user/imports';
 import { reviewOf, type KindReview } from '../../../engine/agents/user/review';
+import { errorMessage } from '../../../engine/errors/message';
 import { clipboardText } from '../../../engine/sharing';
 import { checkKind, saveKind } from '../../../state/flows/userKinds';
 import { useKindsStore } from '../../../state/kinds';
@@ -12,7 +13,6 @@ type Ready = {
   replaces: string | null;
 };
 
-const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 // A custom agent pasted in, in two steps: the JSON (typed, or from the
 // clipboard), then a review of everything it runs before it is added.
@@ -47,7 +47,7 @@ export function useImport() {
         return;
       }
     } catch (e) {
-      setProblems([errorText(e)]);
+      setProblems([errorMessage(e)]);
       return;
     }
     useKindsStore.getState().readUserKinds();
@@ -66,7 +66,7 @@ export function useImport() {
       if (saved.ok) return true;
       setSaveError(saved.problems.join('\n'));
     } catch (e) {
-      setSaveError(errorText(e));
+      setSaveError(errorMessage(e));
     }
     return false;
   };

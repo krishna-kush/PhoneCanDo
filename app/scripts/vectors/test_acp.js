@@ -89,6 +89,11 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   const rows = tr.rowsOf([text('m1', '  '), { type: 'thought', id: 't', text: ' hm ' }, { type: 'plan', id: 'p', entries: [] }, tool('c', 'x', null)]);
   t('rows skip what has nothing to show, trim text', rows, [{ type: 'thought', id: 't', text: 'hm' }, tool('c', 'x', null)]);
   t('rows are the newest', tr.rowsOf(many, 2).map((i) => i.id), ['m3', 'm4']);
+  const items = [text('m1', 'a'), text('m2', 'b')];
+  const before = tr.rowsOf(items);
+  const after = tr.rowsOf([items[0], text('m2', 'bc')]);
+  t('an untouched text keeps its row', after[0] === before[0], true);
+  t('a grown text gets a new row', [after[1] === before[1], after[1].text], [false, 'bc']);
   t('a long text shows its end', tr.tailText('abcdef', 3), '…def');
   t('a short text stays', tr.tailText('abc', 3), 'abc');
 

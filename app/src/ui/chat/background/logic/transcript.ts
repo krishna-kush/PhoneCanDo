@@ -76,6 +76,21 @@ export function tailText(text: string, max: number = MAX_TEXT): string {
   return text.length > max ? `…${text.slice(text.length - max)}` : text;
 }
 
+// Each text's cut row, by the item it was cut from: withItem keeps every
+// item a chunk did not touch, so its row stays the same object and the
+// view's memoised row skips the render a streamed chunk would cost it.
+const cutRows = new WeakMap<AcpItem, AcpItem>();
+
+function cutRow(item: AcpItem): AcpItem {
+  if (item.type !== 'text' && item.type !== 'thought') return item;
+  let row = cutRows.get(item);
+  if (!row) {
+    row = { ...item, text: tailText(item.text.trim()) };
+    cutRows.set(item, row);
+  }
+  return row;
+}
+
 /** What the view draws: the newest items with something to show, long texts cut to their end. */
 export function rowsOf(items: readonly AcpItem[], max: number = MAX_ROWS): AcpItem[] {
   const shown = items.filter((i) => {
@@ -83,5 +98,5 @@ export function rowsOf(items: readonly AcpItem[], max: number = MAX_ROWS): AcpIt
     if (i.type === 'plan') return i.entries.length > 0;
     return true;
   });
-  return shown.slice(-max).map((i) => (i.type === 'text' || i.type === 'thought' ? { ...i, text: tailText(i.text.trim()) } : i));
+  return shown.slice(-max).map(cutRow);
 }

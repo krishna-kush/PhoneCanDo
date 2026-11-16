@@ -3,6 +3,7 @@ import { Asset } from 'expo-asset';
 import { TextInput } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { errorMessage } from '../../engine/errors/message';
 import ExtraKeysBar from './ExtraKeysBar';
 import { usePtySession } from './usePtySession';
 import { useMirrorInput } from './useMirrorInput';
@@ -135,7 +136,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
         await asset.downloadAsync();
         if (!cancelled && asset.localUri) setHtmlUri(asset.localUri);
       } catch (e) {
-        if (!cancelled) setAssetError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setAssetError(errorMessage(e));
       }
     })();
     return () => {

@@ -21,7 +21,7 @@ export default function ModelLogPage({ modelId }: { modelId: string }) {
   const read = useModelServerLog(modelId, server !== 'stopped');
   const lines = useMemo(() => (read.state === 'read' ? read.log.text.split('\n') : []), [read]);
   return (
-    <Screen scroll={false} fabClearance={false}>
+    <Screen scroll={false} pillClearance={false}>
       <PageHeader kicker={model?.name ?? 'model'} title="Server log" />
       {model ? <DetailedLogRow model={model} /> : null}
       {read.state === 'reading' ? <Note>Reading the log…</Note> : null}

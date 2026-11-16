@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { agentKind } from '../../../engine/agents/registry';
+import { errorMessage } from '../../../engine/errors/message';
 import { useAppStore } from '../../../state/app';
 import { useInstallRun } from '../../../state/flows/installRuns';
 import { renameAgentTo } from '../../../state/flows/renameAgent';
@@ -59,7 +60,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
       if (renameAgentTo(agent.id, name)) setRenaming(false);
     } catch (e) {
       setRenaming(false);
-      setRenameError(e instanceof Error ? e.message : String(e));
+      setRenameError(errorMessage(e));
     }
   };
 

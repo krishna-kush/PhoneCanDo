@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { confirmUser, NO_SCREEN_LOCK } from '../../engine/auth';
+import { errorMessage } from '../../engine/errors/message';
 import * as runner from '../../engine/runner';
 import { track } from '../../engine/telemetry';
 import { unlockLasts } from '../control-lock/modes';
@@ -61,7 +62,7 @@ export default function UnlockDialog() {
       answer([requestId, ...pendingUnlockIds()], true);
     } catch (e) {
       // Keep the bridge waiting so the user can retry; "Not now" refuses.
-      setMsg(`Biometric error: ${e instanceof Error ? e.message : String(e)}`);
+      setMsg(`Biometric error: ${errorMessage(e)}`);
     } finally {
       setBusy(false);
     }
@@ -83,7 +84,7 @@ export default function UnlockDialog() {
     <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={close}>
       <YStack
         flex={1}
-        backgroundColor="rgba(0,0,0,0.6)"
+        backgroundColor="scrimSoft"
         alignItems="center"
         justifyContent="center"
         padding="5"

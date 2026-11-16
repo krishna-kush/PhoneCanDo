@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WebView } from 'react-native-webview';
+import { errorMessage } from '../../engine/errors/message';
 import { toB64 } from './keys';
 import { PtyEndError, ptyEndOf, type PtyEnd, type PtyTransport } from './transport/types';
 import { useViewFocus } from './useViewFocus';
@@ -209,7 +210,7 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
       } catch (e) {
         if (stopped) return;
         if (e instanceof PtyEndError) endOutput(e);
-        else setError(e instanceof Error ? e.message : String(e));
+        else setError(errorMessage(e));
       }
     })();
     return () => {
@@ -263,7 +264,7 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
     try {
       fdRef.current.write(toB64(text));
     } catch (e) {
-      console.warn(`[phonecando] ptyWrite failed err=${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[phonecando] ptyWrite failed err=${errorMessage(e)}`);
     }
   }
 

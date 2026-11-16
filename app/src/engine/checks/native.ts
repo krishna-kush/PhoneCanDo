@@ -19,11 +19,6 @@ function runner(): Partial<RunnerModule> {
   }
 }
 
-/** Whether this build checks capabilities at all (the runner has agentChecks). */
-export function checksAvailable(): boolean {
-  return typeof runner().agentChecks === 'function';
-}
-
 /** The agent's checks; null for an unknown agent or a build without checks. */
 export function agentChecks(agentId: AgentId): AgentChecks | null {
   try {

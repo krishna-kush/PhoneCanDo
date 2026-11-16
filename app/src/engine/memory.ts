@@ -7,16 +7,12 @@
 // from before the guard reads as ok with nothing in it.
 import type {
   NativeAutoStop,
-  NativeMemoryAgent,
   NativeMemoryLevel,
-  NativeMemoryModel,
   NativeMemoryStatus,
 } from '../../modules/phonecando-runner/src/PhoneCanDoRunner.types';
 import { isRunnerAvailable, nativeRunner, onRunnerEvent } from './runner';
 
 export type MemoryLevel = NativeMemoryLevel;
-export type MemoryAgent = NativeMemoryAgent;
-export type MemoryModel = NativeMemoryModel;
 export type AutoStop = NativeAutoStop;
 export type MemoryStatus = NativeMemoryStatus;
 

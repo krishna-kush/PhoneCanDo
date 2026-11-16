@@ -10,6 +10,7 @@
 import type { PtyRecipe } from '../../../agents/kit/ts/contract/pty.ts';
 import type { Agent, AgentId, EngineMode, EngineStartError, EngineStatus } from './agents/records';
 import type { AgentKindId } from './agents/registry';
+import { errorMessage } from './errors/message';
 import type { ImageId } from './linux/types';
 import { getPrefix, isRunnerAvailable, nativeRunner, onRunnerEvent } from './runner';
 
@@ -102,7 +103,7 @@ const START_ERRORS: EngineStartError[] = [
 /** Any start rejection as an EngineStartFailure (native puts the code first in the message). */
 export function asStartFailure(e: unknown): EngineStartFailure {
   if (e instanceof EngineStartFailure) return e;
-  const message = e instanceof Error ? e.message : String(e);
+  const message = errorMessage(e);
   const raw = (e as { code?: unknown } | null)?.code;
   const code =
     START_ERRORS.find((c) => c === raw) ?? START_ERRORS.find((c) => message.includes(`${c}:`)) ?? 'start_failed';

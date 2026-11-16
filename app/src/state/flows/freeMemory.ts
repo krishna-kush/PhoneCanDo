@@ -5,6 +5,7 @@
 // leaves the warning at once rather than with the next reading.
 import type { AgentId } from '../../engine/agents/records';
 import { stopModel } from '../../engine/engines';
+import { errorMessage } from '../../engine/errors/message';
 import { useAgentsStore } from '../agents';
 import { useMemoryStore } from '../memory';
 import { useModelsStore } from '../models';
@@ -21,7 +22,7 @@ export async function unloadModel(modelId: string): Promise<ActionResult> {
     await stopModel(modelId);
     return { ok: true };
   } catch (e) {
-    return { ok: false, code: 'stop_failed', message: e instanceof Error ? e.message : String(e) };
+    return { ok: false, code: 'stop_failed', message: errorMessage(e) };
   } finally {
     useAgentsStore.getState().refreshAgents();
     useModelsStore.getState().refreshModels();

@@ -8,11 +8,14 @@ import { useChecksStore } from '../../../../state/checks';
 import AppButton from '../../../common/AppButton';
 import ConfirmDialog from '../../../common/ConfirmDialog';
 import PlainText from '../../../common/PlainText';
+import { useNow } from '../../../common/time/useNow';
 import { usePageActive } from '../../../nav/pageActive';
 import { runHasRows } from './logic/rows';
 import { CANCEL_CHECK, checkingLine, movedLine, NOT_NOW, needsYou, openAgentLabel, stepLine, stepView } from './logic/run';
 import ReadingBar from './ReadingBar';
-import { useSecondClock } from './useSecondClock';
+
+/** How often the time since anything moved counts on. */
+const TICK_MS = 1000;
 
 type Props = { agentId: string; name: string; run: CheckRun };
 
@@ -26,7 +29,7 @@ type Props = { agentId: string; name: string; run: CheckRun };
 // the check is with it; a runner that sends no rows gets the step here.
 export default function RunningCheck({ agentId, name, run }: Props) {
   const active = usePageActive();
-  const now = useSecondClock(active);
+  const now = useNow(active, TICK_MS);
   const step = stepView(run, name);
   const moved = movedLine(run, now);
   const stepHere = step != null && !runHasRows(run);

@@ -131,7 +131,7 @@ export default function AppDrawer() {
       pointerEvents={open ? 'auto' : 'none'}
       importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
     >
-      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }, scrim]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: t.scrim }, scrim]}>
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={close}

@@ -15,6 +15,7 @@ import {
 } from '../engine/models/native';
 import type { LocalModel, ModelDevice, ModelDownload, ModelProgress, SuggestedModel } from '../engine/models/types';
 import { applyModelProgress, dropModelJob, type ModelJobs } from './flows/logic/modelProgress';
+import { changedFields } from './logic/keepUnchanged';
 
 interface ModelsState {
   device: ModelDevice;
@@ -81,7 +82,7 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
     set({ ...readRecords(), hydrated: true });
   },
 
-  refreshModels: () => set(readRecords()),
+  refreshModels: () => set(changedFields(get(), readRecords())),
 
   dismissJob: (key) => set((s) => ({ jobs: dropModelJob(s.jobs, key) })),
 }));

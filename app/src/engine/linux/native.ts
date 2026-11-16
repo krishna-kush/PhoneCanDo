@@ -19,6 +19,7 @@
 // native line. A failed record's or final event's `error` is one line with
 // the code first (`no_space: needs 812 MB, 90 MB free`), next to `errorCode`.
 import type { LinuxStatus } from '../../../modules/phonecando-linux/src/PhoneCanDoLinux.types';
+import { errorMessage } from '../errors/message';
 import type {
   CatalogImage,
   CatalogImagePage,
@@ -131,7 +132,7 @@ function required(): LinuxModule {
 // rejected. → Caused by: <message>"); we keep the native line only.
 function toLinuxError(e: unknown): LinuxError {
   if (e instanceof LinuxError) return e;
-  const raw = e instanceof Error ? e.message : String(e);
+  const raw = errorMessage(e);
   const marker = '→ Caused by: ';
   const at = raw.lastIndexOf(marker);
   const message = at >= 0 ? raw.slice(at + marker.length).trim() : raw;
@@ -171,7 +172,7 @@ export function getLinuxStatus(): LinuxStatus {
     if (typeof status?.available !== 'boolean') return unavailable('the native Linux module answered nothing');
     return status;
   } catch (e) {
-    return unavailable(`the native Linux module failed: ${e instanceof Error ? e.message : String(e)}`);
+    return unavailable(`the native Linux module failed: ${errorMessage(e)}`);
   }
 }
 

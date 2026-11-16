@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AgentId } from '../../../engine/agents/records';
 import { isEngineIdle } from '../../../engine/engines';
 import { useAgentsStore } from '../../../state/agents';
+import { keepUnchangedMap } from '../../../state/logic/keepUnchanged';
 import { usePageActive } from '../../nav/pageActive';
 
 // How often the Machine page asks again while it is in front.
@@ -31,7 +32,7 @@ export function useMachineActivity(agentIds: readonly AgentId[]): Record<AgentId
           next[id] = null;
         }
       }
-      setIdle(next);
+      setIdle((prev) => keepUnchangedMap(prev, next));
     };
     read();
     if (ids.length === 0) return;

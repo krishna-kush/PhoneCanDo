@@ -8,6 +8,7 @@
 import type { AgentId } from '../../engine/agents/records';
 import { stopModelAgents } from '../../engine/engines';
 import type { EnsureResult } from '../../engine/ensureEngine';
+import { errorMessage } from '../../engine/errors/message';
 import { setModelDetailedLog, setModelMemory, toModelError } from '../../engine/models/native';
 import type { MemoryChoices } from '../../engine/models/types';
 import { useAgentsStore } from '../agents';
@@ -42,7 +43,7 @@ async function saveAndRestart(modelId: string, save: () => Promise<void>): Promi
     stopped = await stopModelAgents(modelId);
   } catch (e) {
     agents.refreshAgents();
-    return { ok: false, code: 'stop_failed', message: e instanceof Error ? e.message : String(e) };
+    return { ok: false, code: 'stop_failed', message: errorMessage(e) };
   }
   agents.refreshAgents();
   const restarts: { agentId: AgentId; result: EnsureResult }[] = [];

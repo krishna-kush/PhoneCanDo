@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Linking } from 'react-native';
+import { errorMessage } from '../../engine/errors/message';
 import {
   forgetMe,
   PRIVACY_URL,
@@ -66,7 +67,7 @@ export default function PrivacySection() {
       const r = await action();
       setMsg(r.message);
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e));
+      setMsg(errorMessage(e));
     } finally {
       setBusy(null);
     }

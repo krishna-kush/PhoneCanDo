@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { UserKindFile } from '../../../engine/agents/user/native';
+import { errorMessage } from '../../../engine/errors/message';
 import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
 import { copyKind, deleteKind, shareKind } from '../../../state/flows/userKinds';
@@ -14,7 +15,6 @@ import Note from '../parts/Note';
 import type { KindItem } from './list/item';
 import KindRows from './list/KindRows';
 
-const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 // The agent kinds the user added, each a row of one figure key
 // (list/KindRows.tsx): its mascot, the agents made from it, or why it does
@@ -41,7 +41,7 @@ export default function CustomAgentList() {
 
   const share = (k: UserKindFile) => {
     setNote(null);
-    shareKind(k.id, labelOf(k)).catch((e: unknown) => setNote({ text: errorText(e), error: true }));
+    shareKind(k.id, labelOf(k)).catch((e: unknown) => setNote({ text: errorMessage(e), error: true }));
   };
 
   const remove = () => {
@@ -52,7 +52,7 @@ export default function CustomAgentList() {
       const gone = deleteKind(k.id);
       setNote(gone.ok ? { text: `${labelOf(k)} is deleted.`, error: false } : { text: inUseText(labelOf(k), gone.usedBy), error: true });
     } catch (e) {
-      setNote({ text: errorText(e), error: true });
+      setNote({ text: errorMessage(e), error: true });
     }
   };
 

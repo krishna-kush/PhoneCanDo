@@ -23,7 +23,7 @@ const ui = (p) => src('ui/env/logic', p);
 
 (async () => {
   // --- state/logic -------------------------------------------------------
-  const { sameValue, keepUnchangedList, keepUnchangedMap } = await import(src('state/logic/keepUnchanged.ts'));
+  const { sameValue, keepUnchangedList, keepUnchangedMap, withUnchangedEntry, changedFields } = await import(src('state/logic/keepUnchanged.ts'));
   t('same nested value', sameValue({ a: [1, { b: null }] }, { a: [1, { b: null }] }), true);
   t('changed nested value', sameValue({ a: [1, { b: 1 }] }, { a: [1, { b: 2 }] }), false);
   t('extra key differs', sameValue({ a: 1 }, { a: 1, b: undefined }), false);
@@ -37,6 +37,14 @@ const ui = (p) => src('ui/env/logic', p);
   t('unchanged map is the old map', keepUnchangedMap(prevMap, { a: { state: 'ready' } }) === prevMap, true);
   t('changed map is new', keepUnchangedMap(prevMap, { a: { state: 'stopped' } }) === prevMap, false);
   t('a new key changes the map', keepUnchangedMap(prevMap, { a: { state: 'ready' }, b: { state: 'ready' } }) === prevMap, false);
+  t('an equal entry keeps the map', withUnchangedEntry(prevMap, 'a', { state: 'ready' }) === prevMap, true);
+  t('a changed entry makes a new map', withUnchangedEntry(prevMap, 'a', { state: 'stopped' }), { a: { state: 'stopped' } });
+  t('a new entry is added', withUnchangedEntry(prevMap, 'b', { state: 'ready' }), { a: { state: 'ready' }, b: { state: 'ready' } });
+  const store = { envs: prevList, device: { ram: 8 }, run: () => {} };
+  t('an equal re-read changes nothing', changedFields(store, { envs: [{ id: 'a', name: 'one' }, { id: 'b', name: 'two' }], device: { ram: 8 } }), {});
+  const fields = changedFields(store, { envs: [{ id: 'a', name: 'one' }, { id: 'b', name: 'TWO' }], device: { ram: 8 } });
+  t('only the changed field is set', Object.keys(fields), ['envs']);
+  t('its unchanged records stay', fields.envs[0] === prevList[0], true);
 
   // --- flows/logic -------------------------------------------------------
   const { failureOf, linuxErrorCode, isLinuxErrorCode, failureOfError } = await import(flows('errors.ts'));

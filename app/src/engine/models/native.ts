@@ -14,6 +14,7 @@
 // `onModelsChanged`: re-read listModels() / listDownloads().
 //
 // The Hugging Face token goes in (setHfToken) and never comes back out.
+import { errorMessage } from '../errors/message';
 import type {
   ModelDevice,
   ModelDownload,
@@ -119,7 +120,7 @@ function required(): ModelsModule {
 // rejected. → Caused by: <message>"); we keep the native line only.
 export function toModelError(e: unknown): ModelError {
   if (e instanceof ModelError) return e;
-  const raw = e instanceof Error ? e.message : String(e);
+  const raw = errorMessage(e);
   const marker = '→ Caused by: ';
   const at = raw.lastIndexOf(marker);
   const message = at >= 0 ? raw.slice(at + marker.length).trim() : raw;

@@ -20,7 +20,7 @@ export default function LicensesDialog({
   return (
     <Modal visible={open} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={['top', 'bottom', 'left', 'right']}>
-        <Screen scroll={false} fabClearance={false}>
+        <Screen scroll={false} pillClearance={false}>
           <SectionTitle>Licenses</SectionTitle>
           <Text fontSize={13} color="muted" lineHeight="19px">
             PhoneCanDo bundles the components below. Their licenses require these notices to travel

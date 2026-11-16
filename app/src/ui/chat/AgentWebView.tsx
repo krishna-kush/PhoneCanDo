@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { WebView } from 'react-native-webview';
+import { errorMessage } from '../../engine/errors/message';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { lastPage, rememberPage, restoreUrl } from './lastPage';
@@ -117,7 +118,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
           track('chat.open');
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setError(errorMessage(e));
       }
     })();
     return () => {

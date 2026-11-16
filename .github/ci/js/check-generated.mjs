@@ -53,17 +53,30 @@ const GENERATORS = [
     name: 'brand assets',
     fix: 'pnpm logos',
     script: 'scripts/make-logos.mjs',
-    inputs: [
-      'theme/tokens.json',
-      'theme/logo.json',
-      'mascot/layout/eyes.ts',
-      'mascot/layout/types.ts',
-      'scripts/logos/splash-wake/story.mjs',
-      'scripts/logos/splash-wake/vector.mjs',
-    ],
+    inputs: ['theme/tokens.json', 'theme/logo.json'],
     ignore: [],
   },
 ];
+
+// `inputs` lists only the data files a generator reads by path; the modules
+// it imports are found here, following relative specifiers from the script.
+const SPECIFIER = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g;
+
+function modulesOf(script) {
+  const found = new Set();
+  const queue = [script];
+  while (queue.length) {
+    const rel = queue.pop();
+    if (found.has(rel)) continue;
+    found.add(rel);
+    const src = join(ROOT, rel);
+    if (!existsSync(src)) continue;
+    for (const [, spec] of readFileSync(src, 'utf8').matchAll(SPECIFIER)) {
+      queue.push(relative(ROOT, join(dirname(src), spec)).split(sep).join('/'));
+    }
+  }
+  return [...found];
+}
 
 const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -105,7 +118,7 @@ for (const gen of GENERATORS) {
   const box = mkdtempSync(join(scratchBase, 'pcd-generated-'));
   try {
     const copied = new Map();
-    for (const rel of [gen.script, ...gen.inputs]) {
+    for (const rel of [...modulesOf(gen.script), ...gen.inputs]) {
       const src = join(ROOT, rel);
       if (!existsSync(src)) {
         r.error(`generator input missing`, rel);

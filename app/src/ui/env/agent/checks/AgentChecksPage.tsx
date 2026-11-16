@@ -2,14 +2,17 @@ import { useAgentsStore } from '../../../../state/agents';
 import { useAgentLook } from '../../../common/face/useAgentLook';
 import PageHeader from '../../../common/PageHeader';
 import Screen from '../../../common/Screen';
+import { useNow } from '../../../common/time/useNow';
 import { usePageActive } from '../../../nav/pageActive';
-import { useNow } from '../../../schedule/useNow';
 import Note from '../../parts/Note';
 import AgentGone from '../AgentGone';
 import CapabilityRows from './CapabilityRows';
 import CheckNowBlock from './CheckNowBlock';
 import { CHECKS_INTRO, CHECKS_TITLE, NO_CHECKS } from './logic/copy';
 import { useWatchedChecks } from './useWatchedChecks';
+
+/** How often the rows' times move on. */
+const TICK_MS = 30_000;
 
 // What an agent can do: each thing its kind is set up to do, grouped by
 // where it runs (ACP mode and its parts; phone tools, messages, being
@@ -20,7 +23,7 @@ import { useWatchedChecks } from './useWatchedChecks';
 export default function AgentChecksPage({ agentId }: { agentId: string }) {
   const agent = useAgentsStore((s) => s.agents.find((a) => a.id === agentId));
   const { desk } = useAgentLook(agentId);
-  const now = useNow(usePageActive());
+  const now = useNow(usePageActive(), TICK_MS);
   const checks = useWatchedChecks(agentId);
   if (!agent) return <AgentGone />;
   return (

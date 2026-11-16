@@ -13,6 +13,7 @@ import type { BarcodeId } from '../common/rows/barcode/lines';
 import RowFrame from '../common/rows/RowFrame';
 import RowGroup from '../common/rows/RowGroup';
 import Screen from '../common/Screen';
+import { useNow } from '../common/time/useNow';
 import TextAction from '../drawer/select/TextAction';
 import Note from '../env/parts/Note';
 import { usePageActive } from '../nav/pageActive';
@@ -31,11 +32,12 @@ import {
 import { runsFor, type TimelineEntry, timeline } from './logic/timeline';
 import RecentRuns from './RecentRuns';
 import ScheduleRow from './ScheduleRow';
-import { useNow } from './useNow';
 import { useScheduleAgents } from './useScheduleAgents';
 
 /** The recent runs shown under the list. */
 const RUNS_SHOWN = 20;
+/** How often "next in 12 min" moves on. */
+const TICK_MS = 30_000;
 
 type Props = {
   agentId: AgentId | null;
@@ -52,7 +54,7 @@ type Props = {
 // times move on while the page is in front.
 export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
   const active = usePageActive();
-  const now = useNow(active);
+  const now = useNow(active, TICK_MS);
   const available = useScheduleStore((s) => s.available);
   const schedules = useScheduleStore((s) => s.schedules);
   const runs = useScheduleStore((s) => s.runs);

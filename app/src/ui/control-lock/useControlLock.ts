@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { confirmUser, NO_SCREEN_LOCK } from '../../engine/auth';
+import { errorMessage } from '../../engine/errors/message';
 import * as runner from '../../engine/runner';
 import { track } from '../../engine/telemetry';
 import { usePageActive } from '../nav/pageActive';
@@ -62,7 +63,7 @@ export function useControlLock() {
       // Unlocked shows no text under the button; only a failure explains itself.
       setMsg(ok ? '' : 'This install has no phone-control driver; rebuild the app.');
     } catch (e) {
-      setMsg(`Biometric error: ${e instanceof Error ? e.message : String(e)}`);
+      setMsg(`Biometric error: ${errorMessage(e)}`);
     } finally {
       sync();
       setBusy(false);
@@ -90,7 +91,7 @@ export function useControlLock() {
       }
       if (!runner.setLockMode(next)) setMsg('Not saved; phone control is locked. Try again.');
     } catch (e) {
-      setMsg(`Biometric error: ${e instanceof Error ? e.message : String(e)}`);
+      setMsg(`Biometric error: ${errorMessage(e)}`);
     } finally {
       sync();
       setBusy(false);

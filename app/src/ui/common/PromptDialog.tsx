@@ -30,7 +30,7 @@ export default function PromptDialog({
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <YStack
         flex={1}
-        backgroundColor="rgba(0,0,0,0.6)"
+        backgroundColor="scrimSoft"
         alignItems="center"
         justifyContent="center"
         padding="5"

@@ -23,7 +23,7 @@ export default function AgentInstallLogPage({ agentId }: { agentId: string }) {
   const lines = useMemo(() => (last.state === 'read' ? last.log.text.split('\n') : []), [last]);
   if (!agent) return <AgentGone />;
   return (
-    <Screen scroll={false} fabClearance={false}>
+    <Screen scroll={false} pillClearance={false}>
       <PageHeader kicker={`${desk} · ${agent.name}`} title="Install log" />
       {last.state === 'reading' ? <Note>Reading the log…</Note> : null}
       {last.state === 'none' ? <Note>No install has run in this machine yet.</Note> : null}

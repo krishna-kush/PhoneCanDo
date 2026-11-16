@@ -10,9 +10,11 @@ export function useDeskSeats() {
   const listed = useAgentsStore((s) => s.hydrated);
   const hydrated = useDesksStore((s) => s.hydrated);
 
+  // Read once the agents are listed: the first frame waits on that read,
+  // and the desks have no one to seat before it.
   useEffect(() => {
-    void useDesksStore.getState().hydrate();
-  }, []);
+    if (listed) void useDesksStore.getState().hydrate();
+  }, [listed]);
 
   useEffect(() => {
     if (!listed || !hydrated) return;
