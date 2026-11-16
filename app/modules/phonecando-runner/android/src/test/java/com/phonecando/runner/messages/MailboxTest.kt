@@ -26,9 +26,13 @@ class MailboxTest {
   private val view = FakeView(a, b, c)
   private val courier = FakeCourier()
   private var changes = 0
+  private val held = ArrayList<Pair<String, String>>()
   private val box = mailbox()
 
-  private fun mailbox() = Mailbox(MessageLog(MessageStore(file), { now }), view, courier, { now }, onChange = { changes++ })
+  private fun mailbox() = Mailbox(
+    MessageLog(MessageStore(file), { now }), view, courier, { now }, onChange = { changes++ },
+    onStartFailed = { id, why -> held += id to why },
+  )
 
   @After fun cleanup() {
     file.parentFile.parentFile.deleteRecursively()
@@ -219,6 +223,25 @@ class MailboxTest {
     assertEquals(5, box.policy.wakesLeft("c"))
   }
 
+  @Test fun aWakeThatWentIntoItsChatSaysAndKeepsWhyItDidNotWake() {
+    // A server agent busy on a run: the wake is refused, the message goes into its chat.
+    courier.answers["c"] = Handover.POSTED
+    view.set("c", AgentState.WORKING)
+    val sent = box.send(a, "Reviewer", "status?", replyTo = null, wake = true)
+    assertEquals(SendStatus.DELIVERED, sent.results.single().status)
+    assertEquals("in its chat; not woken: it is busy; it reads this at its next turn", sent.results.single().reason)
+    val delivery = box.recent(1).single().deliveryTo("c")!!
+    assertEquals(DeliveryStatus.DELIVERED, delivery.status)
+    assertFalse(delivery.woke)
+    assertEquals(Mailbox.NOT_WOKEN + "it is busy", delivery.reason)
+    // The log keeps it.
+    val again = Mailbox(MessageLog(MessageStore(file), { now }), view, courier, { now })
+    assertEquals(Mailbox.NOT_WOKEN + "it is busy", again.recent(1).single().deliveryTo("c")!!.reason)
+    // One that did not ask to wake keeps no reason.
+    box.send(a, "Reviewer", "fyi", replyTo = null, wake = false)
+    assertNull(box.recent(1).single().deliveryTo("c")!!.reason)
+  }
+
   @Test fun aSwitchToAcpModeKeepsItQueuedAndSaysItWakes() {
     courier.answers["b"] = Handover.SWITCHING
     val sent = box.send(a, "Tester", "need you", replyTo = null, wake = true)
@@ -377,6 +400,158 @@ class MailboxTest {
     val sent = box.send(a, "Tester (Claude Code)", "hi", replyTo = null, wake = false)
     assertEquals("Tester", sent.results.single().to)
     assertTrue(sent.results.single().status != SendStatus.REFUSED)
+  }
+
+  // ---- an answer wakes its asker ---------------------------------------------------
+
+  @Test fun anAnswerWakesTheAskerAndAnAnswerToItNeverDoes() {
+    // Builder asks Tester with wake: true and ends its turn; Tester wakes for it.
+    val asked = box.send(a, "Tester", "run the tests", replyTo = null, wake = true)
+    assertTrue(asked.results.single().reason!!.contains(SendReport.DONT_WAIT))
+    box.receipt("b", listOf(1))
+    // Its answer, with replyTo, wakes Builder, though it did not ask to.
+    val answer = box.send(b, "Builder", "all green", replyTo = 1, wake = false)
+    assertEquals(SendStatus.WOKEN, answer.results.single().status)
+    val sent = box.recent(1).single()
+    assertTrue(sent.wake)
+    assertEquals(1, sent.hop)
+    assertTrue(courier.last("a")!!.wake)
+    // Builder's answer to that answer is hop 2: it never wakes.
+    box.receipt("a", listOf(2))
+    box.send(a, "Tester", "thanks", replyTo = 2, wake = false)
+    assertEquals(2, box.recent(1).single().hop)
+    assertFalse(courier.last("b")!!.wake)
+  }
+
+  @Test fun onlyTheAnswerToAWakingMessageFromItsRecipientWakesAndTheSwitchStillHolds() {
+    box.send(a, "Tester", "fyi", replyTo = null, wake = false)
+    // A reply to a message that did not ask to wake.
+    box.send(b, "Builder", "noted", replyTo = 1, wake = false)
+    assertFalse(courier.last("a")!!.wake)
+    box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    // A third agent's reply, and a message that is no reply.
+    box.send(c, "Builder", "I saw that", replyTo = 3, wake = false)
+    assertFalse(courier.last("a")!!.wake)
+    box.send(b, "Builder", "working on it", replyTo = null, wake = false)
+    assertFalse(courier.last("a")!!.wake)
+    // The asker switched off waking: its answer waits for its next turn.
+    view.records[0] = a.copy(wakeable = false)
+    val off = box.send(b, "Builder", "done", replyTo = 3, wake = false)
+    assertTrue(box.recent(1).single().wake)
+    assertFalse(courier.last("a")!!.wake)
+    assertTrue(off.results.single().reason!!.contains("not woken: the user switched off waking it"))
+  }
+
+  // ---- a message starts a stopped agent ----------------------------------------------
+
+  private fun stoppedTester() {
+    view.set("b", AgentState.STOPPED)
+    view.starts["b"] = null
+    courier.answers["b"] = Handover.STARTING
+  }
+
+  @Test fun aMessageStartsAStoppedAgentOnceAndABurstGoesInAsOneSetOnceReady() {
+    stoppedTester()
+    val first = box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    assertEquals(SendStatus.WOKEN, first.results.single().status)
+    assertTrue(first.results.single().reason!!.contains("stopped; it starts"))
+    assertTrue(courier.last("b")!!.wake)
+    // While it starts, the next message asks for no second start.
+    courier.answers.remove("b")
+    val second = box.send(a, "Tester", "and this", replyTo = null, wake = true)
+    assertEquals(SendStatus.QUEUED, second.results.single().status)
+    assertTrue(second.results.single().reason!!.contains("starting"))
+    assertFalse(courier.last("b")!!.wake)
+    box.engineStarting("b")
+    assertFalse(courier.last("b")!!.wake)
+    // Ready, idle until its work comes: both go in as one prompt, read as started.
+    view.set("b", AgentState.IDLE)
+    courier.answers["b"] = Handover.WOKE
+    box.engineReady("b")
+    assertEquals(listOf(1L, 2L), courier.last("b")!!.ids)
+    assertTrue(courier.last("b")!!.wake)
+    assertTrue(box.recent(2).all { it.deliveryTo("b")!!.let { d -> d.woke && d.started } })
+    // One start, one wake of the budget; its run is another agent's.
+    assertEquals(5, box.policy.wakesLeft("b"))
+    assertTrue(box.wakes.startedByAgent("b"))
+    assertTrue(held.isEmpty())
+  }
+
+  @Test fun aStartThatFailsHoldsTheAgentBackAndTellsItsSendersOnce() {
+    stoppedTester()
+    box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    box.engineStarting("b")
+    box.engineGone("b", "not ready after 120 s")
+    assertEquals(listOf("b" to "not ready after 120 s"), held)
+    val told = box.recent(1).single()
+    assertTrue(told.notice)
+    assertEquals("a", told.to)
+    assertFalse(told.wake)
+    assertTrue(told.text.contains("Tester could not be started for your message: not ready after 120 s"))
+    // The message waits for its next run.
+    assertEquals(1, box.unread("b"))
+    box.engineGone("b", "again")
+    assertEquals(1, held.size)
+  }
+
+  @Test fun aStartThatNeverBeganFailsAMinuteOn() {
+    stoppedTester()
+    box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    courier.answers.remove("b")
+    now += MessageRules.START_GIVE_UP_MS - 1
+    box.refresh("b")
+    assertTrue(held.isEmpty())
+    now += 1
+    box.refresh("b")
+    assertEquals(listOf("b" to Mailbox.NEVER_CAME), held)
+  }
+
+  @Test fun aStartTheServiceTookIsNeverGivenUpWhileItWaitsItsTurn() {
+    stoppedTester()
+    box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    courier.answers.remove("b")
+    box.startTaken("b")
+    now += 10 * MessageRules.START_GIVE_UP_MS
+    box.refresh("b")
+    assertTrue(held.isEmpty())
+    // The service refused it before any status: told once, held back.
+    box.startFailed("b", "too_many_running: 3 agents running")
+    box.engineGone("b", "too_many_running: 3 agents running")
+    assertEquals(listOf("b" to "too_many_running: 3 agents running"), held)
+    assertEquals(1, box.recent(5).count { it.notice && it.to == "a" })
+  }
+
+  @Test fun aStartAndroidRefusedTellsTheSenderWhy() {
+    view.set("b", AgentState.STOPPED)
+    view.starts["b"] = null
+    val sent = box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    assertEquals(SendStatus.QUEUED, sent.results.single().status)
+    assertTrue(sent.results.single().reason!!.contains("not started: Android did not let PhoneCanDo start it"))
+    assertTrue(held.isEmpty())
+  }
+
+  @Test fun aStopOfTheUsersOrOneThatCameEndsTheStartQuietly() {
+    stoppedTester()
+    box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    box.engineGone("b")
+    assertTrue(held.isEmpty())
+    assertEquals(1, box.recent(5).size)
+  }
+
+  @Test fun onlyANewMessageStartsAStoppedAgentAndTheSenderHearsWhyNot() {
+    view.set("b", AgentState.STOPPED)
+    view.starts["b"] = null
+    val quiet = box.send(a, "Tester", "fyi", replyTo = null, wake = false)
+    assertTrue(quiet.results.single().reason!!.contains("send with wake: true to start it"))
+    view.starts["b"] = "the phone is short of memory"
+    val loud = box.send(a, "Tester", "need you", replyTo = null, wake = true)
+    assertEquals(SendStatus.QUEUED, loud.results.single().status)
+    assertTrue(loud.results.single().reason!!.contains("it is stopped; it gets this when it next runs (not started: the phone is short of memory)"))
+    assertFalse(courier.last("b")!!.wake)
+    // Room again: a chat change (a retry) still starts nothing, so an agent you just stopped stays stopped.
+    view.starts["b"] = null
+    box.chatsChanged(emptySet())
+    assertFalse(courier.last("b")!!.wake)
   }
 
 }

@@ -44,9 +44,9 @@ one bridge route each, so MCP serves them too):
 | Tool | Route | Purpose |
 |---|---|---|
 | `agents_list` | `POST /agents/list` | who is here (`scope` machine or phone), what each does, who holds or waits for the screen |
-| `agents_send` | `POST /agents/send` | a message to an agent by name, `@machine` or `@phone`; `wake: true` (direct only) wakes an idle one |
+| `agents_send` | `POST /agents/send` | a message to an agent by name, `@machine` or `@phone`; `wake: true` (direct only) wakes an idle one, or starts a stopped one; an answer (`replyTo`) to a message that woke you wakes its sender |
 | `agents_inbox` | `POST /agents/inbox` | read and mark read the caller's unread messages and notices |
-| `agents_wait` | `POST /agents/wait` | wait up to 30 s for the next message (`from` one agent) |
+| `agents_wait` | `POST /agents/wait` | wait up to 30 s for the next message (`from` one agent); never for an agent you just woke or started, whose answer can take minutes: end your turn, and its answer wakes you |
 | `agents_keep_running` | `POST /keep` | stay up while idle in the background (`on`, a `reason` the user sees, `minutes` up to 120), or end that ask |
 | `schedule_add` | `POST /schedule/add` | a task for the agent itself later: `at` (local time), `in` minutes, `every` minutes (15 at least) or `daily` "HH:MM" on `days`; `chat` new or same |
 | `schedule_list` | `POST /schedule/list` | the caller's schedules, with the phone's time and zone |

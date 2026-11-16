@@ -44,6 +44,12 @@ object MessageRules {
   /** A woken agent that shows no run within this was not woken after all. */
   const val WAKE_START_MS = MINUTE_MS
 
+  /** A start a message asked for that the engine service has not taken after this never came. */
+  const val START_GIVE_UP_MS = MINUTE_MS
+
+  /** A message never starts an agent the memory guard stopped under this long ago. */
+  const val MEMORY_STOP_HOLD_MS = 10 * MINUTE_MS
+
   /** agents_wait blocks at most this long. */
   const val WAIT_MAX_SEC = 30
 

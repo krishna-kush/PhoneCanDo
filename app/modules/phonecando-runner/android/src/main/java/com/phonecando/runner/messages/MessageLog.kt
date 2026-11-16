@@ -43,9 +43,20 @@ class MessageLog(
   /** [agentId]'s unread messages, oldest first. */
   fun unread(agentId: String): List<Message> = lock.withLock { unreadLocked(agentId) }
 
-  /** Moves [agentId]'s deliveries of [ids] on to [status] ([woke]: that started its run), never back. */
-  fun mark(agentId: String, ids: Collection<Long>, status: DeliveryStatus, woke: Boolean = false) {
-    lock.withLock { markLocked(agentId, ids, status, woke) }
+  /**
+   * Moves [agentId]'s deliveries of [ids] on to [status] ([woke]: that
+   * started its run; [started]: its engine was started for them; [reasons]:
+   * why, by id, one that asked to wake it did not), never back.
+   */
+  fun mark(
+    agentId: String,
+    ids: Collection<Long>,
+    status: DeliveryStatus,
+    woke: Boolean = false,
+    started: Boolean = false,
+    reasons: Map<Long, String> = emptyMap(),
+  ) {
+    lock.withLock { markLocked(agentId, ids, status, woke, started, reasons) }
   }
 
   /** Of [ids], those [agentId] has not read yet (queued or delivered). */
@@ -125,13 +136,20 @@ class MessageLog(
 
   private fun unreadLocked(agentId: String): List<Message> = messages.values.filter { it.deliveryTo(agentId)?.unread == true }
 
-  private fun markLocked(agentId: String, ids: Collection<Long>, status: DeliveryStatus, woke: Boolean) {
+  private fun markLocked(
+    agentId: String,
+    ids: Collection<Long>,
+    status: DeliveryStatus,
+    woke: Boolean,
+    started: Boolean = false,
+    reasons: Map<Long, String> = emptyMap(),
+  ) {
     val now = clock()
     for (id in ids) {
       val m = messages[id] ?: continue
       val d = m.deliveryTo(agentId) ?: continue
       if (d.status == DeliveryStatus.REFUSED || d.status.ordinal >= status.ordinal) continue
-      put(m.withDelivery(agentId) { it.copy(status = status, woke = it.woke || woke, at = now) })
+      put(m.withDelivery(agentId) { it.copy(status = status, woke = it.woke || woke, started = it.started || started, reason = reasons[id] ?: it.reason, at = now) })
     }
   }
 

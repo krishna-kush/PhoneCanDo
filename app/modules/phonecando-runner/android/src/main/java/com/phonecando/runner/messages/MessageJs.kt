@@ -4,7 +4,7 @@ package com.phonecando.runner.messages
 //   {id, from:{agentId|null, name, kind|null},
 //    to:{kind:"agent"|"machine"|"phone", agentId?, name?, imageId?},
 //    text, replyTo, sentAt, hop, notice,
-//    deliveries:[{agentId, name, status, woke, reason?}],
+//    deliveries:[{agentId, name, status, woke, started, reason?}],
 //    scheduled:{scheduleId, by:"user"|"agent", newChat, timing}|null}
 // A runner notice is from agentId null, name "PhoneCanDo"; a scheduled
 // task's notice has `scheduled` (text is the task's own). Names are the
@@ -30,6 +30,7 @@ object MessageJs {
         put("name", d.name)
         put("status", d.status.wire)
         put("woke", d.woke)
+        put("started", d.started)
         d.reason?.let { put("reason", it) }
       }
     },

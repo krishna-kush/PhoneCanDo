@@ -12,12 +12,13 @@ import com.phonecando.runner.engine.EngineStatus
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.acp.AcpEngines
 import com.phonecando.runner.engine.image.ImageDir
+import com.phonecando.runner.engine.starts.EngineStarts
+import com.phonecando.runner.engine.starts.StartHolds
 import com.phonecando.runner.messages.delivery.AcpCourier
 import com.phonecando.runner.messages.delivery.InboxCourier
 import com.phonecando.runner.messages.delivery.InboxFolder
 import com.phonecando.runner.messages.delivery.KindInbox
 import com.phonecando.runner.messages.delivery.RoutingCourier
-import com.phonecando.runner.schedule.EngineStarts
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -30,8 +31,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 // that waits may go in now), receipts from the events files, and the
 // screen line's notices (ScreenMessages). Sets go through RoutingCourier:
 // as a prompt to an agent in ACP mode (AcpCourier), else as the kind's
-// `inbox` says (InboxCourier). Making it also sets the process's one ACP
-// listener (AcpRelay), as every engine start makes it first.
+// `inbox` says (InboxCourier); a set that may start a stopped agent asks
+// the engine service for it (EngineStarts, in the mode StartRules picks);
+// the service taking that request, or refusing it before any status, and
+// the engine failing or dying first say how it went, and a start that
+// failed holds the agent back (StartHolds; Android refusing the request is
+// no failed start, and the set waits in the folder). Making it also sets
+// the process's one ACP listener (AcpRelay), as every engine start makes
+// it first.
 // Everything but the start runs on one thread of its own, so a slow post
 // to an engine never holds a stream or the bridge's screen ticker; a burst
 // of board changes is handled once.
@@ -60,6 +67,8 @@ class Messages private constructor(context: Context) {
     look = view::acpLook,
     folder = { agent -> inboxPlan(agent)?.folder == true },
     switchToAcp = { agent -> EngineStarts(app).start(agent.id, mode = EngineMode.ACP) == null },
+    stopped = view::stopped,
+    start = ::startFor,
   )
 
   val mailbox = Mailbox(
@@ -68,6 +77,7 @@ class Messages private constructor(context: Context) {
     courier = courier,
     onChange = { MessageEvents.changed(unreadCounts()) },
     onError = ::warn,
+    onStartFailed = StartHolds.shared::failed,
   )
 
   /** What the screen line tells agents, for the bridge's ScreenLease. */
@@ -77,10 +87,16 @@ class Messages private constructor(context: Context) {
     override fun onStatus(status: EngineStatus) {
       when (status.state) {
         EngineState.READY -> later { mailbox.engineReady(status.agentId) }
-        EngineState.STOPPED, EngineState.DIED, EngineState.FAILED -> later { mailbox.engineGone(status.agentId) }
+        EngineState.STOPPED -> later { mailbox.engineGone(status.agentId) }
+        EngineState.DIED, EngineState.FAILED -> later { mailbox.engineGone(status.agentId, status.error ?: "its engine ended") }
         else -> {}
       }
     }
+
+    // At once (it only marks the start): a start waiting its turn is not given up.
+    override fun onStartTaken(agentId: String) = mailbox.startTaken(agentId)
+
+    override fun onStartFailed(agentId: String, why: String) = later { mailbox.startFailed(agentId, why) }
 
     override fun onChats() {
       if (!boardDirty.compareAndSet(false, true)) return
@@ -97,6 +113,15 @@ class Messages private constructor(context: Context) {
   }
 
   private fun inboxPlan(agent: AgentRecord) = KindCatalogs.get(app).get(agent.kind)?.let(KindInbox::of)
+
+  // A stopped agent's start for its messages, in the mode its kind takes
+  // them (StartRules.mode); false when Android refused the request (its
+  // set waits for its next run; nothing is held: a schedule's alarm, Run
+  // now and the app may still start it).
+  private fun startFor(agent: AgentRecord): Boolean {
+    val mode = view.startMode(agent) ?: return false
+    return EngineStarts(app).start(agent.id, mode = mode) == null
+  }
 
   /** The engine of [agentId] starts (EngineLauncher.plan, on the start thread): its inbox folder and pending set. */
   fun engineStarting(agentId: String) = mailbox.engineStarting(agentId)

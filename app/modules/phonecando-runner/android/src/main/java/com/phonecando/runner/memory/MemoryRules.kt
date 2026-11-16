@@ -31,6 +31,13 @@ object MemoryRules {
 
   const val POLL_MS = 5_000L
 
+  /**
+   * Room an agent's engine needs: a start nobody asked for in the app (a
+   * message's) waits until the phone has the ok line plus this free
+   * (engine/starts/StartRoom), as lme leaves for it beside a model.
+   */
+  const val START_ROOM = 512 * MIB
+
   /** The stopped engine's status error (EngineStatus.error), so the app can say why it stopped. */
   const val STOPPED_REASON = "low_memory: stopped to free memory"
 }

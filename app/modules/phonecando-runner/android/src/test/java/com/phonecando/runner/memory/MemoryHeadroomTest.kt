@@ -3,6 +3,7 @@ package com.phonecando.runner.memory
 import com.phonecando.lme.host.ram.RamGate
 import com.phonecando.lme.host.ram.RamRules
 import com.phonecando.runner.memory.MemoryRules.MIB
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -21,5 +22,10 @@ class MemoryHeadroomTest {
       // Within a MiB: each side rounds its percentages its own way.
       assertTrue("$total", RamGate.keepFree(total) - RamRules.FREE_MARGIN_MIB * MIB >= okFrom - MIB)
     }
+  }
+
+  // A message's start waits for the room lme leaves an agent's engine.
+  @Test fun aMessagesStartWantsTheRoomLmeLeavesAnEngine() {
+    assertEquals(RamRules.FREE_MARGIN_MIB * MIB, MemoryRules.START_ROOM)
   }
 }

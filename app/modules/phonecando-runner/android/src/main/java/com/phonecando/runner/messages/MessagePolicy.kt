@@ -11,6 +11,7 @@ import com.phonecando.runner.messages.MessageRules.NO_WAKE_HOP
 import com.phonecando.runner.messages.MessageRules.SCHEDULED_WAKE_TTL_MS
 import com.phonecando.runner.messages.MessageRules.WAKES_PER_HOUR
 import com.phonecando.runner.messages.MessageRules.WAKE_TTL_MS
+import com.phonecando.runner.messages.start.StartRules
 
 // What agents may send and when a message may wake its recipient
 // (MessageRules has the numbers):
@@ -22,12 +23,21 @@ import com.phonecando.runner.messages.MessageRules.WAKE_TTL_MS
 // - Waking: only a direct message (or a runner notice) whose sender asked
 //   for it, asked under 10 minutes ago, with hop under 2, to an agent whose
 //   "Other agents can wake it" is on, of a kind that can be woken, whose
-//   engine runs (a stopped engine is never started) and has no run going or
-//   question waiting, and which has been woken fewer than 6 times this hour.
+//   engine runs with no run going or question waiting, or is stopped and
+//   may be started for it (start/StartRules: why not is the WakeCheck's
+//   startRefusal), and which has been woken fewer than 6 times this hour
+//   (a start counts as a wake).
+// - An answer wakes the asker: a direct message whose replyTo is a waking
+//   message (wake: true, direct, not a notice), sent by that message's
+//   recipient back to its sender, asks to wake as if sent with wake: true
+//   (answerWakes), so an agent that asked and ended its turn hears the
+//   answer. Every rule above still holds: the asker's switch, its age from
+//   its own send, the budget, and the hop (an answer from a woken run is
+//   hop 1 and may wake; an answer to that answer is hop 2 and never does).
 // - A scheduled task's notice (ScheduledNote) is the user's or the agent's
 //   own, not another agent's: it wakes whatever the switch, the hop and the
-//   budget say, for 30 minutes; the kind must still wake, the engine run
-//   and be idle.
+//   budget say, for 30 minutes; the kind must still wake, and the engine
+//   run and be idle, or be one that may start.
 // The windows live in memory: a new app process starts them afresh (the
 // wake budget is seeded from the log). Pure: the clock is injected.
 class MessagePolicy(private val clock: () -> Long) {
@@ -124,9 +134,20 @@ class MessagePolicy(private val clock: () -> Long) {
     val wakesLeft: Int,
     /** A scheduled task's notice (ScheduledNote). */
     val scheduled: Boolean = false,
+    /** Not running: why a message may not start it now (start/StartRules, or it is starting); null when it may. */
+    val startRefusal: String? = StartRules.NEVER,
   )
 
   companion object {
+    /**
+     * Whether a message from [from] to [to] that answers [answered] (its
+     * replyTo) asks to wake [to]: [answered] is a direct message [to] sent
+     * [from] with wake: true (never a notice).
+     */
+    fun answerWakes(answered: Message?, from: String, to: String): Boolean =
+      answered != null && answered.wake && !answered.notice && !answered.broadcast &&
+        answered.to == from && answered.from == to
+
     /** Why the message may not wake its recipient now; null when it may. */
     fun wakeRefusal(c: WakeCheck, now: Long): String? = when {
       !c.asked -> "not asked"
@@ -135,9 +156,9 @@ class MessagePolicy(private val clock: () -> Long) {
       now - c.sentAt > (if (c.scheduled) SCHEDULED_WAKE_TTL_MS else WAKE_TTL_MS) -> "asked too long ago"
       !c.scheduled && !c.wakeable -> "the user switched off waking it"
       !c.kindCanWake -> "its kind cannot be woken"
-      !c.hookWaiting -> "it can be woken only while the hook it leaves after a turn is waiting, and none is waiting now"
-      !c.running -> "it is stopped, and is never started by a message"
-      !c.idle -> "it is busy"
+      !c.running && c.startRefusal != null -> c.startRefusal
+      c.running && !c.hookWaiting -> "it can be woken only while the hook it leaves after a turn is waiting, and none is waiting now"
+      c.running && !c.idle -> "it is busy"
       !c.scheduled && c.wakesLeft <= 0 -> "it was woken $WAKES_PER_HOUR times this hour"
       else -> null
     }

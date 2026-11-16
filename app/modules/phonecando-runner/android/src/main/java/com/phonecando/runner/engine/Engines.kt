@@ -3,6 +3,7 @@ package com.phonecando.runner.engine
 import android.content.Context
 import android.util.Log
 import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.engine.starts.StartHolds
 import com.phonecando.runner.engine.work.WorkWatch
 import com.phonecando.runner.engine.work.WorkWatches
 import com.phonecando.runner.limits.RunLimitStore
@@ -15,7 +16,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 
 // The process's one EngineSupervisor with its memory guard (memory/) and
-// work watch (work/: the jobs agents left running, the idle stop), and
+// work watch (work/: the jobs agents left running, the idle stop), a ready
+// engine ending its agent's start hold (starts/StartHolds), and
 // who hears about them: the foreground service (notification, wake lock,
 // stop when idle) and the native module (the phonecandoEngineState,
 // phonecandoPromptReading and phonecandoMemory events). The supervisor
@@ -39,6 +41,12 @@ internal object Engines {
 
     /** The work watch looked (WorkWatch, every POLL_MS while an engine runs); [changed]: an agent's jobs did. */
     fun onWork(changed: Boolean) {}
+
+    /** The service took a start request for [agentId] (it waits its turn on the start thread). On the main thread. */
+    fun onStartTaken(agentId: String) {}
+
+    /** A start of [agentId] the service took ended in [why] (a refusal before any status, or the failure its status also says). */
+    fun onStartFailed(agentId: String, why: String) {}
   }
 
   private val listeners = CopyOnWriteArrayList<Listener>()
@@ -67,8 +75,17 @@ internal object Engines {
     val engines = EngineSupervisor(app, AgentStores.get(app), relay, limits = limits::read)
     guard = MemoryGuards.install(app, engines) { relay.onMemory(it) }
     workWatch = WorkWatches.install(app, engines) { relay.onWork(it) }
+    addListener(object : Listener {
+      override fun onStatus(status: EngineStatus) = StartHolds.shared.statusChanged(status.agentId, status.state)
+    })
     return engines
   }
+
+  /** The service took a start request for [agentId] (PhoneCanDoServeService). */
+  fun startTaken(agentId: String) = relay.onStartTaken(agentId)
+
+  /** A start of [agentId] the service took failed: [why]. */
+  fun startFailed(agentId: String, why: String) = relay.onStartFailed(agentId, why)
 
   fun addListener(listener: Listener) {
     listeners.addIfAbsent(listener)
@@ -90,6 +107,10 @@ internal object Engines {
     override fun onMemory(status: MemoryStatus) = each { it.onMemory(status) }
 
     override fun onWork(changed: Boolean) = each { it.onWork(changed) }
+
+    override fun onStartTaken(agentId: String) = each { it.onStartTaken(agentId) }
+
+    override fun onStartFailed(agentId: String, why: String) = each { it.onStartFailed(agentId, why) }
 
     private inline fun each(block: (Listener) -> Unit) {
       for (l in listeners) {

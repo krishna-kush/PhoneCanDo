@@ -30,6 +30,14 @@ enum class Handover {
    */
   SWITCHING,
 
+  /**
+   * It may start a stopped agent (start/StartRules): we asked for its
+   * engine (in ACP mode for a kind with one), and the set goes in as a
+   * prompt, or through its server's wake call, once that is ready (still
+   * queued).
+   */
+  STARTING,
+
   /** Nothing can take it now: a kind that only pulls (agents_inbox), or a server with no chat yet. */
   NONE,
 }

@@ -44,7 +44,4 @@ object ScheduleRules {
 
   /** An agent we just asked to start counts as starting this long, until its engine says so. */
   const val STARTING_GRACE_MS = MINUTE_MS
-
-  /** After a start of ours failed, the agent's other tasks fail this long rather than start it again. */
-  const val FAILED_START_HOLD_MS = 10 * MINUTE_MS
 }

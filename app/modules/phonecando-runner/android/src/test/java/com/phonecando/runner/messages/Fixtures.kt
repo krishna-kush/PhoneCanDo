@@ -5,6 +5,7 @@ import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.messages.delivery.Courier
 import com.phonecando.runner.messages.delivery.Handover
 import com.phonecando.runner.messages.delivery.Parcel
+import com.phonecando.runner.messages.start.StartRules
 import java.io.File
 import java.nio.file.Files
 
@@ -23,6 +24,9 @@ class FakeView(vararg agents: AgentRecord) : AgentsView {
 
   /** Per agent: a kind that wakes through a waiting hook has it alive (true by default). */
   val waiters = HashMap<String, Boolean>()
+
+  /** Per agent: why a message may not start it while stopped (null: it may); never started when absent. */
+  val starts = HashMap<String, String?>()
   var line = ScreenLine.NONE
 
   override fun all(): List<AgentRecord> = records.toList()
@@ -39,6 +43,8 @@ class FakeView(vararg agents: AgentRecord) : AgentsView {
     levels[kind] ?: if (kindCanWake(kind)) MessagingLevel.WAKES else MessagingLevel.DELIVERED
 
   override fun wakeReady(agent: AgentRecord): Boolean = waiters[agent.id] ?: true
+
+  override fun startRefusal(agent: AgentRecord): String? = if (agent.id in starts) starts[agent.id] else StartRules.NEVER
 
   override fun presence(agentId: String): Presence = presences[agentId] ?: Presence(AgentState.IDLE)
 

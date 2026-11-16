@@ -10,6 +10,8 @@ import com.phonecando.runner.checks.fanout.CheckFanOut
 import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.EngineStatus
+import com.phonecando.runner.engine.starts.EngineStarts
+import com.phonecando.runner.engine.starts.StartHolds
 import com.phonecando.runner.messages.MessageRules
 import com.phonecando.runner.messages.Messages
 import com.phonecando.runner.messages.ScheduledNote
@@ -40,10 +42,13 @@ import java.util.concurrent.TimeUnit
 // - a wake, a start-then-wake and an ACP prompt post the task through the
 //   mailbox as a scheduled notice (ScheduledNote: it wakes whatever the
 //   agent's wake switch and budget say; in ACP mode it goes in as a
-//   prompt); a start puts its first prompt in StartPrompts.
+//   prompt); a start puts its first prompt in StartPrompts. The task's note
+//   names its timing, or for a Run now when it ran (a wait keeps that);
+//   a once you Run now is done after it, as after its own time.
 // - a start we asked for that fails (its engine FAILED or DIED before ready)
 //   turns its run to failed, and the agent's other tasks fail for
-//   FAILED_START_HOLD_MS rather than start it again. Except an ACP start of
+//   StartHolds.HOLD_MS rather than start it again (a message does not start
+//   it then either). Except an ACP start of
 //   a kind that takes a first prompt: its own app gets the task instead, as
 //   before ACP mode (inTerminal), so ACP mode never leaves a schedule worse
 //   off; the run says why ACP mode did not start. A switch to ACP mode
@@ -95,9 +100,10 @@ internal class Firing(
 
   /**
    * A start we asked for: the schedule and run it belongs to, whether in ACP
-   * mode, and whether a terminal start with the task as its first prompt.
+   * mode, whether a terminal start with the task as its first prompt, and
+   * the task's note (its own app gets it if ACP mode fails, inTerminal).
    */
-  private class StartRun(val scheduleId: String, val seq: Long, val acp: Boolean, val task: Boolean)
+  private class StartRun(val scheduleId: String, val seq: Long, val acp: Boolean, val task: Boolean, val note: ScheduledNote)
 
   // Per agent we started: the schedule and the run that start belongs to.
   private val startRuns = ConcurrentHashMap<String, StartRun>()
@@ -105,8 +111,8 @@ internal class Firing(
   // Per agent: the schedule and run whose ACP turn is going.
   private val acpTurns = ConcurrentHashMap<String, Pair<String, Long>>()
 
-  // Per agent: when a start of ours failed, and why.
-  private val failedStarts = ConcurrentHashMap<String, Pair<Long, String>>()
+  // Per agent: why a start of ours, or of a message's, failed lately.
+  private val holds = StartHolds.shared
 
   // Runs watched after they were logged: a start's task window, a wake's receipt.
   private val watch = RunWatch(clock)
@@ -120,8 +126,15 @@ internal class Firing(
     closeCutOff()
   }
 
-  /** One firing of [schedule]: when it was due and fired, and whether late. */
-  private class Shot(val schedule: Schedule, val dueAt: Long, val firedAt: Long, val late: Boolean, val waiting: Waiting?)
+  /** One firing of [schedule]: when it was due and fired, whether late, and whether you asked for it ([runNow]). */
+  private class Shot(
+    val schedule: Schedule,
+    val dueAt: Long,
+    val firedAt: Long,
+    val late: Boolean,
+    val waiting: Waiting?,
+    val runNow: Boolean = false,
+  )
 
   // ---- entry points (the scheduler's thread) ----------------------------------------
 
@@ -143,12 +156,13 @@ internal class Firing(
     if (book.waiting().isNotEmpty()) recheck(Window.NONE)
   }
 
-  /** Run now, from the app in front; null when it fired, else why not. */
+  /** Run now, from the app in front; null when it fired, else why not. A once is done after it (ScheduleBook.ranNow). */
   fun runNow(id: String): String? {
     val s = book.get(id) ?: return "no schedule with that id"
     val now = clock()
     book.unwait(s.id)
-    fire(Shot(s, now, now, false, null), Window.FRONT)
+    book.ranNow(s.id)
+    fire(Shot(s, now, now, false, null, runNow = true), Window.FRONT)
     return null
   }
 
@@ -183,7 +197,7 @@ internal class Firing(
         if (start != null) {
           val why = "the agent did not start: " + (status.error ?: "its engine ended")
           if (start.acp && inTerminal(id, start, status.error ?: "its engine ended")) return
-          failedStarts[id] = clock() to why
+          holds.failed(id, status.error ?: "its engine ended")
           fail(start.scheduleId, start.seq, why)
         } else if (turn != null) {
           fail(turn.first, turn.second, "the agent's engine ended mid-task: " + (status.error ?: "no detail"))
@@ -211,7 +225,7 @@ internal class Firing(
     asked.remove(agentId)
     startRuns.remove(agentId)?.let { runs.settle(it.seq) }
     acpTurns.remove(agentId)?.let { runs.settle(it.second) }
-    failedStarts.remove(agentId)
+    holds.forget(agentId)
     watch.forget(agentId)
   }
 
@@ -223,12 +237,12 @@ internal class Firing(
     val s = book.get(start.scheduleId) ?: return false
     val agent = AgentStores.get(app).get(agentId) ?: return false
     if (!live.read(agent, s.chat, null, clock()).kindPrompts) return false
-    if (starts.start(agentId, note(s).line(s.text), s.chat == ChatMode.NEW) != null) return false
+    if (starts.start(agentId, start.note.line(s.text), s.chat == ChatMode.NEW) != null) return false
     asked[agentId] = clock()
     val detail = "ACP mode did not start ($acpWhy), so its own app took the task"
     runs.update(start.seq, RunOutcome.STARTED, detail, open = true)
     book.ran(start.scheduleId, LastRun(clock(), RunOutcome.STARTED, detail))
-    startRuns[agentId] = StartRun(start.scheduleId, start.seq, acp = false, task = true)
+    startRuns[agentId] = StartRun(start.scheduleId, start.seq, acp = false, task = true, start.note)
     Log.i(TAG, "schedule ${start.scheduleId}: ACP mode of $agentId did not start, its own app took the task")
     return true
   }
@@ -264,7 +278,7 @@ internal class Firing(
         book.unwait(w.scheduleId)
         continue
       }
-      val shot = Shot(s, w.dueAt, w.firedAt, w.late, w)
+      val shot = Shot(s, w.dueAt, w.firedAt, w.late, w, w.runNow)
       if (now >= w.until) {
         done(shot, agentOf(shot), RunOutcome.BUSY, "the agent stayed busy ${TimingText.span((ScheduleRules.BUSY_WAIT_MS / ScheduleRules.MINUTE_MS).toInt())} past its time")
       } else {
@@ -292,9 +306,10 @@ internal class Firing(
       FireRules.Action.ASK_USER -> ask(shot, agent, null, posted = false)
       else -> {
         val starting = action != FireRules.Action.WAKE && action != FireRules.Action.PROMPT_ACP
-        val failed = failedStarts[agent.id]?.takeIf { now - it.first < ScheduleRules.FAILED_START_HOLD_MS }
+        // Run now is yours, in the app: never held.
+        val failed = if (window == Window.FRONT) null else holds.why(agent.id)
         if (starting && failed != null) {
-          done(shot, agent, RunOutcome.FAILED, failed.second)
+          done(shot, agent, RunOutcome.FAILED, "the agent did not start: $failed")
           return
         }
         val may = when (window) {
@@ -315,7 +330,7 @@ internal class Firing(
 
   private fun run(shot: Shot, agent: AgentRecord, action: FireRules.Action) {
     val s = shot.schedule
-    val note = note(s)
+    val note = note(shot)
     val newChat = s.chat == ChatMode.NEW
     when (action) {
       FireRules.Action.START_WITH_PROMPT -> {
@@ -371,7 +386,7 @@ internal class Firing(
   private fun started(shot: Shot, agent: AgentRecord, outcome: RunOutcome, acp: Boolean = false, task: Boolean = false) {
     asked[agent.id] = clock()
     val seq = done(shot, agent, outcome, null, open = true)
-    startRuns.put(agent.id, StartRun(shot.schedule.id, seq, acp, task))?.let { runs.settle(it.seq) }
+    startRuns.put(agent.id, StartRun(shot.schedule.id, seq, acp, task, note(shot)))?.let { runs.settle(it.seq) }
     if (acp) turn(agent.id, shot.schedule.id, seq)
   }
 
@@ -405,7 +420,7 @@ internal class Firing(
   // it), and a notification asks you to open the agent.
   private fun ask(shot: Shot, agent: AgentRecord, why: String?, posted: Boolean) {
     val s = shot.schedule
-    if (!posted) Messages.get(app).mailbox.notice(agent.id, s.text, wake = false, scheduled = note(s))
+    if (!posted) Messages.get(app).mailbox.notice(agent.id, s.text, wake = false, scheduled = note(shot))
     dueNotice.post(agent.id, agent.name, s.text)
     done(shot, agent, RunOutcome.ASKED, why)
   }
@@ -414,7 +429,7 @@ internal class Firing(
     val w = shot.waiting
     when {
       w == null -> book.wait(
-        Waiting(shot.schedule.id, shot.dueAt, shot.firedAt, shot.late, until = shot.dueAt + ScheduleRules.BUSY_WAIT_MS),
+        Waiting(shot.schedule.id, shot.dueAt, shot.firedAt, shot.late, until = shot.dueAt + ScheduleRules.BUSY_WAIT_MS, runNow = shot.runNow),
       )
       w.retryAt != null -> book.wait(w.copy(retryAt = null))
     }
@@ -424,7 +439,7 @@ internal class Firing(
   private fun later(shot: Shot) {
     val retryAt = clock() + ScheduleRules.START_ALARM_MS
     val w = shot.waiting
-      ?: Waiting(shot.schedule.id, shot.dueAt, shot.firedAt, shot.late, until = shot.dueAt + ScheduleRules.BUSY_WAIT_MS)
+      ?: Waiting(shot.schedule.id, shot.dueAt, shot.firedAt, shot.late, until = shot.dueAt + ScheduleRules.BUSY_WAIT_MS, runNow = shot.runNow)
     if (w.retryAt == null) book.wait(w.copy(retryAt = retryAt))
   }
 
@@ -461,7 +476,12 @@ internal class Firing(
 
   private fun agentOf(shot: Shot): AgentRecord? = AgentStores.get(app).get(shot.schedule.agentId)
 
-  private fun note(s: Schedule) = ScheduledNote(s.id, s.by.wire, s.chat == ChatMode.NEW, TimingText.of(s.timing, zone()))
+  // The task's note; a Run now says when it ran, not its timing's next time.
+  private fun note(shot: Shot): ScheduledNote {
+    val s = shot.schedule
+    val timing = if (shot.runNow) TimingText.ranNow(shot.firedAt, zone()) else TimingText.of(s.timing, zone())
+    return ScheduledNote(s.id, s.by.wire, s.chat == ChatMode.NEW, timing)
+  }
 
   private companion object {
     const val TAG = "PhoneCanDoSchedules"

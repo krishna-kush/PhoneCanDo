@@ -3,8 +3,12 @@ package com.phonecando.runner.messages.delivery
 import com.phonecando.runner.agents.AgentRecord
 import java.util.concurrent.ConcurrentHashMap
 
-// The mailbox's one courier: each set goes the way AcpRoute picks for its
-// agent now.
+// The mailbox's one courier: a new set that may wake a stopped agent asks
+// for its start (start(): the mailbox let it, start/StartRules; in ACP mode
+// for a kind with one) and answers STARTING, or, refused or a retry, goes
+// to the folder without the wake mark; once its engine is ready, the mailbox's next try
+// hands the set over as below. Every other set goes the way AcpRoute picks
+// for its agent now.
 // - PROMPT: what its folder still holds goes first (a hook mid-turn must not
 //   print it again), then the AcpCourier prompts it.
 // - SWITCH: we ask its engine to switch to ACP mode (switchToAcp, the
@@ -19,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
 //   take it mid-turn, or next turn) without the wake mark (AcpRoute.
 //   folderWake), so only our prompt ever starts its turn.
 // - NONE: nothing takes it now.
-// IO only through the injected couriers, look, folder and switch.
+// IO only through the injected couriers, look, folder, switch and start.
 class RoutingCourier(
   private val inbox: Courier,
   private val acp: Courier,
@@ -29,6 +33,10 @@ class RoutingCourier(
   /** Asks for the agent's engine in ACP mode; false when the request was refused. */
   private val switchToAcp: (AgentRecord) -> Boolean,
   private val clock: () -> Long = System::currentTimeMillis,
+  /** Nothing of the agent's engine runs (stopped, failed or died). */
+  private val stopped: (AgentRecord) -> Boolean = { false },
+  /** Asks for the stopped agent's engine, for its messages; false when the request was refused. */
+  private val start: (AgentRecord) -> Boolean = { false },
 ) : Courier {
   // When we last asked each agent's engine to switch to ACP mode, and whether that request went out.
   private val switches = ConcurrentHashMap<String, Pair<Long, Boolean>>()
@@ -36,6 +44,10 @@ class RoutingCourier(
   override fun claimed(agent: AgentRecord): Set<Long> = inbox.claimed(agent) + acp.claimed(agent)
 
   override fun handOver(agent: AgentRecord, parcel: Parcel, retry: Boolean): Handover {
+    // Only a new message starts it: a retry (its set built while it ran) never does.
+    if (parcel.wake && stopped(agent)) {
+      return if (!retry && start(agent)) Handover.STARTING else inbox.handOver(agent, parcel.copy(wake = false), retry)
+    }
     val now = look(agent)
     if (now.acpReady) switches.remove(agent.id)
     return when (AcpRoute.decide(now, parcel.wake, folder(agent))) {

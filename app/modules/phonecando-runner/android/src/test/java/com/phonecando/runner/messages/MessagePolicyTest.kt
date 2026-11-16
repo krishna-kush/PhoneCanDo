@@ -1,5 +1,6 @@
 package com.phonecando.runner.messages
 
+import com.phonecando.runner.messages.start.StartRules
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -8,7 +9,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // The numbers agents hold to, the rate limits over their windows, the
-// duplicate check and every reason a message may not wake its recipient.
+// duplicate check and every reason a message may not wake its recipient,
+// or start it when it is stopped.
 class MessagePolicyTest {
   private var now = 1_000_000L
   private val policy = MessagePolicy { now }
@@ -28,6 +30,8 @@ class MessagePolicyTest {
     assertEquals(30, MessageRules.WAIT_MAX_SEC)
     assertEquals(10 * 60_000L, MessageRules.WAKE_TTL_MS)
     assertEquals(30 * 60_000L, MessageRules.SCHEDULED_WAKE_TTL_MS)
+    assertEquals(60_000L, MessageRules.START_GIVE_UP_MS)
+    assertEquals(10 * 60_000L, MessageRules.MEMORY_STOP_HOLD_MS)
   }
 
   @Test fun directMessagesAreLimitedPerRecipient() {
@@ -112,6 +116,45 @@ class MessagePolicyTest {
     ).map { MessagePolicy.wakeRefusal(it, now) }
     assertTrue(refusals.all { it != null })
     assertEquals(refusals.size, refusals.toSet().size)
+  }
+
+  @Test fun aStoppedAgentIsStartedOnlyWhenNothingSaysNot() {
+    val stopped = MessagePolicy.WakeCheck(
+      asked = true, broadcast = false, hop = 1, sentAt = now, wakeable = true,
+      kindCanWake = true, hookWaiting = false, running = false, idle = false, wakesLeft = 1, startRefusal = null,
+    )
+    // A waiting hook and being idle are a running agent's: a start needs neither.
+    assertNull(MessagePolicy.wakeRefusal(stopped, now))
+    assertEquals("the phone is short of memory", MessagePolicy.wakeRefusal(stopped.copy(startRefusal = "the phone is short of memory"), now))
+    // By default a stopped agent is never started.
+    assertEquals(StartRules.NEVER, MessagePolicy.wakeRefusal(stopped.copy(startRefusal = StartRules.NEVER), now))
+    // Every rule of a wake holds for a start: it spends the budget too.
+    val refusals = listOf(
+      stopped.copy(asked = false),
+      stopped.copy(broadcast = true),
+      stopped.copy(hop = 2),
+      stopped.copy(sentAt = now - MessageRules.WAKE_TTL_MS - 1),
+      stopped.copy(wakeable = false),
+      stopped.copy(kindCanWake = false),
+      stopped.copy(wakesLeft = 0),
+    ).map { MessagePolicy.wakeRefusal(it, now) }
+    assertTrue(refusals.all { it != null })
+  }
+
+  @Test fun anAnswerToAWakingMessageAsksToWakeItsAsker() {
+    val asked = Message(
+      id = 7, from = "a", fromName = "Builder", fromKind = "opencode", fromImage = "m1", to = "b", toName = "Tester",
+      text = "run the tests", replyTo = null, sentAt = now, hop = 0, wake = true, notice = false, deliveries = emptyList(),
+    )
+    assertTrue(MessagePolicy.answerWakes(asked, from = "b", to = "a"))
+    // Not a reply; a reply to a message that did not ask to wake; from a third agent; to someone else.
+    assertFalse(MessagePolicy.answerWakes(null, from = "b", to = "a"))
+    assertFalse(MessagePolicy.answerWakes(asked.copy(wake = false), from = "b", to = "a"))
+    assertFalse(MessagePolicy.answerWakes(asked, from = "c", to = "a"))
+    assertFalse(MessagePolicy.answerWakes(asked, from = "b", to = "c"))
+    // A broadcast or a notice never asked anyone to wake.
+    assertFalse(MessagePolicy.answerWakes(asked.copy(to = Message.PHONE), from = "b", to = "a"))
+    assertFalse(MessagePolicy.answerWakes(asked.copy(from = Message.RUNNER, notice = true), from = "b", to = Message.RUNNER))
   }
 
   @Test fun aScheduledTaskWakesPastTheSwitchTheHopAndTheBudgetForHalfAnHour() {

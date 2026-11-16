@@ -14,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
 
 // The /agents/* routes through the real router: on every channel, never
 // gated, never the screen; the reply shapes the agents_* tools pass on.
@@ -81,6 +82,19 @@ class AgentRoutesTest {
     assertEquals("stopped", reviewer.getString("state"))
     assertTrue(reviewer.isNull("chat"))
     assertFalse(reviewer.getBoolean("canWake"))
+  }
+
+  @Test fun nonAsciiTextIsLoggedAndReadBackUnchanged() {
+    val text = "Got it — thanks 👍 café naïve Ærø 日本"
+    val bytes = JSONObject().put("to", "Tester").put("text", text).toString().toByteArray(Charsets.UTF_8)
+    // As the bridge reads a POST, with no charset named: its Content-Length bytes (RequestBody).
+    val body = RequestBody.read(ByteArrayInputStream(bytes), bytes.size.toLong())
+    assertEquals(200, router(true).handle(a1, "POST", "/agents/send", body).status)
+    // The log on disk, read again as a new process would.
+    val again = Mailbox(MessageLog(MessageStore(file), { 1_000L }), view, FakeCourier(), { 1_000L })
+    assertEquals(text, again.recent(1).single().text)
+    val inbox = data(post("/agents/inbox", JSONObject(), from = a2))
+    assertEquals(text, inbox.getJSONArray("messages").getJSONObject(0).getString("text"))
   }
 
   @Test fun sendInboxAndWaitWorkLockedAndOnLite() {

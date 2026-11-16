@@ -62,14 +62,19 @@ data class Message(
   }
 }
 
-/** How far a message got with one recipient; [woke]: handing it over started the recipient's turn. */
+/**
+ * How far a message got with one recipient; [woke]: handing it over started
+ * the recipient's turn; [started]: its engine was started for it first (it
+ * was stopped).
+ */
 data class Delivery(
   val agentId: String,
   /** The recipient's name when it was sent. */
   val name: String,
   val status: DeliveryStatus,
   val woke: Boolean = false,
-  /** Why it was refused, or dropped unread. */
+  val started: Boolean = false,
+  /** Why it was refused, or dropped unread; delivered, why it did not wake the recipient it asked to wake. */
   val reason: String? = null,
   /** Epoch ms of the last change. */
   val at: Long = 0L,

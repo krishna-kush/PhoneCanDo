@@ -2,11 +2,12 @@ package com.phonecando.runner.messages
 
 import com.phonecando.agents.kit.MessagingLevel
 import com.phonecando.runner.agents.AgentRecord
+import com.phonecando.runner.messages.start.StartRules
 
 // What messaging reads about the agents and the screen, whatever keeps
 // them: the store's records, each agent's state from its engine and chats,
-// its kind's label, level and whether it can be woken (now), and who has
-// the screen.
+// its kind's label, level and whether it can be woken (now) or, stopped,
+// started, and who has the screen.
 // LiveAgentsView reads the running app; tests fake it.
 interface AgentsView {
   /** Every agent, in store order. */
@@ -36,6 +37,13 @@ interface AgentsView {
    * kind.
    */
   fun wakeReady(agent: AgentRecord): Boolean = true
+
+  /**
+   * For a stopped [agent]: why a message that may wake it may not start it
+   * now (start/StartRules: its kind, a check, a failed start, memory, your
+   * cap); null when it may.
+   */
+  fun startRefusal(agent: AgentRecord): String? = StartRules.NEVER
 
   fun presence(agentId: String): Presence
 

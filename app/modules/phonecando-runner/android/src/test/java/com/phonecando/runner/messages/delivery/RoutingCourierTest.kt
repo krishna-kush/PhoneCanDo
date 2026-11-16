@@ -7,8 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // The mailbox's courier picks the inbox or an ACP prompt per agent, clears
-// the folder before a prompt, and asks for a switch to ACP mode once,
-// falling back to the folder when it never comes or is refused.
+// the folder before a prompt, asks for a switch to ACP mode once, falling
+// back to the folder when it never comes or is refused, and asks for a
+// stopped agent's start for a set that may wake it.
 class RoutingCourierTest {
   private var now = 1_000_000L
   private val b = agent("b", "Tester")
@@ -21,6 +22,9 @@ class RoutingCourierTest {
   private var hooks = true
   private var switchTakes = true
   private val switches = ArrayList<String>()
+  private var isStopped = false
+  private var startTakes = true
+  private val starts = ArrayList<String>()
   private val courier = RoutingCourier(
     inbox = inbox,
     acp = acp,
@@ -28,6 +32,8 @@ class RoutingCourierTest {
     folder = { hooks },
     switchToAcp = { switches += it.id; switchTakes },
     clock = { now },
+    stopped = { isStopped },
+    start = { starts += it.id; startTakes },
   )
 
   private val waking = Parcel(listOf(1), "wake up", "{}\n", wake = true)
@@ -88,6 +94,33 @@ class RoutingCourierTest {
     assertEquals(waking, inbox.last("b"))
     assertTrue(switches.isEmpty())
     assertEquals(2, inbox.handed.size)
+  }
+
+  @Test fun aWakingSetForAStoppedAgentAsksForItsStart() {
+    isStopped = true
+    look = look.copy(terminalReady = false, idle = false)
+    assertEquals(Handover.STARTING, courier.handOver(b, waking))
+    assertEquals(listOf("b"), starts)
+    assertTrue(inbox.handed.isEmpty())
+    // A set that may not wake it goes to its folder, as today.
+    assertEquals(Handover.HELD, courier.handOver(b, quiet))
+    assertEquals(listOf("b"), starts)
+    assertTrue(switches.isEmpty())
+  }
+
+  @Test fun aRetryNeverStartsAStoppedAgent() {
+    // Its set was built while it ran; it stopped since.
+    isStopped = true
+    assertEquals(Handover.HELD, courier.handOver(b, waking, retry = true))
+    assertEquals(waking.copy(wake = false), inbox.last("b"))
+    assertTrue(starts.isEmpty())
+  }
+
+  @Test fun aRefusedStartLeavesTheSetInTheFolderWithoutTheWakeMark() {
+    isStopped = true
+    startTakes = false
+    assertEquals(Handover.HELD, courier.handOver(b, waking))
+    assertEquals(waking.copy(wake = false), inbox.last("b"))
   }
 
   @Test fun anEngineStartingInAcpModeGetsItsFolderWithoutTheWakeMark() {

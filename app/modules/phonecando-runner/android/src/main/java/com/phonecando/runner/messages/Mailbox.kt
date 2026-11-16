@@ -5,6 +5,8 @@ import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.messages.delivery.Courier
 import com.phonecando.runner.messages.delivery.Handover
 import com.phonecando.runner.messages.delivery.Parcel
+import com.phonecando.runner.messages.start.MessageStarts
+import com.phonecando.runner.messages.start.StartRules
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -13,15 +15,17 @@ import java.util.concurrent.TimeUnit
 // - send: the text cleaned (MessageText; empty or over 4000 characters is
 //   refused), `to` resolved (Addressing), the duplicate check and the rate
 //   limits (MessagePolicy), then one message with a delivery per
-//   recipient, its hop from the sender's run (WakeTracker), handed to each
+//   recipient, its hop from the sender's run (WakeTracker), asking to wake
+//   when the sender asked or it answers a message that asked to wake the
+//   sender (MessagePolicy.answerWakes), handed to each
 //   recipient at once; what each recipient's delivery came to is the reply
 //   (SendReport). Past 50 unread an agent's oldest are dropped, with a
 //   notice.
 // - deliver: an agent's oldest unread, as many as fit one hand-over
 //   (Parcels), to the Courier, one agent at a time (a gate per agent):
 //   posted (delivered), woken (delivered, woke: also an ACP prompt), held
-//   in its inbox folder, or waiting for its engine's switch to ACP mode
-//   (both still unread). The parcel may wake the agent when one of its unread
+//   in its inbox folder, or waiting for its engine's switch to ACP mode or
+//   its start (all still unread). The parcel may wake the agent when one of its unread
 //   messages passes MessagePolicy.wakeRefusal. Again on
 //   every engine start, chat-board change (a server's chat showed up; an
 //   agent went idle, so a wake may apply now), read and receipt.
@@ -29,6 +33,16 @@ import java.util.concurrent.TimeUnit
 //   agents_wait mark read; a held set with the wake mark, claimed while the
 //   agent had no run going, woke it (its wake budget; its run is
 //   startedByAgent).
+// - start: a new message that may wake a stopped agent (MessagePolicy, with
+//   AgentsView.startRefusal: start/StartRules) asks the courier for its
+//   start (STARTING); until its engine is gone it counts as starting
+//   (MessageStarts), so a burst asks once and its set goes in as one once
+//   the engine is ready, read as started. Only a send starts it, never a
+//   retry (an engine or chat change), so an agent you just stopped stays
+//   stopped. A start that failed (the service refused it, its engine
+//   failed or died before ready, or the service never took the request) is
+//   held back (onStartFailed: StartHolds) and each agent whose message
+//   asked to wake it hears so in a notice that never wakes.
 // - a scheduled task (schedule/) is a notice with its ScheduledNote: it may
 //   wake past the switch, the hop and the budget (MessagePolicy), and its
 //   wake neither spends the budget nor marks the run startedByAgent: the
@@ -42,6 +56,8 @@ class Mailbox(
   private val clock: () -> Long = System::currentTimeMillis,
   private val onChange: () -> Unit = {},
   private val onError: (String, Throwable) -> Unit = { _, _ -> },
+  /** A start a message asked for failed ([why]): hold the agent back (StartHolds). */
+  private val onStartFailed: (agentId: String, why: String) -> Unit = { _, _ -> },
 ) {
   data class SendResult(val id: Long?, val results: List<Sent>)
 
@@ -66,6 +82,7 @@ class Mailbox(
 
   val policy = MessagePolicy(clock)
   val wakes = WakeTracker(clock)
+  val starts = MessageStarts(clock)
 
   private val gates = ConcurrentHashMap<String, Any>()
 
@@ -101,6 +118,8 @@ class Mailbox(
     if (limit != null) return refused(label, limit)
     if (broadcast) policy.sentBroadcast(caller.id, target, text) else policy.sentDirect(caller.id, target, text)
     val hop = wakes.hopFor(caller.id)
+    // An answer to a message that asked to wake us wakes its asker too.
+    val answers = !broadcast && MessagePolicy.answerWakes(replyTo?.let(log::get), caller.id, addressedTo[0].id)
     val message = log.add { id ->
       val now = clock()
       Message(
@@ -115,7 +134,7 @@ class Mailbox(
         replyTo = replyTo?.takeIf { it in 1 until id },
         sentAt = now,
         hop = hop,
-        wake = wake && !broadcast,
+        wake = (wake || answers) && !broadcast,
         notice = false,
         deliveries = recipients.map { Delivery(it.id, it.name, DeliveryStatus.QUEUED, at = now) } +
           unreadable.map { Delivery(it.id, it.name, DeliveryStatus.REFUSED, reason = cannotRead(it), at = now) },
@@ -123,15 +142,18 @@ class Mailbox(
     }
     recipients.forEach { capUnread(it) }
     val results = recipients.map { r ->
-      val out = deliver(r.id)
+      val out = deliver(r.id, start = true)
+      // Read again for the reply: a start Android just refused holds it back.
+      val stopped = out.presence.state == AgentState.STOPPED
+      val startRefusal = if (out.presence.running) null else startRefusal(r, out.presence, start = true)
       SendReport.of(
         name = r.name,
         message = message,
         handover = out.handover,
         presence = out.presence,
-        wakeRefusal = MessagePolicy.wakeRefusal(wakeCheck(message, r, out.presence), clock()),
-        folderWakes = out.parcel?.wake == true,
-        wakeHelps = r.wakeable && agents.kindCanWake(r.kind) && agents.wakeReady(r),
+        wakeRefusal = MessagePolicy.wakeRefusal(wakeCheck(message, r, out.presence, startRefusal), clock()),
+        folderWakes = out.parcel?.wake == true && !stopped,
+        wakeHelps = r.wakeable && agents.kindCanWake(r.kind) && if (stopped) startRefusal == null else agents.wakeReady(r),
         pushed = agents.kindLevel(r.kind) != MessagingLevel.INBOX,
       )
     }
@@ -161,7 +183,7 @@ class Mailbox(
     if (mine != null && taken && out.parcel?.ids?.contains(notice.id) != true) {
       return Noticed(if (mine.woke) Handover.WOKE else Handover.POSTED, mine.woke)
     }
-    val waking = out.handover == Handover.HELD || out.handover == Handover.SWITCHING
+    val waking = out.handover == Handover.HELD || out.handover == Handover.SWITCHING || out.handover == Handover.STARTING
     val woke = out.handover == Handover.WOKE || (waking && out.parcel?.wake == true)
     return Noticed(out.handover, woke)
   }
@@ -255,19 +277,24 @@ class Mailbox(
     deliver(agentId, retry = true)
   }
 
-  private fun deliver(agentId: String, retry: Boolean = false): Outcome {
+  // [start]: a new message (a send), which may start a stopped agent.
+  private fun deliver(agentId: String, retry: Boolean = false, start: Boolean = false): Outcome {
     val agent = agents.get(agentId) ?: return Outcome(Handover.NONE, Presence.STOPPED, null)
+    if (starts.stale(agentId)) startFailedFor(agent, NEVER_CAME)
     synchronized(gates.getOrPut(agentId) { Any() }) {
       val claimed = guarded(emptySet()) { courier.claimed(agent) }
       if (claimed.isNotEmpty()) log.mark(agentId, claimed, DeliveryStatus.DELIVERED)
-      val presence = agents.presence(agentId)
+      val presence = presenceOf(agentId)
       val unread = log.unread(agentId)
       if (unread.isEmpty()) {
         parcels.remove(agentId)
         guarded(Unit) { courier.clear(agent) }
         return Outcome(Handover.NONE, presence, null)
       }
-      val wakers = unread.filter { MessagePolicy.wakeRefusal(wakeCheck(it, agent, presence), clock()) == null }
+      // Asked only when it matters: not running, and some message asks to wake it.
+      val startRefusal = if (presence.running || unread.none { it.wake }) null else startRefusal(agent, presence, start)
+      val refusals = unread.associate { it.id to MessagePolicy.wakeRefusal(wakeCheck(it, agent, presence, startRefusal), clock()) }
+      val wakers = unread.filter { refusals[it.id] == null }
       val parcel = Parcels.build(unread, agent.imageId, agents::kindLabel) { it in wakers }
       val last = parcels[agentId]
       if (retry && last != null && last.ids == parcel.ids && last.wake == parcel.wake) {
@@ -277,7 +304,14 @@ class Mailbox(
       when (handover) {
         Handover.POSTED, Handover.WOKE -> {
           val woke = handover == Handover.WOKE
-          log.mark(agentId, parcel.ids, DeliveryStatus.DELIVERED, woke = woke)
+          val started = woke && starts.woke(agentId)
+          // One that asked to wake and went into its chat without: its delivery keeps why.
+          val notWoken = if (woke) {
+            emptyMap()
+          } else {
+            unread.filter { it.wake && it.id in parcel.ids }.mapNotNull { m -> refusals[m.id]?.let { m.id to NOT_WOKEN + it } }.toMap()
+          }
+          log.mark(agentId, parcel.ids, DeliveryStatus.DELIVERED, woke = woke, started = started, reasons = notWoken)
           parcels.remove(agentId)
           val byAgents = wakers.filter { it.scheduled == null }
           if (woke && byAgents.isNotEmpty()) {
@@ -286,13 +320,43 @@ class Mailbox(
           }
         }
         Handover.HELD -> parcels[agentId] = parcel
+        Handover.STARTING -> {
+          starts.asked(agentId)
+          parcels.remove(agentId)
+        }
         Handover.SWITCHING, Handover.NONE -> parcels.remove(agentId)
       }
       return Outcome(handover, presence, parcel)
     }
   }
 
-  private fun wakeCheck(m: Message, agent: AgentRecord, presence: Presence) = MessagePolicy.WakeCheck(
+  // An agent whose start a message asked for counts as starting until its engine says so.
+  private fun presenceOf(agentId: String): Presence {
+    val p = agents.presence(agentId)
+    return if (p.state == AgentState.STOPPED && starts.pending(agentId)) Presence(AgentState.STARTING, p.chat) else p
+  }
+
+  // Why a message may not start [agent], which is not running: starting
+  // already, a retry (only a new message starts it), else its view's why.
+  private fun startRefusal(agent: AgentRecord, presence: Presence, start: Boolean): String? = when {
+    presence.state == AgentState.STARTING -> STARTING
+    !start -> NOT_SENT
+    else -> guarded(StartRules.NEVER) { agents.startRefusal(agent) }
+  }
+
+  // A start a message asked for failed: it is held back a while, and each
+  // agent whose unread message asked to wake it hears so, in a notice that
+  // never wakes; the messages wait for its next run.
+  private fun startFailedFor(agent: AgentRecord, why: String) {
+    guarded(Unit) { onStartFailed(agent.id, why) }
+    val senders = log.unread(agent.id).filter { it.wake && !it.notice }.map { it.from }.distinct()
+    for (sender in senders) {
+      if (agents.get(sender) == null) continue
+      notice(sender, "${agent.name} could not be started for your message: $why. It gets your message when it next runs.")
+    }
+  }
+
+  private fun wakeCheck(m: Message, agent: AgentRecord, presence: Presence, startRefusal: String?) = MessagePolicy.WakeCheck(
     asked = m.wake,
     broadcast = m.broadcast,
     hop = m.hop,
@@ -304,6 +368,7 @@ class Mailbox(
     idle = presence.idle,
     wakesLeft = policy.wakesLeft(agent.id),
     scheduled = m.scheduled != null,
+    startRefusal = startRefusal,
   )
 
   // ---- engine and chat changes ----------------------------------------------------
@@ -311,19 +376,40 @@ class Mailbox(
   /** [agentId]'s engine starts: its folder ready (what an earlier life left removed), its unread set in it. */
   fun engineStarting(agentId: String) {
     val agent = agents.get(agentId) ?: return
+    starts.began(agentId)
     guarded(Unit) { courier.prepare(agent) }
     parcels.remove(agentId)
     deliver(agentId, retry = true)
   }
 
-  /** [agentId]'s engine is ready: a server takes its unread set now. */
+  /** [agentId]'s engine is ready: a server takes its unread set now (a start a message asked for came). */
   fun engineReady(agentId: String) {
     deliver(agentId, retry = true)
+    starts.ready(agentId)
   }
 
-  /** [agentId]'s engine stopped or died: a run a message started is over. */
-  fun engineGone(agentId: String) {
+  /**
+   * [agentId]'s engine stopped, or failed or died ([failure]: why): a run a
+   * message started is over, and a start a message asked for that failed
+   * before it was ready is told.
+   */
+  fun engineGone(agentId: String, failure: String? = null) {
     wakes.ended(agentId)
+    if (failure != null) startFailed(agentId, failure) else starts.gone(agentId)
+  }
+
+  /** The engine service took a start request for [agentId]: its start began, however long it waits its turn. */
+  fun startTaken(agentId: String) {
+    starts.began(agentId)
+  }
+
+  /**
+   * A start of [agentId] failed ([why]), before any status said so (the
+   * service refused it) or with its failed status: a start a message asked
+   * for that was not ready yet is told, once.
+   */
+  fun startFailed(agentId: String, why: String) {
+    if (starts.gone(agentId)) agents.get(agentId)?.let { startFailedFor(it, why) }
   }
 
   /**
@@ -342,6 +428,7 @@ class Mailbox(
     parcels.remove(agentId)
     gates.remove(agentId)
     wakes.ended(agentId)
+    starts.gone(agentId)
     guarded(Unit) { courier.forget(agentId) }
     changed()
   }
@@ -372,5 +459,17 @@ class Mailbox(
 
   companion object {
     const val DROPPED = "dropped unread: too many were waiting"
+
+    /** Before why a delivered message that asked to wake its recipient did not (Delivery.reason). */
+    const val NOT_WOKEN = "not woken: "
+
+    /** Why a message does not start an agent whose start is under way. */
+    const val STARTING = "it is starting"
+
+    /** Why a retry (an engine or chat change) does not start a stopped agent: only a new message does. */
+    const val NOT_SENT = "it is stopped"
+
+    /** A start a message asked for that the engine service did not take within MessageRules.START_GIVE_UP_MS. */
+    const val NEVER_CAME = "the engine service never took its start"
   }
 }

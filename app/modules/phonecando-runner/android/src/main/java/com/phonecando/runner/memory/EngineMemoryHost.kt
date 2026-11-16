@@ -16,8 +16,8 @@ import java.util.concurrent.ConcurrentHashMap
 // answers JS); busy or not by the work watch's last look (a job left
 // running, Keep running, or its own ask to stay up) and on the model whose
 // server it holds; the model servers loading or ready; the agent on
-// screen; and a stop as the user's, with why on its status. A stopped
-// agent's name says which jobs went with it.
+// screen; and a stop as the user's, with why on its status (and its time
+// in MemoryStops). A stopped agent's name says which jobs went with it.
 internal class EngineMemoryHost(private val context: Context, private val engines: EngineSupervisor) : MemoryGuard.Host {
   private val store = AgentStores.get(context)
 
@@ -52,6 +52,7 @@ internal class EngineMemoryHost(private val context: Context, private val engine
     Log.i(TAG, "memory is short, stopping $agentId")
     val jobs = Engines.work()?.states()?.get(agentId)?.jobs.orEmpty()
     if (jobs.isEmpty()) stoppedJobs.remove(agentId) else stoppedJobs[agentId] = jobs
+    MemoryStops.stopped(agentId)
     engines.stopForMemory(agentId)
   }
 

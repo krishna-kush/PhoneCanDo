@@ -2,20 +2,28 @@ package com.phonecando.runner.messages
 
 import android.content.Context
 import com.phonecando.agents.kit.MessagingLevel
+import com.phonecando.linux.jobs.JobTarget
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.bridge.Bridge
 import com.phonecando.runner.checks.Checks
+import com.phonecando.runner.checks.now.CheckNow
 import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.acp.AcpEngines
 import com.phonecando.runner.engine.image.ImageDir
+import com.phonecando.runner.engine.starts.LiveStartRoom
+import com.phonecando.runner.engine.starts.StartHolds
 import com.phonecando.runner.engine.tui.HomeStarts
+import com.phonecando.runner.jobs.JobsAnchor
+import com.phonecando.runner.memory.MemoryStops
 import com.phonecando.runner.messages.delivery.AcpRoute
 import com.phonecando.runner.messages.delivery.InboxFolder
+import com.phonecando.runner.messages.delivery.KindInbox
 import com.phonecando.runner.messages.delivery.ServerSeat
+import com.phonecando.runner.messages.start.StartRules
 import com.phonecando.runner.notify.AppForeground
 import com.phonecando.runner.notify.ChatBoard
 
@@ -31,7 +39,11 @@ import com.phonecando.runner.notify.ChatBoard
 // kind with an ACP mode, which mode its engine runs in and whether it is
 // free (AcpRoute.Look): someone watches its terminal when a view shows it,
 // or, with the app in front, Home asked for it and its view has not
-// attached yet (HomeStarts).
+// attached yet (HomeStarts). For a stopped agent, whether a message may
+// start it and in which mode (start/StartRules): its kind, its level now,
+// a Linux job on its machine (JobsAnchor), Check now (CheckNow.owns), Home
+// opening it, a failed start (StartHolds) or a memory stop (MemoryStops)
+// lately, then the phone's room (LiveStartRoom).
 class LiveAgentsView(context: Context) : AgentsView {
   private val app = context.applicationContext ?: context
 
@@ -60,6 +72,33 @@ class LiveAgentsView(context: Context) : AgentsView {
     if (!kind.wakeNeedsWaiter) return true
     return InboxFolder.of(ImageDir.of(app.filesDir, agent.imageId).home, agent.id).waiterAlive()
   }
+
+  // An engine still stopping is no start: its messages wait for its next run.
+  override fun startRefusal(agent: AgentRecord): String? {
+    if (!stopped(agent)) return STOPPING
+    val kind = KindCatalogs.get(app).get(agent.kind) ?: return StartRules.NEVER
+    val look = StartRules.Look(
+      speaksAcp = kind.speaksAcp,
+      wakesByServer = KindInbox.of(kind)?.wakesByServer == true,
+      levelWakes = Checks.levelNow(kind) == MessagingLevel.WAKES,
+      installing = JobsAnchor.linuxJobs().any { it.target.kind == JobTarget.Kind.IMAGE && it.target.id == agent.imageId },
+      checking = CheckNow.owns(agent.id),
+      opening = HomeStarts.pending(agent.id) && AppForeground.isForeground(app),
+      failed = StartHolds.shared.why(agent.id),
+      memoryStopAt = MemoryStops.at(agent.id),
+      now = System.currentTimeMillis(),
+    )
+    return StartRules.refusal(look) { LiveStartRoom(app).refusal() }
+  }
+
+  /** The mode a message starts [agent] in (StartRules.mode); null when it never does. */
+  fun startMode(agent: AgentRecord): EngineMode? {
+    val kind = KindCatalogs.get(app).get(agent.kind) ?: return null
+    return StartRules.mode(kind.speaksAcp, KindInbox.of(kind)?.wakesByServer == true)
+  }
+
+  /** Nothing of [agent]'s engine runs: stopped, failed or died (not starting, ready or stopping). */
+  fun stopped(agent: AgentRecord): Boolean = Engines.peek()?.status(agent.id)?.state?.live != true
 
   /** [agent] as message routing sees it (AcpRoute.Look.NONE for a kind without an ACP mode). */
   fun acpLook(agent: AgentRecord): AcpRoute.Look {
@@ -120,5 +159,9 @@ class LiveAgentsView(context: Context) : AgentsView {
     if (engines.status(agent.id).state != EngineState.READY) return null
     val working = engines.chatsOf(agent.id).firstOrNull { it.state == ChatBoard.State.WORKING }?.sessionId
     return ServerSeat(port.toString(), agent.password, working ?: engines.latestChat(agent.id))
+  }
+
+  private companion object {
+    const val STOPPING = "it is stopping"
   }
 }

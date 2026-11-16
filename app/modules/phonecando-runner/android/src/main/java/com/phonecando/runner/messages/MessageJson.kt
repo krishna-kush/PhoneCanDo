@@ -64,6 +64,7 @@ internal object MessageJson {
     .put("name", d.name)
     .put("status", d.status.wire)
     .put("woke", d.woke)
+    .put("started", d.started)
     .put("reason", d.reason ?: JSONObject.NULL)
     .put("at", d.at)
 
@@ -74,6 +75,7 @@ internal object MessageJson {
       name = o.optString("name"),
       status = DeliveryStatus.of(o.optString("status")),
       woke = o.optBoolean("woke", false),
+      started = o.optBoolean("started", false),
       reason = text(o, "reason"),
       at = o.optLong("at", 0L),
     )

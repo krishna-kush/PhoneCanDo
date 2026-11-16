@@ -28,8 +28,11 @@ loopback-only, runs in the app process beside the engines
   `/agents/list|send|inbox|wait` (Agent messages below), `/keep` (an
   agent's ask to stay up, below), `/schedule/add|list|cancel` (an agent's
   tasks for itself, Schedules below), and `/mcp`, the
-  same tools over MCP (below). Bodies over 256 KB return 413. `BridgeServer.kt` only frames
-  HTTP; `BridgeEntry.kt` checks the token (before the body is even read),
+  same tools over MCP (below). Bodies over 256 KB return 413. A body is
+  its Content-Length bytes read as UTF-8, whatever the Content-Type says
+  (`RequestBody`: NanoHTTPD's own `parseBody` takes a body with no charset
+  for US-ASCII and turns each byte of non-ASCII text into U+FFFD).
+  `BridgeServer.kt` only frames HTTP; `BridgeEntry.kt` checks the token (before the body is even read),
   then hands `/mcp` to the MCP endpoint and every other path to the router.
 - Envelope: `{ok:true,data}` or `{ok:false,code,message}`. Refusals by the
   bridge itself use the HTTP status above; app-level failures (no app to
@@ -168,13 +171,17 @@ screen routes; the caller is the bearer's agent:
 - `scope` "machine" (the default) lists the other agents on the caller's
   machine, "phone" every other agent. `kind` is the kind's label; `chat`
   the working chat's title, else the latest; `canWake` whether a direct
-  message with `wake: true` would start its run now if it is idle.
+  message with `wake: true` would start its run now if it is idle, or
+  start it if it is stopped (runner.md → Messages → Starting a stopped
+  agent).
 - `to` is an agent's name (any case) or id, `@machine` (every other agent
   on the caller's machine) or `@phone` (every other agent). A name two
-  agents share is refused with both ids. Only a direct message may wake.
-  A refused send (a rate limit, a duplicate, an empty or too long text, a
-  name nobody has) is its result with `id: null`, not an error; `reason`
-  also says when a queued recipient gets it.
+  agents share is refused with both ids. Only a direct message may wake,
+  and start a stopped agent. A refused send (a rate limit, a duplicate, an
+  empty or too long text, a name nobody has) is its result with `id:
+  null`, not an error; `reason` also says when a queued recipient gets it
+  and, for an idle or stopped one, why it was not woken or started. An
+  agent whose start for its message fails later gets a notice saying so.
 - `note` says the messages are other AI agents', not the user's. A wait
   that names no known agent is 200 `ok:false` `unknown_agent`; a missing
   or mistyped argument is 400 `bad_request`.

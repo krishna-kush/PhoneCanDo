@@ -112,7 +112,8 @@ Builder (Claude Code)
   on the bridge's MCP server, next to the phone tools; not behind the
   phone-control lock, on every channel (`../api/tools.md`). With them,
   `agents_keep_running`: an idle agent waiting for an answer asks to stay
-  up for a while, as a message never starts a stopped agent.
+  up for a while, as a message starts a stopped agent only when it asks to
+  wake it, the switch allows it and the phone has room.
 - **Mailbox** (the runner's `messages/`): messages in app-private storage,
   never inside a machine; size and rate limits, repeats dropped, a wake
   budget and a hop limit; every message labelled as from another AI agent,
@@ -120,7 +121,8 @@ Builder (Claude Code)
 - **Delivery**: MCP cannot push into a running chat, so each kind's
   manifest says how messages reach it (`inbox`: its own hooks, its server,
   or its extension; `../../agents/AGENTS.md`). That makes its level: wakes
-  (delivered, and a message that asks can start a turn while it is idle),
+  (delivered, and a message that asks can start a turn while it is idle,
+  starting the agent in the background first when it is stopped),
   delivered, inbox only (it reads them when it calls `agents_inbox`) or
   none (no phone tools: messages to it are refused). The app shows each
   agent's level, and a per-agent switch decides whether other agents may

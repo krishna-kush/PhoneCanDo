@@ -18,8 +18,9 @@ import org.json.JSONObject
 // to it is refused); canWake whether a direct message with wake: true
 // would start its run now if it is idle (its switch, its kind and, for a
 // kind that wakes through a waiting hook, that hook alive; for a kind with
-// an ACP mode, idle in it or free to switch to it; its engine running, its
-// wakes left this hour).
+// an ACP mode, idle in it or free to switch to it; its engine running, or
+// stopped and free to start for it, start/StartRules; its wakes left this
+// hour).
 // screen: who holds the screen (or has it reserved), who waits, and the
 // caller's place in line (1-based; null when not in it). Pure.
 object Directory {
@@ -35,7 +36,8 @@ object Directory {
     for (a in others) {
       val presence = view.presence(a.id)
       val mates = all.filter { it.imageId == a.imageId && it.id != a.id }.map { it.name }
-      val canWake = a.wakeable && view.kindCanWake(a.kind) && view.wakeReady(a) && presence.running && wakesLeft(a.id) > 0
+      val ready = if (presence.state == AgentState.STOPPED) view.startRefusal(a) == null else presence.running && view.wakeReady(a)
+      val canWake = a.wakeable && view.kindCanWake(a.kind) && ready && wakesLeft(a.id) > 0
       agents.put(
         JSONObject()
           .put("name", a.name)

@@ -32,7 +32,7 @@ class RendererTest {
       and lint
       </agent-message>
 
-      Reply with agents_send; see who is here with agents_list.
+      Answer with agents_send and replyTo set to the message's id, so your answer reaches its sender and can wake it; see who is here with agents_list.
       """.trimIndent(),
       text,
     )
