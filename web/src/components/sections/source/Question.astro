@@ -1,33 +1,32 @@
 ---
 // The question every judge got, word for word, its link the pinned commit,
 // and a button to copy it and ask your own. When the release you'd install
-// is newer than the one on trial, a line under it links that one's code.
-import { site } from '../../../data/site';
+// is newer than the one on trial, the button copies the same question
+// pointed at that release's code, and a line under it links what changed.
 import { hearing } from '../../../data/secondOpinion';
 
-const { question, tree } = hearing;
+const { question, tree, latest } = hearing;
 const at = question.indexOf(tree);
 const before = at < 0 ? question : question.slice(0, at);
 const after = at < 0 ? '' : question.slice(at + tree.length);
-const newer = hearing.version !== site.version;
 ---
 
 <div class="ask">
   <p class="op-label">$ ask · word for word</p>
   <pre class="ask-text">{before}{at >= 0 && <a href={tree} target="_blank" rel="noreferrer">{tree}</a>}{after}</pre>
   <div class="ask-acts">
-    <button class="toy-btn" type="button" data-copy>
+    <button class="toy-btn" type="button" data-copy={latest?.question ?? question}>
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
         <path d="M4 4h7v7H4zM8 4V1H1v7h3" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"></path>
       </svg>
-      <span data-copy-label>Copy the question</span>
+      <span data-copy-label>{latest ? `Copy it for v${latest.version}` : 'Copy the question'}</span>
     </button>
-    <p>Paste it into any AI you like.</p>
+    <p>{latest ? `Same question, pointed at v${latest.version}'s code. ` : ''}Paste it into any AI you like.</p>
   </div>
-  {newer && (
+  {latest && (
     <p class="op-label ask-newer">
-      On trial: v{hearing.version} · you'd install v{site.version} ·{" "}
-      <a href={`${site.repo}/tree/v${site.version}`} target="_blank" rel="noreferrer">its code ↗</a>
+      On trial: v{hearing.version} · you'd install v{latest.version} ·{" "}
+      <a href={latest.changes} target="_blank" rel="noreferrer">what changed since ↗</a>
     </p>
   )}
 </div>
@@ -45,13 +44,15 @@ const newer = hearing.version !== site.version;
     copy.addEventListener('click', async () => {
       window.clearTimeout(timer);
       try {
-        await navigator.clipboard.writeText(text.textContent ?? '');
+        await navigator.clipboard.writeText(copy.dataset.copy ?? '');
         label.textContent = 'Copied ✓';
         copy.setAttribute('data-copied', '');
         cueMascot({ say: toyLines.hearing.copied, move: 'hop' });
       } catch {
         // No clipboard (an old browser, a page not served over https):
-        // select it so a long-press or Ctrl+C takes it.
+        // show the text it would copy and select it, so a long-press or
+        // Ctrl+C takes it.
+        if (copy.dataset.copy) text.textContent = copy.dataset.copy;
         getSelection()?.selectAllChildren(text);
         cueMascot({ say: toyLines.hearing.copyFailed, move: 'shake' });
       }

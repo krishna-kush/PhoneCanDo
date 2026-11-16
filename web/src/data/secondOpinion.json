@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "commit": "3bdf98356946e35ec270283ad039516044fae7b9",
+  "asked": "2026-11-16",
+  "demo": true,
+  "judges": {
+    "claude": { "model": "", "chat": "https://claude.ai/share/demo", "ruling": "" },
+    "gemini": { "model": "", "chat": "https://gemini.google.com/share/demo", "ruling": "" },
+    "chatgpt": { "model": "", "chat": "https://chatgpt.com/share/demo", "ruling": "" }
+  }
+}

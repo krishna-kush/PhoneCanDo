@@ -50,6 +50,8 @@ const APP = join(ROOT, 'app');
 const APP_JSON = join(APP, 'app.json');
 const APP_PKG = join(APP, 'package.json');
 const RELEASE_JSON = join(ROOT, 'web/src/data/release.json');
+// The site's second opinion: the release and commit three AIs ruled on.
+const HEARING_JSON = join(ROOT, 'web/src/data/secondOpinion.json');
 const UPDATES_TS = join(APP, 'src/engine/updates.ts');
 // What a release edits before building; --upload-only finds them bumped.
 const VERSION_FILES = [APP_JSON, APP_PKG, UPDATES_TS];
@@ -162,6 +164,7 @@ function main() {
     overrides: args.allowRedCi ? ['ci'] : [],
     withoutLinux: args.withoutLinux,
     stagedChecked: args.signStaged,
+    hearing: JSON.parse(readFileSync(HEARING_JSON, 'utf8')),
   });
   console.log('');
   // What blocks in CI comes first, in red; the whole table after asking.

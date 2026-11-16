@@ -10,6 +10,7 @@
 
 import { payloadsGate } from './agents/payloads.mjs';
 import { classifyChecks } from './ci/classify.mjs';
+import { hearingGate } from './hearing/gate.mjs';
 import { imageGate } from './linux/image.mjs';
 import { prootGate } from './linux/proot.mjs';
 import { dirtyEntries, parsePorcelain } from './worktree.mjs';
@@ -32,6 +33,8 @@ import { dirtyEntries, parsePorcelain } from './worktree.mjs';
  *   stagedChecked    --sign-staged: the build that staged these APKs checked
  *                    proot, the image and the agents (the GitHub release's
  *                    build job), so only tree, pushed and CI run here
+ *   hearing          the site's second-opinion pin { version, commit }
+ *                    (web/src/data/secondOpinion.json), or none: no row
  * }
  * -> { head, sha, gates, ci, proot, image, agents, proceed, refusals, overridden, notes }
  *    proot { version, libs: { name: sha256 } }, image { version, sha256,
@@ -41,7 +44,7 @@ import { dirtyEntries, parsePorcelain } from './worktree.mjs';
 export function runPreflight(ctx) {
   const state = { head: ctx.git.head() };
   state.sha = ctx.builtFrom ?? state.head;
-  const gates = (ctx.stagedChecked ? COMMIT_GATES : GATES).map((gate) => gate(ctx, state)).filter(Boolean);
+  const gates = (ctx.stagedChecked ? STAGED_GATES : GATES).map((gate) => gate(ctx, state)).filter(Boolean);
   return { ...state, gates, ...verdict(gates, ctx.overrides ?? []) };
 }
 
@@ -49,8 +52,11 @@ export function runPreflight(ctx) {
 // { id, title, ok, overridable, summary, detail?, overrideNote? } or null when
 // it cannot apply. The Linux gates (linux/) and the agents gate (agents/)
 // never yield to --allow-red-ci.
+// The second opinion's row comes last and never refuses: it only reminds.
+const opinionGate = (ctx, state) => hearingGate({ hearing: ctx.hearing, git: ctx.git, sha: state.sha });
 const COMMIT_GATES = [treeGate, pushedGate, ciGate];
-const GATES = [...COMMIT_GATES, prootGate, imageGate, payloadsGate];
+const GATES = [...COMMIT_GATES, prootGate, imageGate, payloadsGate, opinionGate];
+const STAGED_GATES = [...COMMIT_GATES, opinionGate];
 
 const short = (sha) => sha.slice(0, 12);
 

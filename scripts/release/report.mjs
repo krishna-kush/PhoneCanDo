@@ -35,7 +35,8 @@ export function preflightReport(result, { ciTable = true, paint = {} } = {}) {
   const from = result.sha === result.head ? 'HEAD' : `the staged APKs' commit; HEAD is ${result.head.slice(0, 12)}`;
   const lines = [p.bold(`Preflight for ${result.sha} (${from})`)];
   for (const gate of result.gates) {
-    const mark = gate.ok ? p.good('ok') : result.overridden.includes(gate.id) ? p.warn('OVERRIDDEN') : p.bad('REFUSED');
+    const passed = gate.remind ? p.warn('ASK AGAIN') : p.good('ok');
+    const mark = gate.ok ? passed : result.overridden.includes(gate.id) ? p.warn('OVERRIDDEN') : p.bad('REFUSED');
     lines.push(`  ${gate.title.padEnd(7)} ${mark}: ${gate.summary}`);
     const detail = gate.detail ?? [];
     for (const line of detail.slice(0, MAX_DETAIL)) lines.push(p.dim(`            ${line}`));

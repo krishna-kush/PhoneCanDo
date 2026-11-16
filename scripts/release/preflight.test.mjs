@@ -213,3 +213,14 @@ test('--sign-staged: only the commit gates run; the build job checked what is st
   assert.deepEqual(result.gates.map((g) => g.id), ['tree', 'pushed', 'ci']);
   assert.equal(result.proot, undefined);
 });
+
+test('the second opinion: last row, never refuses, marked to ask again when trust paths changed', () => {
+  const hearing = { version: '1.0.0', commit: 'b'.repeat(40) };
+  const changed = { ...fakeGit(), changedSince: () => ({ state: 'ok', files: ['pce/core/Tap.kt'] }) };
+  for (const stagedChecked of [false, true]) {
+    const result = preflight({ git: changed, hearing, stagedChecked });
+    assert.equal(result.gates.at(-1).id, 'hearing');
+    assert.equal(result.proceed, true);
+    assert.ok(preflightReport(result).some((line) => /Opinion ASK AGAIN: 1 file\(s\)/.test(line)));
+  }
+});

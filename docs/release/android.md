@@ -76,7 +76,8 @@ The script:
 
 1. Runs the preflight before writing or building anything
    (`scripts/release/`). It only reads: `git rev-parse HEAD`,
-   `git status --porcelain`, `gh auth status`, `gh api` GETs, the staged
+   `git status --porcelain`, the second opinion's `git` reads (below),
+   `gh auth status`, `gh api` GETs, the staged
    Linux files and `lre/images/default/lock/check.sh --locked --remote` (curl
    GETs). It prints a table of the checks on the commit and refuses the
    release when:
@@ -126,6 +127,17 @@ The script:
    - proot or the image is not staged at all. `--without-linux` allows that,
      and full and lite then ship without it; whatever is staged is still
      checked.
+
+   Its last row, `Opinion`, never refuses. It compares the commit the site's
+   second opinion is pinned to (`web/src/data/secondOpinion.json`) with the
+   commit being released (`git cat-file`, `git merge-base --is-ancestor`,
+   `git diff --name-only`). It is marked `ASK AGAIN` when files a reviewer
+   checks changed since then (the areas in `scripts/release/hearing/trust.mjs`:
+   what leaves the phone, Accessibility and the screen, network and
+   downloaded code, how the APK is built), or when history was rewritten so
+   the pin is no longer behind. Asking again means putting the question to
+   the three AIs and filling in that JSON file. A clone without the pinned
+   commit (a shallow CI checkout) only notes it.
 
    `--allow-red-ci` releases despite red CI and ends the GitHub release
    notes with `Released with red CI: <checks>` (not the notes in
