@@ -1,5 +1,5 @@
 {
-  "$comment": "Our suggested models, best first: the one list the app (lme Suggested.MODELS) and the website (web/src/data/cartridges.ts) read. Repository, commit, size and sha256 as huggingface.co listed them on 2026-11-09; context and KV cache from each file's header (lme/gguf); origin is a KnownModels repo. phoneRam is the smallest marketed phone RAM (GB) the RAM gate runs a model on (runsFromGb) and runs it on with no warning (runsWellFromGb); the top-level phoneRam is the gate's own floor, for any model. SuggestedRamTest recomputes every phoneRam from host's RamRules and fails when this file drifts.",
+  "$comment": "Our suggested models, best first: the one list the app (lme Suggested.MODELS) and the website (web/src/data/cartridges.ts) read. Repository, commit, size and sha256 as huggingface.co listed them on 2026-11-09; context, KV cache, recurrent state and whether its KV cache may be 8-bit from each file's header (lme/gguf); origin is a KnownModels repo. phoneRam is the smallest marketed phone RAM (GB) the RAM gate runs a model on (runsFromGb) and runs it on with no warning (runsWellFromGb); the top-level phoneRam is the gate's own floor, for any model. SuggestedRamTest recomputes every phoneRam from host's RamRules and fails when this file drifts.",
   "phoneRam": { "runsFromGb": 6, "runsWellFromGb": 8 },
   "models": [
     {
@@ -14,7 +14,7 @@
         "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4"
       },
       "contextLength": 262144,
-      "kvCache": { "fullPerToken": 16384, "windowPerToken": 0, "slidingWindow": null },
+      "kvCache": { "fullPerToken": 16384, "windowPerToken": 0, "slidingWindow": null, "recurrentPerSequence": 13172736, "quantizable": true },
       "phoneRam": { "runsFromGb": 8, "runsWellFromGb": 8 }
     },
     {
@@ -29,7 +29,7 @@
         "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8"
       },
       "contextLength": 131072,
-      "kvCache": { "fullPerToken": 3072, "windowPerToken": 6144, "slidingWindow": 512 },
+      "kvCache": { "fullPerToken": 3072, "windowPerToken": 6144, "slidingWindow": 512, "recurrentPerSequence": 0, "quantizable": true },
       "phoneRam": { "runsFromGb": 8, "runsWellFromGb": 8 }
     },
     {
@@ -44,7 +44,7 @@
         "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8"
       },
       "contextLength": 262144,
-      "kvCache": { "fullPerToken": 16384, "windowPerToken": 0, "slidingWindow": null },
+      "kvCache": { "fullPerToken": 16384, "windowPerToken": 0, "slidingWindow": null, "recurrentPerSequence": 13172736, "quantizable": true },
       "phoneRam": { "runsFromGb": 16, "runsWellFromGb": 16 }
     }
   ]

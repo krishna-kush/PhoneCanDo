@@ -2,12 +2,15 @@ package com.phonecando.lme.store.registry
 
 import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.model.BaseModelRef
+import com.phonecando.lme.api.model.KvCacheChoice
 import com.phonecando.lme.api.model.KvCacheShape
 import com.phonecando.lme.api.model.ModelDates
 import com.phonecando.lme.api.model.ModelFile
 import com.phonecando.lme.api.model.ModelRecord
 import com.phonecando.lme.api.model.ModelShape
 import com.phonecando.lme.api.model.ModelSource
+import com.phonecando.lme.api.model.RamShare
+import com.phonecando.lme.api.model.ServeChoices
 import com.phonecando.lme.store.download.PendingDownload
 import com.phonecando.lme.store.download.RemoteFile
 import org.junit.jupiter.api.Test
@@ -18,7 +21,7 @@ import kotlin.test.assertEquals
 
 class RegistryCodecTest {
     private val shape = ModelShape(
-        "gemma4", "Gemma", "Q4_K_M", 4_647_450_147, 131072, 35, 1536, KvCacheShape(3072, 6144, 512),
+        "gemma4", "Gemma", "Q4_K_M", 4_647_450_147, 131072, 35, 1536, KvCacheShape(3072, 6144, 512, quantizable = true),
         BaseModelRef("Gemma 4 E2B It", "Google", "https://huggingface.co/google/gemma-4-E2B-it"),
     )
     private val registry = Registry(
@@ -27,13 +30,14 @@ class RegistryCodecTest {
                 "gemma", "Gemma", ModelSource.HuggingFace("unsloth/g", "a".repeat(40)), listOf(ModelFile("g.gguf", 9, "f".repeat(64))), shape, 1,
                 ModelDates.Released(YearMonth.of(2026, 4), YearMonth.of(2025, 1)),
                 context = 49_152,
+                serve = ServeChoices(RamShare.LESS, KvCacheChoice.FULL, savedPrompts = 3, checkpoints = 2, threads = 4, detailedLog = true),
             ),
             ModelRecord(
                 "mine",
                 "Mine",
                 ModelSource.Imported("Download/mine.gguf"),
                 listOf(ModelFile("mine.gguf", 3, "e".repeat(64))),
-                shape.copy(name = null, quant = null, parameterCount = null, contextLength = null, embeddingLength = null, kvCache = KvCacheShape.NONE, baseModel = null),
+                shape.copy(name = null, quant = null, parameterCount = null, contextLength = null, embeddingLength = null, kvCache = KvCacheShape(16384, 0, null, 13_172_736), baseModel = null),
                 2,
             ),
         ),
@@ -50,7 +54,7 @@ class RegistryCodecTest {
     @Test
     fun `round trip`() {
         assertEquals(registry, RegistryCodec.decode(RegistryCodec.encode(registry)))
-        assertEquals(Registry.EMPTY, RegistryCodec.decode("""{"version":3}"""))
+        assertEquals(Registry.EMPTY, RegistryCodec.decode("""{"version":4}"""))
     }
 
     @Test
@@ -61,8 +65,14 @@ class RegistryCodecTest {
             "[]",
             """{"version":1}""",
             """{"version":2}""",
-            """{"version":3,"extra":true}""",
+            """{"version":3}""",
+            """{"version":4,"extra":true}""",
             good.replace("\"gemma\"", "\"Gemma.x\""),
+            good.replace("\"recurrentPerSequence\": 0,", ""),
+            good.replace("\"kvQuantizable\": true,", ""),
+            good.replace("\"ramShare\": \"less\"", "\"ramShare\": \"most\""),
+            good.replace("\"kvCache\": \"full\"", "\"kvCache\": \"tiny\""),
+            good.replace("\"threads\": 4", "\"threads\": 0"),
             good.replace("\"mine\"", "\"gemma\""),
             good.replace("\"g.gguf\"", "\"../g.gguf\""),
             good.replace("\"imported\"", "\"elsewhere\""),

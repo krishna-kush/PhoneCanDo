@@ -9,8 +9,11 @@
 #                       (libc libm libdl liblog: ggml and libc++ are linked
 #                       in), no RPATH/RUNPATH, every LOAD segment
 #                       p_align >= 0x4000 (16 KB pages), and the strings
-#                       lme/host relies on: the LLAMA_API_KEY variable and
-#                       the three wire APIs LlamaCppRuntime promises
+#                       lme/host relies on: the LLAMA_API_KEY variable, the
+#                       three wire APIs LlamaCppRuntime promises, and what
+#                       measures a server (--fit, --log-jsonl and its
+#                       fit_memory_breakdown line) and keeps chats on
+#                       storage (--slot-save-path, /slots/:id_slot)
 #
 # Usage: lme/llamacpp/verify.sh <dir>
 #   markdown table on stdout; SHA256SUMS written only when every check
@@ -24,7 +27,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/pins.env"
 LIB=libllama-server.so
 MIN_ALIGN=$((0x4000))
-MARKERS=(LLAMA_API_KEY /v1/chat/completions /v1/responses /v1/messages /health)
+MARKERS=(LLAMA_API_KEY /v1/chat/completions /v1/responses /v1/messages /health
+  --fit --log-jsonl fit_memory_breakdown --slot-save-path /slots/:id_slot)
 fail=0
 row() { printf '| %s | %s | %s |\n' "$1" "$2" "$3"; }
 ok() { row "$1" "$2" OK; }

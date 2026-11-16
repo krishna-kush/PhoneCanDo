@@ -22,14 +22,26 @@ data class ModelShape(
 )
 
 /**
- * The model's KV cache per token of context, counted in values (a runtime
- * multiplies by its cache type's bytes per value). Layers that keep every
+ * The memory a model keeps for one sequence, counted in values (a runtime
+ * multiplies by its cache type's bytes per value): its KV cache per token
+ * of context, and the state of its recurrent layers. Layers that keep every
  * token add to [fullPerToken]; sliding-window layers add to
  * [windowPerToken] and keep at most [slidingWindow] tokens plus one batch.
  * Layers with no cache of their own (the recurrent layers of a hybrid model,
- * layers that reuse another layer's cache) add nothing.
+ * layers that reuse another layer's cache) add nothing there; recurrent
+ * layers (Mamba-style SSMs, gated delta nets, RWKV, short convolutions) add
+ * their state to [recurrentPerSequence], the same whatever the context.
+ * [quantizable]: every key and value head is a whole number of 32-value
+ * blocks, which an 8-bit (q8_0) KV cache needs; false for a model with no
+ * KV cache.
  */
-data class KvCacheShape(val fullPerToken: Long, val windowPerToken: Long, val slidingWindow: Long?) {
+data class KvCacheShape(
+    val fullPerToken: Long,
+    val windowPerToken: Long,
+    val slidingWindow: Long?,
+    val recurrentPerSequence: Long = 0,
+    val quantizable: Boolean = false,
+) {
     companion object {
         val NONE = KvCacheShape(0, 0, null)
     }

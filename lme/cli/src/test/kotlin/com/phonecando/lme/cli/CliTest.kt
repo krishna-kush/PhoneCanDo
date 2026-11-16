@@ -45,7 +45,9 @@ class CliTest {
         assertEquals(
             listOf(
                 "/opt/llama-server", "--model", model, "--alias", "qwen3-5-4b-q4-k-m", "--host", "127.0.0.1", "--port", "18080",
-                "--ctx-size", "16384", "--parallel", "1", "--threads", "3", "--jinja", "--reasoning", "off", "--no-ui",
+                "--ctx-size", "16384", "--parallel", "1", "--slot-prompt-similarity", "0", "--threads", "3", "--jinja", "--reasoning", "off", "--no-ui",
+                // A hybrid model: the phone's few context checkpoints.
+                "--ctx-checkpoints", "4",
             ),
             plan.getValue("argv").jsonArray.map { it.jsonPrimitive.content },
         )

@@ -56,7 +56,7 @@ internal object SuggestedJson {
             revision = revision,
             file = RepoFile(file.path, file.sizeBytes, file.sha256),
             contextLength = contextLength,
-            kvCache = KvCacheShape(kvCache.fullPerToken, kvCache.windowPerToken, kvCache.slidingWindow),
+            kvCache = KvCacheShape(kvCache.fullPerToken, kvCache.windowPerToken, kvCache.slidingWindow, kvCache.recurrentPerSequence, kvCache.quantizable),
             phoneRam = phoneRam.toPhoneRam(),
         )
     }
@@ -65,7 +65,13 @@ internal object SuggestedJson {
     private class FileJson(val path: String, val sizeBytes: Long, val sha256: String)
 
     @Serializable
-    private class KvCacheJson(val fullPerToken: Long, val windowPerToken: Long, val slidingWindow: Long?)
+    private class KvCacheJson(
+        val fullPerToken: Long,
+        val windowPerToken: Long,
+        val slidingWindow: Long?,
+        val recurrentPerSequence: Long,
+        val quantizable: Boolean,
+    )
 
     @Serializable
     private class PhoneRamJson(val runsFromGb: Int, val runsWellFromGb: Int) {

@@ -16,6 +16,11 @@ class ModelLayoutTest {
         assertEquals(File("/m/models.json"), layout.registry)
         assertEquals(File("/m/q/q.gguf"), layout.file("q", "q.gguf"))
         assertEquals(File("/m/q/q.gguf.part"), layout.part("q", "q.gguf"))
+        // Ours start with a dot, which no model file's name does.
+        assertEquals(File("/m/q/.memory.json"), layout.measured("q"))
+        assertEquals(File("/m/q/.chats"), layout.chats("q"))
+        assertFalse(FileNames.isPlain(ModelLayout.MEASURED) || FileNames.isPlain(ModelLayout.CHATS))
+        assertThrows<LmeException.InvalidName> { layout.chats("..") }
         assertThrows<LmeException.InvalidName> { layout.dir("..") }
         assertThrows<LmeException.InvalidName> { layout.file("q", "../x") }
         assertThrows<LmeException.InvalidName> { layout.part("q", "x.part") }

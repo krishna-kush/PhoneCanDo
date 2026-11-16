@@ -19,7 +19,8 @@ The LME owns:
 
 The host app owns the Android module (`phonecando-models`: paths, jobs,
 the file picker, the token in Keystore, `DeviceInfo`), the runner's model
-slot (the process, its port and key), the one join with agents
+servers (each process, its port and key, the dry run that measures it, the
+go-between that keeps its chats on storage), the one join with agents
 (`LocalModelBinding`) and every screen. If a change needs `android.*`, a
 Context, an agent concept or UI text beyond a short reason, it does not
 belong here. `lme/` never imports `agents/`, `lre/`, `pce/` or `tce/`, and
@@ -39,7 +40,8 @@ gguf + host <- cli         (a leaf for CI: nothing depends on it, never publishe
   sizes in `suggested.json` against the RAM gate. Its main code never does.
 - Pure JVM (Kotlin, JDK 17 toolchain): no `android.*`, no `org.json`, no
   app types. kotlinx-serialization-json stays `implementation` in
-  `catalog`, `store` and `cli`.
+  `catalog`, `store`, `host` (the server's JSON log line it measures
+  from, `FitBreakdown`) and `cli`.
 - `catalog` and `store` never see each other: the host turns a catalog
   variant into a `DownloadRequest`. `host` plans from a `ModelRecord` and a
   `DeviceInfo` and never reads a file.

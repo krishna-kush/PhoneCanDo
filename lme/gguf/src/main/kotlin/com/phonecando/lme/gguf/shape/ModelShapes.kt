@@ -25,7 +25,7 @@ object ModelShapes {
             contextLength = header.integer("$arch.context_length")?.takeIf { it > 0 },
             blockCount = layers,
             embeddingLength = header.integer("$arch.embedding_length")?.takeIf { it > 0 },
-            kvCache = KvLayers.of(header, arch, layers),
+            kvCache = KvLayers.of(header, arch, layers).copy(recurrentPerSequence = RecurrentState.of(header, arch, layers)),
             baseModel = baseModel(header),
         )
     }

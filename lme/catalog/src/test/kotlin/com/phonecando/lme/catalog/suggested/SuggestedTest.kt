@@ -33,9 +33,10 @@ class SuggestedTest {
         assertEquals(KnownModels.QWEN35_4B, qwen4b.origin)
         assertEquals(RepoFile("Qwen3.5-4B-Q4_K_M.gguf", 2_740_937_888, "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4"), qwen4b.file)
         assertEquals(262_144, qwen4b.contextLength)
-        assertEquals(KvCacheShape(16_384, 0, null), qwen4b.kvCache)
-        assertEquals(KvCacheShape(3_072, 6_144, 512), gemma.kvCache)
+        assertEquals(KvCacheShape(16_384, 0, null, 13_172_736, quantizable = true), qwen4b.kvCache)
+        assertEquals(KvCacheShape(3_072, 6_144, 512, quantizable = true), gemma.kvCache)
         assertEquals(KnownModels.QWEN35_9B, qwen9b.origin)
+        assertEquals(KvCacheShape(16_384, 0, null, 13_172_736, quantizable = true), qwen9b.kvCache)
         assertEquals(listOf("unsloth/Qwen3.5-4B-GGUF", "unsloth/gemma-4-E2B-it-GGUF", "unsloth/Qwen3.5-9B-GGUF"), Suggested.MODELS.map { it.repo })
     }
 

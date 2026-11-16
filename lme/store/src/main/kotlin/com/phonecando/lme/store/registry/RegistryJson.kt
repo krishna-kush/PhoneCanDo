@@ -10,7 +10,10 @@ internal data class RegistryJson(
     val downloads: List<DownloadJson> = emptyList(),
 )
 
-/** [context]: the context the user chose for it, in tokens; absent: automatic. */
+/**
+ * [context]: the context the user chose for it, in tokens; absent:
+ * automatic. [serve]: the rest of how it is served; absent: all automatic.
+ */
 @Serializable
 internal data class ModelJson(
     val id: String,
@@ -21,6 +24,22 @@ internal data class ModelJson(
     val addedAt: Long,
     val dates: DatesJson? = null,
     val context: Long? = null,
+    val serve: ServeJson? = null,
+)
+
+/**
+ * A model's serving choices; a field at its default (automatic) is left
+ * out. [ramShare] is `less`, `normal` or `more`; [kvCache] `auto`, `full`
+ * or `half`.
+ */
+@Serializable
+internal data class ServeJson(
+    val ramShare: String = "normal",
+    val kvCache: String = "auto",
+    val savedPrompts: Int? = null,
+    val checkpoints: Int? = null,
+    val threads: Int? = null,
+    val detailedLog: Boolean = false,
 )
 
 /** [kind] is `huggingface` (with [repo] and [revision]) or `imported` (with [fileName]). */
@@ -47,6 +66,8 @@ internal data class ShapeJson(
     val kvFullPerToken: Long,
     val kvWindowPerToken: Long,
     val slidingWindow: Long? = null,
+    val recurrentPerSequence: Long,
+    val kvQuantizable: Boolean,
     val baseModel: BaseModelJson? = null,
 )
 

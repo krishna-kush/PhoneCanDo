@@ -37,8 +37,8 @@ class RealFilesTest {
 
     companion object {
         private val KNOWN = mapOf(
-            "Qwen3.5-4B-Q4_K_M.gguf" to (4_205_751_296L to KvCacheShape(16384, 0, null)),
-            "Qwen3.5-0.8B-Q4_K_M.gguf" to (752_393_024L to KvCacheShape(6144, 0, null)),
+            "Qwen3.5-4B-Q4_K_M.gguf" to (4_205_751_296L to KvCacheShape(16384, 0, null, 13_172_736, quantizable = true)),
+            "Qwen3.5-0.8B-Q4_K_M.gguf" to (752_393_024L to KvCacheShape(6144, 0, null, 5_050_368, quantizable = true)),
         )
     }
 }

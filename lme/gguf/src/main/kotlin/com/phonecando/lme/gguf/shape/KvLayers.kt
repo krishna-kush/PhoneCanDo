@@ -17,15 +17,22 @@ import com.phonecando.lme.gguf.read.GgufHeader
  * - `attention.shared_kv_layers` S: the last S layers reuse earlier caches
  *   (Gemma 3n and 4)
  * - `attention.sliding_window` W with `attention.sliding_window_pattern`
- *   (a bool per layer, true = windowed, or a number P: every Pth layer is
- *   full). Without a pattern every layer counts as full, which only
- *   overestimates.
+ *   (a bool per layer, true = windowed, or a number P: one layer in each P
+ *   is full), else llama.cpp's own period for the architecture
+ *   ([SwaPatterns]). With neither, every layer counts as full and as
+ *   windowed: an upper bound for the KV cache and for what a checkpoint
+ *   copies, never less than the server keeps.
  *
- * Pure.
+ * It may be 8-bit ([KvCacheShape.quantizable]) when every key and value
+ * head length it uses is a whole number of [Q8_BLOCK]-value blocks: the
+ * server refuses a q8_0 cache otherwise. Pure.
  */
 internal object KvLayers {
     /** No model has this many layers; a bigger count is a broken file. */
     const val MAX_LAYERS = 4096L
+
+    /** The values in one block of llama.cpp's q8_0 type. */
+    const val Q8_BLOCK = 32L
 
     fun of(header: GgufHeader, arch: String, layers: Long): KvCacheShape {
         if (layers !in 1..MAX_LAYERS) throw LmeException.InvalidGguf("$arch.block_count is $layers")
@@ -48,20 +55,19 @@ internal object KvLayers {
         val interval = header.integer(key("full_attention_interval"))?.takeIf { it > 0 }
         val shared = header.integer(key("attention.shared_kv_layers"))?.coerceIn(0, layers) ?: 0
         val window = header.integer(key("attention.sliding_window"))?.takeIf { it > 0 }
-        val windowed = if (window != null) windowedLayers(header, key("attention.sliding_window_pattern"), n) else BooleanArray(n)
+        val windowed = if (window != null) windowedLayers(header, arch, key("attention.sliding_window_pattern"), n) else BooleanArray(n)
 
         var full = 0L
         var swa = 0L
         for (layer in 0 until n) {
             if (interval != null && (layer + 1) % interval != 0L) continue
             if (layer >= layers - shared) continue
-            if (windowed[layer]) {
-                swa += kvHeads[layer] * (keyLengthSwa + valueLengthSwa)
-            } else {
-                full += kvHeads[layer] * (keyLength + valueLength)
-            }
+            if (windowed == null || windowed[layer]) swa += kvHeads[layer] * (keyLengthSwa + valueLengthSwa)
+            if (windowed == null || !windowed[layer]) full += kvHeads[layer] * (keyLength + valueLength)
         }
-        return KvCacheShape(full, swa, if (swa > 0) window else null)
+        val lengths = listOf(keyLength, valueLength) + if (swa > 0) listOf(keyLengthSwa, valueLengthSwa) else emptyList()
+        val quantizable = full + swa > 0 && lengths.all { it > 0 && it % Q8_BLOCK == 0L }
+        return KvCacheShape(full, swa, if (swa > 0) window else null, quantizable = quantizable)
     }
 
     /** A number for every layer, or one per layer; nothing at all gives [default]. */
@@ -76,14 +82,16 @@ internal object KvLayers {
         return LongArray(layers) { checked(values[it], key) }
     }
 
-    private fun windowedLayers(header: GgufHeader, key: String, layers: Int): BooleanArray {
+    /** The windowed layers, as llama.cpp reads them for [arch]; null when neither the header nor [SwaPatterns] says. */
+    private fun windowedLayers(header: GgufHeader, arch: String, key: String, layers: Int): BooleanArray? {
         header.bools(key)?.let { flags ->
             if (flags.size < layers) throw LmeException.InvalidGguf("$key has ${flags.size} values for $layers layers")
             return BooleanArray(layers) { flags[it] }
         }
-        // llama.cpp's set_swa_pattern: in each group of P layers the last is full.
-        header.integer(key)?.takeIf { it > 0 }?.let { period -> return BooleanArray(layers) { it % period < period - 1 } }
-        return BooleanArray(layers)
+        val rule = SwaPatterns.of(arch)
+        val period = header.integer(key) ?: rule?.period ?: return null
+        if (period !in 0..MAX_LAYERS) throw LmeException.InvalidGguf("$key is $period")
+        return SwaPatterns.windowed(period, rule?.denseFirst ?: false, layers)
     }
 
     /** Head counts and lengths are small; anything else is a broken file, not a model to plan. */

@@ -2,8 +2,12 @@ package com.phonecando.lme.store
 
 import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.model.BaseModelRef
+import com.phonecando.lme.api.model.KvCacheChoice
 import com.phonecando.lme.api.model.ModelDates
 import com.phonecando.lme.api.model.ModelSource
+import com.phonecando.lme.api.model.RamShare
+import com.phonecando.lme.api.model.ServeChoices
+import com.phonecando.lme.api.serve.MeasuredMemory
 import com.phonecando.lme.store.download.DownloadRequest
 import com.phonecando.lme.store.download.RemoteFile
 import com.phonecando.lme.store.io.FreeSpace
@@ -274,17 +278,48 @@ class ModelStoreTest {
         val first = store.import(ByteArrayInputStream(TestModels.gguf(contextLength = 65_536)), "a.gguf")
         val second = store.import(ByteArrayInputStream(TestModels.gguf()), "b.gguf")
         assertNull(first.context)
+        val auto = ServeChoices.AUTO
 
-        assertEquals(32_768, store.setContext(first.id, 32_768).context)
+        assertEquals(32_768, store.setServing(first.id, 32_768, auto).context)
         assertEquals(listOf(first.id to 32_768L, second.id to null), store.models().map { it.id to it.context })
-        assertEquals(65_536, store.setContext(first.id, 65_536).context)
-        assertThrows<IllegalArgumentException> { store.setContext(first.id, 65_537) }
-        assertThrows<IllegalArgumentException> { store.setContext(first.id, 0) }
-        assertNull(store.setContext(first.id, null).context)
+        assertEquals(65_536, store.setServing(first.id, 65_536, auto).context)
+        assertThrows<IllegalArgumentException> { store.setServing(first.id, 65_537, auto) }
+        assertThrows<IllegalArgumentException> { store.setServing(first.id, 0, auto) }
+        assertNull(store.setServing(first.id, null, auto).context)
         // A header without a trained context bounds nothing.
-        assertEquals(100_000, store.setContext(second.id, 100_000).context)
-        assertThrows<LmeException.NotFound> { store.setContext("never-was", 4_096) }
+        assertEquals(100_000, store.setServing(second.id, 100_000, auto).context)
+        assertThrows<LmeException.NotFound> { store.setServing("never-was", 4_096, auto) }
         assertEquals(listOf(null, 100_000L), store.models().map { it.context })
+    }
+
+    @Test
+    fun `the serving choices are saved with the context, and read back`() {
+        val record = store.import(ByteArrayInputStream(TestModels.gguf()), "a.gguf")
+        assertEquals(ServeChoices.AUTO, record.serve)
+        val mine = ServeChoices(RamShare.MORE, KvCacheChoice.HALF, savedPrompts = 0, checkpoints = 8, threads = 2, detailedLog = true)
+        assertEquals(mine, store.setServing(record.id, null, mine).serve)
+        assertEquals(listOf(mine), store.models().map { it.serve })
+        assertEquals(ServeChoices.AUTO, store.setServing(record.id, null, ServeChoices.AUTO).serve)
+    }
+
+    @Test
+    fun `a model's measurement is kept beside its files, read back, and gone with it`() {
+        val record = store.import(ByteArrayInputStream(TestModels.gguf()), "m.gguf")
+        assertNull(store.measured(record.id))
+        val m = MeasuredMemory("cpu=asimddp;server=9", 32_768, true, 1, 2, 3, 4)
+        store.saveMeasured(record.id, m)
+        assertEquals(m, store.measured(record.id))
+        store.saveMeasured(record.id, m.copy(context = 16_384))
+        assertEquals(16_384, store.measured(record.id)?.context)
+        // Not ours: read as none, so the next start measures again.
+        File(root, "${record.id}/.memory.json").writeText("{\"version\":0}")
+        assertNull(store.measured(record.id))
+        assertThrows<LmeException.NotFound> { store.saveMeasured("nope", m) }
+        assertEquals(File(root, "${record.id}/.chats"), store.chatsDir(record.id))
+        store.chatsDir(record.id).mkdirs()
+        File(store.chatsDir(record.id), "a.bin").writeBytes(ByteArray(3))
+        store.delete(record.id)
+        assertEquals(listOf("models.json"), root.list()!!.toList())
     }
 
     @Test

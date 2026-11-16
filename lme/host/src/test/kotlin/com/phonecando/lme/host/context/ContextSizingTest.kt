@@ -12,7 +12,8 @@ class ContextSizingTest {
 
     private fun fitting(spare: Long, trained: Long?) = ContextSizing.fitting(spare, 1, ContextRange.of(trained), kv)
 
-    private fun automatic(budget: Long, spare: Long, trained: Long?) = ContextSizing.automatic(budget, spare, 1, ContextRange.of(trained), kv)
+    private fun automatic(budget: Long, spare: Long, trained: Long?, reserve: (Long) -> Long = { 0 }) =
+        ContextSizing.automatic(budget, spare, 1, ContextRange.of(trained), kv, reserve)
 
     @Test
     fun `a range runs from the floor, or less, to the trained context`() {
@@ -70,6 +71,20 @@ class ContextSizingTest {
         assertEquals(16_384, automatic(0, 0, 262_144))
         assertEquals(16_384, automatic(plenty, plenty, null))
         assertEquals(8_192, automatic(0, 0, 8_192))
+    }
+
+    @Test
+    fun `past 32k, what is spare holds the prompt cache's room too`() {
+        val plenty = Long.MAX_VALUE / 2
+        // Room for one more context's worth: 1 + 20 x context must fit.
+        val cache = { context: Long -> 10 * context }
+        assertEquals(65_536, automatic(plenty, plenty, 262_144, cache))
+        assertEquals(39_936, automatic(plenty, 1 + 20 * 40_000, 262_144, cache))
+        // Without it, the same spare memory would grow the context to 64k.
+        assertEquals(65_536, automatic(plenty, 1 + 20 * 40_000, 262_144))
+        // Up to 32k the budget alone decides, as before: no room kept for it.
+        assertEquals(32_768, automatic(plenty, 1 + 20 * 30_000, 262_144, cache))
+        assertEquals(20_480, automatic(1 + 10 * 20_480, 1 + 10 * 20_480, 262_144, cache))
     }
 
     @Test

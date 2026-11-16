@@ -3,8 +3,9 @@
 The local model engine (LME) lets an agent use model weights that run on
 the phone. It finds GGUF models on Hugging Face (or takes a file from the
 phone), downloads and checks them, decides whether a model fits the
-phone's RAM, and plans the llama.cpp server that serves it on loopback
-with OpenAI and Anthropic wire APIs. PhoneCanDo owns it and is its only
+phone's RAM (with what its server measured of itself on that phone), and
+plans the llama.cpp server that serves it on loopback with OpenAI and
+Anthropic wire APIs, its chats kept on storage when there is room. PhoneCanDo owns it and is its only
 consumer. Status: `0.1.0-dev`, pre-release.
 
 - `api/`, `gguf/`, `catalog/`, `store/`, `host/`: the pure-JVM Gradle

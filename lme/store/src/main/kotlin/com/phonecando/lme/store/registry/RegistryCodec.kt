@@ -2,12 +2,15 @@ package com.phonecando.lme.store.registry
 
 import com.phonecando.lme.api.LmeException
 import com.phonecando.lme.api.model.BaseModelRef
+import com.phonecando.lme.api.model.KvCacheChoice
 import com.phonecando.lme.api.model.KvCacheShape
 import com.phonecando.lme.api.model.ModelFile
 import com.phonecando.lme.api.model.ModelIds
 import com.phonecando.lme.api.model.ModelRecord
 import com.phonecando.lme.api.model.ModelShape
 import com.phonecando.lme.api.model.ModelSource
+import com.phonecando.lme.api.model.RamShare
+import com.phonecando.lme.api.model.ServeChoices
 import com.phonecando.lme.store.download.PendingDownload
 import com.phonecando.lme.store.download.RemoteFile
 import com.phonecando.lme.store.layout.FileNames
@@ -20,7 +23,7 @@ import kotlinx.serialization.json.Json
  * [LmeException.Corrupt]: we are pre-release and read no older shape. Pure.
  */
 internal object RegistryCodec {
-    const val VERSION = 3
+    const val VERSION = 4
     private const val WHAT = "models.json"
     private val JSON = Json { prettyPrint = true; ignoreUnknownKeys = false }
 
@@ -59,13 +62,27 @@ internal object RegistryCodec {
         shape = with(r.shape) {
             ShapeJson(
                 architecture, name, quant, parameterCount, contextLength, blockCount, embeddingLength,
-                kvCache.fullPerToken, kvCache.windowPerToken, kvCache.slidingWindow,
+                kvCache.fullPerToken, kvCache.windowPerToken, kvCache.slidingWindow, kvCache.recurrentPerSequence, kvCache.quantizable,
                 baseModel?.let { BaseModelJson(it.name, it.organization, it.repoUrl) },
             )
         },
         addedAt = r.addedAtMillis,
         dates = r.dates?.let(DatesCodec::encode),
         context = r.context,
+        serve = r.serve.takeIf { it != ServeChoices.AUTO }?.let(::serve),
+    )
+
+    private fun serve(c: ServeChoices) = ServeJson(
+        c.ramShare.name.lowercase(), c.kvCache.name.lowercase(), c.savedPrompts, c.checkpoints, c.threads, c.detailedLog,
+    )
+
+    private fun serve(j: ServeJson) = ServeChoices(
+        ramShare = RamShare.entries.firstOrNull { it.name.lowercase() == j.ramShare } ?: throw corrupt(),
+        kvCache = KvCacheChoice.entries.firstOrNull { it.name.lowercase() == j.kvCache } ?: throw corrupt(),
+        savedPrompts = j.savedPrompts,
+        checkpoints = j.checkpoints,
+        threads = j.threads,
+        detailedLog = j.detailedLog,
     )
 
     private fun model(j: ModelJson) = ModelRecord(
@@ -80,13 +97,14 @@ internal object RegistryCodec {
         shape = with(j.shape) {
             ModelShape(
                 architecture, name, quant, parameterCount, contextLength, blockCount, embeddingLength,
-                KvCacheShape(kvFullPerToken, kvWindowPerToken, slidingWindow),
+                KvCacheShape(kvFullPerToken, kvWindowPerToken, slidingWindow, recurrentPerSequence, kvQuantizable),
                 baseModel?.let { BaseModelRef(it.name, it.organization, it.repoUrl) },
             )
         },
         addedAtMillis = j.addedAt,
         dates = j.dates?.let { DatesCodec.decode(it, WHAT) },
         context = j.context,
+        serve = j.serve?.let(::serve) ?: ServeChoices.AUTO,
     )
 
     private fun download(p: PendingDownload) = DownloadJson(

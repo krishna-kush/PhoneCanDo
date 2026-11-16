@@ -38,8 +38,9 @@ object Phones {
         addedAtMillis = 0,
     )
 
-    val QWEN_4B = model("qwen3-5-4b-q4-k-m", 2_740_937_888, KvCacheShape(16_384, 0, null), 262_144)
-    val GEMMA_E2B = model("gemma-4-e2b-it-q4-k-m", 3_106_738_272, KvCacheShape(3_072, 6_144, 512), 131_072)
-    val QWEN_9B = model("qwen3-5-9b-q4-k-m", 5_680_522_464, KvCacheShape(16_384, 0, null), 262_144)
-    val QWEN_08B = model("qwen3-5-0-8b-q4-k-m", 532_517_120, KvCacheShape(6_144, 0, null), 262_144)
+    // Shapes from each file's header: Qwen3.5 is hybrid (a gated delta net on 3 of every 4 layers), Gemma 4 windows most layers.
+    val QWEN_4B = model("qwen3-5-4b-q4-k-m", 2_740_937_888, KvCacheShape(16_384, 0, null, 13_172_736, quantizable = true), 262_144)
+    val GEMMA_E2B = model("gemma-4-e2b-it-q4-k-m", 3_106_738_272, KvCacheShape(3_072, 6_144, 512, quantizable = true), 131_072)
+    val QWEN_9B = model("qwen3-5-9b-q4-k-m", 5_680_522_464, KvCacheShape(16_384, 0, null, 13_172_736, quantizable = true), 262_144)
+    val QWEN_08B = model("qwen3-5-0-8b-q4-k-m", 532_517_120, KvCacheShape(6_144, 0, null, 5_050_368, quantizable = true), 262_144)
 }

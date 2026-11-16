@@ -11,6 +11,7 @@ package com.phonecando.lme.api.model
  * @property context the context it is served with, in tokens, as the user
  *   chose it; null: automatic (the runtime picks it for the phone at each
  *   start)
+ * @property serve the rest of how the user wants it served
  */
 data class ModelRecord(
     val id: String,
@@ -21,6 +22,7 @@ data class ModelRecord(
     val addedAtMillis: Long,
     val dates: ModelDates? = null,
     val context: Long? = null,
+    val serve: ServeChoices = ServeChoices.AUTO,
 ) {
     init {
         require(files.isNotEmpty()) { "a model has at least one file" }

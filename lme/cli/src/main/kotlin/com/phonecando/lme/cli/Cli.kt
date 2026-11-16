@@ -6,6 +6,7 @@ import com.phonecando.lme.gguf.read.GgufReader
 import com.phonecando.lme.gguf.shape.ModelShapes
 import com.phonecando.lme.host.context.ContextRange
 import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
+import com.phonecando.lme.host.llamacpp.ServerTuning
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -22,8 +23,8 @@ import java.io.PrintStream
 // trained context; a phone sizes its own from its RAM, a CI host has no such
 // budget), else the floor, every flag the phone's plan
 // passes, without the phone's device and RAM checks, and without
-// --cache-ram (the phone caps the prompt cache by its budget; a CI host
-// keeps the server's default). One JSON line on stdout:
+// --cache-ram or an 8-bit KV cache (the phone sizes those by its budget; a
+// CI host keeps the server's default). One JSON line on stdout:
 //   {"argv", "keyEnv", "healthUrl", "endpoint": {"baseUrl", "model", "contextWindow", "apis"}}
 // The key is read from the variable --key-env names, checked to be a key
 // ApiKeys would make, and never printed: the server takes it from the
@@ -74,7 +75,8 @@ object Cli {
         val range = ContextRange.of(shape.contextLength)
         val context = options["--context"]?.let { it.toLongOrNull() ?: throw IllegalArgumentException("--context is a number") }
             ?.let(range::coerce) ?: range.min
-        val command = LlamaCppRuntime.serve(server.path, model.path, id, context, null, port, threads, key)
+        val tuning = ServerTuning(checkpoints = LlamaCppRuntime.contextCheckpoints(shape.kvCache))
+        val command = LlamaCppRuntime.serve(server.path, model.path, id, context, tuning, port, threads, key)
         val endpoint = command.endpoint
         out.println(
             buildJsonObject {

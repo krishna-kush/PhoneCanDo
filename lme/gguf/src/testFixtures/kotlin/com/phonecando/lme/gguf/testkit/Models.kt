@@ -2,7 +2,7 @@ package com.phonecando.lme.gguf.testkit
 
 /** Synthetic headers shaped like real models (values from their GGUF files). */
 object Models {
-    /** Qwen3.5-4B: hybrid, a KV cache on every 4th of 32 layers. */
+    /** Qwen3.5-4B: hybrid, a KV cache on every 4th of 32 layers, a gated delta net on the other 24. */
     fun qwen35(): GgufBytes = GgufBytes()
         .string("general.architecture", "qwen35")
         .string("general.name", "Qwen3.5-4B")
@@ -16,6 +16,11 @@ object Models {
         .u32("qwen35.attention.head_count_kv", 4)
         .u32("qwen35.attention.key_length", 256)
         .u32("qwen35.attention.value_length", 256)
+        .u32("qwen35.ssm.conv_kernel", 4)
+        .u32("qwen35.ssm.state_size", 128)
+        .u32("qwen35.ssm.group_count", 16)
+        .u32("qwen35.ssm.time_step_rank", 32)
+        .u32("qwen35.ssm.inner_size", 4096)
         .u32("qwen35.full_attention_interval", 4)
         .strings("tokenizer.ggml.tokens", count = 5000, length = 6)
         .u32("general.file_type", 15)

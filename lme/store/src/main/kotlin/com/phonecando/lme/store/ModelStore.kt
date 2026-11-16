@@ -6,15 +6,19 @@ import com.phonecando.lme.api.model.ModelFile
 import com.phonecando.lme.api.model.ModelIds
 import com.phonecando.lme.api.model.ModelRecord
 import com.phonecando.lme.api.model.ModelSource
+import com.phonecando.lme.api.model.ServeChoices
+import com.phonecando.lme.api.serve.MeasuredMemory
 import com.phonecando.lme.store.check.HeaderCheck
 import com.phonecando.lme.store.download.DownloadRequest
 import com.phonecando.lme.store.download.PendingDownload
 import com.phonecando.lme.store.ids.IdMaker
 import com.phonecando.lme.store.imports.ModelImport
+import com.phonecando.lme.store.io.AtomicFile
 import com.phonecando.lme.store.io.FreeSpace
 import com.phonecando.lme.store.io.TreeDelete
 import com.phonecando.lme.store.layout.FileNames
 import com.phonecando.lme.store.layout.ModelLayout
+import com.phonecando.lme.store.measured.MeasuredCodec
 import com.phonecando.lme.store.registry.ModelRegistry
 import com.phonecando.network.CancelSignal
 import com.phonecando.network.ProgressSink
@@ -204,26 +208,54 @@ class ModelStore(
     }
 
     /**
-     * Sets the context model [id] is served with: [context] tokens, at most
-     * its trained context when its header names one; null for automatic.
-     * Returns the record as saved. A running server keeps its own until it
-     * starts again.
+     * Sets how model [id] is served: its context ([context] tokens, at most
+     * its trained context when its header names one; null for automatic)
+     * and the rest of the user's choices ([serve]). Returns the record as
+     * saved. A running server keeps its own until it starts again.
      *
      * @throws LmeException.NotFound when no such model is here
      */
-    fun setContext(id: String, context: Long?): ModelRecord {
+    fun setServing(id: String, context: Long?, serve: ServeChoices): ModelRecord {
         require(context == null || context >= 1) { "a context of at least one token" }
         var saved: ModelRecord? = null
         registry.update { current ->
             val record = current.model(id) ?: throw LmeException.NotFound("model $id")
             val trained = record.shape.contextLength
             require(context == null || trained == null || context <= trained) { "more context than ${record.name} was trained for" }
-            val updated = record.copy(context = context)
+            val updated = record.copy(context = context, serve = serve)
             saved = updated
             current.replacing(updated)
         }
         return saved!!
     }
+
+    /**
+     * What model [id]'s server last measured of itself ([MeasuredMemory]);
+     * null when it never did or the file is not one of ours. The caller
+     * checks it was this phone ([MeasuredMemory.phone]).
+     */
+    fun measured(id: String): MeasuredMemory? {
+        val file = layout.measured(id)
+        if (!file.isFile) return null
+        return try {
+            MeasuredCodec.decode(file.readText())
+        } catch (_: IOException) {
+            null
+        }
+    }
+
+    /**
+     * Keeps [m] as model [id]'s measurement, in place of the last one.
+     *
+     * @throws LmeException.NotFound when no such model is here
+     */
+    fun saveMeasured(id: String, m: MeasuredMemory) {
+        if (registry.read().model(id) == null) throw LmeException.NotFound("model $id")
+        AtomicFile.write(layout.measured(id), MeasuredCodec.encode(m).toByteArray(Charsets.UTF_8))
+    }
+
+    /** The dir model [id]'s chats are kept in on storage; the host makes it. Gone with the model. */
+    fun chatsDir(id: String): File = layout.chats(id)
 
     /** Removes model or download [id] and its files. Stop a server using it first. */
     fun delete(id: String) {
