@@ -1,5 +1,6 @@
 package com.phonecando.runner.checks.now
 
+import com.phonecando.runner.checks.TurnEnd
 import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.acp.AcpOption
 
@@ -26,7 +27,12 @@ import com.phonecando.runner.engine.acp.AcpOption
 // always takes a new chat.
 // The task asks for no tools: tools are checked by their start-up
 // connection. While a check runs, an ACP permission question is answered
-// with a reject (rejectOption). Pure.
+// with a reject (rejectOption). A stop someone asked for ends the whole
+// check, its later parts never sent (turnEndStopsCheck, engineEndStopsCheck).
+// Once it is over, an agent that ran in its
+// own app before it starts again there (restartAfter), unless someone
+// stopped it during the check (stoppedDuring: you, or the memory guard).
+// Pure.
 object CheckNowRules {
   /** What we know of the agent when you ask. */
   data class Look(
@@ -118,6 +124,49 @@ object CheckNowRules {
     plan(prompts, acp, opensChat, ALL)?.parts?.size ?: 0
 
   private val ALL = setOf(TOOLS, MESSAGES, WAKE, TASK_ROW, STATE, ACP, ACP_TOOLS, ACP_MESSAGES, CHAT)
+
+  /**
+   * After a check's engine is released, whether the agent starts again on
+   * its own model (its own app): not when its engine still runs ([liveNow])
+   * or someone stopped it during the check ([stopped], stoppedDuring: a
+   * start now would go against that stop); else yes when its engine was on
+   * the check model ([standIn]) with its terminal on your screen
+   * ([viewer]), or when it ran in its own app before the check ([before],
+   * the mode it ran in then; null: it did not run). An engine left from an
+   * ACP run is not started again: idle, it would stop soon anyway.
+   */
+  fun restartAfter(standIn: Boolean, viewer: Boolean, liveNow: Boolean, before: EngineMode?, stopped: Boolean = false): Boolean =
+    !liveNow && !stopped && ((standIn && viewer) || before == EngineMode.TERMINAL)
+
+  /**
+   * Whether someone stopped the agent during its check (begun at
+   * [beganAt]): its engine ended the check with no failure ([endedByStop]:
+   * your Stop, or the memory guard's), or the memory guard stopped it since
+   * the check began ([memoryStopAt], MemoryStops; null: never), which may
+   * come after its turn ended, when an engine end no longer ends the check.
+   */
+  fun stoppedDuring(endedByStop: Boolean, memoryStopAt: Long?, beganAt: Long?): Boolean =
+    endedByStop || (memoryStopAt != null && beganAt != null && memoryStopAt >= beganAt)
+
+  /**
+   * Whether a part's own turn ending as [end] ends the whole check: a turn
+   * someone stopped (your Stop on Home cancels its ACP turn: stop reason
+   * "cancelled"; an interrupt its own app reports) does, so no later part
+   * sends its task. Our own cancels come only once a part is over, so they
+   * are never a part's turn end. A finished or failed turn lets its part
+   * end as usual.
+   */
+  fun turnEndStopsCheck(end: TurnEnd): Boolean = end == TurnEnd.STOPPED
+
+  /**
+   * Whether the part's engine ending ends the whole check: before its turn
+   * ended ([turnEnd] null) always; after, only a stop someone asked for
+   * (not [failed]: your Stop in the notification, the memory guard) that
+   * cut a turn short (its turn failed as the engine went), as a stop of an
+   * engine in ACP mode ends its turn first.
+   */
+  fun engineEndStopsCheck(turnEnd: TurnEnd?, failed: Boolean): Boolean =
+    turnEnd == null || (!failed && turnEnd != TurnEnd.FINISHED)
 
   /** The answer to a permission question during a check: reject once, else reject always; null: cancel it. */
   fun rejectOption(options: List<AcpOption>): String? =

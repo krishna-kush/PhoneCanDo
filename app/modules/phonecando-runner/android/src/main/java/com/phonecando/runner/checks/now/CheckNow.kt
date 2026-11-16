@@ -15,15 +15,18 @@ import com.phonecando.runner.checks.Checks
 import com.phonecando.runner.checks.LifeEvent
 import com.phonecando.runner.checks.fanout.ChecksEvents
 import com.phonecando.runner.checks.now.model.CheckModel
+import com.phonecando.runner.engine.EngineMode
+import com.phonecando.runner.engine.EngineState
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.acp.AcpEngines
 import com.phonecando.runner.engine.acp.AcpPermissionAsk
+import com.phonecando.runner.engine.starts.EngineStarts
 import com.phonecando.runner.jobs.JobsAnchor
+import com.phonecando.runner.memory.MemoryStops
 import com.phonecando.runner.messages.AgentState
 import com.phonecando.runner.messages.Messages
 import com.phonecando.runner.notify.AppForeground
 import com.phonecando.runner.notify.CheckNotices
-import com.phonecando.runner.schedule.EngineStarts
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -46,7 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 //   the declared capabilities it tests (its rows). Each part stops the
 //   agent's engine when live (an ACP turn cancelled first, as Schedules
 //   restart an idle agent), then starts it with the part's task as its
-//   first prompt (schedule/EngineStarts), on a thread of our own, as a stop
+//   first prompt (engine/starts/EngineStarts), on a thread of our own, as a stop
 //   blocks up to ~3 s.
 // - each verdict for the agent (Checks' onChange, through checks/fanout)
 //   answers its row; a part whose rows all have answers ends at once.
@@ -65,10 +68,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 //   a view shows its terminal, and with the app not in front one
 //   notification says how it went (notify/CheckNotices).
 // - Cancel: cancelled, its ACP turn cancelled, its engine stopped.
+// - your Stop of its check task (Home's Stop on its ACP turn, an interrupt
+//   its own app reports, the notification's Stop): the whole check ends
+//   there (CheckRuns), its later parts never sent.
 // - either way, an engine on the check model with its terminal on your
 //   screen starts again on its own model, so you never work with the
-//   stand-in; and the agent gets back the chat it was in before the check
-//   (ChatsBefore), so its next own-app start opens that, not the check's.
+//   stand-in, and so does an agent that ran in its own app before the
+//   check (CheckNowRules.restartAfter: not one left from an ACP run, nor
+//   one you or the memory guard stopped during the check); and
+//   the agent gets back the chat it was in before the check (ChatsBefore),
+//   so its next own-app start opens that, not the check's.
 // Every change you see tells the app (ChecksEvents). Kept until the next
 // check or the agent is gone.
 object CheckNow {
@@ -94,6 +103,12 @@ object CheckNow {
   /** The agents whose check is over but whose engine is not released yet. */
   private val releasing: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
+  /** The mode each agent's engine ran in when its check began; none when it did not run. */
+  private val ranBefore = ConcurrentHashMap<String, EngineMode>()
+
+  /** The agents whose check a stop someone asked for ended (your Stop, the memory guard's): not started again. */
+  private val endedByStop: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
   @Volatile private var app: Context? = null
 
   /**
@@ -112,6 +127,10 @@ object CheckNow {
       ?: return if (done.isEmpty()) CheckNowRules.CANT else CheckNowRules.CANT_LEFT
     if (!runs.begin(agentId, plan)) return CheckNowRules.CHECKING
     chatsBefore.began(agentId, agent.acpChat)
+    val before = Engines.peek()?.status(agentId)
+      ?.takeIf { it.state == EngineState.STARTING || it.state == EngineState.READY }?.mode
+    if (before != null) ranBefore[agentId] = before else ranBefore.remove(agentId)
+    endedByStop.remove(agentId)
     this.app = app
     changed(agentId)
     val first = plan.parts[0]
@@ -182,13 +201,25 @@ object CheckNow {
     return true
   }
 
-  /** An engine life's news (Checks' onLife): a turn end shows on the next tick. */
+  /**
+   * An engine life's news (Checks' onLife): a turn end shows on the next
+   * tick; a turn you stopped ends the check at once (no later part sends
+   * its task) and releases it as any end does: an agent that ran in its own
+   * app before goes back there.
+   */
   fun life(agentId: String, event: LifeEvent) {
     when (event) {
-      is LifeEvent.TurnEnded -> runs.turnEnded(agentId, event.mode, event.end)
+      is LifeEvent.TurnEnded -> {
+        if (runs.turnEnded(agentId, event.mode, event.end) && runs.get(agentId)?.running == false) {
+          changed(agentId)
+          app?.let { ended(it, agentId) }
+        }
+      }
       is LifeEvent.EngineEnded -> {
         val live = Engines.peek()?.status(agentId)?.state?.live == true
         if (runs.engineEnded(agentId, event.failed, event.detail, live)) {
+          // A stop, not a failure: someone asked for it, so it stays stopped.
+          if (!event.failed) endedByStop += agentId
           changed(agentId)
           app?.let { ended(it, agentId) }
         }
@@ -203,6 +234,8 @@ object CheckNow {
     onCheckModel.remove(agentId)
     chatsBefore.take(agentId)
     releasing -= agentId
+    ranBefore.remove(agentId)
+    endedByStop.remove(agentId)
   }
 
   private fun look(app: Context, agent: AgentRecord, kind: ManifestKind): CheckNowRules.Look {
@@ -259,12 +292,16 @@ object CheckNow {
 
   // The run is over: the engine it started stops, unless a view shows its
   // terminal and [keepForViewer]. On the check model it stops even then,
-  // and with a view on its terminal starts again on its own model. The
-  // agent gets its chat from before the check back first, so that start,
+  // and with a view on its terminal starts again on its own model; so does
+  // an agent that ran in its own app before the check (restartAfter);
+  // neither when you or the memory guard stopped it during the check
+  // (stoppedDuring). The agent gets its chat from before the check back first, so that start,
   // and any later one, opens it.
   private fun release(app: Context, agentId: String, keepForViewer: Boolean) {
     val viewer = Engines.peek()?.hasViewer(agentId) == true
     val standIn = onCheckModel.remove(agentId)
+    val before = ranBefore.remove(agentId)
+    val stopped = CheckNowRules.stoppedDuring(endedByStop.remove(agentId), MemoryStops.at(agentId), runs.get(agentId)?.startedAt)
     try {
       noteChatBefore(agentId)
       if (standIn || !(viewer && keepForViewer)) stop(app, agentId)
@@ -272,7 +309,10 @@ object CheckNow {
     } finally {
       releasing -= agentId
     }
-    if (standIn && viewer) EngineStarts(app).start(agentId)
+    val liveNow = Engines.peek()?.status(agentId)?.state?.live == true
+    if (CheckNowRules.restartAfter(standIn, viewer, liveNow, before, stopped)) {
+      EngineStarts(app).start(agentId)?.let { Log.w(TAG, "check of $agentId: not started again: $it") }
+    }
   }
 
   // The check's ACP part, while it runs: the chat it would have gone back to.

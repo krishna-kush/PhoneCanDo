@@ -1,9 +1,12 @@
 package com.phonecando.runner.checks.now
 
+import com.phonecando.runner.checks.TurnEnd
 import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.acp.AcpOption
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // When Check now refuses (first match wins), its parts and its task.
@@ -140,5 +143,47 @@ class CheckNowRulesTest {
     assertEquals("o2", CheckNowRules.rejectOption(listOf(allow, always)))
     // No way to reject: cancelled.
     assertNull(CheckNowRules.rejectOption(listOf(allow)))
+  }
+
+  @Test fun anAgentThatRanInItsOwnAppStartsAgainAfterItsCheck() {
+    // It ran in its own app: started again, on its own model.
+    assertTrue(CheckNowRules.restartAfter(standIn = false, viewer = false, liveNow = false, before = EngineMode.TERMINAL))
+    assertTrue(CheckNowRules.restartAfter(standIn = true, viewer = false, liveNow = false, before = EngineMode.TERMINAL))
+    // It did not run, or only an ACP run's engine was left: it stays stopped.
+    assertFalse(CheckNowRules.restartAfter(standIn = false, viewer = false, liveNow = false, before = null))
+    assertFalse(CheckNowRules.restartAfter(standIn = true, viewer = false, liveNow = false, before = EngineMode.ACP))
+    // On the check model with its terminal on your screen: started again on its own.
+    assertTrue(CheckNowRules.restartAfter(standIn = true, viewer = true, liveNow = false, before = null))
+    // Still running (kept for your view): nothing to start.
+    assertFalse(CheckNowRules.restartAfter(standIn = false, viewer = true, liveNow = true, before = EngineMode.TERMINAL))
+    // You or the memory guard stopped it during the check: it stays stopped.
+    assertFalse(CheckNowRules.restartAfter(standIn = false, viewer = false, liveNow = false, before = EngineMode.TERMINAL, stopped = true))
+    assertFalse(CheckNowRules.restartAfter(standIn = true, viewer = true, liveNow = false, before = null, stopped = true))
+  }
+
+  @Test fun aStopSomeoneAskedForEndsTheWholeCheck() {
+    // Its turn: only one someone stopped ends the check.
+    assertTrue(CheckNowRules.turnEndStopsCheck(TurnEnd.STOPPED))
+    assertFalse(CheckNowRules.turnEndStopsCheck(TurnEnd.FINISHED))
+    assertFalse(CheckNowRules.turnEndStopsCheck(TurnEnd.FAILED))
+    // Its engine: before its turn ended, any end.
+    assertTrue(CheckNowRules.engineEndStopsCheck(turnEnd = null, failed = true))
+    assertTrue(CheckNowRules.engineEndStopsCheck(turnEnd = null, failed = false))
+    // After it, only a stop that cut the turn short (an ACP engine's stop fails its turn first).
+    assertTrue(CheckNowRules.engineEndStopsCheck(turnEnd = TurnEnd.FAILED, failed = false))
+    assertFalse(CheckNowRules.engineEndStopsCheck(turnEnd = TurnEnd.FAILED, failed = true))
+    assertFalse(CheckNowRules.engineEndStopsCheck(turnEnd = TurnEnd.FINISHED, failed = false))
+  }
+
+  @Test fun aStopDuringTheCheckIsYoursOrTheMemoryGuards() {
+    val began = 1_000L
+    // An engine end with no failure ended the check: a stop someone asked for.
+    assertTrue(CheckNowRules.stoppedDuring(endedByStop = true, memoryStopAt = null, beganAt = began))
+    // The memory guard stopped it since the check began (after its turn, too).
+    assertTrue(CheckNowRules.stoppedDuring(endedByStop = false, memoryStopAt = began + 5_000L, beganAt = began))
+    // A memory stop before the check is not this check's.
+    assertFalse(CheckNowRules.stoppedDuring(endedByStop = false, memoryStopAt = began - 1L, beganAt = began))
+    assertFalse(CheckNowRules.stoppedDuring(endedByStop = false, memoryStopAt = null, beganAt = began))
+    assertFalse(CheckNowRules.stoppedDuring(endedByStop = false, memoryStopAt = began, beganAt = null))
   }
 }

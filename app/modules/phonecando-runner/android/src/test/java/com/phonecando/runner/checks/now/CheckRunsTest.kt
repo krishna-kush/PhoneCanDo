@@ -150,7 +150,7 @@ class CheckRunsTest {
     assertEquals(CheckRuns.Action.Advance(2, appPart), tick(look(ready = true))?.action)
   }
 
-  @Test fun aFailedOrStoppedTurnEndsItsPartWithItsOwnReason() {
+  @Test fun aFailedTurnEndsItsPartWithItsOwnReason() {
     runs.begin("a", twoParts)
     runs.launched("a", 1)
     tick()
@@ -165,14 +165,43 @@ class CheckRunsTest {
     assertEquals(State.DONE, run().state)
     assertEquals(RowStatus.UNKNOWN, status("tools"))
     assertEquals(CheckRunCopy.UNKNOWN_FAILED, why("tools"))
+  }
 
+  @Test fun aTurnYouStoppedEndsTheWholeCheck() {
     runs.begin("a", twoParts)
     runs.launched("a", 1)
     tick()
+    runs.verdict("a", "acp", failed = false)
+    // Your Stop on Home cancels its ACP turn: no own-app part follows.
     assertTrue(runs.turnEnded("a", EngineMode.ACP, TurnEnd.STOPPED))
+    assertEquals(State.CANCELLED, run().state)
+    assertEquals(CheckRunCopy.YOU_STOPPED, run().detail)
+    assertNull(run().step)
+    assertEquals(RowStatus.ANSWERED, status("acp"))
+    assertEquals(CheckRunCopy.UNKNOWN_STOPPED, why("acpTools"))
+    assertEquals(CheckRunCopy.UNKNOWN_NOT_REACHED, why("tools"))
+    assertFalse(runs.active())
     now += CheckRuns.DONE_MS
-    assertEquals(CheckRuns.Tick("a", true, CheckRuns.Action.Advance(2, appPart)), tick())
-    assertEquals(CheckRunCopy.UNKNOWN_STOPPED, why("acp"))
+    assertEquals(emptyList<CheckRuns.Tick>(), runs.tick(mapOf("a" to look())))
+    // The same in its own app (an interrupt it reports).
+    runs.begin("a", terminal)
+    runs.launched("a", 1)
+    assertTrue(runs.turnEnded("a", EngineMode.TERMINAL, TurnEnd.STOPPED))
+    assertEquals(State.CANCELLED, run().state)
+    assertEquals(CheckRunCopy.UNKNOWN_STOPPED, why("task"))
+  }
+
+  @Test fun theNotificationsStopInAcpModeEndsTheWholeCheck() {
+    runs.begin("a", twoParts)
+    runs.launched("a", 1)
+    tick()
+    // A stop of an engine in ACP mode fails its turn first, then the engine stops.
+    assertTrue(runs.turnEnded("a", EngineMode.ACP, TurnEnd.FAILED))
+    assertTrue(runs.engineEnded("a", failed = false, detail = null, liveNow = false))
+    assertEquals(State.FAILED, run().state)
+    assertEquals(CheckRunCopy.STOPPED, run().detail)
+    assertEquals(CheckRunCopy.UNKNOWN_NOT_REACHED, why("tools"))
+    assertFalse(runs.active())
   }
 
   @Test fun acpPartThenItsOwnAppAfterItsTurnEnd() {
@@ -379,9 +408,18 @@ class CheckRunsTest {
     runs.launched("a", 1)
     runs.turnEnded("a", EngineMode.TERMINAL)
     assertFalse(runs.engineEnded("a", failed = true, detail = "exit 0", liveNow = false))
+    // After a finished turn, even a stop is not the check's end.
+    assertFalse(runs.engineEnded("a", failed = false, detail = null, liveNow = false))
     now += CheckRuns.DONE_MS
     tick(look(ready = false))
     assertEquals(State.DONE, run().state)
+    // A crash that failed its turn lets the part end as usual.
+    runs.begin("a", twoParts)
+    runs.launched("a", 1)
+    runs.turnEnded("a", EngineMode.ACP, TurnEnd.FAILED)
+    assertFalse(runs.engineEnded("a", failed = true, detail = "died", liveNow = false))
+    now += CheckRuns.DONE_MS
+    assertEquals(CheckRuns.Action.Advance(2, appPart), tick()?.action)
   }
 
   @Test fun aRefusedStartFails() {

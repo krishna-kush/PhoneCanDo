@@ -29,9 +29,13 @@ import com.phonecando.runner.engine.EngineMode
 //   Then the next part starts (Action.Advance: its engine, an ACP turn
 //   cancelled first, is stopped and started again), or the run is done.
 // - its engine ended before its turn end: failed, with the engine's detail
-//   when it failed or died, else as stopped. An end while an engine of it
-//   runs again was an older life's, and is passed over. Its start refused:
+//   when it failed or died, else as stopped; after a turn end, only a stop
+//   that cut that turn short (CheckNowRules.engineEndStopsCheck: an ACP
+//   engine's stop fails its turn first). An end while an engine of it runs
+//   again was an older life's, and is passed over. Its start refused:
 //   failed with why.
+// - its turn stopped (CheckNowRules.turnEndStopsCheck: your Stop): the
+//   whole check ends there, cancelled; no later part starts.
 // - stuck: in ACP mode, nothing moved for STUCK_MS (not while a question
 //   waits); in any part, it ran CHECK_MAX_MS. The detail says whether a
 //   view shows its terminal.
@@ -60,6 +64,9 @@ class CheckRuns(private val clock: () -> Long) {
 
     /** How that turn ended: a failed or stopped one leaves its rows a reason of its own. */
     var turnEnd = TurnEnd.FINISHED
+
+    /** How its part's turn ended; null before it did. */
+    val endedAs: TurnEnd? get() = if (turnEndAt == null) null else turnEnd
     var readyAt: Long? = null
     var print: CheckSample.Print? = null
 
@@ -112,10 +119,20 @@ class CheckRuns(private val clock: () -> Long) {
     return true
   }
 
-  /** A turn of its engine in [mode] ended, as [end] says: true when that was its part's turn end. */
+  /**
+   * A turn of its engine in [mode] ended, as [end] says: true when that was
+   * its part's turn end. One someone stopped ends the run (cancelled: its
+   * rows testing unknown as stopped, later parts not reached).
+   */
   @Synchronized
   fun turnEnded(agentId: String, mode: EngineMode, end: TurnEnd = TurnEnd.FINISHED): Boolean {
     val e = going(agentId)?.takeIf { it.launched && it.turnEndAt == null && it.part.task != null && it.part.mode == mode } ?: return false
+    if (CheckNowRules.turnEndStopsCheck(end)) {
+      val number = e.run.part
+      e.setRows { if (it.part == number && it.status == RowStatus.TESTING) it.copy(status = RowStatus.UNKNOWN, why = CheckRunCopy.UNKNOWN_STOPPED) else it }
+      e.end(State.CANCELLED, CheckRunCopy.YOU_STOPPED)
+      return true
+    }
     e.turnEndAt = clock()
     e.turnEnd = end
     return true
@@ -127,7 +144,7 @@ class CheckRuns(private val clock: () -> Long) {
    */
   @Synchronized
   fun engineEnded(agentId: String, failed: Boolean, detail: String?, liveNow: Boolean): Boolean {
-    val e = going(agentId)?.takeIf { it.launched && it.turnEndAt == null } ?: return false
+    val e = going(agentId)?.takeIf { it.launched && CheckNowRules.engineEndStopsCheck(it.endedAs, failed) } ?: return false
     if (liveNow) return false
     e.end(State.FAILED, if (failed) detail?.trim()?.takeIf { it.isNotEmpty() } ?: CheckRunCopy.ENGINE_FAILED else CheckRunCopy.STOPPED)
     return true

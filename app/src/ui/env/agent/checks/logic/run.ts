@@ -205,7 +205,8 @@ export function resultLines(run: CheckRun, now: number): { head: string; detail:
     case 'stuck':
       return { head, detail: run.detail ?? 'Nothing moved for 3 minutes, so we stopped it to free memory.', tone: 'primary' };
     case 'cancelled':
-      return { head, detail: 'You cancelled it.', tone: 'muted' };
+      // Cancel says nothing more; your Stop of its task says so (the runner's words).
+      return { head, detail: run.detail ?? 'You cancelled it.', tone: 'muted' };
     case 'failed':
       return { head, detail: run.detail ?? 'It stopped before the check task finished.', tone: 'primary' };
   }

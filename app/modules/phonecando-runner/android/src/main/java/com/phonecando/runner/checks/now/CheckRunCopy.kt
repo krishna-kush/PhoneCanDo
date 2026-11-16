@@ -20,6 +20,9 @@ object CheckRunCopy {
   const val ENGINE_FAILED = "Its engine ended before the check task finished."
   const val STOPPED = "It stopped before the check task finished."
 
+  /** You stopped its check task (a cancelled run's detail). */
+  const val YOU_STOPPED = "You stopped its check task, so the check ended there."
+
   /** A row no part can test: a part with no task runs no turn in its own app. */
   const val SKIPPED = "Needs a turn in its own app; checked the first time you use it."
 
