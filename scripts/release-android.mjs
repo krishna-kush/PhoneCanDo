@@ -39,6 +39,7 @@ import { prootDrift } from './release/linux/drift.mjs';
 import { imageAge } from './release/linux/image-age.mjs';
 import { sourceDecision } from './release/linux/source.mjs';
 import { runPreflight } from './release/preflight.mjs';
+import { releaseLabel, releaseTitle } from './release/label.mjs';
 import { ciBlocks, ciProblems, preflightReport } from './release/report.mjs';
 
 process.env.CI = '1'; // expo prebuild: never prompt
@@ -112,6 +113,12 @@ function main() {
   const tools = findBuildTools(findSdk());
 
   const notes = args.notes || `Release v${version}`;
+  let label;
+  try {
+    label = releaseLabel(args.label);
+  } catch (error) {
+    fail(error.message);
+  }
   const released = new Date().toISOString().slice(0, 10);
   const apkUrl = `https://github.com/${repo}/releases/download/v${version}/phonecando-${version}-full-arm64.apk`;
 
@@ -124,6 +131,7 @@ function main() {
   const updatesNext = nextRepoText(updatesRaw, repo);
 
   console.log(bold(`PhoneCanDo release v${version} (code ${versionCode})`));
+  console.log(`Title:   ${releaseTitle(`v${version}`, label)}`);
   console.log(`Repo:    ${repo}`);
   console.log(`Signing: ${signing.storeFile} (alias ${signing.alias})`);
   console.log(`APKs:    ${apkFor('full')}`);
@@ -198,6 +206,7 @@ function main() {
           size: '<after build>',
           sha256: '<after build>',
           notes,
+          label,
         },
         null,
         2,
@@ -248,16 +257,21 @@ function main() {
     if (args.notes && args.notes !== staged.notes) {
       fail(`--upload-only publishes the staged notes; edit ${manifestPath} to change them`);
     }
+    const stagedLabel = staged.label ?? null;
+    if (args.label !== undefined && label !== stagedLabel) {
+      fail(`--upload-only publishes the staged label (${stagedLabel ?? 'stable'}); edit ${manifestPath} to change it`);
+    }
     const full = fileDigest(asset);
     writeManifest(manifestPath, { ...staged, ...full });
     createDraft({
       version,
       repo,
+      label: stagedLabel,
       notes: releaseNotes(staged.notes),
       assets: assets.uploads,
       target: preflight.sha,
     });
-    const lite = writeRelease(release, liteAsset, full);
+    const lite = writeRelease({ ...release, label: stagedLabel }, liteAsset, full);
     report(asset, full, liteAsset, lite, manifestPath, assets.source);
     console.log(green(`Uploaded staged ${tag} assets.`));
     return;
@@ -277,17 +291,18 @@ function main() {
   copyFileSync(apkFor('lite'), liteAsset);
   writeFileSync(join(stage, SOURCE_COMMIT), `${preflight.sha}\n`);
   const full = fileDigest(asset);
-  writeManifest(manifestPath, { versionCode, version, apk: apkUrl, ...full, notes });
+  writeManifest(manifestPath, { versionCode, version, apk: apkUrl, ...full, notes, label });
 
   createDraft({
     version,
     repo,
+    label,
     notes: releaseNotes(notes),
     assets: assets.uploads,
     target: preflight.sha,
   });
   // The site links the release assets: write its facts only after every upload.
-  const lite = writeRelease(release, liteAsset, full);
+  const lite = writeRelease({ ...release, label }, liteAsset, full);
   report(asset, full, liteAsset, lite, manifestPath, assets.source);
   if (!args.publish) {
     console.log('');
@@ -403,9 +418,11 @@ function readManifest(path) {
   return manifest;
 }
 
-// latest.json: the update manifest lite and full read from the release.
-function writeManifest(path, { versionCode, version, apk, size, sha256, notes }) {
-  writeFileSync(path, `${JSON.stringify({ versionCode, version, apk, size, sha256, notes }, null, 2)}\n`);
+// latest.json: the update manifest lite and full read from the release. The
+// app reads only the fields it knows; label is for --upload-only, which
+// publishes what the first run staged.
+function writeManifest(path, { versionCode, version, apk, size, sha256, notes, label = null }) {
+  writeFileSync(path, `${JSON.stringify({ versionCode, version, apk, size, sha256, notes, label }, null, 2)}\n`);
 }
 
 // web/src/data/release.json: what only a published release knows, for the
@@ -414,9 +431,9 @@ function writeManifest(path, { versionCode, version, apk, size, sha256, notes })
 // the site can collide with it. Lite is the phone download; full's SHA-256
 // is pinned in the computer commands. Both digests come from the files just
 // uploaded.
-function writeRelease({ repo, version, released }, liteApk, full) {
+function writeRelease({ repo, version, released, label }, liteApk, full) {
   const lite = fileDigest(liteApk);
-  const facts = { repo, version, released, lite, full };
+  const facts = { repo, version, released, label, lite, full };
   writeFileSync(RELEASE_JSON, `${JSON.stringify(facts, null, 2)}\n`);
   return lite;
 }
@@ -461,6 +478,9 @@ function parseArgs(argv) {
     } else if (arg === '--notes') {
       i += 1;
       out.notes = requireValue(argv, i, '--notes');
+    } else if (arg === '--label') {
+      i += 1;
+      out.label = requireValue(argv, i, '--label');
     } else if (arg === '--help' || arg === '-h') {
       usage();
       process.exit(0);
@@ -481,6 +501,8 @@ function usage() {
 Options:
   --version X.Y.Z   Release version (default: bump patch)
   --notes TEXT      Update dialog and GitHub release notes
+  --label NAME      alpha or beta: in the release title and the site's
+                    wording (default stable: no label)
   --dry-run         Check env, SDK, file edits and the preflight without
                     building or writing (the preflight only reads)
   --publish         Publish the draft after all assets are attached
@@ -634,13 +656,14 @@ function releaseState(repo, tag) {
 }
 
 // `target`: the commit the tag is created at when the draft is published.
-function createDraft({ version, repo, notes, assets, target }) {
+function createDraft({ version, repo, label, notes, assets, target }) {
   const tag = `v${version}`;
+  const title = releaseTitle(tag, label);
   const state = releaseState(repo, tag);
   if (state === 'published') fail(`Release ${tag} already exists and is published`);
   if (state === 'draft') {
     console.log(yellow(`Draft ${tag} already exists; replacing its assets.`));
-    run('gh', ['release', 'edit', tag, '-R', repo, '--title', `${tag} (alpha)`, '--notes', notes, '--target', target]);
+    run('gh', ['release', 'edit', tag, '-R', repo, '--title', title, '--notes', notes, '--target', target]);
     run('gh', ['release', 'upload', tag, ...assets, '--clobber', '-R', repo]);
   } else {
     run('gh', [
@@ -654,7 +677,7 @@ function createDraft({ version, repo, notes, assets, target }) {
       '--target',
       target,
       '--title',
-      `${tag} (alpha)`,
+      title,
       '--notes',
       notes,
     ]);

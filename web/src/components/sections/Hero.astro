@@ -11,7 +11,7 @@ import { site } from "../../data/site";
     <div class="hero-copy">
         <p class="eyebrow">
             <span class="dot" aria-hidden="true"></span>
-            PhoneCanDo Field Manual · {site.alpha ? "Alpha " : ""}v{site.version}
+            PhoneCanDo Field Manual · {site.stage ? `${site.stageName} ` : ""}v{site.version}
         </p>
         <h1>
             AI that can <VerbReel /> your phone.
@@ -55,7 +55,7 @@ import { site } from "../../data/site";
         <p class="hero-note">
             <span>No account needed</span>
             <span>No PC</span>
-            <span>{site.alpha ? "Sideload alpha" : "Signed APK"}</span>
+            <span>{site.stage ? `Sideload ${site.stage}` : "Signed APK"}</span>
         </p>
     </div>
 
@@ -116,7 +116,7 @@ import { site } from "../../data/site";
     </div>
     <div>
         <dt>Build</dt>
-        <dd>{site.alpha ? "Alpha" : "Stable"} v{site.version}</dd>
+        <dd>{site.stageName ?? "Stable"} v{site.version}</dd>
     </div>
     <div>
         <dt>License</dt>

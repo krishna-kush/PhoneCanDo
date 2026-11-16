@@ -15,8 +15,11 @@ import release from './release.json';
 const repo = `https://github.com/${release.repo}`;
 const releases = `${repo}/releases`;
 const version: string = app.expo.version;
-// 0.x is the alpha: the copy says so until the 1.0 release bumps app.json.
-const alpha = version.startsWith('0.');
+// What the release calls itself: alpha, beta or null (stable), as the release
+// wrote it into release.json (./manage release --label).
+const stage: 'alpha' | 'beta' | null = (release as { label?: 'alpha' | 'beta' | null }).label ?? null;
+// The same word for the start of a phrase: Alpha, Beta.
+const stageName = stage && stage[0].toUpperCase() + stage.slice(1);
 const apkFile = (channel: 'lite' | 'full') => `phonecando-${version}-${channel}-arm64.apk`;
 
 // The oldest Android the app installs on, by the name people know it: the
@@ -81,7 +84,8 @@ export const site = {
   repo,
   releases,
   version,
-  alpha,
+  stage,
+  stageName,
   // Direct GitHub asset URLs. The buttons go through dlUrl() instead; the
   // starter (lite) is the phone download, full is for adb installs.
   apk: apkUrl('lite'),
