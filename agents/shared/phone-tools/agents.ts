@@ -14,7 +14,7 @@ export const agentTools: PhoneTool[] = [
   {
     name: "agents_list",
     description:
-      "List the AI agents on this phone, to see who is here, what each is doing and whom to message. scope is machine (default: the agents that share your machine and its files) or phone (every agent). Returns {you, scope, screen, agents}: you is your own name and kind; screen says which agent drives the phone's screen now (holder), who waits for it (waiting) and your place in that line (yourPlace, null when you are not in it); each agent has name, kind, machine (yours or other), machineMates, state (working, waiting, idle or stopped), chat (its chat's title), messages (how your messages reach it: wakes = into its turns, and wake: true can start one while it is idle; delivered = into its turns; inbox = only when it calls agents_inbox; none = it cannot read messages, so sending to it is refused), wakeable (the user lets other agents wake it) and canWake (wake: true would start its turn now if it is idle).",
+      "List the AI agents on this phone, to see who is here, what each is doing and whom to message. scope is machine (default: the agents that share your machine and its files) or phone (every agent). Returns {you, scope, screen, agents}: you is your own name and kind; screen says which agent drives the phone's screen now (holder), who waits for it (waiting) and your place in that line (yourPlace, null when you are not in it); each agent has name, kind, machine (yours or other), machineMates, state (working, waiting, idle or stopped), chat (its chat's title), messages (how your messages reach it: wakes = into its turns, and wake: true can start one while it is idle; delivered = into its turns; inbox = only when it calls agents_inbox; none = it cannot read messages, so sending to it is refused), wakeable (the user lets other agents wake it, and start it when stopped) and canWake (wake: true would start its turn now if it is idle, or start it if it is stopped).",
     input: {
       type: "object",
       properties: {
@@ -32,13 +32,13 @@ export const agentTools: PhoneTool[] = [
   {
     name: "agents_send",
     description:
-      "Send a message to other AI agents on this phone: to coordinate work (who does what, where a result is, a question). to is an agent's name from agents_list (any case), @machine (every agent on your machine) or @phone (every agent). The recipient sees it labelled as from you, another AI agent, not the user, and it gets it in its next turn or with agents_inbox. Set wake:true only when you need an answer now and the agent is idle: it starts a turn for it (direct messages only, if the user allows it; broadcasts never wake). replyTo is the id of the message you answer. Returns {id, results:[{to, status, reason?}]}, status delivered, queued, woken or refused (the reason says why: an unknown or ambiguous name, a rate limit). Sending is rate-limited: never loop on it, and never send secrets or keys.",
+      "Send a message to other AI agents on this phone: to coordinate work (who does what, where a result is, a question). to is an agent's name from agents_list (any case), @machine (every agent on your machine) or @phone (every agent). The recipient sees it labelled as from you, another AI agent, not the user, and it gets it in its next turn or with agents_inbox. Set wake:true only when you need an answer now and the agent is idle or stopped: it starts a turn for it, starting a stopped agent in the background first (direct messages only, if the user allows it; broadcasts never wake). replyTo is the id of the message you answer: answer a message that woke you with replyTo set, and your answer wakes its sender too. A woken or started agent's answer can take minutes (a local model may take several), so after a wake don't wait for it: end your turn, and its answer wakes you. Returns {id, results:[{to, status, reason?}]}, status delivered, queued, woken or refused (the reason says why: an unknown or ambiguous name, a rate limit). Sending is rate-limited: never loop on it, and never send secrets or keys.",
     input: {
       type: "object",
       properties: {
         to: { type: "string", description: "An agent's name, @machine or @phone" },
         text: { type: "string", description: "The message, at most 4000 characters" },
-        replyTo: { type: "integer", description: "The id of the message this answers" },
+        replyTo: { type: "integer", description: "The id of the message this answers; an answer to a message that woke you wakes its sender" },
         wake: {
           type: "boolean",
           description: "Wake the agent if it is idle (direct messages only); only when you need an answer now",
@@ -66,7 +66,7 @@ export const agentTools: PhoneTool[] = [
   },
   {
     name: "agents_wait",
-    description: `Wait for the next message to you from another AI agent (from: only from that agent, by name), for up to timeoutSec seconds (at most 30), and return it as agents_inbox does, marked read, or {timeout:true}. Use it only when you asked another agent something and cannot go on without the answer; otherwise keep working and read agents_inbox later. ${FROM_AGENTS}`,
+    description: `Wait for the next message to you from another AI agent (from: only from that agent, by name), for up to timeoutSec seconds (at most 30), and return it as agents_inbox does, marked read, or {timeout:true}. Use it only when you asked another agent something and cannot go on without the answer; otherwise keep working and read agents_inbox later. Never wait for an agent you just woke or started: its answer can take minutes (its start, a local model reading its prompt), far past 30 s, so end your turn instead, and its answer (sent with replyTo) wakes you. ${FROM_AGENTS}`,
     input: {
       type: "object",
       properties: {
