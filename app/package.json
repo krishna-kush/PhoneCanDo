@@ -1,6 +1,6 @@
 {
   "name": "phonecando-app",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "main": "index.ts",
   "license": "SEE LICENSE IN ../LICENSE",
   "dependencies": {
