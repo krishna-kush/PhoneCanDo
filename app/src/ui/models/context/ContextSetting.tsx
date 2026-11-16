@@ -1,7 +1,7 @@
 import { XStack, YStack } from 'tamagui';
 import type { LocalModel } from '../../../engine/models/types';
 import PlainText from '../../common/PlainText';
-import SectionTitle from '../../common/SectionTitle';
+import RowGroup from '../../common/rows/RowGroup';
 import Note from '../../env/parts/Note';
 import { automaticNote, chooseNote, contextAt, contextText, SPEED_NOTE } from '../logic/context';
 import ChoiceRow from '../parts/ChoiceRow';
@@ -25,11 +25,10 @@ export default function ContextSetting({ model, automatic, stop, disabled, onAut
   const range = model.contextRange;
   return (
     <YStack gap="2">
-      <SectionTitle>Context</SectionTitle>
-      <YStack gap="2" accessibilityRole="radiogroup">
+      <RowGroup title="Context" radio>
         <ChoiceRow label="Automatic" note={automaticNote(model)} selected={automatic} disabled={disabled} onPress={() => onAutomatic(true)} />
         <ChoiceRow label="Choose" note={chooseNote(range)} selected={!automatic} disabled={disabled} onPress={() => onAutomatic(false)} />
-      </YStack>
+      </RowGroup>
       <Note>{SPEED_NOTE}</Note>
       {!automatic ? (
         <XStack alignItems="center" gap="3">

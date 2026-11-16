@@ -5,7 +5,7 @@ import { updateSchedule } from '../../engine/schedule/native';
 import type { Schedule } from '../../engine/schedule/types';
 import { useScheduleStore } from '../../state/schedule';
 import { HIT, useTheme } from '../common/globals';
-import PlainText from '../common/PlainText';
+import SquareMark from '../common/rows/SquareMark';
 import { reasonText } from './logic/scheduleCopy';
 
 type Props = {
@@ -14,8 +14,8 @@ type Props = {
   onError: (text: string | null) => void;
 };
 
-// A schedule's on/off: the switch rows' square mark, filled when on, saved
-// natively; the list re-reads on the runner's event.
+// A schedule's on/off: the switch rows' square mark (it pops in when
+// turned on), saved natively; the list re-reads on the runner's event.
 export default function OnOffToggle({ schedule: s, onError }: Props) {
   const t = useTheme();
   const [busy, setBusy] = useState(false);
@@ -32,16 +32,14 @@ export default function OnOffToggle({ schedule: s, onError }: Props) {
   return (
     <Pressable
       onPress={toggle}
-      android_ripple={{ color: t.line, borderless: true }}
+      android_ripple={{ color: t.secondarySoft, borderless: true }}
       accessibilityRole="switch"
       accessibilityState={{ checked: s.on, busy }}
       accessibilityLabel={s.on ? 'On' : 'Off'}
       accessibilityHint={s.on ? 'Switches it off' : 'Switches it on'}
     >
       <YStack width={HIT.minTouch} minHeight={HIT.minTouch} flex={1} alignItems="center" justifyContent="center">
-        <PlainText fontFamily="mono" fontSize={14} width={14} textAlign="center" color={s.on ? 'primary' : 'faint'}>
-          {s.on ? '■' : '□'}
-        </PlainText>
+        <SquareMark on={s.on} />
       </YStack>
     </Pressable>
   );

@@ -3,6 +3,8 @@ import type { ModelDates } from '../../../engine/models/types';
 import { datesLine } from '../logic/dates';
 import DatesLine from './DatesLine';
 import PlainText from '../../common/PlainText';
+import RowFrame from '../../common/rows/RowFrame';
+import SquareMark from '../../common/rows/SquareMark';
 
 type Props = {
   label: string;
@@ -14,38 +16,34 @@ type Props = {
   onPress: () => void;
 };
 
-// One choice of a pick-one list (an agent's model): a square mark, its
-// label and what it means, the whole row a radio button.
+// One choice of a pick-one list (an agent's model), a row of its RowGroup:
+// the square mark (it pops in when picked), its label and what it means,
+// the whole row a radio button; the picked row wears RowFrame's red bar.
 export default function ChoiceRow({ label, note, dates, selected, disabled = false, onPress }: Props) {
   const when = datesLine(dates);
   return (
-    <XStack
-      alignItems="center"
-      gap="3"
-      minHeight={64}
-      padding="3"
-      borderWidth={1}
-      borderColor={selected ? 'primary' : 'line'}
-      backgroundColor="panel"
-      opacity={disabled ? 0.5 : '1 press:0.9'}
-      scale={disabled ? undefined : 'press:0.99'}
-      onPress={disabled ? undefined : onPress}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected, disabled }}
-      accessibilityLabel={when ? `${label}, ${note}, ${when}` : `${label}, ${note}`}
+    <RowFrame
+      press={{
+        onPress,
+        role: 'radio',
+        label: when ? `${label}, ${note}, ${when}` : `${label}, ${note}`,
+        state: { checked: selected, disabled },
+      }}
+      dim={disabled}
+      picked={selected}
     >
-      <PlainText fontFamily="mono" fontSize={14} width={16} textAlign="center" color={selected ? 'primary' : 'faint'}>
-        {selected ? '■' : '□'}
-      </PlainText>
-      <YStack flex={1} minWidth={0} gap="1">
-        <PlainText fontSize={16} fontWeight="600" numberOfLines={2}>
-          {label}
-        </PlainText>
-        <PlainText fontSize={13} color="dim">
-          {note}
-        </PlainText>
-        <DatesLine dates={dates} />
-      </YStack>
-    </XStack>
+      <XStack alignItems="center" gap="3">
+        <SquareMark on={selected} />
+        <YStack flex={1} minWidth={0} gap="1">
+          <PlainText fontSize={16} fontWeight="600" numberOfLines={2}>
+            {label}
+          </PlainText>
+          <PlainText fontSize={13} color="dim">
+            {note}
+          </PlainText>
+          <DatesLine dates={dates} />
+        </YStack>
+      </XStack>
+    </RowFrame>
   );
 }

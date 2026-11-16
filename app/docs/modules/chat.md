@@ -143,7 +143,7 @@ goes to it), each recipient's status (waiting, delivered, read, refused
 with the reason) and whom it woke; runner notices in the secondary ink;
 the screen queue in one line at the top. The drawer marks each agent's
 unread count and, once there are two agents, has a Messages row; an
-agent's Settings block has Messages (filtered to it) and "Other agents
+agent's page has a Messages group with Messages (filtered to it) and "Other agents
 can wake it" (`wakeable`, on by default) for a kind that can be woken
 (KindView `canWake`), else a line saying it reads them at its next turn.
 Pure parts in `ui/messages/logic/`, checked by

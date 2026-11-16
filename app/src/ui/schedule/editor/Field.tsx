@@ -4,7 +4,8 @@ import PlainText from '../../common/PlainText';
 import Note from '../../env/parts/Note';
 
 type Props = {
-  label: string;
+  /** Absent when what it holds wears its own title (a RowGroup's strip). */
+  label?: string;
   children: ReactNode;
   /** One line under it about what goes in it. */
   hint?: string;
@@ -16,9 +17,11 @@ type Props = {
 export default function Field({ label, children, hint, problems = [] }: Props) {
   return (
     <YStack gap="2">
-      <PlainText fontSize={15} fontWeight="600">
-        {label}
-      </PlainText>
+      {label ? (
+        <PlainText fontSize={15} fontWeight="600">
+          {label}
+        </PlainText>
+      ) : null}
       {children}
       {hint ? <Note>{hint}</Note> : null}
       {problems.map((p) => (

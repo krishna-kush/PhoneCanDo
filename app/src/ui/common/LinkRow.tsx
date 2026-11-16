@@ -1,9 +1,10 @@
-import { Pressable } from 'react-native';
-import { XStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useOpening } from '../nav/opening';
-import { HIT, useTheme } from './globals';
+import { useTheme } from './globals';
 import OpenMark from './OpenMark';
 import PlainText from './PlainText';
+import Nudge from './rows/Nudge';
+import RowFrame from './rows/RowFrame';
 
 type Props = {
   label: string;
@@ -11,51 +12,51 @@ type Props = {
   detail?: string;
   /** Red detail: something there needs a look. */
   alert?: boolean;
+  /** A line under it, inside the row: what is behind it in words (how messages reach the agent). */
+  note?: string;
+  /** Red note: it says something is wrong. */
+  noteAlert?: boolean;
   onPress: () => void;
-  /**
-   * How far the row's press area reaches past its slot on each side (the
-   * padding and gaps around it), so no strip beside it is dead. Its words
-   * and the layout around it stay where they were.
-   */
+  /** How far the press area reaches past its slot (RowFrame). */
   reach?: { x: number; y: number };
 };
 
 // A row that opens a page, Android settings style: the name, a mono
-// detail, a › (a spinner while the page opens). The drawer's places and an
-// agent's settings use it. A press is Android's own ripple, spreading
-// across the row from the finger; its ink is the palette's hairline (the
-// text colour at about a tenth), as Material's pressed layer.
-export default function LinkRow({ label, detail, alert = false, onPress, reach }: Props) {
+// detail, a › (a spinner while the page opens) that leans toward the page
+// while held, and a note under it. The drawer's places and an agent's
+// settings use it.
+export default function LinkRow({ label, detail, alert = false, note, noteAlert = false, onPress, reach }: Props) {
   const t = useTheme();
   const open = useOpening(onPress);
   return (
-    <Pressable
-      onPress={open.press}
-      android_ripple={{ color: t.line }}
-      style={
-        reach && {
-          marginHorizontal: -reach.x,
-          marginVertical: -reach.y,
-          paddingHorizontal: reach.x,
-          paddingVertical: reach.y,
-        }
-      }
-      accessibilityRole="button"
-      accessibilityLabel={detail ? `${label}, ${detail}` : label}
+    <RowFrame
+      press={{ onPress: open.press, role: 'button', label: detail ? `${label}, ${detail}` : label, hint: note }}
+      reach={reach}
     >
-      <XStack alignItems="center" gap="3" minHeight={HIT.buttonH} paddingHorizontal="2">
-        <PlainText fontSize={16} fontWeight="500" numberOfLines={1} flexShrink={0}>
-          {label}
-        </PlainText>
-        <XStack flex={1} minWidth={0} justifyContent="flex-end">
-          {detail ? (
-            <PlainText fontFamily="mono" fontSize={12} color={alert ? 'primary' : 'dim'} numberOfLines={1}>
-              {detail}
+      <XStack alignItems="center" gap="3">
+        <YStack flex={1} minWidth={0} gap={2}>
+          <XStack alignItems="center" gap="3">
+            <PlainText fontSize={16} fontWeight="500" numberOfLines={1} flexShrink={0}>
+              {label}
+            </PlainText>
+            <XStack flex={1} minWidth={0} justifyContent="flex-end">
+              {detail ? (
+                <PlainText fontFamily="mono" fontSize={12} color={alert ? 'primary' : 'dim'} numberOfLines={1}>
+                  {detail}
+                </PlainText>
+              ) : null}
+            </XStack>
+          </XStack>
+          {note ? (
+            <PlainText fontSize={13} color={noteAlert ? 'primary' : 'muted'}>
+              {note}
             </PlainText>
           ) : null}
-        </XStack>
-        <OpenMark opening={open.opening} size={14} color={t.faint} />
+        </YStack>
+        <Nudge>
+          <OpenMark opening={open.opening} size={14} color={t.faint} />
+        </Nudge>
       </XStack>
-    </Pressable>
+    </RowFrame>
   );
 }

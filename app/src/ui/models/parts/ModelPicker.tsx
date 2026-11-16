@@ -1,9 +1,11 @@
-import { YStack } from 'tamagui';
 import type { LocalModel } from '../../../engine/models/types';
+import RowGroup from '../../common/rows/RowGroup';
 import { modelChoices } from '../logic/choices';
 import ChoiceRow from './ChoiceRow';
 
 type Props = {
+  /** Its box's title. */
+  title: string;
   models: LocalModel[];
   /** The model picked; null: the agent's own setup. */
   selected: string | null;
@@ -11,11 +13,11 @@ type Props = {
   onSelect: (id: string | null) => void;
 };
 
-// The Model choices as one pick-one list: the agent page's Model section
-// and a new agent's Model step.
-export default function ModelPicker({ models, selected, disabled = false, onSelect }: Props) {
+// The Model choices as one pick-one list in a RowGroup: the agent's Model
+// page and a new agent's Model step.
+export default function ModelPicker({ title, models, selected, disabled = false, onSelect }: Props) {
   return (
-    <YStack gap="2" accessibilityRole="radiogroup">
+    <RowGroup title={title} radio>
       {modelChoices(models, selected).map((c) => (
         <ChoiceRow
           key={c.id ?? 'own'}
@@ -27,6 +29,6 @@ export default function ModelPicker({ models, selected, disabled = false, onSele
           onPress={() => onSelect(c.id)}
         />
       ))}
-    </YStack>
+    </RowGroup>
   );
 }

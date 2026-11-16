@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { YStack } from 'tamagui';
 import { agentKind } from '../../../engine/agents/registry';
 import { useAppStore } from '../../../state/app';
 import { useInstallRun } from '../../../state/flows/installRuns';
@@ -8,9 +7,9 @@ import { useModelsStore } from '../../../state/models';
 import AppButton from '../../common/AppButton';
 import LinkRow from '../../common/LinkRow';
 import PromptDialog from '../../common/PromptDialog';
+import RowGroup from '../../common/rows/RowGroup';
 import Screen from '../../common/Screen';
 import AgentMessageRows from '../../messages/AgentMessageRows';
-import SectionTitle from '../../common/SectionTitle';
 import { envTitle } from '../logic/titles';
 import ImageStatus from '../parts/ImageStatus';
 import InstallStatus from '../parts/InstallStatus';
@@ -29,10 +28,10 @@ import { useMachineMates } from './useMachineMates';
 import { useMissingTools } from './useMissingTools';
 
 // One agent: its face and name (Rename), its engine and the ways in, then
-// its settings as rows that open their own pages (Mascot, Model for a kind
-// that can use one, Machine, Install for a kind with one, What it can do:
-// what we have seen it do) and Keep running, a switch, then Reset and
-// Delete.
+// its settings as a group of rows that open their own pages (Mascot, Model
+// for a kind that can use one, Machine, Install for a kind with one, What
+// it can do: what we have seen it do) and Keep running, a switch, its
+// Messages and Schedules groups, then Reset and Delete.
 // What needs a look now shows here too: a machine still setting up, an
 // install running or stopped, tools the machine lacks (on the Machine row).
 export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: boolean }) {
@@ -88,8 +87,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
       {image && image.state !== 'ready' ? <ImageStatus image={image} /> : null}
       {installBusy ? <InstallStatus agent={agent} image={image} /> : null}
 
-      <SectionTitle>Settings</SectionTitle>
-      <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
+      <RowGroup title="Settings">
         <MascotRow agentId={agentId} />
         {hasModelSetting(agent, device.supported) ? (
           <LinkRow label="Model" {...rowProps(modelDetail(agent, models))} onPress={() => push({ name: 'agent-model', agentId })} />
@@ -100,9 +98,9 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
         ) : null}
         <ChecksRow agentId={agentId} />
         <KeepRunningRow agentId={agentId} />
-        <AgentMessageRows agent={agent} />
-        <AgentScheduleRows agent={agent} />
-      </YStack>
+      </RowGroup>
+      <AgentMessageRows agent={agent} />
+      <AgentScheduleRows agent={agent} />
 
       <DangerSection agent={agent} image={image} env={env} linux={linux} />
       <PromptDialog

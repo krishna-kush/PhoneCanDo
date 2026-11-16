@@ -1,5 +1,5 @@
-import { Fragment, type ReactNode, useMemo } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { type ReactNode, useMemo } from 'react';
+import { XStack } from 'tamagui';
 import type { AgentId } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import type { Schedule } from '../../engine/schedule/types';
@@ -9,8 +9,9 @@ import { useScheduleStore } from '../../state/schedule';
 import AppButton from '../common/AppButton';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PageHeader from '../common/PageHeader';
+import RowFrame from '../common/rows/RowFrame';
+import RowGroup from '../common/rows/RowGroup';
 import Screen from '../common/Screen';
-import SectionTitle from '../common/SectionTitle';
 import TextAction from '../drawer/select/TextAction';
 import Note from '../env/parts/Note';
 import { usePageActive } from '../nav/pageActive';
@@ -75,40 +76,36 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
       {available && exact === false ? <LateRunsRow /> : null}
       {cannot ? <Note>{cannot}</Note> : null}
       {line.days.map((day) => (
-        <Fragment key={day.label}>
-          <SectionTitle>{day.label}</SectionTitle>
-          <Rows entries={day.entries} now={now} onEdit={onEdit} />
-        </Fragment>
+        <Rows key={day.label} title={day.label} entries={day.entries} now={now} onEdit={onEdit} />
       ))}
-      {line.rest.length > 0 ? (
-        <>
-          <SectionTitle>{NOT_RUNNING}</SectionTitle>
-          <Rows entries={line.rest} now={now} onEdit={onEdit} />
-        </>
-      ) : null}
+      {line.rest.length > 0 ? <Rows title={NOT_RUNNING} entries={line.rest} now={now} onEdit={onEdit} /> : null}
       {available && empty ? <Note>{emptyText(agentId ? (agent?.name ?? 'this agent') : null)}</Note> : null}
       {empty && canAdd ? <AppButton onPress={onAdd}>{saveLabel(false)}</AppButton> : null}
-      {shownRuns.length > 0 ? (
-        <>
-          <SectionTitle>{RECENT_RUNS}</SectionTitle>
-          <RecentRuns runs={shownRuns} now={now} withAgent={agentId == null} />
-        </>
-      ) : null}
+      {shownRuns.length > 0 ? <RecentRuns title={RECENT_RUNS} runs={shownRuns} now={now} withAgent={agentId == null} /> : null}
     </Screen>
   );
 }
 
-// Rows in one box, a line between them.
-function Rows({ entries, now, onEdit }: { entries: readonly TimelineEntry[]; now: number; onEdit: (s: Schedule) => void }) {
+// One day's schedules (or those not running) as a RowGroup.
+function Rows({
+  title,
+  entries,
+  now,
+  onEdit,
+}: {
+  title: string;
+  entries: readonly TimelineEntry[];
+  now: number;
+  onEdit: (s: Schedule) => void;
+}) {
   return (
-    <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
-      {entries.map((e, i) => (
-        <Fragment key={e.schedule.id}>
-          {i > 0 ? <YStack height={1} backgroundColor="line" /> : null}
+    <RowGroup title={title}>
+      {entries.map((e) => (
+        <RowFrame key={e.schedule.id} bare>
           <ScheduleRow entry={e} now={now} onEdit={onEdit} />
-        </Fragment>
+        </RowFrame>
       ))}
-    </YStack>
+    </RowGroup>
   );
 }
 

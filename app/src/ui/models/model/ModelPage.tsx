@@ -1,10 +1,10 @@
-import { YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
 import { useModelsStore } from '../../../state/models';
 import LinkRow from '../../common/LinkRow';
 import PageHeader from '../../common/PageHeader';
+import RowGroup from '../../common/rows/RowGroup';
 import Screen from '../../common/Screen';
 import { engineIsUp } from '../../env/logic/engineState';
 import Note from '../../env/parts/Note';
@@ -22,8 +22,8 @@ import UsedBy from './UsedBy';
 // context than it was trained for, its RAM verdict), Stop while it is
 // loaded (its running agents stop first, and it asks first when there are
 // any), its Memory setting (its context among its choices), the agents
-// set to it (each opens its page), its server's log, its Hugging Face
-// repository and Delete (refused while an agent is set to it).
+// set to it (each opens its page), More (its server's log, its Hugging
+// Face repository) and Delete (refused while an agent is set to it).
 export default function ModelPage({ modelId }: { modelId: string }) {
   const model = useModelsStore((s) => s.models.find((m) => m.id === modelId));
   const agents = useAgentsStore((s) => s.agents);
@@ -59,12 +59,12 @@ export default function ModelPage({ modelId }: { modelId: string }) {
         <ModelMemory model={model} />
       </ModelPanel>
       <UsedBy users={users} />
-      <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
+      <RowGroup title="More">
         <LinkRow label="Server log" onPress={() => push({ name: 'model-log', modelId: model.id })} />
         {source.kind === 'huggingface' ? (
           <LinkRow label="Hugging Face" detail={source.repo} onPress={() => push({ name: 'model-repo', repo: source.repo })} />
         ) : null}
-      </YStack>
+      </RowGroup>
       <DeleteModel model={model} onDeleted={back} />
     </Screen>
   );

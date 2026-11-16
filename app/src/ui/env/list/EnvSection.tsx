@@ -9,9 +9,10 @@ import { removeEnv } from '../../../state/flows/rowActions';
 import { useTargetProgress } from '../../../state/linux';
 import AppButton from '../../common/AppButton';
 import ConfirmDialog from '../../common/ConfirmDialog';
-import SectionTitle from '../../common/SectionTitle';
-import { HIT } from '../../common/globals';
 import PlainText from '../../common/PlainText';
+import RowFrame from '../../common/rows/RowFrame';
+import RowGroup from '../../common/rows/RowGroup';
+import SectionTitle from '../../common/SectionTitle';
 import { useSlidInList } from '../../nav/slidIn';
 import { linuxFailureText, recordErrorText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
@@ -114,46 +115,35 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
       {error ? <Note tone="error">{error}</Note> : null}
       {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
 
-      <SectionTitle>{agents === 1 ? '1 agent on it' : `${agents} agents on it`}</SectionTitle>
-      <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
-        {shown.map((r, i) => (
-          <YStack key={r.key} borderTopWidth={i > 0 ? 1 : 0} borderColor="line">
+      <RowGroup title={agents === 1 ? '1 agent on it' : `${agents} agents on it`}>
+        {shown.map((r) => (
+          <RowFrame key={r.key} bare>
             <MachineRow image={r.image} agents={r.agents} onOpen={onOpenAgent} />
-          </YStack>
+          </RowFrame>
         ))}
         {makingFirst && rows.length === 0 ? (
-          <YStack padding="3">
+          <RowFrame>
             <ProgressBar label="Making its first agent" fraction={null} />
-          </YStack>
+          </RowFrame>
         ) : null}
         {rows.length === 0 && !makingFirst ? (
-          <YStack padding="3">
+          <RowFrame>
             <Note>{canAddAgent ? 'No agents here yet.' : 'No agents here.'}</Note>
-          </YStack>
+          </RowFrame>
         ) : null}
         {canAddAgent ? (
-          <XStack
-            alignItems="center"
-            gap="3"
-            minHeight={HIT.buttonH}
-            paddingHorizontal="3"
-            borderTopWidth={rows.length > 0 || makingFirst ? 1 : 0}
-            borderColor="line"
-            backgroundColor="press:panel2"
-            opacity={newAgentHere.busy ? 0.5 : 1}
-            onPress={newAgentHere.busy ? undefined : newAgent}
-            accessibilityRole="button"
-            accessibilityLabel="New agent here"
-          >
-            <PlainText fontFamily="mono" fontSize={18} color="primary" width={25} textAlign="center">
-              +
-            </PlainText>
-            <PlainText fontFamily="mono" fontSize={12} letterSpacing={1.2} textTransform="uppercase">
-              {newAgentHere.busy ? 'Making a new agent…' : 'New agent here'}
-            </PlainText>
-          </XStack>
+          <RowFrame press={{ onPress: newAgent, role: 'button', label: 'New agent here' }} dim={newAgentHere.busy}>
+            <XStack alignItems="center" gap="3">
+              <PlainText fontFamily="mono" fontSize={18} color="primary" width={25} textAlign="center">
+                +
+              </PlainText>
+              <PlainText fontFamily="mono" fontSize={12} letterSpacing={1.2} textTransform="uppercase">
+                {newAgentHere.busy ? 'Making a new agent…' : 'New agent here'}
+              </PlainText>
+            </XStack>
+          </RowFrame>
         ) : null}
-      </YStack>
+      </RowGroup>
 
       {env && machines === 0 ? (
         <>

@@ -6,6 +6,7 @@ import AgentFace from '../../common/face/AgentFace';
 import { useAgentLook } from '../../common/face/useAgentLook';
 import OpenMark from '../../common/OpenMark';
 import PlainText from '../../common/PlainText';
+import { ROW_GUTTER } from '../../common/rows/place';
 import { useOpening } from '../../nav/opening';
 import { usePageActive } from '../../nav/pageActive';
 import { activityWord } from '../logic/engineState';
@@ -30,7 +31,8 @@ type Props = {
 
 // One agent in a list, as its machine's row or one of a shared machine's
 // agents (Systems, an agent's Machine page): its face, name and engine's
-// word. A tap opens its page (a spinner for the › until it is in).
+// word. A tap opens its page (a spinner for the › until it is in). It sits
+// in a RowGroup, at the group's gutter.
 export default function AgentLine({ agent, missing, size, onOpen, label, idle = null, extra, children }: Props) {
   const status = useAgentsStore((s) => s.statuses[agent.id]);
   const state = missing ? 'Its machine is missing' : activityWord(status?.state, idle);
@@ -38,7 +40,7 @@ export default function AgentLine({ agent, missing, size, onOpen, label, idle = 
   const open = useOpening(onOpen ? () => onOpen(agent.id) : undefined);
   return (
     <YStack
-      paddingHorizontal="3"
+      paddingHorizontal={ROW_GUTTER}
       paddingVertical="2"
       gap="2"
       backgroundColor={onOpen ? 'press:panel2' : undefined}

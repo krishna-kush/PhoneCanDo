@@ -1,27 +1,29 @@
-import { Fragment } from 'react';
 import { YStack } from 'tamagui';
 import type { ScheduleRun } from '../../engine/schedule/types';
 import PlainText from '../common/PlainText';
+import { ROW_GUTTER } from '../common/rows/place';
+import RowFrame from '../common/rows/RowFrame';
+import RowGroup from '../common/rows/RowGroup';
 import { snippet } from '../messages/logic/messageView';
 import { outcomeText, outcomeTone, runHead } from './logic/scheduleCopy';
 
 type Props = {
+  title: string;
   runs: ScheduleRun[];
   now: number;
   /** Every agent's page: each run names its agent. */
   withAgent: boolean;
 };
 
-// What the recent runs did, newest first: when (and late), whose, what
-// happened in words (started, woke, restarted, asked you, skipped: busy,
-// missed, failed and why) and the first words of the task.
-export default function RecentRuns({ runs, now, withAgent }: Props) {
+// What the recent runs did, newest first, as a RowGroup: when (and late),
+// whose, what happened in words (started, woke, restarted, asked you,
+// skipped: busy, missed, failed and why) and the first words of the task.
+export default function RecentRuns({ title, runs, now, withAgent }: Props) {
   return (
-    <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
-      {runs.map((r, i) => (
-        <Fragment key={r.seq}>
-          {i > 0 ? <YStack height={1} backgroundColor="line" /> : null}
-          <YStack paddingHorizontal="3" paddingVertical="2" gap={2}>
+    <RowGroup title={title}>
+      {runs.map((r) => (
+        <RowFrame key={r.seq} bare>
+          <YStack paddingHorizontal={ROW_GUTTER} paddingVertical="2" gap={2}>
             <PlainText fontFamily="mono" fontSize={11} color="dim" numberOfLines={1}>
               {runHead(r, now, withAgent)}
             </PlainText>
@@ -32,8 +34,8 @@ export default function RecentRuns({ runs, now, withAgent }: Props) {
               {snippet(r.text, 80)}
             </PlainText>
           </YStack>
-        </Fragment>
+        </RowFrame>
       ))}
-    </YStack>
+    </RowGroup>
   );
 }

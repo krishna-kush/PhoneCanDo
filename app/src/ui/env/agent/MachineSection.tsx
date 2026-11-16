@@ -1,4 +1,3 @@
-import { YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { agentKind } from '../../../engine/agents/registry';
 import type { Env, Image } from '../../../engine/linux/types';
@@ -7,7 +6,8 @@ import { kindLevelNow, useChecksStore } from '../../../state/checks';
 import { useMessagesStore } from '../../../state/messages';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
-import SectionTitle from '../../common/SectionTitle';
+import RowFrame from '../../common/rows/RowFrame';
+import RowGroup from '../../common/rows/RowGroup';
 import { unreadText } from '../../messages/logic/messagesCopy';
 import AgentLine from '../list/AgentLine';
 import SystemLogo from '../list/SystemLogo';
@@ -66,10 +66,9 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
       />
       {mates.length > 0 ? (
         <>
-          <SectionTitle>{machineAgentsTitle(mates.length + 1)}</SectionTitle>
-          <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
-            {onMachine.map((a, i) => (
-              <YStack key={a.id} borderTopWidth={i > 0 ? 1 : 0} borderColor="line">
+          <RowGroup title={machineAgentsTitle(mates.length + 1)}>
+            {onMachine.map((a) => (
+              <RowFrame key={a.id} bare>
                 <AgentLine
                   agent={a}
                   missing={false}
@@ -79,9 +78,9 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
                   extra={kindLevelNow(levels, a.kind) === 'none' ? "can't read messages" : unreadText(unread[a.id] ?? 0)}
                   onOpen={a.id === agent.id ? null : openAgent}
                 />
-              </YStack>
+              </RowFrame>
             ))}
-          </YStack>
+          </RowGroup>
           <Note>{SHARED_MACHINE_NOTE}</Note>
         </>
       ) : null}

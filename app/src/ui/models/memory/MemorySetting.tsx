@@ -6,7 +6,7 @@ import { useAgentsStore } from '../../../state/agents';
 import { chooseModelMemory } from '../../../state/flows/modelMemory';
 import AppButton from '../../common/AppButton';
 import PlainText from '../../common/PlainText';
-import SectionTitle from '../../common/SectionTitle';
+import RowGroup from '../../common/rows/RowGroup';
 import { startFailureCode, startFailureText } from '../../env/logic/errorText';
 import Note from '../../env/parts/Note';
 import ProgressBar from '../../env/parts/ProgressBar';
@@ -110,12 +110,11 @@ export default function MemorySetting({ model, onDone }: Props) {
         {MEMORY_TITLE}
       </PlainText>
       <Note>{MEMORY_NOTE}</Note>
-      <SectionTitle>{SHARE_TITLE}</SectionTitle>
-      <YStack gap="2" accessibilityRole="radiogroup">
+      <RowGroup title={SHARE_TITLE} radio>
         {shareOptions(model.traits.budgets).map((o) => (
           <ChoiceRow key={o.value} label={o.label} note={o.note} selected={share === o.value} disabled={busy} onPress={() => setShare(o.value)} />
         ))}
-      </YStack>
+      </RowGroup>
       {plan ? (
         <YStack gap="1" accessibilityLiveRegion="polite">
           <PlainText fontFamily="mono" fontSize={13} color="secondaryInk">
@@ -143,13 +142,12 @@ export default function MemorySetting({ model, onDone }: Props) {
         {showContext ? (
           <ContextSetting model={model} automatic={automatic} stop={stop} disabled={busy} onAutomatic={setAutomatic} onStop={setStop} />
         ) : null}
-        <SectionTitle>{NOTE_SIZE_TITLE}</SectionTitle>
-        <Note>{NOTE_SIZE_NOTE}</Note>
-        <YStack gap="2" accessibilityRole="radiogroup">
+        <RowGroup title={NOTE_SIZE_TITLE} radio>
           {noteSizeOptions(model.traits, kvCache === 'auto' ? (plan?.halfKvCache ?? null) : null).map((o) => (
             <ChoiceRow key={o.value} label={o.label} note={o.note} selected={kvCache === o.value} disabled={busy} onPress={() => setKvCache(o.value)} />
           ))}
-        </YStack>
+        </RowGroup>
+        <Note>{NOTE_SIZE_NOTE}</Note>
         <CountPicker
           title={SAVED_TITLE}
           kind="saved"

@@ -6,6 +6,7 @@ import { deleteUnusedImage } from '../../../state/flows/deleteAgentAndImage';
 import CardMenu from '../../common/CardMenu';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PlainText from '../../common/PlainText';
+import { ROW_GUTTER } from '../../common/rows/place';
 import { linuxFailureText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
 import { sharedMachineLine } from '../logic/sharedMachineText';
@@ -36,7 +37,7 @@ export default function MachineRow({ image, agents, onOpen }: Props) {
   if (agents.length > 1) {
     return (
       <YStack paddingTop="2">
-        <YStack paddingHorizontal="3">
+        <YStack paddingHorizontal={ROW_GUTTER}>
           <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.2} color="secondaryInk" textTransform="uppercase" numberOfLines={1}>
             {sharedMachineLine(size)}
           </PlainText>
@@ -45,7 +46,7 @@ export default function MachineRow({ image, agents, onOpen }: Props) {
           <AgentLine key={a.id} agent={a} missing={image == null} size={null} onOpen={onOpen} />
         ))}
         {image && image.state !== 'ready' ? (
-          <YStack paddingHorizontal="3" paddingBottom="2">
+          <YStack paddingHorizontal={ROW_GUTTER} paddingBottom="2">
             <ImageStatus image={image} />
           </YStack>
         ) : null}
@@ -62,7 +63,7 @@ export default function MachineRow({ image, agents, onOpen }: Props) {
   }
 
   return (
-    <YStack paddingHorizontal="3" paddingVertical="2" gap="2">
+    <YStack paddingHorizontal={ROW_GUTTER} paddingVertical="2" gap="2">
       <LineBody
         lead={<YStack width={25} height={25} borderWidth={1} borderColor="faint" />}
         title="No agent"

@@ -4,6 +4,7 @@ import { XStack, YStack } from 'tamagui';
 import type { Schedule } from '../../engine/schedule/types';
 import { useTheme } from '../common/globals';
 import PlainText from '../common/PlainText';
+import { ROW_GUTTER } from '../common/rows/place';
 import AgentLine from './AgentLine';
 import type { TimelineEntry } from './logic/timeline';
 import { byText, lastRunText, outcomeTone, setByLine } from './logic/scheduleCopy';
@@ -30,13 +31,13 @@ export default function ScheduleRow({ entry, now, onEdit }: Props) {
     <XStack alignItems="stretch">
       <Pressable
         onPress={() => onEdit(s)}
-        android_ripple={{ color: t.line }}
+        android_ripple={{ color: t.secondarySoft }}
         style={{ flex: 1 }}
         accessibilityRole="button"
         accessibilityLabel={`${entry.agent?.name ?? ''}. ${s.text}. ${when}. ${byText(s.by)}`}
         accessibilityHint="Opens it to change or delete"
       >
-        <YStack paddingHorizontal="3" paddingVertical="3" gap="2" opacity={s.on ? 1 : 0.6}>
+        <YStack paddingHorizontal={ROW_GUTTER} paddingVertical="3" gap="2" opacity={s.on ? 1 : 0.6}>
           <AgentLine agentId={s.agentId} agent={entry.agent} />
           <PlainText fontSize={15} lineHeight="21px" numberOfLines={2} ellipsizeMode="tail">
             {s.text}

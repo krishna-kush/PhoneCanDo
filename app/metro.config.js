@@ -1,6 +1,13 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const { withTamagui } = require('@tamagui/cli/metro');
+const { execFileSync } = require('node:child_process');
 const path = require('node:path');
+
+// The key strips' easter-egg barcodes (src/ui/common/rows/barcode/bars.ts)
+// are made from their lines before anything is bundled, so no build ships
+// stale ones: a release's JS is bundled by Metro too (Gradle runs Expo's
+// export:embed). Quiet unless a line changed; a failure stops the build.
+execFileSync(process.execPath, ['--no-warnings', path.join(__dirname, 'scripts/make-barcodes.mjs')], { stdio: 'inherit' });
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);

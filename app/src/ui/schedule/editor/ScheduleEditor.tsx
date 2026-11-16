@@ -87,9 +87,9 @@ export default function ScheduleEditor({ schedule, agentId, onDone }: Props) {
       {schedule && !schedule.on ? <Note>{OFF_NOTE}</Note> : null}
 
       {schedule ? null : (
-        <Field label={AGENT_LABEL} problems={of('agent')}>
+        <Field label={runners.length > 0 ? undefined : AGENT_LABEL} problems={of('agent')}>
           {runners.length > 0 ? (
-            <AgentPicker agents={runners} value={draft.agentId} onPick={(id) => setDraft({ ...draft, agentId: id })} />
+            <AgentPicker title={AGENT_LABEL} agents={runners} value={draft.agentId} onPick={(id) => setDraft({ ...draft, agentId: id })} />
           ) : (
             <Note>{NO_AGENTS}</Note>
           )}
