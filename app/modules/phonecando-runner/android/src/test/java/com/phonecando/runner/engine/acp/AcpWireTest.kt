@@ -92,6 +92,23 @@ class AcpWireTest {
     assertNull(AcpWire.parse("""{"jsonrpc":"2.0"}"""))
   }
 
+  @Test fun anErrorKeepsWhatItsDataSays() {
+    fun errorOf(data: String) =
+      (AcpWire.parse("""{"jsonrpc":"2.0","id":5,"error":{"code":-32603,"message":"Internal error","data":$data}}""") as AcpWire.Response).error!!
+    // The ACP SDKs' internal error: why in data.details (Gemini CLI's loadSession of a chat it deleted).
+    val gone = errorOf("""{"details":"Invalid session identifier \"abc\".\n  Searched for sessions in /root/.gemini/tmp/projects/chats."}""")
+    assertEquals("Invalid session identifier \"abc\". Searched for sessions in /root/.gemini/tmp/projects/chats.", gone.detail)
+    assertEquals("Internal error (${gone.detail})", gone.said())
+    assertEquals("session/load: Internal error (${gone.detail})", AcpException(AcpWire.SESSION_LOAD, gone).message)
+    assertEquals("plain", errorOf("\"plain\"").detail)
+    assertEquals("why", errorOf("""{"message":"why"}""").detail)
+    // Nothing worth saying: none; too long: cut.
+    assertNull(errorOf("{}").detail)
+    assertNull(errorOf("42").detail)
+    assertEquals("Internal error", errorOf("{}").said())
+    assertEquals(AcpWire.MAX_DETAIL_CHARS, errorOf("\"${"x".repeat(1000)}\"").detail!!.length)
+  }
+
   @Test fun linesAreCutHoweverThePipeSplitsThem() {
     val out = ArrayList<String>()
     val lines = AcpWire.Lines(maxChars = 10)

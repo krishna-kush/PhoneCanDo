@@ -38,6 +38,16 @@ data class PromptReading(
   data class Slot(val read: Long, val cached: Long, val total: Long?)
 
   companion object {
+    /** A slot of a /slots body is busy with a request, reading its prompt or writing its reply. */
+    fun processing(body: String): Boolean {
+      val slots = try {
+        JSONArray(body)
+      } catch (_: Exception) {
+        return false
+      }
+      return (0 until slots.length()).any { slots.optJSONObject(it)?.optBoolean("is_processing", false) == true }
+    }
+
     /** The slot reading a prompt in a /slots body; null when none is (idle, writing its reply) or the body is not one. */
     fun readingSlot(body: String): Slot? {
       val slots = try {

@@ -1,7 +1,9 @@
 package com.phonecando.runner.models.prompt
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // GET /slots of the pinned llama-server (v0.9.0: server-context.cpp
@@ -49,5 +51,13 @@ class PromptReadingTest {
     assertNull(PromptReading.readingSlot("""{"error":{"code":501,"message":"This server does not support slots endpoint."}}"""))
     assertNull(PromptReading.readingSlot("not json"))
     assertNull(PromptReading.readingSlot("[]"))
+  }
+
+  @Test fun aSlotReadingOrWritingIsProcessing() {
+    assertTrue(PromptReading.processing("[${slot(true, 4096, 0, 0)}]"))
+    assertTrue(PromptReading.processing("[${slot(false, 0, 0, 0)},${slot(true, 7300, 0, 37, 7300)}]"))
+    assertFalse(PromptReading.processing("[${slot(false, 0, 0, 0, 7300)}]"))
+    assertFalse(PromptReading.processing("""{"error":{"code":501}}"""))
+    assertFalse(PromptReading.processing("not json"))
   }
 }

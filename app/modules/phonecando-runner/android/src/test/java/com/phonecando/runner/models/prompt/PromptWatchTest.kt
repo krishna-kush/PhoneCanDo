@@ -94,4 +94,35 @@ class PromptWatchTest {
     assertTrue(watch.tick())
     assertEquals(2048L, watch.current()?.read)
   }
+
+  @Test fun aLocalModelReadingOrWritingIsAtWorkForItsAgents() {
+    // The 0.8B model reads a prompt for minutes on our test phone, screen
+    // off; an ACP turn's watch reads this as the agent's sign of life.
+    val busy = PromptWatch.busy(listOf(serving), setOf("a1"))
+    var now = 0L
+    var body: String? = slots(true, 0, 0)
+    val watch = PromptWatch({ busy }, { true }, {}, { _, _ -> body }, clock = { now })
+    assertFalse(watch.working("a1"))
+    for (step in 0..150) {
+      now = step * PromptWatch.INTERVAL_MS
+      body = slots(true, step * 50L, 0)
+      watch.tick()
+      assertTrue(watch.working("a1"))
+    }
+    assertFalse(watch.working("a2"))
+    // Writing its reply: still at work.
+    body = slots(true, 7300, 40)
+    watch.tick()
+    assertTrue(watch.working("a1"))
+    // A failed ask keeps it a short while; done, it is not.
+    body = null
+    now += PromptWatch.INTERVAL_MS
+    watch.tick()
+    assertTrue(watch.working("a1"))
+    now += PromptWatch.WORK_FRESH_MS
+    assertFalse(watch.working("a1"))
+    body = slots(false, 7300, 0)
+    watch.tick()
+    assertFalse(watch.working("a1"))
+  }
 }

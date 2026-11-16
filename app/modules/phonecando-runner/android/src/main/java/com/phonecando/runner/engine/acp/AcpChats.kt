@@ -13,10 +13,14 @@ internal fun interface AcpRpc {
 // worked with no terminal launch since, or what a Check now gave back),
 // else the newest the agent lists for the folder when it can list them,
 // reopened with its history (session/load) or without it
-// (session/resume), as the agent can; a new chat when none of that works. Each request carries the
+// (session/resume), as the agent can; a new chat when none of that works,
+// except for a start that only goes on in the kept chat (a run brought
+// back, StartPrompt.sameChat): that start fails instead. Each request carries the
 // folder, the bridge as an MCP server over HTTP when the setup hands it
 // in the chat and the agent takes HTTP (else no servers: no phone tools
 // this time, as its env has no bridge either), and the kind's `_meta`.
+// The kept chat refused (an agent may drop a chat it never answered in:
+// Gemini CLI deletes it) is said (storedFailed), so the driver forgets it.
 // On a chat it opened, the kind's config options are set where the
 // agent offers them; one it refuses is skipped. For a start with a chat
 // of its own, before() names the chat it would have gone back to, so a
@@ -27,12 +31,20 @@ internal class AcpChats(
   private val setup: AcpSetup,
   private val log: (String) -> Unit = {},
 ) {
-  /** A chat it opened: its id, and the agent's answer (its config options). */
-  class Opened(val chatId: String, val answer: JSONObject)
+  /** A chat it opened: its id, the agent's answer (its config options), and whether it is new (session/new). */
+  class Opened(val chatId: String, val answer: JSONObject, val fresh: Boolean = false)
 
-  fun open(newChat: Boolean, stored: String?): Opened {
+  /**
+   * [onlyStored]: reopen [stored] or throw, never another chat.
+   * [storedFailed] runs when the agent refused to reopen [stored].
+   */
+  fun open(newChat: Boolean, stored: String?, onlyStored: Boolean = false, storedFailed: () -> Unit = {}): Opened {
+    if (onlyStored) {
+      return stored?.let { reopen(it, storedFailed) }
+        ?: throw AcpException(AcpWire.SESSION_LOAD, AcpError(0, "its chat could not be opened again"))
+    }
     if (!newChat) {
-      stored?.let { id -> reopen(id)?.let { return it } }
+      stored?.let { id -> reopen(id, storedFailed)?.let { return it } }
       newestListed()?.takeIf { it != stored }?.let { id -> reopen(id)?.let { return it } }
     }
     return createNew()
@@ -50,7 +62,7 @@ internal class AcpChats(
     val answer = rpc.request(AcpWire.SESSION_NEW, AcpWire.sessionNew(setup.cwd, mcp(), meta()), OPEN_MS)
     val id = AcpAnswers.sessionId(answer)
       ?: throw AcpException(AcpWire.SESSION_NEW, AcpError(0, "its answer named no chat"))
-    return Opened(id, answer)
+    return Opened(id, answer, fresh = true)
   }
 
   fun applyOptions(opened: Opened) {
@@ -58,12 +70,13 @@ internal class AcpChats(
       try {
         rpc.request(AcpWire.SET_CONFIG_OPTION, AcpWire.setConfigOption(opened.chatId, id, value), OPTION_MS)
       } catch (e: AcpException) {
-        log("option $id not set: ${e.error.message}")
+        log("option $id not set: ${e.error.said()}")
       }
     }
   }
 
-  private fun reopen(id: String): Opened? {
+  // Null when the agent cannot reopen chats, or refused this one ([failed] runs then).
+  private fun reopen(id: String, failed: () -> Unit = {}): Opened? {
     val method = when {
       caps.loadSession -> AcpWire.SESSION_LOAD
       caps.resume -> AcpWire.SESSION_RESUME
@@ -72,7 +85,9 @@ internal class AcpChats(
     return try {
       Opened(id, rpc.request(method, AcpWire.sessionOpen(id, setup.cwd, mcp(), meta()), OPEN_MS))
     } catch (e: AcpException) {
-      log("$method failed: ${e.error.message}")
+      log("$method failed: ${e.error.said()}")
+      // The agent gone, a timeout or a sign-in first says nothing of the chat.
+      if (!AcpAnswers.notAboutChat(e.error)) failed()
       null
     }
   }
@@ -82,7 +97,7 @@ internal class AcpChats(
     return try {
       AcpAnswers.newestChat(rpc.request(AcpWire.SESSION_LIST, AcpWire.sessionList(setup.cwd), LIST_MS))
     } catch (e: AcpException) {
-      log("${AcpWire.SESSION_LIST} failed: ${e.error.message}")
+      log("${AcpWire.SESSION_LIST} failed: ${e.error.said()}")
       null
     }
   }

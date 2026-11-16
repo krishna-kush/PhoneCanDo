@@ -11,10 +11,13 @@ import kotlin.concurrent.thread
 // answers it between decode steps, never behind a long prompt) every 2 s,
 // and only while a server is busy for someone and someone could look: an
 // agent bound to it has a run going (a working chat, ChatBoard) and the
-// screen is on. With several servers busy at once it watches the first
+// screen is on, or an ACP turn runs (its watch counts a model at work as
+// a sign of life, engine/acp AcpTurnWatch, screen on or off). With several servers busy at once it watches the first
 // (busy); the app shows one reading at a time. [onChange] hears each new reading (PromptReading), and null
 // once nothing is read or nobody is busy. A failed ask keeps the last
-// answer. poke() whenever a run may have started (a chat moved); one thread
+// answer. Each answer also says whether the server is at work for its
+// agents at all (working: reading or writing), for a short while. poke()
+// whenever a run may have started (a chat moved); one thread
 // at a time, which ends once nobody is busy. The key never leaves the
 // request header.
 internal class PromptWatch(
@@ -23,6 +26,7 @@ internal class PromptWatch(
   private val onChange: (PromptReading?) -> Unit,
   private val fetch: (url: String, key: String) -> String? = ::getSlots,
   private val intervalMs: Long = INTERVAL_MS,
+  private val clock: () -> Long = System::currentTimeMillis,
 ) {
   /** The server busy for [agentIds]: where to ask, with which key, and which model it is. */
   data class Target(
@@ -35,12 +39,21 @@ internal class PromptWatch(
     override fun toString() = "Target(baseUrl=$baseUrl, key=<hidden>, modelId=$modelId, agentIds=$agentIds)"
   }
 
+  private class Work(val agentIds: List<String>, val at: Long)
+
   private val lock = Any()
   private var running = false
   @Volatile private var current: PromptReading? = null
+  @Volatile private var work: Work? = null
 
   /** The last reading told; null when none. */
   fun current(): PromptReading? = current
+
+  /** The server was at work for [agentId] (reading its prompt or writing) at a look under WORK_FRESH_MS ago. */
+  fun working(agentId: String): Boolean {
+    val w = work ?: return false
+    return agentId in w.agentIds && clock() - w.at < WORK_FRESH_MS
+  }
 
   /** Starts watching when the server is busy for someone and no watch runs. */
   fun poke() {
@@ -69,6 +82,7 @@ internal class PromptWatch(
     val busy = target() ?: return false
     if (!looking()) return true
     val body = fetch("${busy.baseUrl}/slots", busy.key) ?: return true
+    work = if (PromptReading.processing(body)) Work(busy.agentIds, clock()) else null
     val slot = PromptReading.readingSlot(body)
     publish(slot?.let { PromptReading(busy.modelId, busy.modelName, busy.agentIds, it.read, it.cached, it.total) })
     return true
@@ -84,6 +98,9 @@ internal class PromptWatch(
 
   companion object {
     const val INTERVAL_MS = 2_000L
+
+    /** How long a look's "at work" holds: a few looks, so one failed ask does not end it. */
+    const val WORK_FRESH_MS = 3 * INTERVAL_MS
     private const val CONNECT_MS = 1_000
     private const val READ_MS = 5_000
 

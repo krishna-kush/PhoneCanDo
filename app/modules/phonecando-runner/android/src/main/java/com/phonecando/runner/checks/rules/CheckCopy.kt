@@ -21,12 +21,20 @@ internal object CheckCopy {
   fun http(status: Int) = "http_$status"
 
   fun noContact(acp: Boolean) =
-    "It finished a turn${inAcp(acp)} without ever reaching PhoneCanDo's tools. " +
+    "It finished a turn${inAcp(acp)} without ever reaching PhoneCanDo's tools. " + if (acp) {
+      "ACP mode can't show its questions: open it, and if it asks you to trust this folder or allow a tools server, " +
+        "allow it. Otherwise its tools setting is wrong."
+    } else {
       "If it asked to trust this folder or allow a tools server, allow it; otherwise its tools setting is wrong."
+    }
 
   fun noHook(events: List<String>, acp: Boolean) =
     "It finished a turn${inAcp(acp)} and none of its message hooks (${events.joinToString(", ")}) ran, " +
-      "so messages wait until it checks its inbox. If it asked to trust this folder, allow it."
+      "so messages wait until it checks its inbox. " + if (acp) {
+        "ACP mode can't show its questions: open it, and if it asks you to trust this folder, allow it."
+      } else {
+        "If it asked to trust this folder, allow it."
+      }
 
   const val NO_WAITER_DETAIL = "It finished a turn and its waiting hook didn't start, so a message can't wake it."
 

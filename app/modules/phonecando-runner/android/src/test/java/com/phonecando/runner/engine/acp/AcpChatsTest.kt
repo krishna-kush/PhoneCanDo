@@ -107,6 +107,68 @@ class AcpChatsTest {
     assertEquals(listOf(AcpWire.SESSION_NEW), none.methods())
   }
 
+  @Test fun aKeptChatTheAgentRefusesIsSaidWithWhyAndANewChatIsFresh() {
+    val logged = ArrayList<String>()
+    var refused = 0
+    // Gemini CLI: its loadSession throws for a chat it deleted; the SDK says "Internal error", why in data.
+    val gone = AcpError(-32603, "Internal error", "Invalid session identifier \"kept\".")
+    val agent = FakeAgent(
+      mapOf(
+        AcpWire.SESSION_LOAD to { _: JSONObject -> throw AcpException(AcpWire.SESSION_LOAD, gone) },
+        AcpWire.SESSION_NEW to fresh,
+      ),
+    )
+    val result = AcpChats(agent, AcpCaps(loadSession = true), setup(), logged::add).open(newChat = false, stored = "kept") { refused++ }
+    assertEquals("new", result.chatId)
+    assertTrue(result.fresh)
+    assertEquals(1, refused)
+    assertEquals("session/load failed: Internal error (Invalid session identifier \"kept\".)", logged.single())
+    // A chat it reopened is not fresh.
+    val loads = FakeAgent(mapOf(AcpWire.SESSION_LOAD to opened))
+    assertFalse(AcpChats(loads, AcpCaps(loadSession = true), setup()).open(newChat = false, stored = "kept").fresh)
+  }
+
+  @Test fun aFailureThatSaysNothingOfTheChatKeepsIt() {
+    for (error in listOf(AcpError(AcpWire.GONE, "gone"), AcpError(AcpWire.TIMED_OUT, "late"), AcpError(AcpWire.AUTH_REQUIRED, "Authentication required"))) {
+      var refused = 0
+      val agent = FakeAgent(
+        mapOf(
+          AcpWire.SESSION_LOAD to { _: JSONObject -> throw AcpException(AcpWire.SESSION_LOAD, error) },
+          AcpWire.SESSION_NEW to fresh,
+        ),
+      )
+      AcpChats(agent, AcpCaps(loadSession = true), setup()).open(newChat = false, stored = "kept") { refused++ }
+      assertEquals(error.message, 0, refused)
+    }
+    // Nor does an agent that cannot reopen chats at all.
+    var refused = 0
+    AcpChats(FakeAgent(mapOf(AcpWire.SESSION_NEW to fresh)), AcpCaps(), setup()).open(newChat = false, stored = "kept") { refused++ }
+    assertEquals(0, refused)
+  }
+
+  @Test fun aStartThatOnlyGoesOnInTheKeptChatFailsRatherThanTakeAnother() {
+    val agent = FakeAgent(
+      mapOf(
+        AcpWire.SESSION_LIST to reply("""{"sessions":[{"sessionId":"listed"}]}"""),
+        AcpWire.SESSION_LOAD to { p: JSONObject ->
+          if (p.getString("sessionId") == "kept") throw AcpException(AcpWire.SESSION_LOAD, AcpError(-32603, "gone")) else JSONObject()
+        },
+        AcpWire.SESSION_NEW to fresh,
+      ),
+    )
+    val chats = AcpChats(agent, AcpCaps(list = true, loadSession = true), setup())
+    assertEquals("listed", chats.open(newChat = false, stored = "listed", onlyStored = true).chatId)
+    for (stored in listOf("kept", null)) {
+      try {
+        chats.open(newChat = false, stored = stored, onlyStored = true)
+        throw AssertionError("expected a failure")
+      } catch (e: AcpException) {
+        assertEquals(AcpWire.SESSION_LOAD, e.method)
+      }
+    }
+    assertFalse(AcpWire.SESSION_NEW in agent.methods() || AcpWire.SESSION_LIST in agent.methods())
+  }
+
   @Test fun theBridgeGoesInOnlyOverHttp() {
     val agent = FakeAgent(mapOf(AcpWire.SESSION_NEW to fresh))
     AcpChats(agent, AcpCaps(mcpHttp = false), setup()).createNew()

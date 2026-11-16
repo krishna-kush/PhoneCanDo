@@ -65,6 +65,15 @@ ACP mode" in `gemini --help`, 0.68.0).
 - `chat`: `--resume <id>` at 1. Gemini takes a chat's id there as well as
   `latest` or a number, and an ACP chat is saved under its ACP id (0.68.0:
   the ACP `newSession` makes the id and the session's config uses it).
+  It keeps no chat it never answered in: a failed turn is taken back, its
+  start deletes chat files left empty (`general.sessionRetention`, on by
+  default), `--resume <id>` of one exits 42 and `session/load` of one
+  answers "Internal error" (why in `data.details`). So the runner keeps a
+  new ACP chat only once a turn in it was answered.
+- In a folder it doesn't trust, ACP mode skips the trust check (0.68.0:
+  the trust dialog and its headless exit 55 are the TUI's and `-p`'s) and
+  runs with no hooks and no MCP servers, asking nothing: the check marks
+  ACP phone tools Not working; trust the folder in its own app.
 - So Gemini can run scheduled tasks, and an idle agent in ACP mode gets a
   waking message as a prompt.
 - PC trial (2026-11-13, 0.68.0): the handshake only; a chat needs sign-in.

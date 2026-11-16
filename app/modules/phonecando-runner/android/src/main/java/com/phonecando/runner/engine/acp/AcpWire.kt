@@ -66,7 +66,9 @@ internal object AcpWire {
       method != null -> Notification(method, params)
       id != null -> {
         val ours = (id as? Number)?.toLong() ?: (id as? String)?.toLongOrNull() ?: return null
-        val error = o.optJSONObject("error")?.let { AcpError(it.optInt("code", 0), it.textOf("message") ?: "error ${it.optInt("code", 0)}") }
+        val error = o.optJSONObject("error")?.let {
+          AcpError(it.optInt("code", 0), it.textOf("message") ?: "error ${it.optInt("code", 0)}", detailOf(it.opt("data")))
+        }
         Response(ours, o.optJSONObject("result") ?: JSONObject(), error)
       }
       else -> null
@@ -134,6 +136,17 @@ internal object AcpWire {
 
   private fun JSONObject.withMeta(meta: JSONObject?): JSONObject = if (meta == null) this else put("_meta", meta)
 
+  // An error's `data` in words: the ACP SDKs put why an "Internal error"
+  // happened there (`{"details": …}`), or a plain string. One line, cut.
+  private fun detailOf(data: Any?): String? {
+    val text = when (data) {
+      is String -> data
+      is JSONObject -> data.textOf("details") ?: data.textOf("message")
+      else -> null
+    } ?: return null
+    return text.replace(Regex("\\s+"), " ").trim().take(MAX_DETAIL_CHARS).ifEmpty { null }
+  }
+
   /**
    * Cuts what the agent writes into lines. A line longer than [maxChars]
    * is dropped whole (an agent never needs one that long), so one bad line
@@ -168,13 +181,19 @@ internal object AcpWire {
   }
 
   const val MAX_LINE_CHARS = 8 * 1024 * 1024
+
+  /** The longest error detail kept (AcpError.detail). */
+  const val MAX_DETAIL_CHARS = 300
 }
 
-/** An error answer: its JSON-RPC code and message. */
-internal data class AcpError(val code: Int, val message: String)
+/** An error answer: its JSON-RPC code and message, and [detail], what its `data` says (why an "Internal error"). */
+internal data class AcpError(val code: Int, val message: String, val detail: String? = null) {
+  /** The message with its detail, for a log line or a status. */
+  fun said(): String = detail?.let { "$message ($it)" } ?: message
+}
 
 /** A request that failed: the agent's error answer, no answer in time, or the agent gone. */
-internal class AcpException(val method: String, val error: AcpError) : Exception("$method: ${error.message}")
+internal class AcpException(val method: String, val error: AcpError) : Exception("$method: ${error.said()}")
 
 /** The bridge an ACP agent gets in its session (tools "session"); never printed with its token. */
 internal class AcpBridge(val url: String, val token: String) {

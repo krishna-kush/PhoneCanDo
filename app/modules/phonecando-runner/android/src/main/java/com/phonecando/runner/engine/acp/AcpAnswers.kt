@@ -61,11 +61,19 @@ internal object AcpAnswers {
   /** Why opening the agent failed, for its status: sign-in first in plain words, else the step and the agent's message. */
   fun failure(e: Exception): String {
     val acp = e as? AcpException ?: return "its ACP mode failed: ${e.message ?: e.javaClass.simpleName}"
-    if (acp.error.code == AcpWire.AUTH_REQUIRED || acp.error.message.contains("authenticat", ignoreCase = true)) {
+    if (wantsSignIn(acp.error)) {
       return "needs sign-in: open it and sign in, then it can work in the background"
     }
-    return "its ACP mode failed at ${acp.method}: ${acp.error.message}"
+    return "its ACP mode failed at ${acp.method}: ${acp.error.said()}"
   }
+
+  /** [error] asks for a sign-in first (ACP's auth_required, or says so). */
+  fun wantsSignIn(error: AcpError): Boolean =
+    error.code == AcpWire.AUTH_REQUIRED || error.message.contains("authenticat", ignoreCase = true)
+
+  /** [error] says nothing of the chat it answers: the agent gone, no answer in time, or a sign-in first. */
+  fun notAboutChat(error: AcpError): Boolean =
+    error.code == AcpWire.GONE || error.code == AcpWire.TIMED_OUT || wantsSignIn(error)
 
   // A select option's values, its groups' too.
   private fun values(options: JSONArray?): Set<String> {

@@ -19,12 +19,14 @@ import com.phonecando.runner.engine.acp.AcpAgent
 import com.phonecando.runner.engine.acp.AcpExit
 import com.phonecando.runner.engine.acp.AcpProcess
 import com.phonecando.runner.engine.acp.AcpReady
+import com.phonecando.runner.engine.acp.AcpTurnWatch
 import com.phonecando.runner.engine.proc.EngineProcess
 import com.phonecando.runner.engine.proc.OsSignals
 import com.phonecando.runner.engine.proc.ProcessReaper
 import com.phonecando.runner.engine.ready.HttpReady
 import com.phonecando.runner.engine.ready.TuiReady
 import com.phonecando.runner.engine.spawn.TuiProcess
+import com.phonecando.runner.engine.starts.StartHolds
 import com.phonecando.runner.engine.tui.EngineTerminal
 import com.phonecando.runner.engine.tui.HomeStarts
 import com.phonecando.runner.engine.tui.TerminalViewException
@@ -42,10 +44,12 @@ import com.phonecando.runner.models.prompt.PromptWatch
 import com.phonecando.runner.notify.AgentAlerts
 import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.ChatTracker
+import com.phonecando.runner.notify.SilentTurnNotice
 import com.phonecando.runner.prompts.OpenUrlPrompts
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
 // Runs the engines of several agents at once, keyed by agent id (one per
@@ -77,7 +81,8 @@ import kotlin.concurrent.withLock
 // loaded again for the new mode. In ACP mode (a kind with engine.acp) its driver
 // (engine/acp/AcpAgent) speaks ACP on the process's pipes: ready once it
 // opened its chat (AcpReady), then it sends the start's task; it is idle
-// only with no turn and no question open; any exit we did not ask for is
+// only with no turn and no question open; a turn that goes silent
+// (AcpTurnWatch) stops it with why (failed); any exit we did not ask for is
 // a death, with the last line of its stderr, and never relaunches.
 // A TUI engine's terminal stays with its slot while it runs; viewers attach
 // to it through `terminals`. Stop: ask the engine to end (SIGTERM, or a
@@ -112,7 +117,7 @@ internal class EngineSupervisor(
     prompts.poke()
   }
   private val models = ModelSlots.binding(context, ports, reaper, { limits().maxModels }, ::onModelDied)
-  private val prompts: PromptWatch = ModelSlots.promptWatch(context, models, chats::working) { listener.onPrompt(it) }
+  private val prompts: PromptWatch = ModelSlots.promptWatch(context, models, chats::working, ::anyAcpTurn) { listener.onPrompt(it) }
   private val streams = EngineStreams(
     onActivity = ::onActivity,
     alerts = AgentAlerts(context, store) { Bridge.screenHolder() == it },
@@ -188,9 +193,15 @@ internal class EngineSupervisor(
   /** A viewer shows the agent's TUI now (EngineTerminal.hasViewer); false in ACP mode or when it does not run. */
   fun hasViewer(agentId: String): Boolean = slots[agentId]?.terminal?.hasViewer == true
 
+  /** The agent's TUI terminal while its engine runs (cutoff/ keeps it to read your last input after an exit); null otherwise. */
+  internal fun terminalOf(agentId: String): EngineTerminal? = slots[agentId]?.terminal
+
   /** The agent's ACP driver while its engine is ready in ACP mode (AcpEngines.of); null otherwise. */
   fun acpAgent(agentId: String): AcpAgent? =
     slots[agentId]?.takeIf { it.state == EngineState.READY && it.mode == EngineMode.ACP }?.acp
+
+  // An ACP turn runs on some engine: the prompt watch looks, screen on or off (AcpTurnWatch).
+  private fun anyAcpTurn(): Boolean = slots.values.any { it.acp?.turnRunning == true }
 
   /**
    * Why a start in [mode] would be refused now (ModeSwitch: the engine runs
@@ -224,6 +235,9 @@ internal class EngineSupervisor(
     (slot.state == EngineState.STARTING || slot.state == EngineState.READY) && slot.process?.isAlive == true
 
   fun anyLive(): Boolean = slots.values.any { it.state.live }
+
+  /** An engine is starting (the wake lock holds the CPU for it). */
+  fun anyStarting(): Boolean = slots.values.any { it.state == EngineState.STARTING }
 
   /** An engine we run, or any process tagged with an agent (also from an earlier app process). */
   fun anyAlive(): Boolean = anyLive() || reaper.anyTagged(null)
@@ -479,19 +493,27 @@ internal class EngineSupervisor(
 
   // An ACP engine's driver, told back here: a failed opening fails the
   // start, a turn's start and end change its status, what it hears marks
-  // it used.
+  // it used, its local model at work is a sign of life, and a silent turn
+  // (left to Check now while it has the agent) stops it.
   private fun driver(agentId: String, proc: AcpProcess, plan: LaunchPlan) = AcpAgent(
     agentId = agentId,
     process = proc,
-    start = plan.prompt?.let { StartPrompt(it, plan.newChat) },
+    start = plan.prompt?.let { StartPrompt(it, plan.newChat, plan.sameChat) },
     storedChat = { store.get(agentId)?.acpChat },
     saveChat = { store.setAcpChat(agentId, it) },
+    forgetChat = { store.clearAcpChat(agentId) },
     hooks = object : AcpAgent.Hooks {
       override fun onFailed(reason: String) = onAcpFailed(agentId, proc, reason)
 
       override fun onBusy(busy: Boolean) = emit(status(agentId))
 
       override fun onHeard() = touch(agentId)
+
+      override fun modelBusy() = prompts.working(agentId)
+
+      override fun endsSilentTurns() = !CheckNow.owns(agentId)
+
+      override fun onSilent(reason: String) = onAcpSilent(agentId, proc, reason)
     },
   )
 
@@ -615,6 +637,21 @@ internal class EngineSupervisor(
     Log.w(TAG, "ACP engine $agentId failed: $reason")
     Checks.acpFailed(agentId, reason)
     terminate(setOf(agentId), EngineState.FAILED, reason)
+  }
+
+  // An ACP turn that said nothing for AcpTurnWatch.SILENT_MS was ended
+  // (the driver takes no prompt any more): its engine stops with why, our
+  // own starts hold back as after a failed start (StartHolds, set once it
+  // is down), and you hear that it may need you in its own app. Off the
+  // driver's timer thread, as a stop waits for the process.
+  private fun onAcpSilent(agentId: String, proc: AcpProcess, reason: String) {
+    thread(name = "phonecando-acp-silent-$agentId", isDaemon = true) {
+      if (lock.withLock { slots[agentId]?.let { it.process !== proc || it.state != EngineState.READY } != false }) return@thread
+      Log.w(TAG, "ACP engine $agentId stopped: its turn went silent")
+      terminate(setOf(agentId), EngineState.FAILED, reason)
+      StartHolds.shared.failed(agentId, AcpTurnWatch.HOLD_WHY)
+      SilentTurnNotice.post(context, store.get(agentId))
+    }
   }
 
   // Another engine answered on our port, so ours never bound it: relaunch
