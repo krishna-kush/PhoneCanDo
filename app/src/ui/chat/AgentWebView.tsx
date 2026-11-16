@@ -7,7 +7,8 @@ import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { lastPage, rememberPage, restoreUrl } from './lastPage';
 import { useOpenChat } from './useOpenChat';
-import { useWebBlur } from './useWebBlur';
+import { useWebCover } from './useWebCover';
+import { KEY_GUARD } from './webCover';
 import { setWebBackHandler, setWebHomeHandler } from './webNavigation';
 import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
@@ -30,7 +31,7 @@ import { useTheme } from '../common/globals';
 // never strands the user; the TUI (`TerminalScreen`) is untouched — the
 // header menu switches views. Theme and embed scripts come from the kind's web adapter
 // (webAdapter.ts). While a page or the drawer covers it, its page holds no
-// text focus (useWebBlur.ts).
+// text focus and takes no keys (useWebCover.ts, webCover.ts).
 export default function AgentWebView({ agent }: { agent: Agent }) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,8 +55,9 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   // Null for a kind without a web UI: pairing then fails with a message.
   const webUi = useMemo(() => (kind.web ? webUiFor(kind.web.adapter) : null), [kind]);
   useOpenChat(agent.id, chatId);
-  // Covered by a page or the drawer, the page lets go of the keyboard.
-  useWebBlur(web);
+  // Covered by a page or the drawer, the page lets go of the keyboard and
+  // takes no keys; told again after each document loads.
+  const applyCover = useWebCover(web);
 
   // The web UI owns its history and its project-list home. Chrome calls these
   // handlers so Android Back and the Home menu item never strand the user in
@@ -187,9 +189,10 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
           domStorageEnabled
           sharedCookiesEnabled
           thirdPartyCookiesEnabled
-          injectedJavaScriptBeforeContentLoaded={webUi.themeScript(themeMode, t)}
+          injectedJavaScriptBeforeContentLoaded={`${KEY_GUARD}\n${webUi.themeScript(themeMode, t)}`}
           onLoadEnd={(e) => {
             web.current?.injectJavaScript(webUi.themeScript(themeMode, t));
+            applyCover();
             const loaded = e.nativeEvent.url;
             if (!webUi.isAuthUrl(loaded)) {
               const target = restoreUrl(loaded, restoreRef.current);

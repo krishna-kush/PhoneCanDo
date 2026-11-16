@@ -61,6 +61,11 @@ lists every agent with its engine state and makes the tapped one active
   every other place is a page on a stack over it (`src/state/app/`).
   Layers under the top stay mounted and laid out, only invisible, so a web
   UI or a terminal under a page keeps its state and its size.
+- A web UI under a page or the drawer keeps Android's input focus (React
+  Native can't move it), so a key typed on a page with no field focused
+  went to the web page, and opencode's composer took it. While Home is
+  covered, its page blurs its field and drops key and text events
+  (`ui/chat/useWebCover.ts`, the scripts in `webCover.ts`).
 - Motion (`ui/nav/motion.ts`) follows Android 14+: a page slides in from a
   quarter of the width while it fades in; Back shrinks it to 90%, then it
   slides off to the right. Transform and opacity only: Reanimated's

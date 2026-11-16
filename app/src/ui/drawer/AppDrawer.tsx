@@ -95,7 +95,7 @@ export default function AppDrawer() {
         return;
       }
       // A TUI home keeps the keyboard up for its hidden input; a web home's
-      // page lets go of it by itself (chat/useWebBlur.ts).
+      // page lets go of it by itself (chat/useWebCover.ts).
       Keyboard.dismiss();
       // Already mounted unless the first open beat the idle mount.
       setMounted(true);

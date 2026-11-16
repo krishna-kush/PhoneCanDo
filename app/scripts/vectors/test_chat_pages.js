@@ -1,7 +1,8 @@
 // Web UI page memory (src/ui/chat/lastPage.ts): splitting an engine URL,
 // remembering an agent's last page and where a fresh view restores to. Then
 // the chat a TUI names in its terminal title (src/engine/agents/chatTitle.ts)
-// with opencode's chatTitle from its manifest. The web adapter's chat ids
+// with opencode's chatTitle from its manifest, and the scripts that keep a
+// covered web Home from taking keys (src/ui/chat/webCover.ts). The web adapter's chat ids
 // are in test_web_adapter.js. Imports the real pure modules (Node 22.18+
 // strips their types), so these cannot drift.
 // Run: node test_chat_pages.js (or pnpm check:vectors)
@@ -56,6 +57,42 @@ const mod = pathToFileURL(path.join(__dirname, '../../src/ui/chat/lastPage.ts'))
   t('TUI home names no chat', tuiChatTitle('OpenCode'), null);
   t('a shell title names no chat', tuiChatTitle('root@localhost: ~'), null);
   t('a kind without a pattern names no chat', chatTitleOf(null, 'OC | Fix login'), null);
+
+  // A covered web Home takes no keys (src/ui/chat/webCover.ts): its scripts
+  // run against a stub page with one field focused inside a shadow root.
+  const cover = await import(pathToFileURL(path.join(__dirname, '../../src/ui/chat/webCover.ts')).href);
+  const stubPage = () => {
+    const listeners = {};
+    const field = { blurred: 0, blur() { this.blurred++; } };
+    const doc = { body: {}, activeElement: { shadowRoot: { activeElement: field } } };
+    const win = { addEventListener: (type, fn, capture) => (listeners[type] ??= []).push({ fn, capture }) };
+    const run = (script) => new Function('window', 'document', script)(win, doc);
+    const fire = (type) => {
+      const e = { prevented: false, stopped: false, preventDefault() { this.prevented = true; }, stopImmediatePropagation() { this.stopped = true; } };
+      for (const l of listeners[type] ?? []) l.fn(e);
+      return [e.prevented, e.stopped];
+    };
+    return { listeners, field, run, fire };
+  };
+  const pg = stubPage();
+  pg.run(cover.KEY_GUARD);
+  pg.run(cover.KEY_GUARD);
+  t('the guard listens once, before the page (capture)', ['keydown', 'keypress', 'keyup', 'beforeinput', 'paste', 'focusin'].map((type) => (pg.listeners[type] ?? []).map((l) => l.capture)), [[true], [true], [true], [true], [true], [true]]);
+  t('uncovered, keys reach the page', pg.fire('keydown'), [false, false]);
+  pg.run(cover.COVER_SCRIPT);
+  t('covered, the field inside a shadow root lets go', pg.field.blurred, 1);
+  t('covered, keys and text are dropped', ['keydown', 'keypress', 'keyup', 'beforeinput', 'paste'].map((type) => pg.fire(type)), [[true, true], [true, true], [true, true], [true, true], [true, true]]);
+  t('covered, the guard is still installed once', pg.listeners.keydown.length, 1);
+  pg.fire('focusin');
+  t('covered, a field the page focuses lets go', pg.field.blurred, 2);
+  pg.run(cover.UNCOVER_SCRIPT);
+  t('in front again, keys reach the page', pg.fire('keydown'), [false, false]);
+  pg.fire('focusin');
+  t('in front again, a focused field stays', pg.field.blurred, 2);
+  const fresh = stubPage();
+  fresh.run(cover.COVER_SCRIPT);
+  t('covering a document without the guard installs it', fresh.fire('keydown'), [true, true]);
+  t('the injected scripts end with a value', [cover.COVER_SCRIPT, cover.UNCOVER_SCRIPT].map((s) => s.trimEnd().endsWith('true;')), [true, true]);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
