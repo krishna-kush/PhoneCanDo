@@ -9,6 +9,8 @@ import org.junit.rules.TemporaryFolder
 
 // The dry run read line by line and stopped once it said what we need,
 // long before it would load the model (here: a shell that sleeps on).
+// The sleep is exec'd, as the server is one process: a shell that forks
+// it (dash, CI's /bin/sh) leaves it holding stdout after the kill.
 class FitProbeTest {
   @get:Rule val tmp = TemporaryFolder()
 
@@ -19,14 +21,14 @@ class FitProbeTest {
 
   @Test fun itStopsOnceTheLineCame() {
     val started = System.nanoTime()
-    assertEquals("it", probe("echo starting; echo 'got it'; sleep 30"))
+    assertEquals("it", probe("echo starting; echo 'got it'; exec sleep 30"))
     assertTrue((System.nanoTime() - started) / 1_000_000 < 5_000)
   }
 
   @Test fun anEndWithoutItOrATimeoutIsNone() {
     assertNull(probe("echo nothing"))
     val started = System.nanoTime()
-    assertNull(probe("sleep 30", timeoutMs = 300))
+    assertNull(probe("exec sleep 30", timeoutMs = 300))
     assertTrue((System.nanoTime() - started) / 1_000_000 < 5_000)
   }
 
