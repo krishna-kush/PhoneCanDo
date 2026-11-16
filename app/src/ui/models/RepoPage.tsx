@@ -26,7 +26,8 @@ const FIRST_SCREEN_PANELS = 3;
 // memory is known once it is on the phone), under the original model's
 // dates. Download pins that commit and keeps the dates with the model.
 // Its model card (what it is for, its licence) is on huggingface.co, a
-// tap away: also where a gated repository's terms are accepted.
+// tap away, above and on each model as on a suggestion: also where a
+// gated repository's terms are accepted.
 export default function RepoPage({ repo }: { repo: string }) {
   const [models, setModels] = useState<RepoModels | null>(null);
   const [failure, setFailure] = useState<HubFailure | null>(null);
@@ -95,6 +96,7 @@ function VariantPanel({ repo, revision, dates, variant }: VariantProps) {
         </AppButton>
       )}
       {action.error ? <Note tone="error">{action.error}</Note> : null}
+      <HubLink label={HUB_LINK_LABEL.repo} url={hubRepoUrl(repo)} centered />
     </ModelPanel>
   );
 }

@@ -5,18 +5,23 @@ import AppButton from '../../common/AppButton';
 import Note from '../../env/parts/Note';
 import { openElsewhere } from '../logic/hubLinks';
 
-type Props = { label: string; url: string };
+type Props = {
+  label: string;
+  url: string;
+  /** Centred under a panel's actions; else at the start, under a header. */
+  centered?: boolean;
+};
 
 // A Hugging Face page opened in the browser (a model card, the token
 // settings), as a ghost button; when no app opens it, the address to type.
-export default function HubLink({ label, url }: Props) {
+export default function HubLink({ label, url, centered }: Props) {
   const [msg, setMsg] = useState('');
   const open = () => {
     setMsg('');
     Linking.openURL(url).catch(() => setMsg(openElsewhere(url)));
   };
   return (
-    <YStack gap="1" alignItems="flex-start">
+    <YStack gap="1" alignItems={centered ? 'center' : 'flex-start'}>
       <AppButton variant="ghost" onPress={open}>
         {label}
       </AppButton>

@@ -53,7 +53,7 @@ function SuggestedPanel({ model }: { model: SuggestedModel }) {
         </AppButton>
       )}
       {action.error ? <Note tone="error">{action.error}</Note> : null}
-      <HubLink label={HUB_LINK_LABEL.repo} url={hubRepoUrl(model.repo)} />
+      <HubLink label={HUB_LINK_LABEL.repo} url={hubRepoUrl(model.repo)} centered />
     </ModelPanel>
   );
 }
