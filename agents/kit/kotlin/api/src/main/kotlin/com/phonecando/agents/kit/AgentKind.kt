@@ -73,6 +73,15 @@ interface AgentKind {
   /** The chat's title from that response; null when it has none. */
   fun parseSessionTitle(body: String): String? = null
 
+  /** Request for the chats running now (the manifest's `chats.active`); null when the kind has none. */
+  fun activeChats(port: String, password: String): HttpProbe? = null
+
+  /** The ids of the chats running now in that response; null when it does not read as such. */
+  fun parseActiveChats(body: String): Set<String>? = null
+
+  /** Seconds without activity after which an agent of it is idle (the manifest's `idle.quietSec`); null without an idle rule. */
+  val idleQuietSec: Int? get() = null
+
   /** Every form of the engine password that can show up in a log line. */
   fun passwordForms(password: String): List<String>
 

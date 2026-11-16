@@ -139,6 +139,7 @@ object ManifestDecoder {
 
   private fun chats(c: JsonFields) = Chats(
     title = c.optObj("title")?.obj("http")?.let { TitleSource(it.string("path"), it.string("json")) },
+    active = c.optObj("active")?.obj("http")?.let { ActiveSource(it.string("path"), it.string("json")) },
   )
 
   private fun surfaces(s: JsonFields) = Surfaces(

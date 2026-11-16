@@ -234,10 +234,18 @@ enum class PtyEvent(val wire: String) {
   STOPPED("stopped"),
 }
 
-/** Where a chat's title is read: GET [path], then the JSON pointer [pointer]. */
-data class Chats(val title: TitleSource?)
+/** Where a chat's title is read ([title]), and which chats run now ([active]). */
+data class Chats(val title: TitleSource?, val active: ActiveSource? = null)
 
+/** A chat's title: GET [path], then the string at the JSON pointer [pointer]. */
 data class TitleSource(val path: String, val pointer: String)
+
+/**
+ * The chats running now: GET [path], then at the JSON pointer [pointer]
+ * an object keyed by chat id, or an array of chat ids. A chat it does not
+ * name has no run going, whatever its last event said.
+ */
+data class ActiveSource(val path: String, val pointer: String)
 
 /** Idle once nothing from [from] happened for [quietSec] seconds. */
 data class Idle(val from: List<String>, val quietSec: Int)

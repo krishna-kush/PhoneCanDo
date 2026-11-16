@@ -36,7 +36,10 @@ class ManifestKindTest {
         "readiness": { "http": { "path": "/up" } }
       },
       "events": [{ "sse": { "path": "/ev", "parser": "demo.events" } }],
-      "chats": { "title": { "http": { "path": "/chats/{{sessionId}}", "json": "/name" } } },
+      "chats": {
+        "title": { "http": { "path": "/chats/{{sessionId}}", "json": "/name" } },
+        "active": { "http": { "path": "/chats/running", "json": "/running" } }
+      },
       "idle": { "from": ["events"], "quietSec": 60 },
       "surfaces": { "home": "tui" },
       "hooks": ["demo.events"]
@@ -136,6 +139,25 @@ class ManifestKindTest {
     val untitled = kind("""{"chats":null}""")
     assertNull(untitled.sessionInfo("7", "pw", "s"))
     assertNull(untitled.parseSessionTitle("""{"name":"x"}"""))
+  }
+
+  @Test fun chatsRunningNow() {
+    val k = kind()
+    assertEquals("http://127.0.0.1:7/chats/running", k.activeChats("7", "pw")!!.url)
+    assertEquals(setOf("a", "b"), k.parseActiveChats("""{"running":{"a":{"type":"running"},"b":{}}}"""))
+    assertEquals(setOf("a"), k.parseActiveChats("""{"running":["a",3,null]}"""))
+    assertEquals(emptySet<String>(), k.parseActiveChats("""{"running":{}}"""))
+    assertNull(k.parseActiveChats("""{"running":"a"}"""))
+    assertNull(k.parseActiveChats("""{"other":{}}"""))
+    assertNull(k.parseActiveChats("not json"))
+    val none = kind("""{"chats":null}""")
+    assertNull(none.activeChats("7", "pw"))
+    assertNull(none.parseActiveChats("""{"running":{}}"""))
+  }
+
+  @Test fun idleQuietSeconds() {
+    assertEquals(null, kind("""{"idle":null}""").idleQuietSec)
+    assertEquals(45, kind("""{"idle":{"from":["events"],"quietSec":45}}""").idleQuietSec)
   }
 
   @Test fun noClientOrPairingUnlessTheManifestHasThem() {

@@ -49,6 +49,16 @@ class ManifestGoldenTest {
     assertEquals("http://127.0.0.1:4100/api/session/ses_1", info.url)
     assertEquals(listOf("Authorization" to "Basic $basic"), info.headers.toList())
     assertEquals(listOf(pw, basic), kind.passwordForms(pw))
+    val active = kind.activeChats("4100", pw)!!
+    assertEquals("http://127.0.0.1:4100/api/session/active", active.url)
+    assertEquals(listOf("Authorization" to "Basic $basic"), active.headers.toList())
+  }
+
+  // GET /api/session/active: {data: {<sessionID>: {type: "running"}}} (opencode's session.active).
+  @Test fun chatsRunningNow() {
+    assertEquals(setOf("ses_1"), kind.parseActiveChats("""{"data":{"ses_1":{"type":"running"}}}"""))
+    assertEquals(emptySet<String>(), kind.parseActiveChats("""{"data":{}}"""))
+    assertNull(kind.parseActiveChats("""{"error":"x"}"""))
   }
 
   @Test fun titles() {

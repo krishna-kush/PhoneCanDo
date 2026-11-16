@@ -29,12 +29,24 @@ object JsonPointer {
 
   /** The scalar at [pointer] in the JSON text [body] as text; null for no JSON, null, an object or an array. */
   fun text(body: String, pointer: String): String? {
-    val root = try {
-      Json.parseToJsonElement(body)
-    } catch (_: SerializationException) {
-      return null
-    }
-    val value = resolve(root, pointer)
+    val value = parse(body)?.let { resolve(it, pointer) }
     return if (value is JsonPrimitive && value !is JsonNull) value.content else null
+  }
+
+  /**
+   * The ids at [pointer] in the JSON text [body]: an object's keys, or an
+   * array's strings (anything else in it is skipped); null for no JSON,
+   * nothing there, or anything else.
+   */
+  fun ids(body: String, pointer: String): Set<String>? = when (val value = parse(body)?.let { resolve(it, pointer) }) {
+    is JsonObject -> value.keys
+    is JsonArray -> value.mapNotNullTo(LinkedHashSet()) { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
+    else -> null
+  }
+
+  private fun parse(body: String): JsonElement? = try {
+    Json.parseToJsonElement(body)
+  } catch (_: SerializationException) {
+    null
   }
 }

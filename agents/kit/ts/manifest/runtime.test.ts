@@ -39,7 +39,7 @@ describe('templates', () => {
   it('keep {{password}} to env values', () => {
     ok((m) => (m.surfaces!.terminal!.client!.env!.OTHER = 'x{{password}}'));
     fails((m) => (m.surfaces!.terminal!.client!.cwd = '{{password}}'), '/surfaces/terminal/client/cwd forbidden');
-    fails((m) => (m.chats!.title.http.path = '/api/{{password}}'), '/chats/title/http/path forbidden');
+    fails((m) => (m.chats!.title!.http.path = '/api/{{password}}'), '/chats/title/http/path forbidden');
     fails((m) => (m.surfaces!.web!.pair.url = '/auth/{{code}}?p={{password}}'), '/surfaces/web/pair/url forbidden');
     fails(
       (m) => m.engine!.launch.argv.push({ when: 'sessionId', args: ['{{password}}'] }),
@@ -86,7 +86,15 @@ describe('events, chats, idle', () => {
   });
 
   it('reads the chat title at a JSON pointer', () => {
-    fails((m) => (m.chats!.title.http.json = 'data.title'), '/chats/title/http/json pattern');
+    fails((m) => (m.chats!.title!.http.json = 'data.title'), '/chats/title/http/json pattern');
+  });
+
+  it('reads the chats running now at a JSON pointer, and needs one of the two', () => {
+    fails((m) => (m.chats!.active!.http.json = 'data'), '/chats/active/http/json pattern');
+    fails((m) => (m.chats!.active = { http: { path: 'api' } } as never), '/chats/active/http/path pattern', '/chats/active/http/json required');
+    ok((m) => delete m.chats!.title);
+    ok((m) => delete m.chats!.active);
+    fails((m) => (m.chats = {}), '/chats required');
   });
 
   it('idles on a stream it has, for a sane time', () => {

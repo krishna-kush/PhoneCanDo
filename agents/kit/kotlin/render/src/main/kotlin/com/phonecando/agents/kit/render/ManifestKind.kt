@@ -228,6 +228,13 @@ class ManifestKind private constructor(
     JsonPointer.text(body, it.pointer)?.trim()?.ifEmpty { null }
   }
 
+  override fun activeChats(port: String, password: String): HttpProbe? =
+    manifest.chats?.active?.let { HttpProbe(url(port, it.path, emptyMap()), SecretForms.headers(auth, password)) }
+
+  override fun parseActiveChats(body: String): Set<String>? = manifest.chats?.active?.let { JsonPointer.ids(body, it.pointer) }
+
+  override val idleQuietSec: Int? get() = manifest.idle?.quietSec
+
   override fun passwordForms(password: String): List<String> = SecretForms.of(auth, password)
 
   /** How other agents' messages reach a running agent of this kind (`inbox`); null: it only pulls them. */

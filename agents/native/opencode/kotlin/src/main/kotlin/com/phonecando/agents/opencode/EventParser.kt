@@ -11,7 +11,7 @@ import org.json.JSONObject
 // "data":{"sessionID":"ses_…",…}} — type at top level, session in data.
 // v1 shapes (payload.*) are still accepted defensively.
 // Mapping notes (all device-verified on v2): execution.started OR any
-// step/reasoning/text/tool/inbox movement = WORKING; only
+// step/reasoning/text/tool movement or inbox delivery = WORKING; only
 // session.execution.succeeded = FINISHED (step.ended is not the end of a
 // run: in multi-step runs it comes between steps); execution.failed /
 // session.error = FAILED; session.deleted = GONE. From the upstream schema
@@ -20,9 +20,15 @@ import org.json.JSONObject
 // per busy period is execution.succeeded/failed/interrupted), and
 // permission.asked and form.created are WAITING (the run is alive but
 // blocked on the user; their replies and a cancelled form are WORKING).
-// Deliberately OTHER: execution.interrupted (the user's own stop),
-// catalog/agent/command/skill/websearch/reference/plugin/integration
-// updates, usage, instructions, renamed, server.connected. The supervisor
+// Deliberately OTHER: catalog/agent/command/skill/websearch/reference/
+// plugin/integration updates, usage, instructions, renamed,
+// server.connected; and what lands in a chat without a run: a message
+// filed in its inbox (session.inbox.enqueued, .cancelled,
+// .delivery.changed: our `deliver` call posts with resume false, so no run
+// and no verdict follows) and the user's own shell command
+// (session.shell.started; its result is filed the same way). A run always
+// shows with execution.started and its steps; session.inbox.delivered,
+// the inbox handing a message to a run, stays WORKING. The supervisor
 // reads the stream for activity, telemetry and alerts (engine/EngineStreams):
 // any kind but OTHER marks the engine used; notify/AlertRules alerts on
 // FINISHED, FAILED and WAITING.
@@ -82,6 +88,8 @@ internal object EventParser {
       "execution.interrupted" in type -> Kind.STOPPED
       // A pending form/permission: the run is alive but blocked on the user.
       type == "permission.asked" || type == "form.created" -> Kind.WAITING
+      // Filed in the chat with no run (see above).
+      type in NO_RUN -> Kind.OTHER
       "execution.started" in type || "step.started" in type || "step.streamed" in type ||
         "step.failed" in type ||
         "reasoning." in type || "text." in type || "part." in type || "tool." in type ||
@@ -106,6 +114,13 @@ internal object EventParser {
       title = title,
     )
   }
+
+  private val NO_RUN = setOf(
+    "session.inbox.enqueued",
+    "session.inbox.cancelled",
+    "session.inbox.delivery.changed",
+    "session.shell.started",
+  )
 
   private fun hasParent(body: JSONObject?): Boolean {
     if (body == null) return false

@@ -22,15 +22,19 @@ export function checkRuntime(add: Add, m: Json) {
   if ('signIn' in m) checkSignIn(add, m.signIn);
 }
 
-// A chat's title over HTTP (server); a tui engine's comes from its window
-// title (surfaces.chatTitle).
+// A chat's title, and the chats running now, over HTTP (server); a tui
+// engine's title comes from its window title (surfaces.chatTitle).
 function checkChats(add: Add, chats: unknown, style: string | null) {
-  if (!fields(add, '/chats', chats, ['title'], ['title'])) return;
-  if (style !== 'server') add('/chats', 'forbidden', 'a chat title over HTTP needs engine.style server');
-  const title = (chats as Json).title;
-  if (!fields(add, '/chats/title', title, ['http'], ['http'])) return;
-  const http = httpBlock(add, '/chats/title/http', (title as Json).http, ['json']);
-  if (http) string(add, '/chats/title/http/json', http.json, PATTERNS.jsonPointer, MAX.relPath);
+  if (!fields(add, '/chats', chats, ['title', 'active'], [])) return;
+  if (style !== 'server') add('/chats', 'forbidden', 'chats over HTTP need engine.style server');
+  const c = chats as Json;
+  if (!('title' in c) && !('active' in c)) add('/chats', 'required', 'title or active is required');
+  for (const key of ['title', 'active']) {
+    if (!(key in c)) continue;
+    if (!fields(add, `/chats/${key}`, c[key], ['http'], ['http'])) continue;
+    const http = httpBlock(add, `/chats/${key}/http`, (c[key] as Json).http, ['json']);
+    if (http) string(add, `/chats/${key}/http/json`, http.json, PATTERNS.jsonPointer, MAX.relPath);
+  }
 }
 
 function checkHooks(add: Add, hooks: unknown, id: unknown) {

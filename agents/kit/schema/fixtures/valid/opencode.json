@@ -132,6 +132,12 @@
         "path": "/api/session/{{sessionId}}",
         "json": "/data/title"
       }
+    },
+    "active": {
+      "http": {
+        "path": "/api/session/active",
+        "json": "/data"
+      }
     }
   },
   "inbox": {

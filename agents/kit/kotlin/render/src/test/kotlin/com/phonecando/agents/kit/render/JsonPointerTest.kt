@@ -31,4 +31,13 @@ class JsonPointerTest {
     assertNull(JsonPointer.text("not json", "/data"))
     assertNull(JsonPointer.text("", "/data"))
   }
+
+  @Test fun idsOfAnObjectOrAnArray() {
+    val body = doc.toString()
+    assertEquals(setOf("title", "n", "z", "a/b", "list"), JsonPointer.ids(body, "/data"))
+    assertEquals(setOf("x", "y"), JsonPointer.ids(body, "/data/list"))
+    assertNull(JsonPointer.ids(body, "/data/title"))
+    assertNull(JsonPointer.ids(body, "/nope"))
+    assertNull(JsonPointer.ids("not json", "/data"))
+  }
 }

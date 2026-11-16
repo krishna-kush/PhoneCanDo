@@ -32,7 +32,10 @@ class ManifestDecoderTest {
         "readiness": { "http": { "path": "/health" } }
       },
       "events": [{ "sse": { "path": "/events", "parser": "demo.events" } }],
-      "chats": { "title": { "http": { "path": "/chat/{{sessionId}}", "json": "/title" } } },
+      "chats": {
+        "title": { "http": { "path": "/chat/{{sessionId}}", "json": "/title" } },
+        "active": { "http": { "path": "/chats/active", "json": "/data" } }
+      },
       "idle": { "from": ["events"], "quietSec": 30 },
       "surfaces": {
         "home": "web",
@@ -71,6 +74,7 @@ class ManifestDecoderTest {
     assertEquals("/health", engine.readiness!!.http!!.path)
     assertEquals(listOf(EventSource.Sse("/events", "demo.events")), m.events)
     assertEquals(TitleSource("/chat/{{sessionId}}", "/title"), m.chats!!.title)
+    assertEquals(ActiveSource("/chats/active", "/data"), m.chats!!.active)
     assertEquals(Idle(listOf("events"), 30), m.idle)
     val surfaces = m.surfaces!!
     assertEquals(HomeSurface.WEB, surfaces.home)

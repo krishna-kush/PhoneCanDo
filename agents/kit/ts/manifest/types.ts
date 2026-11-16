@@ -190,7 +190,14 @@ export type EventSource =
 
 export interface Chats {
   /** A chat's title: GET `path`, then the string at JSON pointer `json`. */
-  title: { http: HttpPath & { json: string } };
+  title?: { http: HttpPath & { json: string } };
+  /**
+   * The chats running now: GET `path`, then at JSON pointer `json` an object
+   * keyed by chat id or an array of chat ids. The host asks when a chat has
+   * shown working with no event for `idle.quietSec`, and drops the ones it
+   * does not name.
+   */
+  active?: { http: HttpPath & { json: string } };
 }
 
 export interface Idle {

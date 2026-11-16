@@ -80,4 +80,18 @@ class EventParserTest {
     )
     assertEquals(EngineEvent(EngineEvent.Kind.WAITING, "ses_7"), v1)
   }
+
+  @Test fun whatLandsInAChatWithoutARunIsNoWork() {
+    fun kind(type: String) = parse("""{"type":"$type","data":{"sessionID":"ses_1","id":"msg_1"}}""")?.kind
+    // Our deliver call (resume false) files a message and starts no run: no verdict would ever end it.
+    assertEquals(EngineEvent.Kind.OTHER, kind("session.inbox.enqueued"))
+    assertEquals(EngineEvent.Kind.OTHER, kind("session.inbox.cancelled"))
+    assertEquals(EngineEvent.Kind.OTHER, kind("session.inbox.delivery.changed"))
+    // The user's own shell command, its result filed the same way.
+    assertEquals(EngineEvent.Kind.OTHER, kind("session.shell.started"))
+    assertEquals(EngineEvent.Kind.OTHER, kind("session.shell.ended"))
+    // A run taking a message from the inbox is work.
+    assertEquals(EngineEvent.Kind.WORKING, kind("session.inbox.delivered"))
+    assertEquals(EngineEvent.Kind.WORKING, kind("session.execution.started"))
+  }
 }

@@ -313,7 +313,7 @@
     "chats": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title"],
+      "minProperties": 1,
       "properties": {
         "title": {
           "type": "object",
@@ -322,6 +322,23 @@
           "properties": {
             "http": {
               "description": "A chat's title: GET path, then the string at the JSON pointer json.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "json"],
+              "properties": {
+                "path": { "$ref": "#/$defs/httpPath" },
+                "json": { "$ref": "#/$defs/jsonPointer" }
+              }
+            }
+          }
+        },
+        "active": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["http"],
+          "properties": {
+            "http": {
+              "description": "The chats running now: GET path, then at the JSON pointer json an object keyed by chat id or an array of chat ids. The host asks when a chat has shown working with no event for idle.quietSec, and drops the ones it does not name.",
               "type": "object",
               "additionalProperties": false,
               "required": ["path", "json"],
