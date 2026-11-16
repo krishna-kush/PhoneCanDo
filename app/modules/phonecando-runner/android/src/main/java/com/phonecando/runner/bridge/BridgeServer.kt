@@ -13,7 +13,8 @@ import java.io.IOException
 // the HTTP framing, bound to 127.0.0.1 only (nothing on the network/LAN can
 // reach it). Every request needs the bearer token its engine got at launch;
 // the token names the calling agent, and BridgeEntry decides the rest (the
-// HTTP routes through BridgeRouter, MCP at /mcp). Each authenticated call
+// HTTP routes through BridgeRouter, MCP at /mcp). A POST's body is read as
+// UTF-8 for every route (RequestBody). Each authenticated call
 // is also the capability checks' bridge contact (checks/: S1).
 class BridgeServer private constructor(
   port: Int,
@@ -53,11 +54,10 @@ class BridgeServer private constructor(
     if (method != "POST") return "{}"
     val declared = session.headers["content-length"]?.toLongOrNull() ?: 0L
     if (declared > MAX_BODY) throw BodyRefused(Reply.error(413, "too_large", "body over $MAX_BODY bytes"))
+    // Read here, never by parseBody: it takes a body with no charset for US-ASCII (RequestBody).
     return try {
-      val files = HashMap<String, String>()
-      session.parseBody(files)
-      files["postData"] ?: "{}"
-    } catch (e: Exception) {
+      RequestBody.read(session.inputStream, declared)
+    } catch (e: IOException) {
       throw BodyRefused(Reply.badRequest("bad_json", e.message ?: "cannot read body"))
     }
   }
