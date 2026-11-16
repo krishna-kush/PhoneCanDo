@@ -7,19 +7,24 @@ import com.phonecando.lme.api.model.ModelRecord
 import com.phonecando.lme.api.serve.ServedEndpoint
 import com.phonecando.lme.host.LaunchPlan
 import com.phonecando.lme.host.LaunchRequest
+import com.phonecando.lme.host.chats.ChatStorage
 import com.phonecando.lme.host.health.HealthProbe
 import com.phonecando.lme.host.health.Readiness
 import com.phonecando.lme.host.key.ApiKeys
 import com.phonecando.lme.host.llamacpp.LlamaCppRuntime
 import com.phonecando.lme.host.ram.RamVerdict
 import com.phonecando.network.http.UrlConnectionPort
-import com.phonecando.runner.engine.EngineEnv
 import com.phonecando.runner.engine.EngineStartError
 import com.phonecando.runner.engine.EngineStartException
 import com.phonecando.runner.engine.PortAllocator
 import com.phonecando.runner.engine.proc.ProcessReaper
 import com.phonecando.runner.engine.spawn.ServerSpawner
+import com.phonecando.runner.models.chats.ChatFiles
+import com.phonecando.runner.models.chats.ChatsOnStorage
+import com.phonecando.runner.models.measure.ModelMeasurer
 import java.io.File
+import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 
 // The local model servers (lme's llama-server): one per model, as many
@@ -46,6 +51,16 @@ import kotlin.concurrent.thread
 // process reaps what an earlier app process left (only then: later a
 // tagged server is a sibling of ours). The lock guards the map and the
 // leases only: launching and waiting run outside it.
+//
+// Before a start, what the server will hold is measured (ModelMeasurer:
+// llama.cpp's own count in a dry run, unless one kept here counts this
+// plan already) and the plan counts it; past the budget it plans a smaller
+// context, or refuses. With room on storage the server keeps its chats
+// there (lme's StoredChats): agents then talk to a go-between in front of
+// it (chats/ChatRelay) that saves the chat on its one slot before another
+// takes it and loads the right one back, and that saves the live chat
+// before a planned stop. Saves that keep failing put that model's chats
+// back in RAM from its next start ([chatsFailing]).
 internal class ModelServer(
   private val ports: PortAllocator,
   private val reaper: ProcessReaper,
@@ -60,11 +75,18 @@ internal class ModelServer(
   private val maxModels: () -> Int? = { null },
   /** The server of [holders]' model ended by itself; [detail] says how. */
   private val onDied: (holders: Set<String>, detail: String) -> Unit,
+  /** Measures a model's server before its start; null: the plan estimates. */
+  private val measurer: ModelMeasurer? = null,
+  /** Where a model's chats may be kept on storage, and the room there; null: in RAM. */
+  private val chats: (ModelRecord) -> ChatStorage? = { null },
 ) {
   private val lock = Any()
   private val runs = LinkedHashMap<String, ModelRun>()
   private val sweep = Any()
   private var swept = false
+
+  // Models whose chats could not be saved this process: in RAM from their next start.
+  private val failing: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
   /**
    * The server of [model] for [agentId]'s engine, started first when it is
@@ -86,7 +108,7 @@ internal class ModelServer(
       when (val decision = ModelSlotPolicy.decide(wanted, othersUp(current), maxModels())) {
         ModelSlotPolicy.Decision.Reuse -> {
           current!!.leases += agentId
-          return checkNotNull(current.endpoint)
+          return checkNotNull(current.agentEndpoint)
         }
         ModelSlotPolicy.Decision.Loading -> throw unavailable(ModelReasons.loading(model.name))
         is ModelSlotPolicy.Decision.Capped -> throw capped(decision.cap)
@@ -102,14 +124,15 @@ internal class ModelServer(
     previous?.let { ModelRun.end(listOf(it), reaper, ports) }
     if (orphans.isNotEmpty()) onDied(orphans, ModelReasons.exited(previous?.model?.name ?: model.name, null))
     try {
-      val endpoint = launch(mine)
+      val (endpoint, agents) = launch(mine)
       synchronized(lock) {
         if (runs[model.id] !== mine) throw stopped()
         mine.endpoint = endpoint
+        mine.agentEndpoint = agents
       }
       watch(mine)
       Log.i(LOG_TAG, "model ${model.id} ready for $agentId")
-      return endpoint
+      return agents
     } catch (e: Exception) {
       synchronized(lock) {
         if (runs[model.id] === mine) runs.remove(model.id)
@@ -146,6 +169,7 @@ internal class ModelServer(
       run
     }
     Log.i(LOG_TAG, "no agent uses model ${ending.model.id} any more, stopping it")
+    saveBeforeStop(ending)
     ModelRun.end(listOf(ending), reaper, ports)
   }
 
@@ -156,8 +180,19 @@ internal class ModelServer(
       run to run.leases.toSet().also { run.leases.clear() }
     }
     Log.i(LOG_TAG, "stopping model $modelId")
+    saveBeforeStop(ending)
     ModelRun.end(listOf(ending), reaper, ports)
     return holders
+  }
+
+  /** Whether [modelId]'s chats could not be kept on storage this process (they stay in RAM). */
+  fun chatsFailing(modelId: String): Boolean = modelId in failing
+
+  // A planned stop: the chat on its slot is kept on storage first, when the slot is free soon.
+  private fun saveBeforeStop(run: ModelRun) {
+    val relay = run.relay ?: return
+    if (run.process?.isAlive != true) return
+    relay.switch.saveBeforeStop(SAVE_WAIT_MS)
   }
 
   /** The agents holding [modelId]'s server (also while it loads). */
@@ -165,7 +200,7 @@ internal class ModelServer(
 
   /** The servers that answer now: each one's model, endpoint and the agents holding it. */
   fun serving(): List<Serving> = synchronized(lock) {
-    runs.values.mapNotNull { run -> run.endpoint?.let { Serving(run.model, it, run.leases.toSet()) } }
+    runs.values.mapNotNull { run -> run.endpoint?.let { Serving(run.model, it, run.leases.toSet(), run.heldBytes) } }
   }
 
   /** Every server loading or ready, with its holders (the memory guard). */
@@ -173,8 +208,8 @@ internal class ModelServer(
     runs.values.filter { it.alive }.map { Loaded(it.model, it.endpoint != null, it.leases.toSet()) }
   }
 
-  /** A ready server; [endpoint] keeps its key out of toString. */
-  data class Serving(val model: ModelRecord, val endpoint: ServedEndpoint, val holders: Set<String>)
+  /** A ready server; [endpoint] keeps its key out of toString; [heldBytes]: what it takes from free memory (LaunchPlan.heldBytes). */
+  data class Serving(val model: ModelRecord, val endpoint: ServedEndpoint, val holders: Set<String>, val heldBytes: Long = 0)
 
   /** A server loading or ready (no endpoint, so no key). */
   data class Loaded(val model: ModelRecord, val ready: Boolean, val holders: Set<String>)
@@ -193,8 +228,9 @@ internal class ModelServer(
   // Servers of other models than [current]'s loading or ready.
   private fun othersUp(current: ModelRun?): Int = runs.values.count { it !== current && it.alive }
 
-  // Plans, spawns and waits for ready; the run is its model's while it does.
-  private fun launch(mine: ModelRun): ServedEndpoint {
+  // Measures, plans, spawns and waits for ready, then puts the go-between in front when chats are kept on storage; the run is its
+  // model's while it does. The server's endpoint and the agents'.
+  private fun launch(mine: ModelRun): Pair<ServedEndpoint, ServedEndpoint> {
     val id = mine.model.id
     val exe = File(libDir, BINARY)
     if (!exe.isFile) throw unavailable(ModelReasons.noServer())
@@ -206,14 +242,26 @@ internal class ModelServer(
     }
     val key = ApiKeys.newKey()
     ModelServerKeys.add(key)
-    val plan = LlamaCppRuntime.plan(
-      LaunchRequest(mine.model, modelFile(mine.model).absolutePath, exe.absolutePath, device(), port, key),
+    val storage = if (id in failing) null else chats(mine.model)
+    var request = LaunchRequest(mine.model, modelFile(mine.model).absolutePath, exe.absolutePath, device(), port, key, measurer?.known(mine.model), storage)
+    request = measurer?.measured(request) ?: request
+    if (synchronized(lock) { runs[id] !== mine }) throw stopped()
+    var plan = LlamaCppRuntime.plan(request)
+    var files: ChatFiles? = null
+    if (plan.storedChats > 0 && storage != null) {
+      files = ChatsOnStorage.files(File(storage.dir), mine.model, plan, exe.length())
+      if (files == null) plan = LlamaCppRuntime.plan(request.copy(chats = null))
+    }
+    Log.i(
+      LOG_TAG,
+      "model $id: context ${plan.contextSize}, prompt cache ${plan.promptCacheMiB} MiB, ${plan.totalBytes / MIB} MiB in all " +
+        "(${if (plan.measured) "measured" else "estimated"}), chats on storage ${plan.storedChats}, ${plan.ram}",
     )
-    Log.i(LOG_TAG, "model $id: context ${plan.contextSize}, prompt cache ${plan.promptCacheMiB} MiB, ${plan.totalBytes / MIB} MiB in all, ${plan.ram}")
+    mine.heldBytes = plan.heldBytes
     if (plan.ram is RamVerdict.OverBudget) Log.w(LOG_TAG, "model $id runs past the RAM budget at its chosen context")
     val log = logFile(id)
     log.parentFile?.mkdirs()
-    val proc = ServerSpawner.spawn(plan.argv, env(plan, id), log.parentFile ?: File("/"), log)
+    val proc = ServerSpawner.spawn(plan.argv, ServerEnv.of(plan.env, id), log.parentFile ?: File("/"), log)
     if (!mine.attachProcess(proc)) {
       reaper.stop(listOf(proc), emptySet())
       throw stopped()
@@ -222,7 +270,37 @@ internal class ModelServer(
     val probe = HealthProbe(UrlConnectionPort(connectTimeoutMillis = PROBE_CONNECT_MS, readTimeoutMillis = PROBE_READ_MS))
     Readiness(probe = { probe.probe(plan.healthUrl) }, alive = { proc.isAlive })
       .await { synchronized(lock) { runs[id] !== mine } }
-    return plan.endpoint
+    return plan.endpoint to (files?.let { relay(mine, plan, it) } ?: plan.endpoint)
+  }
+
+  // The go-between in front of [mine]'s server, on a port of ours: the endpoint agents get. Without one (no port to listen on)
+  // agents talk to the server itself, and its chats stay as they are on its slot.
+  private fun relay(mine: ModelRun, plan: LaunchPlan, files: ChatFiles): ServedEndpoint? {
+    val id = mine.model.id
+    val port = try {
+      ports.allocate(null).port
+    } catch (_: EngineStartException) {
+      Log.w(LOG_TAG, "model $id: no port for a go-between; agents talk to its server")
+      return null
+    }
+    val relay = try {
+      ChatsOnStorage.relay(files, plan, port, onFailing = { chatsFailed(id) }, log = { Log.i(LOG_TAG, "model $id: $it") })
+    } catch (e: IOException) {
+      ports.release(port)
+      Log.w(LOG_TAG, "model $id: no go-between (${e.message}); agents talk to its server")
+      return null
+    }
+    if (!mine.attachRelay(relay, port)) {
+      relay.close()
+      ports.release(port)
+      throw stopped()
+    }
+    return plan.endpoint.copy(baseUrl = "http://${LlamaCppRuntime.HOST}:$port")
+  }
+
+  private fun chatsFailed(modelId: String) {
+    failing += modelId
+    Log.w(LOG_TAG, "model $modelId: its chats could not be saved; they stay in RAM from its next start")
   }
 
   // What an earlier app process left: its ports and RAM are ours to take
@@ -234,17 +312,6 @@ internal class ModelServer(
       swept = true
       reaper.stop(emptyList(), setOf(TAG))
     }
-  }
-
-  // Our process env, the plan's (its key), and the tags that make it ours to reap and tell apart.
-  private fun env(plan: LaunchPlan, modelId: String): Map<String, String> {
-    val env = LinkedHashMap(System.getenv())
-    env.remove(EngineEnv.BRIDGE_URL)
-    env.remove(EngineEnv.BRIDGE_TOKEN)
-    env.putAll(plan.env)
-    env[EngineEnv.AGENT] = TAG
-    env[EngineEnv.MODEL] = modelId
-    return env
   }
 
   // An exit nobody asked for: the model is free, and its holders go down.
@@ -290,6 +357,9 @@ internal class ModelServer(
     private const val PROBE_CONNECT_MS = 2_000
     private const val PROBE_READ_MS = 5_000
     private const val MIB = 1L shl 20
+
+    /** How long a planned stop waits for the slot to be free to keep its chat on storage. */
+    private const val SAVE_WAIT_MS = 2_000L
 
     /** A model's server log name: model-server-<id>.log, the id kept to a-z, 0-9 and dashes (ModelIds allows no more). */
     fun logName(modelId: String): String =

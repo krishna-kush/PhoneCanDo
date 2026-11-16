@@ -49,6 +49,8 @@ android {
       def agentsDir = file('../../../../agents')
       inputs.files(fileTree(agentsDir) { include '*/*/agent.json', 'runtimes/**', 'shared/phone-tools/tools.json' })
       systemProperty 'phonecando.agentsDir', agentsDir.absolutePath
+      // Test files live under build/, not the system temp dir (RAM on some PCs).
+      systemProperty 'java.io.tmpdir', temporaryDir.absolutePath
     }
   }
 }
