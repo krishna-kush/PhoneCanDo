@@ -87,7 +87,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
       {image && image.state !== 'ready' ? <ImageStatus image={image} /> : null}
       {installBusy ? <InstallStatus agent={agent} image={image} /> : null}
 
-      <RowGroup title="Settings">
+      <RowGroup title="Settings" barcode="agentSettings">
         <MascotRow agentId={agentId} />
         {hasModelSetting(agent, device.supported) ? (
           <LinkRow label="Model" {...rowProps(modelDetail(agent, models))} onPress={() => push({ name: 'agent-model', agentId })} />

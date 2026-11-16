@@ -9,7 +9,7 @@ import RowGroup from '../../common/rows/RowGroup';
 // on the left, the value on the right, dashed rules between.
 export default function SystemFacts({ facts }: { facts: Fact[] }) {
   return (
-    <RowGroup title="Details">
+    <RowGroup title="Details" barcode="systemDetails">
       {facts.map((f) => (
         <RowFrame key={f.label} bare>
           <XStack alignItems="center" gap="3" minHeight={44} paddingHorizontal={ROW_GUTTER}>

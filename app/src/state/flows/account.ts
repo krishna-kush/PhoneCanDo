@@ -52,7 +52,11 @@ export async function signInWithGoogle(): Promise<void> {
   await Promise.all([syncLinksWithAccount(), syncSettingsWithAccount()]);
 }
 
-/** Re-reads the account from the server (and notices a session that ended elsewhere). */
+/**
+ * Re-reads the account from the server (and notices a session that ended
+ * elsewhere). When the server can't be reached, its error says why, so the
+ * Account page stops waiting for the answer.
+ */
 export async function refreshAccount(): Promise<void> {
   if (!signedIn()) {
     useAccountStore.getState().hydrate();
@@ -60,7 +64,8 @@ export async function refreshAccount(): Promise<void> {
   }
   const r = await fetchAccount();
   if (r.ok) useAccountStore.getState().set({ account: r.value });
-  else goneIfSignedOut(r.error);
+  else if (r.error === 'signed_out') goneIfSignedOut(r.error);
+  else useAccountStore.getState().set({ error: r.error });
 }
 
 /** Ends the session; the links stay on this phone. */

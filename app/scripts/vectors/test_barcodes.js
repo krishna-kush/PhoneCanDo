@@ -1,8 +1,9 @@
-// The key strips' easter-egg barcodes (src/ui/common/rows/barcode/): the
-// lines stay short and distinct, bars.ts is what make-barcodes.mjs writes
-// for them now (fails when a line changed and bars.ts was not rebuilt:
-// pnpm barcodes), and a title always picks the same line. Imports the real
-// modules (Node 22.18+ strips their types), so these cannot drift.
+// The key strips' easter-egg barcodes (src/ui/common/rows/barcode/): each
+// box's line stays short and its own, bars.ts is what make-barcodes.mjs
+// writes for them now (fails when a line changed and bars.ts was not
+// rebuilt: pnpm barcodes), its runs draw exactly the site's encoder's bars,
+// and a day's box gets its day's line. Imports the real modules (Node
+// 22.18+ strips their types), so these cannot drift.
 // Run: node test_barcodes.js (or pnpm check:vectors)
 'use strict';
 const fs = require('node:fs');
@@ -20,25 +21,36 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
 (async () => {
   const { BARCODE_LINES, LINE_MAX } = await import(src('ui/common/rows/barcode/lines.ts'));
   const { BARS } = await import(src('ui/common/rows/barcode/bars.ts'));
-  const { lineFor } = await import(src('ui/common/rows/barcode/pick.ts'));
+  const { drawBars } = await import(src('ui/common/rows/barcode/draw.ts'));
+  const { weekdayBarcode } = await import(src('ui/common/rows/barcode/weekdays.ts'));
+  const messageDays = await import(src('ui/messages/logic/days.ts'));
+  const clock = await import(src('ui/schedule/logic/clock.ts'));
+  const { code128 } = await import(pathToFileURL(path.join(__dirname, '../../../web/src/lib/code128.ts')).href);
   const gen = await import(pathToFileURL(path.join(__dirname, '../make-barcodes.mjs')).href);
+  const ids = Object.keys(BARCODE_LINES);
+  const lines = Object.values(BARCODE_LINES);
 
   // --- the lines ------------------------------------------------------------------
-  t('every line fits', BARCODE_LINES.filter((l) => l.length > LINE_MAX), []);
-  t('no line twice', new Set(BARCODE_LINES).size, BARCODE_LINES.length);
-  t('capitals, digits, spaces and dashes only', BARCODE_LINES.filter((l) => !/^[A-Z0-9 -]+$/.test(l)), []);
+  t('every line fits', lines.filter((l) => l.length > LINE_MAX), []);
+  t('no line twice', lines.filter((l, i) => lines.indexOf(l) !== i), []);
+  t('capitals, digits, spaces and dashes only', lines.filter((l) => !/^[A-Z0-9 -]+$/.test(l)), []);
 
   // --- bars.ts is current -----------------------------------------------------------
-  t('bars.ts is what make-barcodes.mjs writes (pnpm barcodes)', fs.readFileSync(gen.BARS_FILE, 'utf8') === gen.barsSource(), true);
-  t('one barcode per line', BARS.length, BARCODE_LINES.length);
-  t('ten-module quiet zones either side', BARS.every((b) => b.path.startsWith('M10 ')), true);
+  t('bars.ts is what make-barcodes.mjs writes (pnpm barcodes)', fs.readFileSync(gen.BARS_FILE, 'utf8').replace(/\r\n/g, '\n') === gen.barsSource(), true);
+  t('bars for every line, by its id', Object.keys(BARS), ids);
+  const encoded = (line) => {
+    const code = code128(line);
+    return { width: code.width + 20, path: code.bars.map(({ x, w }) => `M${x + 10} 0h${w}v1h-${w}z`).join('') };
+  };
+  t('runs draw the encoder\'s own bars, ten-module quiet zones either side', ids.filter((id) => q(drawBars(BARS[id])) !== q(encoded(BARCODE_LINES[id]))), []);
+  t('draw: a bar, a space, a bar', drawBars('121'), { width: 24, path: 'M10 0h1v1h-1zM13 0h1v1h-1z' });
 
-  // --- which line a title picks -------------------------------------------------------
-  const titles = ['Settings', 'Messages', 'Schedules', 'Used by', 'More', 'Details', '2 agents on it', 'Today', 'Recent runs'];
-  t('a title always picks the same line', titles.map((x) => lineFor(x, 9)), titles.map((x) => lineFor(x, 9)));
-  t('picks stay in range', titles.every((x) => { const i = lineFor(x, BARS.length); return i >= 0 && i < BARS.length; }), true);
-  t('the empty title picks the first FNV bucket', lineFor('', 9), 0x811c9dc5 % 9);
-  t('our titles spread over several lines', new Set(titles.map((x) => lineFor(x, BARS.length))).size >= 4, true);
+  // --- a day's box ------------------------------------------------------------------
+  const local = (y, mo, d, h = 12) => new Date(y, mo, d, h).getTime();
+  const sun = local(2026, 10, 15);
+  t('each weekday its own line', [0, 1, 2, 3, 4, 5, 6].map((i) => weekdayBarcode(local(2026, 10, 15 + i))), ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
+  t('messages: today, yesterday, no time, then the weekday', [sun - 3600e3, local(2026, 10, 14), 0, local(2026, 10, 11)].map((at) => messageDays.dayBarcode(at, sun)), ['messagesToday', 'messagesYesterday', 'messagesEarlier', 'wednesday']);
+  t('schedules: today, tomorrow, then the weekday', [sun, local(2026, 10, 16), local(2026, 10, 20)].map((day) => clock.dayBarcode(clock.startOfDay(day), sun)), ['schedulesToday', 'schedulesTomorrow', 'friday']);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

@@ -27,7 +27,7 @@ export default function LicensesDialog({
             with the app.
           </Text>
           <YStack flex={1} minHeight={0}>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
               <Text fontSize={12} color="muted" lineHeight="18px" userSelect="text">
                 {LICENSES}
               </Text>

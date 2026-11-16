@@ -3,15 +3,19 @@ import AppButton from '../../common/AppButton';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import Note from '../parts/Note';
+import HireBadge from './form/HireBadge';
+import StepStrip from './form/StepStrip';
 import FormField from './FormField';
 import FormScreen from './FormScreen';
 import KindReviewView from './KindReviewView';
+import { IMPORT_STEPS, reviewBadgeLines, reviewStamp } from './logic/badge';
 import SafetyNotes from './SafetyNotes';
 import { useImport } from './useImport';
 import { useStepBack } from './useStepBack';
 
 // Import a custom agent: paste its JSON (someone's export), then read what
-// it runs, install script first, before adding it.
+// it runs, install script first, under its crew badge (a transfer, stamped
+// ready), before adding it.
 export default function ImportAgent() {
   const back = useAppStore((s) => s.back);
   const im = useImport();
@@ -24,6 +28,15 @@ export default function ImportAgent() {
     return (
       <Screen>
         <PageHeader kicker="custom agents · review" title={`Import ${im.ready.review.label}`} />
+        <StepStrip steps={IMPORT_STEPS} at={1} />
+        <HireBadge
+          mode="import"
+          name={im.ready.review.label}
+          lookId={im.ready.review.id}
+          lines={reviewBadgeLines(im.ready.review)}
+          mood="happy"
+          stamp={reviewStamp('import')}
+        />
         <Note>This is everything the agent runs on your phone. Read it before you add it.</Note>
         <KindReviewView review={im.ready.review} />
         <SafetyNotes />
@@ -42,6 +55,7 @@ export default function ImportAgent() {
   return (
     <FormScreen>
       <PageHeader kicker="custom agents" title="Import an agent" />
+      <StepStrip steps={IMPORT_STEPS} at={0} />
       <Note>Paste an agent exported from PhoneCanDo: its whole JSON, from the first brace to the last.</Note>
       <AppButton variant="secondary" onPress={im.paste}>
         Paste from clipboard

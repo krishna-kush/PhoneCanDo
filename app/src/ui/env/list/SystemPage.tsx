@@ -10,11 +10,15 @@ import { envTitle } from '../logic/titles';
 import Note from '../parts/Note';
 import EnvSection from './EnvSection';
 import SystemFacts from './SystemFacts';
+import SystemMark from './SystemMark';
 
 const KICKER = { default: 'system · in the app', registry: 'system · downloaded', android: 'system · no linux' } as const;
 
-// One system (env): what it is (logic/systemFacts.ts), its download, the
-// agents on it and Delete (EnvSection). envId null: the machines whose env
+// The logo's side beside the page's title.
+const LOGO = 48;
+
+// One system (env): its logo by its name, what it is (logic/systemFacts.ts),
+// its download, the agents on it and Delete (EnvSection). envId null: the machines whose env
 // or image we cannot find, so they can still be opened and deleted.
 export default function SystemPage({ envId }: { envId: string | null }) {
   const envs = useLinuxStore((s) => s.envs);
@@ -41,7 +45,11 @@ export default function SystemPage({ envId }: { envId: string | null }) {
 
   return (
     <Screen>
-      <PageHeader kicker={env ? KICKER[env.source.kind] : 'system · missing'} title={env ? envTitle(env.source) : "Machines we can't place"} />
+      <PageHeader
+        kicker={env ? KICKER[env.source.kind] : 'system · missing'}
+        title={env ? envTitle(env.source) : "Machines we can't place"}
+        trailing={<SystemMark env={env} size={LOGO} />}
+      />
       {env ? (
         <SystemFacts facts={systemFacts(env, Date.now())} />
       ) : (

@@ -19,7 +19,8 @@ const SCROLL_EVENT_MS = 100;
 // Full-screen column: 16dp padding, 12dp gaps. `scroll` wraps content in a
 // ScrollView for list screens (Home / Project / Env / Settings) so short
 // phones don't clip the form; a line that turns up at its foot can scroll
-// itself into view (screenEnd.ts).
+// itself into view (screenEnd.ts). No scrollbar: our pages are short and
+// wear their own look (an agent's chat and terminal keep theirs).
 export default function Screen({ children, scroll = true, fabClearance = true, viewport = false }: Props) {
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const [feed] = useState(() => (viewport && scroll ? createViewport(scrollRef) : null));
@@ -43,6 +44,7 @@ export default function Screen({ children, scroll = true, fabClearance = true, v
           flexGrow: 1,
         }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
         onLayout={feed ? (e) => feed.resized(e.nativeEvent.layout.height) : undefined}
         onScroll={feed ? (e) => feed.scrolled(e.nativeEvent.contentOffset.y) : undefined}
         scrollEventThrottle={feed ? SCROLL_EVENT_MS : undefined}

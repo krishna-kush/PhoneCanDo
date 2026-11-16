@@ -4,9 +4,11 @@ import type { Agent } from '../../../engine/agents/records';
 import { agentKind } from '../../../engine/agents/registry';
 import type { ImageId } from '../../../engine/linux/types';
 import { useAgentsStore } from '../../../state/agents';
+import { useDesksStore } from '../../../state/desks';
 import { shareBlockFor } from '../../../state/flows/kindOffers';
 import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { nextAgentName } from '../../../state/flows/logic/names';
+import { deskCode, peekSeat } from '../../../state/logic/desks';
 import { useKindsStore } from '../../../state/kinds';
 import AppCard from '../../common/AppCard';
 import ConfirmDialog from '../../common/ConfirmDialog';
@@ -43,6 +45,8 @@ export default function ShareMachineList({ pick, choices, busy, onShare }: Props
   );
 
   const names = asking ? asking.agents.map((a) => a.name) : [];
+  // The desk it would take in that machine's room, for the name the dialog shows.
+  const code = useDesksStore((s) => (asking ? deskCode(peekSeat(s.desks, asking.imageId)) : ''));
   const ask = (choice: ShareChoice<Agent>) => {
     if (!busy) setAsking(choice);
   };
@@ -64,7 +68,7 @@ export default function ShareMachineList({ pick, choices, busy, onShare }: Props
               subtitle={blocked ?? choice.subtitle}
               icon={
                 choice.logoKeys.length > 0 ? (
-                  <SystemLogo keys={choice.logoKeys} letter={choice.system.charAt(0).toUpperCase()} size={32} />
+                  <SystemLogo keys={choice.logoKeys} size={32} />
                 ) : undefined
               }
               onPress={blocked ? undefined : () => ask(choice)}
@@ -77,7 +81,7 @@ export default function ShareMachineList({ pick, choices, busy, onShare }: Props
         open={asking != null}
         onClose={() => setAsking(null)}
         title={shareTitle(names)}
-        message={shareMessage(nextAgentName(label, agents.map((a) => a.name)), names)}
+        message={shareMessage(nextAgentName(label, agents.map((a) => a.name), code), names)}
         cancelLabel="Its own machine (recommended)"
         confirmLabel="Share"
         onConfirm={share}

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useOsLogosStore } from '../../../state/osLogos';
 import { pickLogo } from '../logic/osLogo';
 
-/** A system's Docker Hub logo by its logo keys (logic/osLogo.ts), as the Which Linux? list shows it; null draws its letter. */
+/** A system's Docker Hub logo by its logo keys (logic/osLogo.ts), as the Which Linux? list shows it; null while none is on file. */
 export function useSystemLogo(keys: readonly string[]): string | null {
   const logos = useOsLogosStore((s) => s.logos);
   const hydrated = useOsLogosStore((s) => s.hydrated);

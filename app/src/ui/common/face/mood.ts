@@ -1,5 +1,6 @@
-// A-01's face for an agent: its engine state as a mood, and the agent's
-// serial; its shape and what it wears are its mascot (state/mascots.ts).
+// A-01's face for an agent: its engine state as a mood; its shape and what
+// it wears are its mascot (state/mascots.ts). An agent's code is its desk
+// (state/desks.ts): the A-numbers are our own characters'.
 // Pure (zero RN imports). The face is never the only signal: rows say the
 // state in words too.
 import type { EngineState } from '../../../engine/agents/records';
@@ -26,13 +27,4 @@ export function moodOf(state: EngineState | null | undefined, installing = false
     default:
       return 'asleep';
   }
-}
-
-type Dated = { id: string; createdAt: number };
-
-/** "A-01" for the oldest agent, "A-02" for the next…; like the site's A-01 and A-02. */
-export function agentSerial(agents: readonly Dated[], id: string): string {
-  const order = [...agents].sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
-  const n = order.findIndex((a) => a.id === id) + 1;
-  return `A-${String(Math.max(n, 1)).padStart(2, '0')}`;
 }

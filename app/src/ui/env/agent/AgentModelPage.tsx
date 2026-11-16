@@ -8,11 +8,11 @@ import { useAgentRecords } from './useAgentRecords';
 // An agent's Model setting: the local model it runs on, or its own setup.
 export default function AgentModelPage({ agentId }: { agentId: string }) {
   const { agent } = useAgentRecords(agentId);
-  const { serial } = useAgentLook(agentId);
+  const { desk } = useAgentLook(agentId);
   if (!agent) return <AgentGone />;
   return (
     <Screen>
-      <PageHeader kicker={`${serial} · ${agent.name}`} title="Model" />
+      <PageHeader kicker={`${desk} · ${agent.name}`} title="Model" />
       <ModelSection agent={agent} />
     </Screen>
   );

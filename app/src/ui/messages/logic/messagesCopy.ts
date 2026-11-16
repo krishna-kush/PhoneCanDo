@@ -3,17 +3,18 @@
 // lines. Plain and short; the agents are AI agents, never "you". Pure
 // (zero RN imports).
 import type { ScreenQueue } from '../../../engine/messages/types';
+import { dayMonth, dayMonthYear } from '../../common/dates.ts';
 import { nameList } from '../../memory/logic/memoryCopy.ts';
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function hhmm(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-function startOfDay(ms: number): number {
+/** Midnight before `ms`, in the phone's own time zone. */
+export function startOfDay(ms: number): number {
   const d = new Date(ms);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
@@ -29,8 +30,7 @@ export function messageTime(sentAt: number, now: number): string {
   const today = startOfDay(now);
   if (sentAt >= today) return hhmm(at);
   if (sentAt >= startOfDay(today - 1)) return `yesterday ${hhmm(at)}`;
-  const day = `${at.getDate()} ${MONTHS[at.getMonth()]}`;
-  return at.getFullYear() === new Date(now).getFullYear() ? `${day} ${hhmm(at)}` : `${day} ${at.getFullYear()}`;
+  return at.getFullYear() === new Date(now).getFullYear() ? `${dayMonth(at)} ${hhmm(at)}` : dayMonthYear(at);
 }
 
 /**
@@ -97,4 +97,12 @@ export function emptyText(agentName: string | null): string {
   return agentName
     ? `No messages to or from ${agentName} yet.`
     : 'No messages yet. When agents talk to each other, it shows here.';
+}
+
+/** The empty page's box. */
+export const EMPTY_TITLE = 'Inbox · empty';
+
+/** Under the empty page's line: A-01 dozing, or up for a moment after a tap. */
+export function napLine(up: boolean): string {
+  return up ? 'A-01 · nothing yet, back to sleep' : 'A-01 · napping by the inbox';
 }

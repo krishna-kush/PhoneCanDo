@@ -1,10 +1,6 @@
 import { XStack, YStack } from 'tamagui';
-import { useOpening } from '../nav/opening';
-import { useTheme } from './globals';
-import OpenMark from './OpenMark';
 import PlainText from './PlainText';
-import Nudge from './rows/Nudge';
-import RowFrame from './rows/RowFrame';
+import OpenRow from './rows/OpenRow';
 
 type Props = {
   label: string;
@@ -16,47 +12,43 @@ type Props = {
   note?: string;
   /** Red note: it says something is wrong. */
   noteAlert?: boolean;
+  /** How it is set now, a mono line under the note (Settings' rows). */
+  now?: string;
   onPress: () => void;
   /** How far the press area reaches past its slot (RowFrame). */
   reach?: { x: number; y: number };
 };
 
-// A row that opens a page, Android settings style: the name, a mono
-// detail, a › (a spinner while the page opens) that leans toward the page
-// while held, and a note under it. The drawer's places and an agent's
-// settings use it.
-export default function LinkRow({ label, detail, alert = false, note, noteAlert = false, onPress, reach }: Props) {
-  const t = useTheme();
-  const open = useOpening(onPress);
+// A row that opens a page, Android settings style (an OpenRow): the name,
+// a mono detail, a note under it and how it is set now. The drawer's
+// places, an agent's settings and Settings' pages use it.
+export default function LinkRow({ label, detail, alert = false, note, noteAlert = false, now, onPress, reach }: Props) {
   return (
-    <RowFrame
-      press={{ onPress: open.press, role: 'button', label: detail ? `${label}, ${detail}` : label, hint: note }}
-      reach={reach}
-    >
-      <XStack alignItems="center" gap="3">
-        <YStack flex={1} minWidth={0} gap={2}>
-          <XStack alignItems="center" gap="3">
-            <PlainText fontSize={16} fontWeight="500" numberOfLines={1} flexShrink={0}>
-              {label}
-            </PlainText>
-            <XStack flex={1} minWidth={0} justifyContent="flex-end">
-              {detail ? (
-                <PlainText fontFamily="mono" fontSize={12} color={alert ? 'primary' : 'dim'} numberOfLines={1}>
-                  {detail}
-                </PlainText>
-              ) : null}
-            </XStack>
+    <OpenRow label={detail ? `${label}, ${detail}` : label} hint={note} onPress={onPress} reach={reach}>
+      <YStack gap={2}>
+        <XStack alignItems="center" gap="3">
+          <PlainText fontSize={16} fontWeight="500" numberOfLines={1} flexShrink={0}>
+            {label}
+          </PlainText>
+          <XStack flex={1} minWidth={0} justifyContent="flex-end">
+            {detail ? (
+              <PlainText fontFamily="mono" fontSize={12} color={alert ? 'primary' : 'dim'} numberOfLines={1}>
+                {detail}
+              </PlainText>
+            ) : null}
           </XStack>
-          {note ? (
-            <PlainText fontSize={13} color={noteAlert ? 'primary' : 'muted'}>
-              {note}
-            </PlainText>
-          ) : null}
-        </YStack>
-        <Nudge>
-          <OpenMark opening={open.opening} size={14} color={t.faint} />
-        </Nudge>
-      </XStack>
-    </RowFrame>
+        </XStack>
+        {note ? (
+          <PlainText fontSize={13} color={noteAlert ? 'primary' : 'muted'}>
+            {note}
+          </PlainText>
+        ) : null}
+        {now ? (
+          <PlainText fontFamily="mono" fontSize={11} color="secondaryInk" numberOfLines={1}>
+            {now}
+          </PlainText>
+        ) : null}
+      </YStack>
+    </OpenRow>
   );
 }

@@ -3,14 +3,15 @@ import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import SectionTitle from '../../common/SectionTitle';
 import Note from '../../env/parts/Note';
-import CapPicker from '../caps/CapPicker';
 import RamGuardSection from '../../memory/RamGuardSection';
+import SeatsPicker from '../caps/SeatsPicker';
 import { useRunLimits } from '../caps/useRunLimits';
 import { pageKicker } from '../logic/hub';
 
-// Settings → Agents & models: the caps on what runs at once, none unless
-// the user picks one (the models' cap only on a phone that runs local
-// models), then the RAM guard, which watches whatever the caps say.
+// Settings → Agents & models: the caps on what runs at once, each a bench
+// of seats (caps/SeatsPicker.tsx), none unless the user picks one (the
+// models' cap only on a phone that runs local models), then the RAM guard,
+// which watches whatever the caps say.
 export default function AgentsPage() {
   const { limits, save, supported, failed } = useRunLimits();
   const modelsOffered = useModelsStore((s) => s.device.supported);
@@ -22,7 +23,7 @@ export default function AgentsPage() {
       </Note>
       {supported ? null : <Note tone="error">{"This build can't keep caps yet. Update the app to set them."}</Note>}
       <SectionTitle>Agents at once</SectionTitle>
-      <CapPicker
+      <SeatsPicker
         kind="agents"
         value={limits.maxAgents}
         disabled={!supported}
@@ -31,7 +32,7 @@ export default function AgentsPage() {
       {modelsOffered ? (
         <>
           <SectionTitle>Local models at once</SectionTitle>
-          <CapPicker
+          <SeatsPicker
             kind="models"
             value={limits.maxModels}
             disabled={!supported}

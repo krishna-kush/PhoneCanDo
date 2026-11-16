@@ -4,8 +4,11 @@ import AppButton from '../../common/AppButton';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import Note from '../parts/Note';
+import HireBadge from './form/HireBadge';
+import StepStrip from './form/StepStrip';
 import FormPage from './FormPage';
 import KindReviewView from './KindReviewView';
+import { FORM_STEPS, reviewBadgeLines, reviewStamp } from './logic/badge';
 import { moreHasProblem } from './logic/moreSettings';
 import SafetyNotes from './SafetyNotes';
 import { useKindForm } from './useKindForm';
@@ -14,7 +17,8 @@ import { useStepBack } from './useStepBack';
 type Props = { kindId: string | null; forNewAgent: boolean };
 
 // A custom agent kind of the user's own: its fields (FormPage), then a
-// review of what it runs (the install among it) before it is saved. Saved
+// review of what it runs (the install among it) before it is saved, under
+// its crew badge with a stamp slammed on. Saved
 // from New agent's Choose agent step, it goes back there with the new kind
 // picked; else back to where it was opened. Whether More settings is open
 // lives here, so it stays as it was when the review goes back to the form.
@@ -41,9 +45,13 @@ export default function CustomAgentForm({ kindId, forNewAgent }: Props) {
       if (forNewAgent) returnWithKind(id);
       else back();
     };
+    const mode = kindId ? 'edit' : 'new';
+    const r = k.ready.review;
     return (
       <Screen>
         <PageHeader kicker="custom agents · review" title="Before you save" />
+        <StepStrip steps={FORM_STEPS} at={1} />
+        <HireBadge mode={mode} name={r.label} lookId={r.id} lines={reviewBadgeLines(r)} mood="happy" stamp={reviewStamp(mode)} />
         <Note>This is everything the agent runs on your phone.</Note>
         <KindReviewView review={k.ready.review} />
         <SafetyNotes />
@@ -64,6 +72,7 @@ export default function CustomAgentForm({ kindId, forNewAgent }: Props) {
   return (
     <FormPage
       k={k}
+      kindId={kindId}
       title={kindId ? `Edit ${k.form.name || 'agent'}` : 'Add your own agent'}
       more={{ open: moreOpen, onOpen: setMoreOpen }}
       onReview={review}

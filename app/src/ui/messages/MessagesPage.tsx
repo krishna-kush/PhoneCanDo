@@ -13,12 +13,14 @@ import TextAction from '../drawer/select/TextAction';
 import Note from '../env/parts/Note';
 import { usePageActive } from '../nav/pageActive';
 import { useSlidIn, useSlidInList } from '../nav/slidIn';
+import EmptyInbox from './EmptyInbox';
+import { boxPlaces } from './logic/days';
 import { emptyText, MESSAGES_INTRO, unreadText } from './logic/messagesCopy';
 import { messagesFor, replyRef } from './logic/messageView';
 import { waitingAgents } from './logic/waitReason';
 import LevelsCard from './LevelsCard';
-import MessageCard from './MessageCard';
-import ScreenQueueBar from './ScreenQueueBar';
+import MessageRow from './MessageRow';
+import ScreenCounter from './counter/ScreenCounter';
 
 /** How often the screen queue is re-read while the page is in front (a claim nobody waits on sends no message). */
 const SCREEN_POLL_MS = 5000;
@@ -31,11 +33,12 @@ const FIRST_CARDS = 6;
 
 type Props = { agentId: AgentId | null };
 
-// What the agents on this phone say to each other, newest first: every
-// message, or (opened from an agent's page) those to or from that agent.
+// What the agents on this phone say to each other, newest first, in a key
+// box per day: every message, or (opened from an agent's page) those to or
+// from that agent.
 // Unfiltered, how far messages reach each agent (LevelsCard) heads it.
 // At the top, while one agent drives the phone's screen or another waits
-// for it, the screen queue in one line. The log is read once the page has
+// for it, the screen queue as a deli counter. The log is read once the page has
 // slid in and kept current while it is open; while it is in front the
 // screen queue is re-read every few seconds and the times move on.
 export default function MessagesPage({ agentId }: Props) {
@@ -49,6 +52,8 @@ export default function MessagesPage({ agentId }: Props) {
   const list = useRef<FlatList<AgentMessage>>(null);
   const [flash, setFlash] = useState<number | null>(null);
   const wasActive = useRef(false);
+  // Messages sent after this land with their stamps (row/Deliveries.tsx).
+  const [openedAt] = useState(() => Date.now());
 
   useEffect(() => {
     if (!slidIn) return;
@@ -82,7 +87,7 @@ export default function MessagesPage({ agentId }: Props) {
   const shown = useMemo(() => messagesFor(log, agentId), [log, agentId]);
 
   // The agents a shown message still waits for: their checks say why it
-  // waits (MessageCard). One key, so a re-read log with the same waits
+  // waits (MessageRow). One key, so a re-read log with the same waits
   // keeps the watch.
   const waiting = useMemo(() => [...new Set(shown.flatMap(waitingAgents))].sort().join('\n'), [shown]);
   useEffect(() => {
@@ -95,7 +100,8 @@ export default function MessagesPage({ agentId }: Props) {
     return new Map(shown.map((m) => [m.id, replyRef(m, log, ids)]));
   }, [shown, log]);
   const data = useSlidInList(shown, FIRST_CARDS);
-  const extra = useMemo(() => ({ flash, now, replies }), [flash, now, replies]);
+  const places = useMemo(() => boxPlaces(data, now), [data, now]);
+  const extra = useMemo(() => ({ flash, now, replies, places }), [flash, now, replies, places]);
 
   const jumpTo = useCallback(
     (id: number) => {
@@ -108,11 +114,13 @@ export default function MessagesPage({ agentId }: Props) {
   );
 
   const renderItem: ListRenderItem<AgentMessage> = ({ item }) => (
-    <MessageCard
+    <MessageRow
       message={item}
+      place={places.get(item.id) ?? LONE}
       reply={replies.get(item.id) ?? null}
       onReply={jumpTo}
       flash={item.id === flash}
+      fresh={item.sentAt >= openedAt}
       now={now}
     />
   );
@@ -121,19 +129,19 @@ export default function MessagesPage({ agentId }: Props) {
     <YStack flex={1} backgroundColor="bg">
       <FlatList
         ref={list}
+        showsVerticalScrollIndicator={false}
         data={data}
         keyExtractor={(m) => String(m.id)}
         renderItem={renderItem}
         extraData={extra}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-        ItemSeparatorComponent={Gap}
         initialNumToRender={FIRST_CARDS}
         ListHeaderComponent={
           <YStack gap="3" paddingBottom="3">
             <Head agentId={agentId} onAll={() => replaceTop({ name: 'messages' })} />
             <Note>{MESSAGES_INTRO}</Note>
             {agentId ? null : <LevelsCard />}
-            <ScreenQueueBar queue={screen} />
+            <ScreenCounter queue={screen} />
           </YStack>
         }
         ListEmptyComponent={ready ? <EmptyLine agentId={agentId} /> : undefined}
@@ -147,11 +155,10 @@ export default function MessagesPage({ agentId }: Props) {
   );
 }
 
-function Gap() {
-  return <YStack height={8} />;
-}
+// A row the day boxes have not placed (they place every row in the list): a box of its own.
+const LONE = { title: null, gap: false, last: true };
 
-// The page's head: the agent it is filtered to (its serial, name and unread
+// The page's head: the agent it is filtered to (its desk, name and unread
 // count) with All to see every message, or every agent's.
 function Head({ agentId, onAll }: { agentId: AgentId | null; onAll: () => void }) {
   if (!agentId) return <PageHeader kicker="All agents" title="Messages" />;
@@ -160,15 +167,15 @@ function Head({ agentId, onAll }: { agentId: AgentId | null; onAll: () => void }
 
 function AgentHead({ agentId, onAll }: { agentId: AgentId; onAll: () => void }) {
   const name = useAgentsStore((s) => s.agents.find((a) => a.id === agentId)?.name ?? null);
-  const { serial } = useAgentLook(agentId);
+  const { desk } = useAgentLook(agentId);
   const unread = unreadText(useUnread(agentId));
-  const kicker = [serial, name, unread].filter(Boolean).join(' · ');
+  const kicker = [desk, name, unread].filter(Boolean).join(' · ');
   return <PageHeader kicker={kicker} title="Messages" trailing={<TextAction label="All" onPress={onAll} />} />;
 }
 
 function EmptyLine({ agentId }: { agentId: AgentId | null }) {
   const name = useAgentsStore((s) => (agentId ? (s.agents.find((a) => a.id === agentId)?.name ?? null) : null));
-  return <Note>{emptyText(agentId ? (name ?? 'this agent') : null)}</Note>;
+  return <EmptyInbox text={emptyText(agentId ? (name ?? 'this agent') : null)} />;
 }
 
 /** Now, moved on every half minute while `on`. */

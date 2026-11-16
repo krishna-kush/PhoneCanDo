@@ -116,6 +116,16 @@ const traits = (over) => ({
   t('a chat counts at half the context', m.countNote('saved', null, savedCount).includes('a chat at half the context'), true);
   t('fits only for saved chats', m.countNote('threads', null, traits({}).threads, 1).startsWith('Auto: 4. '), true);
   t('saved, chats on storage', m.countNote('saved', null, savedCount, 0, true).startsWith(`${m.SAVED_ON_STORAGE_NOTE} Auto: 2. Chats the model`), true);
+  // The bench: which places are filled, and which saved chats have no room now.
+  const filled = (value, count) => m.countOptions(count).slice(1).filter((n) => m.countFilled(n, value, count));
+  t('auto fills up to what it picks', filled(null, { min: 0, max: 3, auto: 2 }), [1, 2]);
+  t('a choice fills up to it', filled(3, { min: 0, max: 3, auto: 2 }), [1, 2, 3]);
+  t('none fills nothing', filled(0, { min: 0, max: 3, auto: 2 }), []);
+  t('a count from 2 fills from 2', filled(4, { min: 2, max: 8, auto: 4 }), [2, 3, 4]);
+  t('past what fits now is short', [1, 2, 3].map((n) => m.countShort(n, 3, savedCount, 1, false)), [false, true, true]);
+  t('an empty place is never short', m.countShort(3, 1, savedCount, 0, false), false);
+  t('on storage nothing is short', m.countShort(2, 3, savedCount, 0, true), false);
+  t('fits unknown: nothing is short', m.countShort(2, 3, savedCount, null, false), false);
   t('on storage says so first', m.SAVED_ON_STORAGE_NOTE, 'Chats go to storage now, so none is kept in RAM; this counts only when storage runs short.');
   t('storage only for saved chats', m.countNote('threads', null, traits({}).threads, null, true).startsWith('Auto: 4. '), true);
   t('snapshots, auto', m.countNote('snapshots', null, traits({}).checkpoints).startsWith('Auto: 4. Points near the end of a chat'), true);

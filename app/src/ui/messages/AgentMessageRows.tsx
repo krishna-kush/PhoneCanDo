@@ -34,7 +34,7 @@ export default function AgentMessageRows({ agent }: { agent: Agent }) {
   const kind = agentKind(agent.kind);
   const blocked = wakeBlockedLine(kind, level);
   return (
-    <RowGroup title="Messages">
+    <RowGroup title="Messages" barcode="agentMessages">
       <LinkRow
         label="Messages"
         detail={unreadText(unread) || undefined}

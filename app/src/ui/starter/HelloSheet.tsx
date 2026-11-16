@@ -5,7 +5,7 @@ import { useAppStore } from '../../state/app';
 import { renameAgentTo } from '../../state/flows/renameAgent';
 import { useStarterStore } from '../../state/starter';
 import AppButton from '../common/AppButton';
-import AgentFace from '../common/face/AgentFace';
+import BoopFace from '../common/face/BoopFace';
 import { boopLine } from '../common/face/lines';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PlainText from '../common/PlainText';
@@ -64,20 +64,13 @@ export default function HelloSheet() {
     <BottomSheet open={open} onClose={() => useStarterStore.getState().windOff()}>
       <SheetScroll contentContainerStyle={{ padding: 16, gap: 12 }}>
         <XStack alignItems="center" gap="4">
-          <YStack
-            onPress={() => setBoops((n) => n + 1)}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={`${look.serial}, your agent. Tap it.`}
-          >
-            <AgentFace mood={look.mood} mascot={look.mascot} size={56} hop={boops} />
-          </YStack>
+          <BoopFace mood={look.mood} mascot={look.mascot} size={56} label={`${look.desk}, your agent. Tap it.`} onBoop={setBoops} />
           <YStack flex={1} minWidth={0} gap="1">
             <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase">
-              {boops > 0 ? `${look.serial} · ${boopLine(boops - 1)}` : helloCaption(look.serial, up)}
+              {boops > 0 ? `${look.desk} · ${boopLine(boops - 1)}` : helloCaption(look.desk, up)}
             </PlainText>
             <PlainText fontSize={22} fontWeight="700" numberOfLines={2}>
-              {helloTitle(agent?.name ?? look.serial)}
+              {helloTitle(agent?.name ?? look.desk)}
             </PlainText>
           </YStack>
         </XStack>

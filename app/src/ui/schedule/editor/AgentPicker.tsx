@@ -26,7 +26,7 @@ export default function AgentPicker({ title, agents, value, onPick }: Props) {
   const shown = open || !picked ? agents : [picked];
   return (
     <YStack gap="2">
-      <RowGroup title={title} radio>
+      <RowGroup title={title} barcode="scheduleAgent" radio>
         {shown.map((a) => {
           const on = a.id === value;
           return (

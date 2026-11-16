@@ -115,7 +115,7 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
       {error ? <Note tone="error">{error}</Note> : null}
       {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
 
-      <RowGroup title={agents === 1 ? '1 agent on it' : `${agents} agents on it`}>
+      <RowGroup title={agents === 1 ? '1 agent on it' : `${agents} agents on it`} barcode="systemAgents">
         {shown.map((r) => (
           <RowFrame key={r.key} bare>
             <MachineRow image={r.image} agents={r.agents} onOpen={onOpenAgent} />

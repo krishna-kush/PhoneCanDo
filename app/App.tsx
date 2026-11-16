@@ -14,6 +14,7 @@ import { useBackChain } from './src/ui/nav/useBackChain';
 import { useShareLinkOpen } from './src/ui/recommend/useShareLinkOpen';
 import { useSettingsSync } from './src/ui/account/useSettingsSync';
 import { useMascotPicks } from './src/ui/common/face/useMascotPicks';
+import { useDeskSeats } from './src/ui/common/desk/useDeskSeats';
 import { useEngineTerminalTheme } from './src/ui/terminal/theme/useEngineTerminalTheme';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
@@ -23,6 +24,7 @@ import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
 import PermissionDialog from './src/ui/chat/background/PermissionDialog';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateDialog from './src/ui/common/UpdateDialog';
+import ThemeCurtain from './src/ui/settings/look/ThemeCurtain';
 import KeyboardTracker from './src/ui/common/keyboard/KeyboardTracker';
 import MemoryGuard from './src/ui/memory/MemoryGuard';
 import RecommendCard from './src/ui/recommend/RecommendCard';
@@ -77,6 +79,7 @@ export default function App() {
   // A signed-in person's settings follow them to their other phones.
   useSettingsSync();
   useMascotPicks();
+  useDeskSeats();
 
   useEffect(() => {
     // Where to land when the app opens for a reason: a tap on an agent's
@@ -215,6 +218,7 @@ export default function App() {
           <OpenUrlDialog />
           <PermissionDialog />
           <UpdateDialog />
+          <ThemeCurtain />
         </SafeAreaProvider>
         </KeyboardProvider>
       </TamaguiProvider>

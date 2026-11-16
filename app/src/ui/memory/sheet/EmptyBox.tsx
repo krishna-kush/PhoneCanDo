@@ -9,7 +9,7 @@ import { NOTHING_RUNNING } from '../logic/memoryCopy';
 // one unit dozing in it.
 export default function EmptyBox() {
   return (
-    <RowGroup title="Agents & models">
+    <RowGroup title="Agents & models" barcode="memoryEmpty">
       <RowFrame>
         <XStack alignItems="center" gap="3">
           <YStack opacity={0.6} accessibilityElementsHidden>

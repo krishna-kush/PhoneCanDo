@@ -4,6 +4,8 @@
 // DST change never shifts a day. Pure (zero RN imports).
 import { WEEKDAYS } from '../../../engine/schedule/parse.ts';
 import type { Weekday } from '../../../engine/schedule/types';
+import type { BarcodeId } from '../../common/rows/barcode/lines.ts';
+import { weekdayBarcode } from '../../common/rows/barcode/weekdays.ts';
 
 export const MIN = 60_000;
 export const HOUR = 60 * MIN;
@@ -71,6 +73,14 @@ export function dayLabel(day: number, now: number): string {
   if (n === 0) return 'Today';
   if (n === 1) return 'Tomorrow';
   return dateText(day, now);
+}
+
+/** The barcode line on a day's box (common/rows/barcode/): today's, tomorrow's, or its weekday's. */
+export function dayBarcode(day: number, now: number): BarcodeId {
+  const n = daysFrom(now, day);
+  if (n === 0) return 'schedulesToday';
+  if (n === 1) return 'schedulesTomorrow';
+  return weekdayBarcode(day);
 }
 
 /**

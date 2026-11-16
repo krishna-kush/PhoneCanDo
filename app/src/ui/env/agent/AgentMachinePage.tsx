@@ -9,11 +9,11 @@ import { useAgentRecords } from './useAgentRecords';
 // tools it lacks.
 export default function AgentMachinePage({ agentId }: { agentId: string }) {
   const { agent, image, env, linux } = useAgentRecords(agentId);
-  const { serial } = useAgentLook(agentId);
+  const { desk } = useAgentLook(agentId);
   if (!agent) return <AgentGone />;
   return (
     <Screen>
-      <PageHeader kicker={`${serial} · ${agent.name}`} title="Machine" />
+      <PageHeader kicker={`${desk} · ${agent.name}`} title="Machine" />
       <MachineSection agent={agent} image={image} env={env} linux={linux} />
     </Screen>
   );

@@ -75,7 +75,7 @@ export default function ChoosePlace({ pick }: { pick: AgentPick }) {
               subtitle={blocked ?? place.subtitle}
               icon={
                 place.logoKeys.length > 0 ? (
-                  <SystemLogo keys={place.logoKeys} letter={place.title.charAt(0).toUpperCase()} size={32} />
+                  <SystemLogo keys={place.logoKeys} size={32} />
                 ) : undefined
               }
               onPress={blocked ? undefined : () => choose(place)}

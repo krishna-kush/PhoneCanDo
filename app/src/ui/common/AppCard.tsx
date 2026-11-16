@@ -16,17 +16,18 @@ type Props = {
   chevron?: boolean;
   /** Check mark for the selected row (Env active row). */
   selected?: boolean;
-  /** Replaces the initial in the index plate (logo, status glyph). */
+  /** What the plate at its start holds (a logo, a status glyph); none: no plate, the words start the row. */
   icon?: ReactNode;
-  /** Hairline box around the index plate (false: icon only). */
+  /** Hairline box around the icon (false: icon only). */
   plate?: boolean;
   /** More lines under the subtitle (a model's dates). */
   children?: ReactNode;
 };
 
-// Square index plate + hairline row, per the site's plates: no rainbow
-// avatars (the palette has exactly two inks). Title/meta truncate so long
-// names never push the trailing actions off-screen.
+// A hairline row, per the site's plates, with an icon's square plate at its
+// start when it has one: no initials or rainbow avatars (the palette has
+// exactly two inks). Title/meta truncate so long names never push the
+// trailing actions off-screen.
 export default function AppCard({
   title,
   subtitle,
@@ -40,7 +41,6 @@ export default function AppCard({
   plate = true,
   children,
 }: Props) {
-  const initial = (title.replace(/^\.+/, '').trim().charAt(0) || '•').toUpperCase();
   const showChevron = chevron ?? (onPress != null && menu == null);
   const open = useOpening(showChevron ? onPress : undefined);
 
@@ -59,26 +59,19 @@ export default function AppCard({
       onPress={showChevron ? open.press : onPress}
       onLongPress={onLongPress}
     >
-      <YStack
-        width={48}
-        height={48}
-        borderWidth={plate ? 1 : 0}
-        borderColor={selected ? 'primary' : 'lineStrong'}
-        alignItems="center"
-        justifyContent="center"
-        flexShrink={0}
-      >
-        {icon ?? (
-          <PlainText
-            fontFamily="mono"
-            fontSize={18}
-            fontWeight="600"
-            color={selected ? 'primary' : 'secondaryInk'}
-          >
-            {initial}
-          </PlainText>
-        )}
-      </YStack>
+      {icon ? (
+        <YStack
+          width={48}
+          height={48}
+          borderWidth={plate ? 1 : 0}
+          borderColor={selected ? 'primary' : 'lineStrong'}
+          alignItems="center"
+          justifyContent="center"
+          flexShrink={0}
+        >
+          {icon}
+        </YStack>
+      ) : null}
       <YStack flex={1} minWidth={0} gap="1" justifyContent="center">
         <PlainText fontSize={16} fontWeight="600" numberOfLines={1} ellipsizeMode="tail">
           {selected ? `✓ ${title}` : title}

@@ -3,12 +3,15 @@ import type { CapabilityCheck, CheckRun } from '../../../../engine/checks/types'
 import PlainText from '../../../common/PlainText';
 import { ROW_GUTTER } from '../../../common/rows/place';
 import RowFrame from '../../../common/rows/RowFrame';
+import type { BarcodeId } from '../../../common/rows/barcode/lines';
 import RowGroup from '../../../common/rows/RowGroup';
 import { capabilityLabel } from './logic/copy';
-import { acpWake, checkGroups, rowDimmed, rowLine } from './logic/rows';
+import { acpWake, checkGroups, rowDimmed, rowLine, type CheckGroup } from './logic/rows';
 import ReadingBar from './ReadingBar';
 
 type Props = { capabilities: CapabilityCheck[]; run: CheckRun | null; name: string; now: number };
+
+const CHECKS_BARCODE: Record<CheckGroup['id'], BarcodeId> = { acp: 'checksAcp', app: 'checksApp' };
 
 // The capabilities by where they run, "In ACP mode" and "In its own app",
 // each a RowGroup (one with nothing set up is left out). A row is its
@@ -22,7 +25,7 @@ export default function CapabilityRows({ capabilities, run, name, now }: Props) 
   return (
     <>
       {checkGroups(capabilities).map((group) => (
-        <RowGroup key={group.id} title={group.title}>
+        <RowGroup key={group.id} title={group.title} barcode={CHECKS_BARCODE[group.id]}>
           {group.checks.map((check) => {
             const line = rowLine(check, run, name, now, acp);
             return (

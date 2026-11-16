@@ -43,8 +43,8 @@ export const WING_IT = "I'll wing it";
 export const LATER_NOTE = 'The first shift waits in About whenever you want it.';
 
 /** Under the face while the agent starts, then once it is up. */
-export function helloCaption(serial: string, up: boolean): string {
-  return `${serial} · ${up ? 'reporting for duty' : 'waking up'}`;
+export function helloCaption(desk: string, up: boolean): string {
+  return `${desk} · ${up ? 'reporting for duty' : 'waking up'}`;
 }
 
 // --- the Home card and the drawer row -------------------------------------------

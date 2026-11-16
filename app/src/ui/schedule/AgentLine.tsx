@@ -17,7 +17,7 @@ type Props = {
 };
 
 // An agent as the drawer shows it: its face, its name, then its serial,
-// kind and engine state in words ("A-04 · Claude Code · stopped").
+// kind and engine state in words ("desk 1b · Claude Code · stopped").
 export default function AgentLine({ agentId, agent, size = 22 }: Props) {
   const look = useAgentLook(agentId);
   const state = useAgentsStore((s) => s.statuses[agentId]?.state);
@@ -28,7 +28,7 @@ export default function AgentLine({ agentId, agent, size = 22 }: Props) {
       </PlainText>
     );
   }
-  const sub = `${look.serial} · ${agentKind(agent.kind).label} · ${engineStateWord(state).toLowerCase()}`;
+  const sub = `${look.desk} · ${agentKind(agent.kind).label} · ${engineStateWord(state).toLowerCase()}`;
   return (
     <XStack alignItems="center" gap="3" minWidth={0}>
       <AgentFace mood={look.mood} mascot={look.mascot} size={size} />

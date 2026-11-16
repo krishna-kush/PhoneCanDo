@@ -21,7 +21,7 @@ type Props = {
 export default function AgentsBox({ rows, seconds, map, onOpen }: Props) {
   if (rows.length === 0) return null;
   return (
-    <RowGroup title="Agents">
+    <RowGroup title="Agents" barcode="memoryAgents">
       <BoxLine mono>{agentsBoxLine(rows.length, totalBytes(rows))}</BoxLine>
       {rows.map((row) => (
         <AgentStopRow

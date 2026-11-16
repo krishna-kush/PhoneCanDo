@@ -1,7 +1,9 @@
 // The drawer's selection (src/ui/drawer/select/logic/selection.ts): picking
 // in the drawer's order, dropping deleted agents, All/None, which engines
-// Stop can bring down, and what the delete confirm says. Imports the real
-// pure module (Node 22.18+ strips its types), so these cannot drift.
+// Stop can bring down, and what the delete confirm says; and the agents'
+// order a drag keeps (src/state/logic/agentOrder.ts) with the drag's slots
+// (src/ui/drawer/reorder/logic/slots.ts). Imports the real pure modules
+// (Node 22.18+ strips their types), so these cannot drift.
 // Run: node test_drawer_select.js (or pnpm check:vectors)
 'use strict';
 const path = require('node:path');
@@ -92,6 +94,31 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
     s.failedLine([{ name: 'Bob', reason: 'Busy.' }, { name: 'Ann', reason: 'Gone.' }]),
     "Couldn't delete Bob and Ann. Busy.",
   );
+
+  // --- the order a drag keeps -------------------------------------------------
+  const o = await import(src('state/logic/agentOrder.ts'));
+  const ag = (...ids) => ids.map((id) => ({ id }));
+  const ids = (list) => list.map((a) => a.id);
+  t('storage: strings once', o.readOrder(['a', 2, 'b', 'a', null]), ['a', 'b']);
+  t('storage: not a list is none', o.readOrder({ a: 1 }), []);
+  t('no order: as the runner lists them', ids(o.inOrder(ag('a', 'b', 'c'), [])), ['a', 'b', 'c']);
+  t('the kept order wins', ids(o.inOrder(ag('a', 'b', 'c'), ['c', 'a', 'b'])), ['c', 'a', 'b']);
+  t('a new agent goes last', ids(o.inOrder(ag('a', 'b', 'n', 'c'), ['c', 'a', 'b'])), ['c', 'a', 'b', 'n']);
+  t('new ones keep their own order', ids(o.inOrder(ag('x', 'a', 'y'), ['a'])), ['a', 'x', 'y']);
+  t('a deleted id is skipped', ids(o.inOrder(ag('a', 'c'), ['c', 'gone', 'a'])), ['c', 'a']);
+  t('move down', o.moveId(['a', 'b', 'c'], 'a', 2), ['b', 'c', 'a']);
+  t('move up', o.moveId(['a', 'b', 'c'], 'c', 0), ['c', 'a', 'b']);
+  t('past the ends: clamped', [o.moveId(['a', 'b'], 'a', 9), o.moveId(['a', 'b'], 'b', -3)], [['b', 'a'], ['b', 'a']]);
+  const still = ['a', 'b'];
+  t('already there: the same array', [o.moveId(still, 'a', 0) === still, o.moveId(still, 'z', 1) === still], [true, true]);
+
+  const sl = await import(src('ui/drawer/reorder/logic/slots.ts'));
+  t('a short drag stays', sl.dropSlot(1, 20, 68, 3), 1);
+  t('past half a row moves one', sl.dropSlot(1, 40, 68, 3), 2);
+  t('up two rows', sl.dropSlot(2, -136, 68, 3), 0);
+  t('past the ends: clamped', [sl.dropSlot(0, -500, 68, 3), sl.dropSlot(2, 500, 68, 3)], [0, 2]);
+  t('one row, or none measured: slot 0', [sl.dropSlot(0, 90, 68, 1), sl.dropSlot(1, 90, 0, 3)], [0, 0]);
+  t('list height: rows and the gaps between', [sl.listHeight(0, 64), sl.listHeight(1, 64), sl.listHeight(3, 64)], [0, 64, 64 * 3 + 2 * sl.ROW_GAP]);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

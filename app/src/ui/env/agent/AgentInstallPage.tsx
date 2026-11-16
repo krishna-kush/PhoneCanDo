@@ -9,11 +9,11 @@ import { useAgentRecords } from './useAgentRecords';
 // page holds still so a run's log can take the room left (InstallSection).
 export default function AgentInstallPage({ agentId }: { agentId: string }) {
   const { agent, image } = useAgentRecords(agentId);
-  const { serial } = useAgentLook(agentId);
+  const { desk } = useAgentLook(agentId);
   if (!agent) return <AgentGone />;
   return (
     <Screen scroll={false} fabClearance={false}>
-      <PageHeader kicker={`${serial} · ${agent.name}`} title="Install" />
+      <PageHeader kicker={`${desk} · ${agent.name}`} title="Install" />
       <InstallSection agent={agent} image={image} />
     </Screen>
   );

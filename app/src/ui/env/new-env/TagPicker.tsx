@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { catalogTags } from '../../../engine/linux/native';
 import type { CatalogTag } from '../../../engine/linux/types';
+import { YStack } from 'tamagui';
 import AppButton from '../../common/AppButton';
-import AppCard from '../../common/AppCard';
 import AppInput from '../../common/AppInput';
+import LinkRow from '../../common/LinkRow';
 import PageHeader from '../../common/PageHeader';
+import RowFrame from '../../common/rows/RowFrame';
+import RowGroup from '../../common/rows/RowGroup';
 import Screen from '../../common/Screen';
 import { useSlidInList } from '../../nav/slidIn';
 import { useAppStore } from '../../../state/app';
@@ -18,11 +21,11 @@ import ProgressBar from '../parts/ProgressBar';
 const SEARCH_DELAY_MS = 400;
 
 // Versions drawn as the page opens; the rest come once it has slid in.
-const FIRST_SCREEN_CARDS = 8;
+const FIRST_SCREEN_ROWS = 8;
 
-// Download another Linux, step 2: which version. Native lists only tags with an arm64
-// build (the rest would fail on this phone); the usual ones (latest, plain
-// version numbers) come first. The search box asks the registry, not just
+// Download another Linux, step 2: which version, as rows of one key box.
+// Native lists only tags with an arm64 build (the rest would fail on this
+// phone); the usual ones (latest, plain version numbers) come first. The search box asks the registry, not just
 // the loaded pages. A page can hold no arm64 tag at all, so a few such pages
 // are read on our own before "Load more".
 export default function TagPicker({ repo, pick }: { repo: string; pick?: AgentPick }) {
@@ -66,7 +69,7 @@ export default function TagPicker({ repo, pick }: { repo: string; pick?: AgentPi
   }, [fetchPages, query]);
 
   const ranked = rankTags(tags);
-  const shown = useSlidInList(ranked, FIRST_SCREEN_CARDS);
+  const shown = useSlidInList(ranked, FIRST_SCREEN_ROWS);
   const now = Date.now();
   const q = query.trim();
   let empty: string | null = null;
@@ -86,34 +89,46 @@ export default function TagPicker({ repo, pick }: { repo: string; pick?: AgentPi
         autoCorrect={false}
         returnKeyType="search"
       />
-      {shown.map((tag) => (
-        <AppCard
-          key={tag.name}
-          title={tag.name}
-          subtitle={[tag.sizeArm64 != null ? formatBytes(tag.sizeArm64) : null, formatAgo(tag.lastUpdated, now)]
-            .filter(Boolean)
-            .join(' · ')}
-          onPress={() =>
-            push({
-              name: 'new-env-confirm',
-              repo,
-              tag: { name: tag.name, sizeArm64: tag.sizeArm64, lastUpdated: tag.lastUpdated },
-              typed: false,
-              pick,
-            })
-          }
-        />
-      ))}
-      {loading ? <ProgressBar label="Loading versions" fraction={null} /> : null}
-      {error ? (
-        <>
-          <Note tone="error">{error}</Note>
-          <AppButton variant="secondary" onPress={() => void fetchPages(1, q, false)}>
-            Try again
-          </AppButton>
-        </>
-      ) : null}
-      {empty ? <Note>{empty}</Note> : null}
+      <RowGroup title="arm64 versions" barcode="armVersions">
+        {shown.map((tag) => (
+          <LinkRow
+            key={tag.name}
+            label={tag.name}
+            detail={[tag.sizeArm64 != null ? formatBytes(tag.sizeArm64) : null, formatAgo(tag.lastUpdated, now)]
+              .filter(Boolean)
+              .join(' · ')}
+            onPress={() =>
+              push({
+                name: 'new-env-confirm',
+                repo,
+                tag: { name: tag.name, sizeArm64: tag.sizeArm64, lastUpdated: tag.lastUpdated },
+                typed: false,
+                pick,
+              })
+            }
+          />
+        ))}
+        {loading ? (
+          <RowFrame>
+            <ProgressBar label="Loading versions" fraction={null} />
+          </RowFrame>
+        ) : null}
+        {error ? (
+          <RowFrame>
+            <YStack gap="2">
+              <Note tone="error">{error}</Note>
+              <AppButton variant="secondary" onPress={() => void fetchPages(1, q, false)}>
+                Try again
+              </AppButton>
+            </YStack>
+          </RowFrame>
+        ) : null}
+        {empty ? (
+          <RowFrame>
+            <Note>{empty}</Note>
+          </RowFrame>
+        ) : null}
+      </RowGroup>
       {!loading && !error && next != null ? (
         <AppButton variant="secondary" onPress={() => void fetchPages(next, q, true)}>
           Load more

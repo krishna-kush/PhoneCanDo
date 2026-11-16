@@ -25,7 +25,7 @@ export default function ContextSetting({ model, automatic, stop, disabled, onAut
   const range = model.contextRange;
   return (
     <YStack gap="2">
-      <RowGroup title="Context" radio>
+      <RowGroup title="Context" barcode="modelContext" radio>
         <ChoiceRow label="Automatic" note={automaticNote(model)} selected={automatic} disabled={disabled} onPress={() => onAutomatic(true)} />
         <ChoiceRow label="Choose" note={chooseNote(range)} selected={!automatic} disabled={disabled} onPress={() => onAutomatic(false)} />
       </RowGroup>

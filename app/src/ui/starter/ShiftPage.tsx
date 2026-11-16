@@ -7,7 +7,7 @@ import { progress } from '../../state/logic/starter/shift';
 import { useMascotsStore } from '../../state/mascots';
 import { useStarterStore } from '../../state/starter';
 import AppButton from '../common/AppButton';
-import AgentFace from '../common/face/AgentFace';
+import BoopFace from '../common/face/BoopFace';
 import { boopLine } from '../common/face/lines';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PageHeader from '../common/PageHeader';
@@ -62,16 +62,9 @@ export default function ShiftPage() {
     <Screen>
       <PageHeader kicker={shiftKicker(p.done, p.total)} title={SHIFT_TITLE} />
       <XStack alignItems="center" gap="3">
-        <YStack
-          onPress={() => setBoops((n) => n + 1)}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={`${look.serial}, your agent. Tap it.`}
-        >
-          <AgentFace mood={look.mood} mascot={look.mascot} size={36} hop={boops} still={!active} />
-        </YStack>
+        <BoopFace mood={look.mood} mascot={look.mascot} size={36} still={!active} label={`${look.desk}, your agent. Tap it.`} onBoop={setBoops} />
         <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase" flexShrink={1}>
-          {`${look.serial} · ${boops > 0 ? boopLine(boops - 1) : line}`}
+          {`${look.desk} · ${boops > 0 ? boopLine(boops - 1) : line}`}
         </PlainText>
       </XStack>
       <PlainText fontSize={15} color="muted">
@@ -106,7 +99,7 @@ export default function ShiftPage() {
 
       {p.next == null ? (
         <Finale
-          serial={look.serial}
+          desk={look.desk}
           mascot={look.mascot}
           earned={shift.earned}
           skipped={p.skipped}

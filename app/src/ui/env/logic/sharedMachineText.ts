@@ -80,7 +80,7 @@ export function sharedLogLine(others: readonly string[]): string {
     : `${nameList(others)} share this machine, so this may be the log of one of their installs.`;
 }
 
-/** The Systems list's line over a machine agents share: "Shared machine · 1.2 GB". */
-export function sharedMachineLine(size: string | null): string {
-  return size ? `Shared machine · ${size}` : 'Shared machine';
+/** The Systems list's line over a machine agents share: "Shared machine · room 1 · 1.2 GB". */
+export function sharedMachineLine(size: string | null, room: string | null = null): string {
+  return ['Shared machine', room, size].filter(Boolean).join(' · ');
 }

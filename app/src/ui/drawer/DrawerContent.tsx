@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { messagesAvailable } from '../../engine/messages/native';
@@ -10,6 +10,7 @@ import { useKindsStore } from '../../state/kinds';
 import { useLinuxStore } from '../../state/linux';
 import { useMessagesStore } from '../../state/messages';
 import { useModelsStore } from '../../state/models';
+import { moveId } from '../../state/logic/agentOrder';
 import AppButton from '../common/AppButton';
 import { crewLine } from '../common/face/lines';
 import { moodOf } from '../common/face/mood';
@@ -19,6 +20,8 @@ import { useStartNewAgent } from '../env/new-agent/useStartNewAgent';
 import Note from '../env/parts/Note';
 import AgentRow from './AgentRow';
 import DownloadRow from './DownloadRow';
+import ReorderList from './reorder/ReorderList';
+import ReorderRow from './reorder/ReorderRow';
 import LinkRow from '../common/LinkRow';
 import { unreadText } from '../messages/logic/messagesCopy';
 import { unreadTotal } from '../messages/logic/messageView';
@@ -44,7 +47,8 @@ function channel(): string {
 }
 
 // What the drawer holds: every agent (tap to switch, › for its page, a long
-// press or Select to pick several, with the selection's bar pinned below),
+// press or Select to pick several, with the selection's bar pinned below, a
+// hold and slide to move it; the list scrolls only while no row is lifted),
 // Own envs still downloading, New agent, then the app's other places:
 // First shift (while it runs), Models, Systems, Custom agents, Schedules (while an agent can run them),
 // Messages (once agents can talk to each other), Settings, About. Memoised: the drawer's own renders (open, shut)
@@ -55,6 +59,8 @@ function DrawerContent({ still }: { still: boolean }) {
   const statuses = useAgentsStore((s) => s.statuses);
   const activeAgentId = useAgentsStore((s) => s.activeAgentId);
   const setActiveAgent = useAgentsStore((s) => s.setActiveAgent);
+  const setOrder = useAgentsStore((s) => s.setOrder);
+  const [lifted, setLifted] = useState(false);
   const push = useAppStore((s) => s.push);
   const goHome = useAppStore((s) => s.goHome);
   const linuxAvailable = useLinuxStore((s) => s.status.available);
@@ -78,7 +84,12 @@ function DrawerContent({ still }: { still: boolean }) {
 
   return (
     <YStack flex={1}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: PAD, gap: GAP }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        scrollEnabled={!lifted}
+        contentContainerStyle={{ padding: PAD, gap: GAP }}
+        showsVerticalScrollIndicator={false}
+      >
         <XStack alignItems="center" gap="2" paddingTop="2">
           <LogoMark size={16} />
           <PlainText fontFamily="mono" fontSize={18} fontWeight="600" letterSpacing={-0.4}>
@@ -94,22 +105,30 @@ function DrawerContent({ still }: { still: boolean }) {
           {agents.length > 1 && !pick.on ? <TextAction label="Select" onPress={() => pick.start()} /> : null}
         </XStack>
         <YStack gap="1">
-          {agents.map((agent) => (
-            <AgentRow
-              key={agent.id}
-              agent={agent}
-              active={agent.id === activeAgentId}
-              still={still}
-              picking={pick.on}
-              picked={pick.picked.includes(agent.id)}
-              onSwitch={() => {
-                goHome();
-                if (agent.id !== activeAgentId) void setActiveAgent(agent.id);
-              }}
-              onOpen={() => push({ name: 'agent', agentId: agent.id })}
-              onPick={() => (pick.on ? pick.toggle(agent.id) : pick.start(agent.id))}
-            />
-          ))}
+          <ReorderList ids={order} rowHeight={64} onDrop={setOrder} onLift={setLifted}>
+            {agents.map((agent, index) => {
+              const onPick = () => (pick.on ? pick.toggle(agent.id) : pick.start(agent.id));
+              return (
+                <ReorderRow key={agent.id} id={agent.id} index={index} onHold={onPick}>
+                  <AgentRow
+                    agent={agent}
+                    active={agent.id === activeAgentId}
+                    still={still}
+                    picking={pick.on}
+                    picked={pick.picked.includes(agent.id)}
+                    onSwitch={() => {
+                      goHome();
+                      if (agent.id !== activeAgentId) void setActiveAgent(agent.id);
+                    }}
+                    onOpen={() => push({ name: 'agent', agentId: agent.id })}
+                    onPick={onPick}
+                    onMove={(by) => setOrder(moveId(order, agent.id, index + by))}
+                    place={{ index, count: agents.length }}
+                  />
+                </ReorderRow>
+              );
+            })}
+          </ReorderList>
           {downloading.map((env) => (
             <DownloadRow key={env.id} env={env} onOpen={() => push({ name: 'system', envId: env.id })} />
           ))}

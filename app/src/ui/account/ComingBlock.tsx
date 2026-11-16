@@ -1,34 +1,36 @@
 import { XStack, YStack } from 'tamagui';
 import PlainText from '../common/PlainText';
-import SectionTitle from '../common/SectionTitle';
+import RowFrame from '../common/rows/RowFrame';
+import RowGroup from '../common/rows/RowGroup';
+import Stamp from '../common/Stamp';
+import Note from '../env/parts/Note';
 import { COMING, COMING_LINE, COMING_TITLE } from './copy';
+import { COMING_STAMP } from './logic/pass';
 
-// What sign-in is for next: features that will need an account and stay
-// optional, numbered like the site's field-manual lists. Shown signed in or out.
+// What sign-in is for next, as a key box: why first, then each feature
+// that will need an account and stay optional, a small "soon" stamp on
+// each. Shown signed in or out.
 export default function ComingBlock() {
   return (
-    <YStack gap="3">
-      <SectionTitle>{COMING_TITLE}</SectionTitle>
-      <PlainText fontSize={13} color="muted">
-        {COMING_LINE}
-      </PlainText>
-      {COMING.map((f, i) => (
-        <XStack key={f.title} gap="3" alignItems="flex-start">
-          <YStack width={22} paddingTop={3}>
-            <PlainText fontFamily="mono" fontSize={11} color="primary">
-              {String(i + 1).padStart(2, '0')}
-            </PlainText>
-          </YStack>
-          <YStack flex={1} gap="1">
-            <PlainText fontSize={15} fontWeight="600" color="fg">
-              {f.title}
-            </PlainText>
-            <PlainText fontSize={13} color="muted">
-              {f.line}
-            </PlainText>
-          </YStack>
-        </XStack>
+    <RowGroup title={COMING_TITLE} barcode="accountComing">
+      <RowFrame>
+        <Note>{COMING_LINE}</Note>
+      </RowFrame>
+      {COMING.map((f) => (
+        <RowFrame key={f.title}>
+          <XStack alignItems="center" gap="3">
+            <YStack flex={1} minWidth={0} gap={2}>
+              <PlainText fontSize={16} fontWeight="600">
+                {f.title}
+              </PlainText>
+              <PlainText fontSize={13} color="muted">
+                {f.line}
+              </PlainText>
+            </YStack>
+            <Stamp tone="secondary">{COMING_STAMP}</Stamp>
+          </XStack>
+        </RowFrame>
       ))}
-    </YStack>
+    </RowGroup>
   );
 }

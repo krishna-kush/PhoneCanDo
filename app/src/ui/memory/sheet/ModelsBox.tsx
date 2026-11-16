@@ -22,7 +22,7 @@ type Props = {
 export default function ModelsBox({ rows, level, map, onOpen }: Props) {
   if (rows.length === 0) return null;
   return (
-    <RowGroup title="Local models">
+    <RowGroup title="Local models" barcode="memoryModels">
       <BoxLine tight={level !== 'ok'}>{modelsBoxLine(level, totalBytes(rows))}</BoxLine>
       {rows.map((row) => (
         <ModelStopRow

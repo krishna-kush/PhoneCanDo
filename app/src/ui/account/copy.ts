@@ -1,6 +1,7 @@
 // Every line of the optional Google sign-in: the Settings row and the
 // Account page. Pure (zero RN imports).
 import type { AccountError } from '../../engine/account/index.ts';
+import { dayMonthYear } from '../common/dates.ts';
 
 export const ROW_TITLE = 'Account';
 export const ROW_LINE = 'Optional: sign in with Google so your links and settings follow you';
@@ -38,7 +39,6 @@ export const SIGN_IN = 'Sign in with Google';
 export const NOT_CONFIGURED = "Sign-in isn't set up in this build yet. Everything else works without it.";
 export const NO_PLAY_SERVICES = "Sign-in needs Google Play services, which this phone doesn't have. Everything else works without it.";
 
-export const SIGNED_IN_AS = 'Signed in with Google';
 export const SIGN_OUT = 'Sign out';
 export const SIGN_OUT_NOTE = 'Signing out keeps your links and settings on this phone; sign in again any time.';
 export const DELETE = 'Delete account';
@@ -49,11 +49,9 @@ export const DELETE_CONFIRM_MESSAGE =
   'Your email, your account, its list of links and its settings are removed from our server. This phone keeps its links and settings. You can sign in again later, as a new account.';
 export const DELETED = 'Account deleted. Nothing of it is left on our server.';
 
-/** Since when the account exists, as a date. */
-export function sinceLine(createdAt: number): string {
-  const d = new Date(createdAt);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `member since ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+/** Since when the account exists, as a date: "16 Nov 2026". */
+export function sinceDate(createdAt: number): string {
+  return dayMonthYear(new Date(createdAt));
 }
 
 /** What went wrong, in a line; null for nothing worth saying. */

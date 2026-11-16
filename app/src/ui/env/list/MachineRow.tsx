@@ -4,6 +4,7 @@ import type { Agent } from '../../../engine/agents/records';
 import type { Image } from '../../../engine/linux/types';
 import { deleteUnusedImage } from '../../../state/flows/deleteAgentAndImage';
 import CardMenu from '../../common/CardMenu';
+import { useRoom } from '../../common/desk/useDesk';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PlainText from '../../common/PlainText';
 import { ROW_GUTTER } from '../../common/rows/place';
@@ -27,6 +28,7 @@ export default function MachineRow({ image, agents, onOpen }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const size = image && image.sizeBytes > 0 ? formatBytes(image.sizeBytes) : null;
+  const room = useRoom(image?.id);
   const below = (
     <>
       {image && image.state !== 'ready' ? <ImageStatus image={image} /> : null}
@@ -39,7 +41,7 @@ export default function MachineRow({ image, agents, onOpen }: Props) {
       <YStack paddingTop="2">
         <YStack paddingHorizontal={ROW_GUTTER}>
           <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.2} color="secondaryInk" textTransform="uppercase" numberOfLines={1}>
-            {sharedMachineLine(size)}
+            {sharedMachineLine(size, room)}
           </PlainText>
         </YStack>
         {agents.map((a) => (

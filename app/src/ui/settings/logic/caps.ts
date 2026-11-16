@@ -21,6 +21,8 @@ const NAMES: Record<CapKind, Readonly<Record<number, string>>> = {
     4: 'four on the floor',
     5: 'high five',
     6: 'half a dozen',
+    // Not offered as a chip, but a bench or a scale has a seventh place.
+    7: 'lucky seven',
     8: 'octopus mode',
   },
   models: { 1: 'one big brain', 2: 'two brains', 3: 'brain trust' },

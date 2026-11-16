@@ -227,6 +227,7 @@ const MIN = 60_000;
     limits: { maxAgents: null, maxModels: null },
     telemetry: true,
     version: '1.2.3',
+    updateReady: null,
     account: { signedIn: false, email: null, offered: true },
     sharesSent: 0,
   };
@@ -234,6 +235,7 @@ const MIN = 60_000;
   t('hub order: phone control is not a row', hub.map((x) => x.target), ['account', 'look', 'agents', 'privacy', 'updates', 'refer', 'about']);
   t('every row says what is inside', hub.every((x) => x.line.length > 0 && x.now.length > 0), true);
   t('privacy now', hub[3].now, 'usage stats on');
+  t('updates now', [hub[4].now, h.hubRows({ ...facts, updateReady: '1.3.0' })[4].now], ['v1.2.3 · full', 'v1.3.0 is out · you have v1.2.3']);
   t('account now: signed out', hub[0].now, 'signed out · optional');
   t('account now: signed in', h.hubRows({ ...facts, account: { signedIn: true, email: 'a@b.c', offered: true } })[0].now, 'a@b.c');
   t('account now: not here', h.hubRows({ ...facts, account: { signedIn: false, email: null, offered: false } })[0].now, 'not on this phone or build');

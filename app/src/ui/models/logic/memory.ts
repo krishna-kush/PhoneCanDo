@@ -169,6 +169,16 @@ export function countChip(value: number | null): string {
 
 export type CountKind = 'saved' | 'snapshots' | 'threads';
 
+/** Whether place `n` of a count's bench is filled: 1 up to the choice, or to what Auto picks. */
+export function countFilled(n: number, value: number | null, count: MemoryCount): boolean {
+  return n >= 1 && n <= (value ?? count.auto);
+}
+
+/** Whether filled place `n` of the saved chats is past the [fitsNow] that fit now (none while chats go to storage). */
+export function countShort(n: number, value: number | null, count: MemoryCount, fitsNow: number | null, onStorage: boolean): boolean {
+  return !onStorage && fitsNow != null && n > fitsNow && countFilled(n, value, count);
+}
+
 /** "none fit now", "1 fits now", "2 fit now": the saved chats the planner finds room for now. */
 export function fitsNowText(count: number): string {
   if (!(count > 0)) return 'none fit now';

@@ -23,7 +23,7 @@ export default function UsedBy({ users }: { users: readonly Agent[] }) {
     );
   }
   return (
-    <RowGroup title="Used by">
+    <RowGroup title="Used by" barcode="modelUsedBy">
       {users.map((a) => (
         <RowFrame key={a.id} bare>
           <AgentLine agent={a} missing={false} size={null} label={agentKind(a.kind).label} onOpen={openAgent} />

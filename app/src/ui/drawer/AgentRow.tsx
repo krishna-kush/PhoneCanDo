@@ -27,22 +27,33 @@ type Props = {
   onOpen: () => void;
   /** Picks or unpicks it; a long press starts the selection with it. */
   onPick: () => void;
+  /** Moves it one place up (-1) or down (1): TalkBack's way to drag it. */
+  onMove: (by: -1 | 1) => void;
+  /** Its place in the drawer, from 0, and how many agents there are. */
+  place: { index: number; count: number };
 };
 
-// One agent in the drawer: its face, name, serial, kind and engine state in
+// One agent in the drawer: its face, name, desk, kind and engine state in
 // words, and a small count of its messages not read yet. A tap makes it
 // the active agent (Home shows it), the › opens its page (a spinner until
 // it is in), and a long press starts picking agents to stop or delete
-// together. While picking, the highlight marks the picked rows (the stamp
-// still names the active one).
-export default function AgentRow({ agent, active, still, picking, picked, onSwitch, onOpen, onPick }: Props) {
+// together. The long press is the drawer's (reorder/ReorderRow.tsx): a
+// hold that slides drags the row to another place instead. While picking,
+// the highlight marks the picked rows (the stamp still names the active
+// one). TalkBack gets the same as actions: pick, move up, move down.
+export default function AgentRow({ agent, active, still, picking, picked, onSwitch, onOpen, onPick, onMove, place }: Props) {
   const t = useTheme();
   const look = useAgentLook(agent.id);
   const state = useAgentsStore((s) => s.statuses[agent.id]?.state);
-  const sub = `${look.serial} · ${agentKind(agent.kind).label} · ${engineStateWord(state).toLowerCase()}`;
+  const sub = `${look.desk} · ${agentKind(agent.kind).label} · ${engineStateWord(state).toLowerCase()}`;
   const unread = useUnread(agent.id);
   const lit = picking ? picked : active;
   const open = useOpening(onOpen);
+  const actions = [
+    { name: 'longpress', label: picking ? 'Pick' : 'Pick several' },
+    ...(place.index > 0 ? [{ name: 'moveUp', label: 'Move up' }] : []),
+    ...(place.index < place.count - 1 ? [{ name: 'moveDown', label: 'Move down' }] : []),
+  ];
 
   return (
     <XStack
@@ -61,7 +72,13 @@ export default function AgentRow({ agent, active, still, picking, picked, onSwit
         paddingLeft="2"
         opacity="press:0.7"
         onPress={picking ? onPick : onSwitch}
-        onLongPress={onPick}
+        accessibilityActions={actions}
+        onAccessibilityAction={(e) => {
+          const name = e.nativeEvent.actionName;
+          if (name === 'longpress') onPick();
+          else if (name === 'moveUp') onMove(-1);
+          else if (name === 'moveDown') onMove(1);
+        }}
         accessibilityRole={picking ? 'checkbox' : 'button'}
         accessibilityState={picking ? { checked: picked } : { selected: active }}
         accessibilityLabel={[agent.name, sub, active ? 'active' : '', unreadLabel(unread)].filter(Boolean).join(', ')}

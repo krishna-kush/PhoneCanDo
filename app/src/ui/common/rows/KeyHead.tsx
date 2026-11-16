@@ -2,13 +2,15 @@ import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
 import PlainText from '../PlainText';
 import KeyBarcode from './barcode/KeyBarcode';
+import type { BarcodeId } from './barcode/lines';
 import { ROW_GUTTER } from './place';
 
 // A box's title strip, as the site's `.key-label` over a figure's key: a
 // figure label (an amber dash, the title in amber mono capitals, on two
 // lines when long) and, at its right, a barcode with an easter egg in it
-// (barcode/), then `trailing` (an open-close arrow).
-export default function KeyHead({ title, trailing }: { title: string; trailing?: ReactNode }) {
+// (barcode/), its line the box's own, then `trailing` (an open-close
+// arrow).
+export default function KeyHead({ title, barcode, trailing }: { title: string; barcode: BarcodeId; trailing?: ReactNode }) {
   return (
     <XStack
       alignItems="center"
@@ -34,7 +36,7 @@ export default function KeyHead({ title, trailing }: { title: string; trailing?:
         {title}
       </PlainText>
       <XStack flex={1} minWidth={8} />
-      <KeyBarcode title={title} />
+      <KeyBarcode barcode={barcode} />
       {trailing}
     </XStack>
   );

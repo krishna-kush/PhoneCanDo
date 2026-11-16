@@ -18,10 +18,12 @@ import { ensureEngine, type EnsureResult } from '../engine/ensureEngine';
 import { prepareImageForStart } from '../engine/linux/native';
 import type { ImageId } from '../engine/linux/types';
 import { isRunnerAvailable } from '../engine/runner';
+import { inOrder, readOrder } from './logic/agentOrder';
 import { agentsOn } from './flows/logic/machineTenants';
 import { keepUnchangedList, keepUnchangedMap } from './logic/keepUnchanged';
 
 const ACTIVE_AGENT_KEY = 'phonecando.activeAgent.v1';
+const ORDER_KEY = 'phonecando.agentOrder.v1';
 
 interface AgentsState {
   agents: Agent[];
@@ -30,6 +32,8 @@ interface AgentsState {
   activeAgentId: AgentId | null;
   /** True once hydrateAgents has read the list. */
   hydrated: boolean;
+  /** The ids in the order the user dragged them (logic/agentOrder.ts); `agents` follows it. */
+  order: readonly AgentId[];
 
   /** Reads agents and engine states and subscribes to engine changes (once). */
   hydrateAgents: () => Promise<void>;
@@ -37,6 +41,8 @@ interface AgentsState {
   refreshAgents: () => void;
   /** Null forgets the pick, so the first agent is active. */
   setActiveAgent: (id: AgentId | null) => Promise<void>;
+  /** Keeps the agents in this order (the drawer's drag), here and on the next launch. */
+  setOrder: (ids: readonly AgentId[]) => void;
   /** Prepares the agent's image, then starts its engine or finds it running. */
   startAgent: (id: AgentId) => Promise<EnsureResult>;
   stopAgent: (id: AgentId) => Promise<void>;
@@ -58,6 +64,15 @@ function readNative(): { agents: Agent[]; statuses: Record<AgentId, EngineStatus
 function pickActive(agents: Agent[], wanted: AgentId | null): AgentId | null {
   if (wanted && agents.some((a) => a.id === wanted)) return wanted;
   return agents[0]?.id ?? null;
+}
+
+async function readStoredOrder(): Promise<AgentId[]> {
+  try {
+    return readOrder(JSON.parse((await AsyncStorage.getItem(ORDER_KEY)) ?? '[]'));
+  } catch {
+    // unreadable or malformed: the runner's order
+    return [];
+  }
 }
 
 async function persistActive(id: AgentId | null): Promise<void> {
@@ -109,6 +124,7 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
     statuses: {},
     activeAgentId: null,
     hydrated: false,
+    order: [],
 
     hydrateAgents: async () => {
       let stored: string | null = null;
@@ -121,9 +137,11 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
         subscribed = true;
         onEngineState((status) => set((s) => ({ statuses: { ...s.statuses, [status.agentId]: status } })));
       }
-      const { agents, statuses } = readNative();
+      const order = await readStoredOrder();
+      const read = readNative();
+      const agents = inOrder(read.agents, order);
       const activeAgentId = pickActive(agents, stored);
-      set({ agents, statuses, activeAgentId, hydrated: true });
+      set({ agents, statuses: read.statuses, activeAgentId, order, hydrated: true });
       if (activeAgentId !== stored) await persistActive(activeAgentId);
     },
 
@@ -136,7 +154,7 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
       const read = readNative();
       // Unchanged records stay the same objects, so the header, the drawer's
       // rows and the faces skip the render this re-read would cost them.
-      const agents = keepUnchangedList(get().agents, read.agents);
+      const agents = keepUnchangedList(get().agents, inOrder(read.agents, get().order));
       const statuses = keepUnchangedMap(get().statuses, read.statuses);
       const prev = get().activeAgentId;
       // A deleted active agent hands over to the first one left.
@@ -150,6 +168,14 @@ export const useAgentsStore = create<AgentsState>((set, get) => {
       if (id != null && !get().agents.some((a) => a.id === id)) return;
       set({ activeAgentId: pickActive(get().agents, id) });
       await persistActive(id);
+    },
+
+    setOrder: (ids) => {
+      const order = [...ids];
+      set({ order, agents: inOrder(get().agents, order) });
+      AsyncStorage.setItem(ORDER_KEY, JSON.stringify(order)).catch(() => {
+        // Best-effort; the in-memory order applies for this run.
+      });
     },
 
     startAgent: (id) => {

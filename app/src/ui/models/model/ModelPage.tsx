@@ -59,7 +59,7 @@ export default function ModelPage({ modelId }: { modelId: string }) {
         <ModelMemory model={model} />
       </ModelPanel>
       <UsedBy users={users} />
-      <RowGroup title="More">
+      <RowGroup title="More" barcode="modelMore">
         <LinkRow label="Server log" onPress={() => push({ name: 'model-log', modelId: model.id })} />
         {source.kind === 'huggingface' ? (
           <LinkRow label="Hugging Face" detail={source.repo} onPress={() => push({ name: 'model-repo', repo: source.repo })} />

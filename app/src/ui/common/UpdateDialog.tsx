@@ -14,6 +14,7 @@ import {
   type UpdateManifest,
 } from '../../engine/updates';
 import { track } from '../../engine/telemetry';
+import { offerAtLaunch } from '../../state/logic/updateOffer';
 import AppButton from './AppButton';
 
 type Phase =
@@ -35,17 +36,22 @@ function errText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-// Full: checks GitHub two seconds after launch and only speaks up when a
-// newer build exists. Lite: the full build always exists, so the pitch opens
-// at once and the manifest fills in behind it. Settings → Updates re-runs the
-// check on demand through the store nonce. Android always shows its own
-// installer; the best this can do is download and hand the APK over.
+// How long after launch the background check waits, so it never slows the start.
+const LAUNCH_CHECK_MS = 2000;
+
+// Checks GitHub quietly in the background two seconds after launch and keeps
+// what it found for Settings (the Updates row). The box opens by itself only
+// for a newer build it has not offered before, never in a debug build, and
+// on lite not while its offer is off (state/logic/updateOffer.ts); walking
+// away keeps it shut until the next build. Settings → Updates re-runs the
+// check on demand through the store nonce and always answers. Android
+// always shows its own installer; the best this can do is download and
+// hand the APK over.
 export default function UpdateDialog() {
   const current = installedVersion();
   const lite = isLiteUpgrade();
   const nonce = useAppStore((s) => s.updatePromptNonce);
   const hydrated = useAppStore((s) => s.hydrated);
-  const muted = useAppStore((s) => s.updatePromptMuted);
   const [phase, setPhase] = useState<Phase>('idle');
   const [manifest, setManifest] = useState<UpdateManifest | null>(null);
   const [progress, setProgress] = useState<UpdateProgress>({ written: 0, total: 0 });
@@ -54,55 +60,76 @@ export default function UpdateDialog() {
   const abortRef = useRef<AbortController | null>(null);
   const checkRef = useRef<AbortController | null>(null);
 
-  // quiet: say nothing unless a newer build exists (launch check on full).
-  async function check(quiet: boolean) {
+  // Settings → Updates: the box opens at once and says what it found, even nothing newer.
+  async function check() {
     checkRef.current?.abort();
     const ctrl = new AbortController();
     checkRef.current = ctrl;
-    if (!quiet) setPhase('checking');
+    setPhase('checking');
     try {
       const m = await checkForUpdate(ctrl.signal);
       if (ctrl.signal.aborted) return;
-      track(m ? 'update.check.newer' : 'update.check.none', { manual: !quiet });
+      track(m ? 'update.check.newer' : 'update.check.none', { manual: true });
+      useAppStore.getState().setUpdateReady(m?.version ?? null);
       if (m) {
         setManifest(m);
         setPhase('available');
         track('update.offered', { version: m.version, lite });
-      } else if (!quiet) {
+      } else {
         setPhase('none');
       }
     } catch (e) {
       if (ctrl.signal.aborted) return;
-      track('update.check.failed', { manual: !quiet });
-      if (quiet) return; // offline at launch: the site is the fallback
+      track('update.check.failed', { manual: true });
       setError(`Could not reach GitHub: ${errText(e)}`);
       setPhase('error');
     }
   }
 
-  useEffect(() => {
-    // Debug builds run the same launch check so the pitch can be seen in the
-    // dev loop; only the install is refused (see downloadAndInstall).
-    if (!hydrated) return;
-    if (lite) {
-      // Settings → Updates can silence the launch pitch; the button there
-      // still opens it on demand.
-      if (muted) return;
-      void check(false);
-      return () => checkRef.current?.abort();
+  // At launch, in the background: says nothing unless offerAtLaunch opens the box.
+  async function launchCheck() {
+    checkRef.current?.abort();
+    const ctrl = new AbortController();
+    checkRef.current = ctrl;
+    try {
+      const m = await checkForUpdate(ctrl.signal);
+      if (ctrl.signal.aborted) return;
+      track(m ? 'update.check.newer' : 'update.check.none', { manual: false });
+      const app = useAppStore.getState();
+      app.setUpdateReady(m?.version ?? null);
+      const offer = offerAtLaunch({
+        newer: m?.versionCode ?? null,
+        offered: app.updateOffered,
+        debug: __DEV__,
+        lite,
+        muted: app.updatePromptMuted,
+      });
+      if (!m || !offer) return;
+      void app.setUpdateOffered(m.versionCode);
+      setManifest(m);
+      setPhase('available');
+      track('update.offered', { version: m.version, lite });
+    } catch {
+      // Offline at launch: the site is the fallback.
+      if (!ctrl.signal.aborted) track('update.check.failed', { manual: false });
     }
-    const timer = setTimeout(() => void check(true), 2000);
+  }
+
+  useEffect(() => {
+    // Lite with its offer off asks GitHub nothing at launch (docs/telemetry.md).
+    if (!hydrated || (lite && useAppStore.getState().updatePromptMuted)) return;
+    const timer = setTimeout(() => void launchCheck(), LAUNCH_CHECK_MS);
     return () => {
       clearTimeout(timer);
       checkRef.current?.abort();
     };
-    // Launch-only: a later mute must not close an open dialog.
+    // Launch-only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lite, hydrated]);
+  }, [hydrated]);
 
   // Settings → Updates.
   useEffect(() => {
-    if (nonce > 0) void check(false);
+    if (nonce > 0) void check();
   }, [nonce]);
 
   async function downloadAndInstall() {
@@ -382,7 +409,7 @@ export default function UpdateDialog() {
                 </AppButton>
                 <AppButton
                   flex={1}
-                  onPress={() => (manifest ? void downloadAndInstall() : void check(false))}
+                  onPress={() => (manifest ? void downloadAndInstall() : void check())}
                 >
                   Retry
                 </AppButton>

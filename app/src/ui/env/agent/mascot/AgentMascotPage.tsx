@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ScrollView, useWindowDimensions } from 'react-native';
 import { XStack } from 'tamagui';
 import { SHAPES } from '../../../../../../mascot/body.ts';
@@ -16,7 +15,6 @@ import { useAgentRecords } from '../useAgentRecords';
 import { MASCOT_TITLE, SHAPE_LABEL, SHAPE_TITLE, WARDROBE_TITLE } from './copy';
 import MascotChoice from './MascotChoice';
 import MascotStage from './stage/MascotStage';
-import { useShuffle } from './stage/useShuffle';
 import Wardrobe from './wardrobe/Wardrobe';
 
 // The page's own padding, which its scrolling part reaches past so it
@@ -34,19 +32,11 @@ export default function AgentMascotPage({ agentId }: { agentId: string }) {
   const active = usePageActive();
   const push = useAppStore((s) => s.push);
   const { width } = useWindowDimensions();
-  const [hop, setHop] = useState(0);
-  const bump = () => setHop((n) => n + 1);
-  const shuffle = useShuffle(() => {
-    useMascotsStore.getState().surprise(agentId);
-    bump();
-  });
   if (!agent) return <AgentGone />;
 
   const { mascot } = look;
   const choose = (change: Partial<Look>) => {
-    shuffle.stop();
     useMascotsStore.getState().setLook(agentId, { ...mascot, ...change });
-    bump();
   };
   const openShift = () => {
     useStarterStore.getState().start();
@@ -55,16 +45,16 @@ export default function AgentMascotPage({ agentId }: { agentId: string }) {
 
   return (
     <Screen scroll={false} fabClearance={false}>
-      <PageHeader kicker={`${look.serial} · ${agent.name}`} title={MASCOT_TITLE} />
+      <PageHeader kicker={`${look.desk} · ${agent.name}`} title={MASCOT_TITLE} />
       <MascotStage
-        mascot={shuffle.preview ?? mascot}
-        hop={hop}
+        mascot={mascot}
         still={!active}
-        onHop={bump}
         onSwap={() => choose({ swap: !mascot.swap })}
-        onSurprise={shuffle.start}
+        surprise={() => useMascotsStore.getState().surprise()}
+        onSurprise={choose}
       />
       <ScrollView
+        showsVerticalScrollIndicator={false}
         style={{ flex: 1, marginHorizontal: -EDGE, marginBottom: -EDGE }}
         contentContainerStyle={{ paddingHorizontal: EDGE, paddingBottom: EDGE, gap: 12 }}
       >

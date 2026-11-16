@@ -20,7 +20,7 @@ import {
 import { REWARD_DESIGN } from './reward';
 
 type Props = {
-  serial: string;
+  desk: string;
   mascot: Look;
   earned: boolean;
   /** Missions skipped: the reward waits for them. */
@@ -35,7 +35,7 @@ type Props = {
 // CERTIFIED CREW stamp slammed down. With every mission done, the Shift
 // lead look is the user's (Put it on dresses the agent at once); with some
 // skipped, it says what is left to earn it.
-export default function Finale({ serial, mascot, earned, skipped, still, onPutOn, onBack, onStartOver }: Props) {
+export default function Finale({ desk, mascot, earned, skipped, still, onPutOn, onBack, onStartOver }: Props) {
   const [hop, setHop] = useState(0);
   const wearing = mascot.design === REWARD_DESIGN;
   const putOn = () => {
@@ -57,7 +57,7 @@ export default function Finale({ serial, mascot, earned, skipped, still, onPutOn
           onPress={() => setHop((n) => n + 1)}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel={`${serial}, your agent. Tap it.`}
+          accessibilityLabel={`${desk}, your agent. Tap it.`}
         >
           <AgentFace mood="happy" mascot={mascot} size={48} hop={hop} hearts={3} still={still} />
         </YStack>
@@ -69,7 +69,7 @@ export default function Finale({ serial, mascot, earned, skipped, still, onPutOn
         </YStack>
       </XStack>
       <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase">
-        {`${serial} · ${FINALE_CAPTION}`}
+        {`${desk} · ${FINALE_CAPTION}`}
       </PlainText>
       <PlainText fontSize={15}>{FINALE_LINE}</PlainText>
       <PlainText fontSize={14} color="muted">

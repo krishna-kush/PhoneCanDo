@@ -1,9 +1,13 @@
+import { ActivityIndicator } from 'react-native';
 import { XStack } from 'tamagui';
-import { HIT } from './globals';
+import { HIT, useTheme } from './globals';
 import LogoLoader from './LogoLoader';
 import PlainText from './PlainText';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+
+/** The room either side of a label: a ghost button set under a page's title pulls back by it, so its words line up. */
+export const BUTTON_PAD_X = 18;
 
 type Props = {
   /** The label, text only (it is drawn as PlainText). */
@@ -14,6 +18,12 @@ type Props = {
   /** Busy state: disabled, outlined, with the small logo loader before the
       label (the loader's red needs a non-red surface to read). */
   loading?: boolean;
+  /**
+   * Android's own circular spinner before the label, for a wait of a moment
+   * the caller already guards (a shuffle under way). Unlike `loading` the
+   * button keeps its look and its press, so a press under way is never cut.
+   */
+  spinning?: boolean;
   flex?: number;
   accessibilityState?: { selected?: boolean };
 };
@@ -35,9 +45,11 @@ export default function AppButton({
   variant = 'primary',
   disabled,
   loading,
+  spinning = false,
   flex,
   accessibilityState,
 }: Props) {
+  const t = useTheme();
   // A press also clears the border, as Tamagui 2's Button did.
   const outlined = variant === 'secondary' || loading;
   const ghost = !outlined && variant === 'ghost';
@@ -59,7 +71,7 @@ export default function AppButton({
       flexWrap="nowrap"
       width="auto"
       minHeight={HIT.buttonH}
-      paddingHorizontal="4"
+      paddingHorizontal={BUTTON_PAD_X}
       paddingVertical="3"
       gap={9}
       borderRadius={0}
@@ -75,7 +87,7 @@ export default function AppButton({
       outlineStyle="focus-visible:solid"
       outlineWidth="focus-visible:2px"
     >
-      {loading ? <LogoLoader size={9} /> : null}
+      {loading ? <LogoLoader size={9} /> : spinning ? <ActivityIndicator size={14} color={outlined || ghost ? t.fg : t.onPrimary} /> : null}
       <PlainText
         fontFamily="mono"
         fontSize={12}

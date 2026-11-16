@@ -10,7 +10,7 @@ export default function ModelStep({ pick }: { pick: ModelPick }) {
   if (!pick.show) return null;
   return (
     <>
-      <ModelPicker title="Model" models={pick.models} selected={pick.modelId} onSelect={pick.select} />
+      <ModelPicker title="Model" barcode="newAgentModel" models={pick.models} selected={pick.modelId} onSelect={pick.select} />
       <Note>{pick.modelId ? HONEST_NOTE : "You can change this later on the agent's page."}</Note>
     </>
   );

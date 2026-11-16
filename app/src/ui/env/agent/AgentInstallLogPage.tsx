@@ -17,14 +17,14 @@ import { useMachineMates } from './useMachineMates';
 // another agent's, and the page says so.
 export default function AgentInstallLogPage({ agentId }: { agentId: string }) {
   const { agent } = useAgentRecords(agentId);
-  const { serial } = useAgentLook(agentId);
+  const { desk } = useAgentLook(agentId);
   const mates = useMachineMates(agent);
   const last = useLastInstallLog(agent?.imageId ?? null);
   const lines = useMemo(() => (last.state === 'read' ? last.log.text.split('\n') : []), [last]);
   if (!agent) return <AgentGone />;
   return (
     <Screen scroll={false} fabClearance={false}>
-      <PageHeader kicker={`${serial} · ${agent.name}`} title="Install log" />
+      <PageHeader kicker={`${desk} · ${agent.name}`} title="Install log" />
       {last.state === 'reading' ? <Note>Reading the log…</Note> : null}
       {last.state === 'none' ? <Note>No install has run in this machine yet.</Note> : null}
       {last.state === 'failed' ? <Note tone="error">{last.message}</Note> : null}

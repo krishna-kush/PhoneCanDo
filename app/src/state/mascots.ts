@@ -20,8 +20,8 @@ type MascotsState = {
   /** Looks for [ids], oldest first: a new agent gets one, a deleted one's goes. */
   assign: (ids: readonly AgentId[]) => void;
   setLook: (id: AgentId, look: Look) => void;
-  /** A new look for [id] at random, unlike the one it has and the other agents'. */
-  surprise: (id: AgentId) => void;
+  /** A look at random for Surprise me, unlike every agent's here (its own too); setLook keeps it. */
+  surprise: () => Look;
 };
 
 // Best-effort: the in-memory looks apply for this run.
@@ -70,8 +70,5 @@ export const useMascotsStore = create<MascotsState>((set, get) => ({
     save(looks);
   },
 
-  surprise: (id) => {
-    const { looks } = get();
-    get().setLook(id, pickLook(Object.values(looks), Math.random));
-  },
+  surprise: () => pickLook(Object.values(get().looks), Math.random),
 }));

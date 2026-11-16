@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { useAgentsStore } from '../../../state/agents';
+import { useDesk } from '../../common/desk/useDesk';
 import AgentFace from '../../common/face/AgentFace';
 import { useAgentLook } from '../../common/face/useAgentLook';
 import OpenMark from '../../common/OpenMark';
@@ -32,11 +33,13 @@ type Props = {
 // One agent in a list, as its machine's row or one of a shared machine's
 // agents (Systems, an agent's Machine page): its face, name and engine's
 // word. A tap opens its page (a spinner for the › until it is in). It sits
-// in a RowGroup, at the group's gutter.
+// in a RowGroup, at the group's gutter. Its desk leads the line under its
+// name ("desk 1b · running"): agents sharing a machine share its room.
 export default function AgentLine({ agent, missing, size, onOpen, label, idle = null, extra, children }: Props) {
   const status = useAgentsStore((s) => s.statuses[agent.id]);
+  const desk = useDesk(agent.id);
   const state = missing ? 'Its machine is missing' : activityWord(status?.state, idle);
-  const sub = [label, state, extra, size, onOpen ? null : 'this agent'].filter(Boolean).join(' · ');
+  const sub = [desk, label, state, extra, size, onOpen ? null : 'this agent'].filter(Boolean).join(' · ');
   const open = useOpening(onOpen ? () => onOpen(agent.id) : undefined);
   return (
     <YStack

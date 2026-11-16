@@ -18,6 +18,8 @@ export type HubFacts = {
   /** Usage stats on or off; null while unknown or not in this build. */
   telemetry: boolean | null;
   version: string;
+  /** A newer build the launch's background check found ("1.0.3"); null when none. */
+  updateReady: string | null;
   /** Who is signed in; `offered` when this phone and build can sign in at all. */
   account: { signedIn: boolean; email: string | null; offered: boolean };
   /** Links shared from this phone (and the account). */
@@ -55,7 +57,12 @@ export function hubRows(f: HubFacts): HubRow[] {
       line: 'What we count, what we never touch, and your delete button',
       now: f.telemetry == null ? 'usage stats' : `usage stats ${f.telemetry ? 'on' : 'off'}`,
     },
-    { target: 'updates', title: 'Updates', line: updatesLine(f.channel), now: `v${f.version} · ${f.channel}` },
+    {
+      target: 'updates',
+      title: 'Updates',
+      line: updatesLine(f.channel),
+      now: f.updateReady ? `v${f.updateReady} is out · you have v${f.version}` : `v${f.version} · ${f.channel}`,
+    },
     { target: 'refer', title: refer.ROW_TITLE, line: refer.ROW_LINE, now: refer.rowNow(f.sharesSent) },
     { target: 'about', title: 'About', line: 'Version, licences, and a mascot that likes boops', now: `v${f.version}` },
   ];

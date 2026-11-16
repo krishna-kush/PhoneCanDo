@@ -11,6 +11,7 @@ export default function FormScreen({ children }: { children: ReactNode }) {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 104, gap: 12, flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
         bottomOffset={24}
       >
         {children}

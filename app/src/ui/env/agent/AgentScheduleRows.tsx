@@ -36,7 +36,7 @@ export default function AgentScheduleRows({ agent }: { agent: Agent }) {
     );
   }
   return (
-    <RowGroup title={SCHEDULES_TITLE}>
+    <RowGroup title={SCHEDULES_TITLE} barcode="agentSchedules">
       <LinkRow
         label={SCHEDULES_TITLE}
         detail={countText(count) || undefined}

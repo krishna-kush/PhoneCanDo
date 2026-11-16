@@ -37,10 +37,10 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   // --- the shuffle ----------------------------------------------------------------
   const times = s.shuffleTimes();
   const holds = times.shows.slice(1).map((at, i) => at - times.shows[i]);
-  t('ten looks flick past', times.shows.length, 10);
+  t('ten looks show, the pick last', times.shows.length, 10);
   t('the first shows at once', times.shows[0], 0);
   t('each held longer than the last', holds.every((h, i) => i === 0 || h >= holds[i - 1]), true);
-  t('the pick lands after the last look', times.lands > times.shows[times.shows.length - 1], true);
+  t('the pick is kept after it shows', times.lands > times.shows[times.shows.length - 1], true);
   t('all over in about a second', times.lands >= 800 && times.lands <= 1500, true);
   t('a shuffle of one', s.shuffleTimes(1, 100, 2), { shows: [0], lands: 100 });
 

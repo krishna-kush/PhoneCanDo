@@ -37,6 +37,8 @@ type Props = {
   hearts: number;
   /** The [i]th of [count] hearts, at [place]. */
   heart: (i: number, count: number, place: HeartPlace) => ReactNode;
+  /** A reaction between awake and asleep (AgentFace): the pupils and the "z" both drawn, their styles showing one or the other. */
+  handOver?: boolean;
 };
 
 // A-01's face as drawn, for the live face (AgentFace) and the still one
@@ -45,7 +47,7 @@ type Props = {
 // it wears, laid out by the shared spec), and the mood's marks: a "z"
 // asleep, a "?" in trouble, a drop when sweaty, hearts when happy.
 // Decoration only (hidden from screen readers): rows say the state in words.
-export default function FaceDrawing({ layout: f, mood, moving, motion, hearts, heart }: Props) {
+export default function FaceDrawing({ layout: f, mood, moving, motion, hearts, heart, handOver = false }: Props) {
   const t = useTheme();
   const { fig, dx, dy, eyeA, eyeB, eyeW, eyeH, pupil } = f;
   const front = fig.front;
@@ -126,7 +128,7 @@ export default function FaceDrawing({ layout: f, mood, moving, motion, hearts, h
         </View>
         <WearMarks marks={fig.marks} box={f.box} dx={dx} dy={dy} />
       </moving.View>
-      {mood === 'asleep' ? (
+      {mood === 'asleep' || handOver ? (
         <moving.Text
           style={[{ position: 'absolute', right: 0, top: 0, fontFamily: 'GeistMono-Bold', fontSize: f.mark, color: t.dim }, motion.z]}
         >

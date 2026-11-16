@@ -12,9 +12,11 @@ import ComingBlock from './ComingBlock';
 import SignedInBlock from './SignedInBlock';
 import SignedOutBlock from './SignedOutBlock';
 
-// Settings → Account: optional Google sign-in. Signed out, why and the
-// button (or why there is none here); signed in, who, what follows you,
-// Sign out and Delete account; then, either way, what sign-in is for next. The account is re-read from the server whenever the page is in
+// Settings → Account: optional Google sign-in, as a crew pass. Signed out,
+// why, a pass not issued yet with A-01 holding the door, and the button
+// (or why there is none here); signed in, the issued pass, what follows
+// you, Sign out and Delete account; then, either way, what sign-in is for
+// next. The account is re-read from the server whenever the page is in
 // front, which also notices a session that ended elsewhere.
 export default function AccountPage() {
   const active = usePageActive();

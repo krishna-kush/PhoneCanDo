@@ -26,7 +26,7 @@ type Props = {
 export default function RamFigure({ use, map, level, warnBelowBytes, nextName }: Props) {
   const r = ramReadout(use);
   return (
-    <RowGroup title="Phone memory">
+    <RowGroup title="Phone memory" barcode="memoryRam">
       <RowFrame>
         <YStack gap="1">
           <XStack alignItems="baseline" gap="2">

@@ -7,7 +7,8 @@
 // recent runs. Pure (zero RN imports).
 import type { AgentId } from '../../../engine/agents/records';
 import type { Schedule, ScheduleRun } from '../../../engine/schedule/types';
-import { dayLabel, startOfDay } from './clock.ts';
+import type { BarcodeId } from '../../common/rows/barcode/lines.ts';
+import { dayBarcode, dayLabel, startOfDay } from './clock.ts';
 
 export type TimelineAgent = { id: AgentId; name: string; kind: string };
 
@@ -17,7 +18,7 @@ export type TimelineEntry = {
   agent: TimelineAgent | null;
 };
 
-export type TimelineDay = { label: string; entries: TimelineEntry[] };
+export type TimelineDay = { label: string; barcode: BarcodeId; entries: TimelineEntry[] };
 
 export type Timeline = {
   /** Still to run, by the day of the next run, soonest first. */
@@ -50,10 +51,11 @@ export function timeline(
   const days: TimelineDay[] = [];
   for (const e of next) {
     // A run waiting past its time (the agent busy) sits under today.
-    const label = dayLabel(startOfDay(Math.max(e.schedule.nextAt ?? now, now)), now);
+    const day = startOfDay(Math.max(e.schedule.nextAt ?? now, now));
+    const label = dayLabel(day, now);
     const last = days[days.length - 1];
     if (last && last.label === label) last.entries.push(e);
-    else days.push({ label, entries: [e] });
+    else days.push({ label, barcode: dayBarcode(day, now), entries: [e] });
   }
   return { days, rest };
 }

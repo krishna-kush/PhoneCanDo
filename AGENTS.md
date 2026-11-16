@@ -30,7 +30,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
   the one Back handler (`useBackChain.ts`). `drawer/` is the side menu,
-  opened from Home's header. `common/face/` is A-01, the site's mascot, as
+  opened from Home's header (a hold and slide moves an agent: `reorder/`,
+  the order kept in `state/logic/agentOrder.ts`). `common/face/` is A-01, the site's mascot, as
   each agent's face, in the agent's own mascot (`state/mascots.ts`, changed
   on its Mascot page, `env/agent/mascot/`). `models/` is the Models page and
   a model's own page (`model/`); an agent's Model page is in `env/agent/`. `memory/` is the
@@ -150,7 +151,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   fun?" card's runs, last ask and answer), `share.ts` (the links this
   phone shared, what they did), `account.ts` (who is signed in),
   `settingsSync.ts` (when each synced setting last changed here),
-  `mascots.ts` (each agent's mascot, picked at random), `starter.ts`
+  `mascots.ts` (each agent's mascot, picked at random), `desks.ts`
+  (each agent's desk code, "1b": its machine's room and its desk there,
+  never given out again; the A-numbers are our own characters'), `starter.ts`
   (the first shift's marks and reward), `checks.ts` (each kind's level
   now, the watched agents' checks); multi-step
   flows in `flows/` (pure parts in `flows/logic/`). Ports, passwords and tokens stay

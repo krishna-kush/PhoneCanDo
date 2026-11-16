@@ -6,6 +6,7 @@ import { kindLevelNow, useChecksStore } from '../../../state/checks';
 import { useMessagesStore } from '../../../state/messages';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
+import { useRoom } from '../../common/desk/useDesk';
 import RowFrame from '../../common/rows/RowFrame';
 import RowGroup from '../../common/rows/RowGroup';
 import { unreadText } from '../../messages/logic/messagesCopy';
@@ -25,7 +26,7 @@ import { useMissingTools } from './useMissingTools';
 type Props = { agent: Agent; image: Image | undefined; env: Env | undefined; linux: boolean };
 
 // The agent's machine page body: which env it comes from (with its OS's
-// logo, as on Systems), the detected OS, its size, every agent on a machine
+// logo, as on Systems), its room (state/desks.ts), the detected OS, its size, every agent on a machine
 // agents share (this one first, the others open their pages; each says
 // whether it is working now and its unread messages, or that it can't
 // read them at its kind's level now), its setup
@@ -41,6 +42,7 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
   const idle = useMachineActivity(mates.length > 0 ? onMachine.map((a) => a.id) : []);
   const unread = useMessagesStore((s) => s.unread);
   const levels = useChecksStore((s) => s.levels);
+  const room = useRoom(image?.id);
 
   if (!image) {
     return (
@@ -60,13 +62,13 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
     <>
       <AppCard
         title={title}
-        subtitle={[os, size].filter(Boolean).join(' · ') || undefined}
-        icon={env ? <SystemLogo keys={logoKeys(env)} letter={title.charAt(0).toUpperCase()} size={32} /> : undefined}
+        subtitle={[room, os, size].filter(Boolean).join(' · ') || undefined}
+        icon={env ? <SystemLogo keys={logoKeys(env)} size={32} /> : undefined}
         chevron={false}
       />
       {mates.length > 0 ? (
         <>
-          <RowGroup title={machineAgentsTitle(mates.length + 1)}>
+          <RowGroup title={machineAgentsTitle(mates.length + 1)} barcode="machineAgents">
             {onMachine.map((a) => (
               <RowFrame key={a.id} bare>
                 <AgentLine

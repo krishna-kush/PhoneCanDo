@@ -5,17 +5,20 @@ import { useAppStore } from '../../../state/app';
 import { copyKind, deleteKind, shareKind } from '../../../state/flows/userKinds';
 import { useKindsStore } from '../../../state/kinds';
 import AppButton from '../../common/AppButton';
-import AppCard, { type CardMenuItem } from '../../common/AppCard';
+import type { CardMenuItem } from '../../common/CardMenu';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
-import { inUseText, kindLine } from '../logic/customAgentText';
+import { inUseText } from '../logic/customAgentText';
 import Note from '../parts/Note';
+import type { KindItem } from './list/item';
+import KindRows from './list/KindRows';
 
 const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-// The agent kinds the user added: each with the agents made from it, or
-// why it does not load. Tap to edit; ⋮ copies or shares its JSON, or
+// The agent kinds the user added, each a row of one figure key
+// (list/KindRows.tsx): its mascot, the agents made from it, or why it does
+// not load. Tap to edit; ⋮ copies or shares its JSON, or
 // deletes it (not while an agent is of it). Add one, or import one.
 export default function CustomAgentList() {
   const push = useAppStore((s) => s.push);
@@ -60,22 +63,21 @@ export default function CustomAgentList() {
     { label: 'Delete', danger: true, onSelect: () => setDoomed(k) },
   ];
 
+  const items: KindItem[] = kinds.map((k) => ({
+    kind: k,
+    label: labelOf(k),
+    agents: agents.filter((a) => a.kind === k.id).length,
+    menu: menuOf(k),
+    onEdit: k.problem ? null : () => edit(k),
+  }));
+
   return (
     <Screen>
       <PageHeader kicker="agents of your own" title="Custom agents" />
       <Note>
         Agents you describe yourself: any terminal UI, installed by your own script into each machine made with it.
       </Note>
-      {kinds.map((k) => (
-        <AppCard
-          key={k.id}
-          title={labelOf(k)}
-          subtitle={kindLine(k.id, k.problem?.detail ?? null, agents.filter((a) => a.kind === k.id).length)}
-          onPress={k.problem ? undefined : () => edit(k)}
-          menu={menuOf(k)}
-          menuLabel={`Actions for ${labelOf(k)}`}
-        />
-      ))}
+      {items.length > 0 ? <KindRows items={items} /> : null}
       {kinds.length === 0 ? <Note>None yet.</Note> : null}
       {note ? <Note tone={note.error ? 'error' : 'muted'}>{note.text}</Note> : null}
       <AppButton onPress={() => push({ name: 'custom-agent', kindId: null })}>Add your own agent</AppButton>

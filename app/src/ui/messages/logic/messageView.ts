@@ -79,6 +79,32 @@ export function deliveryLines(m: AgentMessage): DeliveryLine[] {
   });
 }
 
+/** A recipient's rubber stamp: its status word, red when refused; none while it waits (a live light says it is on its way). */
+export type DeliveryStamp = { word: string; tone: 'primary' | 'secondary' };
+
+export function deliveryStamp(status: DeliveryStatus): DeliveryStamp | null {
+  if (status === 'queued') return null;
+  return { word: STATUS_WORDS[status], tone: status === 'refused' ? 'primary' : 'secondary' };
+}
+
+/** One recipient as the page marks it: its name (on a message to many), its stamp and a few words after it. */
+export type DeliveryMark = { key: string; name: string | null; stamp: DeliveryStamp | null; note: string | null; tone: Tone };
+
+/**
+ * Each recipient's mark. A message to one agent names it in its head
+ * already, so its mark has no name. After the stamp: why it was refused,
+ * whether the message woke or started it, or, still waiting, "waiting".
+ */
+export function deliveryMarks(m: AgentMessage): DeliveryMark[] {
+  const single = m.to.kind === 'agent' && m.deliveries.length === 1;
+  return m.deliveries.map((d) => {
+    const stamp = deliveryStamp(d.status);
+    if (d.status === 'refused') return { key: d.agentId, name: single ? null : d.name, stamp, note: d.reason, tone: 'primary' };
+    if (d.status === 'queued') return { key: d.agentId, name: single ? null : d.name, stamp, note: 'waiting', tone: 'dim' };
+    return { key: d.agentId, name: single ? null : d.name, stamp, note: wokeText(d, single ? d.name : 'it'), tone: 'secondaryInk' };
+  });
+}
+
 // "started Reviewer" when its engine was started for it, "woke Reviewer" when it only woke.
 function wokeText(d: Pick<MessageDelivery, 'woke' | 'started'>, who: string): string | null {
   if (d.started) return `started ${who}`;

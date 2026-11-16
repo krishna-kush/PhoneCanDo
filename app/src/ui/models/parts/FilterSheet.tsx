@@ -49,7 +49,7 @@ export default function FilterSheet({
       <Sheet.Container padding="4" paddingBottom="6" gap="3">
         <Sheet.Background borderRadius={0} borderWidth={1} borderColor="lineStrong" />
         {/* Tamagui 3's sheet pads its scroll view; ours stays flush, as on 2. */}
-        <Sheet.ScrollView maxHeight={height * CHOICES_SHARE} paddingHorizontal={0}>
+        <Sheet.ScrollView maxHeight={height * CHOICES_SHARE} paddingHorizontal={0} showsVerticalScrollIndicator={false}>
           <Choices title="Size" options={SIZE_OPTIONS} value={filters.size} onChange={(size) => onChange({ size })} />
           <Choices
             title="License"

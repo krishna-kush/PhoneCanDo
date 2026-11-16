@@ -2,7 +2,8 @@
 
 PhoneCanDo ships signed APKs from public GitHub releases. Set
 `GITHUB_REPO=<owner>/PhoneCanDo` to the repo that hosts them. The app checks
-`releases/latest/download/latest.json` on launch and offers the update; Android
+`releases/latest/download/latest.json` quietly on launch and offers each newer
+build once (never in a debug build; Settings → Updates checks any time); Android
 still shows its installer (one tap). Play is not involved.
 
 Each release carries two APKs with the same version string.

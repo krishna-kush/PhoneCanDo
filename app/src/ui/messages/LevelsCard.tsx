@@ -34,7 +34,7 @@ export default function LevelsCard() {
           accessibilityState={{ expanded: open }}
           accessibilityLabel={LEVELS_HEADING}
         >
-          <KeyHead title={LEVELS_HEADING} trailing={<ChevronIcon dir={open ? 'down' : 'right'} size={12} color={t.dim} />} />
+          <KeyHead title={LEVELS_HEADING} barcode="messageLevels" trailing={<ChevronIcon dir={open ? 'down' : 'right'} size={12} color={t.dim} />} />
         </Pressable>
         {open ? (
           <YStack paddingHorizontal={ROW_GUTTER} paddingTop="3" paddingBottom="3" gap="3">

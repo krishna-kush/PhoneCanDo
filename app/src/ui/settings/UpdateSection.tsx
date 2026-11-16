@@ -1,32 +1,33 @@
 import { installedVersion } from '../../engine/updates';
 import { useAppStore } from '../../state/app';
 import AppButton from '../common/AppButton';
-import AppCard from '../common/AppCard';
 import PlainText from '../common/PlainText';
-import ThumbIcon from '../common/ThumbIcon';
+import RowGroup from '../common/rows/RowGroup';
+import SwitchRow from '../common/rows/SwitchRow';
+import BuildLabel from './updates/BuildLabel';
+import { channelOf } from './updates/copy';
+import Courier from './updates/Courier';
+import LiteBox from './updates/LiteBox';
+import RouteFacts from './updates/RouteFacts';
 
-function Thumb({ up }: { up: boolean }) {
-  return <ThumbIcon up={up} size={26} />;
-}
-
-// Settings → Updates, the body of its page (pages/UpdatesPage.tsx). Lite:
-// the full-build pitch and its launch prompt switch. Full: the GitHub
-// update check. Play: Play keeps it current.
-export default function UpdateSection({ channel }: { channel: string }) {
+// Settings → Updates, the body of its page (pages/UpdatesPage.tsx): the
+// build on this phone as a parcel's label (updates/). Lite: its packing
+// list, the full-build pitch and whether that offer opens at launch. Full:
+// A-01 on the porch and the GitHub update check. Play: Play keeps it
+// current. Either of those two says how a new build reaches you.
+export default function UpdateSection({ channel: name }: { channel: string }) {
   const requestUpdatePrompt = useAppStore((s) => s.requestUpdatePrompt);
   const updatePromptMuted = useAppStore((s) => s.updatePromptMuted);
   const setUpdatePromptMuted = useAppStore((s) => s.setUpdatePromptMuted);
   const version = installedVersion();
+  const channel = channelOf(name);
+  const label = <BuildLabel channel={channel} version={version.version} versionCode={version.versionCode} />;
 
   if (channel === 'lite') {
     return (
       <>
-        <AppCard
-          title="Starter build: a brain in a jar"
-          subtitle="Chat and terminal only. No eyes, no hands."
-          chevron={false}
-          icon={<Thumb up={false} />}
-        />
+        {label}
+        <LiteBox />
         <PlainText fontSize={14} color="muted">
           Right now the agent can think but not act. It cannot see your screen, tap a button or
           type a word, so every "open WhatsApp and reply" ends in a polite shrug. The full build
@@ -34,35 +35,27 @@ export default function UpdateSection({ channel }: { channel: string }) {
           eyes and hands behind your fingerprint.
         </PlainText>
         <AppButton onPress={requestUpdatePrompt}>Install the full build</AppButton>
-        <AppButton variant="secondary" onPress={() => void setUpdatePromptMuted(!updatePromptMuted)}>
-          {updatePromptMuted ? 'Ask again on launch' : "Don't ask on launch"}
-        </AppButton>
-        <PlainText fontSize={13} color="muted">
-          {updatePromptMuted
-            ? 'The full-build offer stays quiet at launch. This button brings it back.'
-            : 'The full-build offer opens every launch until you install it or silence it here.'}
-        </PlainText>
+        <RowGroup title="At launch" barcode="atLaunch">
+          <SwitchRow
+            title="Offer the full build"
+            on={!updatePromptMuted}
+            onToggle={() => void setUpdatePromptMuted(!updatePromptMuted)}
+            note={
+              updatePromptMuted
+                ? 'The full-build offer stays quiet at launch. Turn this on to bring it back.'
+                : 'The full-build offer opens once at launch for each new full build, never twice for the same one.'
+            }
+          />
+        </RowGroup>
       </>
     );
   }
 
   return (
     <>
-      <AppCard
-        title={channel === 'play' ? 'Updates come through Play' : 'Full build'}
-        subtitle={
-          channel === 'play'
-            ? `v${version.version} · Play keeps it current`
-            : `v${version.version} · checks GitHub on launch`
-        }
-        chevron={false}
-        icon={<Thumb up />}
-      />
-      {channel !== 'play' ? (
-        <AppButton variant="secondary" onPress={requestUpdatePrompt}>
-          Check for updates
-        </AppButton>
-      ) : null}
+      {label}
+      <Courier channel={channel} />
+      <RouteFacts channel={channel} />
     </>
   );
 }

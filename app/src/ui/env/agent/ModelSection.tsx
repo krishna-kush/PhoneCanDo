@@ -47,7 +47,7 @@ export default function ModelSection({ agent }: { agent: Agent }) {
 
   return (
     <>
-      <ModelPicker title="Runs on" models={models} selected={agent.model} disabled={busy !== undefined} onSelect={pick} />
+      <ModelPicker title="Runs on" barcode="agentModel" models={models} selected={agent.model} disabled={busy !== undefined} onSelect={pick} />
       {busy !== undefined ? (
         <ProgressBar label={loading ? `Switching to ${loading}: loading it can take a minute` : 'Switching'} fraction={null} />
       ) : null}

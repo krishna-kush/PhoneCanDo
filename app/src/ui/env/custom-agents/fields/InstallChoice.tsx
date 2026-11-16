@@ -1,13 +1,13 @@
 import { YStack } from 'tamagui';
 import { changeInstall, INSTALL_WAYS, isPreset, type InstallWay } from '../../../../engine/agents/user/install';
-import { FIELD_TAGS, fieldProblems, INSTALL_CHOICES, PACKAGE_FIELD, SCRIPT_HINT } from '../../logic/customAgentText';
-import FieldLabel from '../FieldLabel';
+import RowGroup from '../../../common/rows/RowGroup';
+import { FIELD_TAGS, fieldProblems, INSTALL_CHOICES, PACKAGE_FIELD, SCRIPT_HINT, tagText } from '../../logic/customAgentText';
 import FormField from '../FormField';
 import OptionRow from '../OptionRow';
 import type { FormKit } from './types';
 
-// How it installs: one of four, then the one field that way needs (the
-// package, or the script). A change runs through changeInstall, so the
+// How it installs: one of four, as a pick-one key box, then the one field
+// that way needs (the package, or the script). A change runs through changeInstall, so the
 // command follows the package and a package turned into a script keeps
 // its line.
 export default function InstallChoice({ k }: { k: FormKit }) {
@@ -15,8 +15,7 @@ export default function InstallChoice({ k }: { k: FormKit }) {
   const change = (next: { install?: InstallWay; installPackage?: string }) => k.patch(changeInstall(k.form, next));
   return (
     <YStack gap="3">
-      <FieldLabel label="How it installs" tag={FIELD_TAGS.install} />
-      <YStack gap="2" accessibilityRole="radiogroup">
+      <RowGroup title={`How it installs ${tagText(FIELD_TAGS.install ?? 'needed')}`} barcode="installChoice" radio>
         {INSTALL_WAYS.map((w) => (
           <OptionRow
             key={w}
@@ -27,7 +26,7 @@ export default function InstallChoice({ k }: { k: FormKit }) {
             onToggle={() => change({ install: w })}
           />
         ))}
-      </YStack>
+      </RowGroup>
       {isPreset(way) ? (
         <FormField
           label={PACKAGE_FIELD[way].label}

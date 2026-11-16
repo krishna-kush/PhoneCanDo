@@ -1,6 +1,6 @@
 // The user's app-wide choices, kept in AsyncStorage: theme, the terminal's
-// extra keys, the lite build's update offer and the restricted-settings
-// guide's progress.
+// extra keys, the update offer (lite's switch, the build already offered at
+// a launch) and the restricted-settings guide's progress.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StateCreator } from 'zustand';
 import type { AppState } from '../app';
@@ -10,6 +10,7 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 const THEME_MODE_KEY = 'phonecando.themeMode.v1';
 const EXTRA_KEYS_STICKY_KEY = 'phonecando.extraKeysSticky.v1';
 const UPDATE_PROMPT_MUTED_KEY = 'phonecando.updatePromptMuted.v1';
+const UPDATE_OFFERED_KEY = 'phonecando.updateOffered.v1';
 const A11Y_STEP_KEY = 'phonecando.a11yStep.v3';
 
 export type PrefsSlice = {
@@ -22,6 +23,10 @@ export type PrefsSlice = {
   updatePromptNonce: number;
   /** Lite: stop opening the full-build pitch on launch (Settings → Updates). */
   updatePromptMuted: boolean;
+  /** The newest versionCode the update box opened for by itself at a launch (0: none); this phone only. */
+  updateOffered: number;
+  /** A newer build the launch's background check found ("1.0.3"); null when none or not checked. In-memory only. */
+  updateReady: string | null;
   /**
    * Restricted-settings guide progress: 1 Android's note, 2 App info (Allow
    * restricted settings), 3 the Accessibility switch.
@@ -38,6 +43,8 @@ export type PrefsSlice = {
   setExtraKeysSticky: (sticky: boolean) => Promise<void>;
   requestUpdatePrompt: () => void;
   setUpdatePromptMuted: (muted: boolean) => Promise<void>;
+  setUpdateOffered: (versionCode: number) => Promise<void>;
+  setUpdateReady: (version: string | null) => void;
   setA11yStep: (step: 1 | 2 | 3) => Promise<void>;
   setA11yGuideForced: (forced: boolean) => void;
 };
@@ -57,6 +64,8 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
   extraKeysSticky: false,
   updatePromptNonce: 0,
   updatePromptMuted: false,
+  updateOffered: 0,
+  updateReady: null,
   a11yStep: 1,
   a11yGuideForced: false,
 
@@ -65,15 +74,16 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
     // failure still ends in hydrated, on the defaults.
     let stored: readonly (readonly [string, string | null])[] = [];
     try {
-      stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY]);
+      stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY, UPDATE_OFFERED_KEY]);
     } catch {
       // unreadable: defaults for this run
     }
-    const [theme, sticky, muted, step] = stored.map(([, v]) => v);
+    const [theme, sticky, muted, step, offered] = stored.map(([, v]) => v);
     set({
       themeMode: theme === 'light' || theme === 'dark' ? theme : 'system',
       extraKeysSticky: sticky === '1',
       updatePromptMuted: muted === '1',
+      updateOffered: Number.parseInt(offered ?? '0', 10) || 0,
       a11yStep: step === '2' ? 2 : step === '3' ? 3 : 1,
       hydrated: true,
     });
@@ -95,6 +105,13 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
     set({ updatePromptMuted });
     await save(UPDATE_PROMPT_MUTED_KEY, updatePromptMuted ? '1' : '0');
   },
+
+  setUpdateOffered: async (updateOffered) => {
+    set({ updateOffered });
+    await save(UPDATE_OFFERED_KEY, String(updateOffered));
+  },
+
+  setUpdateReady: (updateReady) => set({ updateReady }),
 
   setA11yStep: async (a11yStep) => {
     set({ a11yStep });

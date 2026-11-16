@@ -116,6 +116,7 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('update stops another', w.updateStopsLine(['Gemini CLI']), 'An update stops the agent first, and Gemini CLI too, since it uses the same files; they start again when done.');
   t('shared log', w.sharedLogLine(['opencode']), 'opencode shares this machine, so this may be the log of its install.');
   t('shared machine line', w.sharedMachineLine('1.2 GB'), 'Shared machine · 1.2 GB');
+  t('shared machine line with its room', w.sharedMachineLine('1.2 GB', 'room 1'), 'Shared machine · room 1 · 1.2 GB');
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

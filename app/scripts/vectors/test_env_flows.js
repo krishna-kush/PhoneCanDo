@@ -56,12 +56,11 @@ const ui = (p) => src('ui/env/logic', p);
   const coded = Object.assign(new Error('Docker Hub said 429'), { code: 'rate_limited' });
   t('failure of a rejection', failureOfError(coded), { code: 'rate_limited', message: 'Docker Hub said 429' });
 
-  const { nextAgentName } = await import(flows('names.ts'));
-  t('first agent', nextAgentName('opencode', []), 'opencode');
-  t('second agent', nextAgentName('opencode', ['opencode']), 'opencode 2');
-  t('fills the gap', nextAgentName('opencode', ['opencode', 'opencode 3']), 'opencode 2');
-  t('case-insensitive', nextAgentName('opencode', ['OpenCode', 'opencode 2']), 'opencode 3');
-  t('renamed first frees label', nextAgentName('opencode', ['work', 'opencode 2']), 'opencode');
+  const { nextAgentName, nameTaken } = await import(flows('names.ts'));
+  t('a new agent carries its desk', nextAgentName('opencode', [], '1a'), 'opencode 1a');
+  t('the next desk', nextAgentName('opencode', ['opencode 1a'], '1b'), 'opencode 1b');
+  t('a name taken by hand gets a number', nextAgentName('opencode', ['OpenCode 2A'], '2a'), 'opencode 2a 2');
+  t('name taken, case and spaces aside', [nameTaken(' Builder ', ['builder']), nameTaken('Builder', ['opencode 1a'])], [true, false]);
 
   const { pickOrphanImage } = await import(flows('orphans.ts'));
   const img = (id, envId, state, createdAt) => ({ id, envId, state, createdAt });

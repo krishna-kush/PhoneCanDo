@@ -2,7 +2,9 @@
 // (src/engine/messages/parse.ts), and how the Messages page and the rows
 // around it show it: the filter to one agent, who to whom, each
 // recipient's status, replies (src/ui/messages/logic/messageView.ts), the
-// times, the screen queue's line and the copy (messagesCopy.ts). Imports
+// times, the screen queue's line and the copy (messagesCopy.ts), and the
+// page's look: delivery stamps, day boxes (days.ts) and the deli counter
+// (queue.ts). Imports
 // the real pure modules (Node 22.18+ strips their types), so these cannot
 // drift. Times read in UTC.
 // Run: node test_messages.js (or pnpm check:vectors)
@@ -201,6 +203,62 @@ const HOUR = 60 * MIN;
   t('woken only its own way, which failed', lv.wakeBlockedLine({ acp: false, canWake: true }, 'inbox'),
     'We saw waking it while idle fail, so a wake may not reach it. What it can do says why.');
   t('both ways failed', lv.wakeBlockedLine({ acp: true, canWake: true }, 'delivered').startsWith('We saw its ACP mode and its own wake fail'), true);
+
+  // --- the page's look: stamps, day boxes, the deli counter --------------------
+  t('waiting: no stamp yet', v.deliveryStamp('queued'), null);
+  t('read: an amber stamp', v.deliveryStamp('read'), { word: 'read', tone: 'secondary' });
+  t('refused: a red stamp', v.deliveryStamp('refused'), { word: 'refused', tone: 'primary' });
+  const one = msg(9, { deliveries: [{ agentId: 'r', name: 'Reviewer', status: 'read', woke: true, started: false, reason: null }] });
+  t('one recipient: no name, what it did after the stamp', v.deliveryMarks(one),
+    [{ key: 'r', name: null, stamp: { word: 'read', tone: 'secondary' }, note: 'woke Reviewer', tone: 'secondaryInk' }]);
+  const many = msg(10, {
+    to: { kind: 'phone' },
+    deliveries: [
+      { agentId: 'r', name: 'Reviewer', status: 'queued', woke: false, started: false, reason: null },
+      { agentId: 't', name: 'Tester', status: 'refused', woke: false, started: false, reason: 'not wakeable' },
+      { agentId: 'f', name: 'Fixer', status: 'delivered', woke: false, started: true, reason: null },
+    ],
+  });
+  t('many recipients: each named, waiting, why refused, started', v.deliveryMarks(many).map((m) => [m.name, m.stamp?.word ?? null, m.note, m.tone]), [
+    ['Reviewer', null, 'waiting', 'dim'],
+    ['Tester', 'refused', 'not wakeable', 'primary'],
+    ['Fixer', 'delivered', 'started it', 'secondaryInk'],
+  ]);
+
+  const d = await import(src('ui/messages/logic/days.ts'));
+  const noon = Date.UTC(2026, 10, 16, 12, 0);
+  t('today', d.dayTitle(noon - HOUR, noon), 'Today');
+  t('yesterday', d.dayTitle(Date.UTC(2026, 10, 15, 23, 59), noon), 'Yesterday');
+  t('this year: its weekday', d.dayTitle(Date.UTC(2026, 10, 3, 9, 0), noon), 'Tue 3 Nov');
+  t('an older year', d.dayTitle(Date.UTC(2025, 10, 3, 9, 0), noon), '3 Nov 2025');
+  t('no time', d.dayTitle(0, noon), 'Earlier');
+  const days = d.boxPlaces([
+    { id: 5, sentAt: noon - MIN },
+    { id: 4, sentAt: noon - HOUR },
+    { id: 3, sentAt: Date.UTC(2026, 10, 15, 8, 0) },
+    { id: 2, sentAt: 0 },
+  ], noon);
+  t('a day box: the first opens it, the last closes it', [...days.entries()], [
+    [5, { title: 'Today', gap: false, last: false }],
+    [4, { title: null, gap: false, last: true }],
+    [3, { title: 'Yesterday', gap: true, last: true }],
+    [2, { title: 'Earlier', gap: true, last: true }],
+  ]);
+  t('no messages, no boxes', d.boxPlaces([], noon).size, 0);
+
+  const qu = await import(src('ui/messages/logic/queue.ts'));
+  const B = { agentId: 'b', name: 'Builder' }, R = { agentId: 'r', name: 'Reviewer' }, T = { agentId: 't', name: 'Tester' };
+  t('a holder gets ticket 01, the line goes on from it', qu.queueSpots({ holder: B, reserved: false, waiting: [R, T] }), {
+    holder: { agentId: 'b', name: 'Builder', ticket: 'No. 01' },
+    line: [{ agentId: 'r', name: 'Reviewer', ticket: 'No. 02' }, { agentId: 't', name: 'Tester', ticket: 'No. 03' }],
+  });
+  t('no holder: the line starts at 01', qu.queueSpots({ holder: null, reserved: false, waiting: [R] }).line[0].ticket, 'No. 01');
+  t('now serving the holder', qu.nowServing({ holder: B, reserved: false, waiting: [] }), 'Now serving 01');
+  t('now serving nobody', qu.nowServing({ holder: null, reserved: false, waiting: [R] }), 'Now serving ––');
+  t('driving', qu.screenWord({ holder: B, reserved: false, waiting: [] }), 'driving');
+  t('handed the screen, not driving yet', qu.screenWord({ holder: B, reserved: true, waiting: [] }), 'its turn');
+  t('free', qu.screenWord({ holder: null, reserved: false, waiting: [R] }), 'free');
+  t('the empty page naps', c.napLine(false), 'A-01 · napping by the inbox');
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

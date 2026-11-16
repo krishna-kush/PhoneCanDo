@@ -20,7 +20,7 @@ type Props = {
 // skipped: busy, missed, failed and why) and the first words of the task.
 export default function RecentRuns({ title, runs, now, withAgent }: Props) {
   return (
-    <RowGroup title={title}>
+    <RowGroup title={title} barcode="recentRuns">
       {runs.map((r) => (
         <RowFrame key={r.seq} bare>
           <YStack paddingHorizontal={ROW_GUTTER} paddingVertical="2" gap={2}>

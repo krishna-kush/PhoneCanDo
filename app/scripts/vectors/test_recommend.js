@@ -5,7 +5,7 @@
 // and reading one back, when opening through one counts as an install, the
 // kept list and joining it with the account's; the server's answers
 // (engine/share/wire.ts, engine/account/wire.ts); and the Refer page's
-// funnel (ui/recommend/logic/funnel.ts). Imports the real pure modules
+// funnel and route (ui/recommend/logic/funnel.ts, route.ts). Imports the real pure modules
 // (Node 22.18+ strips their types), so these cannot drift.
 // Run: node test_recommend.js (or pnpm check:vectors)
 'use strict';
@@ -212,6 +212,53 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
     f.sentLabel(new Date(2026, 9, 3, 9).getTime(), noon),
     f.sentLabel(new Date(2025, 0, 2, 9).getTime(), noon),
   ], ['today', 'yesterday', '3 Oct', '2 Jan 2025']);
+
+  // --- the route: how far the links got (ui/recommend/logic/route.ts) ----------
+  const r = await import(src('ui/recommend/logic/route.ts'));
+  const F = (sent, opened = 0, downloaded = 0, installed = 0, using = 0) => ({ sent, opened, downloaded, installed, using });
+  const ladder = [F(0), F(1), F(2), F(2, 3), F(2, 3, 1), F(2, 3, 1, 1), F(2, 3, 2, 2), F(2, 3, 2, 2, 1)];
+  t('route reach', ladder.map(r.reach), [-1, 0, 0, 1, 2, 3, 3, 4]);
+  t('route reach skips an empty stop', r.reach(F(1, 0, 0, 1)), 3);
+  t('route moods', ladder.map(r.routeMood), ['asleep', 'awake', 'awake', 'busy', 'busy', 'happy', 'happy', 'happy']);
+  t('route verdicts', ladder.map(r.routeVerdict), [
+    'No links out yet. Share one and this box starts counting.',
+    "Your link is out there. Nobody's tapped it yet.",
+    "Your links are out there. Nobody's tapped one yet.",
+    'Someone peeked! No download yet.',
+    'A download! Now we wait for the install.',
+    'You brought a friend aboard.',
+    'You brought 2 friends aboard.',
+    'They came back another day. That is a real crew mate.',
+  ]);
+  t('crew stamps', [r.crewStamp(F(2, 3, 1)), r.crewStamp(F(2, 3, 1, 1)), r.crewStamp(F(5, 9, 4, 3, 1))], [null, '+1 crew', '+3 crew']);
+  t('link reach', [
+    r.linkReach(undefined),
+    r.linkReach({ ...stats.aaaaaaaa, opened: 0, downloaded: 0, installed: 0, using: 0 }),
+    r.linkReach(stats.bbbbbbbb),
+    r.linkReach({ ...stats.bbbbbbbb, downloaded: 1 }),
+    r.linkReach({ ...stats.aaaaaaaa, using: 0 }),
+    r.linkReach(stats.aaaaaaaa),
+  ], [0, 0, 1, 2, 3, 4]);
+
+  // --- the share sheet's text (ui/recommend/copy.ts) ---------------------------
+  const words = await import(src('ui/recommend/copy.ts'));
+  const link = 'https://phonecando.app/i/aaaaaaaa';
+  const msg = words.shareMessage(link, 0);
+  const lead = (sent, at = 'https://phonecando.app') => words.shareMessage(at, sent).split('\n')[0];
+  t('share text ends with the link on its own line', msg.split('\n').slice(-1)[0], link);
+  t('share text is one line, then the link', msg.split('\n').length, 2);
+  t('share text: each share takes the next line, the bare site too', [lead(0), lead(1)], [words.SHARE_LINES[0], words.SHARE_LINES[1]]);
+  t('share text: the lines come round again', lead(words.SHARE_LINES.length), words.SHARE_LINES[0]);
+  t('share text: every line comes up', new Set(Array.from({ length: words.SHARE_LINES.length }, (_, i) => lead(i))).size, words.SHARE_LINES.length);
+  t('share lines: a dozen', words.SHARE_LINES.length, 12);
+  t('share lines all have A-01', words.SHARE_LINES.every((l) => l.includes('A-01')), true);
+  const control = /tap|type|screen|drive|open apps|opens apps|opened an app|work my apps|eyes and hands/;
+  t('share lines: most say it works the phone too', words.SHARE_LINES.filter((l) => control.test(l)).length >= 9, true);
+  t('share lines: no root promised', words.SHARE_LINES.some((l) => /root/i.test(l)), false);
+  const emoji = (l) => (l.match(/\p{Extended_Pictographic}/gu) ?? []).length;
+  t('share lines: one emoji at most', words.SHARE_LINES.map(emoji).every((n) => n <= 1), true);
+  t('share lines fit a chat preview', words.SHARE_LINES.every((l) => l.length <= 160), true);
+  t('sent stamps', [words.sentStamp(1), words.sentStamp(3)], ['Sent!', 'Sent ×3']);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

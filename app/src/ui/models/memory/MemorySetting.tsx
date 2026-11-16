@@ -110,7 +110,7 @@ export default function MemorySetting({ model, onDone }: Props) {
         {MEMORY_TITLE}
       </PlainText>
       <Note>{MEMORY_NOTE}</Note>
-      <RowGroup title={SHARE_TITLE} radio>
+      <RowGroup title={SHARE_TITLE} barcode="modelRam" radio>
         {shareOptions(model.traits.budgets).map((o) => (
           <ChoiceRow key={o.value} label={o.label} note={o.note} selected={share === o.value} disabled={busy} onPress={() => setShare(o.value)} />
         ))}
@@ -142,7 +142,7 @@ export default function MemorySetting({ model, onDone }: Props) {
         {showContext ? (
           <ContextSetting model={model} automatic={automatic} stop={stop} disabled={busy} onAutomatic={setAutomatic} onStop={setStop} />
         ) : null}
-        <RowGroup title={NOTE_SIZE_TITLE} radio>
+        <RowGroup title={NOTE_SIZE_TITLE} barcode="noteSize" radio>
           {noteSizeOptions(model.traits, kvCache === 'auto' ? (plan?.halfKvCache ?? null) : null).map((o) => (
             <ChoiceRow key={o.value} label={o.label} note={o.note} selected={kvCache === o.value} disabled={busy} onPress={() => setKvCache(o.value)} />
           ))}

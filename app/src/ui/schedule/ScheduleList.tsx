@@ -9,6 +9,7 @@ import { useScheduleStore } from '../../state/schedule';
 import AppButton from '../common/AppButton';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PageHeader from '../common/PageHeader';
+import type { BarcodeId } from '../common/rows/barcode/lines';
 import RowFrame from '../common/rows/RowFrame';
 import RowGroup from '../common/rows/RowGroup';
 import Screen from '../common/Screen';
@@ -76,9 +77,9 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
       {available && exact === false ? <LateRunsRow /> : null}
       {cannot ? <Note>{cannot}</Note> : null}
       {line.days.map((day) => (
-        <Rows key={day.label} title={day.label} entries={day.entries} now={now} onEdit={onEdit} />
+        <Rows key={day.label} title={day.label} barcode={day.barcode} entries={day.entries} now={now} onEdit={onEdit} />
       ))}
-      {line.rest.length > 0 ? <Rows title={NOT_RUNNING} entries={line.rest} now={now} onEdit={onEdit} /> : null}
+      {line.rest.length > 0 ? <Rows title={NOT_RUNNING} barcode="schedulesOff" entries={line.rest} now={now} onEdit={onEdit} /> : null}
       {available && empty ? <Note>{emptyText(agentId ? (agent?.name ?? 'this agent') : null)}</Note> : null}
       {empty && canAdd ? <AppButton onPress={onAdd}>{saveLabel(false)}</AppButton> : null}
       {shownRuns.length > 0 ? <RecentRuns title={RECENT_RUNS} runs={shownRuns} now={now} withAgent={agentId == null} /> : null}
@@ -89,17 +90,19 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
 // One day's schedules (or those not running) as a RowGroup.
 function Rows({
   title,
+  barcode,
   entries,
   now,
   onEdit,
 }: {
   title: string;
+  barcode: BarcodeId;
   entries: readonly TimelineEntry[];
   now: number;
   onEdit: (s: Schedule) => void;
 }) {
   return (
-    <RowGroup title={title}>
+    <RowGroup title={title} barcode={barcode}>
       {entries.map((e) => (
         <RowFrame key={e.schedule.id} bare>
           <ScheduleRow entry={e} now={now} onEdit={onEdit} />
@@ -109,7 +112,7 @@ function Rows({
   );
 }
 
-// The page's head: the agent it is for (its serial and name) with All for
+// The page's head: the agent it is for (its desk and name) with All for
 // every agent's, or every agent's; Add while there is an agent to add for.
 function Head({ agentId, canAdd, onAdd }: { agentId: AgentId | null; canAdd: boolean; onAdd: () => void }) {
   const replaceTop = useAppStore((s) => s.replaceTop);
@@ -130,7 +133,7 @@ function Head({ agentId, canAdd, onAdd }: { agentId: AgentId | null; canAdd: boo
 
 function AgentHead({ agentId, trailing }: { agentId: AgentId; trailing: ReactNode }) {
   const name = useAgentsStore((s) => s.agents.find((a) => a.id === agentId)?.name ?? null);
-  const { serial } = useAgentLook(agentId);
-  const kicker = [serial, name].filter(Boolean).join(' · ');
+  const { desk } = useAgentLook(agentId);
+  const kicker = [desk, name].filter(Boolean).join(' · ');
   return <PageHeader kicker={kicker} title={SCHEDULES_TITLE} trailing={trailing} />;
 }

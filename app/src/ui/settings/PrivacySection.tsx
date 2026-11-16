@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Linking } from 'react-native';
-import { XStack } from 'tamagui';
 import {
   forgetMe,
   PRIVACY_URL,
@@ -12,24 +11,43 @@ import {
   type TelemetryOutcome,
 } from '../../engine/telemetry';
 import { useAppStore } from '../../state/app';
-import AppButton from '../common/AppButton';
-import AppCard from '../common/AppCard';
 import ConfirmDialog from '../common/ConfirmDialog';
+import { useTheme } from '../common/globals';
+import OpenMark from '../common/OpenMark';
 import PlainText from '../common/PlainText';
 import PromptDialog from '../common/PromptDialog';
-import ThumbIcon from '../common/ThumbIcon';
+import RowFrame from '../common/rows/RowFrame';
+import RowGroup from '../common/rows/RowGroup';
+import SwitchRow from '../common/rows/SwitchRow';
+import {
+  ALSO,
+  FORGET_NOTE,
+  NOT_IN_BUILD,
+  OFF_MEANS,
+  REPORT_NOTE,
+  REPORT_OFF_NOTE,
+  RESET_NOTE,
+  statsNote,
+} from './privacy/copy';
+import GuardDesk from './privacy/GuardDesk';
+import Manifest from './privacy/Manifest';
+import Shredder from './privacy/Shredder';
+import ToolRow from './privacy/ToolRow';
 
 type Busy = 'report' | 'forget' | 'reset' | null;
 
-// Settings → Privacy, the body of its page (pages/PrivacyPage.tsx): the
-// usage-stats switch, what it sends and what it never does (and how share
-// links and the optional sign-in fit in), and the user's tools (new
-// anonymous id, send a report, delete my data). Reset only
-// starts a new install id; Delete my data is what removes the phone's data
-// from the server, so the copy never blurs the two. For our own test
-// phones, a long-press on the usage-stats card reveals the tester-device
-// switch; debug builds also get the local dev host switch.
+// Settings → Privacy, the body of its page (pages/PrivacyPage.tsx), as a
+// customs declaration for what leaves the phone (privacy/): A-01 at the
+// desk over the usage-stats switch, what goes out and what never does
+// (privacy/Manifest.tsx), how share links and the optional sign-in fit in,
+// and the user's tools (new anonymous id, send a report, delete my data
+// through the shredder, the details). Reset only starts a new install id;
+// Delete my data is what removes the phone's data from the server, so the
+// copy never blurs the two. For our own test phones, a long-press on the
+// desk reveals the tester-device switch; debug builds also get the local
+// dev host switch.
 export default function PrivacySection() {
+  const t = useTheme();
   const [showTester, setShowTester] = useState(false);
   const telemetry = useAppStore((s) => s.telemetry);
   const { ready, available, enabled, tester, devLocal } = telemetry;
@@ -68,128 +86,104 @@ export default function PrivacySection() {
   if (ready && !available) {
     return (
       <PlainText fontSize={14} color="muted">
-        Usage stats are not available in this build, so nothing is sent.
+        {NOT_IN_BUILD}
       </PlainText>
     );
   }
 
   return (
     <>
-      <AppCard
-        title="Share anonymous usage stats"
-        subtitle={!ready ? 'Loading…' : enabled ? 'On · helps find bugs' : 'Off · nothing is sent'}
-        chevron={false}
-        icon={<ThumbIcon up={enabled} size={26} />}
-        onLongPress={() => setShowTester((v) => !v)}
-      />
-      <XStack gap="2">
-        <AppButton
-          flex={1}
-          variant={enabled ? 'primary' : 'secondary'}
-          disabled={!idle}
-          accessibilityState={{ selected: enabled }}
-          onPress={() => {
+      <RowGroup title="Usage stats" barcode="usageStats">
+        <GuardDesk ready={ready} enabled={enabled} onLongPress={() => setShowTester((v) => !v)} />
+        <SwitchRow
+          title="Share anonymous usage stats"
+          on={enabled}
+          busy={!idle}
+          onToggle={() => {
             setMsg('');
-            void setTelemetryEnabled(true);
+            void setTelemetryEnabled(!enabled);
           }}
-        >
-          On
-        </AppButton>
-        <AppButton
-          flex={1}
-          variant={enabled ? 'secondary' : 'primary'}
+          note={statsNote(ready, enabled)}
+          more={OFF_MEANS}
+        />
+      </RowGroup>
+
+      <Manifest />
+
+      <RowGroup title="Also on the form" barcode="privacyAlso">
+        {ALSO.map((a) => (
+          <RowFrame key={a.title}>
+            <PlainText fontSize={16} fontWeight="500">
+              {a.title}
+            </PlainText>
+            <PlainText fontSize={13} color="muted">
+              {a.note}
+            </PlainText>
+          </RowFrame>
+        ))}
+      </RowGroup>
+
+      <RowGroup title="Your tools" barcode="privacyTools">
+        <ToolRow
+          label="Reset anonymous ID"
+          note={RESET_NOTE}
           disabled={!idle}
-          accessibilityState={{ selected: !enabled }}
-          onPress={() => {
-            setMsg('');
-            void setTelemetryEnabled(false);
-          }}
-        >
-          Off
-        </AppButton>
-      </XStack>
-      <PlainText fontSize={14} color="muted">
-        Sent: your device type, Android and app version, crashes, engine health and how often
-        features are used, under a random anonymous ID. Never sent: your chats, files, keys, or
-        anything on your screen. Off stops it and deletes what has not been sent yet.
-      </PlainText>
-      <PlainText fontSize={14} color="muted">
-        Tell a friend: each link you share carries a random code, so we can count how often it
-        was opened, downloaded and installed. Never who. Links you share while this is off go out
-        untracked.
-      </PlainText>
-      <PlainText fontSize={14} color="muted">
-        Signing in with Google (Settings → Account) is optional. We keep your email, your links&apos;
-        codes and a few settings (theme, extra keys, run caps) only if you sign in, and never link
-        them to these usage stats.
-      </PlainText>
-      <AppButton
-        variant="secondary"
-        disabled={!idle}
-        loading={busy === 'reset'}
-        onPress={() => setConfirmReset(true)}
-      >
-        Reset anonymous ID
-      </AppButton>
-      <PlainText fontSize={13} color="muted">
-        Starts a new install ID and drops data not sent yet. Data already sent stays linked to this
-        phone; Delete my data removes it.
-      </PlainText>
-      <AppButton
-        variant="secondary"
-        disabled={!idle || !enabled}
-        loading={busy === 'report'}
-        onPress={() => setReportOpen(true)}
-      >
-        Send report
-      </AppButton>
-      <AppButton
-        variant="danger"
-        disabled={!idle}
-        loading={busy === 'forget'}
-        onPress={() => setConfirmForget(true)}
-      >
-        Delete my data
-      </AppButton>
-      <AppButton variant="ghost" onPress={openDetails}>
-        Privacy details
-      </AppButton>
+          busy={busy === 'reset'}
+          onPress={() => setConfirmReset(true)}
+          mark={<OpenMark opening={false} size={14} color={t.faint} />}
+        />
+        <ToolRow
+          label="Send report"
+          note={enabled ? REPORT_NOTE : REPORT_OFF_NOTE}
+          disabled={!idle || !enabled}
+          busy={busy === 'report'}
+          onPress={() => setReportOpen(true)}
+          mark={<OpenMark opening={false} size={14} color={t.faint} />}
+        />
+        <ToolRow
+          label="Delete my data"
+          note={FORGET_NOTE}
+          danger
+          disabled={!idle}
+          busy={busy === 'forget'}
+          onPress={() => setConfirmForget(true)}
+          mark={<Shredder shredding={false} />}
+          busyMark={<Shredder shredding />}
+        />
+        <ToolRow
+          label="Privacy details"
+          note="The whole list, on phonecando.app."
+          onPress={openDetails}
+          mark={<OpenMark opening={false} size={14} color={t.faint} />}
+        />
+      </RowGroup>
       {msg ? (
         <PlainText fontSize={13} color="muted">
           {msg}
         </PlainText>
       ) : null}
 
-      {showTester ? (
-        <>
-          <AppCard
-            title={`Tester device: ${tester ? 'on' : 'off'}`}
-            subtitle="Left out of user counts. For our own test phones."
-            chevron={false}
-            icon={<ThumbIcon up={tester} size={26} />}
-          />
-          <AppButton variant="secondary" disabled={!idle} onPress={() => void setTesterDevice(!tester)}>
-            {tester ? 'Unmark tester device' : 'Mark as tester device'}
-          </AppButton>
-        </>
-      ) : null}
-
-      {__DEV__ ? (
-        <>
-          <AppCard
-            title={`Send to local dev host: ${devLocal ? 'on' : 'off'}`}
-            subtitle="Debug build · 127.0.0.1:8787"
-            chevron={false}
-            icon={<ThumbIcon up={devLocal} size={26} />}
-          />
-          <AppButton variant="secondary" onPress={() => void setDevLocal(!devLocal)}>
-            {devLocal ? 'Stop sending to dev host' : 'Send to local dev host'}
-          </AppButton>
-          <PlainText fontSize={13} color="muted">
-            Debug builds send nothing unless this is on. Run pnpm -C tce dev, then adb reverse
-            tcp:8787 tcp:8787.
-          </PlainText>
-        </>
+      {showTester || __DEV__ ? (
+        <RowGroup title="Back room" barcode="backRoom">
+          {showTester ? (
+            <SwitchRow
+              title="Tester device"
+              on={tester}
+              busy={!idle}
+              onToggle={() => void setTesterDevice(!tester)}
+              note="Left out of user counts. For our own test phones."
+            />
+          ) : null}
+          {__DEV__ ? (
+            <SwitchRow
+              title="Send to local dev host"
+              on={devLocal}
+              onToggle={() => void setDevLocal(!devLocal)}
+              note="Debug build · 127.0.0.1:8787"
+              more="Debug builds send nothing unless this is on. Run pnpm -C tce dev, then adb reverse tcp:8787 tcp:8787."
+            />
+          ) : null}
+        </RowGroup>
       ) : null}
 
       <PromptDialog

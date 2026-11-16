@@ -70,7 +70,7 @@ export default function FolderPicker() {
         </Text>
       )}
       <YStack flex={1} minHeight={0}>
-        <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <YStack gap="2" paddingBottom="2">
             {canUp ? (
               <AppCard title="…" subtitle="Up one level" onPress={up} chevron={false} />

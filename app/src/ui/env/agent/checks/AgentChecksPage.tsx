@@ -19,13 +19,13 @@ import { useWatchedChecks } from './useWatchedChecks';
 // notice opens this page.
 export default function AgentChecksPage({ agentId }: { agentId: string }) {
   const agent = useAgentsStore((s) => s.agents.find((a) => a.id === agentId));
-  const { serial } = useAgentLook(agentId);
+  const { desk } = useAgentLook(agentId);
   const now = useNow(usePageActive());
   const checks = useWatchedChecks(agentId);
   if (!agent) return <AgentGone />;
   return (
     <Screen>
-      <PageHeader kicker={`${serial} · ${agent.name}`} title={CHECKS_TITLE} />
+      <PageHeader kicker={`${desk} · ${agent.name}`} title={CHECKS_TITLE} />
       <Note>{CHECKS_INTRO}</Note>
       {checks ? (
         <>

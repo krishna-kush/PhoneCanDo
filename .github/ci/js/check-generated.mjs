@@ -53,7 +53,14 @@ const GENERATORS = [
     name: 'brand assets',
     fix: 'pnpm logos',
     script: 'scripts/make-logos.mjs',
-    inputs: ['theme/tokens.json', 'theme/logo.json'],
+    inputs: [
+      'theme/tokens.json',
+      'theme/logo.json',
+      'mascot/layout/eyes.ts',
+      'mascot/layout/types.ts',
+      'scripts/logos/splash-wake/story.mjs',
+      'scripts/logos/splash-wake/vector.mjs',
+    ],
     ignore: [],
   },
 ];
