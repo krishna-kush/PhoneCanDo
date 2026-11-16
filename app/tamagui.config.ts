@@ -136,8 +136,9 @@ const v2Input = {
   },
 };
 
-// The sheet's dimmed backdrop (v2's SheetOverlay theme), read by name.
-const sheetOverlay = { dark: 'rgba(0,0,0,0.9)', light: 'rgba(0,0,0,0.5)' };
+// The sheet's dimmed backdrop (v2's SheetOverlay theme), read by name; the
+// native bottom sheet (ui/common/sheet/BottomSheet.tsx) dims with it too.
+export const sheetOverlay = { dark: 'rgba(0,0,0,0.9)', light: 'rgba(0,0,0,0.5)' };
 
 // The default mono font is a CSS stack, and a system font overlay can map
 // even `monospace` to the user's chosen sans. Bundle the site's Geist Mono

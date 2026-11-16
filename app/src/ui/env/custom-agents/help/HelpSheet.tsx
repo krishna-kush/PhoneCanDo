@@ -1,9 +1,8 @@
 import { useRef } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import AppButton from '../../../common/AppButton';
-import BottomSheet from '../../../common/BottomSheet';
 import PlainText from '../../../common/PlainText';
+import BottomSheet from '../../../common/sheet/BottomSheet';
 import type { FieldHelp } from '../../logic/customAgentText';
 
 export type OpenHelp = { label: string; help: FieldHelp };
@@ -15,23 +14,15 @@ export default function HelpSheet({ shown, onClose }: { shown: OpenHelp | null; 
   const last = useRef(shown);
   if (shown) last.current = shown;
   return (
-    <BottomSheet open={shown != null} onClose={onClose} closeLabel="Close">
+    <BottomSheet open={shown != null} onClose={onClose}>
       {last.current ? <SheetBody shown={last.current} onClose={onClose} /> : null}
     </BottomSheet>
   );
 }
 
 function SheetBody({ shown, onClose }: { shown: OpenHelp; onClose: () => void }) {
-  const insets = useSafeAreaInsets();
   return (
-    <YStack
-      backgroundColor="panel"
-      borderTopWidth={1}
-      borderColor="lineStrong"
-      padding="4"
-      paddingBottom={16 + insets.bottom}
-      gap="3"
-    >
+    <YStack padding="4" gap="3">
       <PlainText fontSize={18} fontWeight="700">
         {shown.label}
       </PlainText>

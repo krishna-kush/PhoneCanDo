@@ -51,16 +51,19 @@ Industries, Inc.), Tamagui (MIT License, Copyright (c) 2020 Nate Wienert and
 contributors) and Zustand (MIT License, Copyright (c) 2019 Paul Henschel). Their
 notices are retained in the bundled JavaScript and in the app's About screen.
 
-## AndroidX, Kotlin and kotlinx — Apache License 2.0
+## AndroidX, Material Components, Kotlin and kotlinx — Apache License 2.0
 
 The app, the PCE and the Linux runtime engine (`lre/`) use AndroidX, the Kotlin
 standard library, kotlinx.coroutines and kotlinx.serialization
 (`kotlinx-serialization-json` 1.8.1, which `lre/oci` brings into every
-channel), Apache License 2.0. Copyright (C) The Android Open Source Project
-(AndroidX); Copyright 2010-2024 JetBrains s.r.o. and Kotlin Programming Language
-contributors (Kotlin); Copyright 2000-2020 JetBrains s.r.o. and Kotlin
-Programming Language contributors (kotlinx.coroutines); Copyright 2017-2024
-JetBrains s.r.o. (kotlinx.serialization). The full license text is in the
+channel), Apache License 2.0. The app's bottom sheets use Material Components
+for Android (`com.google.android.material`, through react-native-true-sheet),
+Apache License 2.0. Copyright (C) The Android Open Source Project
+(AndroidX, Material Components for Android); Copyright 2010-2024 JetBrains
+s.r.o. and Kotlin Programming Language contributors (Kotlin); Copyright
+2000-2020 JetBrains s.r.o. and Kotlin Programming Language contributors
+(kotlinx.coroutines); Copyright 2017-2024 JetBrains s.r.o.
+(kotlinx.serialization). The full license text is in the
 app's About screen and at <https://www.apache.org/licenses/LICENSE-2.0>.
 
 ## XZ for Java — 0BSD

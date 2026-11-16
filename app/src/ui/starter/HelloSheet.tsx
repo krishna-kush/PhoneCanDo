@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { ScrollView, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { XStack, YStack } from 'tamagui';
 import { useActiveAgent, useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { renameAgentTo } from '../../state/flows/renameAgent';
 import { useStarterStore } from '../../state/starter';
 import AppButton from '../common/AppButton';
-import BottomSheet from '../common/BottomSheet';
 import AgentFace from '../common/face/AgentFace';
 import { boopLine } from '../common/face/lines';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PlainText from '../common/PlainText';
 import PromptDialog from '../common/PromptDialog';
+import BottomSheet from '../common/sheet/BottomSheet';
+import SheetScroll from '../common/sheet/SheetScroll';
 import {
   helloCaption,
   helloLine,
@@ -40,8 +39,6 @@ export default function HelloSheet() {
   const status = useStarterStore((s) => s.shift.status);
   const push = useAppStore((s) => s.push);
   const { missions, hands } = useShiftMissions();
-  const { height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const [boops, setBoops] = useState(0);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
@@ -64,59 +61,51 @@ export default function HelloSheet() {
   };
 
   return (
-    <BottomSheet open={open} onClose={() => useStarterStore.getState().windOff()} closeLabel={WING_IT}>
-      <YStack
-        backgroundColor="panel"
-        borderTopWidth={1}
-        borderColor="lineStrong"
-        maxHeight={height * 0.85}
-        paddingBottom={insets.bottom}
-      >
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-          <XStack alignItems="center" gap="4">
-            <YStack
-              onPress={() => setBoops((n) => n + 1)}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel={`${look.serial}, your agent. Tap it.`}
-            >
-              <AgentFace mood={look.mood} mascot={look.mascot} size={56} hop={boops} />
-            </YStack>
-            <YStack flex={1} minWidth={0} gap="1">
-              <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase">
-                {boops > 0 ? `${look.serial} · ${boopLine(boops - 1)}` : helloCaption(look.serial, up)}
-              </PlainText>
-              <PlainText fontSize={22} fontWeight="700" numberOfLines={2}>
-                {helloTitle(agent?.name ?? look.serial)}
-              </PlainText>
-            </YStack>
-          </XStack>
-          <PlainText fontSize={15}>{helloLine(hands)}</PlainText>
-          <XStack>
-            <AppButton
-              variant="ghost"
-              onPress={() => {
-                setName(agent?.name ?? '');
-                setRenaming(true);
-              }}
-            >
-              {`${RENAME} ✎`}
-            </AppButton>
-          </XStack>
-          <PlainText fontSize={15} color="muted">
-            {helloShift(missions.length)}
-          </PlainText>
-          <XStack gap="2" justifyContent="flex-end" flexWrap="wrap">
-            <AppButton variant="ghost" onPress={() => useStarterStore.getState().windOff()}>
-              {WING_IT}
-            </AppButton>
-            <AppButton onPress={begin}>{START}</AppButton>
-          </XStack>
-          <PlainText fontSize={12} color="dim">
-            {LATER_NOTE}
-          </PlainText>
-        </ScrollView>
-      </YStack>
+    <BottomSheet open={open} onClose={() => useStarterStore.getState().windOff()}>
+      <SheetScroll contentContainerStyle={{ padding: 16, gap: 12 }}>
+        <XStack alignItems="center" gap="4">
+          <YStack
+            onPress={() => setBoops((n) => n + 1)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={`${look.serial}, your agent. Tap it.`}
+          >
+            <AgentFace mood={look.mood} mascot={look.mascot} size={56} hop={boops} />
+          </YStack>
+          <YStack flex={1} minWidth={0} gap="1">
+            <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase">
+              {boops > 0 ? `${look.serial} · ${boopLine(boops - 1)}` : helloCaption(look.serial, up)}
+            </PlainText>
+            <PlainText fontSize={22} fontWeight="700" numberOfLines={2}>
+              {helloTitle(agent?.name ?? look.serial)}
+            </PlainText>
+          </YStack>
+        </XStack>
+        <PlainText fontSize={15}>{helloLine(hands)}</PlainText>
+        <XStack>
+          <AppButton
+            variant="ghost"
+            onPress={() => {
+              setName(agent?.name ?? '');
+              setRenaming(true);
+            }}
+          >
+            {`${RENAME} ✎`}
+          </AppButton>
+        </XStack>
+        <PlainText fontSize={15} color="muted">
+          {helloShift(missions.length)}
+        </PlainText>
+        <XStack gap="2" justifyContent="flex-end" flexWrap="wrap">
+          <AppButton variant="ghost" onPress={() => useStarterStore.getState().windOff()}>
+            {WING_IT}
+          </AppButton>
+          <AppButton onPress={begin}>{START}</AppButton>
+        </XStack>
+        <PlainText fontSize={12} color="dim">
+          {LATER_NOTE}
+        </PlainText>
+      </SheetScroll>
       <PromptDialog
         open={renaming}
         onClose={() => setRenaming(false)}

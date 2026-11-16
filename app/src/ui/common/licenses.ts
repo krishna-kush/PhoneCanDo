@@ -182,13 +182,15 @@ Copyright (c) 2019 Paul Henschel (Zustand)
 The MIT License text is the same as the opencode section above.
 
 ==============================================================================
-AndroidX, Kotlin and kotlinx — Apache License 2.0
+AndroidX, Material Components, Kotlin and kotlinx — Apache License 2.0
 ==============================================================================
 
-AndroidX, the Kotlin standard library, kotlinx.coroutines and
-kotlinx.serialization (kotlinx-serialization-json 1.8.1).
+AndroidX, Material Components for Android (the bottom sheets), the Kotlin
+standard library, kotlinx.coroutines and kotlinx.serialization
+(kotlinx-serialization-json 1.8.1).
 
 Copyright (C) The Android Open Source Project (AndroidX)
+Copyright (C) The Android Open Source Project (Material Components for Android)
 Copyright 2010-2024 JetBrains s.r.o. and Kotlin Programming Language contributors (Kotlin)
 Copyright 2000-2020 JetBrains s.r.o. and Kotlin Programming Language contributors (kotlinx.coroutines)
 Copyright 2017-2024 JetBrains s.r.o. (kotlinx.serialization)
