@@ -32,6 +32,7 @@ import com.phonecando.runner.engine.work.WorkWatch
 import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.notify.AppForeground
+import com.phonecando.runner.notify.AppOnScreen
 import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.LinuxJobLines
 import com.phonecando.runner.notify.ReadingLines
@@ -62,7 +63,7 @@ import java.util.concurrent.RejectedExecutionException
 // (power/WorkLock), and stops itself once nothing has run for 10 s
 // (stopIfIdle).
 // It is in the foreground while anything of ours runs, idle engines too
-// (render). Out of the foreground with the app away, Android stops a plain
+// with the app away (render; with the app on screen they need no line). Out of the foreground with the app away, Android stops a plain
 // service about a minute later, and the engines with it (onDestroy),
 // before the work watch's idle stop would; and away, it lets the service
 // back into the foreground only in an exemption's window (an alarm's), so
@@ -140,6 +141,13 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
+  // The app comes on screen or leaves it: the ready line goes or comes
+  // back, and with it the foreground. Leaving, this runs at the pause,
+  // while Android still allows the startForeground.
+  private val screenListener = AppOnScreen.Listener {
+    main.post { render() }
+  }
+
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onCreate() {
@@ -161,6 +169,7 @@ class PhoneCanDoServeService : Service() {
     Engines.addListener(engineListener)
     JobsAnchor.install(this)
     JobsAnchor.addListener(jobsListener)
+    AppOnScreen.addListener(screenListener)
     JobsAnchor.service(up = true)
     goForeground()
   }
@@ -307,6 +316,7 @@ class PhoneCanDoServeService : Service() {
   override fun onDestroy() {
     Engines.removeListener(engineListener)
     JobsAnchor.removeListener(jobsListener)
+    AppOnScreen.removeListener(screenListener)
     workLock.release()
     // Jobs still running (the system ended the service): the next job
     // event asks for the service again.
@@ -369,8 +379,9 @@ class PhoneCanDoServeService : Service() {
   }
 
   // The notification while anything of ours runs, in the foreground (an
-  // idle engine too, as ready). With nothing running it goes: at once
-  // with the app in front, which may bring it back any time; away, only
+  // idle engine too, as ready, with the app away). With nothing running,
+  // or only idle engines with the app on screen, it goes: at once with
+  // the app in front, which may bring it back any time; away, only
   // after LINGER_MS of still nothing, as stopIfIdle waits, since work
   // often follows at once (meanwhile it says how it ended, the last Stop's
   // "… stopped" or NOTHING_LEFT, never the old lines and their Stop
@@ -382,7 +393,7 @@ class PhoneCanDoServeService : Service() {
     if (content == null) {
       if (!foreground) return
       main.removeCallbacks(leaveWhenStillQuiet)
-      if (AppForeground.isForeground(this)) {
+      if (AppOnScreen.shown || AppForeground.isForeground(this)) {
         leaveForeground()
         return
       }
@@ -444,7 +455,8 @@ class PhoneCanDoServeService : Service() {
   // The chats the engines are busy with, each with its agent's name, the
   // agents kept up by their jobs, the agents starting, the prompt a model
   // server reads, the model jobs and the Linux jobs; with none of those,
-  // the engines running, as ready; null when nothing runs.
+  // the engines running, as ready, with the app away; null when nothing
+  // runs, or only those with the app on screen.
   private fun content(): Notification? {
     val supervisor = Engines.peek()
     val agents = AgentStores.get(this).all()
@@ -473,7 +485,7 @@ class PhoneCanDoServeService : Service() {
     val stopping = supervisor?.statuses()?.filter { it.state == EngineState.STOPPING }?.map { it.agentId }.orEmpty()
     return notification.build(
       chats, names, running, transfers, reading, linux, work, starts, ::stopIntent, stopping,
-      ::stopJobIntent, endingJobs.values.toList(),
+      ::stopJobIntent, endingJobs.values.toList(), AppOnScreen.shown,
     )
   }
 

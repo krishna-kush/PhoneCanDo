@@ -20,8 +20,10 @@ import com.phonecando.runner.engine.work.WorkWatch
 // (TransferLines), then the Linux jobs (LinuxJobLines). Engines that only
 // run get one quiet line with no buttons (ReadyLines): away from the app,
 // Android stops a service out of the foreground about a minute later, and
-// the agents with it. Only with nothing running at all is there no
-// notification (build gives null) and the service leaves the foreground.
+// the agents with it. With the app on screen that line is not needed, so
+// there is none: the app shows its agents. Only then, or with nothing
+// running at all, is there no notification (build gives null) and the
+// service leaves the foreground.
 // Chat titles, jobs and model, system and agent names stay off the lock
 // screen: the public version only counts. Tapping opens the app; on that
 // agent's Home when every chat listed belongs to one agent (or, with none,
@@ -45,7 +47,8 @@ internal class ServiceNotification(private val context: Context) {
    * that takes a few seconds never looks hung; [stopJob]: the intent that
    * stops one job alone; [endingJobs]: the names of the jobs being
    * stopped, a "Stopping …" line each under the same bar. With none of
-   * that, the agents in [running] as ready; null when nothing runs.
+   * that, the agents in [running] as ready, unless [onScreen] (the app is
+   * in front); null when nothing runs.
    */
   fun build(
     chats: List<ChatBoard.Chat>,
@@ -60,6 +63,7 @@ internal class ServiceNotification(private val context: Context) {
     stopping: Collection<String> = emptyList(),
     stopJob: (String, WorkWatch.Job) -> PendingIntent? = { _, _ -> null },
     endingJobs: List<String> = emptyList(),
+    onScreen: Boolean = false,
   ): Notification? {
     val kept = work.filter { it.agentId !in stopping }
     val ending = stopping.map { "Stopping ${names[it] ?: it}…" } + endingJobs.map { "Stopping $it…" }
@@ -68,7 +72,7 @@ internal class ServiceNotification(private val context: Context) {
     val agent = chats.map { it.agentId }.distinct().singleOrNull()
       ?: running.singleOrNull()?.takeIf { chats.isEmpty() }
     val tap = agent?.let { LaunchTargets.tap(context, LaunchTarget("home", it)) } ?: launchIntent()
-    if (chats.isEmpty() && extra.isEmpty()) return ready(running.map { names[it] ?: it }, tap)
+    if (chats.isEmpty() && extra.isEmpty()) return if (onScreen) null else ready(running.map { names[it] ?: it }, tap)
     val counts = listOf(
       summary(chats), stoppingCount(ending), WorkLines.count(kept), startingCount(starting),
       if (reading != null) READING else "", transferCount(transfers), linuxCount(linuxJobs),

@@ -34,6 +34,8 @@ import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.memory.MemoryStatus
 import com.phonecando.runner.models.prompt.PromptReading
+import com.phonecando.runner.notify.AppForeground
+import com.phonecando.runner.notify.AppOnScreen
 import com.phonecando.runner.prompts.OpenUrlPrompts
 import com.phonecando.runner.prompts.PermissionPrompts
 import com.phonecando.runner.schedule.ScheduleEvents
@@ -118,6 +120,9 @@ class PhoneCanDoRunnerModule : Module() {
       // any screen and without depending on UI code; a per-resume hook would
       // repeat it for nothing.
       appContext.reactContext?.let { PackageReplacedReceiver.clearNotice(it) }
+      // Made after the app came on screen (its first resume went by
+      // unheard): the service's ready line goes now, not at the next resume.
+      appContext.reactContext?.let { if (AppForeground.isForeground(it)) AppOnScreen.set(true) }
       // Telemetry is installed by TelemetryInitProvider before
       // Application.onCreate; this idempotent repeat covers a merged
       // manifest that lacks the provider.
@@ -143,10 +148,16 @@ class PhoneCanDoRunnerModule : Module() {
         ChecksEvents.sink = null
       }
     }
+    // The app comes on screen: the service drops its ready line.
+    OnActivityEntersForeground {
+      AppOnScreen.set(true)
+    }
     // The app leaves the screen (its activity pauses): a fresh look at
-    // what the agents left running, while Android still lets the service
-    // take the foreground for a job that just started (WorkWatch).
+    // what the agents left running, and the service's ready line back,
+    // while Android still lets the service take the foreground for a job
+    // that just started (WorkWatch) or an idle engine (AppOnScreen).
     OnActivityEntersBackground {
+      AppOnScreen.set(false)
       Engines.work()?.poke()
     }
     // The user closed PhoneCanDo (swiped it from recent apps; it handles
