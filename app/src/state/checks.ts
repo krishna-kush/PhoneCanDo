@@ -1,6 +1,6 @@
 // Capability checks as the screens read them (engine/checks/): each kind's
-// messaging level now (the kind list, the Messages page, an agent's
-// Messages line, a shared machine's agents), read at start and on each
+// messaging level now (the Messages page, an agent's Messages line, a
+// shared machine's agents), read at start and on each
 // change, and, while a page watches an agent (its page, What it can do,
 // a message waiting for it), that agent's checks. The first read
 // subscribes to the runner's changes and to the app coming back to the
