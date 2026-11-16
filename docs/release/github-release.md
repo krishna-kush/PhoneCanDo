@@ -41,6 +41,9 @@ jobs:
    key, checks the release certificate is their only signer and uploads the
    draft. It installs no packages: only our scripts, Node, `apksigner` and
    `gh` run while the key is on the runner, and the key is deleted after.
+   Once the draft has them, it deletes `build`'s debug-signed APKs (the
+   `release-staged` artifact), which anyone signed in to GitHub could
+   otherwise download for a day.
 3. **`pr`**: commits `app/app.json`, `app/package.json`,
    `app/src/engine/updates.ts` and `web/src/data/release.json` (both APKs'
    size and sha256) to `release/v<ver>` and opens a pull request to `prod`.

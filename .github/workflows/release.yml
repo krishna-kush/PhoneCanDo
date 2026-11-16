@@ -194,6 +194,8 @@ jobs:
       contents: write
       # The preflight reads CI's checks on the commit.
       checks: read
+      # Deleting the build job's debug-signed APKs once they are signed.
+      actions: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -256,6 +258,19 @@ jobs:
       - name: Remove the release key
         if: ${{ always() }}
         run: rm -f "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/release-signing.env"
+
+      # The staged APKs carry only the debug key, and anyone signed in to
+      # GitHub can download a public repo's artifacts: once signed and
+      # uploaded they go at once, not after a day. Kept when signing failed,
+      # so "Re-run failed jobs" can sign them again.
+      - name: Delete the staged release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ids="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+            -q '.artifacts[] | select(.name == "release-staged") | .id')"
+          for id in $ids; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id"; done
 
       # What a local release leaves changed in the tree, for the pr job.
       - name: Collect the changed files
