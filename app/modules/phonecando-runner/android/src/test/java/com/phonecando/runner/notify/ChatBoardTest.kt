@@ -232,4 +232,17 @@ class ChatBoardTest {
     assertEquals("Fix login", board.chats().single().title)
     assertEquals(State.DONE, board.chats().single().state)
   }
+
+  @Test fun aBlankTitleEventClearsTheTitle() {
+    fun titled(t: String) = board.onEvent("a", EngineEvent(Kind.OTHER, "tui", title = t), ++now)
+    on("a", Kind.WORKING, "tui")
+    titled("Old chat")
+    on("a", Kind.FINISHED, "tui")
+    // A TUI showing no chat title now: its next run is a new chat, not the old one.
+    assertEquals(ChatBoard.Change(true), titled(""))
+    assertNull(board.chats().single().title)
+    assertEquals(ChatBoard.Change(false), titled(""))
+    on("a", Kind.WORKING, "tui")
+    assertNull(board.chats().single().title)
+  }
 }

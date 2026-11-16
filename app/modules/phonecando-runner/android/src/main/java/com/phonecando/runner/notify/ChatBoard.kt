@@ -23,6 +23,9 @@ import com.phonecando.agents.kit.EngineEvent.Kind
 // - Each agent's last top-level chat to move (latest) is kept while its
 //   engine runs, whatever the board shows: where other agents' messages go
 //   for a server engine (messages/).
+// - A blank title in an event clears the chat's title (a TUI showing no
+//   chat title now: a new chat in the same session key); a blank title
+//   read (setTitle) changes nothing, so a failed read keeps the last.
 class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: Int = MAX_CHILDREN) {
   /** In the order the notification lists them. */
   enum class State(val label: String) {
@@ -56,7 +59,7 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
   @Synchronized
   fun onEvent(agentId: String, event: EngineEvent, now: Long): Change {
     val session = event.sessionId ?: return NONE
-    event.title?.let { return Change(applyTitle(agentId, session, it)) }
+    event.title?.let { return Change(if (it.isBlank()) clearTitle(agentId, session) else applyTitle(agentId, session, it)) }
     val kids = children.getOrPut(agentId) { LinkedHashSet() }
     if (event.childCreated) {
       kids += session
@@ -158,6 +161,13 @@ class ChatBoard(private val maxEnded: Int = MAX_ENDED, private val maxChildren: 
     chats[key] = chat.copy(title = title)
     // A title can make an ended chat the open one: seeing it.
     seeOpenIfEnded()
+    return true
+  }
+
+  private fun clearTitle(agentId: String, sessionId: String): Boolean {
+    val key = key(agentId, sessionId)
+    val chat = chats[key]?.takeIf { it.title != null } ?: return false
+    chats[key] = chat.copy(title = null)
     return true
   }
 

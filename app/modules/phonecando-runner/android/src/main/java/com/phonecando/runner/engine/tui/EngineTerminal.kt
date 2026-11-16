@@ -70,6 +70,10 @@ internal class EngineTerminal(
   @Volatile var firstInputAt: Long? = null
     private set
 
+  /** Epoch ms of a viewer's last write (the user typed: an Esc may have stopped a run); null before any. TuiEvents.quiet reads it. */
+  @Volatile var lastInputAt: Long? = null
+    private set
+
   /** A viewer is attached and shows the program (on screen, the app in front): someone looks at it now. */
   val hasViewer: Boolean get() = synchronized(lock) { viewer != null && shown }
 
@@ -155,7 +159,9 @@ internal class EngineTerminal(
   fun write(viewerId: String, bytes: ByteArray) {
     val target = synchronized(lock) {
       if (viewer != viewerId || ended) return
-      if (firstInputAt == null) firstInputAt = clock()
+      val now = clock()
+      if (firstInputAt == null) firstInputAt = now
+      lastInputAt = now
       pty
     }
     target?.write(bytes)

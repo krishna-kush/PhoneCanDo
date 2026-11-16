@@ -82,6 +82,24 @@ class EngineTerminalTest {
     refusal(TerminalViewException.DETACHED) { t.read("v3", 10) }
   }
 
+  @Test fun aViewersWritesAreTheUsersInput() {
+    val t = terminal()
+    assertNull(t.lastInputAt)
+    t.attach("v1")
+    t.write("v1", "hi".toByteArray())
+    assertEquals(1_000L, t.firstInputAt)
+    assertEquals(1_000L, t.lastInputAt)
+    now = 5_000L
+    t.write("v1", "\u001b".toByteArray())
+    assertEquals(1_000L, t.firstInputAt)
+    assertEquals(5_000L, t.lastInputAt)
+    // A replaced viewer's keys are nobody's input.
+    t.attach("v2")
+    now = 9_000L
+    t.write("v1", "x".toByteArray())
+    assertEquals(5_000L, t.lastInputAt)
+  }
+
   @Test fun aPausedViewersQueueIsReplacedByAFreshReplay() {
     val t = terminal(queueCap = 32)
     t.attach("v1")
