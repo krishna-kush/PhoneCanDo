@@ -79,7 +79,11 @@ export type Host = {
   parts: () => { el: HTMLElement; key: string }[];
   /** Whether the left margin's playground plays: the home page's does. */
   playground: boolean;
+  /** Told each time the page is measured: its floors' parts, the story's timeline, and the heights the scroll is read against. */
+  measured?: (page: Measured) => void;
 };
+
+export type Measured = { bands: Band[]; timeline: Timeline; viewH: number; docH: number };
 
 /** The running backdrop, for its page to answer the pointer with. */
 export type World = {
@@ -160,6 +164,7 @@ export function startWorld(host: Host): World | null {
       timeline = makeTimeline(floors);
       if (host.playground) play.reset(floors.map((floor) => floor.key));
     }
+    host.measured?.({ bands, timeline, viewH: view.h, docH });
   };
 
   const running = () => shown.matches && document.visibilityState === 'visible';

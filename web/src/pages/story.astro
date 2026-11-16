@@ -90,6 +90,20 @@ const floors = chapterKeys.map((key) => ({ key, ...floorWords[key] }));
     height: calc(70vh + var(--lines) * 30vh);
     height: calc(70svh + var(--lines) * 30svh);
   }
+  /* Where a swipe comes to rest, a floor at a time (lib/backdrop/boot/stops.ts):
+     only on touch screens, where one fling would carry the story several
+     floors on; a mouse wheel scrolls freely. */
+  .story-stop {
+    position: absolute;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  @media (pointer: coarse) {
+    html:has(.story-floors) { scroll-snap-type: y mandatory; }
+  }
   .story-quiet {
     position: absolute;
     width: 1px;

@@ -26,3 +26,15 @@ export function floorAt(bands: Band[], scrollY: number, viewH: number, docH: num
   }
   return n - 0.5;
 }
+
+/** The scroll position at which floorAt gives [floor]: its inverse, the least such position (floorAt only grows with the scroll). */
+export function scrollFor(bands: Band[], floor: number, viewH: number, docH: number): number {
+  let lo = 0;
+  let hi = Math.max(0, docH - viewH);
+  for (let k = 0; k < 40 && hi - lo > 0.5; k++) {
+    const mid = (lo + hi) / 2;
+    if (floorAt(bands, mid, viewH, docH) < floor) lo = mid;
+    else hi = mid;
+  }
+  return Math.round(hi);
+}

@@ -70,6 +70,19 @@ export function depth(tl: Timeline, clock: number): number {
   return st && st.leaveAt !== null && sec > st.leaveAt ? i + dropped(sec - st.leaveAt) : i;
 }
 
+/**
+ * The floor number on floor [i] where its chapter has played to its last
+ * rest and Little has not set off for the hatch yet: halfway between the two.
+ */
+export function settled(tl: Timeline, i: number): number {
+  const st = tl.stretches[i];
+  if (!st) return i;
+  const rests = st.story.rests;
+  const last = rests.length ? rests[rests.length - 1][0] : 0;
+  const leave = st.leaveAt === null ? 1 : st.story.leave;
+  return i + ((last + leave) / 2) * STAGE;
+}
+
 /** Seconds into floor i's stretch: 0 until Little lands there, its length once it has gone. */
 export function secOn(tl: Timeline, i: number, clock: number): number {
   const st = tl.stretches[i];

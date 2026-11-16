@@ -13,6 +13,7 @@ import { COLUMN } from '../story/narration';
 import { WIDE } from '../wide';
 import { storyCameraY, storyHorizon } from '../world/storyCamera';
 import { startWorld } from './loop';
+import { placeStops } from './stops';
 
 /** [root] holds the canvas; [track] the page's floors, each a section with its key in data-floor. */
 export function startStory(root: HTMLElement, track: HTMLElement) {
@@ -30,6 +31,7 @@ export function startStory(root: HTMLElement, track: HTMLElement) {
     camera: (floor, little) => storyCameraY(floor, little),
     parts: () => [...track.querySelectorAll<HTMLElement>('[data-floor]')].map((el) => ({ el, key: el.dataset.floor ?? '' })),
     playground: false,
+    measured: (page) => placeStops(track, page),
   });
   if (!world) return;
   // A click, not a press: a finger that lands on someone to scroll says nothing.
