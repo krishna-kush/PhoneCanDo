@@ -102,14 +102,18 @@ function main() {
   if (!repo || !/^[^/\s]+\/[^/\s]+$/.test(repo)) {
     fail('Set GITHUB_REPO=owner/repo');
   }
-  const releaseEnv = process.env.PHONECANDO_RELEASE_ENV;
-  if (!releaseEnv || !existsSync(releaseEnv)) {
-    fail('Set PHONECANDO_RELEASE_ENV to the env file with the signing settings (./manage uses the repo-root .env; see .env.example)');
+  // --sign-later builds without the key (the GitHub release's build job):
+  // the APKs carry the debug key until --sign-staged signs them.
+  let signing = null;
+  if (!args.signLater) {
+    const releaseEnv = process.env.PHONECANDO_RELEASE_ENV;
+    if (!releaseEnv || !existsSync(releaseEnv)) {
+      fail('Set PHONECANDO_RELEASE_ENV to the env file with the signing settings (./manage uses the repo-root .env; see .env.example)');
+    }
+    // Gradle runs from app/android; keep the env path absolute for both shells.
+    process.env.PHONECANDO_RELEASE_ENV = resolve(releaseEnv);
+    signing = checkSigningEnv();
   }
-  // Gradle runs from app/android; keep the env path absolute for both shells.
-  process.env.PHONECANDO_RELEASE_ENV = resolve(releaseEnv);
-
-  const signing = checkSigningEnv();
   const tools = findBuildTools(findSdk());
 
   const notes = args.notes || `Release v${version}`;
@@ -133,7 +137,7 @@ function main() {
   console.log(bold(`PhoneCanDo release v${version} (code ${versionCode})`));
   console.log(`Title:   ${releaseTitle(`v${version}`, label)}`);
   console.log(`Repo:    ${repo}`);
-  console.log(`Signing: ${signing.storeFile} (alias ${signing.alias})`);
+  console.log(`Signing: ${signing ? `${signing.storeFile} (alias ${signing.alias})` : 'later (--sign-later: the debug key until --sign-staged)'}`);
   console.log(`APKs:    ${apkFor('full')}`);
   console.log(`         ${apkFor('lite')}`);
   const tag = `v${version}`;
@@ -157,6 +161,7 @@ function main() {
     builtFrom: args.uploadOnly ? readSourceCommit(stage) : undefined,
     overrides: args.allowRedCi ? ['ci'] : [],
     withoutLinux: args.withoutLinux,
+    stagedChecked: args.signStaged,
   });
   console.log('');
   // What blocks in CI comes first, in red; the whole table after asking.
@@ -170,11 +175,16 @@ function main() {
   console.log('');
   if (!preflight.proceed && !args.dryRun) fail(`preflight refused the release: ${preflight.refusals.join('; ')}`);
   // --upload-only already answered this when it built.
-  if (preflight.proot && !args.uploadOnly) checkProotDrift({ ask: !args.dryRun });
-  if (preflight.image && !args.uploadOnly) checkImageAge(preflight.image.version, { ask: !args.dryRun });
+  // --accept-all answers yes to them (the GitHub release, no terminal); they still print.
+  const askLinux = !args.dryRun && !args.acceptAll;
+  if (preflight.proot && !args.uploadOnly) checkProotDrift({ ask: askLinux });
+  if (preflight.image && !args.uploadOnly) checkImageAge(preflight.image.version, { ask: askLinux });
   // GitHub release notes only: latest.json's notes are the in-app update dialog.
   const releaseNotes = (base) => [base, ...preflight.notes].join('\n\n');
-  const assets = releaseAssets({ dir: stage, version, proot: preflight.proot });
+  // --sign-staged runs no Linux gate: the source tarball the build job
+  // staged is the one its proot was built from (pins.env names it).
+  const proot = args.signStaged ? stagedProotSource(stage, version) : preflight.proot;
+  const assets = releaseAssets({ dir: stage, version, proot });
   // What each built APK must carry under lib/ and assets/default-image/:
   // exactly the staged files the preflight checked, nothing else.
   const linuxEntries = expectedLinuxEntries({ proot: preflight.proot, image: preflight.image });
@@ -230,7 +240,7 @@ function main() {
   // this step still gets it.
   if (args.uploadOnly) for (const f of assets.staged) if (!existsSync(f)) fail(`--upload-only: missing ${f}`);
   mkdirSync(stage, { recursive: true });
-  if (assets.source) stageProotSource(assets.source);
+  if (assets.source && !args.signStaged) stageProotSource(assets.source);
 
   writeFileSync(APP_JSON, appJsonNext);
   writeFileSync(APP_PKG, appPkgNext);
@@ -240,10 +250,17 @@ function main() {
   const release = { repo, version, released };
 
   if (args.uploadOnly) {
+    if (args.signStaged) {
+      signWithReleaseKey(asset, tools);
+      signWithReleaseKey(liteAsset, tools);
+    }
     verifyApk(asset, tools, appPackage, version, versionCode, 'full');
     verifyApk(liteAsset, tools, appPackage, version, 1, 'lite');
-    verifyLinux(asset, linuxEntries);
-    verifyLinux(liteAsset, linuxEntries);
+    // The build job checked the Linux in these APKs; signing adds no entries.
+    if (!args.signStaged) {
+      verifyLinux(asset, linuxEntries);
+      verifyLinux(liteAsset, linuxEntries);
+    }
     // The staged full APK may have been rebuilt or replaced since latest.json
     // was written, and lite rejects a download whose size differs: size and
     // SHA-256 always come from the file being uploaded.
@@ -283,8 +300,9 @@ function main() {
   // user is offered. Lite: same version string, versionCode 1
   // (withBuildChannel.js), no accessibility service, so a browser install
   // passes Play Protect. Both carry the Linux the preflight checked.
-  verifyApk(apkFor('full'), tools, appPackage, version, versionCode, 'full');
-  verifyApk(apkFor('lite'), tools, appPackage, version, 1, 'lite');
+  const signer = !args.signLater;
+  verifyApk(apkFor('full'), tools, appPackage, version, versionCode, 'full', { signer });
+  verifyApk(apkFor('lite'), tools, appPackage, version, 1, 'lite', { signer });
   verifyLinux(apkFor('full'), linuxEntries);
   verifyLinux(apkFor('lite'), linuxEntries);
   copyFileSync(apkFor('full'), asset);
@@ -292,6 +310,11 @@ function main() {
   writeFileSync(join(stage, SOURCE_COMMIT), `${preflight.sha}\n`);
   const full = fileDigest(asset);
   writeManifest(manifestPath, { versionCode, version, apk: apkUrl, ...full, notes, label });
+  if (args.signLater) {
+    console.log(green(`\nStaged in ${stage}, signed with the debug key for now.`));
+    console.log('--upload-only --sign-staged signs them with the release key and uploads them.');
+    return;
+  }
 
   createDraft({
     version,
@@ -319,14 +342,11 @@ function buildFlavors(flavors) {
   // config plugins replace their blocks on every run, so reuse is safe.
   run('npx', ['expo', 'prebuild', '-p', 'android', '--no-install', args.clean ? '--clean' : '--no-clean'], { cwd: APP });
   const tasks = flavors.map((f) => `assemble${f.charAt(0).toUpperCase()}${f.slice(1)}Release`).join(' ');
-  run(
-    'bash',
-    [
-      '-c',
-      `set -a; source "$PHONECANDO_RELEASE_ENV"; set +a; ./gradlew ${tasks} --build-cache -PreactNativeArchitectures=arm64-v8a`,
-    ],
-    { cwd: join(APP, 'android') },
-  );
+  // --sign-later: no key here; withReleaseSigning.js then signs with the debug key.
+  const env = args.signLater ? 'export PHONECANDO_SIGN_LATER=1' : 'set -a; source "$PHONECANDO_RELEASE_ENV"; set +a';
+  run('bash', ['-c', `${env}; ./gradlew ${tasks} --build-cache -PreactNativeArchitectures=arm64-v8a`], {
+    cwd: join(APP, 'android'),
+  });
   for (const f of flavors) if (!existsSync(apkFor(f))) fail(`Missing APK after build: ${apkFor(f)}`);
 }
 
@@ -340,6 +360,35 @@ function fileDigest(file) {
 // The built APK's proot libs and Default image, byte for byte the staged
 // files the preflight checked, and no other Linux entry (none at all with
 // --without-linux and nothing staged).
+// --sign-staged: signs a staged APK with the release key in place. The
+// passwords reach apksigner through its env:NAME form, never its command
+// line; signing replaces the debug key's signature (checkSigner proves it).
+function signWithReleaseKey(apk, tools) {
+  const out = `${apk}.signed`;
+  run(
+    'bash',
+    [
+      '-c',
+      'set -a; source "$PHONECANDO_RELEASE_ENV"; set +a; exec "$1" sign --ks "$PHONECANDO_STORE_FILE" ' +
+        '--ks-key-alias "${PHONECANDO_KEY_ALIAS:-phonecando}" --ks-pass env:PHONECANDO_STORE_PASSWORD ' +
+        '--key-pass env:PHONECANDO_KEY_PASSWORD --v4-signing-enabled false --out "$2" "$3"',
+      'sign',
+      tools.apksigner,
+      out,
+      apk,
+    ],
+    {},
+  );
+  renameSync(out, apk);
+}
+
+// --sign-staged: the proot source tarball the build job staged beside the
+// APKs, named by pins.env's version; null when the APKs ship no proot.
+function stagedProotSource(stage, version) {
+  const proot = { version: linux.pins().PROOT_VERSION };
+  return existsSync(releaseAssets({ dir: stage, version, proot }).source) ? proot : null;
+}
+
 function verifyLinux(apk, expected) {
   const problems = linuxEntryProblems(expected, makeApkReader().linuxEntries(apk));
   if (problems.length) {
@@ -461,6 +510,9 @@ function parseArgs(argv) {
     clean: false,
     allowRedCi: false,
     withoutLinux: false,
+    acceptAll: false,
+    signLater: false,
+    signStaged: false,
     version: undefined,
     notes: '',
   };
@@ -472,6 +524,9 @@ function parseArgs(argv) {
     else if (arg === '--clean') out.clean = true;
     else if (arg === '--allow-red-ci') out.allowRedCi = true;
     else if (arg === '--without-linux') out.withoutLinux = true;
+    else if (arg === '--accept-all') out.acceptAll = true;
+    else if (arg === '--sign-later') out.signLater = true;
+    else if (arg === '--sign-staged') out.signStaged = true;
     else if (arg === '--version') {
       i += 1;
       out.version = requireValue(argv, i, '--version');
@@ -486,6 +541,12 @@ function parseArgs(argv) {
       process.exit(0);
     } else fail(`Unknown argument: ${arg}`);
   }
+  // The GitHub release's two jobs: one builds without the key, the other
+  // signs and uploads what it staged (--upload-only with signing first).
+  if (out.signLater && (out.signStaged || out.uploadOnly || out.publish)) {
+    fail('--sign-later only builds and stages: no --sign-staged, --upload-only or --publish with it');
+  }
+  if (out.signStaged) out.uploadOnly = true;
   return out;
 }
 
@@ -514,6 +575,16 @@ Options:
   --allow-red-ci    Release although CI on the commit is red or unfinished;
                     the GitHub release notes say so. Never skips the clean
                     tree, pushed commit or Linux checks
+  --sign-later      Build and stage without the release key (the debug key
+                    signs for now), no upload: the GitHub release's build job
+  --sign-staged     Sign the staged APKs with the release key, then upload
+                    them as --upload-only does; the build that staged them
+                    checked Linux and the agents (the GitHub release's
+                    signing job)
+  --accept-all      Answer yes to every question the release asks (the
+                    Default image's age, proot behind upstream); what it
+                    would ask still prints. For runs with no terminal (the
+                    GitHub release)
   --without-linux   Release full and lite with no proot or Default image
                     staged (they then ship no Linux). Whatever is staged is
                     still checked
@@ -592,8 +663,8 @@ function findBuildTools(sdk) {
 
 // Release signer, channel contents and agent payloads (apk-audit.mjs), then the
 // package, version and versionCode.
-function verifyApk(apk, tools, pkg, version, versionCode, channel) {
-  console.log(auditApk(apk, channel, tools));
+function verifyApk(apk, tools, pkg, version, versionCode, channel, { signer = true } = {}) {
+  console.log(auditApk(apk, channel, tools, { signer }));
 
   const badging = execFileSync(tools.aapt, ['dump', 'badging', apk], {
     encoding: 'utf8',

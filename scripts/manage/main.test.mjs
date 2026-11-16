@@ -108,3 +108,26 @@ test('an image kind has nothing to build, stage or lock', () => {
   assert.equal(dispatch(['agent', 'claude-code', 'build']).code, 2);
   assert.equal(dispatch(['agent', 'claude-code', 'test']).code, 0);
 });
+
+test('release --via-github starts release.yml on prod with the inputs given', () => {
+  const { code, calls } = dispatch(['release', '1.0.0', '--via-github', '--notes', 'Hello there', '--label', 'beta', '--allow-red-ci']);
+  // Recording, no run ever shows up: it stops (1) after starting the workflow.
+  assert.equal(code, 1);
+  const start = calls.find((call) => call[1] === 'gh' && call[2] === 'workflow');
+  assert.deepEqual(start.slice(1, 7), ['gh', 'workflow', 'run', 'release.yml', '-R', start[6]]);
+  assert.deepEqual(start.slice(7), ['--ref', 'prod', '-f', 'version=1.0.0', '-f', 'notes=Hello there', '-f', 'label=beta', '-f', 'allow_red_ci=true']);
+  // Nothing local: no limits check, proot, agents or release script.
+  assert.ok(!calls.some((call) => call[1] === 'node' || call[1] === 'bash'));
+});
+
+test('release --via-github refuses the flags only a local release has', () => {
+  for (const flag of ['--dry-run', '--upload-only', '--without-linux', '--clean']) {
+    assert.deepEqual(dispatch(['release', '1.0.0', '--via-github', flag]), { code: 2, calls: [] }, flag);
+  }
+});
+
+test('release --via-github takes --accept-all but needs no input for it: the workflow always passes it', () => {
+  const { calls } = dispatch(['release', '1.0.0', '--via-github', '--accept-all']);
+  const start = calls.find((call) => call[1] === 'gh' && call[2] === 'workflow');
+  assert.deepEqual(start.slice(7), ['--ref', 'prod', '-f', 'version=1.0.0']);
+});

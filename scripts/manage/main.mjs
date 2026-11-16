@@ -9,7 +9,7 @@ import { android, check, logos, prebuild, web, xterm } from './commands/dev.mjs'
 import { image } from './commands/image.mjs';
 import { apk, device } from './commands/phone.mjs';
 import { data, limits, stats } from './commands/usage-data.mjs';
-import { CommandFailed, UsageError } from './errors.mjs';
+import { CommandFailed, Stop, UsageError } from './errors.mjs';
 import { render } from './usage.mjs';
 
 export const COMMANDS = {
@@ -45,6 +45,10 @@ export function main(argv) {
     if (error instanceof UsageError) {
       console.error(red(`manage: ${error.message}`));
       return 2;
+    }
+    if (error instanceof Stop) {
+      console.error(red(`manage: ${error.message}`));
+      return 1;
     }
     if (error instanceof CommandFailed) return error.status;
     if (error.code === 'ENOENT') {

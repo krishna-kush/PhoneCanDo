@@ -28,11 +28,13 @@ const PCE_CLASSES = 'Lcom/phonecando/pce/';
 const FULL_ONLY = [PCE_CLASSES, 'Lcom/phonecando/runner/uiauto/', 'Lcom/phonecando/runner/packs/'];
 
 // Signer, channel and payload checks in one call; returns apksigner's report.
-export function auditApk(apk, channel, tools) {
-  const certs = checkSigner(apk, tools);
+/** signer false: an APK signed later (--sign-later), so its signer is not checked yet. */
+export function auditApk(apk, channel, tools, { signer = true } = {}) {
+  const certs = signer ? checkSigner(apk, tools) : '';
   auditChannel(apk, channel, tools);
   checkPayloads(apk, channel);
-  console.log(`${basename(apk)}: ${channel} audit OK (release signer, channel, agent payloads)`);
+  const what = signer ? 'release signer, channel, agent payloads' : 'channel, agent payloads; signed later';
+  console.log(`${basename(apk)}: ${channel} audit OK (${what})`);
   return certs;
 }
 

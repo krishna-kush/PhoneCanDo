@@ -4,6 +4,9 @@
 /** A bad command line: main.mjs prints it and exits 2. */
 export class UsageError extends Error {}
 
+/** Something went wrong that is not a bad argument: main.mjs prints it and exits 1. */
+export class Stop extends Error {}
+
 /** A command we ran exited non-zero: main.mjs exits with its code. */
 export class CommandFailed extends Error {
   constructor(cmd, status) {
@@ -15,4 +18,9 @@ export class CommandFailed extends Error {
 /** Stops on a bad argument. */
 export function die(message) {
   throw new UsageError(message);
+}
+
+/** Stops on anything else. */
+export function stop(message) {
+  throw new Stop(message);
 }

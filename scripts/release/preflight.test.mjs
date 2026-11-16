@@ -206,3 +206,10 @@ test('upload-only after HEAD moved: the staged commit is checked and released', 
   assert.deepEqual(commitAsks.map(([, , sha]) => sha), [SHA, SHA]);
   assert.match(preflightReport(result)[0], /the staged APKs' commit; HEAD is ffffffffffff/);
 });
+
+test('--sign-staged: only the commit gates run; the build job checked what is staged', () => {
+  const result = preflight({ linux: fakeLinux({ proot: { libs: {}, sums: null, version: '5.1.107.102', marked: false }, image: NOT_STAGED }), stagedChecked: true });
+  assert.equal(result.proceed, true);
+  assert.deepEqual(result.gates.map((g) => g.id), ['tree', 'pushed', 'ci']);
+  assert.equal(result.proot, undefined);
+});

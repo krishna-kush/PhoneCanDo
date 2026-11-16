@@ -13,6 +13,7 @@ export const GROUPS = [
       ['release <ver> --allow-red-ci', 'release despite red CI (noted in the release notes)'],
       ['release <ver> --without-linux', 'full + lite with no proot or Default image'],
       ['release <ver> --label alpha|beta', 'call it an alpha or beta (title and site); stable without'],
+      ['release <ver> --via-github', 'build, sign and draft it on GitHub Actions instead of here'],
       ['build lite|full [--clean]', 'release-signed local APK -> dist/<channel>/, no version bump'],
       ['prebuild [--clean]', 're-apply the config plugins to app/android'],
     ],
