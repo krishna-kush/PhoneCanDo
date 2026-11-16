@@ -112,8 +112,8 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('reset shared', w.resetMessage('alpine:3.22', ['opencode', 'Gemini CLI']), "System files go back to the alpine:3.22 base. opencode and Gemini CLI share it, so both stop first. Your projects, chats and keys stay. Tools either agent installed go away; we'll offer to install them again.");
   t('reset shared by three', w.resetMessage('alpine:3.22', ['a', 'b', 'c']), "System files go back to the alpine:3.22 base. a, b and c share it, so they all stop first. Your projects, chats and keys stay. Tools any of them installed go away; we'll offer to install them again.");
   t('machine agents title', w.machineAgentsTitle(3), 'On this machine · 3 agents');
-  t('update alone', w.updateStopsLine([]), 'An update stops the agent first.');
-  t('update stops another', w.updateStopsLine(['Gemini CLI']), 'An update stops the agent first, and Gemini CLI too, since it uses the same files.');
+  t('update alone', w.updateStopsLine([]), 'An update stops the agent first and starts it again when done.');
+  t('update stops another', w.updateStopsLine(['Gemini CLI']), 'An update stops the agent first, and Gemini CLI too, since it uses the same files; they start again when done.');
   t('shared log', w.sharedLogLine(['opencode']), 'opencode shares this machine, so this may be the log of its install.');
   t('shared machine line', w.sharedMachineLine('1.2 GB'), 'Shared machine · 1.2 GB');
 

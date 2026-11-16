@@ -12,7 +12,10 @@
 // as waiting for its machine. On a machine agents share, the script stops
 // first the agents that run the same files: those of the kind, and those
 // whose kind needs one of the same runtimes. The runner records the version
-// on every agent of the kind in the machine.
+// on every agent of the kind in the machine. Once it ended well, the agents
+// it stopped start again, one at a time (the first may load a model the
+// next share), so Home shows the agent back, not stopped; after a failure
+// they stay stopped, with Retry on the agent page.
 //
 // It starts by itself right after every creation flow makes such an agent
 // (startInstallIfNeeded), and from the agent page: Install or Retry, Update
@@ -100,10 +103,11 @@ async function run(agentId: AgentId, mode: InstallMode): Promise<boolean> {
     applyInstall(agentId, { type: 'stage', stage: 'plan' });
     const family = image.os?.family ?? '';
     const plan = (mode === 'update' ? updatePlan(agentId, family) : null) ?? installPlan(agentId, family);
+    let stopped: AgentId[] = [];
     if (plan) {
       applyInstall(agentId, { type: 'plan', phases: plan.phases });
       // The script replaces files a running agent uses.
-      await stopForScript(agent);
+      stopped = await stopForScript(agent);
       await prepareAgentImage(agent);
       applyInstall(agentId, { type: 'stage', stage: 'script' });
       const end = await followJob(
@@ -130,6 +134,7 @@ async function run(agentId: AgentId, mode: InstallMode): Promise<boolean> {
     // Every agent of the kind in the machine has its files back: a reset's offer goes for them all.
     for (const a of agentsOnImage(agent.imageId)) if (a.kind === agent.kind) forgetAgentReinstall(a.id);
     applyInstall(agentId, { type: 'done', version });
+    await startAgain(stopped);
     return true;
   } catch (e) {
     applyInstall(agentId, { type: 'failed', failure: installFailureOf(e) });
@@ -164,15 +169,33 @@ async function readyImage(imageId: ImageId): Promise<Image> {
   return image;
 }
 
-// The agent, and on a shared machine the agents that run the same files.
-async function stopForScript(agent: Agent): Promise<void> {
+// The agent, and on a shared machine the agents that run the same files;
+// the ones that were running.
+async function stopForScript(agent: Agent): Promise<AgentId[]> {
   const others = stoppedByInstall(listAgents(), agent, (kind) => agentKind(kind).runtimes);
-  await Promise.all([agent.id, ...others.map((a) => a.id)].map(stopIfRunning));
+  const ids = [agent.id, ...others.map((a) => a.id)];
+  const stopped = await Promise.all(ids.map(stopIfRunning));
+  return ids.filter((_, i) => stopped[i]);
 }
 
-async function stopIfRunning(agentId: AgentId): Promise<void> {
+// True when it was running and is stopped now.
+async function stopIfRunning(agentId: AgentId): Promise<boolean> {
   const state = engineStatus(agentId).state;
-  if (state === 'starting' || state === 'ready') await useAgentsStore.getState().stopAgent(agentId);
+  if (state !== 'starting' && state !== 'ready') return false;
+  await useAgentsStore.getState().stopAgent(agentId);
+  return true;
+}
+
+// The agents the script stopped, started again one at a time. A start
+// that fails shows where that agent is shown (Home's Retry).
+async function startAgain(ids: AgentId[]): Promise<void> {
+  for (const id of ids) {
+    try {
+      await useAgentsStore.getState().startAgent(id);
+    } catch {
+      // its own state says why
+    }
+  }
 }
 
 // The kind's version check in the machine, then the record that lets the

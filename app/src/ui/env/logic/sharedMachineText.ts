@@ -66,11 +66,11 @@ export function machineAgentsTitle(count: number): string {
 export const SHARED_MACHINE_NOTE =
   'They share its projects, installed tools and settings. Each keeps its own sign-in and chats, and its instructions name the others here.';
 
-/** Under Update agent: the agent stops first, and so do `others` (same kind or same runtimes). */
+/** Under Update agent: the agent stops first, and so do `others` (same kind or same runtimes); a good update starts them again. */
 export function updateStopsLine(others: readonly string[]): string {
-  if (others.length === 0) return 'An update stops the agent first.';
+  if (others.length === 0) return 'An update stops the agent first and starts it again when done.';
   const they = others.length === 1 ? 'it uses' : 'they use';
-  return `An update stops the agent first, and ${nameList(others)} too, since ${they} the same files.`;
+  return `An update stops the agent first, and ${nameList(others)} too, since ${they} the same files; they start again when done.`;
 }
 
 /** Over the last install log on a machine others use: it may be one of theirs. */
