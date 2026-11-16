@@ -8,6 +8,7 @@ import org.json.JSONObject
  * and fired, whether late, [until] when it is skipped as busy (dueAt +
  * BUSY_WAIT), and [retryAt], when it was decided outside an alarm that it
  * starts the agent: the alarm at that time decides again and starts it.
+ * [runNow]: you asked for it (Run now), so its task says when it ran.
  */
 data class Waiting(
   val scheduleId: String,
@@ -16,10 +17,11 @@ data class Waiting(
   val late: Boolean,
   val until: Long,
   val retryAt: Long? = null,
+  val runNow: Boolean = false,
 )
 
 // The schedules and their waiting firings in files/state/schedules.json:
-//   {"schedules":[<ScheduleJson>...], "waiting":[{scheduleId, dueAt, firedAt, late, until, retryAt?}...]}
+//   {"schedules":[<ScheduleJson>...], "waiting":[{scheduleId, dueAt, firedAt, late, until, retryAt?, runNow}...]}
 // written whole and atomically (StateFile). A schedule or waiting firing
 // that does not read is left out; an unreadable file reads as empty. The
 // waiting ones are kept so a firing outlives the process (its agent's
@@ -58,6 +60,7 @@ class ScheduleStore(private val file: StateFile) {
       .put("late", w.late)
       .put("until", w.until)
       .put("retryAt", w.retryAt ?: JSONObject.NULL)
+      .put("runNow", w.runNow)
 
     private fun waiting(o: JSONObject): Waiting? {
       val id = o.optString("scheduleId").takeIf { it.isNotEmpty() } ?: return null
@@ -68,6 +71,7 @@ class ScheduleStore(private val file: StateFile) {
         late = o.optBoolean("late", false),
         until = o.optLong("until", 0L),
         retryAt = if (o.isNull("retryAt")) null else o.optLong("retryAt", 0L).takeIf { it > 0 },
+        runNow = o.optBoolean("runNow", false),
       )
     }
 

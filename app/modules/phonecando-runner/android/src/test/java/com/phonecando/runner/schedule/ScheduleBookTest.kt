@@ -131,4 +131,34 @@ class ScheduleBookTest {
     b.ran(once.id, LastRun(now, RunOutcome.WOKE, null))
     assertEquals(RunOutcome.WOKE, book().get(once.id)!!.lastRun!!.outcome)
   }
+
+  @Test fun runNowMakesAOnceDoneAndLeavesARepeatingOneAsItWas() {
+    val b = book()
+    val once = ok(b.add("a1", ScheduleBook.Draft("once", inAnHour), SetBy.USER))
+    val every = ok(b.add("a1", ScheduleBook.Draft("every", Timing.Every(30, now)), SetBy.USER))
+    val before = changes
+    b.ranNow(once.id)
+    b.ranNow(every.id)
+    // Done, as after its own time: still on, no next run, never due again.
+    val done = book().get(once.id)!!
+    assertNull(done.nextAt)
+    assertTrue(done.on)
+    assertEquals(every.nextAt, b.get(every.id)!!.nextAt)
+    assertEquals(before + 1, changes)
+    now += ScheduleRules.HOUR_MS
+    assertEquals(listOf(every.id), b.takeDue().map { it.schedule.id })
+    // Done already, or gone: nothing changes.
+    b.ranNow(once.id)
+    b.ranNow("nope")
+    assertEquals(before + 2, changes)
+  }
+
+  @Test fun aWaitingRunNowKeepsItsMark() {
+    val b = book()
+    val once = ok(b.add("a1", ScheduleBook.Draft("once", inAnHour), SetBy.USER))
+    b.wait(Waiting(once.id, now, now, false, until = now + 10_000, runNow = true))
+    assertTrue(book().waiting().single().runNow)
+    b.wait(Waiting(once.id, now, now, false, until = now + 10_000))
+    assertFalse(book().waiting().single().runNow)
+  }
 }

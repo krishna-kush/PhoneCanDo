@@ -5,7 +5,7 @@ import java.time.ZoneId
 // The schedules in memory, kept in step with their file (ScheduleStore):
 // add, change, remove (the app, any schedule; an agent through the bridge,
 // its own), what is due at an alarm (DueRules: nextAt moves on as they are
-// taken), each one's last run, the firings that wait for their agent, and
+// taken; a once you Run now is done, ranNow), each one's last run, the firings that wait for their agent, and
 // the time the one alarm goes off next (the soonest nextAt, retry or
 // busy deadline). Caps: MAX_PER_AGENT schedules per agent, MAX_BY_AGENT of
 // them set by the agent. A text the user changes makes the task the
@@ -194,6 +194,21 @@ class ScheduleBook(
     }
     changed()
     return due
+  }
+
+  /**
+   * Run now fires [id]: a once has run, so it is done (no nextAt, still on,
+   * as after its own time); a repeating one keeps its next time.
+   */
+  fun ranNow(id: String) {
+    val done = synchronized(this) {
+      val i = schedules.indexOfFirst { it.id == id }
+      val s = schedules.getOrNull(i)?.takeIf { !it.timing.repeats && it.nextAt != null } ?: return
+      schedules[i] = s.copy(nextAt = null)
+      save()
+      true
+    }
+    if (done) changed()
   }
 
   /** What [id]'s latest firing came to. */

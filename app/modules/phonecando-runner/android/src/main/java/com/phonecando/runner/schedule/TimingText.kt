@@ -8,9 +8,10 @@ import java.util.Locale
 
 // A timing and a time as plain English for the model (the task's label, the
 // schedule_* replies): "once at 2026-11-14 09:00", "every 30 min", "every
-// 2 h 30 min", "daily at 09:00", "Mon, Wed, Fri at 09:00", and times as
-// ISO-8601 with the phone's offset. The app words timings itself
-// (ui/schedule/logic). Pure.
+// 2 h 30 min", "daily at 09:00", "Mon, Wed, Fri at 09:00"; a Run now as
+// when it ran, "run now at 2026-11-14 14:03"; and times as ISO-8601 with
+// the phone's offset. The app words timings itself (ui/schedule/logic).
+// Pure.
 object TimingText {
   fun of(timing: Timing, zone: ZoneId): String = when (timing) {
     is Timing.Once -> "once at " + LOCAL.format(Instant.ofEpochMilli(timing.at).atZone(zone))
@@ -20,6 +21,9 @@ object TimingText {
       if (timing.days.isEmpty() || timing.days.size == 7) "daily at $time" else "${days(timing.days)} at $time"
     }
   }
+
+  /** A Run now at [ms], whatever its timing: "run now at 2026-11-14 14:03". */
+  fun ranNow(ms: Long, zone: ZoneId): String = "run now at " + LOCAL.format(Instant.ofEpochMilli(ms).atZone(zone))
 
   /** "2 h 30 min", "15 min", "3 days". */
   fun span(minutes: Int): String {
