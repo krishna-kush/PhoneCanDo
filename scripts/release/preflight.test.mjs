@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { fakeAgents, okPayload } from './agents/fixtures.mjs';
 import { fakeLinux, NOT_STAGED, okProot, okRelease, okRun, RELEASE, RUN_ID } from './linux/fixtures.mjs';
 import { runPreflight } from './preflight.mjs';
-import { preflightReport } from './report.mjs';
+import { ciBlocks, ciProblems, preflightReport } from './report.mjs';
 
 const REPO = 'krishna-kush/PhoneCanDo';
 const VERSION_FILES = ['app/app.json', 'app/package.json', 'app/src/engine/updates.ts'];
@@ -82,6 +82,11 @@ test('clean, pushed, green, Linux verified: go, and the report says so', () => {
   assert.match(text, /Image\s+ok: Default image 20261107-e541287e is the locked one/);
   assert.match(text, /Agents\s+ok: opencode 2\.0\.26-android-phonecando\.1 \(github run 7 abc1234\)/);
   assert.match(text, /Preflight passed\.$/);
+  assert.equal(ciBlocks(result), false);
+  const folded = preflightReport(result, { ciTable: false }).join('\n');
+  assert.doesNotMatch(folded, /CHECK\s+WORKFLOW/);
+  assert.match(folded, /CI table left out: \d+ check\(s\), none blocking/);
+  assert.match(folded, /Preflight passed\.$/);
 });
 
 test('an outdated agent payload refuses the release, never overridden', () => {
@@ -169,6 +174,10 @@ test('red CI without the override: refused, with the hint', () => {
   const text = preflightReport(result).join('\n');
   assert.match(text, /ci-ok\s+CI\s+failure\s+required gate\s+BLOCK/);
   assert.match(text, /overridden with --allow-red-ci/);
+  // What blocks, one line each (release-android.mjs prints them in red).
+  assert.equal(ciBlocks(result), true);
+  assert.deepEqual(ciProblems(result), ['ci-ok (CI): failure']);
+  assert.match(preflightReport(result, { ciTable: false }).join('\n'), /CI table left out: \d+ check\(s\), 1 blocking/);
 });
 
 test('red CI with --allow-red-ci: goes on, and the release notes record it', () => {

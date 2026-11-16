@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Script wiring gate: the entry points people type still reach real files.
 //
-//   ./manage        loaded as a module with scripts/manage/run.py's RECORD
-//                   set, so commands are noted and never run, then every
-//                   dispatchable subcommand is called with valid args; each
-//                   recorded `node <file>`, `<file>.sh` and `pnpm <script>`
-//                   must resolve (nothing is executed). Every COMMANDS entry
-//                   must be in its help (scripts/manage/usage.py) and vice versa.
+//   ./manage        its commands (scripts/manage/main.mjs) loaded with
+//                   run.mjs's recorder set, so commands are noted and never
+//                   run, then every dispatchable subcommand is called with
+//                   valid args; each recorded `node <file>`, `<file>.sh` and
+//                   `pnpm <script>` must resolve (nothing is executed). Every
+//                   COMMANDS entry must be in its help (usage.mjs) and vice versa.
 //   package.json    root/app/web scripts: `node <file>` targets exist and
 //                   `pnpm -C app|web <script>` names a script there.
 //   vectors         every app/scripts/vectors/*.js runs from `check:vectors`
@@ -15,7 +15,7 @@
 //                   and updates.ts REPO == web/src/data/release.json repo
 //                   (scripts/release-android.mjs writes them together).
 //
-//   node .github/ci/js/check-wiring.mjs      (needs python3 for ./manage)
+//   node .github/ci/js/check-wiring.mjs
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
@@ -80,39 +80,45 @@ ok('updates.ts REPO == web release.json repo', rOk, `${repo} / ${release.repo}`)
 if (!rOk) r.error(`REPO ${repo} != web/src/data/release.json repo ${release.repo}`, 'app/src/engine/updates.ts');
 
 // ---------- ./manage dispatch (dry run) ----------
-const PY = String.raw`
-import importlib.machinery, importlib.util, json, sys
-path = sys.argv[1]
-loader = importlib.machinery.SourceFileLoader("manage", path)
-spec = importlib.util.spec_from_loader("manage", loader)
-m = importlib.util.module_from_spec(spec)
-loader.exec_module(m)
-channels = sys.modules["manage.args"].CHANNELS
-run, usage = sys.modules["manage.run"], sys.modules["manage.usage"]
-calls = []
-run.RECORD = lambda cmd, cwd: calls.append({"cmd": [str(c) for c in cmd], "cwd": str(cwd)})
-probes = [("check", []), ("logos", []), ("xterm", []), ("prebuild", []), ("prebuild", ["--clean"]),
-          ("web", ["dev"]), ("web", ["build"]), ("web", ["preview"]),
-          ("release", ["0.0.0", "--dry-run"]), ("build", ["lite"]), ("build", ["full"])]
-probes += [("agent", ["list"]), ("agent", ["check"]), ("agent", ["new", "x", "--native"]),
-           ("agent", ["status"]), ("agent", ["sync", "full"])]
-probes += [("agent", [k, a] + (["out"] if a == "stage" else []))
-           for k, d in m.agent_kinds().items() for a in ("build", "stage", "lock", "test")
-           if d.parent.name == "native" or a == "test"]
-probes += [("android", [c]) for c in channels]
-probes += [("image", ["fetch"]), ("image", ["stage"]), ("image", ["lock", "1"]), ("image", ["build"]),
-           ("image", ["stage", "--local"])]
-for name, args in probes:
-    if name in m.COMMANDS:
-        m.COMMANDS[name](args)
-doc = "\n".join("./manage " + c for _, commands, _ in usage.GROUPS for c, _ in commands)
-print(json.dumps({"root": str(m.ROOT), "commands": sorted(m.COMMANDS), "doc": doc, "calls": calls}))
+// In a child node, with no terminal on stdin, so build's "show the usage
+// report?" question takes its default instead of waiting.
+const PROBE = String.raw`
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+const load = (rel) => import(pathToFileURL(join(process.env.MANAGE_DIR, rel)).href);
+const run = await load('run.mjs');
+const calls = [];
+run.setRecord((cmd, cwd) => { calls.push({ cmd: cmd.map(String), cwd: String(cwd) }); });
+const { COMMANDS } = await load('main.mjs');
+const { agentKinds } = await load('commands/agent.mjs');
+const { CHANNELS } = await load('args.mjs');
+const { GROUPS } = await load('usage.mjs');
+const { ROOT } = await load('paths.mjs');
+const probes = [['check', []], ['logos', []], ['xterm', []], ['prebuild', []], ['prebuild', ['--clean']],
+  ['web', ['dev']], ['web', ['build']], ['web', ['preview']],
+  ['release', ['0.0.0', '--dry-run']], ['build', ['lite']], ['build', ['full']],
+  ['agent', ['list']], ['agent', ['check']], ['agent', ['new', 'x', '--native']],
+  ['agent', ['status']], ['agent', ['sync', 'full']],
+  ['image', ['fetch']], ['image', ['stage']], ['image', ['lock', '1']], ['image', ['build']], ['image', ['stage', '--local']]];
+for (const [id, { native }] of Object.entries(agentKinds())) {
+  for (const action of ['build', 'stage', 'lock', 'test']) {
+    if (native || action === 'test') probes.push(['agent', [id, action, ...(action === 'stage' ? ['out'] : [])]]);
+  }
+}
+for (const channel of CHANNELS) probes.push(['android', [channel]]);
+for (const [name, args] of probes) if (Object.hasOwn(COMMANDS, name)) COMMANDS[name](args);
+const doc = GROUPS.flatMap(([, commands]) => commands.map(([command]) => './manage ' + command)).join('\n');
+console.log(JSON.stringify({ root: ROOT, commands: Object.keys(COMMANDS).sort(), doc, calls }));
 `;
-const py = spawnSync('python3', ['-I', '-B', '-c', PY, join(ROOT, 'manage')], { encoding: 'utf8' });
-if (py.status !== 0) {
-  r.error(`could not load ./manage as a module:\n${py.stderr || py.stdout}`, 'manage');
+const probe = spawnSync(process.execPath, ['--input-type=module', '-e', PROBE], {
+  encoding: 'utf8',
+  stdio: ['ignore', 'pipe', 'pipe'],
+  env: { ...process.env, MANAGE_DIR: join(ROOT, 'scripts', 'manage') },
+});
+if (probe.status !== 0) {
+  r.error(`could not load ./manage's commands:\n${probe.stderr || probe.stdout}`, 'manage');
 } else {
-  const { root, commands, doc, calls } = JSON.parse(py.stdout.trim().split('\n').pop());
+  const { root, commands, doc, calls } = JSON.parse(probe.stdout.trim().split('\n').pop());
   const documented = new Set([...doc.matchAll(/\.\/manage (\w+)/g)].map((m) => m[1]));
   for (const c of commands) {
     if (!documented.has(c)) r.error(`command "${c}" is not in the --help text`, 'manage');

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Lists the tracked scripts of one language, one path per line, for the lint
 # jobs: by extension, plus extensionless files whose shebang names the
-# interpreter (./manage is Python). Reads a NUL-separated file list on stdin:
+# interpreter (./manage is sh). Reads a NUL-separated file list on stdin:
 #
 #   git ls-files -z | bash .github/ci/lint/list-scripts.sh shell|python
 set -euo pipefail

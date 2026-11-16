@@ -27,7 +27,8 @@ import { fileURLToPath } from 'node:url';
 import { auditApk } from './apk-audit.mjs';
 import { releaseAssets } from './release/assets.mjs';
 import { makeApkReader } from './release/io/apk.mjs';
-import { askYes, red, yellow } from './release/io/ask.mjs';
+import { askShow, askYes } from './terminal/ask.mjs';
+import { PAINT, bold, cyan, dim, green, red, yellow } from './terminal/style.mjs';
 import { makeGh } from './release/io/gh.mjs';
 import { makeGit } from './release/io/git.mjs';
 import { makeAgents } from './release/io/agents.mjs';
@@ -38,7 +39,7 @@ import { prootDrift } from './release/linux/drift.mjs';
 import { imageAge } from './release/linux/image-age.mjs';
 import { sourceDecision } from './release/linux/source.mjs';
 import { runPreflight } from './release/preflight.mjs';
-import { preflightReport } from './release/report.mjs';
+import { ciBlocks, ciProblems, preflightReport } from './release/report.mjs';
 
 process.env.CI = '1'; // expo prebuild: never prompt
 process.env.EXPO_NO_GIT_STATUS = '1'; // expo prebuild: never run git
@@ -122,7 +123,7 @@ function main() {
   const appPkgNext = nextPackageVersion(appPkgRaw, version);
   const updatesNext = nextRepoText(updatesRaw, repo);
 
-  console.log(`PhoneCanDo release v${version} (code ${versionCode})`);
+  console.log(bold(`PhoneCanDo release v${version} (code ${versionCode})`));
   console.log(`Repo:    ${repo}`);
   console.log(`Signing: ${signing.storeFile} (alias ${signing.alias})`);
   console.log(`APKs:    ${apkFor('full')}`);
@@ -150,7 +151,14 @@ function main() {
     withoutLinux: args.withoutLinux,
   });
   console.log('');
-  console.log(preflightReport(preflight).join('\n'));
+  // What blocks in CI comes first, in red; the whole table after asking.
+  if (ciBlocks(preflight)) {
+    console.log(red('CI is not green. Blocking the release:'));
+    for (const line of ciProblems(preflight)) console.log(red(`  ${line}`));
+    console.log('');
+  }
+  const ciTable = !preflight.ci || askShow('Show the CI table?');
+  console.log(preflightReport(preflight, { ciTable, paint: PAINT }).join('\n'));
   console.log('');
   if (!preflight.proceed && !args.dryRun) fail(`preflight refused the release: ${preflight.refusals.join('; ')}`);
   // --upload-only already answered this when it built.
@@ -166,7 +174,11 @@ function main() {
   if (args.dryRun) {
     // Writes nothing and never touches the release; the GitHub release state
     // is checked only by a real run.
-    console.log('Dry run: no files written, no build, no release.');
+    console.log(cyan('Dry run: no files written, no build, no release.'));
+    if (!askShow('Show what a real run would do (assets, Linux, file edits, manifest)?')) {
+      if (!preflight.proceed) fail('dry run: a real run would stop at the preflight above');
+      return;
+    }
     console.log(
       `Assets: ${[
         `${basename(assets.full)} (latest.json target)`,
@@ -247,7 +259,7 @@ function main() {
     });
     const lite = writeRelease(release, liteAsset, full);
     report(asset, full, liteAsset, lite, manifestPath, assets.source);
-    console.log(`Uploaded staged ${tag} assets.`);
+    console.log(green(`Uploaded staged ${tag} assets.`));
     return;
   }
 
@@ -279,7 +291,7 @@ function main() {
   report(asset, full, liteAsset, lite, manifestPath, assets.source);
   if (!args.publish) {
     console.log('');
-    console.log('Draft release ready. Review it, then publish with:');
+    console.log(green('Draft release ready. Review it, then publish with:'));
     console.log(`  gh release edit v${version} --draft=false -R ${repo}`);
   }
 }
@@ -319,7 +331,7 @@ function verifyLinux(apk, expected) {
     fail(`${basename(apk)} does not carry the Linux the preflight checked:\n  ${problems.join('\n  ')}`);
   }
   const count = Object.keys(expected).length;
-  console.log(`${basename(apk)}: Linux OK (${count ? `${count} entries equal the staged files` : 'none, as staged'})`);
+  console.log(green(`${basename(apk)}: Linux OK (${count ? `${count} entries equal the staged files` : 'none, as staged'})`));
 }
 
 // Packs proot's GPL source (lre/proot/source-tarball.sh) into the shared
@@ -572,7 +584,7 @@ function verifyApk(apk, tools, pkg, version, versionCode, channel) {
   if (name !== pkg) fail(`APK package ${name} != ${pkg}`);
   if (Number(code) !== versionCode) fail(`APK versionCode ${code} != ${versionCode}`);
   if (apkVersion !== version) fail(`APK versionName ${apkVersion} != ${version}`);
-  console.log(`Verified ${name} ${apkVersion} (${code})`);
+  console.log(green(`Verified ${name} ${apkVersion} (${code})`));
 }
 
 function nextAppJson(raw, version, versionCode) {
@@ -627,7 +639,7 @@ function createDraft({ version, repo, notes, assets, target }) {
   const state = releaseState(repo, tag);
   if (state === 'published') fail(`Release ${tag} already exists and is published`);
   if (state === 'draft') {
-    console.log(`Draft ${tag} already exists; replacing its assets.`);
+    console.log(yellow(`Draft ${tag} already exists; replacing its assets.`));
     run('gh', ['release', 'edit', tag, '-R', repo, '--title', `${tag} (alpha)`, '--notes', notes, '--target', target]);
     run('gh', ['release', 'upload', tag, ...assets, '--clobber', '-R', repo]);
   } else {
@@ -686,7 +698,7 @@ function compareVersionStrings(a, b) {
 }
 
 function run(command, commandArgs, options = {}) {
-  console.log(`$ ${command} ${commandArgs.map(shellQuote).join(' ')}`);
+  console.log(dim(`$ ${command} ${commandArgs.map(shellQuote).join(' ')}`));
   const result = spawnSync(command, commandArgs, { stdio: 'inherit', ...options });
   if (result.error) fail(`${command}: ${result.error.message}`);
   if (result.status !== 0) fail(`${command} exited ${result.status}`);
@@ -700,11 +712,11 @@ function checkProotDrift({ ask }) {
   try {
     drift = prootDrift(pins, makeGh().upstreamLag(pins.PROOT_REPO, pins.PROOT_COMMIT));
   } catch (error) {
-    console.log(`proot: could not check ${pins.PROOT_REPO} for newer changes (${error.message}); going on`);
+    console.log(yellow(`proot: could not check ${pins.PROOT_REPO} for newer changes (${error.message}); going on`));
     return;
   }
   if (!drift) {
-    console.log(`proot: ${pins.PROOT_VERSION} is the newest on ${pins.PROOT_REPO}`);
+    console.log(green(`proot: ${pins.PROOT_VERSION} is the newest on ${pins.PROOT_REPO}`));
     return;
   }
   for (const line of drift.lines) console.log(red(line));

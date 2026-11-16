@@ -239,12 +239,25 @@ jobs:
           for f in "${files[@]}"; do node --check "$f"; done
           echo "node --check: ${#files[@]} files OK"
           echo "node --check: ${#files[@]} files OK" >> "$GITHUB_STEP_SUMMARY"
-      # Through python3 explicitly: the committed exec bit is lint.yml's check.
-      - name: manage compiles and prints its help
+      # The sh wrapper and its Node commands: the help, and usage errors
+      # exiting 2 before anything runs. Through sh explicitly: the committed
+      # exec bit is lint.yml's check.
+      - name: manage prints its help and refuses bad arguments
         run: |
           set -euo pipefail
-          python3 -m py_compile manage
-          python3 manage --help
+          usage="$(sh manage help)"
+          grep -q 'one entry point for the repo' <<< "$usage"
+          [ "$(sh manage)" = "$usage" ]
+          for args in "no-such-command" "build play" "agent status desktop"; do
+            rc=0
+            # shellcheck disable=SC2086 # each line is several arguments
+            sh manage $args > /dev/null 2>&1 || rc=$?
+            [ "$rc" -eq 2 ] || { echo "::error file=manage::'./manage $args' exited $rc, expected 2"; exit 1; }
+          done
+      # Every command line's exit code and the commands it runs, recorded
+      # by scripts/manage/run.mjs, so nothing executes.
+      - name: manage tests (node --test)
+        run: node --test "scripts/manage/**/*.test.mjs"
       # Loads the release script's whole import graph (apk-audit.mjs) and
       # exits at --help, before any env, SDK or network access.
       - name: Release script loads (--help)

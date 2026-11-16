@@ -31,6 +31,7 @@ import { inputsDigest } from './inputs.mjs';
 import { defaultDest, stagePayload } from './stage.mjs';
 import { readStamp } from './stamp.mjs';
 import { stagedState } from './state.mjs';
+import { bold, dim, red, stateColor, yellow } from './style.mjs';
 
 const CHANNELS = ['full', 'lite', 'play'];
 const short = (sha) => (sha ?? '').slice(0, 12);
@@ -46,18 +47,20 @@ export function repoName(root = REPO_ROOT, env = process.env) {
 
 /** One kind's lines and its default action, as printed before the question. */
 export function describe(kind, choice) {
-  const lines = [`  ${kind.id}  native  ${kind.manifest.version}  sources ${short(kind.inputs)}`];
+  const lines = [`  ${bold(kind.id)}  native  ${kind.manifest.version}  ${dim(`sources ${short(kind.inputs)}`)}`];
   const { staged } = kind;
-  lines.push(`    staged   ${staged.state}${staged.source ? ` (${staged.source})` : ''}`);
-  for (const why of staged.state === 'outdated' ? staged.why : []) lines.push(`             ${why}`);
-  if (kind.builds === null) lines.push(`    github   could not ask (${kind.buildsError})`);
+  const paint = stateColor[staged.state] ?? ((text) => text);
+  lines.push(`    staged   ${paint(staged.state)}${staged.source ? ` (${staged.source})` : ''}`);
+  for (const why of staged.state === 'outdated' ? staged.why : []) lines.push(dim(`             ${why}`));
+  if (kind.builds === null) lines.push(yellow(`    github   could not ask (${kind.buildsError})`));
   else if (!kind.builds.length) lines.push('    github   no build of these sources (kept 14 days; a push of them builds one)');
   else {
     const b = kind.builds[0];
     lines.push(`    github   run ${b.runId} from ${b.sha.slice(0, 7)}, built ${day(b.created)}, kept until ${day(b.expires)}`);
   }
   const picked = choice.actions[choice.pick];
-  lines.push(`    -> ${picked ? label(picked) : `cannot: ${choice.note}`}${picked && choice.note ? ` (${choice.note})` : ''}`);
+  const next = `    -> ${picked ? label(picked) : `cannot: ${choice.note}`}${picked && choice.note ? ` (${choice.note})` : ''}`;
+  lines.push(picked ? bold(next) : red(next));
   return lines;
 }
 
@@ -155,11 +158,11 @@ async function main(argv) {
     }
   }
 
-  console.log(`Agents in this APK (${opts.channels.join(', ')})`);
+  console.log(bold(`Agents in this APK (${opts.channels.join(', ')})`));
   const plans = native.map((kind) => ({ kind, choice: choose(kind, opts) }));
   for (const { kind, choice } of plans) for (const line of describe(kind, choice)) console.log(line);
   if (image.length) {
-    console.log(`  image kinds, data only (installed into a machine's Linux when an agent is made): ${image.map((k) => k.id).join(', ')}`);
+    console.log(dim(`  image kinds, data only (installed into a machine's Linux when an agent is made): ${image.map((k) => k.id).join(', ')}`));
   }
   console.log('');
 
@@ -185,14 +188,14 @@ async function main(argv) {
       const pick = await ask(rl, kind, choice);
       const action = choice.actions[pick];
       if (!action) {
-        console.error(`  ${kind.id}: ${choice.note}; nothing to stage`);
+        console.error(red(`  ${kind.id}: ${choice.note}; nothing to stage`));
         failed++;
         continue;
       }
       try {
         act(kind, action, { root, github });
       } catch (error) {
-        console.error(`  ${kind.id}: ${error.message}`);
+        console.error(red(`  ${kind.id}: ${error.message}`));
         failed++;
       }
     }

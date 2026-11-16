@@ -45,8 +45,13 @@ case "${1:-}" in
 esac
 [ "$mode" = ask ] && [ ! -t 0 ] && mode=auto
 
-if [ -t 1 ]; then yellow=$'\e[33m' red=$'\e[31m' plain=$'\e[0m'; else yellow='' red='' plain=''; fi
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  green=$'\e[32m' yellow=$'\e[33m' red=$'\e[31m' plain=$'\e[0m'
+else
+  green='' yellow='' red='' plain=''
+fi
 say() { printf 'proot: %s\n' "$*"; }
+good() { printf '%sproot: %s%s\n' "$green" "$*" "$plain"; }
 stop() { printf '%sproot: %s%s\n' "$red" "$*" "$plain" >&2; exit 1; }
 
 # state and reason of the staged libs
@@ -104,16 +109,16 @@ build: lre/proot/stage.sh on the unzipped proot-android-arm64 download of a proo
     stop "the build failed its checks (verify.sh)"
   fi
   bash "$HERE/stage.sh" "$WORK/out" "$LIBS" >/dev/null
-  say "staged into the app: libproot.so $(short "$LIBS/libproot.so"), built from these pins and patches"
+  good "staged into the app: libproot.so $(short "$LIBS/libproot.so"), built from these pins and patches"
 }
 
 case "$state" in
   current)
     what="the app's proot is current: built from these pins, patches and scripts (libproot.so $(short "$LIBS/libproot.so"))"
     case "$mode" in
-      check | yes | auto) say "$what" ;;
+      check | yes | auto) good "$what" ;;
       ask)
-        say "$what"
+        good "$what"
         if [ "$(ask 'Use it, or rebuild it? [U/r]' u)" = r ]; then build; fi ;;
     esac ;;
   missing | outdated)
