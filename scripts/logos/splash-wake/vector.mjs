@@ -1,0 +1,122 @@
+// The launch splash's icon as an animated vector: the brand mark coming to life
+// as A-01 (story.mjs), drawn with mascot/layout/eyes.ts's eyes. Android plays
+// it from the splash's first frame; the drawable as written is that frame,
+// which is all a phone below Android 12 shows.
+
+import { IDLE, IDLE_MS, STORY, STORY_MS } from './story.mjs';
+
+const n = (v) => +v.toFixed(2);
+const rect = (b) => `M${n(b.x)},${n(b.y)}h${n(b.w)}v${n(b.h)}h${n(-b.w)}Z`;
+
+// An ease as an inline interpolator; aapt2 lifts it into its own resource.
+function easeXml([x1, y1, x2, y2]) {
+  return `<aapt:attr name="android:interpolator"><pathInterpolator android:controlX1="${x1}" android:controlY1="${y1}" android:controlX2="${x2}" android:controlY2="${y2}"/></aapt:attr>`;
+}
+
+// One property over `length` ms, holding its last value to the end, once or
+// round and round. The eases sit on the keyframes; the animator itself runs
+// linear, or Android's default accelerate-decelerate would bend every time.
+function animatorXml(prop, keys, map, eases, length, loop) {
+  const last = keys[keys.length - 1];
+  const held = last[0] < length ? [...keys, [length, last[1]]] : keys;
+  const frames = held.map(([ms, value, ease]) => {
+    const head = `<keyframe android:fraction="${+(ms / length).toFixed(4)}" android:value="${n(map(value))}"`;
+    return ease ? `${head}>${easeXml(eases[ease])}</keyframe>` : `${head}/>`;
+  });
+  const repeat = loop ? ' android:repeatCount="infinite"' : '';
+  return `<objectAnimator android:duration="${length}"${repeat} android:interpolator="@android:interpolator/linear">
+          <propertyValuesHolder android:propertyName="${prop}" android:valueType="floatType">
+            ${frames.join('\n            ')}
+          </propertyValuesHolder>
+        </objectAnimator>`;
+}
+
+// A line with an idle part plays the story once, then that part forever.
+function lineXml([prop, keys, map, idle], eases) {
+  const story = animatorXml(prop, keys, map, eases, STORY_MS, false);
+  if (!idle) return story;
+  return `<set android:ordering="sequentially">
+        ${story}
+        ${animatorXml(prop, idle, map, eases, IDLE_MS, true)}
+        </set>`;
+}
+
+function targetXml(name, lines, eases) {
+  return `<target android:name="${name}">
+    <aapt:attr name="android:animation">
+      <set>
+        ${lines.map((line) => lineXml(line, eases)).join('\n        ')}
+      </set>
+    </aapt:attr>
+  </target>`;
+}
+
+const at = (keys) => keys[0][1];
+const same = (v) => v;
+
+/**
+ * `box` is the viewport and `dp` its size; `S` the block's side, `front` and
+ * `back` its blocks, `eyes` from layEyes, `inks` its colours, `eases` by
+ * name (story.mjs's easesOf).
+ */
+export function splashWakeXml({ box, dp, S, front, back, eyes, inks, eases }) {
+  const { body, eyes: eye } = STORY;
+  // A gaze of 1 moves the pupils this far from the eye's middle (mascot/layout/eyes.ts).
+  const reach = eyes[0].open.w * 0.22;
+  const rest = at(eye.gaze) * reach;
+  const gazeAt = (g) => (g - at(eye.gaze)) * reach;
+  const feet = { x: (front.x + back.x + back.w) / 2, y: back.y + back.h };
+  const moved = (share) => share * S;
+
+  // The blink's lid: a block of the face's own colour over the eye, a little
+  // wider and taller so no edge of white shows, that grows down from above
+  // the eye. A blink of v leaves the eye's bottom v showing.
+  const over = S * 0.01;
+  const lidH = eyes[0].open.h + over;
+  const lidAt = (v) => ((1 - v) * eyes[0].open.h + over) / lidH;
+
+  const eyeGroups = eyes.map(({ open, pupil }, i) => {
+    const mid = open.x + open.w / 2;
+    const lid = { x: open.x - over, y: open.y - over, w: open.w + 2 * over, h: lidH };
+    return `<group android:name="lid${i}" android:pivotX="${n(mid)}" android:pivotY="${n(open.y + open.h)}" android:scaleY="${at(eye.lid)}">
+          <path android:fillColor="${inks.eye}" android:pathData="${rect(open)}"/>
+          <group android:name="gaze${i}">
+            <path android:name="pupil${i}" android:fillColor="${inks.pupil}" android:fillAlpha="${at(eye.pupil)}" android:pathData="${rect({ ...pupil, x: pupil.x + rest })}"/>
+          </group>
+          <group android:name="blink${i}" android:pivotX="${n(mid)}" android:pivotY="${n(lid.y)}" android:scaleY="${n(lidAt(at(eye.blink)))}">
+            <path android:fillColor="${inks.front}" android:pathData="${rect(lid)}"/>
+          </group>
+        </group>`;
+  });
+
+  const targets = [
+    targetXml('body', [['scaleX', body.sx, same, IDLE.body.sx], ['scaleY', body.sy, same, IDLE.body.sy], ['translateY', body.lift, moved]], eases),
+    ...eyes.flatMap((_, i) => [
+      targetXml(`lid${i}`, [['scaleY', eye.lid, same]], eases),
+      targetXml(`blink${i}`, [['scaleY', eye.blink, lidAt, IDLE.eyes.blink]], eases),
+      targetXml(`gaze${i}`, [['translateX', eye.gaze, gazeAt, IDLE.eyes.gaze]], eases),
+      targetXml(`pupil${i}`, [['fillAlpha', eye.pupil, same]], eases),
+    ]),
+  ];
+
+  return `<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated by scripts/make-logos.mjs (pnpm logos); don't edit. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+  <aapt:attr name="android:drawable">
+    <vector
+        android:width="${dp}dp"
+        android:height="${dp}dp"
+        android:viewportWidth="${box}"
+        android:viewportHeight="${box}">
+      <group android:name="body" android:pivotX="${n(feet.x)}" android:pivotY="${n(feet.y)}" android:scaleX="${at(body.sx)}" android:scaleY="${at(body.sy)}">
+        <path android:fillColor="${inks.back}" android:pathData="${rect(back)}"/>
+        <path android:fillColor="${inks.front}" android:pathData="${rect(front)}"/>
+        ${eyeGroups.join('\n        ')}
+      </group>
+    </vector>
+  </aapt:attr>
+  ${targets.join('\n  ')}
+</animated-vector>
+`;
+}

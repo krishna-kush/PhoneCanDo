@@ -9,6 +9,9 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
+import { layEyes } from '../mascot/layout/eyes.ts';
+import { easesOf } from './logos/splash-wake/story.mjs';
+import { splashWakeXml } from './logos/splash-wake/vector.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = [];
@@ -174,6 +177,27 @@ function markOutlineVector(box, stroke, off) {
 </vector>
 `;
 }
+// The splash mark at the PNG's 36% of a 1024 box (288dp, the splash icon's
+// whole box), with A-01's eyes laid out by the mascot spec.
+function splashWake(scheme) {
+  const size = 1024;
+  const front = Math.round(size * 0.36);
+  const off = Math.max(ASSET_MIN_SHADOW, Math.round(front * SHADOW_RATIO));
+  const x = Math.round((size - front - off) / 2);
+  const box = { x, y: x, w: front, h: front };
+  const eyes = layEyes(box, { S: front, sx: 1, sy: 1, eyes: 'dot', gaze: [0, 0], toward: 0 });
+  return splashWakeXml({
+    box: size,
+    dp: 288,
+    S: front,
+    front: box,
+    back: { ...box, x: x + off, y: x + off },
+    eyes,
+    inks: { front: scheme.primary, back: scheme.secondary, eye: scheme.onPrimary, pupil: tokens.dark.bg },
+    eases: easesOf(logo),
+  });
+}
+
 // ---------- generated files ----------
 // App assets consumed by app.json. Prebuild draws Android's launcher and
 // splash resources from these, so app/android/ (its gitignored output) is
@@ -183,11 +207,11 @@ write('app/assets/icon.png', mark(1024, 0.56, { bg: BG }), 1024);
 write('app/assets/android-icon-background.png', solid(1024, BG), 1024);
 write('app/assets/android-icon-foreground.png', mark(1024, 0.34), 1024);
 write('app/assets/android-icon-monochrome.png', mark(1024, 0.34, { mono: true }), 1024);
-// The launch splash (app/plugins/withSplash.js): dark and light marks, each
-// in its scheme's brand colours. The plugin writes Android's splash drawables
-// from these on prebuild.
-write('app/assets/splash-icon.png', mark(1024, 0.36), 1024);
-write('app/assets/splash-icon-light.png', mark(1024, 0.36, { front: LIGHT_RED, shadow: LIGHT_YELLOW }), 1024);
+// The launch splash (app/plugins/withSplash.js): the mark waking up as A-01,
+// dark and light, each in its scheme's brand colours. The plugin copies them
+// into Android's splash drawables on prebuild.
+write('app/assets/splash/wake.xml', splashWake(tokens.dark));
+write('app/assets/splash/wake-light.xml', splashWake(tokens.light));
 write('app/assets/favicon.png', mark(48, 0.5, { bg: BG }), 48);
 // Every notification's small icon (status bar and shade). The runner module's
 // res is source, not prebuild output, so writing it here is safe.
