@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
-  interpolate,
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
@@ -13,13 +11,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { PLAIN, type Look } from '../../../../../mascot/look.ts';
-import tokens from '../../../../../theme/tokens.json';
-import { useTheme } from '../globals';
-import { logoOffset } from '../LogoMark';
 import { useReduceMotion } from '../useReduceMotion';
-import { BOX, fitFace } from './fit';
+import FaceDrawing, { type HeartPlace, type Moving, PixelHeart } from './FaceDrawing';
+import { faceLayout } from './layout';
 import type { Mood } from './mood';
-import WearMarks from './WearMarks';
+import { dropStyle, HEART_MS, HEART_RISE, heartStyle, LID, liftStyle, lidStyle, pupilStyle, zStyle } from './motion';
 
 type Props = {
   mood: Mood;
@@ -35,30 +31,18 @@ type Props = {
   hearts?: number;
 };
 
-const LID = { awake: 1, busy: 1, asleep: 0.15, oops: 0.45, sweaty: 1, happy: 1 } as const;
+const LIVE: Moving = { View: Animated.View, Text: Animated.Text };
 
-// A pixel heart, row by row (happy), like the logo built from squares.
-const HEART = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
-// One heart's loop, and the part of it spent rising (the rest is a pause).
-const HEART_MS = 2300;
-const HEART_RISE = 0.78;
-// Each heart's sideways place, in heart widths from the first (up to three).
-const HEART_SHIFT = [0, -0.75, -0.35];
-
-// The site's mascot A-01 as an agent's face: the logo's red square on its
-// amber shadow, with two eyes, in the agent's own mascot: its shape, which
-// ink is in front and what it wears, laid out by the shared spec as the
-// website's are (mascot/layout/figure.ts), drawn a little smaller when it
-// would not fit its box. Awake it blinks now and then, busy it looks about, asleep
-// its eyes shut under a drifting "z", in trouble it squints under a "?",
-// sweaty (the phone short of memory) it glances about, wide-eyed, while a
-// drop runs down its brow, and happy its eyes close in a smile while a
-// pixel heart floats up (or a few, one after another).
-// Every motion is a Reanimated loop on the UI thread (no JS per step, no
-// re-render), and none runs while it is `still`. Decoration only (hidden
-// from screen readers): rows say the state in words.
+// The site's mascot A-01 as an agent's face, alive (FaceDrawing draws it):
+// awake it blinks now and then, busy it looks about, asleep its eyes shut
+// under a drifting "z", in trouble it squints under a "?", sweaty (the phone
+// short of memory) it glances about, wide-eyed, while a drop runs down its
+// brow, and happy its eyes close in a smile while a pixel heart floats up
+// (or a few, one after another). Every motion is a Reanimated loop on the UI
+// thread (no JS per step, no re-render), and none runs while it is `still`.
+// A face that never moves (a picker's) is a StillFace: it sets none of this
+// up.
 export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, still = false, hearts = 1 }: Props) {
-  const t = useTheme();
   const quiet = useReduceMotion() || still;
   const lid = useSharedValue<number>(LID[mood]);
   const look = useSharedValue(0);
@@ -68,26 +52,8 @@ export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, st
   // Each face keeps its own blink rhythm.
   const [blinkEvery] = useState(() => 2400 + Math.random() * 3600);
 
-  // Room for every look, so faces line up down a list.
-  const box = Math.round(size * BOX);
-  const fit = useMemo(() => fitFace(mascot, size, box, logoOffset), [mascot, size, box]);
-  const { figure: fig, dx, dy } = fit;
-  const front = fig.front;
-  const left = front.x + dx;
-  const top = front.y + dy;
-  const bodyW = front.w;
-  const bodyH = front.h;
-  const off = fit.offset;
-  // The top of everything it draws: its hat's, if it wears one.
-  const crown = fig.bounds.y + dy;
-
-  const [eyeA, eyeB] = fig.eyes.map((e) => e.open);
-  const eyeW = eyeA.w;
-  const eyeH = eyeA.h;
-  // Down to the header's 16 (a 2dp pupil in a 4dp eye); below that, eyes only.
-  const pupilBox = size >= 14 ? fig.eyes[0].pupil : null;
-  const pupilW = pupilBox?.w ?? 0;
-  const markSize = Math.max(8, Math.round(size * 0.5));
+  const layout = useMemo(() => faceLayout(mascot, size), [mascot, size]);
+  const { eyeW, mark, heartH } = layout;
 
   // The lid for the mood; awake blinks every few seconds.
   useEffect(() => {
@@ -147,197 +113,28 @@ export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, st
     );
   }, [hop, quiet, size, lift]);
 
-  const body = useAnimatedStyle(() => ({ transform: [{ translateY: lift.value }] }));
-  const eyeStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: lid.value }] }));
-  // Busy and sweaty, the pupils look as far as a gaze of 1 each way (mascot/layout/eyes.ts).
-  const pupilStyle = useAnimatedStyle(() => ({ transform: [{ translateX: look.value * eyeW * 0.22 }] }), [eyeW]);
-  const zStyle = useAnimatedStyle(
-    () => ({
-      opacity: interpolate(drift.value, [0, 0.2, 0.8, 1], [0, 1, 1, 0]),
-      transform: [{ translateY: interpolate(drift.value, [0, 1], [markSize * 0.4, -markSize * 0.4]) }],
-    }),
-    [markSize],
-  );
-  // The drop: a square with one sharp corner, turned so the corner points up.
-  const drop = Math.max(3, Math.round(markSize * 0.5));
-  const dropStyle = useAnimatedStyle(
-    () => ({
-      opacity: interpolate(drift.value, [0, 0.15, 0.75, 1], [0, 1, 1, 0]),
-      transform: [{ translateY: interpolate(drift.value, [0, 1], [0, markSize * 0.8]) }, { rotate: '45deg' }],
-    }),
-    [markSize],
-  );
-
-  // Happy: each eye an upturned bracket, shut in a smile.
-  const line = Math.max(1, Math.round(size * 0.07));
-  const smileEye = (x: number, y: number) => (
-    <View
-      style={{
-        position: 'absolute',
-        left: x,
-        top: y + Math.round(eyeH * 0.2),
-        width: eyeW,
-        height: Math.max(line * 2, Math.round(eyeH * 0.5)),
-        borderColor: t.onPrimary,
-        borderTopWidth: line,
-        borderLeftWidth: line,
-        borderRightWidth: line,
-      }}
-    />
-  );
-
-  // The hearts start low on the head's top-right corner, the later ones a
-  // little further left.
-  const cell = Math.max(1, Math.round(size * 0.07));
-  const heartW = cell * HEART[0].length;
-  const heartH = cell * HEART.length;
-  const heartCount = quiet ? 1 : Math.max(1, Math.min(hearts, HEART_SHIFT.length));
-
-  // Awake, its pupils rest a little to the right, as the site's do.
-  const restX = mood === 'awake' ? eyeW * 0.11 : 0;
-  const eye = (x: number, y: number) => (
-    <Animated.View
-      style={[{ position: 'absolute', left: x, top: y, width: eyeW, height: eyeH, backgroundColor: t.onPrimary }, eyeStyle]}
-    >
-      {pupilBox && mood !== 'asleep' ? (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              left: pupilBox.x - eyeA.x + restX,
-              top: pupilBox.y - eyeA.y,
-              width: pupilW,
-              height: pupilBox.h,
-              backgroundColor: tokens.dark.bg,
-            },
-            pupilStyle,
-          ]}
-        />
-      ) : null}
-    </Animated.View>
-  );
+  const body = useAnimatedStyle(() => liftStyle(lift.value));
+  const eye = useAnimatedStyle(() => lidStyle(lid.value));
+  // Busy and sweaty, the pupils look as far as a gaze of 1 each way.
+  const pupil = useAnimatedStyle(() => pupilStyle(look.value, eyeW), [eyeW]);
+  const z = useAnimatedStyle(() => zStyle(drift.value, mark), [mark]);
+  const drop = useAnimatedStyle(() => dropStyle(drift.value, mark), [mark]);
 
   return (
-    <View
-      style={{ width: box, height: box, flexShrink: 0 }}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      pointerEvents="none"
-    >
-      <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: box, height: box }, body]}>
-        <View
-          style={{
-            position: 'absolute',
-            left: fig.back.x + dx,
-            top: fig.back.y + dy,
-            width: bodyW,
-            height: bodyH,
-            backgroundColor: fig.back.ink === 'red' ? t.primary : t.secondary,
-          }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            left,
-            top,
-            width: bodyW,
-            height: bodyH,
-            backgroundColor: front.ink === 'red' ? t.primary : t.secondary,
-          }}
-        >
-          {mood === 'happy' ? smileEye(eyeA.x - front.x, eyeA.y - front.y) : eye(eyeA.x - front.x, eyeA.y - front.y)}
-          {mood === 'happy' ? smileEye(eyeB.x - front.x, eyeB.y - front.y) : eye(eyeB.x - front.x, eyeB.y - front.y)}
-        </View>
-        <WearMarks marks={fig.marks} box={box} dx={dx} dy={dy} />
-      </Animated.View>
-      {mood === 'asleep' ? (
-        <Animated.Text
-          style={[{ position: 'absolute', right: 0, top: 0, fontFamily: 'GeistMono-Bold', fontSize: markSize, color: t.dim }, zStyle]}
-        >
-          z
-        </Animated.Text>
-      ) : null}
-      {mood === 'sweaty' ? (
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              left: left + bodyW - Math.round(drop * 0.6),
-              top: top + Math.round(bodyH * 0.05),
-              width: drop,
-              height: drop,
-              backgroundColor: t.dim,
-              borderTopLeftRadius: 0,
-              borderTopRightRadius: drop / 2,
-              borderBottomLeftRadius: drop / 2,
-              borderBottomRightRadius: drop / 2,
-            },
-            dropStyle,
-          ]}
-        />
-      ) : null}
-      {mood === 'happy'
-        ? Array.from({ length: heartCount }, (_, i) => (
-            <FloatingHeart
-              key={i}
-              beat={beat}
-              phase={i / heartCount}
-              left={left + bodyW + off - Math.round(heartW * (0.5 - HEART_SHIFT[i]))}
-              top={crown - heartH + cell}
-              cell={cell}
-              color={t.primary}
-            />
-          ))
-        : null}
-      {mood === 'oops' ? (
-        <Text style={{ position: 'absolute', right: 0, top: 0, fontFamily: 'GeistMono-Bold', fontSize: markSize, color: t.primary }}>
-          ?
-        </Text>
-      ) : null}
-    </View>
+    <FaceDrawing
+      layout={layout}
+      mood={mood}
+      moving={LIVE}
+      motion={{ body, eye, pupil, z, drop }}
+      hearts={quiet ? 1 : hearts}
+      heart={(i, count, place) => <FloatingHeart beat={beat} phase={i / count} place={place} h={heartH} />}
+    />
   );
 }
 
 // One heart of a happy face: rises off the head and fades, its turn
 // [phase] of the way into the shared loop, then waits out the rest.
-function FloatingHeart({
-  beat,
-  phase,
-  left,
-  top,
-  cell,
-  color,
-}: {
-  beat: SharedValue<number>;
-  phase: number;
-  left: number;
-  top: number;
-  cell: number;
-  color: string;
-}) {
-  const w = cell * HEART[0].length;
-  const h = cell * HEART.length;
-  const style = useAnimatedStyle(() => {
-    const p = (beat.value + phase) % 1;
-    const life = Math.min(1, p / HEART_RISE);
-    const eased = 1 - (1 - life) * (1 - life);
-    return {
-      opacity: p >= HEART_RISE ? 0 : interpolate(life, [0, 0.25, 0.8, 1], [0, 1, 1, 0]),
-      transform: [{ translateY: interpolate(eased, [0, 1], [h * 0.4, -h * 0.8]) }],
-    };
-  }, [phase, h]);
-  return (
-    <Animated.View style={[{ position: 'absolute', left, top, width: w, height: h }, style]}>
-      {HEART.flatMap((row, y) =>
-        [...row].map((c, x) =>
-          c === 'X' ? (
-            <View
-              key={`${x}-${y}`}
-              style={{ position: 'absolute', left: x * cell, top: y * cell, width: cell, height: cell, backgroundColor: color }}
-            />
-          ) : null,
-        ),
-      )}
-    </Animated.View>
-  );
+function FloatingHeart({ beat, phase, place, h }: { beat: SharedValue<number>; phase: number; place: HeartPlace; h: number }) {
+  const style = useAnimatedStyle(() => heartStyle(beat.value, phase, h), [phase, h]);
+  return <PixelHeart place={place} style={style} view={Animated.View} />;
 }
