@@ -65,6 +65,16 @@ class ResumeFallbackTest {
     assertEquals(listOf("demo", "--x", "check CI"), argv(ResumeFallback.without(first)))
   }
 
+  @Test fun aNoteThatOnlyGoesOnInItsChatIsDroppedWithTheResume() {
+    // A run brought back (cutoff/): a new chat would not know what to go on with.
+    val prompting = tui(""","resume":{"args":["--continue"],"at":1},"prompt":{"args":["{{prompt}}"]}""")
+    val first = plan(prompting, ranBefore = true).copy(prompt = "go on", sameChat = true)
+    assertEquals(listOf("demo", "--continue", "--x", "go on"), argv(first))
+    val again = ResumeFallback.without(first)
+    assertEquals(listOf("demo", "--x"), argv(again))
+    assertFalse(again.sameChat)
+  }
+
   @Test fun everyOtherExitCountsAsItWould() {
     // Exit 0 before ready, a launch that did not resume, a kind without resume args, a server.
     assertFalse(ResumeFallback.applies(plan(resuming, ranBefore = true), 0))

@@ -77,6 +77,11 @@ class Schedules private constructor(context: Context) {
     firing.onAcpTurnEnd(agentId, stopReason, error)
   }
 
+  /** A run cut off was brought back (cutoff/): it stays as it is, [note] in its detail. */
+  fun broughtBack(seq: Long, note: String) = later({}) {
+    if (runs.addNote(seq, note) != null) ScheduleEvents.changed()
+  }
+
   /** Exact alarms are allowed ("Alarms & reminders"). */
   fun exactAlarms(): Boolean = alarms.exact()
 

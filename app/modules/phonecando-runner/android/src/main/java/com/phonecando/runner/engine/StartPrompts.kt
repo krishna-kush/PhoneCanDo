@@ -2,8 +2,12 @@ package com.phonecando.runner.engine
 
 import java.util.concurrent.ConcurrentHashMap
 
-/** A first prompt for an agent's next engine start: a scheduled task, and whether it wants a chat of its own. */
-data class StartPrompt(val prompt: String, val newChat: Boolean)
+/**
+ * A first prompt for an agent's next engine start: a scheduled task, and
+ * whether it wants a chat of its own; [sameChat]: it goes on in the chat
+ * the start reopens and never in another (a run brought back, cutoff/).
+ */
+data class StartPrompt(val prompt: String, val newChat: Boolean, val sameChat: Boolean = false)
 
 // The first prompt an agent's next engine start runs (a scheduled task),
 // handed from whoever starts it to EngineLauncher.plan(), which takes it:
@@ -22,8 +26,8 @@ object StartPrompts {
   /** Clock for the age, in ms; monotonic, so a clock change neither keeps nor drops one (entries live as long as the process). */
   internal var now: () -> Long = { System.nanoTime() / 1_000_000 }
 
-  fun put(agentId: String, prompt: String, newChat: Boolean) {
-    entries[agentId] = Entry(StartPrompt(prompt, newChat), now())
+  fun put(agentId: String, prompt: String, newChat: Boolean, sameChat: Boolean = false) {
+    entries[agentId] = Entry(StartPrompt(prompt, newChat, sameChat), now())
   }
 
   /** The agent's prompt, removed; null when there is none, or it waited longer than MAX_AGE_MS. */

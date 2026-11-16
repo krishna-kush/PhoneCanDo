@@ -25,6 +25,11 @@ class StartPromptsTest {
     assertNull(StartPrompts.take("a1"))
   }
 
+  @Test fun aNoteForTheSameChatSaysSo() {
+    StartPrompts.put("a1", "go on", newChat = false, sameChat = true)
+    assertEquals(StartPrompt("go on", newChat = false, sameChat = true), StartPrompts.take("a1"))
+  }
+
   @Test fun theNewestWins() {
     StartPrompts.put("a1", "first", newChat = false)
     StartPrompts.put("a1", "second", newChat = true)

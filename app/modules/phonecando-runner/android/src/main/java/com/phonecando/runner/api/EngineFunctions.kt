@@ -7,6 +7,8 @@ import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.runner.PhoneCanDoServeService
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
+import com.phonecando.runner.cutoff.CutOffs
+import com.phonecando.runner.cutoff.Held
 import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.EngineRequests
 import com.phonecando.runner.engine.EngineStartError
@@ -86,9 +88,12 @@ internal fun ModuleDefinitionBuilder.engineFunctions(context: () -> Context) {
   }
 
   // Resolves when no engine and no tagged process is left (the updater
-  // calls it before a self-update).
-  AsyncFunction("stopAllEngines") { promise: Promise ->
+  // calls it before a self-update, with [keepRuns]: the runs the agents
+  // have going are kept and offered back once the new build is in,
+  // cutoff/).
+  AsyncFunction("stopAllEngines") { keepRuns: Boolean, promise: Promise ->
     val engines = Engines.get(context())
+    if (keepRuns) CutOffs.get(context()).hold(Held.UPDATE)
     thread(name = "phonecando-engine-stop-all", isDaemon = true) {
       engines.stopAll()
       // SIGKILLed processes take a moment to leave /proc.
@@ -96,6 +101,13 @@ internal fun ModuleDefinitionBuilder.engineFunctions(context: () -> Context) {
       while (engines.anyAlive() && SystemClock.elapsedRealtime() < deadline) Thread.sleep(50)
       promise.resolve(null)
     }
+  }
+
+  // The self-update's installer came back without installing (you
+  // cancelled it): the runs stopAllEngines(true) kept go (cutoff/).
+  Function("updateCancelled") {
+    CutOffs.peek()?.updateCancelled()
+    Unit
   }
 
   // Engines we run plus any process tagged with an agent; reads /proc.

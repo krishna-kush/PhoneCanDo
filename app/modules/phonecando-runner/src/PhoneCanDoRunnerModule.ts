@@ -146,7 +146,10 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
    */
   startEngine(agentId: string, mode?: NativeEngineMode): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
-  stopAllEngines(): Promise<void>;
+  /** [keepRuns]: the runs the agents have going are kept and offered back after (a self-update). */
+  stopAllEngines(keepRuns: boolean): Promise<void>;
+  /** The self-update's installer came back without installing: the runs stopAllEngines(true) kept go. */
+  updateCancelled(): void;
   /** Stops the agents on the model first, then its server; resolves with the agents it stopped. */
   stopModel(modelId: string): Promise<string[]>;
   runLimits(): NativeRunLimits;

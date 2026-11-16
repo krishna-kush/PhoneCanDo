@@ -85,7 +85,8 @@ export type RunnerModule = {
   /** No mode: the terminal. A native build from before ACP mode takes no mode. */
   startEngine(agentId: string, mode?: EngineMode): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
-  stopAllEngines(): Promise<void>;
+  stopAllEngines(keepRuns: boolean): Promise<void>;
+  updateCancelled(): void;
   isAnyEngineAlive(): boolean;
   touchEngine(agentId: string): void;
   dismissAgentAlert(agentId: string): void;

@@ -16,11 +16,13 @@ import com.phonecando.runner.R
 // Ids within an agent: SLOT, /notify 4600-8695 (one per title), prompts
 // 9000-9255, links to open (prompts/OpenUrlPrompts) 9300-9363, a due task
 // 9400 (schedule/DueNotice), a capability that stopped working 9450-9465
-// and a Check now waiting for you or its end 9466 (CheckNotices), permission questions
+// and a Check now waiting for you or its end 9466 (CheckNotices), a run cut
+// off 9470 (cutoff/CutOffNotice), permission questions
 // (prompts/PermissionPrompts) 9500-9563. The engine service (4101), the update
 // notice (4202) and the memory notice (4301, MemoryNotices, on this
 // channel) are untagged, so they never meet these. A notice may carry
-// buttons (NoticeAction), each its own PendingIntent.
+// buttons (NoticeAction), each its own PendingIntent, and what a swipe
+// away sends (deleteIntent).
 internal class AgentNotices(private val context: Context) {
   data class Notice(
     val agentId: String,
@@ -35,6 +37,8 @@ internal class AgentNotices(private val context: Context) {
     val actions: List<NoticeAction> = emptyList(),
     /** Expanded, it shows the whole text (one too long for a line). */
     val longText: Boolean = false,
+    /** Sent when you swipe it away (not when a tap or a button takes it down). */
+    val deleteIntent: PendingIntent? = null,
   )
 
   /** A button on a notice; [needsUnlock]: on the lock screen it asks for the phone to be unlocked first (Android 12+). */
@@ -52,6 +56,7 @@ internal class AgentNotices(private val context: Context) {
       .setAutoCancel(true)
       .setOnlyAlertOnce(notice.quietUpdate)
     notice.subText?.let(builder::setSubText)
+    notice.deleteIntent?.let(builder::setDeleteIntent)
     if (notice.longText) builder.setStyle(Notification.BigTextStyle().bigText(notice.text))
     for (action in notice.actions) builder.addAction(button(action))
     nm.notify(notice.agentId, notice.id, builder.build())

@@ -18,6 +18,9 @@ import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.checks.Checks
 import com.phonecando.runner.checks.fanout.CheckFanOut
 import com.phonecando.runner.checks.now.CheckNow
+import com.phonecando.runner.cutoff.CutOffLook
+import com.phonecando.runner.cutoff.CutOffs
+import com.phonecando.runner.cutoff.Held
 import com.phonecando.runner.engine.EngineMode
 import com.phonecando.runner.engine.EngineRequests
 import com.phonecando.runner.engine.EngineStartError
@@ -147,6 +150,9 @@ class PhoneCanDoServeService : Service() {
     // Before any engine starts: the capability checks hear every launch.
     Checks.init(this)
     CheckFanOut.install(this)
+    // Before any engine starts: the record of runs going hears every one,
+    // and offers what an earlier process left cut off (cutoff/).
+    CutOffs.get(this).look(CutOffLook.Trigger.START)
     notification = ServiceNotification(this).also { it.createChannel() }
     workLock = WorkLock(this)
     starts = Executors.newSingleThreadExecutor { r ->
@@ -191,10 +197,13 @@ class PhoneCanDoServeService : Service() {
     starting += agentId
     requestId?.let(pendingRequests::add)
     val supervisor = Engines.get(this)
+    // Who asked with no promise to wait on (a message, a task) hears how it went.
+    Engines.startTaken(agentId)
     try {
       starts.execute {
         val result = runCatching { supervisor.start(agentId, requestedAt, mode) }
         EngineRequests.complete(requestId, result)
+        result.exceptionOrNull()?.let { Engines.startFailed(agentId, it.message ?: "it did not start") }
         main.post {
           starting.remove(agentId)
           requestId?.let(pendingRequests::remove)
@@ -206,6 +215,7 @@ class PhoneCanDoServeService : Service() {
       starting.remove(agentId)
       requestId?.let(pendingRequests::remove)
       EngineRequests.complete(requestId, failure("the engine service is stopping"))
+      Engines.startFailed(agentId, "the engine service is stopping")
     }
   }
 
@@ -307,8 +317,12 @@ class PhoneCanDoServeService : Service() {
     main.removeCallbacksAndMessages(null)
     // Engines still running (the system ended the service): end them off
     // the main thread, which can take up to 3 s. When nothing runs, a start
-    // that arrives right after must not be caught by a late stop-all.
-    Engines.peek()?.takeIf { it.anyLive() }?.stopAllAsync(if (timedOut) TIME_LIMIT_REASON else null)
+    // that arrives right after must not be caught by a late stop-all. The
+    // runs they had going are kept and offered back (cutoff/).
+    Engines.peek()?.takeIf { it.anyLive() }?.let { engines ->
+      CutOffs.peek()?.hold(Held.SYSTEM)
+      engines.stopAllAsync(if (timedOut) TIME_LIMIT_REASON else null)
+    }
     super.onDestroy()
   }
 
@@ -329,6 +343,8 @@ class PhoneCanDoServeService : Service() {
     foreground = false
     stopSelf()
     Engines.peek()?.takeIf { it.anyLive() }?.let {
+      // The runs they had going are kept and offered back (cutoff/).
+      CutOffs.peek()?.hold(Held.SYSTEM)
       it.stopAllAsync(TIME_LIMIT_REASON)
       TimeLimitNotice.post(this)
     }
@@ -410,13 +426,15 @@ class PhoneCanDoServeService : Service() {
     doneShown = null
   }
 
-  // The CPU stays awake while a chat works, a model server reads a prompt,
-  // a job runs, an agent's job does something or a Check now runs
+  // The CPU stays awake while an engine starts (a message's or a task's
+  // start may come with the screen off), a chat works, a model server reads
+  // a prompt, a job runs, an agent's job does something or a Check now runs
   // (power/WorkLock).
   private fun holdCpu() {
     if (timedOut) return
     val supervisor = Engines.peek()
     val need = JobsAnchor.anyRunning() || CheckNow.running() ||
+      starting.isNotEmpty() || supervisor?.anyStarting() == true ||
       supervisor?.chats()?.any { it.state == ChatBoard.State.WORKING } == true ||
       supervisor?.promptReading() != null ||
       Engines.work()?.states()?.values?.any { it.active } == true

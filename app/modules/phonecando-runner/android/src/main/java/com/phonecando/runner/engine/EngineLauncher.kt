@@ -65,6 +65,8 @@ internal data class LaunchPlan(
   val mode: EngineMode = EngineMode.TERMINAL,
   /** The first prompt wants a chat of its own. */
   val newChat: Boolean = false,
+  /** The first prompt goes on in the chat this launch reopens, never in a new one (StartPrompt.sameChat). */
+  val sameChat: Boolean = false,
   /** Terminal mode: the chat ACP mode left (AgentRecord.acpChat), which this launch opens (engine.acp.chat); null: none. */
   val chatId: String? = null,
 ) {
@@ -158,6 +160,7 @@ internal class EngineLauncher(private val context: Context) {
       prompt = start?.prompt,
       mode = mode,
       newChat = start?.newChat == true,
+      sameChat = start?.sameChat == true,
       chatId = if (mode == EngineMode.TERMINAL) chatToOpen(record, kind, start) else null,
     )
   }

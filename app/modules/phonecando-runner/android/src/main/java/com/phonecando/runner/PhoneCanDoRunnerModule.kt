@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Build
 import com.phonecando.runner.acp.AcpAppEvents
 import com.phonecando.runner.acp.AcpRelay
+import com.phonecando.runner.cutoff.CutOffLook
+import com.phonecando.runner.cutoff.CutOffs
 import com.phonecando.runner.api.acpFunctions
 import com.phonecando.runner.api.agentFunctions
 import com.phonecando.runner.api.agentModelFunctions
@@ -130,6 +132,8 @@ class PhoneCanDoRunnerModule : Module() {
       // ACP turns tell the app and the rest of the runner what they do
       // (also set when messaging is made, before any engine starts).
       appContext.reactContext?.let { AcpRelay.install(it) }
+      // Runs an earlier process left cut off are offered (cutoff/), once.
+      appContext.reactContext?.let { CutOffs.get(it).look(CutOffLook.Trigger.START) }
     }
     OnDestroy {
       Engines.removeListener(engineListener)

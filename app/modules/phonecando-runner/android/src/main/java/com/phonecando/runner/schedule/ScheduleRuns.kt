@@ -7,7 +7,8 @@ import org.json.JSONObject
 // (StateFile) on every change; a run's outcome can change after it was
 // logged (a start that failed). seq goes on from the highest in the file.
 // A run left open (ScheduleRun.open) by an earlier process was cut off with
-// it: closeOpen fails it.
+// it: closeOpen fails it. One brought back (cutoff/) stays failed, with
+// when in its detail (addNote).
 // A deleted agent's runs stay, under the name it had. Thread-safe; pure
 // apart from the file.
 class ScheduleRuns(
@@ -77,6 +78,30 @@ class ScheduleRuns(
     return closed.map { run -> run to (runs.last { it.scheduleId == run.scheduleId }.seq == run.seq) }
   }
 
+  /** The newest run of [agentId] still open; null when none is. */
+  @Synchronized
+  fun openOf(agentId: String): Long? = runs.lastOrNull { it.agentId == agentId && it.open }?.seq
+
+  /**
+   * The newest run of [agentId] that set it working (started, woke or
+   * restarted it) and fired at [since] or later; null when none did. A
+   * terminal start settles at ready, before its task's run is seen.
+   */
+  @Synchronized
+  fun setWorkingSince(agentId: String, since: Long): Long? =
+    runs.lastOrNull { it.agentId == agentId && it.firedAt >= since && it.outcome in WORKING }?.seq
+
+  /** [note] after the run [seq]'s detail, its outcome as it was; null when it is no longer kept. */
+  @Synchronized
+  fun addNote(seq: Long, note: String): ScheduleRun? {
+    val i = runs.indexOfFirst { it.seq == seq }
+    if (i < 0) return null
+    val detail = runs[i].detail?.takeIf { it.isNotBlank() }
+    runs[i] = runs[i].copy(detail = if (detail == null) note else "$detail; $note")
+    save()
+    return runs[i]
+  }
+
   /** The newest [limit], newest first. */
   @Synchronized
   fun newest(limit: Int): List<ScheduleRun> = runs.takeLast(limit.coerceIn(0, ScheduleRules.RUNS_KEPT)).reversed()
@@ -91,5 +116,9 @@ class ScheduleRuns(
     } catch (e: Exception) {
       onError("schedule runs not saved", e)
     }
+  }
+
+  private companion object {
+    val WORKING = setOf(RunOutcome.STARTED, RunOutcome.WOKE, RunOutcome.RESTARTED)
   }
 }

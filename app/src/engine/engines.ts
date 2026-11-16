@@ -49,7 +49,7 @@ export async function setAgentModel(id: AgentId, modelId: string | null): Promis
 /**
  * Stops every agent set to the local model whose engine is starting or running (the model server goes with the
  * last), so a change to the model's context takes effect; resolves their ids to start again
- * (state/flows/modelContext.ts does).
+ * (state/flows/modelMemory.ts does).
  */
 export function stopModelAgents(modelId: string): Promise<AgentId[]> {
   return nativeRunner().stopModelAgents(modelId);
@@ -129,9 +129,19 @@ export function stopEngine(agentId: AgentId): Promise<void> {
   return nativeRunner().stopEngine(agentId);
 }
 
-/** Resolves once no engine and no process an engine started is left. */
-export function stopAllEngines(): Promise<void> {
-  return nativeRunner().stopAllEngines();
+/**
+ * Resolves once no engine and no process an engine started is left.
+ * [keepRuns]: the runs the agents have going are kept, and offered back
+ * once the app is up again (a self-update's stop).
+ */
+export function stopAllEngines(keepRuns = false): Promise<void> {
+  return nativeRunner().stopAllEngines(keepRuns);
+}
+
+/** The self-update's installer came back without installing: the runs stopAllEngines(true) kept go. */
+export function updateCancelled(): void {
+  if (!isRunnerAvailable()) return;
+  nativeRunner().updateCancelled();
 }
 
 /** Any engine, or any process an engine started, still alive. */

@@ -8,7 +8,7 @@ import { applicationId, nativeApplicationVersion, nativeBuildVersion } from 'exp
 import { Directory, DownloadTask, File, Paths } from 'expo-file-system';
 import { getContentUriAsync } from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
-import { isAnyEngineAlive, stopAllEngines } from './engines';
+import { isAnyEngineAlive, stopAllEngines, updateCancelled } from './engines';
 import { canRequestPackageInstalls, getBuildChannel, markSelfUpdatePending } from './runner';
 
 const REPO = 'krishna-kush/PhoneCanDo';
@@ -136,11 +136,12 @@ export async function downloadUpdate(
 // every agent's engine, and everything they started, before the installer
 // kills the app, so the new build never pairs with an old binary.
 // stopAllEngines resolves once nothing tagged is left; the poll is a bound
-// for a native side that answers early.
+// for a native side that answers early. The runs agents have going are
+// kept: the new build offers to bring them back.
 async function stopEngines(): Promise<void> {
   try {
     if (!isAnyEngineAlive()) return;
-    await stopAllEngines();
+    await stopAllEngines(true);
     const deadline = Date.now() + 4000;
     while (isAnyEngineAlive() && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 100));
@@ -165,13 +166,22 @@ export async function installDownloaded(apk: File): Promise<void> {
   // The update receiver in the new build acts only on this mark
   // (PackageReplacedReceiver.kt).
   markSelfUpdatePending();
-  const res = await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-    data: uri,
-    type: 'application/vnd.android.package-archive',
-    flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
-    // Ask the installer for a result so a refusal is visible in logcat.
-    extra: { 'android.intent.extra.RETURN_RESULT': true },
-  });
+  let res: IntentLauncher.IntentLauncherResult;
+  try {
+    res = await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+      data: uri,
+      type: 'application/vnd.android.package-archive',
+      flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+      // Ask the installer for a result so a refusal is visible in logcat.
+      extra: { 'android.intent.extra.RETURN_RESULT': true },
+    });
+  } catch (e) {
+    updateCancelled();
+    throw e;
+  }
+  // Back here, nothing was installed (an install replaces this process):
+  // the runs stopEngines kept are not offered back later.
+  if (res.resultCode !== IntentLauncher.ResultCode.Success) updateCancelled();
   console.log(
     `[phonecando-update] intent result=${res.resultCode} extra=${JSON.stringify(res.extra ?? null)}`,
   );

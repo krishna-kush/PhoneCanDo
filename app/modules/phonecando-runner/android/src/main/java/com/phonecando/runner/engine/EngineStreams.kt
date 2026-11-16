@@ -3,11 +3,13 @@ package com.phonecando.runner.engine
 import android.util.Log
 import com.phonecando.agents.kit.AgentKind
 import com.phonecando.agents.kit.EngineEvent
+import com.phonecando.agents.kit.HttpProbe
 import com.phonecando.agents.kit.render.ManifestKind
 import com.phonecando.agents.kit.term.SignalRules
 import com.phonecando.runner.TelemetryRecorder
 import com.phonecando.runner.TelemetrySwitch
 import com.phonecando.runner.engine.acp.AcpAgent
+import com.phonecando.runner.engine.events.ActiveChats
 import com.phonecando.runner.engine.events.EventFileTail
 import com.phonecando.runner.engine.events.EventSink
 import com.phonecando.runner.engine.events.EventTimers
@@ -15,24 +17,29 @@ import com.phonecando.runner.engine.events.HookMap
 import com.phonecando.runner.engine.tui.EngineTerminal
 import com.phonecando.runner.engine.tui.TuiEvents
 import com.phonecando.runner.notify.AgentAlerts
+import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.ChatTracker
 import java.io.File
 
 // Engine event streams: the supervisor opens one per ready engine, always:
-// a server's SSE stream, or a TUI's output signals through its kind's PTY
+// a server's SSE stream (with its kind's `chats.active`, a chat left
+// working that its server no longer runs ends as a guessed stop:
+// events/ActiveChats), or a TUI's output signals through its kind's PTY
 // rules (TuiEvents), which also carry its chat title, together with its
 // events file (events/: the kit scripts' lines, through the kind's hook map
 // to the same events, links to open as open_url prompts, which go when
 // the stream stops, `@inbox` receipts as other agents' messages read,
 // messages/, and `@hook` lines, an inbox hook that ran, for the checks);
 // a kind with hooks also has a run that shows nothing for a
-// while end as stopped (TuiEvents.quiet). An ACP engine's events come
+// while after you typed into it (an Esc), or for a long while, end as
+// stopped (TuiEvents.quiet). An ACP engine's events come
 // from its driver (AcpAgent: its turns, AcpEvents); its hooks still write
 // the events file, but ACP says how its run goes, so only their links,
 // receipts and `@hook` lines are read there. Every event also goes to the
 // capability checks (checks/: a turn's end, a task that started).
 // Activity (any event the kind maps to something other than OTHER, so not
-// heartbeats or catalog updates) marks the agent used, which keeps a working
+// heartbeats or catalog updates, nor a guessed stop: a quiet screen is no
+// sign of use) marks the agent used, which keeps a working
 // engine from being stopped to make room for another, whether or not
 // anyone is looking at it, and is what its kind's idle rule reads. Every
 // event also goes to the agent's alerts (finished, failed, waiting for your
@@ -64,13 +71,45 @@ internal class EngineStreams(
       size > CREATED_SEEN_MAX
   }
 
-  /** A started stream, or null when the kind has none. */
+  /**
+   * A started stream, or null when the kind has none; with the kind's
+   * `chats.active`, its working chats are held against the server's
+   * (ActiveChats).
+   */
   fun open(agentId: String, kind: AgentKind, port: Int, password: String): EventSource? {
     val stream = kind.eventStream(port.toString(), password) ?: return null
     alerts.reset(agentId)
     chats.attach(agentId, kind, port, password)
-    return SseClient(stream, TAG, "phonecando-sse-$agentId", kind::parseEvent) { onEvent(agentId, it) }
-      .also { it.start() }
+    val active = kind.activeChats(port.toString(), password)?.let { probe ->
+      ActiveChats(
+        quietMs = (kind.idleQuietSec ?: ActiveChats.QUIET_DEFAULT_SEC) * 1000L,
+        working = { chats.of(agentId).filter { it.state == ChatBoard.State.WORKING }.map { it.sessionId } },
+        ask = { askActive(agentId, kind, probe) },
+        stop = { sessionId -> onEvent(agentId, EngineEvent(EngineEvent.Kind.STOPPED, sessionId, guessed = true)) },
+      )
+    }
+    val sse = SseClient(stream, TAG, "phonecando-sse-$agentId", kind::parseEvent) { event ->
+      if (event.kind != EngineEvent.Kind.OTHER) active?.heard()
+      onEvent(agentId, event)
+    }.also { it.start() }
+    val look = active?.let { a -> EventTimers.every(ActiveChats.TICK_MS) { a.tick() } }
+    return EventSource {
+      look?.stop()
+      sse.stop()
+    }
+  }
+
+  // The chats [agentId]'s server runs now; null when it did not answer.
+  private fun askActive(agentId: String, kind: AgentKind, probe: HttpProbe): Set<String>? = try {
+    val conn = probe.open(ACTIVE_CONNECT_MS, ACTIVE_READ_MS)
+    try {
+      if (conn.responseCode != 200) null else kind.parseActiveChats(conn.inputStream.bufferedReader().use { it.readText() })
+    } finally {
+      conn.disconnect()
+    }
+  } catch (e: Exception) {
+    Log.w(TAG, "running chats of $agentId not read: ${e.javaClass.simpleName}")
+    null
   }
 
   /** A TUI engine's events, from the signals in [terminal]'s output and the lines of [eventsFile] from now on. */
@@ -88,7 +127,7 @@ internal class EngineStreams(
     val lines = sink(agentId, hooks, events::raise)
     val tail = EventFileTail(eventsFile, lines::accept).start()
     // Hooks may never say a run ended (an interrupt): a quiet screen does.
-    val quiet = if (hooks.isEmpty()) null else EventTimers.every(QUIET_CHECK_MS) { events.quiet(terminal.lastOutputAt) }
+    val quiet = if (hooks.isEmpty()) null else EventTimers.every(QUIET_CHECK_MS) { events.quiet(terminal.lastOutputAt, terminal.lastInputAt) }
     return EventSource {
       terminal.listen(null)
       tail.stop()
@@ -151,7 +190,7 @@ internal class EngineStreams(
       Log.w(TAG, "engine event not checked", e)
     }
     if (event.sessionCreated && TelemetrySwitch.isEnabled()) countCreated(agentId, event.sessionId)
-    if (event.kind != EngineEvent.Kind.OTHER || event.sessionCreated) onActivity(agentId)
+    if ((event.kind != EngineEvent.Kind.OTHER && !event.guessed) || event.sessionCreated) onActivity(agentId)
     alerts.onEvent(agentId, event)
     chats.onEvent(agentId, event)
     if (event.sessionId != null && event.kind in RUN_ENDS && !chats.busy(agentId)) runEnded(agentId)
@@ -170,6 +209,8 @@ internal class EngineStreams(
     const val TAG = "PhoneCanDoEngineSse"
     const val CREATED_SEEN_MAX = 256
     const val QUIET_CHECK_MS = 5_000L
+    const val ACTIVE_CONNECT_MS = 1_000
+    const val ACTIVE_READ_MS = 3_000
     val RUN_ENDS = setOf(EngineEvent.Kind.FINISHED, EngineEvent.Kind.FAILED, EngineEvent.Kind.STOPPED, EngineEvent.Kind.GONE)
   }
 }

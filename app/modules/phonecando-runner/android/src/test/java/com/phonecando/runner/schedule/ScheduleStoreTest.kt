@@ -149,4 +149,35 @@ class ScheduleStoreTest {
     runs.settle(run.seq)
     assertTrue(runs.newest(1).none { it.open })
   }
+
+  @Test fun aRunCutOffAndBroughtBackStaysFailedWithWhen() {
+    val log = File(dir, "state/schedule-runs.jsonl")
+    val runs = ScheduleRuns(StateFile(log))
+    fun add(agentId: String, open: Boolean) = runs.add { seq ->
+      ScheduleRun(seq, "s1", agentId, "Builder", "task", SetBy.USER, dueAt = 1, firedAt = 2, late = false, outcome = RunOutcome.STARTED, open = open)
+    }
+    val going = add("a1", open = true)
+    add("a2", open = true)
+    add("a1", open = false)
+    // The cut-off record names the run an agent's turn began as.
+    assertEquals(going.seq, runs.openOf("a1"))
+    assertNull(runs.openOf("a3"))
+    // Or the run that set it working since its engine started (a terminal start, settled at ready).
+    val asked = runs.add { seq ->
+      ScheduleRun(seq, "s2", "a3", "Tester", "task", SetBy.USER, dueAt = 5, firedAt = 50, late = false, outcome = RunOutcome.ASKED)
+    }
+    val started = runs.add { seq ->
+      ScheduleRun(seq, "s2", "a3", "Tester", "task", SetBy.USER, dueAt = 5, firedAt = 40, late = false, outcome = RunOutcome.STARTED)
+    }
+    assertEquals(started.seq, runs.setWorkingSince("a3", 40))
+    assertNull(runs.setWorkingSince("a3", 41))
+    assertTrue(asked.seq != runs.setWorkingSince("a3", 0))
+    val again = ScheduleRuns(StateFile(log))
+    again.closeOpen("PhoneCanDo was closed before the task finished")
+    val noted = again.addNote(going.seq, "brought back at 10:42")
+    assertEquals(RunOutcome.FAILED, noted?.outcome)
+    assertEquals("PhoneCanDo was closed before the task finished; brought back at 10:42", noted?.detail)
+    assertEquals(noted, ScheduleRuns(StateFile(log)).newest(10).single { it.seq == going.seq })
+    assertNull(again.addNote(999, "brought back at 10:42"))
+  }
 }

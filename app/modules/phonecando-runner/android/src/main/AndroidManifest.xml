@@ -91,6 +91,24 @@
         <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
       </intent-filter>
     </receiver>
+    <!-- Offers back the runs a reboot or an update cut off
+         (cutoff/CutOffBootReceiver.kt); not exported, as above. Not
+         directBootAware: BOOT_COMPLETED comes after the first unlock, when
+         our files can be read. -->
+    <receiver
+      android:name="com.phonecando.runner.cutoff.CutOffBootReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
+    <!-- Continue and Dismiss on a cut-off run's notice
+         (cutoff/CutOffActionReceiver.kt): only our own PendingIntents send
+         it. -->
+    <receiver
+      android:name="com.phonecando.runner.cutoff.CutOffActionReceiver"
+      android:exported="false" />
     <!-- Telemetry: installs the crash handler before Application.onCreate
          in every process start (TelemetryInitProvider.kt). Serves no data.
          The authority carries the applicationId, so each dev channel
