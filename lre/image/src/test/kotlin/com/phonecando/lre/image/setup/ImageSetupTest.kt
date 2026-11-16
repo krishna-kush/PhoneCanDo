@@ -126,6 +126,14 @@ class ImageSetupTest {
     }
 
     @Test
+    fun `Amazon Linux reports rg missing but installs only git, which it packages`() {
+        ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.amazonLinux(it) }, host, big)
+        assertEquals(MissingTools(listOf("git", "rg"), "dnf install -y git", listOf("rg")), ImageSetup.checkTools(layout, tools))
+        Tree(layout.rootfs).exe("usr/bin/git") // what that line leaves
+        assertEquals(MissingTools(listOf("rg"), null, listOf("rg")), ImageSetup.checkTools(layout, tools))
+    }
+
+    @Test
     fun `an image without a package manager reports tools but no command`() {
         val result = ImageSetup(TreeUnpacker()).create(layout, treeBase { Distros.bare(it) }, host, big)
         assertEquals(MissingTools(tools, null), ImageSetup.checkTools(layout, tools))

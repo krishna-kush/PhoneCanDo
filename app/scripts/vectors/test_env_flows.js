@@ -223,7 +223,9 @@ const ui = (p) => src('ui/env/logic', p);
   t('ago days', formatAgo('2026-11-01T00:00:00Z', now), '6 days ago');
   t('ago months', formatAgo('2026-08-01T00:00:00Z', now), '3 months ago');
 
-  const { missingToolsLine, reinstallLine } = await import(ui('hints.ts'));
+  const { missingToolsLine, notPackagedLine, reinstallLine } = await import(ui('hints.ts'));
+  t('not packaged one', notPackagedLine(['rg']), "This Linux has no package for rg, so it can't be installed here.");
+  t('not packaged many', notPackagedLine(['rg', 'jq']), "This Linux has no package for rg and jq, so they can't be installed here.");
   t('missing one', missingToolsLine(['git']), 'This machine lacks git, which the agent needs.');
   t('missing many', missingToolsLine(['bash', 'git', 'rg']), 'This machine lacks bash, git and rg, which the agent needs.');
   t('reinstall few', reinstallLine(['python3', 'make']), 'The reset removed what you installed: python3 and make. You can install them again in one go.');

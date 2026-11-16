@@ -68,6 +68,12 @@ identifies it, the install and refresh commands, the package for each
 agent tool (`rg` → `ripgrep`), how to list hand-installed packages for a
 reset, and the proot fix. Detection order matters (dnf before yum).
 
+`family/InstallLine.kt` builds the line for one OS: Enterprise Linux
+rebuilds get `epel-release` first (ripgrep is in EPEL), and a package the OS
+doesn't carry at all (Amazon Linux 2023 has no ripgrep and no EPEL) is left
+out, so the rest still install; the tools check reports such a tool as
+`notPackaged` instead of offering a line that would fail.
+
 | Family | Install line | Hand-installed list | proot fix |
 |---|---|---|---|
 | apt | `apt-get update && apt-get install -y` | `apt-mark showmanual` | `APT::Sandbox::User "root"` |

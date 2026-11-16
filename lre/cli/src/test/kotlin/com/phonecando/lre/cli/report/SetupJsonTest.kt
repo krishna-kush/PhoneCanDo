@@ -32,7 +32,8 @@ class SetupJsonTest {
         assertEquals(
             """{"os":{"id":"debian","versionId":"13","idLike":[],"prettyName":"Debian GNU/Linux 13 (trixie)",""" +
                 """"family":"apt","shell":"/bin/bash"},"missingTools":["git","rg"],""" +
-                """"installCommand":"apt-get update && apt-get install -y git ripgrep","socketPathTight":false,""" +
+                """"installCommand":"apt-get update && apt-get install -y git ripgrep","notPackaged":[],""" +
+                """"socketPathTight":false,""" +
                 """"source":{"kind":"registry","ref":"docker.io/library/debian:stable","manifestDigest":"sha256:ab",""" +
                 """"layers":1,"bytes":50000000,"sourceHost":"registry-1.docker.io"},""" +
                 """"timingsMs":{"download":1200,"setup":3400}}""",
@@ -57,6 +58,7 @@ class SetupJsonTest {
         assertEquals("null", os.getValue("versionId").toString())
         assertEquals("""["a b"]""", os.getValue("idLike").toString())
         assertEquals("null", json.getValue("installCommand").toString())
+        assertEquals("[]", json.getValue("notPackaged").toString())
         assertEquals("true", json.getValue("socketPathTight").toString())
         assertEquals(
             """{"kind":"tarball","path":"/w/rootfs \"x\".tar","bytes":42}""",

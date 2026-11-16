@@ -10,6 +10,12 @@ export function missingToolsLine(tools: readonly string[]): string {
   return `This machine lacks ${list(tools)}, which the agent needs.`;
 }
 
+/** "This Linux has no package for rg, so it can't be installed here." */
+export function notPackagedLine(tools: readonly string[]): string {
+  const one = tools.length === 1;
+  return `This Linux has no package for ${list(tools)}, so ${one ? 'it' : 'they'} can't be installed here.`;
+}
+
 // Long lists read as a count; the command itself names every package.
 const NAMED_MAX = 6;
 

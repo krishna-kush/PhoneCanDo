@@ -20,7 +20,7 @@ data class SetupTimings(val download: Long, val setup: Long)
  * commands the image lacks (MissingTools). Pure. Shape (null where they have null):
  *
  * `{"os":{"id","versionId","idLike":[],"prettyName","family","shell"}|null,
- *   "missingTools":[],"installCommand","socketPathTight",
+ *   "missingTools":[],"installCommand","notPackaged":[],"socketPathTight",
  *   "source":{"kind":"registry","ref","manifestDigest","layers","bytes","sourceHost"}
  *          |{"kind":"tarball","path","bytes"},
  *   "timingsMs":{"download","setup"}}`
@@ -38,6 +38,7 @@ object SetupJson {
         put("os", result.os?.let(::os) ?: JsonNull)
         put("missingTools", strings(tools.commands))
         put("installCommand", tools.installCommand)
+        put("notPackaged", strings(tools.notPackaged))
         put("socketPathTight", result.socketPathTight)
         put("source", source(source))
         put(
