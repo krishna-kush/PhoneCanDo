@@ -6,11 +6,14 @@ import SectionTitle from '../../common/SectionTitle';
 import { formatBytes } from '../../env/logic/format';
 import Note from '../../env/parts/Note';
 import { useSlidInList } from '../../nav/slidIn';
+import { HUB_LINK_LABEL, hubRepoUrl } from '../logic/hubLinks';
+import HubLink from '../parts/HubLink';
 import ModelPanel from '../parts/ModelPanel';
 import { useAction } from '../useAction';
 
 // Our suggestions, best first, each with its verdict for this phone (files
-// plus the context's memory). Search below stays open to any model.
+// plus the context's memory), and a link to its model card on
+// huggingface.co. Search below stays open to any model.
 // `firstScreen` panels draw as the page opens (ModelsPage.tsx).
 export default function Suggested({ firstScreen }: { firstScreen: number }) {
   const suggested = useModelsStore((s) => s.suggested);
@@ -50,6 +53,7 @@ function SuggestedPanel({ model }: { model: SuggestedModel }) {
         </AppButton>
       )}
       {action.error ? <Note tone="error">{action.error}</Note> : null}
+      <HubLink label={HUB_LINK_LABEL.repo} url={hubRepoUrl(model.repo)} />
     </ModelPanel>
   );
 }

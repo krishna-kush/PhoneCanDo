@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { forgetToken, saveToken } from '../../../state/flows/modelActions';
 import { useModelsStore } from '../../../state/models';
+import { HUB_LINK_LABEL, HUB_TOKENS_URL } from '../logic/hubLinks';
+import HubLink from '../parts/HubLink';
 import AppButton from '../../common/AppButton';
 import AppInput from '../../common/AppInput';
 import SectionTitle from '../../common/SectionTitle';
@@ -9,7 +11,8 @@ import { useAction } from '../useAction';
 
 // The user's Hugging Face token, for gated and private models only. It is
 // kept encrypted on the phone and sent to huggingface.co alone; once saved
-// the app never shows it again, so the field is cleared.
+// the app never shows it again, so the field is cleared. Until then, a
+// link to the page that makes one.
 export default function HfToken() {
   const hasToken = useModelsStore((s) => s.hasToken);
   const [token, setToken] = useState('');
@@ -35,6 +38,7 @@ export default function HfToken() {
         </>
       ) : (
         <>
+          <HubLink label={HUB_LINK_LABEL.token} url={HUB_TOKENS_URL} />
           <AppInput
             value={token}
             onChangeText={setToken}

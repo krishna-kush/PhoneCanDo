@@ -11,8 +11,10 @@ import Note from '../env/parts/Note';
 import { useSlidInList } from '../nav/slidIn';
 import ProgressBar from '../env/parts/ProgressBar';
 import { type HubFailure, hubFailure } from './hubFailure';
+import { HUB_LINK_LABEL, hubRepoUrl } from './logic/hubLinks';
 import { variantFiles, variantLine, variantTitle } from './logic/modelText';
 import DatesLine from './parts/DatesLine';
+import HubLink from './parts/HubLink';
 import ModelPanel from './parts/ModelPanel';
 import { useAction } from './useAction';
 
@@ -23,6 +25,8 @@ const FIRST_SCREEN_PANELS = 3;
 // first, each with its size and verdict (its files alone: the context's
 // memory is known once it is on the phone), under the original model's
 // dates. Download pins that commit and keeps the dates with the model.
+// Its model card (what it is for, its licence) is on huggingface.co, a
+// tap away: also where a gated repository's terms are accepted.
 export default function RepoPage({ repo }: { repo: string }) {
   const [models, setModels] = useState<RepoModels | null>(null);
   const [failure, setFailure] = useState<HubFailure | null>(null);
@@ -44,6 +48,7 @@ export default function RepoPage({ repo }: { repo: string }) {
   return (
     <Screen>
       <PageHeader kicker="models · hugging face" title={repo} />
+      <HubLink label={models?.gated ? HUB_LINK_LABEL.gated : HUB_LINK_LABEL.repo} url={hubRepoUrl(repo)} />
       {error ? (
         <>
           <Note tone="error">{error}</Note>
@@ -56,7 +61,7 @@ export default function RepoPage({ repo }: { repo: string }) {
       ) : (
         <>
           <DatesLine dates={models.dates} />
-          {models.gated ? <Note>Gated: accept its terms on huggingface.co and save a token from that account first.</Note> : null}
+          {models.gated ? <Note>Gated: accept its terms on huggingface.co (above) and save a token from that account first.</Note> : null}
           {models.variants.length === 0 ? <Note>No GGUF model we can run in this repository.</Note> : null}
           {variants.map((v) => (
             <VariantPanel
