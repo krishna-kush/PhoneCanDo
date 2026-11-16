@@ -3,7 +3,7 @@ import type { CapabilityCheck, CheckRun } from '../../../../engine/checks/types'
 import PlainText from '../../../common/PlainText';
 import SectionTitle from '../../../common/SectionTitle';
 import { capabilityLabel } from './logic/copy';
-import { checkGroups, rowLine } from './logic/rows';
+import { acpWake, checkGroups, rowDimmed, rowLine } from './logic/rows';
 import ReadingBar from './ReadingBar';
 
 type Props = { capabilities: CapabilityCheck[]; run: CheckRun | null; name: string; now: number };
@@ -13,8 +13,10 @@ type Props = { capabilities: CapabilityCheck[]; run: CheckRun | null; name: stri
 // name, then a mono line: its state (checked with which version and when,
 // not checked yet, not working and why, or off) or, while a check runs,
 // where the check is with it, with the reading bar under a row being
-// tested. An Off row is dimmed.
+// tested. An Off row is dimmed, but for Woken while idle of an agent that
+// wakes in ACP mode, which says so.
 export default function CapabilityRows({ capabilities, run, name, now }: Props) {
+  const acp = acpWake(capabilities);
   return (
     <>
       {checkGroups(capabilities).map((group) => (
@@ -22,7 +24,7 @@ export default function CapabilityRows({ capabilities, run, name, now }: Props) 
           <SectionTitle>{group.title}</SectionTitle>
           <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
             {group.checks.map((check, i) => {
-              const line = rowLine(check, run, name, now);
+              const line = rowLine(check, run, name, now, acp);
               return (
                 <YStack
                   key={check.id}
@@ -31,7 +33,7 @@ export default function CapabilityRows({ capabilities, run, name, now }: Props) 
                   paddingVertical="2"
                   borderTopWidth={i > 0 ? 1 : 0}
                   borderColor="line"
-                  opacity={check.state === 'off' ? 0.6 : 1}
+                  opacity={rowDimmed(check, acp) ? 0.6 : 1}
                 >
                   <PlainText fontSize={16} fontWeight="500">
                     {capabilityLabel(check.id)}

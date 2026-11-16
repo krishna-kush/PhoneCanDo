@@ -65,6 +65,16 @@ export function stateLine(check: Pick<CapabilityCheck, 'state' | 'cliVersion' | 
 }
 
 /**
+ * Woken while idle for an agent that wakes only in ACP mode (its own wake
+ * off, ACP mode set up), by ACP mode's state.
+ */
+export function wakeByAcpLine(acp: CheckState): string {
+  return acp === 'failed'
+    ? "Not working: it wakes only in ACP mode, which isn't working."
+    : 'In ACP mode: a message that asks wakes it with an ACP turn.';
+}
+
+/**
  * The agent page's row detail: "4 checked · 1 not working", "2 checked · 3
  * not checked", "checking now" while Check now runs. A failure always
  * shows; with three kinds of state, the not checked count gives way.

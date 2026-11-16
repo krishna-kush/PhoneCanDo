@@ -9,7 +9,7 @@ import { useMessagesStore, useUnread } from '../../state/messages';
 import LinkRow from '../common/LinkRow';
 import PlainText from '../common/PlainText';
 import { usePageActive } from '../nav/pageActive';
-import { agentLevelLine } from './logic/levels';
+import { agentLevelLine, wakeBlockedLine } from './logic/levels';
 import { unreadText } from './logic/messagesCopy';
 import WakeRow from './WakeRow';
 
@@ -19,7 +19,9 @@ import WakeRow from './WakeRow';
 // only, can't read; lowered by what we saw not working), then "Other
 // agents can wake it" for a kind that can be woken while idle: the kind's
 // own level is wakes, by its `inbox.wake` (canWake) or by its ACP mode, as
-// the runner's kindCanWake has it. Nothing on a build without messages.
+// the runner's kindCanWake has it. While its level now is lower, a line
+// under the switch says what we saw fail; the switch stays, since the
+// runner still tries a wake. Nothing on a build without messages.
 // The counts are re-read each time the page comes to front.
 export default function AgentMessageRows({ agent }: { agent: Agent }) {
   const push = useAppStore((s) => s.push);
@@ -31,6 +33,7 @@ export default function AgentMessageRows({ agent }: { agent: Agent }) {
   }, [active]);
   if (!messagesAvailable()) return null;
   const kind = agentKind(agent.kind);
+  const blocked = wakeBlockedLine(kind, level);
   return (
     <>
       <LinkRow
@@ -43,7 +46,18 @@ export default function AgentMessageRows({ agent }: { agent: Agent }) {
           {agentLevelLine(level, kind.label)}
         </PlainText>
       </YStack>
-      {kind.messaging === 'wakes' && canSetWakeable() ? <WakeRow agent={agent} /> : null}
+      {kind.messaging === 'wakes' && canSetWakeable() ? (
+        <>
+          <WakeRow agent={agent} />
+          {blocked ? (
+            <YStack paddingHorizontal="2" paddingBottom="2">
+              <PlainText fontSize={13} color="muted">
+                {blocked}
+              </PlainText>
+            </YStack>
+          ) : null}
+        </>
+      ) : null}
     </>
   );
 }

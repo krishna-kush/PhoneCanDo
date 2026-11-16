@@ -208,6 +208,9 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   });
   t('stuck without words gets ours', r.resultLines(ended('stuck'), now).detail, 'Nothing moved for 3 minutes, so we stopped it to free memory.');
   t('cancelled', r.resultLines(ended('cancelled'), now), { head: 'Last check · 5 min ago · cancelled', detail: 'You cancelled it.', tone: 'muted' });
+  t('stopped by you, in the runner\'s words', r.resultLines(ended('cancelled', 'You stopped its check task, so the check ended there.'), now), {
+    head: 'Last check · 5 min ago · cancelled', detail: 'You stopped its check task, so the check ended there.', tone: 'muted',
+  });
   t('a failed check without words or a time gets ours', r.resultLines({ ...ended('failed'), startedAt: 0 }, now), {
     head: 'Last check · failed', detail: 'It stopped before the check task finished.', tone: 'primary',
   });
@@ -265,6 +268,21 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
     'Skipped: needs a turn in its own app; checked the first time you use it');
   t('after the run: a row left queued shows its state', g.rowLine(cap('tools', 'checked'), { ...after, state: 'cancelled' }, 'Builder', now).text, 'Checked');
   t('no run: its state line', g.rowLine(cap('tools', 'off'), null, 'Builder', now), { text: 'Off: not set up for this agent.', tone: 'faint', progress: null });
+
+  // Woken while idle of a kind that wakes only in ACP mode.
+  t('wakes only in ACP mode: ACP mode\'s state', g.acpWake([cap('wake', 'off'), cap('acp', 'checked')]), 'checked');
+  t('its own wake set up: not by ACP mode', g.acpWake([cap('wake', 'unchecked'), cap('acp', 'checked')]), null);
+  t('no ACP mode: nothing wakes it', g.acpWake([cap('wake', 'off'), cap('acp', 'off')]), null);
+  t('no rows: nothing', g.acpWake([]), null);
+  t('woken in ACP mode', g.rowLine(cap('wake', 'off'), null, 'Builder', now, 'unchecked'),
+    { text: 'In ACP mode: a message that asks wakes it with an ACP turn.', tone: 'muted', progress: null });
+  t('woken in ACP mode, which fails', g.rowLine(cap('wake', 'off'), null, 'Builder', now, 'failed'),
+    { text: "Not working: it wakes only in ACP mode, which isn't working.", tone: 'primary', progress: null });
+  t('off without ACP mode: still Off', g.rowLine(cap('wake', 'off'), null, 'Builder', now, null).text, 'Off: not set up for this agent.');
+  t('only Woken while idle reads by ACP mode', g.rowLine(cap('tools', 'off'), null, 'Builder', now, 'checked').text, 'Off: not set up for this agent.');
+  t('woken in ACP mode: not dimmed', g.rowDimmed(cap('wake', 'off'), 'checked'), false);
+  t('off: dimmed', [g.rowDimmed(cap('wake', 'off'), null), g.rowDimmed(cap('tools', 'off'), 'checked')], [true, true]);
+  t('set up: not dimmed', g.rowDimmed(cap('wake', 'checked'), null), false);
   t('a run with rows', g.runHasRows(run), true);
   t('a run from before rows', g.runHasRows(going([])), false);
   t('no run, no rows', g.runHasRows(null), false);

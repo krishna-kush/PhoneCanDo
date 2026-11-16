@@ -65,6 +65,23 @@ export function agentLevelLine(level: MessagingLevel, kindLabel: string): string
 }
 
 /**
+ * Under "Other agents can wake it" when the agent's kind is made to wake
+ * but its level now is lower: what we saw fail, its ACP mode, its own wake
+ * or both (the level drops only once every way it wakes fails). The runner
+ * still tries a wake, so the switch stays. Null at wakes.
+ */
+export function wakeBlockedLine(kind: { acp: boolean; canWake: boolean }, level: MessagingLevel): string | null {
+  if (level === 'wakes') return null;
+  const what =
+    kind.acp && kind.canWake
+      ? 'its ACP mode and its own wake'
+      : kind.acp
+        ? 'its ACP mode'
+        : 'waking it while idle';
+  return `We saw ${what} fail, so a wake may not reach it. What it can do says why.`;
+}
+
+/**
  * The explainer's rows: each level with its title, meaning and the names
  * of the agents at it (by their kind's level), best first; a level no agent
  * is at still shows, with no names, so the four always read the same.

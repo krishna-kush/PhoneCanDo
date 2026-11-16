@@ -2,10 +2,11 @@
 // mode, its own app), and each row's line: its state as usual or, while a
 // check runs, where the check is with it (testing now, queued, answered,
 // couldn't tell, skipped). Unknown and skipped lines stay after the run
-// until the next check. Pure (zero RN imports):
+// until the next check. An agent whose kind wakes only in ACP mode reads
+// Woken while idle by ACP mode, not Off. Pure (zero RN imports):
 // scripts/vectors/test_checks.js checks it.
-import type { CapabilityCheck, CapabilityId, CheckRun, CheckRunRow } from '../../../../../engine/checks/types';
-import { stateLine, stateTone, type Tone } from './copy.ts';
+import type { CapabilityCheck, CapabilityId, CheckRun, CheckRunRow, CheckState } from '../../../../../engine/checks/types';
+import { stateLine, stateTone, wakeByAcpLine, type Tone } from './copy.ts';
 import { stepView } from './run.ts';
 
 export type CheckGroup = { id: 'acp' | 'app'; title: string; checks: CapabilityCheck[] };
@@ -25,6 +26,18 @@ export function checkGroups(capabilities: readonly CapabilityCheck[]): CheckGrou
     });
     return checks.some((c) => c.state !== 'off') ? [{ id: g.id, title: g.title, checks }] : [];
   });
+}
+
+/** ACP mode's state when it is the only way the agent wakes (its own wake off, ACP mode set up); else null. */
+export function acpWake(capabilities: readonly CapabilityCheck[]): CheckState | null {
+  const wake = capabilities.find((c) => c.id === 'wake');
+  const acp = capabilities.find((c) => c.id === 'acp');
+  return wake?.state === 'off' && acp != null && acp.state !== 'off' ? acp.state : null;
+}
+
+/** An Off row is dimmed, but not Woken while idle when ACP mode wakes the agent ([acp]: acpWake's). */
+export function rowDimmed(check: CapabilityCheck, acp: CheckState | null): boolean {
+  return check.state === 'off' && !(check.id === 'wake' && acp != null);
 }
 
 /** A row's line, its ink and, while a local model reads the task for it, the thin bar's fill (0 to 1). */
@@ -50,9 +63,10 @@ function rowStatus(run: CheckRun | null, id: CapabilityId): CheckRunRow | null {
  * The row's line: "Testing now · reading the task · 42%" (with the bar),
  * "Queued · after ACP mode", "Couldn't tell from this turn", "Skipped:
  * …", or, answered or with no check about it, its state line ("Checked
- * with 1.0.51 · just now", "Not working: …").
+ * with 1.0.51 · just now", "Not working: …"); Woken while idle that is
+ * off while ACP mode wakes the agent ([acp]: acpWake's) says so instead.
  */
-export function rowLine(check: CapabilityCheck, run: CheckRun | null, name: string, now: number): RowLine {
+export function rowLine(check: CapabilityCheck, run: CheckRun | null, name: string, now: number, acp: CheckState | null = null): RowLine {
   const row = rowStatus(run, check.id);
   switch (row?.status) {
     case 'testing': {
@@ -68,6 +82,9 @@ export function rowLine(check: CapabilityCheck, run: CheckRun | null, name: stri
     case 'skipped':
       return { text: skippedText(row.why), tone: 'dim', progress: null };
     default:
+      if (check.id === 'wake' && check.state === 'off' && acp != null) {
+        return { text: wakeByAcpLine(acp), tone: acp === 'failed' ? 'primary' : 'muted', progress: null };
+      }
       return { text: stateLine(check, now), tone: stateTone(check.state), progress: null };
   }
 }
