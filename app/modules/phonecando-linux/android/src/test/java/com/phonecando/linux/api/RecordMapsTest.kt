@@ -2,6 +2,7 @@ package com.phonecando.linux.api
 
 import com.phonecando.linux.records.Samples
 import com.phonecando.lre.image.reset.ReinstallList
+import com.phonecando.lre.image.tools.MissingTools
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -41,6 +42,13 @@ class RecordMapsTest {
     assertEquals(
       mapOf("installCommand" to "apt-get install -y jq", "packages" to listOf("jq")),
       ReinstallList("apt-get install -y jq", listOf("jq")).toMap(),
+    )
+  }
+
+  @Test fun missingToolsHasItsShape() {
+    assertEquals(
+      mapOf("missingTools" to listOf("rg"), "installCommand" to null, "notPackaged" to listOf("rg")),
+      MissingTools(listOf("rg"), null, listOf("rg")).toMap(),
     )
   }
 }

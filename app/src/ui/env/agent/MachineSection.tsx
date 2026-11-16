@@ -13,7 +13,7 @@ import { unreadText } from '../../messages/logic/messagesCopy';
 import AgentLine from '../list/AgentLine';
 import SystemLogo from '../list/SystemLogo';
 import { formatBytes } from '../logic/format';
-import { missingToolsLine } from '../logic/hints';
+import { missingToolsLine, notPackagedLine } from '../logic/hints';
 import { logoKeys } from '../logic/osLogo';
 import { machineAgentsTitle, SHARED_MACHINE_NOTE } from '../logic/sharedMachineText';
 import { envTitle, osLine } from '../logic/titles';
@@ -54,6 +54,9 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
   const size = image.sizeBytes > 0 ? formatBytes(image.sizeBytes) : null;
   const missing = tools?.missingTools ?? [];
   const install = tools?.installCommand ?? null;
+  // Missing tools its OS doesn't package: left out of the install command.
+  const notPackaged = tools?.notPackaged ?? [];
+  const unknownManager = !install && notPackaged.length < missing.length;
 
   const title = env ? envTitle(env.source) : 'Unknown env';
   const openAgent = (agentId: string) => push({ name: 'agent', agentId });
@@ -97,9 +100,11 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
               </AppButton>
               <Note>The command is typed in for you; press Enter to run it.</Note>
             </>
-          ) : (
+          ) : null}
+          {notPackaged.length > 0 ? <Note>{notPackagedLine(notPackaged)}</Note> : null}
+          {unknownManager ? (
             <Note>We don't know its package manager, so install them by hand in a terminal.</Note>
-          )}
+          ) : null}
         </>
       ) : null}
       {linux ? (

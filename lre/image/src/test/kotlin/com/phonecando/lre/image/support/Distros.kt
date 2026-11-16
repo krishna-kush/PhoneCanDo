@@ -34,6 +34,17 @@ object Distros {
         .dir("usr/sbin")
         .file("etc/os-release", "NAME=\"Fedora Linux\"\nVERSION_ID=42\nID=fedora\nPRETTY_NAME=\"Fedora Linux 42 (Container Image)\"\n")
 
+    /** Amazon Linux 2023: dnf, merged /usr; its repositories carry no ripgrep. */
+    fun amazonLinux(root: File): Tree = Tree(root)
+        .link("bin", "usr/bin").link("sbin", "usr/sbin")
+        .exe("usr/bin/bash").link("usr/bin/sh", "bash").exe("usr/bin/dnf")
+        .dir("usr/sbin")
+        .file(
+            "etc/os-release",
+            "NAME=\"Amazon Linux\"\nVERSION_ID=\"2023\"\nID=\"amzn\"\nID_LIKE=\"fedora\"\n" +
+                "PRETTY_NAME=\"Amazon Linux 2023\"\n",
+        )
+
     /** Arch: pacman with a pacman 7 config. */
     fun arch(root: File): Tree = Tree(root)
         .link("bin", "usr/bin").link("sbin", "usr/bin")

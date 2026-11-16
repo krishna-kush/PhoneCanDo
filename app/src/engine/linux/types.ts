@@ -188,8 +188,10 @@ export type TerminalRecipe = { cmd: string[]; env: Record<string, string>; cwd: 
 export type ReinstallList = { installCommand: string; packages: string[] };
 
 /** The commands (an agent's tools) an image lacks, and the line that installs them with its
-    package manager: null when none are missing or the package manager is unknown. */
-export type MissingTools = { missingTools: string[]; installCommand: string | null };
+    package manager: null when none are missing, the package manager is unknown or its OS
+    packages none of them. notPackaged: the missing commands its OS doesn't package at all
+    (Amazon Linux has no ripgrep), left out of that line. */
+export type MissingTools = { missingTools: string[]; installCommand: string | null; notPackaged: string[] };
 
 /** The end of a machine's last guest script log (an agent's install or update): its `# <label>`
     line, then what it printed, redacted, in whole lines. */

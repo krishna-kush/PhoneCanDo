@@ -52,4 +52,5 @@ fun OsInfo.toMap(): Map<String, Any?> = mapOf(
 
 fun ReinstallList.toMap(): Map<String, Any?> = mapOf("installCommand" to installCommand, "packages" to packages)
 
-fun MissingTools.toMap(): Map<String, Any?> = mapOf("missingTools" to commands, "installCommand" to installCommand)
+fun MissingTools.toMap(): Map<String, Any?> =
+    mapOf("missingTools" to commands, "installCommand" to installCommand, "notPackaged" to notPackaged)

@@ -16,8 +16,14 @@ import java.io.File
 data class MissingTools(
     /** The asked-for commands the guest PATH lacks, in the order asked. */
     val commands: List<String>,
-    /** One shell line that installs [commands]; null when none are missing or the package manager is unknown. */
+    /**
+     * One shell line that installs [commands], less any the OS doesn't package;
+     * null when none are missing, the package manager is unknown or the OS
+     * packages none of them.
+     */
     val installCommand: String?,
+    /** The [commands] the OS's repositories don't carry at all, so [installCommand] leaves them out. */
+    val notPackaged: List<String> = emptyList(),
 ) {
     companion object {
         val NONE = MissingTools(emptyList(), null)
@@ -49,8 +55,10 @@ internal object ToolsCheck {
         val fs = GuestFs(rootfs)
         val dirs = GuestPath.dirs(guestPath)
         val missing = commands.distinct().filter { fs.findCommand(it, dirs) == null }
-        val install = os.family?.takeIf { missing.isNotEmpty() }?.let(Families::of)
-            ?.let { traits -> InstallLine.of(traits, os, missing.map(traits::packageFor)) }
-        return MissingTools(missing, install)
+        val traits = os.family?.takeIf { missing.isNotEmpty() }?.let(Families::of) ?: return MissingTools(missing, null)
+        // A tool the OS doesn't package stays missing, out of the line, and says why.
+        val packaged = InstallLine.packaged(os, missing.map(traits::packageFor))
+        val install = packaged.takeIf { it.isNotEmpty() }?.let { InstallLine.of(traits, os, it) }
+        return MissingTools(missing, install, missing.filter { traits.packageFor(it) !in packaged })
     }
 }

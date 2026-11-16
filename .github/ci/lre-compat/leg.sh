@@ -72,12 +72,15 @@ start=$SECONDS
 rc=$?
 secs=$((SECONDS - start))
 setup="$(tail -n 1 "$SCRATCH/setup.json")"
-os="" family="" missing="" install=""
+os="" family="" missing="" install="" notpkg=""
 if [ "$rc" -eq 0 ] && jq -e '.os != null' <<<"$setup" >/dev/null 2>&1; then
   os="$(jq -r '.os.prettyName // .os.id' <<<"$setup")"
   family="$(jq -r '.os.family // "none"' <<<"$setup")"
   missing="$(jq -r '.missingTools | join(" ")' <<<"$setup")"
   install="$(jq -r '.installCommand // ""' <<<"$setup")"
+  # Tools the distro doesn't package at all (Amazon Linux: rg): left out of
+  # the install command, so their checks below are skipped, not failed.
+  notpkg="$(jq -r '.notPackaged // [] | join(" ")' <<<"$setup")"
   mib="$(jq -r '.source.bytes / 1048576 | floor' <<<"$setup")"
   pass "cli setup ${source_args[0]}" "$secs" "$os, ${mib} MiB, missing: ${missing:-none}"
 else
@@ -121,7 +124,11 @@ if [ -n "$os" ]; then
 
   if $tools; then
     check 'git --version (shim)' re '^git version [0-9]' on_path "$PROJ" git --version
-    check 'rg --version (shim)' re '^ripgrep [0-9]' on_path "$PROJ" rg --version
+    if [[ " $notpkg " == *" rg "* ]]; then
+      skip 'rg --version (shim)' "this distro has no ripgrep package"
+    else
+      check 'rg --version (shim)' re '^ripgrep [0-9]' on_path "$PROJ" rg --version
+    fi
     check 'git init + commit --allow-empty in home' eq '1' in_image "$PROJ" \
       'git init -q && git -c user.email=ci@phonecando.invalid -c user.name=CI commit -q --allow-empty -m lre-compat &&
        git rev-list --count HEAD'

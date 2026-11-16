@@ -39,6 +39,21 @@ class InstallLineTest {
     }
 
     @Test
+    fun `Amazon Linux leaves out ripgrep, which it doesn't package, so git still installs`() {
+        val amazon = os("amzn", listOf("fedora"), PackageFamily.DNF)
+        assertEquals(listOf("git"), InstallLine.packaged(amazon, listOf("git", "ripgrep")))
+        assertEquals(emptyList(), InstallLine.packaged(amazon, listOf("ripgrep")))
+        assertEquals("dnf install -y git", line(amazon, *InstallLine.packaged(amazon, listOf("git", "ripgrep")).toTypedArray()))
+    }
+
+    @Test
+    fun `every other OS keeps every package`() {
+        for (other in listOf(alma, os("fedora", emptyList(), PackageFamily.DNF), os("debian", emptyList(), PackageFamily.APT))) {
+            assertEquals(listOf("git", "ripgrep"), InstallLine.packaged(other, listOf("git", "ripgrep")))
+        }
+    }
+
+    @Test
     fun `Fedora, RHEL and Debian keep their plain lines`() {
         val fedora = os("fedora", emptyList(), PackageFamily.DNF)
         assertEquals("dnf install -y git ripgrep", line(fedora, "git", "ripgrep"))
