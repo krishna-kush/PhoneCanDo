@@ -1,9 +1,9 @@
 name: Lint
 
 # Repo-wide lint gate: workflows (actionlint + shellcheck), shell scripts,
-# Python (./manage), JSON/YAML/TOML/XML data, repo hygiene, Markdown links.
-# Spelling (typos) and Markdown style (markdownlint) report without blocking
-# yet. Runs on prod pushes, every PR, daily (adds external links) and on demand.
+# Python (./manage), JSON/YAML/TOML/XML data, repo hygiene, Markdown links,
+# spelling (typos) and Markdown style (markdownlint). Runs on prod pushes,
+# every PR, daily (adds external links) and on demand.
 
 on:
   push:
@@ -349,7 +349,7 @@ jobs:
           fail: true
 
   typos:
-    name: typos (spelling, report only)
+    name: typos (spelling)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -358,11 +358,9 @@ jobs:
         with:
           persist-credentials: false
 
-      # Non-blocking until the first green run proves the allowlist in
-      # .github/typos.toml; then drop continue-on-error.
+      # Real words typos takes for misspellings go in .github/typos.toml.
       - name: typos
         id: typos
-        continue-on-error: true
         uses: crate-ci/typos@4c8b7f51ca60df14e3c5ca82770dfbbe6c3dae85 # v1.52.0
         with:
           config: .github/typos.toml
@@ -371,10 +369,10 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           OUTCOME: ${{ steps.typos.outcome }}
-        run: echo "**typos:** ${OUTCOME} (non-blocking; findings are annotations)." >> "$GITHUB_STEP_SUMMARY"
+        run: echo "**typos:** ${OUTCOME} (findings are annotations)." >> "$GITHUB_STEP_SUMMARY"
 
   markdownlint:
-    name: markdownlint (style, report only)
+    name: markdownlint (style)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -391,11 +389,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
 
-      # Relaxed rule set in docs.markdownlint-cli2.jsonc. Non-blocking until a
-      # first green run; then drop continue-on-error.
+      # Relaxed rule set in docs.markdownlint-cli2.jsonc.
       - name: markdownlint-cli2
         id: mdl
-        continue-on-error: true
         run: |
           set -euo pipefail
           npx --yes "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}" '**/*.md' \
@@ -405,7 +401,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           OUTCOME: ${{ steps.mdl.outcome }}
-        run: echo "**markdownlint-cli2 ${MARKDOWNLINT_CLI2_VERSION}:** ${OUTCOME} (non-blocking)." >> "$GITHUB_STEP_SUMMARY"
+        run: echo "**markdownlint-cli2 ${MARKDOWNLINT_CLI2_VERSION}:** ${OUTCOME}." >> "$GITHUB_STEP_SUMMARY"
 
   lint-ok:
     name: lint-ok
@@ -414,8 +410,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # The one check to mark required in branch protection. typos and
-      # markdownlint are listed but cannot fail it (continue-on-error steps).
+      # The one check to mark required in branch protection.
       - name: All lint jobs passed
         env:
           NEEDS: ${{ toJSON(needs) }}

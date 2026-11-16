@@ -36,7 +36,7 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('capitals, digits, spaces and dashes only', lines.filter((l) => !/^[A-Z0-9 -]+$/.test(l)), []);
 
   // --- bars.ts is current -----------------------------------------------------------
-  t('bars.ts is what make-barcodes.mjs writes (pnpm barcodes)', fs.readFileSync(gen.BARS_FILE, 'utf8').replace(/\r\n/g, '\n') === gen.barsSource(), true);
+  t('bars.ts is what make-barcodes.mjs writes (pnpm barcodes)', fs.readFileSync(gen.BARS_FILE, 'utf8') === gen.barsSource(), true);
   t('bars for every line, by its id', Object.keys(BARS), ids);
   const encoded = (line) => {
     const code = code128(line);

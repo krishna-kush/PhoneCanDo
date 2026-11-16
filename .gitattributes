@@ -1,0 +1,7 @@
+# LF in every checkout on every OS: generated files and the checks that
+# compare them byte for byte must match on Windows too.
+* text=auto eol=lf
+
+# cmd.exe needs CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf

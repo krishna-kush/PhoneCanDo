@@ -56,8 +56,10 @@ extend-ignore-re = [
   "\\b[0-9]+ths\\b",
   # A Hugging Face paging cursor (base64) in HfCatalogTest.
   "cursor=[A-Za-z0-9_-]+",
-  # A word split across chunks in LineSplitterTest.
-  "\"hel\"",
+  # A word split across chunks in LineSplitterTest and AcpTurnTest.
+  "\"[Hh]el\"",
+  # Desk letters past z in app/scripts/vectors/test_desks.js (..., 'az', 'ba').
+  "'ba'",
   # Inline opt-out for a single line: `typos: ignore-line`.
   "(?Rm)^.*typos: ignore-line.*$",
 ]
@@ -81,3 +83,5 @@ unparseable = "unparseable"
 formant = "formant"
 # Regex stem matching authenticate/authentication (tce scripts).
 authenticat = "authenticat"
+# A llama.cpp model architecture (lme SwaPatterns).
+limite = "limite"

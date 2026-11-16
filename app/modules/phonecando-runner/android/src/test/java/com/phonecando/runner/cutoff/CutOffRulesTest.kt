@@ -115,7 +115,7 @@ class CutOffRulesTest {
     assertNull(CutOffRules.scheduleRun(null, firstOfLife = true, lifeStartedAt = null, setWorkingSince = since))
   }
 
-  @Test fun aCancelledUpdateDropsOnlyThisLifesKeptRuns() {
+  @Test fun aCancelledUpdateDropsOnlyTheKeptRunsOfThisLife() {
     val runs = listOf(
       run().copy(held = Held.UPDATE),
       run(agentId = "a2").copy(held = Held.SYSTEM),
