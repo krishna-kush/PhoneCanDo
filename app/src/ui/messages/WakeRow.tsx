@@ -11,8 +11,9 @@ import { WAKE_TITLE, wakeSubtitle } from './logic/messagesCopy';
 // "Other agents can wake it" in the agent's Settings block, laid out as
 // the rows around it with the square mark Keep running uses, and a line
 // under it saying what it does. On (the default), another agent's message
-// that asks to wake it can start a turn while it is idle; it never starts
-// a stopped agent. Kept natively; the record re-read shows it.
+// that asks to wake it can start a turn while it is idle, and starts it in
+// the background when it is stopped. Kept natively; the record re-read
+// shows it.
 export default function WakeRow({ agent }: { agent: Agent }) {
   const t = useTheme();
   const refreshAgents = useAgentsStore((s) => s.refreshAgents);

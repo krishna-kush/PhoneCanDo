@@ -46,6 +46,7 @@ function asDelivery(raw: Raw): MessageDelivery | null {
     name: str(raw?.name) || agentId,
     status: status && STATUSES.includes(status) ? (status as DeliveryStatus) : 'queued',
     woke: raw?.woke === true,
+    started: raw?.started === true,
     reason: str(raw?.reason) || null,
   };
 }

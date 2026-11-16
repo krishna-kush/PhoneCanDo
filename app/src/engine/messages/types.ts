@@ -4,7 +4,7 @@
 // keeps the log in app-private storage, delivers each message through the
 // recipient kind's hooks, extension or server, and records per recipient
 // whether it waits, was delivered, was read or was refused, and whether it
-// woke the agent. It also posts notices of its own (the screen queue:
+// woke the agent (and started it, when it was stopped). It also posts notices of its own (the screen queue:
 // someone waits for the screen, the screen is yours).
 import type { AgentId } from '../agents/records';
 
@@ -26,7 +26,9 @@ export type MessageDelivery = {
   status: DeliveryStatus;
   /** The message started a turn of this agent (it was idle and wakeable). */
   woke: boolean;
-  /** Why it was refused (the runner's words); null otherwise. */
+  /** Its engine was started for it first: it was stopped. */
+  started: boolean;
+  /** Why it was refused, or, delivered, why it did not wake the agent it asked to wake (the runner's words); null otherwise. */
   reason: string | null;
 };
 

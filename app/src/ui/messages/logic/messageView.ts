@@ -65,17 +65,24 @@ export type DeliveryLine = { key: string; text: string; tone: Tone };
 /**
  * Each recipient's status, one line each. A message to one agent names it
  * in its head already, so its line is only the status ("read · woke
- * Reviewer"); a message to a machine or the phone names each recipient.
+ * Reviewer", "read · started Reviewer" when it was stopped); a message to
+ * a machine or the phone names each recipient.
  */
 export function deliveryLines(m: AgentMessage): DeliveryLine[] {
   const single = m.to.kind === 'agent' && m.deliveries.length === 1;
   return m.deliveries.map((d) => {
     const status = statusText(d);
     const text = single
-      ? [status, d.woke ? `woke ${d.name}` : null].filter(Boolean).join(' · ')
-      : [d.name, status, d.woke ? 'woke it' : null].filter(Boolean).join(' · ');
+      ? [status, wokeText(d, d.name)].filter(Boolean).join(' · ')
+      : [d.name, status, wokeText(d, 'it')].filter(Boolean).join(' · ');
     return { key: d.agentId, text, tone: STATUS_TONES[d.status] };
   });
+}
+
+// "started Reviewer" when its engine was started for it, "woke Reviewer" when it only woke.
+function wokeText(d: Pick<MessageDelivery, 'woke' | 'started'>, who: string): string | null {
+  if (d.started) return `started ${who}`;
+  return d.woke ? `woke ${who}` : null;
 }
 
 /** The first words of a message, on one line, cut at `max` characters with an ellipsis. */

@@ -84,7 +84,7 @@ export const WAKE_TITLE = 'Other agents can wake it';
 /** Under the switch: what it does, on or off. */
 export function wakeSubtitle(on: boolean): string {
   return on
-    ? "A message that asks to wake it can start a turn while it's idle. A stopped agent stays stopped."
+    ? "A message that asks to wake it can start a turn while it's idle, and starts it in the background if it's stopped."
     : 'Messages wait for its next turn.';
 }
 

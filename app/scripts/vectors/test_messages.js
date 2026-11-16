@@ -45,7 +45,7 @@ const HOUR = 60 * MIN;
     sentAt: 1000,
     hop: 0,
     notice: false,
-    deliveries: [{ agentId: 'r', name: 'Reviewer', status: 'read', woke: true, reason: null }],
+    deliveries: [{ agentId: 'r', name: 'Reviewer', status: 'read', woke: true, started: false, reason: null }],
   });
   t('no id: dropped', p.asMessage({ text: 'x' }), null);
   t('not an object: dropped', p.asMessage('x'), null);
@@ -117,6 +117,8 @@ const HOUR = 60 * MIN;
   t('one recipient: only its status', v.deliveryLines(msg(1)).map((l) => [l.text, l.tone]), [['delivered', 'muted']]);
   const woke = msg(1, { deliveries: [{ agentId: 'r', name: 'Reviewer', status: 'read', woke: true, reason: null }] });
   t('a wake names who it woke', v.deliveryLines(woke).map((l) => [l.text, l.tone]), [['read · woke Reviewer', 'secondaryInk']]);
+  const started = msg(1, { deliveries: [{ agentId: 'r', name: 'Reviewer', status: 'read', woke: true, started: true, reason: null }] });
+  t('a start names who it started', v.deliveryLines(started).map((l) => l.text), ['read · started Reviewer']);
   t('a broadcast names each recipient', v.deliveryLines(phone).map((l) => [l.text, l.tone]), [
     ['Reviewer · read', 'secondaryInk'],
     ['Tester · refused: stopped', 'primary'],
@@ -166,7 +168,7 @@ const HOUR = 60 * MIN;
   t('unread text', [c.unreadText(0), c.unreadText(1), c.unreadText(4)], ['', '1 unread', '4 unread']);
   t('the mark stays small', [c.unreadMark(7), c.unreadMark(120)], ['7', '99+']);
   t('unread for a screen reader', [c.unreadLabel(0), c.unreadLabel(1), c.unreadLabel(3)], ['', '1 unread message', '3 unread messages']);
-  t('the switch says a stopped agent stays stopped', c.wakeSubtitle(true).includes('A stopped agent stays stopped'), true);
+  t('the switch says a stopped agent starts for it', c.wakeSubtitle(true).includes('starts it in the background'), true);
   t('off, messages wait', c.wakeSubtitle(false), 'Messages wait for its next turn.');
   t('empty, one agent', c.emptyText('Reviewer'), 'No messages to or from Reviewer yet.');
   t('empty, every agent', c.emptyText(null), 'No messages yet. When agents talk to each other, it shows here.');
@@ -193,6 +195,12 @@ const HOUR = 60 * MIN;
   ]);
   const levelCopy = lv.LEVELS.map((l) => [lv.levelTitle(l), lv.levelMeaning(l), lv.agentLevelLine(l, 'X')].join(' ')).join(' ');
   t('level copy never says A2A or the owner', /\bA2A\b|owner/i.test(levelCopy), false);
+  t('wakes now: no line under the switch', lv.wakeBlockedLine({ acp: true, canWake: true }, 'wakes'), null);
+  t('woken only in ACP mode, which failed', lv.wakeBlockedLine({ acp: true, canWake: false }, 'delivered'),
+    'We saw its ACP mode fail, so a wake may not reach it. What it can do says why.');
+  t('woken only its own way, which failed', lv.wakeBlockedLine({ acp: false, canWake: true }, 'inbox'),
+    'We saw waking it while idle fail, so a wake may not reach it. What it can do says why.');
+  t('both ways failed', lv.wakeBlockedLine({ acp: true, canWake: true }, 'delivered').startsWith('We saw its ACP mode and its own wake fail'), true);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
