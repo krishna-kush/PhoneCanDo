@@ -34,19 +34,21 @@ export type Why =
   | 'switch-off'
   | 'hop'
   | 'budget'
-  | 'woke';
+  | 'woke'
+  | 'started';
 
 export function land(to: Target, note: Note, limits: Limits): { lands: Lands; why: Why } {
   if (to.level === 'none') return { lands: 'refused', why: 'no-tools' };
   if (to.level === 'inbox') return { lands: 'pile', why: 'inbox' };
-  if (to.state === 'stopped') return { lands: 'pile', why: 'stopped' };
   if (to.state === 'working') return { lands: 'read', why: 'mid-run' };
-  if (to.level === 'delivered') return { lands: 'pile', why: 'next-turn' };
+  // One that is never woken is never started either.
+  if (to.level === 'delivered') return { lands: 'pile', why: to.state === 'stopped' ? 'stopped' : 'next-turn' };
   if (note.broadcast) return { lands: 'pile', why: 'broadcast' };
   if (!to.wakeable) return { lands: 'pile', why: 'switch-off' };
   if (note.hop >= limits.noWakeHop) return { lands: 'pile', why: 'hop' };
   if (to.wakes >= limits.wakesPerHour) return { lands: 'pile', why: 'budget' };
-  return { lands: 'woke', why: 'woke' };
+  // A stopped one starts in the background to read it, as a wake.
+  return { lands: 'woke', why: to.state === 'stopped' ? 'started' : 'woke' };
 }
 
 /** The rubber stamp a note lands with: a word or two, and the reason under it. */
@@ -54,6 +56,8 @@ export function stampFor(why: Why, limits: Limits): [head: string, sub: string] 
   switch (why) {
     case 'woke':
       return ['Woken', 'starts a turn to answer'];
+    case 'started':
+      return ['Started', 'gets up to answer'];
     case 'mid-run':
       return ['Delivered', 'mid-run'];
     case 'next-turn':
@@ -63,7 +67,7 @@ export function stampFor(why: Why, limits: Limits): [head: string, sub: string] 
     case 'no-tools':
       return ['Refused', 'no phone tools'];
     case 'stopped':
-      return ['Stopped', 'a note won’t start it'];
+      return ['Stopped', 'never woken · next run'];
     case 'broadcast':
       return ['Next turn', 'notes to all never wake'];
     case 'switch-off':
@@ -80,6 +84,8 @@ export function sayLanded(name: string, from: string, why: Why, limits: Limits):
   switch (why) {
     case 'woke':
       return `${from}'s note woke ${name}, which starts a turn to answer.`;
+    case 'started':
+      return `${name} was stopped, so ${from}'s note started it in the background to answer.`;
     case 'mid-run':
       return `${name} got ${from}'s note in the middle of its run.`;
     case 'next-turn':
@@ -89,7 +95,7 @@ export function sayLanded(name: string, from: string, why: Why, limits: Limits):
     case 'no-tools':
       return `${name} has no phone tools, so ${from}'s note was refused.`;
     case 'stopped':
-      return `${name} is stopped, and a note never starts a stopped agent: it waits.`;
+      return `${name} is stopped and is never woken, so ${from}'s note waits for its next run.`;
     case 'broadcast':
       return `${name} gets ${from}'s note to everyone at its next turn: notes to all never wake.`;
     case 'switch-off':

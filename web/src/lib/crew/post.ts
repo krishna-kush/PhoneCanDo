@@ -29,6 +29,7 @@ const AMBER: Why[] = ['mid-run', 'next-turn', 'inbox', 'broadcast'];
 
 const MASCOT: Partial<Record<Why, () => Parameters<typeof cueMascot>[0]>> = {
   woke: () => ({ say: toyLines.crew.woke, move: 'hop' }),
+  started: () => ({ say: toyLines.crew.woke, move: 'hop' }),
   'no-tools': () => ({ say: toyLines.crew.refused, move: 'shake' }),
   hop: () => ({ say: toyLines.crew.hop, move: 'shake' }),
   'switch-off': () => ({ say: toyLines.crew.dnd }),
