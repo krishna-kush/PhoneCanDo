@@ -20,17 +20,20 @@ import com.phonecando.pce.json.PceJson
 import com.phonecando.pce.pack.FlowResult
 import com.phonecando.runner.PceAutomation
 import com.phonecando.runner.packs.PackStore
+import com.phonecando.runner.uiauto.overlay.OverlayGuard
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 
 // Full-only PCE adapter. The bridge only sees PceAutomation; PCE and
-// accessibility backend classes are absent from play builds.
+// accessibility backend classes are absent from play builds. The backend
+// keeps the driving overlay out of the agent's way (GuardedBackend).
 @OptIn(ExperimentalPceApi::class)
 class PceAutomationImpl(
   private val service: PhoneCanDoAccessibilityService,
+  overlay: OverlayGuard = OverlayGuard.NONE,
 ) : PceAutomation {
-  private val backend = A11yBackend(A11yServiceProvider { service })
+  private val backend = GuardedBackend(A11yBackend(A11yServiceProvider { service }), overlay, service.packageName)
   private val pce = Pce.create(backend)
   private val packs = PackStore(service, pce)
 

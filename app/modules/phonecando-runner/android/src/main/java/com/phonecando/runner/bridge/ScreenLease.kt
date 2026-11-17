@@ -29,6 +29,11 @@ package com.phonecando.runner.bridge
 // screen and never joins the line: it gets the screen only when the line
 // hands it over (its reservation, or a lease that began with one).
 //
+// The user can take the screen back from the agent driving it (takeBack,
+// the overlay's Take back): its lease ends, the line moves on, and every
+// screen request of that agent is TakenBack until its run ends (runEnded)
+// or its engine is gone (forget).
+//
 // Time moves on at every call and at tick (the bridge ticks every second),
 // so a waiter hears it is theirs even when nobody calls. Pure: the clock is
 // injected, and notices go out after the lock is let go.
@@ -47,6 +52,9 @@ class ScreenLease(
 
   /** A turn another agent's message started cannot take the screen. */
   data object Refused : Claim
+
+  /** The user took the screen back from this agent for the rest of its run (takeBack). */
+  data object TakenBack : Claim
 
   class Ticket internal constructor(val agentId: String, internal val epoch: Long)
 
@@ -89,6 +97,9 @@ class ScreenLease(
   // The agents waiting, in order: id to name.
   private val waiting = LinkedHashMap<String, String>()
 
+  // The agents the user took the screen back from, until their run ends.
+  private val takenBack = HashSet<String>()
+
   /**
    * A screen request: Granted for the holder, the reserved agent or a free
    * screen; otherwise the caller joins the line (Busy with its place), or
@@ -103,6 +114,7 @@ class ScreenLease(
     val now = clock()
     settle(now, alive, out)
     when {
+      agentId in takenBack -> TakenBack
       holder == agentId -> if (agentTurn && !fromLine) Refused else use(agentId, agentName, now)
       reserved == agentId -> {
         hold(agentId, fromLine = reservedFromLine)
@@ -131,6 +143,7 @@ class ScreenLease(
     val now = clock()
     settle(now, alive, out)
     when {
+      agentId in takenBack -> TakenBack
       holder == agentId || reserved == agentId || free(now) -> null
       agentTurn -> placeOf(agentId, now) ?: Refused
       else -> join(agentId, agentName, now, out)
@@ -152,6 +165,7 @@ class ScreenLease(
     val now = clock()
     settle(now, alive, out)
     when {
+      agentId in takenBack -> TakenBack
       holder == agentId || reserved == agentId -> {
         pause(agentId)
         null
@@ -202,6 +216,7 @@ class ScreenLease(
    * it); a new request of its keeps the screen after all.
    */
   fun runEnded(agentId: String): Unit = locked { out ->
+    takenBack.remove(agentId)
     if (holder != agentId) return@locked
     if (running > 0) {
       runOver = true
@@ -213,10 +228,32 @@ class ScreenLease(
 
   /** The agent's engine is gone: it leaves the line and loses the screen or its reservation at once. */
   fun forget(agentId: String): Unit = locked { out ->
+    takenBack.remove(agentId)
     waiting.remove(agentId)
     if (reserved == agentId) reserved = null
     if (holder == agentId) endHolder()
     settle(clock(), null, out)
+  }
+
+  /**
+   * The user took the screen back from [agentId]: it loses the screen, its
+   * reservation and its place in line at once, and its screen requests are
+   * TakenBack until [runEnded] or [forget]. A request of its still running
+   * ends on its own; its [done] no longer counts. False when it had none
+   * of them (nothing to take back).
+   */
+  fun takeBack(agentId: String): Boolean = locked { out ->
+    val had = holder == agentId || reserved == agentId || agentId in waiting
+    if (!had) return@locked false
+    takenBack += agentId
+    waiting.remove(agentId)
+    if (reserved == agentId) reserved = null
+    if (holder == agentId) {
+      endHolder()
+      epoch++
+    }
+    settle(clock(), null, out)
+    true
   }
 
   /** Lets time move the line on: an idle holder or an unclaimed reservation passes the screen. */
@@ -226,7 +263,10 @@ class ScreenLease(
   fun holderId(): String? = synchronized(mutex) { holder }
 
   /** A holder is driving: a screen request runs or one ended under `idleMs` ago. A reservation is not. */
-  fun inUse(): Boolean = synchronized(mutex) { holder != null && (running > 0 || clock() - lastUse < idleMs) }
+  fun inUse(): Boolean = synchronized(mutex) { driving(clock()) }
+
+  /** The agent driving now ([inUse]), for what the user sees on screen; null when nobody is. */
+  fun driver(): Seat? = synchronized(mutex) { holder?.takeIf { driving(clock()) }?.let { Seat(it, holderName) } }
 
   /** Who has the screen and who waits, as of the last call or tick. An idle holder nobody waits for is not shown. */
   fun line(): Line = synchronized(mutex) {
@@ -256,6 +296,8 @@ class ScreenLease(
     reserve(next.key, next.value, now, fromLine = true)
     out += { notices.yours(next.key) }
   }
+
+  private fun driving(now: Long) = holder != null && (running > 0 || now - lastUse < idleMs)
 
   private fun free(now: Long) = reserved == null && (holder == null || holderIdle(now))
 

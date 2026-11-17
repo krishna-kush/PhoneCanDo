@@ -8,10 +8,12 @@ import java.util.concurrent.TimeUnit
 // the lease's time, or a reservation nobody claimed, passes the screen to
 // the next in line even while no agent calls the bridge, so a waiter hears
 // it is theirs. One daemon thread per open bridge; it sleeps with the phone.
+// After each tick, `after` runs (the overlay's DriverWatch).
 class ScreenTicker(
   private val lease: ScreenLease,
   private val alive: (agentId: String) -> Boolean,
   private val periodMs: Long = 1_000,
+  private val after: () -> Unit = {},
 ) {
   private var timer: ScheduledExecutorService? = null
 
@@ -19,7 +21,10 @@ class ScreenTicker(
   fun start() {
     if (timer != null) return
     timer = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "phonecando-screen-line").apply { isDaemon = true } }
-      .also { it.scheduleWithFixedDelay({ runCatching { lease.tick(alive) } }, periodMs, periodMs, TimeUnit.MILLISECONDS) }
+      .also { it.scheduleWithFixedDelay({
+        runCatching { lease.tick(alive) }
+        runCatching { after() }
+      }, periodMs, periodMs, TimeUnit.MILLISECONDS) }
   }
 
   @Synchronized

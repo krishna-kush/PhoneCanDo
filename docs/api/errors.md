@@ -49,4 +49,5 @@ HTTP status and a lowercase code (`../../app/docs/modules/bridge.md`):
 | `automation_off` | 403 | phone control is locked | `mobile_request_unlock` |
 | `automation_unavailable` | 503 | the accessibility service is not connected | `mobile_open_accessibility` |
 | `control_busy` | 409 | another agent holds the screen (or has it reserved); the caller is now in line, and the body adds `holder` (its name), `place` (1-based) and `retryAfterMs` | do other work or end the turn; a "the screen is yours" notice arrives with the agent's messages (`agents_inbox`), then call again. `mobile_request_unlock` answers the same way, at once and without a dialog: that is not a refusal |
+| `control_taken_back` | 409 | the user took the phone back from this agent (the driving overlay's Take back) | don't use the screen again this run; carry on without it, or end the turn and ask the user. A new run can drive again |
 | `screen_refused` | 409 | a turn another agent's message started tried to take the screen | tell the user; only a turn the user started, or the caller's own earlier place in line, can take the screen |

@@ -221,6 +221,28 @@ class BridgeRouterTest {
     assertEquals(200, r.handle(dir.records[1], "POST", "/clipboard", "{}").status)
   }
 
+  @Test fun aTakenBackAgentGetsControlTakenBackUntilItsRunEnds() {
+    val r = router()
+    assertEquals(200, r.handle(dir.records[0], "POST", "/pce/observe", "{}").status)
+    lease.takeBack("a1")
+    val refused = r.handle(dir.records[0], "POST", "/open", "{}")
+    assertEquals(409, refused.status)
+    assertEquals("control_taken_back", json(refused).getString("code"))
+    // Calls that leave the screen alone still pass.
+    assertEquals(200, r.handle(dir.records[0], "POST", "/clipboard", "{}").status)
+    lease.runEnded("a1")
+    assertEquals(200, r.handle(dir.records[0], "POST", "/pce/observe", "{}").status)
+  }
+
+  @Test fun aGrantedScreenRequestShowsTheDriver() {
+    var shown = 0
+    val r = BridgeRouter(true, { host }, lock, lease, { dir.get(it) != null }, handlers, onDrive = { shown++ })
+    r.handle(dir.records[0], "POST", "/pce/observe", "{}")
+    r.handle(dir.records[1], "POST", "/pce/observe", "{}")
+    r.handle(dir.records[0], "POST", "/clipboard", "{}")
+    assertEquals(1, shown)
+  }
+
   @Test fun theReservedAgentPassesInAnAgentTurn() {
     val r = router()
     r.handle(dir.records[0], "POST", "/pce/observe", "{}")

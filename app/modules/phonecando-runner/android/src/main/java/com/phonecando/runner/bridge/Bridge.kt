@@ -53,6 +53,10 @@ object Bridge {
   @Volatile
   private var lease: ScreenLease? = null
 
+  // The open bridge's take back (the overlay's button); null while none is open.
+  @Volatile
+  private var takeBackHolder: (() -> Boolean)? = null
+
   /** An agent is driving the screen now: a screen call runs or ran within the lease's idle time. */
   fun screenInUse(): Boolean = lease?.inUse() == true
 
@@ -67,6 +71,14 @@ object Bridge {
   fun runEnded(agentId: String) {
     lease?.runEnded(agentId)
   }
+
+  /**
+   * The user takes the screen back from the agent holding it (the overlay's
+   * Take back): its lease ends, its screen calls get control_taken_back
+   * until its run ends, and an ask-mode unlock ends too. False when nobody
+   * held it.
+   */
+  fun takeBack(): Boolean = takeBackHolder?.invoke() == true
 
   /** Who holds the screen and who waits for it; null while no bridge is open. */
   fun screenLine(): ScreenLease.Line? = lease?.line()
@@ -89,6 +101,7 @@ object Bridge {
       KeepRoutes(KeepAsks.shared, KeepRunning.get(app)::isOn) { Engines.work()?.poke() }.table() +
       ScheduleRoutes(Schedules.get(app).book, SelfScheduling.get(app)::isOn, timeText = PhoneTime.text(app)).table()
     val screen = ScreenLease(LEASE_IDLE_MS, notices = messages.screenNotices(LEASE_IDLE_MS)) { SystemClock.elapsedRealtime() }
+    val watch = DriverWatch(screen)
     val router = BridgeRouter(
       full = channel == "full",
       automation = automation,
@@ -98,6 +111,7 @@ object Bridge {
       handlers = handlers,
       onError = { msg, e -> Log.w(TAG, msg, e) },
       startedByAgent = messages.mailbox.wakes::startedByAgent,
+      onDrive = watch::check,
     )
     val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val ports = BridgePorts.candidates(prefs.getInt(KEY_PORT, 0))
@@ -105,8 +119,16 @@ object Bridge {
     val server = BridgeServer.start(ports, agents, router, tools, appVersion(app), onCall, messages.mailbox::unread)
       ?: return null
     prefs.edit().putInt(KEY_PORT, server.listeningPort).apply()
-    val ticker = ScreenTicker(screen, alive = { agents.get(it) != null }).also { it.start() }
+    val ticker = ScreenTicker(screen, alive = { agents.get(it) != null }, after = watch::check).also { it.start() }
+    val takeBack = {
+      val holder = screen.holderId()
+      val taken = holder != null && screen.takeBack(holder)
+      if (taken) lock.endAsk(holder!!)
+      watch.check()
+      taken
+    }
     lease = screen
+    takeBackHolder = takeBack
     return object : BridgeHandle {
       override val url = "http://127.0.0.1:${server.listeningPort}"
 
@@ -120,6 +142,9 @@ object Bridge {
         ticker.stop()
         server.stop()
         if (lease === screen) lease = null
+        if (takeBackHolder === takeBack) takeBackHolder = null
+        // Nobody drives a phone with no bridge.
+        ScreenIndicator.current?.let { runCatching { it.show(null) } }
         // No engine is left to hear the answers: end the waits now, and
         // every ask-mode unlock with them.
         BridgePrompts.registry.cancelAll()

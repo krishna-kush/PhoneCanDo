@@ -10,11 +10,15 @@ import com.phonecando.runner.FullAutomation
 import com.phonecando.runner.PceAuto
 import com.phonecando.runner.PceAutomation
 import com.phonecando.runner.RestrictedSettings
+import com.phonecando.runner.bridge.ScreenIndicator
+import com.phonecando.runner.uiauto.overlay.DrivingOverlay
 
 // Full-build accessibility host. All observation and action logic lives in the
-// PCE adapter; this service only owns the Android lifecycle.
+// PCE adapter; this service only owns the Android lifecycle, and the
+// driving overlay (overlay/DrivingOverlay) that shows you who drives.
 class PhoneCanDoAccessibilityService : AccessibilityService() {
   private var pce: PceAutomation? = null
+  private var overlay: DrivingOverlay? = null
 
   // Android exposes no direct "current activity" query to an accessibility
   // service. Track the last window-state event; the PCE asks for it by
@@ -39,7 +43,10 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
     RestrictedSettings.markConnected(this)
     try {
       AutomationHosts.current = FullAutomation
-      val next = PceAutomationImpl(this)
+      val shown = DrivingOverlay(this)
+      overlay = shown
+      ScreenIndicator.current = shown
+      val next = PceAutomationImpl(this, shown)
       PceAuto.setService(next)
       pce = next
       Log.i(TAG, "pce adapter connected")
@@ -90,6 +97,11 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
   override fun onDestroy() {
     PceAuto.clear(pce)
     pce = null
+    overlay?.let {
+      if (ScreenIndicator.current === it) ScreenIndicator.current = null
+      it.close()
+    }
+    overlay = null
     super.onDestroy()
   }
 

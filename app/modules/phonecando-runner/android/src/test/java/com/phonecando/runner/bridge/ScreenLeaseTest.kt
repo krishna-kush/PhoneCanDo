@@ -397,4 +397,58 @@ class ScreenLeaseTest {
     assertEquals(ScreenLease.Line(null, reserved = false, emptyList()), lease.line())
     lease.done(granted("a4"))
   }
+
+  @Test fun takeBackEndsTheLeaseAndHandsTheScreenOn() {
+    lease.done(granted("a1"))
+    busy("a2")
+    assertTrue(lease.takeBack("a1"))
+    assertNull(lease.holderId())
+    assertEquals("yours a2", told.notes.last())
+    lease.done(granted("a2"))
+  }
+
+  @Test fun aTakenBackAgentIsRefusedUntilItsRunEnds() {
+    val act = granted("a1")
+    assertTrue(lease.takeBack("a1"))
+    // Its running request ending counts for nothing.
+    lease.done(act)
+    assertEquals(ScreenLease.TakenBack, claim("a1"))
+    assertEquals(ScreenLease.TakenBack, lease.waitInLine("a1", "name-a1", isAlive))
+    assertEquals(ScreenLease.TakenBack, lease.promptOpened("a1", "name-a1", isAlive))
+    assertNull(lease.holderId())
+    lease.runEnded("a1")
+    lease.done(granted("a1"))
+  }
+
+  @Test fun forgetClearsATakeBack() {
+    lease.done(granted("a1"))
+    lease.takeBack("a1")
+    lease.forget("a1")
+    lease.done(granted("a1"))
+  }
+
+  @Test fun takeBackDropsAWaitersPlace() {
+    lease.done(granted("a1"))
+    busy("a2")
+    assertTrue(lease.takeBack("a2"))
+    assertEquals(emptyList<String>(), waiting())
+    assertEquals(ScreenLease.TakenBack, claim("a2"))
+    assertFalse(lease.takeBack("a3"))
+  }
+
+  @Test fun theDriverIsTheHolderWhileInUse() {
+    assertNull(lease.driver())
+    val act = granted("a1")
+    assertEquals(ScreenLease.Seat("a1", "name-a1"), lease.driver())
+    now += 60_000
+    // A request still running keeps it driving.
+    assertEquals("a1", lease.driver()?.agentId)
+    lease.done(act)
+    now += 29_999
+    assertEquals("a1", lease.driver()?.agentId)
+    now += 1
+    assertNull(lease.driver())
+    // Idle with nobody waiting: it still holds, but nobody is shown driving.
+    assertEquals("a1", lease.holderId())
+  }
 }

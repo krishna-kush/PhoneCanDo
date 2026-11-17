@@ -20,7 +20,8 @@ loopback-only, runs in the app process beside the engines
   `not_found`), flavor (full-only routes answer 404 in lite/play), the
   phone-control switch (403 `automation_off`), the accessibility service
   (503 `automation_unavailable`), the JSON body (400), the screen lease (409
-  `control_busy` or `screen_refused`, full builds only), then the handler.
+  `control_busy`, `screen_refused` or `control_taken_back`, full builds
+  only), then the handler.
   A refused request never takes the lease, though it may wait in line
   (Screen lease below). `Routes.kt` lists every route with its guards.
 - Endpoints: `ping/battery/notify/share/open/clipboard/app/unlock/accessibility`
@@ -153,6 +154,38 @@ queue can"). It gets the screen only when the line hands it over: its
 reservation, or a lease that began with one. A hand-over is never a
 phone-control unlock: `ControlLock.unlockedFor` still applies, so in ask
 mode the user's yes is still needed.
+
+### Driving overlay
+
+While an agent drives (`ScreenLease.driver()`: the holder while
+`inUse()`), you see it over every app: the screen's edge lit and a pill
+with A-01's face, the agent's name, "is driving your phone" and **Take
+back** (`uiauto/overlay/`, full only). Both are accessibility overlay
+windows of our service, so no draw-over permission is needed and Android
+lets touches through them to the app below. The edge never takes a touch.
+`DriverWatch` tells the overlay (`ScreenIndicator.current`, which the
+service sets) when the driver changes: at once on a granted screen
+request, otherwise on `ScreenTicker`'s second, so it fades about 30 s after
+the agent's last screen request, or as its run ends. The colours are
+`theme/tokens.json`'s, generated into resources by `theme.gradle`.
+
+The agent never meets the overlay (`uiauto/GuardedBackend.kt`, around the
+PCE's backend). A screenshot is taken with both windows see-through. A
+tap, long press or swipe lands with the pill letting touches through,
+because the backend taps even a node by a touch at its centre first, and a
+touch goes to whatever window is on top. Each waits for a drawn frame
+first. Our overlay windows are dropped from a snapshot's window list.
+Typing, keys, scrolls and launches never touch the screen.
+
+**Take back** (`Bridge.takeBack` → `ScreenLease.takeBack`) ends the
+holder's lease, its reservation and its place in line at once, and the line
+moves on. Its screen requests, `/unlock` included, then get 409
+`control_taken_back` ("the user took the phone back; don't use the screen
+again this run…") until its run ends (`runEnded`) or its engine is gone
+(`forget`). An ask-mode unlock ends with it. A request already running
+finishes on its own. The pill says "Phone is yours" for a moment, then
+goes. TEMP: a long press on the pill switches between the looks being tried
+(`OverlayLook`).
 
 ## Agent messages
 
@@ -393,7 +426,7 @@ differ per flavor.
 Lite and full share the package name and signing key. Lite is pinned to
 `versionCode` 1 so any full release replaces it and no lite can ever replace
 an installed full. Lite is the site download because Play Protect blocks
-full from a browser; see `docs/release/upgrade-test.md`. `SYSTEM_ALERT_WINDOW` is not used by any channel and is stripped.
+full from a browser; see `docs/release/upgrade-test.md`. `SYSTEM_ALERT_WINDOW` is not used by any channel and is stripped; the driving overlay is the accessibility service's own overlay window type, which needs no permission.
 
 `plugins/withBuildChannel.js` declares the flavors in `app/build.gradle`
 (lite pins `versionCode 1`), fills the `com.phonecando.channel` meta-data

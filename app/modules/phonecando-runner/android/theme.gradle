@@ -1,0 +1,57 @@
+// The driving overlay's colours (src/uiauto/.../uiauto/overlay), from
+// theme/tokens.json, the one palette: each role below becomes a colour
+// resource `theme_<role>`, light in values/ and dark in values-night/, so
+// the overlay follows the phone's theme like the rest of the screen. Full
+// only: the other channels have no overlay. `rgba(...)` tokens turn into
+// #AARRGGBB.
+
+abstract class ThemeColors extends DefaultTask {
+  @InputFile
+  @PathSensitive(PathSensitivity.NONE)
+  abstract RegularFileProperty getTokens()
+
+  @Input
+  abstract ListProperty<String> getRoles()
+
+  @OutputDirectory
+  abstract DirectoryProperty getOutputDir()
+
+  @TaskAction
+  void write() {
+    def palette = new groovy.json.JsonSlurper().parse(tokens.get().asFile)
+    def root = outputDir.get().asFile
+    root.deleteDir()
+    [values: palette.light, 'values-night': palette.dark].each { dir, theme ->
+      def lines = roles.get().collect { role ->
+        def value = theme[role]
+        if (value == null) throw new GradleException("theme/tokens.json has no $role")
+        "  <color name=\"theme_$role\">${androidColor(value)}</color>"
+      }
+      def folder = new File(root, dir)
+      folder.mkdirs()
+      new File(folder, 'theme_colors.xml').text =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- Generated from theme/tokens.json (theme.gradle). -->\n<resources>\n${lines.join('\n')}\n</resources>\n"
+    }
+  }
+
+  String androidColor(String value) {
+    def rgba = value =~ /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/
+    if (!rgba.matches()) return value
+    def alpha = Math.round(Float.parseFloat(rgba.group(4)) * 255)
+    return String.format('#%02x%02x%02x%02x', alpha, rgba.group(1) as int, rgba.group(2) as int, rgba.group(3) as int)
+  }
+}
+
+def themeColors = tasks.register('themeColors', ThemeColors) {
+  tokens = file('../../../../theme/tokens.json')
+  roles = ['primary', 'secondary', 'panel', 'fg', 'muted', 'onPrimary', 'lineStrong']
+  outputDir = layout.buildDirectory.dir('generated/themeColors')
+}
+
+androidComponents {
+  onVariants(selector().all()) { variant ->
+    if (variant.flavorName == 'full') {
+      variant.sources.res?.addGeneratedSourceDirectory(themeColors) { it.outputDir }
+    }
+  }
+}

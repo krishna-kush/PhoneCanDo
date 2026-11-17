@@ -20,7 +20,8 @@ typealias RouteHandler = (BridgeCall) -> Reply
 // the screen gets the 409 with its place (ScreenLease) instead of a 403 or
 // a dialog over that agent's app. A turn another agent's message started
 // (`startedByAgent`) gets 409 screen_refused unless the line handed it the
-// screen. Pure: the automation host, the lock, the lease, the agent checks
+// screen. An agent the user took the screen back from gets 409
+// control_taken_back until its run ends. Pure: the automation host, the lock, the lease, the agent checks
 // and the handlers are injected.
 class BridgeRouter(
   private val full: Boolean,
@@ -31,6 +32,8 @@ class BridgeRouter(
   private val handlers: Map<Route, RouteHandler>,
   private val onError: (String, Throwable) -> Unit = { _, _ -> },
   private val startedByAgent: (agentId: String) -> Boolean = { false },
+  // A screen request was granted: the overlay shows its driver at once.
+  private val onDrive: () -> Unit = {},
 ) {
   fun handle(agent: AgentRecord, method: String, path: String, body: String): Reply {
     val route = Route.find(method, path)
@@ -57,7 +60,7 @@ class BridgeRouter(
     // Lite/play have no driver whose flow another agent could break.
     val ticket = if (route.screen && full) {
       when (val claim = lease.claim(agent.id, agent.name, alive, startedByAgent(agent.id))) {
-        is ScreenLease.Granted -> claim.ticket
+        is ScreenLease.Granted -> claim.ticket.also { onDrive() }
         else -> return refusal(claim)
       }
     } else {
@@ -95,6 +98,7 @@ class BridgeRouter(
 
   private fun refusal(claim: ScreenLease.Claim): Reply = when (claim) {
     is ScreenLease.Busy -> Reply.busy(claim.holderName, claim.retryAfterMs, claim.place)
+    ScreenLease.TakenBack -> Reply.takenBack()
     else -> Reply.screenRefused()
   }
 

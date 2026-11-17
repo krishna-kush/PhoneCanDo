@@ -59,6 +59,8 @@ android {
 // manifests (agents/{native,image}/<id>/agent.json). After `android {}`: it
 // adds jniLibs to the flavors declared there.
 apply from: 'agents.gradle'
+// The driving overlay's colours from theme/tokens.json (full only).
+apply from: 'theme.gradle'
 
 dependencies {
   // Loopback agent bridge HTTP framing (MIT). Hand-rolling it was 100 lines of

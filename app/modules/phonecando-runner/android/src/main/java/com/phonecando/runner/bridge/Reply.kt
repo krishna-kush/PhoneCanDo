@@ -45,6 +45,14 @@ data class Reply(val status: Int, val body: String, val headers: Map<String, Str
       "a turn another agent's message started can't take the screen; the user or your own earlier request in the queue can",
     )
 
+    /** The user took the screen back from this agent for the rest of its run (ScreenLease.takeBack). */
+    fun takenBack() = error(
+      409,
+      "control_taken_back",
+      "the user took the phone back; don't use the screen again this run. Carry on without it, " +
+        "or end your turn and ask them if you need it",
+    )
+
     fun errorBody(code: String, message: String): JSONObject =
       JSONObject().put("ok", false).put("code", code).put("message", message)
   }
