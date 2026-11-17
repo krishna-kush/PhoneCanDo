@@ -34,12 +34,37 @@ glibc-only, so no Alpine.
 `cline --acp` (the ACP registry's `cline` entry; "Run in Agent Client
 Protocol (ACP) mode" in `cline --help`, 3.0.74).
 
-- No phone tools and no hooks (below), so `tools` does not apply: ACP
-  mode lets it run a scheduled task while nobody watches, with its
-  questions asked on the phone.
-- No `chat`: `--id <session-id>` resumes a session, but we have not seen
-  whether it opens the TUI without a prompt, nor whether ACP chats use
-  the same ids. After an ACP run the terminal starts a new chat.
+- ACP mode never reads the provider and model saved in
+  `~/.cline/data/settings/providers.json` (what its TUI uses): a new or
+  reloaded session takes `CLINE_PROVIDER`, else `cline`, and the
+  provider's default model (`apps/cli/src/acp/acpAgent.ts` `newSession`,
+  `loadSession`, `resolveDefaultModelId`, cli-v3.0.74). With the default,
+  a free account's scheduled task failed on the phone ("Insufficient
+  balance", `anthropic/claude-sonnet-5.5`, 2026-11-17).
+- Provider, through `sh -c`: the script reads `lastUsedProvider` there
+  with node and exports it as `CLINE_PROVIDER` (only when unset and a
+  plain id), then execs `cline --acp`.
+- Model, through the code hook `cline.model` (`optionsHook`,
+  `kotlin/.../ChosenModel.kt`): when a chat opens, the runner reads that
+  provider's `settings.model` from the machine's HOME (only those two
+  fields; the file also holds sign-in tokens) and sets it as the `model`
+  config option. Not `CLINE_MODEL`: Cline takes it only when its
+  chat-model list (`Llms.getModelsForProvider(provider, {filter:
+  "chat"})`) has it, and that list leaves out the free `cline-free/*`
+  models, so it fell back to the default (phone, 2026-11-17). Its
+  `setSessionConfigOption` takes any `model` value as it is
+  (`acpAgent.ts`, `case "model"`), so the runner sets a hook's value even
+  when the option's list (`config-options.ts` `buildModelConfigOption`,
+  the same chat list) does not name it. Owed: a phone check that a
+  scheduled task runs on the free model.
+- No phone tools and none of Cline's own hooks (below), so `tools` does
+  not apply: ACP mode lets it run a scheduled task while nobody watches,
+  with its questions asked on the phone.
+- `chat`: `--tui --id <session-id>` opens that session in the TUI and
+  waits for input, with no prompt (phone, 2026-11-17, 3.0.74). An ACP
+  chat's id is one of Cline's own sessions (`~/.cline/data/sessions/<id>/`,
+  e.g. `1794913202337_tiqRE_cli`, `source: cli`), so after an ACP run, or
+  a tap on a scheduled run, the terminal opens that chat.
 - PC trial (2026-11-13, 3.0.74): the handshake only; a chat needs
   sign-in. Owed: a signed-in turn (whether it asks before tools, or
   approves them all as its `--auto-approve` default does), whether ACP

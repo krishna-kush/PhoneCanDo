@@ -1,5 +1,6 @@
 package com.phonecando.agents.builtin
 
+import com.phonecando.agents.cline.ClineHooks
 import com.phonecando.agents.kit.KindHooks
 import com.phonecando.agents.opencode.OpencodeHooks
 
@@ -7,5 +8,5 @@ import com.phonecando.agents.opencode.OpencodeHooks
 // reaches them only through this map; a kind with hooks is one line here,
 // and a kind without any needs none.
 object BuiltinHooks {
-  val all: Map<String, KindHooks> = listOf<KindHooks>(OpencodeHooks).associateBy { it.id }
+  val all: Map<String, KindHooks> = listOf<KindHooks>(ClineHooks, OpencodeHooks).associateBy { it.id }
 }

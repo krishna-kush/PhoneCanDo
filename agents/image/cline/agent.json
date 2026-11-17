@@ -65,7 +65,9 @@
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
     "prompt": { "args": ["--tui", "--", "{{prompt}}"] },
     "acp": {
-      "argv": ["/root/.local/bin/cline", "--acp"]
+      "argv": ["sh", "-c", "f=\"$HOME/.cline/data/settings/providers.json\"; if [ -z \"${CLINE_PROVIDER:-}\" ] && [ -f \"$f\" ]; then CLINE_PROVIDER=$(node -e 'try{const p=JSON.parse(require(\"fs\").readFileSync(process.argv[1],\"utf8\")).lastUsedProvider;if(typeof p===\"string\"&&/^[\\w.:\\/@-]+$/.test(p))process.stdout.write(p)}catch(e){}' \"$f\"); [ -n \"$CLINE_PROVIDER\" ] && export CLINE_PROVIDER || unset CLINE_PROVIDER; fi; exec /root/.local/bin/cline --acp \"$@\"", "cline"],
+      "optionsHook": "cline.model",
+      "chat": { "args": ["--tui", "--id", "{{chatId}}"] }
     }
   },
   "idle": { "from": ["output"], "quietSec": 120 },
@@ -75,6 +77,7 @@
     "chatTitle": "^(?!Cline$)(?:> )?(.+)$"
   },
   "phoneTools": "none",
+  "hooks": ["cline.model"],
   "signIn": [
     { "method": "device-code", "note": "Pick \"Sign in with Cline\" on first start: it shows a code and authkit.cline.bot/device; open that page and enter the code." },
     { "method": "api-key", "note": "Or pick \"Bring your own provider\" and paste an API key (or run cline auth in this machine's terminal)." }
