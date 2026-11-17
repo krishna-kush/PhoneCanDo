@@ -12,6 +12,8 @@ class VariantsTest {
         val files = listOf(
             RepoFile("m-Q4_0.gguf", 10, null),
             RepoFile("mmproj-F16.gguf", 10, sha),
+            RepoFile("Qwen2-VL-2B-mmproj-f16.gguf", 10, sha),
+            RepoFile("m.mmproj-Q8_0.gguf", 10, sha),
             RepoFile("MTP/mtp-m-Q8_0.gguf", 10, sha),
             RepoFile("imatrix.gguf", 10, sha),
             RepoFile("notes.txt", 10, sha),

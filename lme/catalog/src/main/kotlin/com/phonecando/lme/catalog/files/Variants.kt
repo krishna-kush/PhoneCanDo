@@ -9,12 +9,14 @@ import com.phonecando.lme.catalog.RepoFile
  * (an incomplete set is dropped). Left out:
  *
  * - companion files that are GGUF but not a model on their own: vision
- *   projectors (`mmproj*`), multi-token-prediction drafts (`mtp-*`) and
+ *   projectors (`mmproj` anywhere in the name: `mmproj-F16.gguf`,
+ *   `m-mmproj-f16.gguf`), multi-token-prediction drafts (`mtp-*`) and
  *   importance matrices (`imatrix*`)
  * - files without an LFS sha256: we verify every byte we download
  */
 object Variants {
-    private val COMPANION_PREFIXES = listOf("mmproj", "mtp-", "imatrix")
+    private const val PROJECTOR = "mmproj"
+    private val COMPANION_PREFIXES = listOf("mtp-", "imatrix")
 
     fun of(files: List<RepoFile>): List<ModelVariant> {
         val models = files.filter { isModelFile(it) }
@@ -33,6 +35,6 @@ object Variants {
 
     private fun isModelFile(file: RepoFile): Boolean {
         val name = file.name.lowercase()
-        return name.endsWith(".gguf") && file.sha256 != null && COMPANION_PREFIXES.none { name.startsWith(it) }
+        return name.endsWith(".gguf") && file.sha256 != null && PROJECTOR !in name && COMPANION_PREFIXES.none { name.startsWith(it) }
     }
 }
