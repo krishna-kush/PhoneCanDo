@@ -1,0 +1,480 @@
+diff --git a/packages/ui/src/components/logo.tsx b/packages/ui/src/components/logo.tsx
+--- a/packages/ui/src/components/logo.tsx
++++ b/packages/ui/src/components/logo.tsx
+@@ -9,8 +9,8 @@
+       fill="none"
+       xmlns="http://www.w3.org/2000/svg"
+     >
+-      <path data-slot="logo-logo-mark-shadow" d="M12 16H4V8H12V16Z" fill="var(--icon-weak-base)" />
+-      <path data-slot="logo-logo-mark-o" d="M12 4H4V16H12V4ZM16 20H0V0H16V20Z" fill="var(--icon-strong-base)" />
++      <path data-slot="logo-logo-mark-shadow" d="M2 5H16V19H2Z" fill="var(--icon-weak-base)" />
++      <path data-slot="logo-logo-mark-o" d="M0 3H14V17H0Z" fill="var(--icon-strong-base)" />
+     </svg>
+   )
+ }
+@@ -25,37 +25,46 @@
+       fill="none"
+       xmlns="http://www.w3.org/2000/svg"
+     >
+-      <path d="M60 80H20V40H60V80Z" fill="var(--icon-base)" />
+-      <path d="M60 20H20V80H60V20ZM80 100H0V0H80V100Z" fill="var(--icon-strong-base)" />
++      <path d="M9 19H79V89H9Z" fill="var(--icon-base)" />
++      <path d="M1 11H71V81H1Z" fill="var(--icon-strong-base)" />
+     </svg>
+   )
+ }
+ 
++// PHONECANDO: square letters with a hard drop shadow, like PhoneCanDo's mark.
+ export const Logo = (props: { class?: string }) => {
+   return (
+     <svg
+       xmlns="http://www.w3.org/2000/svg"
+-      viewBox="0 0 234 42"
++      viewBox="0 0 297 33"
+       fill="none"
+       classList={{ [props.class ?? ""]: !!props.class }}
+     >
+-      <g>
+-        <path d="M18 30H6V18H18V30Z" fill="var(--icon-weak-base)" />
+-        <path d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z" fill="var(--icon-base)" />
+-        <path d="M48 30H36V18H48V30Z" fill="var(--icon-weak-base)" />
+-        <path d="M36 30H48V12H36V30ZM54 36H36V42H30V6H54V36Z" fill="var(--icon-base)" />
+-        <path d="M84 24V30H66V24H84Z" fill="var(--icon-weak-base)" />
+-        <path d="M84 24H66V30H84V36H60V6H84V24ZM66 18H78V12H66V18Z" fill="var(--icon-base)" />
+-        <path d="M108 36H96V18H108V36Z" fill="var(--icon-weak-base)" />
+-        <path d="M108 12H96V36H90V6H108V12ZM114 36H108V12H114V36Z" fill="var(--icon-base)" />
+-        <path d="M144 30H126V18H144V30Z" fill="var(--icon-weak-base)" />
+-        <path d="M144 12H126V30H144V36H120V6H144V12Z" fill="var(--icon-strong-base)" />
+-        <path d="M168 30H156V18H168V30Z" fill="var(--icon-weak-base)" />
+-        <path d="M168 12H156V30H168V12ZM174 36H150V6H174V36Z" fill="var(--icon-strong-base)" />
+-        <path d="M198 30H186V18H198V30Z" fill="var(--icon-weak-base)" />
+-        <path d="M198 12H186V30H198V12ZM204 36H180V6H198V0H204V36Z" fill="var(--icon-strong-base)" />
+-        <path d="M234 24V30H216V24H234Z" fill="var(--icon-weak-base)" />
+-        <path d="M216 12V18H228V12H216ZM234 24H216V30H234V36H210V6H234V24Z" fill="var(--icon-strong-base)" />
++      <g fill="var(--icon-weak-base)">
++        <path d="M3 3H21V9H9V15H21V21H9V33H3ZM21 9H27V15H21Z" />
++        <path d="M33 3H39V15H51V3H57V33H51V21H39V33H33Z" />
++        <path d="M63 3H87V33H63ZM69 9V27H81V9Z" />
++        <path d="M93 3H99V9H105V15H99V33H93ZM111 3H117V33H111V21H105V15H111Z" />
++        <path d="M123 3H147V9H129V15H141V21H129V27H147V33H123Z" />
++        <path d="M153 3H177V9H159V27H177V33H153Z" />
++        <path d="M183 3H207V33H201V21H189V33H183ZM189 9V15H201V9Z" />
++        <path d="M213 3H219V9H225V15H219V33H213ZM231 3H237V33H231V21H225V15H231Z" />
++        <path d="M243 3H261V9H249V27H261V33H243ZM261 9H267V27H261Z" />
++        <path d="M273 3H297V33H273ZM279 9V27H291V9Z" />
++      </g>
++      <g fill="var(--icon-base)">
++        <path d="M0 0H18V6H6V12H18V18H6V30H0ZM18 6H24V12H18Z" />
++        <path d="M30 0H36V12H48V0H54V30H48V18H36V30H30Z" />
++        <path d="M60 0H84V30H60ZM66 6V24H78V6Z" />
++        <path d="M90 0H96V6H102V12H96V30H90ZM108 0H114V30H108V18H102V12H108Z" />
++        <path d="M120 0H144V6H126V12H138V18H126V24H144V30H120Z" />
++      </g>
++      <g fill="var(--icon-strong-base)">
++        <path d="M150 0H174V6H156V24H174V30H150Z" />
++        <path d="M180 0H204V30H198V18H186V30H180ZM186 6V12H198V6Z" />
++        <path d="M210 0H216V6H222V12H216V30H210ZM228 0H234V30H228V18H222V12H228Z" />
++        <path d="M240 0H258V6H246V24H258V30H240ZM258 6H264V24H258Z" />
++        <path d="M270 0H294V30H270ZM276 6V24H288V6Z" />
+       </g>
+     </svg>
+   )
+diff --git a/packages/ui/src/typography/wordmark/wordmark.tsx b/packages/ui/src/typography/wordmark/wordmark.tsx
+--- a/packages/ui/src/typography/wordmark/wordmark.tsx
++++ b/packages/ui/src/typography/wordmark/wordmark.tsx
+@@ -1,4 +1,18 @@
+-import { createUniqueId, type ComponentProps } from "solid-js"
++import { createUniqueId, For, type ComponentProps } from "solid-js"
++
++// PHONECANDO, one path per letter (the same letters as Logo, without the shadow).
++const letters = [
++  "M0 0H18V6H6V12H18V18H6V30H0ZM18 6H24V12H18Z",
++  "M30 0H36V12H48V0H54V30H48V18H36V30H30Z",
++  "M60 0H84V30H60ZM66 6V24H78V6Z",
++  "M90 0H96V6H102V12H96V30H90ZM108 0H114V30H108V18H102V12H108Z",
++  "M120 0H144V6H126V12H138V18H126V24H144V30H120Z",
++  "M150 0H174V6H156V24H174V30H150Z",
++  "M180 0H204V30H198V18H186V30H180ZM186 6V12H198V6Z",
++  "M210 0H216V6H222V12H216V30H210ZM228 0H234V30H228V18H222V12H228Z",
++  "M240 0H258V6H246V24H258V30H240ZM258 6H264V24H258Z",
++  "M270 0H294V30H270ZM276 6V24H288V6Z",
++]
+ 
+ export function Wordmark(
+   props: Pick<ComponentProps<"svg">, "class"> & { fade?: boolean; muted?: boolean; outline?: boolean },
+@@ -9,7 +23,7 @@
+   return (
+     <svg
+       xmlns="http://www.w3.org/2000/svg"
+-      viewBox="0 0 720 129"
++      viewBox="0 0 294 30"
+       fill="none"
+       classList={{
+         [props.class ?? ""]: !!props.class,
+@@ -24,46 +38,15 @@
+             stroke={props.outline ? "currentColor" : undefined}
+             stroke-width={props.outline ? 1 : undefined}
+           >
+-            <path
+-              pathLength={props.outline ? 1 : undefined}
+-              d="M55.3846 36.4286H18.4615V91.7143H55.3846V36.4286ZM73.8462 110.143H0V18H73.8462V110.143Z"
+-            />
+-            <path
+-              pathLength={props.outline ? 1 : undefined}
+-              d="M110.462 91.7143H147.385V36.4286H110.462V91.7143ZM165.846 110.143H110.462V128.571H92V18H165.846V110.143Z"
+-            />
+-            <path
+-              pathLength={props.outline ? 1 : undefined}
+-              d="M258.846 73.2857H203.462V91.7143H258.846V110.143H185V18H258.846V73.2857ZM203.462 54.8571H240.385V36.4286H203.462V54.8571Z"
+-            />
+-            <path
+-              pathLength={props.outline ? 1 : undefined}
+-              d="M332.385 36.4286H295.462V110.143H277V18H332.385V36.4286ZM350.846 110.143H332.385V36.4286H350.846V110.143Z"
+-            />
+-            <path
+-              pathLength={props.outline ? 1 : undefined}
+-              d="M442.846 36.4286H387.462V91.7143H442.846V110.143H369V18H442.846V36.4286Z"
+-            />
+-            <path
+-              pathLength={props.outline ? 1 : undefined}
+-              d="M517.385 36.4286H480.462V91.7143H517.385V36.4286ZM535.846 110.143H462V18H535.846V110.143Z"
+-            />
+-            <path
+-              pathLength={props.outline ? 1 : undefined}
+-              d="M609.385 36.8571H572.462V92.1429H609.385V36.8571ZM627.846 110.571H554V18.4286H609.385V0H627.846V110.571Z"
+-            />
+-            <path
+-              pathLength={props.outline ? 1 : undefined}
+-              d="M664.462 36.4286V54.8571H701.385V36.4286H664.462ZM719.846 73.2857H664.462V91.7143H719.846V110.143H646V18H719.846V73.2857Z"
+-            />
++            <For each={letters}>{(d) => <path pathLength={props.outline ? 1 : undefined} d={d} />}</For>
+           </g>
+         </g>
+       </g>
+       <defs>
+-        <mask id={mask} style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="720" height="129">
+-          <rect width="720" height="129" fill={`url(#${maskGradient})`} />
++        <mask id={mask} style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="294" height="30">
++          <rect width="294" height="30" fill={`url(#${maskGradient})`} />
+         </mask>
+-        <linearGradient id={maskGradient} x1="360" y1="68" x2="360" y2="129" gradientUnits="userSpaceOnUse">
++        <linearGradient id={maskGradient} x1="147" y1="16" x2="147" y2="30" gradientUnits="userSpaceOnUse">
+           <stop stop-color="white" stop-opacity="0.7" />
+           <stop offset="1" stop-color="white" stop-opacity="0" />
+         </linearGradient>
+diff --git a/packages/app/src/new-session/wordmark.tsx b/packages/app/src/new-session/wordmark.tsx
+--- a/packages/app/src/new-session/wordmark.tsx
++++ b/packages/app/src/new-session/wordmark.tsx
+@@ -9,8 +9,8 @@
+       class="pointer-events-none mx-auto w-full max-w-[720px] text-v2-background-bg-inverse"
+     >
+       <div data-slot="wordmark-reveal" class="relative mx-auto w-4/5">
+-        <Logo class="block aspect-[720/129] w-full opacity-[0.16]" />
+-        <Logo class="wordmark-shimmer absolute inset-0 aspect-[720/129] w-full" />
++        <Logo class="block aspect-[297/33] w-full opacity-[0.16]" />
++        <Logo class="wordmark-shimmer absolute inset-0 aspect-[297/33] w-full" />
+       </div>
+     </div>
+   )
+diff --git a/packages/app/src/settings/about/animated-wordmark.tsx b/packages/app/src/settings/about/animated-wordmark.tsx
+--- a/packages/app/src/settings/about/animated-wordmark.tsx
++++ b/packages/app/src/settings/about/animated-wordmark.tsx
+@@ -1,9 +1,9 @@
+ import { createEffect, For, on, onCleanup } from "solid-js"
+ import { createStore } from "solid-js/store"
+ 
+-const target = ["o", "p", "e", "n", "c", "o", "d", "e"] as const
++const target = ["p", "h", "o", "n", "e", "c", "a", "n", "d", "o"] as const
+ 
+-const choices = ["o", "p", "e", "n", "c", "d"] as const
++const choices = ["p", "h", "o", "n", "e", "c", "a", "d"] as const
+ 
+ export function AnimatedWordmark(props: { active: boolean }) {
+   const [state, setState] = createStore({ letters: [...target] })
+@@ -47,36 +47,44 @@
+   onCleanup(() => timers.forEach(clearTimeout))
+ 
+   return (
+-    <svg class="settings-about-wordmark" viewBox="0 0 234 42" aria-hidden="true">
++    <svg class="settings-about-wordmark" viewBox="0 0 297 33" aria-hidden="true">
+       <defs>
+-        <symbol id="settings-about-letter-o" viewBox="0 0 24 42">
+-          <path class="settings-about-letter-shadow" d="M18 30H6V18H18V30Z" />
+-          <path d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z" />
+-        </symbol>
+-        <symbol id="settings-about-letter-p" viewBox="0 0 24 42">
+-          <path class="settings-about-letter-shadow" d="M18 30H6V18H18V30Z" />
+-          <path d="M6 30H18V12H6V30ZM24 36H6V42H0V6H24V36Z" />
+-        </symbol>
+-        <symbol id="settings-about-letter-e" viewBox="0 0 24 42">
+-          <path class="settings-about-letter-shadow" d="M24 24V30H6V24H24Z" />
+-          <path d="M24 24H6V30H24V36H0V6H24V24ZM6 18H18V12H6V18Z" />
+-        </symbol>
+-        <symbol id="settings-about-letter-n" viewBox="0 0 24 42">
+-          <path class="settings-about-letter-shadow" d="M18 36H6V18H18V36Z" />
+-          <path d="M18 12H6V36H0V6H18V12ZM24 36H18V12H24V36Z" />
+-        </symbol>
+-        <symbol id="settings-about-letter-c" viewBox="0 0 24 42">
+-          <path class="settings-about-letter-shadow" d="M24 30H6V18H24V30Z" />
+-          <path d="M24 12H6V30H24V36H0V6H24V12Z" />
+-        </symbol>
+-        <symbol id="settings-about-letter-d" viewBox="0 0 24 42">
+-          <path class="settings-about-letter-shadow" d="M18 30H6V18H18V30Z" />
+-          <path d="M18 12H6V30H18V12ZM24 36H0V6H18V0H24V36Z" />
++        <symbol id="settings-about-letter-p" viewBox="0 0 27 33">
++          <path class="settings-about-letter-shadow" d="M3 3H21V9H9V15H21V21H9V33H3ZM21 9H27V15H21Z" />
++          <path d="M0 0H18V6H6V12H18V18H6V30H0ZM18 6H24V12H18Z" />
++        </symbol>
++        <symbol id="settings-about-letter-h" viewBox="0 0 27 33">
++          <path class="settings-about-letter-shadow" d="M3 3H9V15H21V3H27V33H21V21H9V33H3Z" />
++          <path d="M0 0H6V12H18V0H24V30H18V18H6V30H0Z" />
++        </symbol>
++        <symbol id="settings-about-letter-o" viewBox="0 0 27 33">
++          <path class="settings-about-letter-shadow" d="M3 3H27V33H3ZM9 9V27H21V9Z" />
++          <path d="M0 0H24V30H0ZM6 6V24H18V6Z" />
++        </symbol>
++        <symbol id="settings-about-letter-n" viewBox="0 0 27 33">
++          <path class="settings-about-letter-shadow" d="M3 3H9V9H15V15H9V33H3ZM21 3H27V33H21V21H15V15H21Z" />
++          <path d="M0 0H6V6H12V12H6V30H0ZM18 0H24V30H18V18H12V12H18Z" />
++        </symbol>
++        <symbol id="settings-about-letter-e" viewBox="0 0 27 33">
++          <path class="settings-about-letter-shadow" d="M3 3H27V9H9V15H21V21H9V27H27V33H3Z" />
++          <path d="M0 0H24V6H6V12H18V18H6V24H24V30H0Z" />
++        </symbol>
++        <symbol id="settings-about-letter-c" viewBox="0 0 27 33">
++          <path class="settings-about-letter-shadow" d="M3 3H27V9H9V27H27V33H3Z" />
++          <path d="M0 0H24V6H6V24H24V30H0Z" />
++        </symbol>
++        <symbol id="settings-about-letter-a" viewBox="0 0 27 33">
++          <path class="settings-about-letter-shadow" d="M3 3H27V33H21V21H9V33H3ZM9 9V15H21V9Z" />
++          <path d="M0 0H24V30H18V18H6V30H0ZM6 6V12H18V6Z" />
++        </symbol>
++        <symbol id="settings-about-letter-d" viewBox="0 0 27 33">
++          <path class="settings-about-letter-shadow" d="M3 3H21V9H9V27H21V33H3ZM21 9H27V27H21Z" />
++          <path d="M0 0H18V6H6V24H18V30H0ZM18 6H24V24H18Z" />
+         </symbol>
+       </defs>
+       <For each={state.letters}>
+         {(letter, index) => (
+-          <use href={`#settings-about-letter-${letter}`} x={index() * 30} width="24" height="42" />
++          <use href={`#settings-about-letter-${letter}`} x={index() * 30} width="27" height="33" />
+         )}
+       </For>
+     </svg>
+diff --git a/packages/app/src/settings/about/about.tsx b/packages/app/src/settings/about/about.tsx
+--- a/packages/app/src/settings/about/about.tsx
++++ b/packages/app/src/settings/about/about.tsx
+@@ -93,6 +93,8 @@
+ 
+       <AnimatedWordmark active={props.active} />
+ 
++      <p>{language.t("settings.about.builtOn")}</p>
++
+       <div class="settings-about-credits">
+         <p>{language.rich("settings.about.writtenByNames", { names: language.list(writerCredits()) })}</p>
+         <p>
+diff --git a/packages/app/src/runtime/i18n/en.ts b/packages/app/src/runtime/i18n/en.ts
+--- a/packages/app/src/runtime/i18n/en.ts
++++ b/packages/app/src/runtime/i18n/en.ts
+@@ -667,6 +667,8 @@
+   "settings.about.version": "Version {{version}}",
+   "settings.about.devVersion": "development",
+   "settings.about.license": "Released under the MIT License",
++  "settings.about.builtOn":
++    "Built on OpenCode, the open source coding agent by Anomaly. PhoneCanDo is not affiliated with or endorsed by Anomaly.",
+   "settings.about.writtenByNames": "Written by {{names}}",
+   "settings.about.illustratedByNames": "Illustrated by {{names}}",
+   "settings.about.otherContributor.one": "{{count}} other",
+diff --git a/packages/app/src/servers/connect/screen.tsx b/packages/app/src/servers/connect/screen.tsx
+--- a/packages/app/src/servers/connect/screen.tsx
++++ b/packages/app/src/servers/connect/screen.tsx
+@@ -114,7 +114,7 @@
+   return (
+     <main data-component="connect-server" aria-labelledby="server-connect-title">
+       <div class="server-connect-content">
+-        <div class="server-connect-brand" role="img" aria-label="OpenCode">
++        <div class="server-connect-brand" role="img" aria-label="PhoneCanDo">
+           <Wordmark />
+         </div>
+         <header>
+diff --git a/packages/app/index.html b/packages/app/index.html
+--- a/packages/app/index.html
++++ b/packages/app/index.html
+@@ -6,7 +6,7 @@
+       name="viewport"
+       content="width=device-width, initial-scale=1, interactive-widget=resizes-content, viewport-fit=cover"
+     />
+-    <title>OpenCode</title>
++    <title>PhoneCanDo</title>
+     <link rel="icon" type="image/x-icon" href="%OPENCODE_FAVICON%" />
+     <link rel="apple-touch-icon" sizes="180x180" href="%OPENCODE_APPLE_TOUCH_ICON%" />
+     <link rel="manifest" href="/site.webmanifest" />
+diff --git a/packages/app/manifest.json b/packages/app/manifest.json
+--- a/packages/app/manifest.json
++++ b/packages/app/manifest.json
+@@ -1,6 +1,6 @@
+ {
+-  "name": "OpenCode",
+-  "short_name": "OpenCode",
++  "name": "PhoneCanDo",
++  "short_name": "PhoneCanDo",
+   "id": "/",
+   "start_url": "/",
+   "scope": "/",
+diff --git a/packages/tui/src/logo.ts b/packages/tui/src/logo.ts
+--- a/packages/tui/src/logo.ts
++++ b/packages/tui/src/logo.ts
+@@ -1,6 +1,7 @@
++// PHONE CANDO: square letters, each stroke with a shadow under it ("^", "~", "_").
+ export const logo = {
+-  left: ["                   ", "█▀▀█ █▀▀█ █▀▀█ █▀▀▄", "█__█ █__█ █^^^ █__█", "▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀~~▀"],
+-  right: ["             ▄     ", "█▀▀▀ █▀▀█ █▀▀█ █▀▀█", "█___ █__█ █__█ █^^^", "▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀"],
++  left: ["█^^▄ █  █ █^^█ █▄ █ █^^^", "█^^~ █^^█ █  █ █~^█ █^^ ", "^    ^  ^ ^^^^ ^  ^ ^^^^"],
++  right: ["█^^^ █^^█ █▄ █ █^^▄ █^^█", "█    █^^█ █~^█ █  █ █  █", "^^^^ ^  ^ ^  ^ ^^^~ ^^^^"],
+ }
+ 
+ export const go = {
+diff --git a/packages/tui/src/component/logo.tsx b/packages/tui/src/component/logo.tsx
+--- a/packages/tui/src/component/logo.tsx
++++ b/packages/tui/src/component/logo.tsx
+@@ -51,15 +51,16 @@
+ 
+   return (
+     <box>
+-      {dimensions().height < 12 ? null : dimensions().width < 22 ? (
++      {dimensions().height < 12 ? null : dimensions().width < 27 ? (
+         <For each={go.right.slice(1)}>
+           {(line) => <box flexDirection="row">{renderLine(line, theme.text.base, true)}</box>}
+         </For>
+-      ) : dimensions().width < 44 ? (
++      ) : dimensions().width < 54 ? (
+         <>
+-          <For each={logo.left.slice(1)}>
++          <For each={logo.left}>
+             {(line) => <box flexDirection="row">{renderLine(line, theme.text.muted, false)}</box>}
+           </For>
++          <box height={1} />
+           <For each={logo.right}>
+             {(line) => <box flexDirection="row">{renderLine(line, theme.text.base, true)}</box>}
+           </For>
+diff --git a/packages/tui/src/util/presentation.ts b/packages/tui/src/util/presentation.ts
+--- a/packages/tui/src/util/presentation.ts
++++ b/packages/tui/src/util/presentation.ts
+@@ -16,11 +16,11 @@
+       })
+       .join("")
+ 
+-  return logo.left.map((line, index) => {
+-    const left = draw(line, dim, "\x1b[38;5;235m", "\x1b[48;5;235m")
+-    const right = draw(logo.right[index] ?? "", reset, "\x1b[38;5;238m", "\x1b[48;5;238m")
+-    return `${pad}${left} ${right}`
+-  })
++  const left = logo.left.map((line) => draw(line, dim, "\x1b[38;5;235m", "\x1b[48;5;235m"))
++  const right = logo.right.map((line) => draw(line, reset, "\x1b[38;5;238m", "\x1b[48;5;238m"))
++  // Side by side takes 51 columns; a phone's terminal is often narrower.
++  if ((process.stdout.columns ?? 80) < pad.length + 49) return [...left, "", ...right].map((line) => line && `${pad}${line}`)
++  return left.map((line, index) => `${pad}${line} ${right[index] ?? ""}`)
+ }
+ 
+ export function sessionEpilogue(input: { title: string; sessionID?: string }) {
+diff --git a/packages/tui/src/attention.ts b/packages/tui/src/attention.ts
+--- a/packages/tui/src/attention.ts
++++ b/packages/tui/src/attention.ts
+@@ -32,7 +32,7 @@
+   dispose(): void
+ }
+ 
+-const DEFAULT_TITLE = "OpenCode"
++const DEFAULT_TITLE = "PhoneCanDo"
+ const TITLE_LIMIT = 80
+ const MESSAGE_LIMIT = 240
+ const BUILTIN_SOUNDS: Record<AttentionSoundName, string> = {
+diff --git a/packages/tui/src/app.tsx b/packages/tui/src/app.tsx
+--- a/packages/tui/src/app.tsx
++++ b/packages/tui/src/app.tsx
+@@ -602,14 +602,14 @@
+     if (!terminalTitleEnabled()) return
+ 
+     if (route.data.type === "home") {
+-      renderer.setTerminalTitle("OpenCode")
++      renderer.setTerminalTitle("PhoneCanDo")
+       return
+     }
+ 
+     if (route.data.type === "session") {
+       const title = session?.title
+       if (!title || isFallbackTitle(title)) {
+-        renderer.setTerminalTitle("OpenCode")
++        renderer.setTerminalTitle("PhoneCanDo")
+         return
+       }
+ 
+diff --git a/packages/tui/src/component/error-component.tsx b/packages/tui/src/component/error-component.tsx
+--- a/packages/tui/src/component/error-component.tsx
++++ b/packages/tui/src/component/error-component.tsx
+@@ -117,7 +117,7 @@
+         {/* Headline */}
+         <box flexDirection="column" alignItems="center" flexShrink={0}>
+           <text attributes={TextAttributes.BOLD} fg={colors.text}>
+-            OpenCode crashed
++            PhoneCanDo crashed
+           </text>
+           <Show when={showSubtext()}>
+             <text fg={colors.muted}>An unexpected error stopped the session.</text>
+diff --git a/packages/tui/src/routes/session/permission.tsx b/packages/tui/src/routes/session/permission.tsx
+--- a/packages/tui/src/routes/session/permission.tsx
++++ b/packages/tui/src/routes/session/permission.tsx
+@@ -325,7 +325,7 @@
+           <text fg={theme.text.base}>Reject permission</text>
+         </box>
+         <box paddingLeft={1}>
+-          <text fg={theme.text.muted}>Tell OpenCode what to do differently</text>
++          <text fg={theme.text.muted}>Tell PhoneCanDo what to do differently</text>
+         </box>
+       </box>
+       <box
+diff --git a/packages/tui/src/mini/footer.permission.tsx b/packages/tui/src/mini/footer.permission.tsx
+--- a/packages/tui/src/mini/footer.permission.tsx
++++ b/packages/tui/src/mini/footer.permission.tsx
+@@ -110,7 +110,7 @@
+       minHeight={1}
+       maxHeight={3}
+       wrapMode="word"
+-      placeholder="Tell OpenCode what to do differently"
++      placeholder="Tell PhoneCanDo what to do differently"
+       placeholderColor={props.theme.muted}
+       textColor={props.theme.formfieldText}
+       focusedTextColor={props.theme.formfieldFocusedText}
+@@ -322,7 +322,7 @@
+           {title()}
+         </text>
+         <Show when={!compact() && stage() === "reject"}>
+-          <text fg={props.theme.muted}>Tell OpenCode what to do differently</text>
++          <text fg={props.theme.muted}>Tell PhoneCanDo what to do differently</text>
+         </Show>
+       </box>
+ 
+diff --git a/packages/tui/src/mini/runtime.lifecycle.ts b/packages/tui/src/mini/runtime.lifecycle.ts
+--- a/packages/tui/src/mini/runtime.lifecycle.ts
++++ b/packages/tui/src/mini/runtime.lifecycle.ts
+@@ -174,7 +174,7 @@
+   if (mono) renderer.on(CliRenderEvents.EXTERNAL_OUTPUT, monoSnapshot)
+   const setTitle = (title?: string) => {
+     if (input.host.platform !== "linux") return
+-    if (!title || isFallbackTitle(title)) return renderer.setTerminalTitle("OpenCode")
++    if (!title || isFallbackTitle(title)) return renderer.setTerminalTitle("PhoneCanDo")
+     renderer.setTerminalTitle(`OC | ${title.length > 40 ? title.slice(0, 37) + "…" : title}`)
+   }
+   setTitle(input.sessionTitle)
+diff --git a/packages/tui/src/mini/footer.prompt.tsx b/packages/tui/src/mini/footer.prompt.tsx
+--- a/packages/tui/src/mini/footer.prompt.tsx
++++ b/packages/tui/src/mini/footer.prompt.tsx
+@@ -534,7 +534,7 @@
+         description: "compact older session context to free space",
+       } satisfies SlashOption,
+       ...EXIT_COMMANDS.map(
+-        (name) => ({ kind: "slash", name, display: `/${name}`, description: "close OpenCode" }) satisfies SlashOption,
++        (name) => ({ kind: "slash", name, display: `/${name}`, description: "close PhoneCanDo" }) satisfies SlashOption,
+       ),
+     ]
+     const hidden = new Set(builtins.map((item) => item.name))

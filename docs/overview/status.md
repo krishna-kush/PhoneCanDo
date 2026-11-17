@@ -4,7 +4,7 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
 
 ## App and engine
 
-- opencode payload: self-built bionic `opencode v2.0.26-android-phonecando.1`
+- opencode payload: self-built bionic `opencode v2.0.26-android-phonecando.2`
   (`liboc-engine.so` + `liboc-opentui.so`), web UI embedded, pair API live.
 - Several agents, each with its own engine in the runner's foreground
   service (no cap by default: near the memory peak the runner warns, then

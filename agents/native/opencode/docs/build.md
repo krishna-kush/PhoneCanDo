@@ -92,11 +92,53 @@ Solid app and embeds it as `opencode-web-ui.gen.ts`.
   dropped the `OPENTUI_LIB_PATH` override. The driver restores the env
   short-circuit in the bundled chunk before compiling.
 
+### PhoneCanDo's brand
+
+The web UI and TUI show PHONECANDO, our name, where they showed opencode's.
+The credit stays visible: the web UI's About page says "Built on OpenCode,
+the open source coding agent by Anomaly" and that we are not affiliated,
+above OpenCode's own credits, trademark line and third-party notices, which
+we keep. OpenCode's brand page (opencode.ai/brand) asks projects built on it
+to lead with their own name and never to suggest Anomaly endorses them.
+
+- `patches/phonecando-brand.patch`:
+  - the web wordmarks (`ui/src/components/logo.tsx`,
+    `ui/src/typography/wordmark/wordmark.tsx`, the About page's animated
+    one) as PHONECANDO in square letters with our mark's hard drop shadow;
+  - the page title and manifest name;
+  - the About page's built-on line (`settings.about.builtOn`, en only; other
+    languages fall back to it);
+  - the TUI logo (`tui/src/logo.ts`, PHONE beside or over CANDO;
+    `component/logo.tsx` stacks them under 54 columns, the exit footer
+    under 51);
+  - the terminal title, the crash headline, and "Tell PhoneCanDo what to do
+    differently". The `OC |` prefix of a chat's title stays: agent.json's
+    `chatTitle` reads it.
+- `brand/rename.mjs` renames OpenCode to PhoneCanDo in the locale strings
+  that name the app itself (its `KEYS`), in every language. It is a script
+  because those strings are in 63 files. It fails when upstream drops or
+  rewords one of its keys; `ci/upstream.sh` runs it with `--check`.
+- `brand/icons/`, written by `scripts/make-logos.mjs` (`pnpm logos`): our
+  mark over the upstream desktop icon set that `packages/app/vite.icons.ts`
+  reads for the favicon and install icons.
+
+What stays upstream's, on purpose:
+
+- **Names that are true as they stand.** OpenCode Zen, Go and Console are
+  their services. "Free models provided by OpenCode" is true. Lines about
+  an OpenCode server's version, the crash report sent to their repo, the
+  model-facing prompts and commands such as `opencode pair` all stay.
+- **The wire identity.** This is the `opencode/<channel>/<version>/<client>`
+  User-Agent, the `x-opencode-*` headers, `OPENCODE_CLIENT`, the provider ids
+  and the `OPENCODE_*` vars. OpenCode's free models are for OpenCode ("Free-tier
+  chat models require OpenCode", opencode.ai/docs/zen). This is still OpenCode,
+  and it says so; never change these to look like another client.
+
 ## Verify before staging
 
 - `readelf -d` on both files: `NEEDED` system-only (`libc`, `libm`, `libdl`).
 - `strings` on the payload: `auth/connect`, `/api/pair`, `wasm-unsafe-eval`
-  (embedded UI), `OPENTUI_LIB_PATH`.
+  (embedded UI), `OPENTUI_LIB_PATH`, `PhoneCanDo` (the brand patch's TUI).
 - Undefined-symbol scan of `liboc-opentui.so` against the NDK api-29 stubs: zero
   gaps. This catches the next `dlopen ... cannot locate symbol` before it
   ships.

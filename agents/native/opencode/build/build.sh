@@ -3,7 +3,8 @@
 # Output: <workdir>/out/opencode2.bin (bionic aarch64) + libopentui.so.
 # The web UI is embedded (opencode-web-ui.gen.ts) and the pair API comes with
 # the newer upstream pin. The android compile target (absent upstream) is
-# added via patches/build-android-target.patch.
+# added via patches/build-android-target.patch; PhoneCanDo's name and look on
+# the web UI and TUI via patches/phonecando-brand.patch and brand/.
 #
 # Versions come from pins.env next to this script. Toolchain (all
 # overridable, none machine-local):
@@ -21,6 +22,7 @@ WORK="${1:-${XDG_CACHE_HOME:-$HOME/.cache}/opencode/v2build}"
 DIST="$WORK/dist"
 OUT="$WORK/out"
 PATCH="$HERE/patches/build-android-target.patch"
+BRAND_PATCH="$HERE/patches/phonecando-brand.patch"
 
 # The pins (pins.env, their one source). A value already in the env wins, as
 # with the ${VAR:-default}s this file had before, so a bump can be tried
@@ -55,6 +57,25 @@ if git -C "$OPENCODE_WORKTREE" apply --check "$PATCH" 2>/dev/null; then
 else
   echo "android target patch already applied — continuing"
 fi
+
+# 1b. PhoneCanDo's brand on the web UI and TUI: the wordmarks, titles and the
+# About page's "Built on OpenCode" line (the patch), the app's own name in
+# every language (brand/rename.mjs) and our icons. The wire identity
+# (User-Agent, x-opencode-* headers, provider ids, OPENCODE_* vars) stays
+# upstream's: OpenCode's free models need it.
+if git -C "$OPENCODE_WORKTREE" apply --check "$BRAND_PATCH" 2>/dev/null; then
+  git -C "$OPENCODE_WORKTREE" apply "$BRAND_PATCH"
+  echo "brand patch applied"
+elif git -C "$OPENCODE_WORKTREE" apply --reverse --check "$BRAND_PATCH" 2>/dev/null; then
+  echo "brand patch already applied — continuing"
+else
+  echo "brand patch does not apply to $OPENCODE_WORKTREE" >&2
+  exit 1
+fi
+bun "$HERE/brand/rename.mjs" "$OPENCODE_WORKTREE"
+for channel in dev beta prod; do
+  cp -R "$HERE/brand/icons/." "$OPENCODE_WORKTREE/packages/desktop/icons/$channel/"
+done
 
 # 2. Renderer lib (zig + NDK sysroot).
 # (mirrors the upstream opentui build; kept inline so paths stay ours)

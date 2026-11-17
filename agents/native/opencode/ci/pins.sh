@@ -16,7 +16,7 @@ PINS=build/pins.env
 DRIVER=build/build.sh
 DOCS=(docs/README.md docs/build.md)
 # Must match the patch → tree mapping in upstream.sh `check`.
-KNOWN_PATCHES=(build-android-target.patch opentui-android-build.patch)
+KNOWN_PATCHES=(build-android-target.patch opentui-android-build.patch phonecando-brand.patch)
 REQUIRED=(OPENCODE_TAG OPENCODE_VERSION OPENCODE_CHANNEL OPENTUI_VERSION BUN_VERSION ZIG_VERSION NDK_VERSION ANDROID_API)
 fail=0
 

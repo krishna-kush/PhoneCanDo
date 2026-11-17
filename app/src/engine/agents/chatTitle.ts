@@ -1,7 +1,8 @@
 // The chat a kind's TUI shows, read from the title it gives the terminal:
 // group 1 of the kind's chatTitle regex (KindView). opencode's is
 // `^OC \| (.+)$`: in a titled chat its TUI sets "OC | <title>", cut to 37
-// characters plus "…" past 40; its home and an untitled chat show "OpenCode".
+// characters plus "…" past 40; its home and an untitled chat show
+// "PhoneCanDo" (our brand patch; "OpenCode" upstream).
 // Pure; vectors in scripts/vectors/test_chat_pages.js.
 const compiled = new Map<string, RegExp>();
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Clone the pinned upstream trees where build.sh looks for them (its default
-# OPENCODE_WORKTREE and OPENTUI_SRC under <workdir>) and prove both patches
-# apply. The trees are fresh, so both must: build.sh reads a failed
-# `apply --check` as "already applied" and carries on, which here would only
-# surface much later as a confusing build error.
+# OPENCODE_WORKTREE and OPENTUI_SRC under <workdir>) and prove every patch
+# applies. The trees are fresh, so each must: build.sh reads a failed
+# `apply --check` of the android patches as "already applied" and carries on,
+# which here would only surface much later as a confusing build error.
 # Usage: bash agents/native/opencode/ci/sources.sh <workdir>
 #   markdown sources table on stdout; exit 1 when a clone or patch fails.
 set -euo pipefail
@@ -19,6 +19,7 @@ git -c advice.detachedHead=false clone -q --depth 1 --branch "$OPENCODE_TAG" \
 git -c advice.detachedHead=false clone -q --depth 1 --branch "v$OPENTUI_VERSION" \
   https://github.com/anomalyco/opentui.git "$ot"
 git -C "$oc" apply --check "$here/../build/patches/build-android-target.patch"
+git -C "$oc" apply --check "$here/../build/patches/phonecando-brand.patch"
 git -C "$ot" apply --check "$here/../build/patches/opentui-android-build.patch"
 oc_sha="$(git -C "$oc" rev-parse HEAD)"
 ot_sha="$(git -C "$ot" rev-parse HEAD)"

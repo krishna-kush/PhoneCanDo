@@ -6,9 +6,11 @@
 //   app/scripts/inline-xterm.js  -> app/assets/xterm/terminal.bundle.html
 //   scripts/make-logos.mjs       -> app/assets/*.png, web/public/ icons,
 //                                   logo/favicon SVGs, site.webmanifest,
-//                                   the runner's notification icon
+//                                   the runner's notification icon, the
+//                                   built-in agent's web UI icons
 //
-// PNGs compare by header + inflated pixel stream: a different zlib build
+// PNGs (and the PNGs inside an .ico) compare by header + inflated pixel
+// stream: a different zlib build
 // (another Node, CPU) may compress the same pixels to other bytes, which only
 // warns.
 //
@@ -102,6 +104,24 @@ function pngPixels(buf) {
   }
 }
 
+// An icon of PNGs (make-logos' ico()): its directory + each PNG's pixels, so
+// a different zlib build inside the PNGs is no drift either.
+function icoPixels(buf) {
+  if (buf.length < 6 || buf.readUInt16LE(0) !== 0 || buf.readUInt16LE(2) !== 1) return null;
+  const count = buf.readUInt16LE(4);
+  const parts = [];
+  for (let i = 0; i < count; i++) {
+    const at = 6 + 16 * i;
+    if (at + 16 > buf.length) return null;
+    const size = buf.readUInt32LE(at + 8);
+    const offset = buf.readUInt32LE(at + 12);
+    const pixels = pngPixels(buf.subarray(offset, offset + size));
+    if (!pixels) return null;
+    parts.push(buf.subarray(at, at + 8), pixels);
+  }
+  return Buffer.concat(parts);
+}
+
 function walk(dir, base = dir, out = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
@@ -155,7 +175,10 @@ for (const gen of GENERATORS) {
         const have = readFileSync(committed);
         if (have.equals(fresh)) {
           status = '✅ identical';
-        } else if (rel.endsWith('.png') && pngPixels(have)?.equals(pngPixels(fresh) ?? Buffer.alloc(0))) {
+        } else if (
+          (rel.endsWith('.png') && pngPixels(have)?.equals(pngPixels(fresh) ?? Buffer.alloc(0))) ||
+          (rel.endsWith('.ico') && icoPixels(have)?.equals(icoPixels(fresh) ?? Buffer.alloc(0)))
+        ) {
           status = '✅ same pixels (other zlib bytes)';
           r.warn(`same pixels, different compressed bytes (zlib build); not drift`, rel);
         } else {

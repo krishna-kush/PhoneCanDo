@@ -61,12 +61,18 @@ check() {
   echo "| Check | Result | Detail |"
   echo "|---|---|---|"
 
-  # 1. The two patches the driver applies (patch → tree mapping; pins.sh
-  #    keeps this list in step with build/patches/).
+  # 1. The patches the driver applies (patch → tree mapping; pins.sh keeps
+  #    this list in step with build/patches/).
   apply_check "build-android-target.patch → opencode" "$oc" \
     "$AGENT/build/patches/build-android-target.patch"
   apply_check "opentui-android-build.patch → opentui" "$otui" \
     "$AGENT/build/patches/opentui-android-build.patch"
+  apply_check "phonecando-brand.patch → opencode" "$oc" \
+    "$AGENT/build/patches/phonecando-brand.patch"
+  # The locale strings brand/rename.mjs renames still name OpenCode.
+  local brand
+  if brand="$(node "$AGENT/build/brand/rename.mjs" "$oc" --check 2>&1)"; then ok "brand locale strings" "$brand"
+  else bad "brand locale strings" "$brand"; fi
 
   # 2. The CLI surface the driver drives build.ts through.
   local bts="$oc/packages/cli/script/build.ts" missing="" probe

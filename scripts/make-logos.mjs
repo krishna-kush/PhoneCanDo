@@ -127,6 +127,25 @@ function solid(size, color) {
   return png(size, size, canvas(size, color));
 }
 
+// A Windows icon holding PNGs (Vista and later read them as they are).
+function ico(images) {
+  const head = Buffer.alloc(6 + 16 * images.length);
+  head.writeUInt16LE(1, 2); // type: icon
+  head.writeUInt16LE(images.length, 4);
+  let offset = head.length;
+  images.forEach(({ size, data }, i) => {
+    const at = 6 + 16 * i;
+    head[at] = size % 256; // 0 means 256
+    head[at + 1] = size % 256;
+    head.writeUInt16LE(1, at + 4); // planes
+    head.writeUInt16LE(32, at + 6); // bits per pixel
+    head.writeUInt32LE(data.length, at + 8);
+    head.writeUInt32LE(offset, at + 12);
+    offset += data.length;
+  });
+  return Buffer.concat([head, ...images.map(({ data }) => data)]);
+}
+
 // ---------- writers ----------
 function write(rel, data, size) {
   const path = join(ROOT, rel);
@@ -241,6 +260,15 @@ const manifest = {
 };
 write('web/public/site.webmanifest', `${JSON.stringify(manifest, null, 2)}\n`);
 
+// The built-in agent's web UI (opencode's, built by its build.sh): the tab
+// icon, touch icon and install icons, laid over the upstream desktop icon
+// set its web build reads them from (packages/app/vite.icons.ts).
+const ENGINE_ICONS = 'agents/native/opencode/build/brand/icons';
+write(`${ENGINE_ICONS}/icon.ico`, ico([16, 32, 48].map((size) => ({ size, data: mark(size, 0.66) }))));
+write(`${ENGINE_ICONS}/icon.png`, mark(512, 0.5, { bg: BG }), 512);
+write(`${ENGINE_ICONS}/ios/AppIcon-60x60@3x.png`, mark(180, 0.5, { bg: BG }), 180);
+write(`${ENGINE_ICONS}/android/mipmap-xxxhdpi/ic_launcher.png`, mark(192, 0.5, { bg: BG }), 192);
+
 // ---------- self-check ----------
 for (const { rel, size } of OUT) {
   const buf = readFileSync(join(ROOT, rel));
@@ -253,6 +281,10 @@ for (const { rel, size } of OUT) {
     const text = buf.toString('utf8');
     if (!text.includes(tokens.dark.primary) || !text.includes(tokens.dark.secondary)) {
       throw new Error(`${rel}: missing brand colours`);
+    }
+  } else if (rel.endsWith('.ico')) {
+    if (buf.readUInt16LE(0) !== 0 || buf.readUInt16LE(2) !== 1 || buf.readUInt16LE(4) === 0) {
+      throw new Error(`${rel}: not an icon`);
     }
   } else if (rel.endsWith('.xml')) {
     if (!buf.toString('utf8').includes('<vector')) throw new Error(`${rel}: not a vector drawable`);

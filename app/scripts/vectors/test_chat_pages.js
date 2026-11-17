@@ -54,7 +54,7 @@ const mod = pathToFileURL(path.join(__dirname, '../../src/ui/chat/lastPage.ts'))
   const tuiChatTitle = (title) => chatTitleOf(manifest.surfaces.terminal.chatTitle, title);
   t('TUI chat title', tuiChatTitle('OC | Fix login'), 'Fix login');
   t('TUI cut title kept as shown', tuiChatTitle('OC | Refactor the payment service retries …'), 'Refactor the payment service retries …');
-  t('TUI home names no chat', tuiChatTitle('OpenCode'), null);
+  t('TUI home names no chat', tuiChatTitle('PhoneCanDo'), null);
   t('a shell title names no chat', tuiChatTitle('root@localhost: ~'), null);
   t('a kind without a pattern names no chat', chatTitleOf(null, 'OC | Fix login'), null);
 
