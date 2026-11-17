@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "opencode",
   "label": "Resident",
-  "version": "2.0.26-android-phonecando.3",
+  "version": "2.0.26-android-phonecando.4",
   "type": "native",
   "prefix": "oc",
   "channels": [

@@ -106,21 +106,26 @@ to lead with their own name and never to suggest Anomaly endorses them.
     `ui/src/typography/wordmark/wordmark.tsx`, the About page's animated
     one) as PHONECANDO in square letters with our mark's hard drop shadow;
   - the new-session screen's big wordmark (`app/src/new-session/`) in our
-    colours at 45% opacity: PHONE and DO in our primary red, CAN in our
+    colours, solid on a light page and at 85% on a dark one
+    (`--wordmark-opacity`): PHONE and DO in our primary red, CAN in our
     secondary yellow, the shadow the theme's weak icon colour. `<Logo>`
     fills its three words from `--logo-phone`, `--logo-can` and `--logo-do`,
     which only `wordmark.css` sets, from the two vars our app writes on
     `:root` (agent.json's `cssVars`: `--phonecando-brand-primary` and
     `--phonecando-brand-secondary`); the shimmer sets them to white, so its
-    sweep stays light. Every other wordmark, the error page's `<Logo>` and
-    the TUI keep the theme's icon colours, and so does this one when the
+    sweep stays light. Every other web wordmark and the error page's
+    `<Logo>` keep the theme's icon colours, and so does this one when the
     page runs without our app;
   - the page title and manifest name;
   - the About page's built-on line (`settings.about.builtOn`, en only; other
     languages fall back to it);
   - the TUI logo (`tui/src/logo.ts`, PHONE beside or over CANDO;
     `component/logo.tsx` stacks them under 54 columns, the exit footer
-    under 51);
+    under 51), PHONE and DO in the theme's first agent colour and CAN in
+    its second (our red and yellow in our theme);
+  - the TUI's theme: `phonecando` (below) unless you pick another
+    (`context/theme.tsx`; until its file is read, or without one,
+    opencode's is drawn);
   - the terminal title, the crash headline, and "Tell PhoneCanDo what to do
     differently". The `OC |` prefix of a chat's title stays: agent.json's
     `chatTitle` reads it.
@@ -133,6 +138,18 @@ to lead with their own name and never to suggest Anomaly endorses them.
   reads for the favicon and install icons. All are on a transparent
   background, so a change to our theme's background never changes these
   build sources (and so the payload).
+- The TUI theme itself is not in the payload: the agent's config ships it
+  (`config/themes/phonecando.json`, into `.config/opencode/themes/`), so
+  a colour change needs an app build, never a payload build. It is
+  opencode's own default theme (a copy in `scripts/tui-theme/opencode.json`,
+  MIT) with its two main colours made ours by `scripts/make-tui-theme.mjs`
+  (`pnpm tui-theme`) from `theme/tokens.json`: interactive (the active
+  input, selections, links) our red, the accent (headings, highlights) and
+  warning (a command waiting for your OK) our yellow, and agents' colours
+  starting with those two, so Build is red. Every other colour stays
+  opencode's. On a pin bump, copy that version's
+  `packages/tui/src/theme/assets/v2/opencode.json` over the copy and run it
+  again.
 
 What stays upstream's, on purpose:
 

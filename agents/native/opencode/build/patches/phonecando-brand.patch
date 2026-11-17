@@ -175,7 +175,7 @@ diff --git a/packages/app/src/new-session/wordmark.tsx b/packages/app/src/new-se
        <div data-slot="wordmark-reveal" class="relative mx-auto w-4/5">
 -        <Logo class="block aspect-[720/129] w-full opacity-[0.16]" />
 -        <Logo class="wordmark-shimmer absolute inset-0 aspect-[720/129] w-full" />
-+        <Logo class="block aspect-[297/33] w-full opacity-[0.45]" />
++        <Logo class="wordmark-base block aspect-[297/33] w-full" />
 +        <Logo class="wordmark-shimmer absolute inset-0 aspect-[297/33] w-full" />
        </div>
      </div>
@@ -341,7 +341,25 @@ diff --git a/packages/tui/src/logo.ts b/packages/tui/src/logo.ts
 diff --git a/packages/tui/src/component/logo.tsx b/packages/tui/src/component/logo.tsx
 --- a/packages/tui/src/component/logo.tsx
 +++ b/packages/tui/src/component/logo.tsx
-@@ -51,15 +51,16 @@
+@@ -5,9 +5,17 @@
+ import { tint } from "../theme/color"
+ import { go, logo } from "../logo"
+ 
++// In each CANDO row the CAN letters' columns (three of 4 + a space each); DO follows.
++const CAN = 15
++
+ export function Logo() {
+   const theme = useTheme()
+   const dimensions = useTerminalDimensions()
++  // The theme's first two agent colours (PhoneCanDo's: our red, then our
++  // yellow): PHONE and DO in the first, CAN in the second.
++  const first = () => theme.categorical[0]?.[200] ?? theme.text.base
++  const second = () => (theme.categorical[1] ?? theme.categorical[0])?.[200] ?? theme.text.base
++  const cando = (line: string) => [...renderLine(line.slice(0, CAN), second(), true), ...renderLine(line.slice(CAN), first(), true)]
+ 
+   const renderLine = (line: string, fg: RGBA, bold: boolean): JSX.Element[] => {
+     const shadow = tint(theme.background.base, fg, 0.25)
+@@ -51,25 +59,26 @@
  
    return (
      <box>
@@ -354,13 +372,27 @@ diff --git a/packages/tui/src/component/logo.tsx b/packages/tui/src/component/lo
 +      ) : dimensions().width < 54 ? (
          <>
 -          <For each={logo.left.slice(1)}>
+-            {(line) => <box flexDirection="row">{renderLine(line, theme.text.muted, false)}</box>}
 +          <For each={logo.left}>
-             {(line) => <box flexDirection="row">{renderLine(line, theme.text.muted, false)}</box>}
++            {(line) => <box flexDirection="row">{renderLine(line, first(), true)}</box>}
            </For>
 +          <box height={1} />
            <For each={logo.right}>
-             {(line) => <box flexDirection="row">{renderLine(line, theme.text.base, true)}</box>}
+-            {(line) => <box flexDirection="row">{renderLine(line, theme.text.base, true)}</box>}
++            {(line) => <box flexDirection="row">{cando(line)}</box>}
            </For>
+         </>
+       ) : (
+         <For each={logo.left}>
+           {(line, index) => (
+             <box flexDirection="row" gap={1}>
+-              <box flexDirection="row">{renderLine(line, theme.text.muted, false)}</box>
+-              <box flexDirection="row">{renderLine(logo.right[index()], theme.text.base, true)}</box>
++              <box flexDirection="row">{renderLine(line, first(), true)}</box>
++              <box flexDirection="row">{cando(logo.right[index()])}</box>
+             </box>
+           )}
+         </For>
 diff --git a/packages/tui/src/util/presentation.ts b/packages/tui/src/util/presentation.ts
 --- a/packages/tui/src/util/presentation.ts
 +++ b/packages/tui/src/util/presentation.ts
@@ -485,7 +517,7 @@ diff --git a/packages/tui/src/mini/footer.prompt.tsx b/packages/tui/src/mini/foo
 diff --git a/packages/app/src/new-session/wordmark.css b/packages/app/src/new-session/wordmark.css
 --- a/packages/app/src/new-session/wordmark.css
 +++ b/packages/app/src/new-session/wordmark.css
-@@ -1,11 +1,20 @@
+@@ -1,11 +1,26 @@
  [data-component="new-session-wordmark"] {
    --icon-strong-base: var(--icon-base);
    --wordmark-shimmer-opacity: 0.45;
@@ -495,6 +527,12 @@ diff --git a/packages/app/src/new-session/wordmark.css b/packages/app/src/new-se
 +  --logo-phone: var(--phonecando-brand-primary, var(--icon-base));
 +  --logo-can: var(--phonecando-brand-secondary, var(--icon-strong-base));
 +  --logo-do: var(--phonecando-brand-primary, var(--icon-strong-base));
++  /* Solid on a light page; a touch under on a dark one, where full red glares. */
++  --wordmark-opacity: 1;
++
++  .wordmark-base {
++    opacity: var(--wordmark-opacity);
++  }
  
    .wordmark-shimmer {
      --icon-base: white;
@@ -506,3 +544,34 @@ diff --git a/packages/app/src/new-session/wordmark.css b/packages/app/src/new-se
  
      /* Blend above the base logo's opacity so the sweep only adds light in either theme. */
      color: white;
+@@ -25,6 +40,7 @@
+ [data-color-scheme="dark"] [data-component="new-session-wordmark"] {
+   /* Preserve the previous dark highlight strength: 0.16 × 0.7 × 0.6. */
+   --wordmark-shimmer-opacity: 0.0672;
++  --wordmark-opacity: 0.85;
+ }
+ 
+ /* Oversizing the mask moves its highlight physically left to right, including in RTL. */
+diff --git a/packages/tui/src/context/theme.tsx b/packages/tui/src/context/theme.tsx
+--- a/packages/tui/src/context/theme.tsx
++++ b/packages/tui/src/context/theme.tsx
+@@ -112,7 +112,9 @@
+ const [store, setStore] = createStore<State>({
+   mode: "dark",
+   lock: undefined,
+-  active: "opencode",
++  // PhoneCanDo's theme (the agent's config ships themes/phonecando.json):
++  // until its file is read, or without one, opencode's is drawn.
++  active: "phonecando",
+   ready: false,
+ })
+ const [themeSources, setThemeSources] = createSignal(allThemes())
+@@ -134,7 +136,7 @@
+         const mode = lock ?? renderer.themeMode ?? props.mode
+         draft.mode = mode
+         draft.lock = lock
+-        draft.active = config.theme?.name ?? "opencode"
++        draft.active = config.theme?.name ?? "phonecando"
+         draft.ready = false
+       }),
+     )

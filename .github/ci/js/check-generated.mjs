@@ -8,6 +8,8 @@
 //                                   logo/favicon SVGs, site.webmanifest,
 //                                   the runner's notification icon, the
 //                                   built-in agent's web UI icons
+//   scripts/make-tui-theme.mjs   -> the built-in agent's TUI theme
+//                                   (agents/native/opencode/config/themes/)
 //
 // PNGs (and the PNGs inside an .ico) compare by header + inflated pixel
 // stream: a different zlib build
@@ -56,6 +58,13 @@ const GENERATORS = [
     fix: 'pnpm logos',
     script: 'scripts/make-logos.mjs',
     inputs: ['theme/tokens.json', 'theme/logo.json'],
+    ignore: [],
+  },
+  {
+    name: 'built-in agent TUI theme',
+    fix: 'pnpm tui-theme',
+    script: 'scripts/make-tui-theme.mjs',
+    inputs: ['theme/tokens.json', 'scripts/tui-theme/opencode.json'],
     ignore: [],
   },
 ];

@@ -18,6 +18,7 @@
     "web:dev": "pnpm -C web dev",
     "web:build": "pnpm -C web build",
     "logos": "node scripts/make-logos.mjs",
+    "tui-theme": "node scripts/make-tui-theme.mjs",
     "release:android": "node scripts/release-android.mjs",
     "build:android": "node scripts/build-android.mjs"
   }
