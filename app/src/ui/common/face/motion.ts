@@ -3,8 +3,15 @@
 // rest). Pure (zero RN imports); each style is a worklet, as anything a
 // worklet imports must be.
 
-/** How open the eyes are for each mood (1 open, down to nearly shut). */
-export const LID = { awake: 1, busy: 1, asleep: 0.15, oops: 0.45, sweaty: 1, happy: 1 } as const;
+/**
+ * How open the eyes are for each mood (1 open, down to nearly shut). Happy
+ * shuts them in its smile (drawn as brackets), so its lids only show as a
+ * face changes to or from it: they squint shut into the smile.
+ */
+export const LID = { awake: 1, busy: 1, asleep: 0.15, oops: 0.45, sweaty: 1, happy: 0.15 } as const;
+
+/** Where the pupils rest for each mood, as a gaze (-1 to 1, as pupilStyle takes it): awake a little to the right, as the site's do. */
+export const LOOK = { awake: 0.5, busy: 0, asleep: 0, oops: 0, sweaty: 0, happy: 0 } as const;
 
 /** A pixel heart, row by row (happy), like the logo built from squares. */
 export const HEART = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
@@ -17,119 +24,11 @@ export const HEART_SHIFT = [0, -0.75, -0.35];
 /** Asleep's "z": one float up, and the wait before the next. */
 export const Z_FLOAT_MS = 1800;
 export const Z_WAIT_MS = 500;
-/** How far along its float the "z" is first seen in full: a nap handed over to starts it there, never from unseen. */
+/** How far along its float the "z" is first seen in full: a change into asleep starts it there, never from unseen. */
 export const Z_SHOWN = 0.2;
 
-/** One move of a reaction's lids: to `lid` over `ms`, then held `hold`. */
-export type LidStep = { readonly lid: number; readonly ms: number; readonly hold: number };
-
-type ReactionSpec = {
-  readonly from: 'awake' | 'asleep';
-  readonly to: 'awake' | 'asleep';
-  /** How long it stays as it was before its lids move. */
-  readonly sleepMs: number;
-  readonly steps: readonly LidStep[];
-  /** How far the figure moves, in face sizes, over the first step and back over the last: down a wince or a nod, up a jump or a stretch. */
-  readonly lean: number;
-  /** Waking: when the "z" starts to go and the pupils to come. Dozing off, it is as the lids meet. */
-  readonly napAt?: number;
-  /** How long that hand-over takes. */
-  readonly napMs: number;
-};
-
-/**
- * A one-off move between awake and asleep, in one go, after which the
- * face carries on as its `to` mood (AgentFace's `reaction`).
- * The theme sweep's A-01: glare wakes as the lights come on (asleep, "z"
- * and all, then the "z" goes and the pupils come as it squints against
- * the light, holds, and blinks its eyes open); startle dozes off as they
- * go out (its eyes go wide, hold, and slowly close).
- * Privacy's guard: doze falls asleep at the desk (the lids droop half
- * shut, one heavy blink, drag back up, then drift shut, its head nodding);
- * wake comes to slowly (the "z" drifts off and fades, the lids open half
- * way with a stretch, blink, then open).
- * Dozing off, the "z" starts as the lids meet, already in view (Z_SHOWN).
- */
-export const REACTION = {
-  glare: {
-    from: 'asleep',
-    to: 'awake',
-    sleepMs: 250,
-    steps: [
-      { lid: 0.22, ms: 70, hold: 200 },
-      { lid: LID.awake, ms: 130, hold: 0 },
-    ],
-    lean: 0.06,
-    napAt: 250,
-    napMs: 70,
-  },
-  startle: {
-    from: 'awake',
-    to: 'asleep',
-    sleepMs: 0,
-    steps: [
-      { lid: 1.4, ms: 70, hold: 250 },
-      { lid: LID.asleep, ms: 350, hold: 0 },
-    ],
-    lean: -0.14,
-    napMs: 0,
-  },
-  doze: {
-    from: 'awake',
-    to: 'asleep',
-    sleepMs: 0,
-    steps: [
-      { lid: 0.5, ms: 300, hold: 200 },
-      { lid: LID.asleep, ms: 110, hold: 0 },
-      { lid: 0.4, ms: 170, hold: 80 },
-      { lid: LID.asleep, ms: 450, hold: 0 },
-    ],
-    lean: 0.05,
-    napMs: 150,
-  },
-  wake: {
-    from: 'asleep',
-    to: 'awake',
-    sleepMs: 300,
-    steps: [
-      { lid: 0.5, ms: 350, hold: 150 },
-      { lid: LID.asleep, ms: 100, hold: 0 },
-      { lid: LID.awake, ms: 300, hold: 0 },
-    ],
-    lean: -0.05,
-    napAt: 150,
-    napMs: 300,
-  },
-} as const satisfies Record<string, ReactionSpec>;
-
-export type Reaction = keyof typeof REACTION;
-
-const spec = (r: Reaction): ReactionSpec => REACTION[r];
-
-/** When a reaction's step [i] starts to move, from its start. */
-export function stepAtMs(r: Reaction, i: number): number {
-  const s = spec(r);
-  return s.steps.slice(0, i).reduce((at, step) => at + step.ms + step.hold, s.sleepMs);
-}
-
-/** When its lids are done moving. */
-export function lidsDoneMs(r: Reaction): number {
-  return stepAtMs(r, spec(r).steps.length);
-}
-
-/** When the "z" starts to go and the pupils to come (waking), or the other way round (dozing off: as the lids meet). */
-export function napAtMs(r: Reaction): number {
-  const s = spec(r);
-  return s.napAt ?? lidsDoneMs(r);
-}
-
-/** A reaction's whole length, start to end: from then on it is its `to` mood. */
-export function reactionMs(r: Reaction): number {
-  return Math.max(lidsDoneMs(r), napAtMs(r) + spec(r).napMs);
-}
-
-/** Where each loop rests on a face that does not move: no hop, eyes ahead, the "z" or drop halfway, one heart halfway up. */
-export const REST = { lift: 0, look: 0, drift: 0.5, beat: HEART_RISE / 2 } as const;
+/** Where each loop rests on a face that does not move: no hop, the "z" or drop halfway, one heart halfway up (the pupils rest at LOOK). */
+export const REST = { lift: 0, drift: 0.5, beat: HEART_RISE / 2 } as const;
 
 // [x] along the points [from], mapped onto [to] in straight lines between
 // them, as Reanimated's interpolate (every loop stays inside [from]).
@@ -167,19 +66,6 @@ export function zStyle(drift: number, mark: number) {
     opacity: along(drift, [0, 0.2, 0.8, 1], [0, 1, 1, 0]),
     transform: [{ translateY: along(drift, [0, 1], [mark * 0.4, -mark * 0.4]) }],
   };
-}
-
-/** A reaction's pupils, there while [nap] is 0 (awake) and gone at 1 (asleep). */
-export function napPupilStyle(look: number, eyeW: number, nap: number) {
-  'worklet';
-  return { ...pupilStyle(look, eyeW), opacity: 1 - nap };
-}
-
-/** A reaction's "z", there only while [nap] is 1 (asleep). */
-export function napZStyle(drift: number, mark: number, nap: number) {
-  'worklet';
-  const z = zStyle(drift, mark);
-  return { ...z, opacity: z.opacity * nap };
 }
 
 /** Sweaty: the drop [drift] of the way down its run, turned so its corner points up. */

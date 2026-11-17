@@ -33,7 +33,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   opened from Home's header (a hold and slide moves an agent: `reorder/`,
   the order kept in `state/logic/agentOrder.ts`). `common/face/` is A-01, the site's mascot, as
   each agent's face, in the agent's own mascot (`state/mascots.ts`, changed
-  on its Mascot page, `env/agent/mascot/`). `models/` is the Models page and
+  on its Mascot page, `env/agent/mascot/`); it plays every change of mood
+  itself (`change/` pure, `live/` its hooks), so a page only gives the
+  mood. `models/` is the Models page and
   a model's own page (`model/`); an agent's Model page is in `env/agent/`. `memory/` is the
   RAM warning (sheet, Home chip, pill, auto-stop line; pure copy and rows
   in `memory/logic/`), mounted once

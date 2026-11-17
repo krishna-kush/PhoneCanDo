@@ -42,9 +42,10 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('halfway down, always up', c.rowDrop(0.5, true, 60, 14), 30);
 
   // --- the theme sweep ------------------------------------------------------------
-  const f = await import(src('ui/common/face/motion.ts'));
-  t('lights on: the wake-up, then a beat with the eyes open', c.sweepHold('light'), f.reactionMs('glare') + 130);
-  t('lights off: wide, dozing off, then the nap for a beat', c.sweepHold('dark'), f.reactionMs('startle') + 400);
+  const f = await import(src('ui/common/face/change/specs.ts'));
+  const ft = await import(src('ui/common/face/change/timing.ts'));
+  t('lights on: the wake-up, then a beat with the eyes open', c.sweepHold('light'), ft.changeMs(f.REACTION.glare) + 130);
+  t('lights off: wide, dozing off, then the nap for a beat', c.sweepHold('dark'), ft.changeMs(f.REACTION.startle) + 400);
   t('the holds', [c.sweepHold('light'), c.sweepHold('dark')], [780, 1070]);
   t('lights on: A-01 is still napping as the colour comes', f.REACTION.glare.sleepMs <= c.SWEEP.growMs, true);
   t('the colour covers the app before either hold ends', c.SWEEP.growMs < Math.min(c.sweepHold('light'), c.sweepHold('dark')), true);

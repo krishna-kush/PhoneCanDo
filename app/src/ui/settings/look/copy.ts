@@ -3,7 +3,8 @@
 // the preview's keys row rides as the keyboard goes down. Pure (zero RN
 // imports).
 import type { ThemeMode } from '../../../state/app/prefs';
-import { reactionMs } from '../../common/face/motion.ts';
+import { REACTION } from '../../common/face/change/specs.ts';
+import { changeMs } from '../../common/face/change/timing.ts';
 
 export type Scheme = 'light' | 'dark';
 
@@ -59,5 +60,5 @@ export const SWEEP = { growMs: 280, fadeMs: 240, afterMs: { light: 130, dark: 40
 
 /** The least time the sweep covers the app from the tap, however fast the theme goes in under it: A-01's reaction, then its beat. */
 export function sweepHold(scheme: Scheme): number {
-  return reactionMs(scheme === 'light' ? 'glare' : 'startle') + SWEEP.afterMs[scheme];
+  return changeMs(REACTION[scheme === 'light' ? 'glare' : 'startle']) + SWEEP.afterMs[scheme];
 }

@@ -1,10 +1,10 @@
 import { type ComponentType, Fragment, type ReactNode } from 'react';
-import { type StyleProp, Text, type TextStyle, View, type ViewStyle } from 'react-native';
+import { type StyleProp, type TextStyle, View, type ViewStyle } from 'react-native';
 import type { AnimatedStyle } from 'react-native-reanimated';
 import tokens from '../../../../../theme/tokens.json';
 import { useTheme } from '../globals';
+import type { Part } from './change/parts';
 import type { FaceLayout } from './layout';
-import type { Mood } from './mood';
 import { HEART, HEART_SHIFT } from './motion';
 import WearMarks from './WearMarks';
 
@@ -16,13 +16,15 @@ export type Moving = {
   Text: ComponentType<{ style?: StyleProp<AnimatedStyle<TextStyle>>; children?: ReactNode }>;
 };
 
-/** Each moving part's style at this moment (motion.ts): animated on a live face, plain on a still one. */
+/** Each moving part's style at this moment (motion.ts), its opacity its weight in a change (change/parts.ts): animated on a live face, plain on a still one. */
 export type MotionStyles = {
   body: Style;
   eye: Style;
   pupil: Style;
+  smile: Style;
   z: StyleProp<AnimatedStyle<TextStyle>>;
   drop: Style;
+  query: StyleProp<AnimatedStyle<TextStyle>>;
 };
 
 /** Where a happy face's heart starts, and its ink. */
@@ -30,15 +32,14 @@ export type HeartPlace = { left: number; top: number; cell: number; color: strin
 
 type Props = {
   layout: FaceLayout;
-  mood: Mood;
+  /** The parts it draws (change/parts.ts): its mood's, or both moods' as it changes, each at its weight. */
+  parts: readonly Part[];
   moving: Moving;
   motion: MotionStyles;
   /** How many hearts a happy face shows (1 to 3). */
   hearts: number;
   /** The [i]th of [count] hearts, at [place]. */
   heart: (i: number, count: number, place: HeartPlace) => ReactNode;
-  /** A reaction between awake and asleep (AgentFace): the pupils and the "z" both drawn, their styles showing one or the other. */
-  handOver?: boolean;
 };
 
 // A-01's face as drawn, for the live face (AgentFace) and the still one
@@ -47,38 +48,41 @@ type Props = {
 // it wears, laid out by the shared spec), and the mood's marks: a "z"
 // asleep, a "?" in trouble, a drop when sweaty, hearts when happy.
 // Decoration only (hidden from screen readers): rows say the state in words.
-export default function FaceDrawing({ layout: f, mood, moving, motion, hearts, heart, handOver = false }: Props) {
+export default function FaceDrawing({ layout: f, parts, moving, motion, hearts, heart }: Props) {
   const t = useTheme();
+  const has = (p: Part) => parts.includes(p);
   const { fig, dx, dy, eyeA, eyeB, eyeW, eyeH, pupil } = f;
   const front = fig.front;
 
   // Happy: each eye an upturned bracket, shut in a smile.
   const smileEye = (x: number, y: number) => (
-    <View
-      style={{
-        position: 'absolute',
-        left: x,
-        top: y + Math.round(eyeH * 0.2),
-        width: eyeW,
-        height: Math.max(f.line * 2, Math.round(eyeH * 0.5)),
-        borderColor: t.onPrimary,
-        borderTopWidth: f.line,
-        borderLeftWidth: f.line,
-        borderRightWidth: f.line,
-      }}
+    <moving.View
+      style={[
+        {
+          position: 'absolute',
+          left: x,
+          top: y + Math.round(eyeH * 0.2),
+          width: eyeW,
+          height: Math.max(f.line * 2, Math.round(eyeH * 0.5)),
+          borderColor: t.onPrimary,
+          borderTopWidth: f.line,
+          borderLeftWidth: f.line,
+          borderRightWidth: f.line,
+        },
+        motion.smile,
+      ]}
     />
   );
 
-  // Awake, its pupils rest a little to the right, as the site's do.
-  const restX = mood === 'awake' ? eyeW * 0.11 : 0;
+  // The pupils' gaze is motion.pupil's (awake rests them a little to the right, motion.ts's LOOK).
   const eye = (x: number, y: number) => (
     <moving.View style={[{ position: 'absolute', left: x, top: y, width: eyeW, height: eyeH, backgroundColor: t.onPrimary }, motion.eye]}>
-      {pupil && mood !== 'asleep' ? (
+      {pupil && has('pupils') ? (
         <moving.View
           style={[
             {
               position: 'absolute',
-              left: pupil.x - eyeA.x + restX,
+              left: pupil.x - eyeA.x,
               top: pupil.y - eyeA.y,
               width: pupil.w,
               height: pupil.h,
@@ -123,19 +127,21 @@ export default function FaceDrawing({ layout: f, mood, moving, motion, hearts, h
             backgroundColor: front.ink === 'red' ? t.primary : t.secondary,
           }}
         >
-          {mood === 'happy' ? smileEye(eyeA.x - front.x, eyeA.y - front.y) : eye(eyeA.x - front.x, eyeA.y - front.y)}
-          {mood === 'happy' ? smileEye(eyeB.x - front.x, eyeB.y - front.y) : eye(eyeB.x - front.x, eyeB.y - front.y)}
+          {has('eyes') ? eye(eyeA.x - front.x, eyeA.y - front.y) : null}
+          {has('eyes') ? eye(eyeB.x - front.x, eyeB.y - front.y) : null}
+          {has('smile') ? smileEye(eyeA.x - front.x, eyeA.y - front.y) : null}
+          {has('smile') ? smileEye(eyeB.x - front.x, eyeB.y - front.y) : null}
         </View>
         <WearMarks marks={fig.marks} box={f.box} dx={dx} dy={dy} />
       </moving.View>
-      {mood === 'asleep' || handOver ? (
+      {has('z') ? (
         <moving.Text
           style={[{ position: 'absolute', right: 0, top: 0, fontFamily: 'GeistMono-Bold', fontSize: f.mark, color: t.dim }, motion.z]}
         >
           z
         </moving.Text>
       ) : null}
-      {mood === 'sweaty' ? (
+      {has('drop') ? (
         <moving.View
           style={[
             {
@@ -154,7 +160,7 @@ export default function FaceDrawing({ layout: f, mood, moving, motion, hearts, h
           ]}
         />
       ) : null}
-      {mood === 'happy'
+      {has('hearts')
         ? Array.from({ length: heartCount }, (_, i) => (
             <Fragment key={i}>
               {heart(i, heartCount, {
@@ -166,10 +172,12 @@ export default function FaceDrawing({ layout: f, mood, moving, motion, hearts, h
             </Fragment>
           ))
         : null}
-      {mood === 'oops' ? (
-        <Text style={{ position: 'absolute', right: 0, top: 0, fontFamily: 'GeistMono-Bold', fontSize: f.mark, color: t.primary }}>
+      {has('query') ? (
+        <moving.Text
+          style={[{ position: 'absolute', right: 0, top: 0, fontFamily: 'GeistMono-Bold', fontSize: f.mark, color: t.primary }, motion.query]}
+        >
           ?
-        </Text>
+        </moving.Text>
       ) : null}
     </View>
   );
