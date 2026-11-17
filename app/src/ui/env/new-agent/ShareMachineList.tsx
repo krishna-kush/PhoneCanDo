@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { agentKind } from '../../../engine/agents/registry';
 import type { ImageId } from '../../../engine/linux/types';
@@ -10,12 +9,12 @@ import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { nextAgentName } from '../../../state/flows/logic/names';
 import { deskCode, peekSeat } from '../../../state/logic/desks';
 import { useKindsStore } from '../../../state/kinds';
-import AppCard from '../../common/AppCard';
 import ConfirmDialog from '../../common/ConfirmDialog';
-import SectionTitle from '../../common/SectionTitle';
+import RowGroup from '../../common/rows/RowGroup';
 import SystemLogo from '../list/SystemLogo';
 import { shareBlockText, type ShareChoice } from '../logic/shareChoices';
 import { shareMessage, shareTitle } from '../logic/sharedMachineText';
+import OsRow, { OS_ROW_LOGO } from '../new-env/OsRow';
 
 type Props = {
   pick: AgentPick;
@@ -26,8 +25,9 @@ type Props = {
 };
 
 // New agent's Where does it run?, Share a machine: the machines agents
-// already use (logic/shareChoices.ts), each titled by its agents and showing
-// its system's logo. One the picked agent can't join is dimmed and says why.
+// already use (logic/shareChoices.ts), a key box of rows, each titled by
+// its agents and showing its system's logo. One the picked agent can't join
+// is dimmed and says why.
 // A tap asks first: the confirm says what sharing means and recommends its
 // own machine (that button closes it, back to the systems above); Share
 // makes the agent there.
@@ -58,25 +58,21 @@ export default function ShareMachineList({ pick, choices, busy, onShare }: Props
 
   return (
     <>
-      <SectionTitle>Share a machine</SectionTitle>
-      {choices.map((choice) => {
-        const blocked = blockedOf(choice);
-        return (
-          <YStack key={choice.key} opacity={blocked ? 0.5 : 1}>
-            <AppCard
+      <RowGroup title="Share a machine" barcode="placeShare">
+        {choices.map((choice) => {
+          const blocked = blockedOf(choice);
+          return (
+            <OsRow
+              key={choice.key}
+              lead={<SystemLogo keys={choice.logoKeys} size={OS_ROW_LOGO} />}
               title={choice.title}
-              subtitle={blocked ?? choice.subtitle}
-              icon={
-                choice.logoKeys.length > 0 ? (
-                  <SystemLogo keys={choice.logoKeys} size={32} />
-                ) : undefined
-              }
-              onPress={blocked ? undefined : () => ask(choice)}
-              chevron={!blocked}
+              line={blocked ?? choice.subtitle}
+              dim={blocked != null || busy}
+              onPress={() => ask(choice)}
             />
-          </YStack>
-        );
-      })}
+          );
+        })}
+      </RowGroup>
       <ConfirmDialog
         open={asking != null}
         onClose={() => setAsking(null)}

@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { YStack } from 'tamagui';
 import { agentKind } from '../../../engine/agents/registry';
 import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
@@ -7,28 +6,29 @@ import { offersForEnv } from '../../../state/flows/kindOffers';
 import type { AgentPick } from '../../../state/flows/logic/modelStep';
 import { useKindsStore } from '../../../state/kinds';
 import { useLinuxStore } from '../../../state/linux';
-import AppCard from '../../common/AppCard';
 import PageHeader from '../../common/PageHeader';
+import RowGroup from '../../common/rows/RowGroup';
 import Screen from '../../common/Screen';
-import SectionTitle from '../../common/SectionTitle';
 import Stamp from '../../common/Stamp';
 import SystemLogo from '../list/SystemLogo';
 import { blockedText } from '../logic/agentChoice';
 import { placesFor, type Place } from '../logic/places';
 import { shareChoices } from '../logic/shareChoices';
 import { placeNote } from '../logic/sharedMachineText';
+import OsRow, { OS_ROW_LOGO } from '../new-env/OsRow';
 import Note from '../parts/Note';
+import OsLogo from '../parts/OsLogo';
 import ProgressBar from '../parts/ProgressBar';
 import ShareMachineList from './ShareMachineList';
 import { useNewAgent } from './useNewAgent';
 
-// New agent, step 2: where the picked agent runs. Its own machine
-// (logic/places.ts, recommended): a tap on a system makes the agent there;
-// Download another Linux goes on to pick an OS and a version, and the
-// download starts from its last look. A system shows its OS's logo, as the
-// Systems list does. Or, when agents have machines, sharing one of them
-// (ShareMachineList). A place that cannot run this agent is dimmed and says
-// why.
+// New agent, step 2: where the picked agent runs, as key boxes of rows
+// like Add system's. Its own machine (logic/places.ts, recommended): a tap
+// on a system makes the agent there; Download another Linux goes on to
+// pick an OS and a version, and the download starts from its last look. A
+// system shows its OS's logo, as the Systems list does. Or, when agents
+// have machines, sharing one of them (ShareMachineList). A place that
+// cannot run this agent is dimmed and says why.
 export default function ChoosePlace({ pick }: { pick: AgentPick }) {
   const push = useAppStore((s) => s.push);
   const envs = useLinuxStore((s) => s.envs);
@@ -65,27 +65,28 @@ export default function ChoosePlace({ pick }: { pick: AgentPick }) {
     <Screen>
       <PageHeader kicker="new agent · where" title="Where does it run?" />
       <Note>{placeNote(label, canShare)}</Note>
-      {canShare ? <SectionTitle>Its own machine</SectionTitle> : null}
-      {places.map((place) => {
-        const blocked = blockedOf(place);
-        return (
-          <YStack key={place.key} opacity={blocked ? 0.5 : 1}>
-            <AppCard
-              title={place.title}
-              subtitle={blocked ?? place.subtitle}
-              icon={
-                place.logoKeys.length > 0 ? (
-                  <SystemLogo keys={place.logoKeys} size={32} />
-                ) : undefined
+      <RowGroup title={canShare ? 'Its own machine' : 'Pick one'} barcode="placeOwn">
+        {places.map((place) => {
+          const blocked = blockedOf(place);
+          return (
+            <OsRow
+              key={place.key}
+              lead={
+                place.target ? (
+                  <SystemLogo keys={place.logoKeys} size={OS_ROW_LOGO} />
+                ) : (
+                  <OsLogo uri={null} size={OS_ROW_LOGO} fallback="↓" />
+                )
               }
-              onPress={blocked ? undefined : () => choose(place)}
-              chevron={!blocked}
-            >
-              {place.recommended && !blocked ? <Stamp>recommended</Stamp> : null}
-            </AppCard>
-          </YStack>
-        );
-      })}
+              title={place.title}
+              line={blocked ?? place.subtitle}
+              stamp={place.recommended && !blocked ? <Stamp>recommended</Stamp> : undefined}
+              dim={blocked != null || newAgent.busy}
+              onPress={() => choose(place)}
+            />
+          );
+        })}
+      </RowGroup>
       {canShare ? (
         <ShareMachineList
           pick={pick}

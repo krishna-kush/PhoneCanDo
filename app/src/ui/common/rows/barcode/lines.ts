@@ -21,6 +21,8 @@ export const BARCODE_LINES = {
 
   // New agent
   arcadeShowcase: 'INSERT COIN',
+  placeOwn: 'NEW DIGS',
+  placeShare: 'BUNK BEDS',
 
   // Systems
   systems: 'MULTIVERSE',

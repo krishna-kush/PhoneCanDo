@@ -16,14 +16,14 @@ type Props = {
   meta?: string;
   /** A rubber stamp under its words (recommended). */
   stamp?: ReactNode;
-  /** Half faded and no press: a pick is on its way. */
+  /** Half faded and no press: a pick is on its way, or this place can't take the agent (its line says why). */
   dim?: boolean;
   onPress: () => void;
 };
 
 // One system to pick while adding one, a row of a key box (Which Linux?,
-// Add system), opening the next step (an OpenRow): its logo, name, what it
-// is, a fact and a stamp.
+// Add system, Where does it run?), opening the next step (an OpenRow): its
+// logo, name, what it is, a fact and a stamp.
 export default function OsRow({ lead, title, line, meta, stamp, dim = false, onPress }: Props) {
   return (
     <OpenRow label={`${title}, ${line}`} onPress={onPress} dim={dim}>
