@@ -52,8 +52,8 @@ function channel(): string {
 // press or Select to pick several, with the selection's bar pinned below, a
 // hold and slide to move it; the list scrolls only while no row is lifted),
 // Own envs still downloading (or paused), New agent, then the app's other places:
-// First shift (while it runs), Models, Systems, Custom agents, Schedules (while an agent can run them),
-// Messages (once agents can talk to each other), Settings, About. Memoised: the drawer's own renders (open, shut)
+// First shift (while it runs), Models, Systems, Custom agents, Schedules,
+// Messages, Settings, About. Memoised: the drawer's own renders (open, shut)
 // pass the same `still` until its slide ends. Mounting it starts the
 // unread counts (each row's mark), which the runner keeps current.
 function DrawerContent({ still }: { still: boolean }) {
@@ -77,7 +77,7 @@ function DrawerContent({ still }: { still: boolean }) {
   const order = useMemo(() => agents.map((a) => a.id), [agents]);
   const pick = useAgentSelection(order, still);
   const unread = useMessagesStore((s) => unreadTotal(s.unread));
-  const messaging = messagesAvailable() && (agents.length > 1 || unread > 0);
+  const messaging = messagesAvailable();
   useEffect(() => useMessagesStore.getState().refreshMessages(), []);
   // The custom agents' count: read once here; a save or delete reads them again.
   useEffect(() => {
