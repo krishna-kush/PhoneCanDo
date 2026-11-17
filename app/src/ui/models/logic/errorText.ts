@@ -1,5 +1,6 @@
 // Model error codes as plain sentences. Pure (zero RN imports). Only
-// `internal` adds the native line: the code alone tells nobody anything.
+// `internal` adds the native line: the code alone tells nobody anything;
+// `invalid_gguf` adds lme's reason (which part of the header failed).
 import type { ModelErrorCode } from '../../../engine/models/types';
 
 const TEXT: Record<ModelErrorCode, string> = {
@@ -35,10 +36,21 @@ function isCode(code: string): code is ModelErrorCode {
 /** A failed model action as a sentence; `in_use` carries the agents' names as its message. */
 export function modelErrorText(code: string, message: string): string {
   if (code === 'in_use') return `${message} ${message.includes(',') ? 'run' : 'runs'} on it. Pick another model for them first.`;
+  if (code === 'invalid_gguf') {
+    const reason = firstLine(message).replace(GGUF_PREFIX, '');
+    return reason ? `${TEXT.invalid_gguf} Why: ${reason}.` : TEXT.invalid_gguf;
+  }
   if (isCode(code) && code !== 'internal') return TEXT[code];
-  // Its first line only: a bridge failure goes on with a JS stack.
-  const detail = message.trim().split('\n')[0].trim();
+  const detail = firstLine(message);
   return detail ? `${TEXT.internal} (${detail})` : TEXT.internal;
+}
+
+// lme's InvalidGguf message: "not a usable GGUF file: <reason>".
+const GGUF_PREFIX = /^not a usable GGUF file:\s*/;
+
+// Its first line only: a bridge failure goes on with a JS stack.
+function firstLine(message: string): string {
+  return message.trim().split('\n')[0].trim();
 }
 
 /** How long a Hugging Face wait has left: "40 s", "about 2 min" (rounded up). */

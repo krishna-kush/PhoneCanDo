@@ -277,6 +277,12 @@ const model = (over) => ({
   // --- ui/models/logic/errorText --------------------------------------------
   const { modelErrorText } = await import(src('ui/models/logic', 'errorText.ts'));
   t('known code', modelErrorText('exists', 'already on the phone as qwen'), 'This model is already on the phone.');
+  t(
+    'a bad GGUF says why',
+    modelErrorText('invalid_gguf', 'not a usable GGUF file: no clip.block_count: not a language model'),
+    "That file isn't a model we can run (a GGUF file). Why: no clip.block_count: not a language model.",
+  );
+  t('a bad GGUF without a reason', modelErrorText('invalid_gguf', ''), "That file isn't a model we can run (a GGUF file).");
   t('internal keeps the line', modelErrorText('internal', 'boom'), 'Something went wrong on our side. (boom)');
   t(
     'internal drops the stack',
