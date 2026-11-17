@@ -78,6 +78,11 @@ export const BARCODE_LINES = {
   schedulesEmpty: 'CLEAR SKIES',
   recentRuns: 'DONE AND DONE',
   scheduleAgent: 'YOU ARE UP',
+  schedulesRules: 'FINE PRINT',
+  rulesDue: 'RIGHT ON TIME',
+  rulesAsk: 'OVER TO YOU',
+  rulesWait: 'HOLD PLEASE',
+  rulesAfter: 'HOW DID IT GO',
 
   // Any other day's box, Messages' or Schedules', by its weekday
   sunday: 'SUNDAY FUNDAY',

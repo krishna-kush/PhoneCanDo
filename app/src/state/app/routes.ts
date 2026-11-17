@@ -87,6 +87,8 @@ export type Route =
   | { name: 'messages'; agentId?: AgentId }
   /** Tasks set to run at a time, grouped by agent; with `agentId`, only that agent's. */
   | { name: 'schedules'; agentId?: AgentId }
+  /** How schedules run: what a due task does by kind, when it asks you, waits and misses. */
+  | { name: 'schedule-rules' }
   /** Settings: a short hub of rows, each opening one of its pages. */
   | { name: 'settings' }
   | { name: 'settings-page'; page: SettingsPageId }

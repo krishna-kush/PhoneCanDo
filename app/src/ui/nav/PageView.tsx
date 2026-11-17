@@ -57,6 +57,8 @@ function PageView({ route }: { route: Route }) {
       return <Pages.MessagesPage agentId={route.agentId ?? null} />;
     case 'schedules':
       return <Pages.SchedulesPage agentId={route.agentId ?? null} />;
+    case 'schedule-rules':
+      return <Pages.ScheduleRulesPage />;
     case 'settings':
       return <Pages.SettingsScreen />;
     case 'settings-page':

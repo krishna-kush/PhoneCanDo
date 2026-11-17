@@ -32,6 +32,7 @@ import PageClock from './clock/PageClock';
 import EmptySchedules from './empty/EmptySchedules';
 import { runsFor, type TimelineEntry, timeline } from './logic/timeline';
 import RecentRuns from './RecentRuns';
+import RulesEntry from './rules/RulesEntry';
 import ScheduleRow from './ScheduleRow';
 import { useScheduleAgents } from './useScheduleAgents';
 
@@ -50,8 +51,11 @@ type Props = {
 // Android's exact alarms are off, then one timeline across agents (on a
 // page for one agent, just its own): what still runs, soonest first under
 // a heading per day, then what is off or done; then what the recent runs
-// did. Each row names its agent as the drawer does, and the live alarm
-// clock (clock/) stands at the foot. Add opens the editor for an agent
+// did; each of those boxes folds on a tap at its title (open at first),
+// the fine print's does not.
+// Each row names its agent as the drawer does; then the row that opens
+// "How schedules run" (rules/), and under it at the foot the live alarm
+// clock (clock/). Add opens the editor for an agent
 // that can run schedules; with none, a line says so. With nothing to
 // list, the empty box (empty/). The times move on while the page is in
 // front.
@@ -89,6 +93,7 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
         <EmptySchedules text={emptyText(agentId ? (agent?.name ?? 'this agent') : null)} canAdd={canAdd} onAdd={onAdd} still={!active} now={now} />
       ) : null}
       {shownRuns.length > 0 ? <RecentRuns title={RECENT_RUNS} runs={shownRuns} now={now} withAgent={agentId == null} /> : null}
+      {available ? <RulesEntry /> : null}
       {available && !empty ? <PageClock still={!active} /> : null}
     </Screen>
   );
@@ -109,7 +114,7 @@ function Rows({
   onEdit: (s: Schedule) => void;
 }) {
   return (
-    <RowGroup title={title} barcode={barcode}>
+    <RowGroup title={title} barcode={barcode} foldable>
       {entries.map((e) => (
         <RowFrame key={e.schedule.id} bare>
           <ScheduleRow entry={e} now={now} onEdit={onEdit} />

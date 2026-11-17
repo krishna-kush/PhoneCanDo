@@ -79,6 +79,9 @@ export const Pages = {
   get SchedulesPage(): typeof import('../schedule/SchedulesPage').default {
     return require('../schedule/SchedulesPage').default;
   },
+  get ScheduleRulesPage(): typeof import('../schedule/rules/RulesPage').default {
+    return require('../schedule/rules/RulesPage').default;
+  },
   get AboutPage(): typeof import('../settings/AboutPage').default {
     return require('../settings/AboutPage').default;
   },

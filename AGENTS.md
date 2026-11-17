@@ -43,7 +43,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   other, the screen queue), the drawer's unread marks and an agent page's
   Messages and wake rows; pure parts in `messages/logic/`.
   `schedule/` is the Schedules page (tasks set to reach an agent at a time,
-  the recent runs, its editor in `editor/`), the drawer row and an agent
+  the recent runs, its editor in `editor/`, the How schedules run page in
+  `rules/`), the drawer row and an agent
   page's Schedules and "Can schedule itself" rows; pure parts in
   `schedule/logic/`.
   `recommend/` is telling a friend: the Refer page (Settings' Tell a friend
