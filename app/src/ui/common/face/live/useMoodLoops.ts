@@ -1,12 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { cancelAnimation, Easing, type SharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
-import { BLEND_MS } from '../change/specs';
 import type { Shift } from '../change/shift';
 import { handOverAtMs } from '../change/timing';
 import type { Mood } from '../mood';
-import { HEART_MS, LID, LOOK, REST, Z_FLOAT_MS, Z_SHOWN, Z_WAIT_MS } from '../motion';
+import { between, BLINK_EVERY_MS, HEART_MS, LID, REST, Z_FLOAT_MS, Z_SHOWN, Z_WAIT_MS } from '../motion';
 
-type Values = { lid: SharedValue<number>; look: SharedValue<number>; drift: SharedValue<number>; beat: SharedValue<number> };
+type Values = { lid: SharedValue<number>; drift: SharedValue<number>; beat: SharedValue<number> };
 
 // Awake's blink, every [every] ms, again and again.
 const blinking = (every: number) =>
@@ -16,16 +15,19 @@ const blinking = (every: number) =>
 const driftOf = (m: Mood) => (m === 'asleep' ? 'z' : m === 'sweaty' ? 'drop' : null);
 
 /**
- * A live face's moods' own loops, on the UI thread: awake blinks now and
- * then, busy looks about, sweaty glances, the "z" or drop drifts, happy's
- * hearts float up. A loop runs while its mood is on either side of a
- * change, so a mark keeps moving as it fades; a mark a change brings in
- * starts as the marks hand over. The lids are the change's while one plays
- * (useChangeMotion). None runs while [quiet]: each rests (motion.ts's REST).
+ * A live face's moods' own loops, on the UI thread: awake blinks, the "z"
+ * or drop drifts, happy's hearts float up (the pupils' looking is
+ * useLook's). A loop runs while its mood is on either side of a change,
+ * so a mark keeps moving as it fades; a mark a change brings in starts as
+ * the marks hand over. The lids are the change's while one plays
+ * (useChangeMotion). None runs while [quiet]: each rests (motion.ts's
+ * REST). Each face keeps its own blink rhythm, so a row of them never
+ * blinks in step.
  */
-export function useMoodLoops(shift: Shift, quiet: boolean, blinkEvery: number, { lid, look, drift, beat }: Values) {
+export function useMoodLoops(shift: Shift, quiet: boolean, { lid, drift, beat }: Values) {
   const { from, to } = shift;
   const resting = shift.change == null;
+  const [blinkEvery] = useState(() => between(BLINK_EVERY_MS, Math.random()));
 
   // At rest the lid is the mood's; awake blinks every few seconds.
   useEffect(() => {
@@ -36,24 +38,6 @@ export function useMoodLoops(shift: Shift, quiet: boolean, blinkEvery: number, {
     lid.value = blinking(blinkEvery);
     return () => cancelAnimation(lid);
   }, [to, resting, quiet, blinkEvery, lid]);
-
-  // Busy: the pupils look left and right. Sweaty: quick glances, held.
-  // Any other mood: they ease to where it rests them.
-  useEffect(() => {
-    cancelAnimation(look);
-    if (quiet) {
-      look.value = LOOK[to];
-      return;
-    }
-    if (to !== 'busy' && to !== 'sweaty') {
-      look.value = withTiming(LOOK[to], { duration: BLEND_MS, easing: Easing.inOut(Easing.quad) });
-      return;
-    }
-    const [move, hold] = to === 'sweaty' ? [110, 700] : [280, 240];
-    const step = (gaze: number) => withTiming(gaze, { duration: move, easing: Easing.inOut(Easing.quad) });
-    look.value = withRepeat(withSequence(withDelay(hold, step(1)), withDelay(hold, step(-1))), -1, false);
-    return () => cancelAnimation(look);
-  }, [to, quiet, look]);
 
   // The "z" floats up and fades, again and again; the drop runs down.
   const drifting = driftOf(to) ?? driftOf(from);

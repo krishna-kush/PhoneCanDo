@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { PLAIN, type Look } from '../../../../../mascot/look.ts';
 import { useReduceMotion } from '../useReduceMotion';
@@ -8,10 +8,11 @@ import FaceDrawing, { type Moving } from './FaceDrawing';
 import { faceLayout } from './layout';
 import FloatingHeart from './live/FloatingHeart';
 import { useChangeMotion } from './live/useChangeMotion';
+import { useLook } from './live/useLook';
 import { useMoodChange } from './live/useMoodChange';
 import { useMoodLoops } from './live/useMoodLoops';
 import type { Mood } from './mood';
-import { dropStyle, LID, liftStyle, lidStyle, LOOK, pupilStyle, zStyle } from './motion';
+import { dropStyle, eyeStyle, LID, liftStyle, LOOK, pupilStyle, zStyle } from './motion';
 
 type Props = {
   mood: Mood;
@@ -37,10 +38,10 @@ type Props = {
 const LIVE: Moving = { View: Animated.View, Text: Animated.Text };
 
 // The site's mascot A-01 as an agent's face, alive (FaceDrawing draws it):
-// awake it blinks now and then, busy it looks about, asleep its eyes shut
-// under a drifting "z", in trouble it squints under a "?", sweaty (the phone
-// short of memory) it glances about, wide-eyed, while a drop runs down its
-// brow, and happy its eyes close in a smile while a pixel heart floats up
+// awake it blinks and glances left and right now and then (a tap makes it
+// hop and look around for who tapped it), busy it looks about, asleep its eyes shut under a drifting "z", in trouble it squints
+// under a "?", sweaty (the phone short of memory) it glances about,
+// wide-eyed, while a drop runs down its brow, and happy its eyes close in a smile while a pixel heart floats up
 // (or a few, one after another). Every change of mood is played, never
 // snapped (change/: it dozes off, comes to, jolts awake at a tap, or blends),
 // so a page only says the mood. Every motion is a Reanimated animation on
@@ -58,14 +59,13 @@ export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, st
   const beat = useSharedValue(0);
   // The hand-over between a change's two moods' parts (change/parts.ts).
   const over = useSharedValue<number>(at);
-  // Each face keeps its own blink rhythm.
-  const [blinkEvery] = useState(() => 2400 + Math.random() * 3600);
 
   const layout = useMemo(() => faceLayout(mascot, size), [mascot, size]);
   const { eyeW, mark, heartH } = layout;
 
   useChangeMotion(shift, size, quiet, { lid, lift, over });
-  useMoodLoops(shift, quiet, blinkEvery, { lid, look, drift, beat });
+  useMoodLoops(shift, quiet, { lid, drift, beat });
+  useLook(shift, quiet, hop, look);
 
   // A tap: a small hop with a landing bounce.
   useEffect(() => {
@@ -84,7 +84,8 @@ export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, st
   const drops = sidesOf('drop', from, to);
   const queries = sidesOf('query', from, to);
   const body = useAnimatedStyle(() => liftStyle(lift.value));
-  const eye = useAnimatedStyle(() => weighted(lidStyle(lid.value), partWeight(eyes, over.value, at)), [eyes[0], eyes[1], at]);
+  // A glance past a pupil's reach turns the eyes too (motion.ts's PUPIL_REACH).
+  const eye = useAnimatedStyle(() => weighted(eyeStyle(lid.value, look.value, eyeW), partWeight(eyes, over.value, at)), [eyeW, eyes[0], eyes[1], at]);
   // Busy and sweaty, the pupils look as far as a gaze of 1 each way.
   const pupil = useAnimatedStyle(() => weighted(pupilStyle(look.value, eyeW), partWeight(pupils, over.value, at)), [eyeW, pupils[0], pupils[1], at]);
   const smile = useAnimatedStyle(() => weighted({}, partWeight(smiles, over.value, at)), [smiles[0], smiles[1], at]);

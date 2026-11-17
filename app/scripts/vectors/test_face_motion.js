@@ -37,6 +37,11 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   t('rest: one heart halfway up', r(m.heartStyle(m.REST.beat, 0, 12)), { opacity: 1, transform: [{ translateY: -6 }] });
   t('lids by mood', [m.LID.awake, m.LID.asleep, m.LID.oops], [1, 0.15, 0.45]);
   t('happy shuts its eyes in its smile', m.LID.happy, m.LID.asleep);
+  t('awake glances past its rest each way', [-m.GLANCE.to < m.LOOK.awake, m.GLANCE.to > m.LOOK.awake], [true, true]);
+  t('a glance goes past a pupil\'s reach, so the eyes turn both ways', [m.GLANCE.to > m.PUPIL_REACH, m.LOOK.awake < m.PUPIL_REACH], [true, true]);
+  t('a glance is quick and held short of the next', [m.GLANCE.moveMs < m.GLANCE.holdMs, 2 * m.GLANCE.moveMs + m.GLANCE.holdMs < m.GLANCE.everyMs[0]], [true, true]);
+  t('a rhythm is picked inside its range', [m.between([100, 300], 0), m.between([100, 300], 0.5), m.between([100, 300], 1)], [100, 200, 300]);
+  t('each face picks its own rhythm from a range', [m.BLINK_EVERY_MS[0] < m.BLINK_EVERY_MS[1], m.GLANCE.everyMs[0] < m.GLANCE.everyMs[1]], [true, true]);
 
   // --- along the loops ------------------------------------------------------------
   t('the "z" fades in', r(m.zStyle(0.1, 10).opacity), 0.5);
@@ -44,6 +49,11 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   t('the "z" starts low and ends high', [r(m.zStyle(0, 10)).transform[0].translateY, r(m.zStyle(1, 10)).transform[0].translateY], [4, -4]);
   t('the drop is gone at both ends', [m.dropStyle(0, 10).opacity, m.dropStyle(1, 10).opacity], [0, 0]);
   t('pupils look a full gaze', r(m.pupilStyle(-1, 10)), { transform: [{ translateX: -2.2 }] });
+  t('a pupil stops at its reach, in its eye', [r(m.pupilStyle(2, 10)), r(m.pupilStyle(-2, 10))], [{ transform: [{ translateX: 2.42 }] }, { transform: [{ translateX: -2.42 }] }]);
+  t('past its reach, the eyes turn the rest of the way', [r(m.eyeStyle(1, 2, 10)).transform[0], r(m.eyeStyle(1, -2, 10)).transform[0]], [{ translateX: 1.98 }, { translateX: -1.98 }]);
+  t('within reach the eyes stay put (busy, sweaty, at rest)', [-1, 0, m.LOOK.awake, 1].map((g) => Math.abs(m.eyeStyle(1, g, 10).transform[0].translateX)), [0, 0, 0, 0]);
+  t('a pupil and its eye add up to the whole glance', r(m.pupilStyle(2, 10).transform[0].translateX + m.eyeStyle(1, 2, 10).transform[0].translateX), 4.4);
+  t('the eye keeps its lid', r(m.eyeStyle(0.15, 0, 10)).transform[1], { scaleY: 0.15 });
   t('a heart starts low, unseen', r(m.heartStyle(0, 0, 12)), { opacity: 0, transform: [{ translateY: 4.8 }] });
   t('a heart waits out the pause unseen', m.heartStyle(0.9, 0, 12).opacity, 0);
   t('a later heart is a phase behind', r(m.heartStyle(0, m.REST.beat, 12)), r(m.heartStyle(m.REST.beat, 0, 12)));
@@ -81,6 +91,13 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   const of = sp.changeOf;
   t('coming to: the slow wake', [lids(of('asleep', 'awake', false)), of('asleep', 'busy', false).sleepMs], [lids(W), W.sleepMs]);
   t('a tap: jolted awake, wide, then open', lids(of('asleep', 'awake', true)), [1.25, m.LID.awake]);
+  t('a jolt looks left, then right, then settles: who woke it?', sp.JOLT.look.map((s) => s.gaze), [-m.GLANCE.to, m.GLANCE.to, m.LOOK.awake]);
+  t('a jolt looks once its pupils are in', tm.lookAtMs(sp.JOLT), sp.JOLT.handOverMs);
+  t('a tap and a jolt look around the same way', sp.JOLT.look, sp.lookAround(m.LOOK.awake));
+  t('a tap on a busy face looks around, then back to its own rest', sp.lookAround(m.LOOK.busy).map((s) => s.gaze), [-m.GLANCE.to, m.GLANCE.to, m.LOOK.busy]);
+  t('looking around ends still', sp.lookAround(0).at(-1).hold, 0);
+  t('only a tap looks about as it wakes', [sp.REACTION.wake.look, sp.changeOf('asleep', 'awake', false).look, sp.changeOf('awake', 'busy', true).look], [undefined, undefined, undefined]);
+  t('a tap waking it into another mood still looks about', sp.changeOf('asleep', 'busy', true).look?.length, 3);
   t('a jolt is all at once, the hop its lift', [sp.JOLT.sleepMs, sp.JOLT.lean, tm.handOverAtMs(sp.JOLT), tm.changeMs(sp.JOLT)], [0, 0, 0, 360]);
   t('waking into a frown opens only so far', [lids(of('asleep', 'oops', false)).at(-1), lids(of('asleep', 'oops', true)).at(-1)], [m.LID.oops, m.LID.oops]);
   t('dozing off from any open-eyed mood', ['awake', 'busy', 'oops', 'sweaty'].every((f) => of(f, 'asleep', false) === D && of(f, 'asleep', true) === D), true);

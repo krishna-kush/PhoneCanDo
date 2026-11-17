@@ -5,10 +5,13 @@
 // are named (REACTION) for a face that plays one as it appears.
 // Pure (zero RN imports).
 import type { Mood } from '../mood';
-import { LID } from '../motion.ts';
+import { GLANCE, LID, LOOK } from '../motion.ts';
 
 /** One move of the lids: to `lid` over `ms`, then held `hold`. */
 export type LidStep = { readonly lid: number; readonly ms: number; readonly hold: number };
+
+/** One move of the pupils: to a gaze of `gaze` (-1 to 1) over `ms`, then held `hold`. */
+export type LookStep = { readonly gaze: number; readonly ms: number; readonly hold: number };
 
 export type Change = {
   /** How long it stays as it was before its lids move. */
@@ -21,6 +24,8 @@ export type Change = {
   readonly handOverAt?: number;
   /** How long that hand-over takes. */
   readonly handOverMs: number;
+  /** Where the pupils look once they are in, before the new mood's own looking starts (a jolt: who woke it?). */
+  readonly look?: readonly LookStep[];
 };
 
 /**
@@ -78,7 +83,20 @@ export const REACTION = {
 
 export type Reaction = keyof typeof REACTION;
 
-/** A tap waking it: its eyes pop wide as it hops (the hop is its lift), then settle open, the "z" gone at once. */
+/** Looking around for who woke or tapped it: left, then right, past the pupils' reach so the eyes turn, then back to [rest]. */
+export function lookAround(rest: number): readonly LookStep[] {
+  return [
+    { gaze: -GLANCE.to, ms: 150, hold: 280 },
+    { gaze: GLANCE.to, ms: 260, hold: 280 },
+    { gaze: rest, ms: 180, hold: 0 },
+  ];
+}
+
+/**
+ * A tap waking it: its eyes pop wide as it hops (the hop is its lift), then
+ * settle open, the "z" gone at once, and it looks around to see who woke
+ * it before it settles.
+ */
 export const JOLT: Change = {
   sleepMs: 0,
   steps: [
@@ -88,6 +106,7 @@ export const JOLT: Change = {
   lean: 0,
   handOverAt: 0,
   handOverMs: 80,
+  look: lookAround(LOOK.awake),
 };
 
 /** Every other change: the lids ease to the new mood's as its marks cross-fade. */

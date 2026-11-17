@@ -17,7 +17,12 @@ export function handOverAtMs(c: Change): number {
   return c.handOverAt ?? lidsDoneMs(c);
 }
 
-/** Its whole length, start to end: from then on the face is its new mood. */
+/** When its pupils start to look about (look), once they are in. */
+export function lookAtMs(c: Change): number {
+  return handOverAtMs(c) + c.handOverMs;
+}
+
+/** Its whole length, start to end: from then on the face is its new mood (its look may still be going: the pupils are the mood's loop's after it). */
 export function changeMs(c: Change): number {
   return Math.max(lidsDoneMs(c), handOverAtMs(c) + c.handOverMs);
 }

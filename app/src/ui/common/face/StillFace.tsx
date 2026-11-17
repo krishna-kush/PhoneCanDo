@@ -5,7 +5,7 @@ import { PARTS } from './change/parts';
 import FaceDrawing, { type Moving, PixelHeart } from './FaceDrawing';
 import { faceLayout } from './layout';
 import type { Mood } from './mood';
-import { dropStyle, heartStyle, LID, liftStyle, lidStyle, LOOK, pupilStyle, REST, zStyle } from './motion';
+import { dropStyle, eyeStyle, heartStyle, LID, liftStyle, LOOK, pupilStyle, REST, zStyle } from './motion';
 
 type Props = {
   mood: Mood;
@@ -32,7 +32,7 @@ export default function StillFace({ mood, size = 24, mascot = PLAIN }: Props) {
       moving={STILL}
       motion={{
         body: liftStyle(REST.lift),
-        eye: lidStyle(LID[mood]),
+        eye: eyeStyle(LID[mood], LOOK[mood], layout.eyeW),
         pupil: pupilStyle(LOOK[mood], layout.eyeW),
         smile: null,
         z: zStyle(REST.drift, layout.mark),

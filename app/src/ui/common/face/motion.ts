@@ -13,6 +13,35 @@ export const LID = { awake: 1, busy: 1, asleep: 0.15, oops: 0.45, sweaty: 1, hap
 /** Where the pupils rest for each mood, as a gaze (-1 to 1, as pupilStyle takes it): awake a little to the right, as the site's do. */
 export const LOOK = { awake: 0.5, busy: 0, asleep: 0, oops: 0, sweaty: 0, happy: 0 } as const;
 
+/** A while [r] (0 to 1) of the way from [lo] to [hi] ms: each face picks its own rhythm in a range. */
+export function between([lo, hi]: readonly [number, number], r: number): number {
+  return lo + r * (hi - lo);
+}
+
+/** How often awake blinks, in ms: each face picks its own between these. */
+export const BLINK_EVERY_MS = [2400, 6000] as const;
+
+/**
+ * Awake's glances now and then: each face waits its own while (picked
+ * between `everyMs`), looks to a side (a gaze of `to`, left first), holds,
+ * and comes back to rest; the next one goes the other way. `to` is past a
+ * pupil's reach, so the eyes turn with each glance and the right one shows
+ * as well as the left, though awake's pupils already rest to the right.
+ */
+export const GLANCE = { everyMs: [3000, 6500], moveMs: 200, holdMs: 650, to: 2 } as const;
+
+/** How far a pupil goes in its eye, as a gaze (it is half the eye wide); a gaze past it turns the eyes the rest of the way. */
+export const PUPIL_REACH = 1.1;
+
+/** How far a gaze of 1 moves a pupil, in eye widths. */
+const GAZE_W = 0.22;
+
+// [look] held to the pupil's reach.
+function reached(look: number): number {
+  'worklet';
+  return Math.max(-PUPIL_REACH, Math.min(PUPIL_REACH, look));
+}
+
 /** A pixel heart, row by row (happy), like the logo built from squares. */
 export const HEART = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
 /** One heart's loop, and the part of it spent rising (the rest is a pause). */
@@ -47,16 +76,16 @@ export function liftStyle(lift: number) {
   return { transform: [{ translateY: lift }] };
 }
 
-/** An eye [lid] open. */
-export function lidStyle(lid: number) {
+/** An eye [eyeW] wide (mascot/layout/eyes.ts), [lid] open, turned with a gaze of [look] past its pupil's reach (a glance). */
+export function eyeStyle(lid: number, look: number, eyeW: number) {
   'worklet';
-  return { transform: [{ scaleY: lid }] };
+  return { transform: [{ translateX: (look - reached(look)) * eyeW * GAZE_W }, { scaleY: lid }] };
 }
 
-/** The pupils looking [look] of the way to a side (-1 to 1) in an eye [eyeW] wide (mascot/layout/eyes.ts). */
+/** The pupils looking [look] of the way to a side (-1 to 1, held to their reach) in an eye [eyeW] wide. */
 export function pupilStyle(look: number, eyeW: number) {
   'worklet';
-  return { transform: [{ translateX: look * eyeW * 0.22 }] };
+  return { transform: [{ translateX: reached(look) * eyeW * GAZE_W }] };
 }
 
 /** Asleep: the "z" [drift] of the way up its float, fading in and out. */
