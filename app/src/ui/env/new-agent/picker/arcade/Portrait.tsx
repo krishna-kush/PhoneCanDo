@@ -16,6 +16,9 @@ const POP = { damping: 9, stiffness: 320 };
 /** The corner coin's size, and how far in from the corner it sits, in dp. */
 const COIN = 9;
 const COIN_AT = 5;
+/** The stamp sits up across the frame's top corner, clear of the face, in dp. */
+const STAMP_UP = -12;
+const STAMP_OUT = -4;
 
 type Props = {
   offer: Offer;
@@ -31,7 +34,7 @@ type Props = {
 // One portrait in the arcade's grid, a radio button: the applicant's face
 // over its name, and in its top corner its coin when it plays free (the
 // stat key at the page's foot says which); the house pick (the kind a
-// fresh install starts with) wears its stamp in the other. Picked, it smiles in a red frame
+// fresh install starts with) wears its stamp up across the other. Picked, it smiles in a red frame
 // with the cursor's corner ticks round it; VS mode's challenger the same in
 // amber. A tap pops it;
 // a hold pops it too and challenges the pick with it. One that can't work
@@ -57,6 +60,7 @@ export default function Portrait({ offer, look, picked, challenger = false, onSe
   return (
     <Animated.View style={[{ flex: 1, minWidth: 0 }, style]}>
       <YStack
+        flex={1}
         alignItems="center"
         gap={6}
         paddingTop="3"
@@ -72,18 +76,8 @@ export default function Portrait({ offer, look, picked, challenger = false, onSe
         accessibilityState={{ checked: picked, disabled: blocked }}
         accessibilityLabel={challenger ? `${applicantLabel(offer, kind)}, the challenger` : applicantLabel(offer, kind)}
       >
-        {coin === 'slot' ? null : (
-          <YStack position="absolute" top={COIN_AT} right={COIN_AT}>
-            <Coin coin={coin} size={COIN} />
-          </YStack>
-        )}
-        {kind.isDefault ? (
-          <YStack position="absolute" top={COIN_AT - 1} left={COIN_AT - 1}>
-            <HouseStamp small />
-          </YStack>
-        ) : null}
         <YStack height={40} justifyContent="flex-end">
-          <StillFace mood={picked || challenger ? 'happy' : blocked ? 'asleep' : 'awake'} size={22} mascot={look} />
+          <StillFace mood={picked || challenger ? 'happy' : blocked ? 'asleep' : 'awake'} size={22} mascot={look} stand />
         </YStack>
         <PlainText
           fontFamily="mono"
@@ -94,6 +88,17 @@ export default function Portrait({ offer, look, picked, challenger = false, onSe
         >
           {offer.label}
         </PlainText>
+        {/* After the face, so they are drawn over it: a later child paints on top. */}
+        {coin === 'slot' ? null : (
+          <YStack position="absolute" top={COIN_AT} right={COIN_AT}>
+            <Coin coin={coin} size={COIN} />
+          </YStack>
+        )}
+        {kind.isDefault ? (
+          <YStack position="absolute" top={STAMP_UP} left={STAMP_OUT}>
+            <HouseStamp />
+          </YStack>
+        ) : null}
         {picked ? <Cursor ink="primary" /> : challenger ? <Cursor ink="secondary" /> : null}
       </YStack>
     </Animated.View>

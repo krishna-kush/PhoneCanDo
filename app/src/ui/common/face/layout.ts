@@ -8,10 +8,10 @@ import { HEART } from './motion';
 
 export type FaceLayout = ReturnType<typeof faceLayout>;
 
-export function faceLayout(mascot: Look, size: number) {
+export function faceLayout(mascot: Look, size: number, stand = false) {
   // Room for every look, so faces line up down a list.
   const box = Math.round(size * BOX);
-  const fit = fitFace(mascot, size, box, logoOffset);
+  const fit = fitFace(mascot, size, box, logoOffset, stand);
   const { figure: fig, dx, dy } = fit;
   const front = fig.front;
   const [eyeA, eyeB] = fig.eyes.map((e) => e.open);

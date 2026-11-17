@@ -12,7 +12,8 @@ const GAP = 8;
 const SIDES = 32;
 
 // The arcade's grid of portraits, as many to a row as fit, sharing the
-// row evenly (the last row keeps the same widths), the pick and VS mode's
+// row evenly (the last row keeps the same widths) and each as tall as the
+// row's tallest (a name on two lines), the pick and VS mode's
 // challenger marked. It starts from the window's width, so it lays out right the
 // first time.
 type Props = PickerProps & {
@@ -28,7 +29,7 @@ export default function PortraitGrid({ offers, selected, challenger, onSelect, o
   return (
     <YStack gap={GAP} paddingTop={6} onLayout={(e) => setWidth(e.nativeEvent.layout.width)} accessibilityRole="radiogroup">
       {rowsOf(offers, columns).map((row) => (
-        <XStack key={row[0].id} gap={GAP}>
+        <XStack key={row[0].id} gap={GAP} alignItems="stretch">
           {row.map((o) => (
             <Portrait
               key={o.id}

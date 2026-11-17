@@ -13,6 +13,8 @@ type Props = {
   size?: number;
   /** Its design, shape and inks (mascot/look.ts); A-01's own when left out. */
   mascot?: Look;
+  /** Feet on the box's bottom, not centred: a row of faces stands on one line. */
+  stand?: boolean;
 };
 
 // Plain views: a still face only ever hands them plain styles.
@@ -23,8 +25,8 @@ const STILL = { View, Text } as unknown as Moving;
 // views, with no animation set up at all, so sixty of them mount at once
 // without a wait.
 // One that blinks, hops or floats hearts is an AgentFace.
-export default function StillFace({ mood, size = 24, mascot = PLAIN }: Props) {
-  const layout = useMemo(() => faceLayout(mascot, size), [mascot, size]);
+export default function StillFace({ mood, size = 24, mascot = PLAIN, stand = false }: Props) {
+  const layout = useMemo(() => faceLayout(mascot, size, stand), [mascot, size, stand]);
   return (
     <FaceDrawing
       layout={layout}

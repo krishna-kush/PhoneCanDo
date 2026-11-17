@@ -9,14 +9,14 @@ import PlainText from '../../../../common/PlainText';
 import Plate from '../../../../common/Plate';
 import KeyHead from '../../../../common/rows/KeyHead';
 import { ROW_GUTTER } from '../../../../common/rows/place';
+import Stamp from '../../../../common/Stamp';
 import { usePageActive } from '../../../../nav/pageActive';
 import { offerBadges } from '../../../logic/agentChoice';
 import Badge from '../../../parts/Badge';
-import { ARCADE, HOUSE_PICK_LINE, makerLine } from '../copy';
+import { ARCADE, HOUSE_PICK, HOUSE_PICK_LINE, makerLine } from '../copy';
 import { kindFacts } from '../logic/facts';
 import { playLinks, powerMove } from '../logic/howToPlay';
 import FactRows from './FactRows';
-import HouseStamp from './HouseStamp';
 import HowToPlay from './HowToPlay';
 import PlateRule from './PlateRule';
 import PowerMove from './PowerMove';
@@ -26,7 +26,7 @@ import VsSticker from './vs/VsSticker';
 // The arcade's showcase, on the hard amber shadow: the picked applicant
 // big in its frame (it hops and smiles as it is picked, and hops at a tap
 // like every face, saying something new each time), its name, who makes
-// it, the house pick's stamp landing on the kind a fresh install starts
+// it, the house pick's stamp slammed on the kind a fresh install starts
 // with, and its badges, the VS sticker at its side when there is someone to
 // challenge it, then its stats, each meter filling up again and its coin
 // spinning for every new pick; under a dashed rule each, its power move
@@ -41,6 +41,10 @@ type Props = {
 
 export default function Showcase({ offer, look, onChallenge }: Props) {
   const active = usePageActive();
+  // Once the page has been in front: the stamp waits for that, unseen, so
+  // its one slam is the one you see (not one under the page's slide).
+  const [landed, setLanded] = useState(active);
+  if (active && !landed) setLanded(true);
   const { hop, cheering } = useCheer(offer.id);
   const [boops, setBoops] = useState({ id: offer.id, n: 0 });
   const booped = boops.id === offer.id ? boops.n : 0;
@@ -88,7 +92,16 @@ export default function Showcase({ offer, look, onChallenge }: Props) {
           </YStack>
           {kind.isDefault ? (
             <XStack gap="2" alignItems="center" flexWrap="wrap">
-              <HouseStamp lands />
+              {landed ? (
+                <Stamp key={offer.id} slam>
+                  {HOUSE_PICK}
+                </Stamp>
+              ) : (
+                // Its room kept, so nothing moves when it lands.
+                <YStack opacity={0}>
+                  <Stamp>{HOUSE_PICK}</Stamp>
+                </YStack>
+              )}
               <PlainText fontFamily="mono" fontSize={10} color="secondaryInk">
                 {HOUSE_PICK_LINE}
               </PlainText>

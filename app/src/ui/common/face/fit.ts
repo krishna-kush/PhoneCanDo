@@ -1,6 +1,7 @@
 // A face's figure fitted to its box: laid out by the shared spec
 // (mascot/layout/figure.ts) at the face's size, then smaller if its shape
-// and what it wears would not fit, and centred. Pure (zero RN imports).
+// and what it wears would not fit, and centred (or stood on the box's
+// bottom). Pure (zero RN imports).
 import { figure } from '../../../../../mascot/layout/figure.ts';
 import type { Figure } from '../../../../../mascot/layout/types.ts';
 import type { Look } from '../../../../../mascot/look.ts';
@@ -20,7 +21,9 @@ export type Fitted = {
   offset: number;
 };
 
-export function fitFace(look: Look, size: number, box: number, offsetOf: (size: number) => number): Fitted {
+// `stand` puts its feet (the blocks' bottom) on the box's bottom instead of
+// centring it, so a row of faces of every shape and hat stands on one line.
+export function fitFace(look: Look, size: number, box: number, offsetOf: (size: number) => number, stand = false): Fitted {
   const at = (s: number) => figure(look, { size: s, body: BODY, offset: offsetOf(s) });
   let drawn = size;
   let f = at(size);
@@ -32,7 +35,9 @@ export function fitFace(look: Look, size: number, box: number, offsetOf: (size: 
   return {
     figure: f,
     dx: (box - f.bounds.w) / 2 - f.bounds.x,
-    dy: (box - f.bounds.h) / 2 - f.bounds.y,
+    dy: stand
+      ? box - Math.max(f.front.y + f.front.h, f.back.y + f.back.h)
+      : (box - f.bounds.h) / 2 - f.bounds.y,
     size: drawn,
     offset: offsetOf(drawn),
   };
