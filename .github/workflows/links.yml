@@ -1,0 +1,57 @@
+name: Agent links
+
+# Every official link the app's Choose agent step opens (each agent.json's
+# about.links) still answers: agents/kit/cli/links.mjs fails on a gone page
+# (404, 410) or a gone host, and only warns when a site is down or slow. A
+# sign-in page that keeps robots out (401, 403, 429) counts as there. Runs
+# when a manifest or the checker changes, nightly (sites move links without
+# telling us), and on demand.
+
+on:
+  push:
+    branches: [prod]
+    paths:
+      - agents/native/*/agent.json
+      - agents/image/*/agent.json
+      - agents/kit/cli/links.mjs
+      - agents/kit/cli/manifests.mjs
+      - .github/workflows/links.yml
+  pull_request:
+    paths:
+      - agents/native/*/agent.json
+      - agents/image/*/agent.json
+      - agents/kit/cli/links.mjs
+      - agents/kit/cli/manifests.mjs
+      - .github/workflows/links.yml
+  workflow_dispatch:
+  schedule:
+    - cron: '41 4 * * *'
+
+permissions:
+  contents: read
+
+# Every push runs to completion (one group per commit); only a newer commit on
+# the same PR cancels the older PR run. Scheduled and manual runs get own groups.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  links:
+    name: about.links answer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Check every agent's links (agents/kit/cli/links.mjs)
+        run: node agents/kit/cli/links.mjs
