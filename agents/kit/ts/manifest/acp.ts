@@ -7,6 +7,8 @@
 // - tools: how it gets the phone tools (session: the bridge goes in
 //   session/new; config: its own config names it, as in terminal mode).
 // - options: session config options set on every chat it opens.
+// - optionsHook: a code hook (listed in hooks) that reads more options from
+//   the agent's HOME when a chat opens, set over options.
 // - meta: a JSON object passed as `_meta` when a chat opens; its strings are
 //   templates as env values are; at most MAX.acpMetaBytes.
 // - chat: terminal-mode args that open one given chat, in place of the
@@ -30,6 +32,7 @@ export function checkAcp(add: Add, m: Json) {
   if (!acp) return;
   if ('tools' in acp) oneOf(add, `${AT}/tools`, acp.tools, ACP_TOOLS);
   if ('options' in acp) checkOptions(add, acp.options);
+  if ('optionsHook' in acp) checkOptionsHook(add, acp.optionsHook, m.hooks);
   if ('meta' in acp) checkMeta(add, acp.meta);
   if ('chat' in acp) checkChat(add, acp.chat, engine.launch);
 }
@@ -42,6 +45,13 @@ function checkOptions(add: Add, options: unknown) {
     text(add, path, value);
   })) return;
   if (Object.keys(options as Json).length > MAX.acpOptions) add(at, 'length', `sets at most ${MAX.acpOptions} options`);
+}
+
+// A bundled kind's code hook, named in its hooks (a user kind has none).
+function checkOptionsHook(add: Add, hook: unknown, hooks: unknown) {
+  const at = `${AT}/optionsHook`;
+  if (!string(add, at, hook, PATTERNS.hookId, MAX.hookId)) return;
+  if (!(Array.isArray(hooks) && hooks.includes(hook))) add(at, 'mismatch', `${String(hook)} is not in hooks`);
 }
 
 function checkMeta(add: Add, meta: unknown) {

@@ -139,6 +139,7 @@ describe('surfaces', () => {
       delete a.colorSchemeKey;
       delete a.hide;
       delete a.sessionUrl;
+      delete a.sessionPath;
     });
   });
 

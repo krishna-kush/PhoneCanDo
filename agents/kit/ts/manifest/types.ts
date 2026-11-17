@@ -165,6 +165,8 @@ export interface Acp {
   tools?: AcpTools;
   /** Session config options set on every chat it opens, by config id (at most 8; ids and values 1 to 64 characters). */
   options?: Record<string, string>;
+  /** A code hook (listed in hooks) that reads more options from the agent's HOME when a chat opens, set over options. */
+  optionsHook?: string;
   /** Passed as `_meta` when a chat opens; its strings are templates as env values are (at most 4 KiB). */
   meta?: Record<string, unknown>;
   /** Terminal-mode args that open one given chat, in place of the resume args: exactly one is {{chatId}}, whole. */
@@ -198,6 +200,11 @@ export interface Chats {
    * does not name.
    */
   active?: { http: HttpPath & { json: string } };
+  /**
+   * A chat's last reply (a scheduled task's answer): GET `path`, then the
+   * code hook `parser` (listed in hooks) reads the agent's final text in it.
+   */
+  reply?: { http: HttpPath & { parser: string } };
 }
 
 export interface Idle {
@@ -230,6 +237,8 @@ export interface WebAdapter {
   authUrl: string;
   /** A regex whose first group is the chat (session id) a URL shows. */
   sessionUrl?: string;
+  /** The path that shows one chat: {{sessionId}}, and {{origin64}} for the page's origin as base64url. */
+  sessionPath?: string;
   /** Per place on the way to a chat, the selector of the thing to tap there; the app's guide points at it. */
   spots?: Partial<Record<WebSpot, string>>;
 }

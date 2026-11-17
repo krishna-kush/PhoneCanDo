@@ -149,6 +149,26 @@ class InboxCourierTest {
     assertEquals(listOf(InboxCall.WAKE to 200, InboxCall.DELIVER to 200, InboxCall.DELIVER to 503), heard)
   }
 
+  @Test fun aServerThatTookAScheduledTaskSaysWhichChat() {
+    val heard = ArrayList<Triple<String, String, String>>()
+    var status = 200
+    val c = InboxCourier(
+      { Plan(server = true, wakesByServer = true) },
+      { folder },
+      { ServerSeat("4096", "pw-b", "ses_1") },
+      { status },
+      scheduled = { agentId, scheduleId, sessionId -> heard += Triple(agentId, scheduleId, sessionId) },
+    )
+    c.handOver(b, parcel)
+    assertTrue(heard.isEmpty())
+    c.handOver(b, parcel.copy(scheduleIds = listOf("s1", "s2")))
+    assertEquals(listOf(Triple("b", "s1", "ses_1"), Triple("b", "s2", "ses_1")), heard)
+    // Not taken: nothing to say.
+    status = 503
+    c.handOver(b, parcel.copy(scheduleIds = listOf("s3")))
+    assertEquals(2, heard.size)
+  }
+
   @Test fun aReaderKindGetsTheFolderToo() {
     assertEquals(Handover.HELD, courier(Plan(reader = true)).handOver(b, parcel))
     assertTrue(File(folder.pending, "messages.jsonl").exists())

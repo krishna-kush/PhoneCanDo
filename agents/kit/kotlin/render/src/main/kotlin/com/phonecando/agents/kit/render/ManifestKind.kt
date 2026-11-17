@@ -52,6 +52,10 @@ class ManifestKind private constructor(
   private val readinessPath: String?,
   private val sse: EventSource.Sse?,
   private val parser: ((String) -> EngineEvent?)?,
+  /** Server only: reads a chat's last reply (`chats.reply`). */
+  private val replyParser: ((String) -> String?)?,
+  /** Reads ACP session config options from the agent's HOME (`engine.acp.optionsHook`). */
+  private val homeOptions: ((File) -> Map<String, String>)?,
 ) : AgentKind {
   override val id: String get() = manifest.id
   override val displayName: String get() = manifest.label
@@ -126,6 +130,16 @@ class ManifestKind private constructor(
   override val acpBridgeInSession: Boolean get() = acp?.tools == AcpTools.SESSION
 
   override val acpOptions: Map<String, String> get() = acp?.options.orEmpty()
+
+  // A hook that fails sets nothing: the chat opens on the agent's own default.
+  override fun acpHomeOptions(home: File): Map<String, String> {
+    val read = homeOptions ?: return emptyMap()
+    return try {
+      read(home).filter { (id, value) -> id.isNotEmpty() && value.isNotEmpty() }.entries.take(AcpSpec.MAX_OPTIONS).associate { it.toPair() }
+    } catch (_: Exception) {
+      emptyMap()
+    }
+  }
 
   override fun acpMeta(ctx: LaunchContext): String? =
     acp?.meta?.let { AcpSeam.meta(it, LaunchRenderer.values(seenBy(ctx))) }
@@ -227,6 +241,13 @@ class ManifestKind private constructor(
   override fun parseSessionTitle(body: String): String? = manifest.chats?.title?.let {
     JsonPointer.text(body, it.pointer)?.trim()?.ifEmpty { null }
   }
+
+  override fun chatReply(port: String, password: String, sessionId: String): HttpProbe? =
+    manifest.chats?.reply?.let {
+      HttpProbe(url(port, it.path, mapOf("sessionId" to sessionId)), SecretForms.headers(auth, password))
+    }
+
+  override fun parseChatReply(body: String): String? = replyParser?.invoke(body)?.trim()?.ifEmpty { null }
 
   override fun activeChats(port: String, password: String): HttpProbe? =
     manifest.chats?.active?.let { HttpProbe(url(port, it.path, emptyMap()), SecretForms.headers(auth, password)) }
@@ -370,8 +391,10 @@ class ManifestKind private constructor(
       InboxChecks.check(manifest)
       AcpChecks.check(manifest)
       val stream = KindChecks.hooks(manifest, hooks)
+      val reply = KindChecks.reply(manifest, hooks)
+      val homeOptions = KindChecks.acpOptions(manifest, hooks)
       val bound = RuntimeBinding.bind(manifest, runtimes)
-      return ManifestKind(manifest, bound, engine.launch!!, readiness, stream?.first, stream?.second)
+      return ManifestKind(manifest, bound, engine.launch!!, readiness, stream?.first, stream?.second, reply, homeOptions)
     }
   }
 }

@@ -5,8 +5,10 @@ package com.phonecando.runner.schedule
 //   engine stopped                                       START_ACP_WITH_PROMPT (in ACP mode, the task its first prompt)
 //   engine starting or stopping, or ready and busy       WAIT_IDLE
 //   ready in ACP mode, idle                              PROMPT_ACP (the task as its next prompt)
-//   ready in terminal mode, idle, no viewer, no jobs,
-//     app not in front                                   SWITCH_TO_ACP_WITH_PROMPT (the task its first prompt there)
+//   ready in terminal mode, idle, no viewer, no jobs     SWITCH_TO_ACP_WITH_PROMPT (the task its first prompt there;
+//                                                          the app in front is no reason to wait: Home shows the run live)
+//   ready in terminal mode, idle, its hook waiting,
+//     chat SAME                                          WAKE (it takes the task in place)
 //   ready in terminal mode, idle, otherwise              ASK_USER
 // Any other kind:
 //   kind has neither a start prompt nor a wake          UNSUPPORTED (refused when set; failed here)
@@ -16,7 +18,7 @@ package com.phonecando.runner.schedule
 //   ready, idle, can be woken now, chat SAME or a server kind   WAKE
 //   ready, idle, takes a prompt at start, no jobs, app not in front   RESTART_WITH_PROMPT
 //   otherwise                                            ASK_USER
-// Busy is a run going or a question waiting. Pure.
+// Busy is a run going or a question waiting. Why it asks: AskReasons. Pure.
 object FireRules {
   enum class Engine { STOPPED, STARTING, READY, STOPPING }
 
@@ -58,6 +60,10 @@ object FireRules {
     val mode: Mode = Mode.TERMINAL,
     /** Someone has its terminal open in the app. */
     val viewer: Boolean = false,
+    /** The jobs it left running, by name (the work watch's last look); [jobs] may hold with none (kept running). */
+    val jobNames: List<String> = emptyList(),
+    /** It reads a notice left in its mailbox while its terminal runs: phone tools or an `inbox` block. */
+    val readsNotices: Boolean = true,
   )
 
   fun decide(s: State): Action {
@@ -85,7 +91,7 @@ object FireRules {
     Engine.READY -> when {
       !s.idle -> Action.WAIT_IDLE
       s.mode == Mode.ACP -> Action.PROMPT_ACP
-      !s.viewer && !s.jobs && !s.appInFront -> Action.SWITCH_TO_ACP_WITH_PROMPT
+      !s.viewer && !s.jobs -> Action.SWITCH_TO_ACP_WITH_PROMPT
       // Someone uses it, or it left jobs: its waiting hook takes the task in
       // place, as it did before ACP mode.
       s.kindWakes && s.wakeReady && s.chat == ChatMode.SAME -> Action.WAKE

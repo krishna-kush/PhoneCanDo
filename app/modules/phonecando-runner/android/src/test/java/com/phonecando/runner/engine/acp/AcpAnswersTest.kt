@@ -40,6 +40,21 @@ class AcpAnswersTest {
     assertTrue(AcpAnswers.optionsToSet(opened, mapOf("mode" to "plan")).isEmpty())
   }
 
+  @Test fun optionsReadFromHomeGoOverAndNeedOnlyTheOption() {
+    val opened = JSONObject(
+      """{"sessionId":"s","configOptions":[
+        {"id":"mode","type":"select","currentValue":"act","options":[{"value":"plan"},{"value":"act"}]},
+        {"id":"model","type":"select","currentValue":"paid/big","options":[{"value":"paid/big"},{"value":"paid/small"}]}]}""",
+    )
+    // The model its own UI chose is not in its ACP list, and is set anyway; over the manifest's.
+    assertEquals(
+      listOf("mode" to "plan", "model" to "free/mini"),
+      AcpAnswers.optionsToSet(opened, linkedMapOf("mode" to "plan", "model" to "paid/small"), mapOf("model" to "free/mini", "x" to "y")),
+    )
+    // Already set, or an option it does not offer: nothing.
+    assertTrue(AcpAnswers.optionsToSet(opened, emptyMap(), mapOf("model" to "paid/big", "theme" to "dark")).isEmpty())
+  }
+
   @Test fun aPermissionQuestion() {
     val ask = AcpAnswers.permissionAsk(
       "acp-a-1",

@@ -46,6 +46,7 @@ import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.ChatTracker
 import com.phonecando.runner.notify.SilentTurnNotice
 import com.phonecando.runner.prompts.OpenUrlPrompts
+import com.phonecando.runner.schedule.Schedules
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -130,6 +131,7 @@ internal class EngineSupervisor(
     },
     runEnded = Bridge::runEnded,
     checkEvent = Checks::engineEvent,
+    scheduleEvent = { agentId, event -> Schedules.peek()?.engineEvent(agentId, event) },
     hookRan = Checks::hookRan,
   )
 

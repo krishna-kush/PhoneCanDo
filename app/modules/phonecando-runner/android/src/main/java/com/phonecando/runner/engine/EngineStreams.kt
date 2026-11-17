@@ -36,7 +36,9 @@ import java.io.File
 // from its driver (AcpAgent: its turns, AcpEvents); its hooks still write
 // the events file, but ACP says how its run goes, so only their links,
 // receipts and `@hook` lines are read there. Every event also goes to the
-// capability checks (checks/: a turn's end, a task that started).
+// capability checks (checks/: a turn's end, a task that started) and,
+// after the alerts, to the scheduler (schedule/: a scheduled run's chat
+// whose run ended gets its reply, whose notice takes the alert's place).
 // Activity (any event the kind maps to something other than OTHER, so not
 // heartbeats or catalog updates, nor a guessed stop: a quiet screen is no
 // sign of use) marks the agent used, which keeps a working
@@ -62,6 +64,8 @@ internal class EngineStreams(
   private val runEnded: (agentId: String) -> Unit = {},
   /** Every event of every stream, for the checks (checks/). */
   private val checkEvent: (agentId: String, event: EngineEvent) -> Unit = { _, _ -> },
+  /** Every event of every stream, after the alerts, for scheduled runs' replies (schedule/). */
+  private val scheduleEvent: (agentId: String, event: EngineEvent) -> Unit = { _, _ -> },
   /** An `@hook` line: one of the kind's inbox hooks ran ([wait]: its waiting form), for the checks. */
   private val hookRan: (agentId: String, event: String, wait: Boolean) -> Unit = { _, _, _ -> },
 ) {
@@ -194,6 +198,11 @@ internal class EngineStreams(
     alerts.onEvent(agentId, event)
     chats.onEvent(agentId, event)
     if (event.sessionId != null && event.kind in RUN_ENDS && !chats.busy(agentId)) runEnded(agentId)
+    try {
+      scheduleEvent(agentId, event)
+    } catch (e: Exception) {
+      Log.w(TAG, "engine event not heard by the schedules", e)
+    }
   }
 
   private fun countCreated(agentId: String, sessionId: String?) {

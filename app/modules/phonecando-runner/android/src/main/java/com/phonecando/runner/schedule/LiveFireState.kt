@@ -2,6 +2,7 @@ package com.phonecando.runner.schedule
 
 import android.content.Context
 import com.phonecando.agents.kit.manifest.InboxWake
+import com.phonecando.agents.kit.manifest.PhoneTools
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.engine.EngineMode
@@ -16,8 +17,10 @@ import com.phonecando.runner.notify.AppForeground
 // turn running counts as busy) and whether a hook kind's hook waits
 // (messages' LiveAgentsView, as a wake would see it), its kind's start
 // prompt, wake and ACP mode (KindCatalogs), whether someone has its
-// terminal open, the jobs it left running (the work watch's last look) and
-// whether PhoneCanDo is in front.
+// terminal open, the jobs it left running and their names (the work
+// watch's last look), whether it reads a notice left for it (phone tools or
+// an `inbox` block; an ACP kind's prompts don't count, its terminal reads
+// none) and whether PhoneCanDo is in front.
 internal class LiveFireState(context: Context) {
   private val app = context.applicationContext ?: context
 
@@ -38,6 +41,7 @@ internal class LiveFireState(context: Context) {
     }
     val inbox = kind?.inbox
     val look = view.acpLook(agent)
+    val work = Engines.work()?.states()?.get(agent.id)
     return FireRules.State(
       engine = engine,
       idle = presence.idle && !look.acpBusy,
@@ -47,11 +51,13 @@ internal class LiveFireState(context: Context) {
       wakeReady = view.wakeReady(agent),
       chat = chat,
       // For a switch to ACP mode, Keep running counts too (as the engine's switch counts it).
-      jobs = Engines.work()?.states()?.get(agent.id)?.busy == true || look.jobs,
+      jobs = work?.busy == true || look.jobs,
+      jobNames = work?.jobs.orEmpty(),
       appInFront = AppForeground.isForeground(app),
       acp = kind?.speaksAcp == true,
       mode = if (status?.mode == EngineMode.ACP) FireRules.Mode.ACP else FireRules.Mode.TERMINAL,
       viewer = look.viewer,
+      readsNotices = kind == null || (kind.manifest.phoneTools ?: PhoneTools.NONE) != PhoneTools.NONE || inbox != null,
     )
   }
 

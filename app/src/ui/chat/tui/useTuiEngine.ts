@@ -6,6 +6,7 @@ import { useAgentsStore } from '../../../state/agents';
 import { useAppActive } from '../../common/useAppActive';
 import { useHomeInFront } from '../../nav/homeInFront';
 import type { PtyEnd } from '../../terminal/transport/types';
+import { onChatAsk, takeChat } from '../chatAsk';
 import { SETTLE_MS, tuiPhase, wantsTerminal, type TuiStart } from './tuiPhase';
 
 // The engine behind a TUI home. Each run (the mount, every Restart) starts
@@ -52,6 +53,23 @@ export function useTuiEngine(agentId: AgentId) {
       cancelled = true;
     };
   }, [agentId, run]);
+
+  // A chat Home was asked to open (openChat: one its ACP mode ran, kept
+  // natively for the terminal's next launch). A terminal already up and
+  // idle stops and starts again on it; a stopped engine, one in ACP mode or
+  // one at work opens it at its next launch anyway. Asked before this Home
+  // mounted, it is taken as it mounts.
+  useEffect(() => {
+    const reopen = () => {
+      if (!takeChat(agentId)) return;
+      const agents = useAgentsStore.getState();
+      const s = agents.statuses[agentId];
+      if (s?.state !== 'ready' || s.mode === 'acp' || s.busy) return;
+      void agents.stopAgent(agentId).then(() => setRun((r) => r + 1));
+    };
+    reopen();
+    return onChatAsk(agentId, reopen);
+  }, [agentId]);
 
   // A new start of the engine brings a new program to attach to.
   useEffect(() => {

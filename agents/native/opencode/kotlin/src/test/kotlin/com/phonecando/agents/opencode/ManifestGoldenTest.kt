@@ -52,6 +52,9 @@ class ManifestGoldenTest {
     val active = kind.activeChats("4100", pw)!!
     assertEquals("http://127.0.0.1:4100/api/session/active", active.url)
     assertEquals(listOf("Authorization" to "Basic $basic"), active.headers.toList())
+    val reply = kind.chatReply("4100", pw, "ses_1")!!
+    assertEquals("http://127.0.0.1:4100/api/session/ses_1/message?type=assistant&limit=1&order=desc", reply.url)
+    assertEquals(listOf("Authorization" to "Basic $basic"), reply.headers.toList())
   }
 
   // GET /api/session/active: {data: {<sessionID>: {type: "running"}}} (opencode's session.active).

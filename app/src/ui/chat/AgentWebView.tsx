@@ -7,6 +7,7 @@ import { errorMessage } from '../../engine/errors/message';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { lastPage, rememberPage, restoreUrl } from './lastPage';
+import { useChatAsk } from './useChatAsk';
 import { useOpenChat } from './useOpenChat';
 import { useWebCover } from './useWebCover';
 import { useWebSpots } from './useWebSpots';
@@ -31,8 +32,9 @@ import { useTheme } from '../common/globals';
 // returns to the page that agent was last on (lastPage.ts). Android Back
 // walks the web history and the header menu has a Home action, so a session
 // never strands the user; the TUI (`TerminalScreen`) is untouched — the
-// header menu switches views. Theme and embed scripts come from the kind's web adapter
-// (webAdapter.ts). While a page or the drawer covers it, its page holds no
+// header menu switches views. A chat Home was asked to open (a scheduled
+// run's, openChat) wins over the last page (useChatAsk.ts). Theme and
+// embed scripts come from the kind's web adapter (webAdapter.ts). While a page or the drawer covers it, its page holds no
 // text focus and takes no keys (useWebCover.ts, webCover.ts). While a guide
 // looks for the web UI's spots, the page says where they are (useWebSpots.ts).
 export default function AgentWebView({ agent }: { agent: Agent }) {
@@ -53,6 +55,8 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   const canGoBackRef = useRef(false);
   const currentUrlRef = useRef('');
   const homeUrlRef = useRef<string | null>(null);
+  // A page has finished loading and shows (the cover is off).
+  const shownRef = useRef(false);
   const themeMode = useAppStore((s) => s.themeMode);
   const t = useTheme();
   const kind = agentKind(agent.kind);
@@ -63,6 +67,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   // takes no keys; told again after each document loads.
   const applyCover = useWebCover(web);
   const spots = useWebSpots(web, frame, webUi);
+  const chatLanding = useChatAsk(agent.id, kind.web?.adapter.sessionUrl ?? null, kind.web?.adapter.sessionPath ?? null, web, currentUrlRef, shownRef);
 
   // The web UI owns its history and its project-list home. Chrome calls these
   // handlers so Android Back and the Home menu item never strand the user in
@@ -142,6 +147,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
           onPress={() => {
             setError(null);
             setUrl(null);
+            shownRef.current = false;
             setAttempt((a) => a + 1);
           }}
         >
@@ -202,7 +208,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
             spots.watch();
             const loaded = e.nativeEvent.url;
             if (!webUi.isAuthUrl(loaded)) {
-              const target = restoreUrl(loaded, restoreRef.current);
+              const target = chatLanding(loaded) ?? restoreUrl(loaded, restoreRef.current);
               restoreRef.current = null;
               if (target) {
                 // Replaces the home it passed through; back from it goes home.
@@ -210,6 +216,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
                 return;
               }
             }
+            shownRef.current = true;
             setCovered(false);
           }}
           onNavigationStateChange={(nav) => {

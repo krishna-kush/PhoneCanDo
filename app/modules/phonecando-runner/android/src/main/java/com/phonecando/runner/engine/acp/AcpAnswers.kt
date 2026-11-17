@@ -8,7 +8,8 @@ import java.time.OffsetDateTime
 // id, the newest chat in its list (by updatedAt; one without a time loses
 // to one with, and with no times at all the first listed wins), the
 // config options (engine.acp.options) worth setting on a chat it opened
-// (only an option it offers, with a value it offers, not already set), a
+// (only an option it offers, with a value it offers, not already set; a
+// value its kind's hook read from HOME needs only the option), a
 // turn's stop reason, a permission question, and why a step failed in
 // words for the agent's status. Pure.
 internal object AcpAnswers {
@@ -32,13 +33,22 @@ internal object AcpAnswers {
     return best
   }
 
-  /** [wanted] (configId to value) that [opened] (a session/new, load or resume answer) offers and has not set, in [wanted]'s order. */
-  fun optionsToSet(opened: JSONObject, wanted: Map<String, String>): List<Pair<String, String>> {
+  /**
+   * [wanted] (configId to value) that [opened] (a session/new, load or
+   * resume answer) offers and has not set, in [wanted]'s order, then
+   * [chosen]'s not in [wanted]. [chosen] (what the agent's own UI picked,
+   * read by its kind's hook) goes over [wanted] and needs only the option,
+   * not its value, offered: an agent's ACP list may leave out what its UI
+   * offers (Cline's leaves out its free models).
+   */
+  fun optionsToSet(opened: JSONObject, wanted: Map<String, String>, chosen: Map<String, String> = emptyMap()): List<Pair<String, String>> {
     val offered = opened.optJSONArray("configOptions") ?: return emptyList()
     val byId = (0 until offered.length()).mapNotNull { offered.optJSONObject(it) }.associateBy { it.textOf("id") }
-    return wanted.entries.mapNotNull { (id, value) ->
+    return (wanted.keys + chosen.keys).mapNotNull { id ->
       val option = byId[id] ?: return@mapNotNull null
-      if (option.textOf("currentValue") == value || value !in values(option.optJSONArray("options"))) null else id to value
+      val value = chosen[id] ?: wanted.getValue(id)
+      val listed = id in chosen || value in values(option.optJSONArray("options"))
+      if (option.textOf("currentValue") == value || !listed) null else id to value
     }
   }
 

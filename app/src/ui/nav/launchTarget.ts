@@ -3,17 +3,23 @@
 // agent's page ('env'; with no agent, Systems), what it can do ('checks':
 // its page, then its checks), Settings, Models, Settings' Updates or the
 // RAM warning ('memory') and, when the reason is one agent, that agent,
-// which becomes the active one. An open terminal stays on top whatever the
+// which becomes the active one. Home with a chat (a scheduled run's notice)
+// opens that chat (openChat.ts). An open terminal stays on top whatever the
 // target (stack.ts towardHome).
 import { Keyboard } from 'react-native';
 import type { LaunchTarget } from '../../engine/runner';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { useMemoryStore } from '../../state/memory';
+import { openChat } from './openChat';
 
 export function applyLaunchTarget(target: LaunchTarget | null): void {
   if (!target) return;
   Keyboard.dismiss();
+  if (target.tab === 'home' && target.agentId && target.chatId) {
+    openChat(target.agentId, target.chatId);
+    return;
+  }
   const agents = useAgentsStore.getState();
   if (target.agentId && target.agentId !== agents.activeAgentId) void agents.setActiveAgent(target.agentId);
   const app = useAppStore.getState();

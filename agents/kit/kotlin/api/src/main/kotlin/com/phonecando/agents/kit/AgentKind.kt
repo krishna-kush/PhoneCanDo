@@ -73,6 +73,12 @@ interface AgentKind {
   /** The chat's title from that response; null when it has none. */
   fun parseSessionTitle(body: String): String? = null
 
+  /** Request for a chat's last reply (the manifest's `chats.reply`); null when the kind has none. */
+  fun chatReply(port: String, password: String, sessionId: String): HttpProbe? = null
+
+  /** The agent's final text in that response (its parser hook); null when it has none. */
+  fun parseChatReply(body: String): String? = null
+
   /** Request for the chats running now (the manifest's `chats.active`); null when the kind has none. */
   fun activeChats(port: String, password: String): HttpProbe? = null
 
@@ -133,6 +139,14 @@ interface AgentKind {
 
   /** The session config options set on every chat it opens in ACP mode (`engine.acp.options`), by config id. */
   val acpOptions: Map<String, String> get() = emptyMap()
+
+  /**
+   * The session config options its hook (`engine.acp.optionsHook`) reads
+   * from the agent's [home] (the host folder) when a chat opens, by config
+   * id; they go over [acpOptions] and are set even when the agent's ACP
+   * mode does not list the value (its own UI chose it). Empty without one.
+   */
+  fun acpHomeOptions(home: File): Map<String, String> = emptyMap()
 
   /** `engine.acp.meta` with its placeholders filled from [ctx], as compact JSON text; null when it has none. */
   fun acpMeta(ctx: LaunchContext): String? = null

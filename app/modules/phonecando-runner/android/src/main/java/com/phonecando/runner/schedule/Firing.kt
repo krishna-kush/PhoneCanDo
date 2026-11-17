@@ -2,6 +2,7 @@ package com.phonecando.runner.schedule
 
 import android.content.Context
 import android.util.Log
+import com.phonecando.agents.kit.EngineEvent
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.checks.CheckChange
@@ -16,6 +17,8 @@ import com.phonecando.runner.messages.MessageRules
 import com.phonecando.runner.messages.Messages
 import com.phonecando.runner.messages.ScheduledNote
 import com.phonecando.runner.messages.delivery.Handover
+import com.phonecando.runner.schedule.reply.RunEnd
+import com.phonecando.runner.schedule.reply.RunReplies
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -32,6 +35,11 @@ import java.util.concurrent.TimeUnit
 //   ACP mode, start it in that mode or switch it there with the task as
 //   first prompt, or prompt it there; wait for it to be idle; or ask you
 //   (ASK_USER: the task as a notice it reads next turn, and DueNotice).
+//   Every ask says why (AskReasons, or why a start or wake was refused),
+//   in its run's detail and the notice. An agent that can't read that
+//   notice (AskReasons.tapRuns) gets none: its DueNotice's tap runs the
+//   task (Run now, fromNotice), and a Run now from that tap that asks
+//   again posts no second DueNotice.
 //   Everything that makes the agent work, a wake too, goes
 //   through the engine service's start request (EngineStarts) first, so it
 //   needs the alarm's leave to start the service (Window.ALARM; a restart
@@ -69,6 +77,10 @@ import java.util.concurrent.TimeUnit
 //   than run it again: missed runs are never replayed, the agent may have
 //   taken the task already, and a start that ran the phone out of memory
 //   would only do so again. The next due time runs as usual.
+// - the chat a run's task went into and the agent's reply there
+//   (reply/RunReplies): an ACP turn's as it ends, a server kind's chat once
+//   its task goes in and its reply once a run there ends, each end with
+//   one notice.
 // One waiting firing per schedule: one due while another waits is busy.
 // Each outcome goes to the runs log and the schedule's lastRun.
 internal class Firing(
@@ -117,6 +129,9 @@ internal class Firing(
   // Runs watched after they were logged: a start's task window, a wake's receipt.
   private val watch = RunWatch(clock)
 
+  // Runs' chats and replies.
+  private val replies = RunReplies(app, runs, clock)
+
   private val timer: ScheduledExecutorService by lazy {
     Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "phonecando-schedule-watch").apply { isDaemon = true } }
   }
@@ -134,6 +149,8 @@ internal class Firing(
     val late: Boolean,
     val waiting: Waiting?,
     val runNow: Boolean = false,
+    /** A Run now from a due notice's tap: asking again posts no second notice. */
+    val fromNotice: Boolean = false,
   )
 
   // ---- entry points (the scheduler's thread) ----------------------------------------
@@ -156,13 +173,16 @@ internal class Firing(
     if (book.waiting().isNotEmpty()) recheck(Window.NONE)
   }
 
-  /** Run now, from the app in front; null when it fired, else why not. A once is done after it (ScheduleBook.ranNow). */
-  fun runNow(id: String): String? {
+  /**
+   * Run now, from the app in front or a due notice's tap ([fromNotice]);
+   * null when it fired, else why not. A once is done after it (ScheduleBook.ranNow).
+   */
+  fun runNow(id: String, fromNotice: Boolean = false): String? {
     val s = book.get(id) ?: return "no schedule with that id"
     val now = clock()
     book.unwait(s.id)
     book.ranNow(s.id)
-    fire(Shot(s, now, now, false, null, runNow = true), Window.FRONT)
+    fire(Shot(s, now, now, false, null, runNow = true, fromNotice = fromNotice), Window.FRONT)
     return null
   }
 
@@ -174,6 +194,7 @@ internal class Firing(
   fun onStatus(status: EngineStatus) {
     val id = status.agentId
     val acp = status.mode == EngineMode.ACP
+    if (!status.state.live) replies.engineGone(id)
     // The terminal engine a switch to ACP mode stops is not the start we
     // asked for; a failed start is, whatever mode it names.
     if (startRuns[id]?.acp == true && !acp && status.state != EngineState.FAILED) return
@@ -207,12 +228,23 @@ internal class Firing(
     }
   }
 
-  /** An ACP turn of [agentId] ended (AcpRelay, on the scheduler's thread): one a task began that ended badly fails its run. */
-  fun onAcpTurnEnd(agentId: String, stopReason: String?, error: String?) {
+  /**
+   * An ACP turn of [agentId] ended in [chatId], its final text [reply]
+   * (AcpRelay, on the scheduler's thread): a task's run keeps both, and one
+   * that ended badly fails.
+   */
+  fun onAcpTurnEnd(agentId: String, stopReason: String?, error: String?, chatId: String?, reply: String?) {
     val (scheduleId, seq) = acpTurns.remove(agentId) ?: return
+    replies.acpEnded(agentId, seq, chatId, reply, RunEnd.ofAcp(stopReason, error))
     val failure = AcpTurnEnds.failure(stopReason, error)
     if (failure != null) fail(scheduleId, seq, failure) else runs.settle(seq)
   }
+
+  /** The mailbox put [scheduleId]'s task into [agentId]'s chat [sessionId] (on the scheduler's thread). */
+  fun onDelivered(agentId: String, scheduleId: String, sessionId: String) = replies.delivered(agentId, scheduleId, sessionId)
+
+  /** An event of [agentId]'s engine, on its stream's thread: a run in a watched chat that ended gets its reply. */
+  fun onEngineEvent(agentId: String, event: EngineEvent) = replies.onEvent(agentId, event)
 
   /** A check changed (CheckFanOut, on its thread): the task check failing inside a start's window fails that run. */
   fun onCheck(change: CheckChange) {
@@ -227,6 +259,7 @@ internal class Firing(
     acpTurns.remove(agentId)?.let { runs.settle(it.second) }
     holds.forget(agentId)
     watch.forget(agentId)
+    replies.forget(agentId)
   }
 
   // An ACP start of [agentId] failed before ready ([acpWhy]: not installed,
@@ -303,7 +336,7 @@ internal class Firing(
     when (action) {
       FireRules.Action.WAIT_IDLE -> waitFor(shot)
       FireRules.Action.UNSUPPORTED -> done(shot, agent, RunOutcome.FAILED, "its kind cannot run scheduled tasks")
-      FireRules.Action.ASK_USER -> ask(shot, agent, null, posted = false)
+      FireRules.Action.ASK_USER -> ask(shot, agent, AskReasons.of(state) ?: AskReasons.UNKNOWN, posted = false)
       else -> {
         val starting = action != FireRules.Action.WAKE && action != FireRules.Action.PROMPT_ACP
         // Run now is yours, in the app: never held.
@@ -320,7 +353,7 @@ internal class Firing(
         when {
           may -> run(shot, agent, action)
           window == Window.NONE && alarms.exact() -> later(shot)
-          else -> ask(shot, agent, "PhoneCanDo may not start or wake agents in the background without Alarms & reminders", posted = false)
+          else -> ask(shot, agent, AskReasons.NO_BACKGROUND_START, posted = false)
         }
       }
     }
@@ -342,7 +375,7 @@ internal class Firing(
         val why = starts.start(agent.id)
         if (why != null) return ask(shot, agent, why, posted = false)
         Messages.get(app).mailbox.notice(agent.id, s.text, wake = true, scheduled = note)
-        started(shot, agent, RunOutcome.STARTED)
+        replies.coming(agent.id, s.id, started(shot, agent, RunOutcome.STARTED))
       }
       FireRules.Action.RESTART_WITH_PROMPT -> {
         starts.stop(agent.id)
@@ -356,8 +389,9 @@ internal class Firing(
         val noticed = Messages.get(app).mailbox.notice(agent.id, s.text, wake = true, scheduled = note)
         if (noticed?.woke == true) {
           val seq = done(shot, agent, RunOutcome.WOKE, null)
-          // A hook or reader wake: the notice waits in its inbox folder for a receipt.
-          if (noticed?.handover == Handover.HELD) watchReceipt(agent.id, s, seq)
+          // A hook or reader wake: the notice waits in its inbox folder for
+          // a receipt. A server's: it went into a chat, or goes in soon.
+          if (noticed?.handover == Handover.HELD) watchReceipt(agent.id, s, seq) else replies.coming(agent.id, s.id, seq)
         } else {
           ask(shot, agent, "it could not be woken", posted = true)
         }
@@ -379,15 +413,17 @@ internal class Firing(
         val seq = done(shot, agent, RunOutcome.WOKE, null, open = prompted)
         if (prompted) turn(agent.id, s.id, seq)
       }
-      else -> ask(shot, agent, null, posted = false)
+      else -> ask(shot, agent, AskReasons.UNKNOWN, posted = false)
     }
   }
 
-  private fun started(shot: Shot, agent: AgentRecord, outcome: RunOutcome, acp: Boolean = false, task: Boolean = false) {
+  // The run's seq.
+  private fun started(shot: Shot, agent: AgentRecord, outcome: RunOutcome, acp: Boolean = false, task: Boolean = false): Long {
     asked[agent.id] = clock()
     val seq = done(shot, agent, outcome, null, open = true)
     startRuns.put(agent.id, StartRun(shot.schedule.id, seq, acp, task, note(shot)))?.let { runs.settle(it.seq) }
     if (acp) turn(agent.id, shot.schedule.id, seq)
+    return seq
   }
 
   // [agentId]'s ACP turn is the run [seq]'s; one it replaced is no longer followed.
@@ -416,12 +452,16 @@ internal class Firing(
     }
   }
 
-  // ASK_USER: the task waits as a notice (unless the wake already posted
-  // it), and a notification asks you to open the agent.
-  private fun ask(shot: Shot, agent: AgentRecord, why: String?, posted: Boolean) {
+  // ASK_USER, [why] it asked: the task waits as a notice (unless the wake
+  // already posted it), and a notification asks you to open the agent. An
+  // agent that can't read that notice gets none (one left would come back
+  // with a later turn's prompt as a second copy): the notification's tap
+  // runs the task instead. A Run now from that tap posts no second one.
+  private fun ask(shot: Shot, agent: AgentRecord, why: String, posted: Boolean) {
     val s = shot.schedule
-    if (!posted) Messages.get(app).mailbox.notice(agent.id, s.text, wake = false, scheduled = note(shot))
-    dueNotice.post(agent.id, agent.name, s.text)
+    val tapRuns = !posted && AskReasons.tapRuns(live.read(agent, s.chat, asked[agent.id], clock()))
+    if (!posted && !tapRuns) Messages.get(app).mailbox.notice(agent.id, s.text, wake = false, scheduled = note(shot))
+    if (!shot.fromNotice) dueNotice.post(agent.id, agent.name, s.text, why, if (tapRuns) s.id else null)
     done(shot, agent, RunOutcome.ASKED, why)
   }
 

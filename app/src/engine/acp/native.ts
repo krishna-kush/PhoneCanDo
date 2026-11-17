@@ -36,6 +36,19 @@ export function acpCancel(agentId: AgentId): boolean {
   }
 }
 
+/**
+ * Keeps [chatId], a chat its ACP mode ran (a scheduled run's), as the one
+ * the agent's next terminal launch opens; false when its kind can't open a
+ * chat by id, or on a native build from before this.
+ */
+export function keepAcpChat(agentId: AgentId, chatId: string): boolean {
+  try {
+    return runner().keepAcpChat?.(agentId, chatId) === true;
+  } catch {
+    return false;
+  }
+}
+
 /** Answers a permission question with one of its options, or null to cancel it; false when it is gone. */
 export function resolvePermission(requestId: string, optionId: string | null): boolean {
   try {

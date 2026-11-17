@@ -4,11 +4,15 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import com.phonecando.runner.schedule.Schedules
 
 // What every agent notification and the bridge's own launch open: hands the
 // intent's LaunchTarget to the app (LaunchTargets.deliver), starts
 // PhoneCanDo and finishes in onCreate, so it never draws (Theme.NoDisplay,
-// noHistory; manifest).
+// noHistory; manifest). A due notice's tap for an agent that can't read
+// the task (schedule/DueNotice) carries the schedule too: it runs now
+// (Schedules.runNow, as the app's Run now: the app comes to the front)
+// before the agent's Home target is handed over.
 //
 // Why a trampoline and not an Expo ReactActivityLifecycleListener reading
 // MainActivity's intent: Android keeps the intent that created an activity
@@ -25,6 +29,7 @@ class OpenTargetActivity : Activity() {
     // Recents can replay the intent that started a task; only a real tap or
     // launch carries a target.
     if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) {
+      LaunchTargets.runScheduleOf(intent)?.let(::runSchedule)
       LaunchTargets.fromIntent(intent)?.let { LaunchTargets.deliver(this, it) }
     }
     try {
@@ -33,6 +38,14 @@ class OpenTargetActivity : Activity() {
       Log.w(TAG, "open PhoneCanDo failed", e)
     }
     finish()
+  }
+
+  private fun runSchedule(id: String) {
+    try {
+      Schedules.get(this).runNow(id, fromNotice = true)?.let { Log.i(TAG, "schedule $id not run from its notice: $it") }
+    } catch (e: Exception) {
+      Log.w(TAG, "schedule $id not run from its notice", e)
+    }
   }
 
   private companion object {

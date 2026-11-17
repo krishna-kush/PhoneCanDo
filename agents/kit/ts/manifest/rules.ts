@@ -95,7 +95,7 @@ export const FIRST_SCRIPT_ARG = 4;
 // `_meta` when a chat opens, and `chat` holds the terminal-mode args that
 // open one given chat, whose one placeholder {{chatId}} no other template
 // may name.
-export const ACP_FIELDS = ['argv', 'env', 'tools', 'options', 'meta', 'chat'];
+export const ACP_FIELDS = ['argv', 'env', 'tools', 'options', 'optionsHook', 'meta', 'chat'];
 export const ACP_TOOLS = ['session', 'config'];
 export const CHAT_PLACEHOLDER = 'chatId';
 

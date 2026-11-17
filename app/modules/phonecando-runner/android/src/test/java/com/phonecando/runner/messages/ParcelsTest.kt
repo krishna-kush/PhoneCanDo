@@ -16,6 +16,13 @@ class ParcelsTest {
     text = "x".repeat(chars), replyTo = null, sentAt = 0, hop = 0, wake = wake, notice = false, deliveries = emptyList(),
   )
 
+  @Test fun theScheduledTasksInASetAreNamed() {
+    fun task(id: Long, scheduleId: String) = msg(id, 10).copy(scheduled = ScheduledNote(scheduleId, "user", newChat = false, timing = "daily at 09:00"))
+    val p = Parcels.build(listOf(msg(1, 10), task(2, "s1"), task(3, "s2"), task(4, "s1")), "m1", label) { false }
+    assertEquals(listOf("s1", "s2"), p.scheduleIds)
+    assertTrue(Parcels.build(listOf(msg(1, 10)), "m1", label) { false }.scheduleIds.isEmpty())
+  }
+
   @Test fun smallSetsGoWhole() {
     val p = Parcels.build(listOf(msg(1, 10), msg(2, 10)), "m1", label) { false }
     assertEquals(listOf(1L, 2L), p.ids)

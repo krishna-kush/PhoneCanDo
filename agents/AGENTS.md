@@ -30,7 +30,8 @@ agents/
 │                   phonecando-note/: the note on PhoneCanDo the runner writes into every agent's instructions
 ├── runtimes/<id>/  runtime plugins (runtime.json + install scripts): installed only into a machine whose agent needs them
 ├── native/<id>/    built by us for Android, staged into the APK lib dir, runs outside proot
-└── image/<id>/     installed into its machine's image when the agent is made, runs in proot; data only
+└── image/<id>/     installed into its machine's image when the agent is made, runs in proot; data, and
+                    optional runner-side kotlin/ hooks (Cline's)
 ```
 
 A kind is one folder. Its name equals the manifest `id`, and it holds
@@ -139,6 +140,11 @@ phonecando-linux <- kit-api   (ProjectDir only: the machine's shell starts in th
     working chat the answer does not name ends as a guessed stop: a lost
     verdict, or an event the parser took for work that started none,
     never leaves a chat working for good. `chats` needs one of the two.
+  - `chats.reply.http {path, parser}`: GET a chat's last reply
+    (`{{sessionId}}` in the path); the code hook `parser` (listed in
+    `hooks`) reads the agent's final text in the answer. The runner asks
+    once a scheduled task's run in that chat ends, for the run and its
+    notice.
 - **tui**: the kind's own TUI on a PTY the runner keeps. It runs on when
   you leave the tab or the app, its screen comes back when you return, and
   the Home tab shows it. It has no port, so none of the server blocks.
@@ -230,6 +236,11 @@ command that starts the same agent speaking the Agent Client Protocol
   every chat it opens, skipped when the agent has no such option. Claude
   Code and Qwen Code get `mode: default`: their ACP chats start in `auto`,
   where a model decides or refuses tools with nobody asked.
+- `optionsHook`: a code hook (listed in `hooks`; kit-api
+  `KindHooks.acpOptions`) that reads more options from the agent's HOME
+  each time a chat opens, set over `options`: what the agent's own UI
+  last chose, where its ACP mode does not read it (Cline's model). A
+  value it reads is set even when the option's list leaves it out.
 - `meta`: a JSON object sent as `_meta` when a chat opens (its strings are
   templates, as env values are; at most 4 KiB): the kind's own extension
   point (Claude Code's adapter takes our settings file there).

@@ -39,6 +39,10 @@ internal class AgentNotices(private val context: Context) {
     val longText: Boolean = false,
     /** Sent when you swipe it away (not when a tap or a button takes it down). */
     val deleteIntent: PendingIntent? = null,
+    /** On Home, the tap opens this chat of the agent's (LaunchTarget.chatId). */
+    val chatId: String? = null,
+    /** The tap also runs this schedule now (schedule/DueNotice, LaunchTargets.runScheduleOf). */
+    val runSchedule: String? = null,
   )
 
   /** A button on a notice; [needsUnlock]: on the lock screen it asks for the phone to be unlocked first (Android 12+). */
@@ -52,7 +56,7 @@ internal class AgentNotices(private val context: Context) {
       .setContentTitle(notice.title)
       .setContentText(notice.text)
       .setSmallIcon(R.drawable.ic_stat_phonecando)
-      .setContentIntent(LaunchTargets.tap(context, LaunchTarget.of(notice.tab, notice.agentId)))
+      .setContentIntent(LaunchTargets.tap(context, LaunchTarget.of(notice.tab, notice.agentId, notice.chatId), notice.runSchedule))
       .setAutoCancel(true)
       .setOnlyAlertOnce(notice.quietUpdate)
     notice.subText?.let(builder::setSubText)

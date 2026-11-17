@@ -2,6 +2,8 @@ package com.phonecando.runner.api
 
 import android.content.Context
 import com.phonecando.runner.acp.AcpAppEvents
+import com.phonecando.runner.agents.AgentStores
+import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.engine.acp.AcpEngines
 import com.phonecando.runner.prompts.PermissionPrompts
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
@@ -25,6 +27,18 @@ internal fun ModuleDefinitionBuilder.acpFunctions(context: () -> Context, emit: 
     val handle = AcpEngines.of(agentId)
     if (handle == null || !handle.busy) return@Function false
     handle.cancel()
+    true
+  }
+
+  // Keeps [chatId], a chat its ACP mode ran (a scheduled run's), as the
+  // one its next terminal launch opens (AgentRecord.acpChat,
+  // EngineLauncher.chatToOpen): a tap on that run opens it. False when its
+  // kind can't open a chat by id (engine.acp.chat) or there is no such agent.
+  Function("keepAcpChat") { agentId: String, chatId: String ->
+    val stores = AgentStores.get(context())
+    val agent = stores.get(agentId) ?: return@Function false
+    if (KindCatalogs.get(context()).get(agent.kind)?.opensChat != true || chatId.isBlank()) return@Function false
+    stores.setAcpChat(agentId, chatId)
     true
   }
 

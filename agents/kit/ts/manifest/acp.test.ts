@@ -71,6 +71,16 @@ describe('acp mode', () => {
     fails((m) => (m.engine.acp.options = [] as never), '/engine/acp/options type');
   });
 
+  it('reads more options through a code hook it lists', () => {
+    ok((m) => {
+      m.hooks = ['claude-code.pick'];
+      m.engine.acp.optionsHook = 'claude-code.pick';
+    });
+    fails((m) => (m.engine.acp.optionsHook = 'claude-code.pick'), '/engine/acp/optionsHook mismatch');
+    fails((m) => (m.engine.acp.optionsHook = 'pick'), '/engine/acp/optionsHook pattern');
+    fails((m) => (m.engine.acp.optionsHook = 1 as never), '/engine/acp/optionsHook type');
+  });
+
   it('takes meta as JSON whose strings are env-value templates, up to 4 KiB', () => {
     ok((m) => (m.engine.acp.meta = { a: { list: ['{{home}}/x', 1, true, null], key: '{{password}}' } }));
     fails((m) => (m.engine.acp.meta = { a: { list: ['x', '{{nope}}'] } }), '/engine/acp/meta/a/list/1 unknown');

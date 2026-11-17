@@ -34,11 +34,13 @@ import kotlin.test.assertTrue
 class KindCapabilitiesTest {
   private val fixtures = File(checkNotNull(System.getProperty("phonecando.fixtures")))
 
-  // opencode's manifest names its SSE parser.
+  // opencode's manifest names its SSE parser and its reply parser.
   private val opencodeHooks = object : KindHooks {
     override val id = "opencode"
 
     override fun sseParser(name: String): ((String) -> EngineEvent?)? = { null }
+
+    override fun replyParser(name: String): ((String) -> String?)? = { null }
   }
 
   private fun text(file: String) = File(fixtures, "valid/$file").readText()

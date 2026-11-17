@@ -2,6 +2,7 @@ package com.phonecando.runner.schedule
 
 import android.content.Context
 import android.util.Log
+import com.phonecando.agents.kit.EngineEvent
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.engine.EngineStatus
@@ -20,8 +21,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 // Run now and engine changes run on one thread of its own, so a restart's
 // stop (up to ~3 s) never holds a broadcast thread or the bridge; engine
 // statuses are read on the thread that changed them (Firing.onStatus), a
-// burst of engine changes is decided once. An ACP turn's end comes on the
-// same thread, after the firing that began it.
+// burst of engine changes is decided once. An ACP turn's end and a task
+// the mailbox put into a chat come on the same thread, after the firing
+// that began them; engine events stay on their stream's thread (a chat's
+// reply is read on one of its own, reply/RunReplies).
 class Schedules private constructor(context: Context) {
   private val app = context.applicationContext ?: context
   private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "phonecando-schedules").apply { isDaemon = true } }
@@ -64,18 +67,33 @@ class Schedules private constructor(context: Context) {
     alarms.arm(book.nextAlarm())
   }
 
-  /** Run now (the app, in front): null when it fires, else why not (ScheduleBook.NOT_FOUND, AGENT_GONE). */
-  fun runNow(id: String): String? {
+  /**
+   * Run now (the app, in front; or [fromNotice], a due notice's tap that
+   * brings it there): null when it fires, else why not
+   * (ScheduleBook.NOT_FOUND, AGENT_GONE).
+   */
+  fun runNow(id: String, fromNotice: Boolean = false): String? {
     val s = book.get(id) ?: return ScheduleBook.NOT_FOUND
     if (AgentStores.get(app).get(s.agentId) == null) return ScheduleBook.AGENT_GONE
-    later({}) { firing.runNow(id) }
+    later({}) { firing.runNow(id, fromNotice) }
     return null
   }
 
-  /** An ACP turn of [agentId] ended (acp/AcpRelay): a task's run fails when it ended badly. */
-  fun acpTurnEnded(agentId: String, stopReason: String?, error: String?) = later({}) {
-    firing.onAcpTurnEnd(agentId, stopReason, error)
+  /**
+   * An ACP turn of [agentId] ended in [chatId], its final text [reply]
+   * (acp/AcpRelay): a task's run keeps both, and fails when it ended badly.
+   */
+  fun acpTurnEnded(agentId: String, stopReason: String?, error: String?, chatId: String?, reply: String?) = later({}) {
+    firing.onAcpTurnEnd(agentId, stopReason, error, chatId, reply)
   }
+
+  /** The mailbox put [scheduleId]'s task into [agentId]'s server chat [sessionId] (messages/delivery/InboxCourier). */
+  fun delivered(agentId: String, scheduleId: String, sessionId: String) = later({}) {
+    firing.onDelivered(agentId, scheduleId, sessionId)
+  }
+
+  /** An event of [agentId]'s engine (engine/EngineStreams, on its stream's thread). */
+  fun engineEvent(agentId: String, event: EngineEvent) = firing.onEngineEvent(agentId, event)
 
   /** A run cut off was brought back (cutoff/): it stays as it is, [note] in its detail. */
   fun broughtBack(seq: Long, note: String) = later({}) {

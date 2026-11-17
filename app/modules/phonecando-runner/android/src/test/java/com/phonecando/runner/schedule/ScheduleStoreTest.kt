@@ -102,9 +102,46 @@ class ScheduleStoreTest {
       mapOf(
         "seq" to 206.0, "scheduleId" to first.scheduleId, "agentId" to "a1", "agentName" to "Builder", "text" to first.text,
         "by" to "user", "dueAt" to first.dueAt.toDouble(), "firedAt" to first.firedAt.toDouble(), "late" to first.late, "outcome" to "started",
+        "chatId" to null, "reply" to null,
       ),
       ScheduleJs.of(again.newest(1).single()),
     )
+  }
+
+  @Test fun aRunKeepsItsChatAndReply() {
+    val log = File(dir, "state/schedule-runs.jsonl")
+    val runs = ScheduleRuns(StateFile(log))
+    val run = runs.add { seq ->
+      ScheduleRun(seq, "s1", "a1", "Builder", "task", SetBy.USER, dueAt = 1, firedAt = 2, late = false, outcome = RunOutcome.WOKE)
+    }
+    // The chat first (its task went in), the reply once its run ended; null leaves one as it was.
+    assertEquals("ses_1", runs.answer(run.seq, "ses_1", null)?.chatId)
+    val answered = runs.answer(run.seq, null, "All 12 tests pass.\nNothing else.")!!
+    assertEquals(run.copy(chatId = "ses_1", reply = "All 12 tests pass.\nNothing else."), answered)
+    assertNull(runs.answer(999, "ses_1", "x"))
+    val again = ScheduleRuns(StateFile(log)).newest(1).single()
+    assertEquals(answered, again)
+    val js = ScheduleJs.of(again)
+    assertEquals("ses_1", js["chatId"])
+    assertEquals("All 12 tests pass.\nNothing else.", js["reply"])
+  }
+
+  @Test fun aRunLoggedBeforeRepliesReadsWithNone() {
+    val log = File(dir, "state/schedule-runs.jsonl")
+    log.parentFile.mkdirs()
+    log.writeText(
+      "{\"seq\":3,\"scheduleId\":\"s1\",\"agentId\":\"a1\",\"agentName\":\"Builder\",\"text\":\"task\",\"by\":\"user\"," +
+        "\"dueAt\":1,\"firedAt\":2,\"late\":false,\"outcome\":\"woke\"}\n" +
+        "{\"seq\":4,\"scheduleId\":\"s1\",\"agentId\":\"a1\",\"agentName\":\"Builder\",\"text\":\"task\",\"by\":\"user\"," +
+        "\"dueAt\":1,\"firedAt\":2,\"late\":false,\"outcome\":\"woke\",\"chatId\":null,\"reply\":\"\"}\n",
+    )
+    val runs = ScheduleRuns(StateFile(log)).newest(2)
+    assertEquals(listOf(4L, 3L), runs.map { it.seq })
+    assertTrue(runs.all { it.chatId == null && it.reply == null })
+    // Absent from the line while it has none.
+    val line = runs.first().toJson()
+    assertTrue(!line.has("chatId") && !line.has("reply"))
+    assertEquals("ses_9", ScheduleRun.of(JSONObject(line.put("chatId", "ses_9").toString()))?.chatId)
   }
 
   @Test fun runsLeftOpenByAnEarlierProcessFail() {

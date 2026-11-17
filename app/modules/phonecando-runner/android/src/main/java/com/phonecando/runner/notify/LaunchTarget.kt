@@ -7,14 +7,15 @@ package com.phonecando.runner.notify
  * agent: Systems); "checks" that agent's checks (a capability that stopped
  * working, notify/CheckNotices); "models" the Models page (a model job);
  * "updates" Settings' Updates page (the update download); "memory" the RAM
- * warning (MemoryNotices). JS sees `{tab, agentId}` (runner.ts
- * LaunchTarget). Pure.
+ * warning (MemoryNotices). [chatId]: on Home, that agent's chat (a
+ * scheduled run's, schedule/reply/). JS sees `{tab, agentId, chatId}`
+ * (runner.ts LaunchTarget). Pure.
  */
-data class LaunchTarget(val tab: String, val agentId: String?) {
-  /** Tells two targets' notification taps apart (LaunchTargets.intent). */
-  val key: String get() = "${agentId.orEmpty()}/$tab"
+data class LaunchTarget(val tab: String, val agentId: String?, val chatId: String? = null) {
+  /** Tells two targets' notification taps apart (LaunchTargets.intent); each chat its own. */
+  val key: String get() = "${agentId.orEmpty()}/$tab" + chatId?.let { "/$it" }.orEmpty()
 
-  fun toMap(): Map<String, Any?> = mapOf("tab" to tab, "agentId" to agentId)
+  fun toMap(): Map<String, Any?> = mapOf("tab" to tab, "agentId" to agentId, "chatId" to chatId)
 
   companion object {
     const val HOME = "home"
@@ -26,10 +27,10 @@ data class LaunchTarget(val tab: String, val agentId: String?) {
 
     val TABS = setOf(HOME, ENV, "settings", CHECKS, MODELS, UPDATES, MEMORY)
 
-    /** An unknown or missing tab is Home; a blank agent id is none. */
-    fun of(tab: String?, agentId: String?) = LaunchTarget(
-      tab?.takeIf { it in TABS } ?: HOME,
-      agentId?.takeIf { it.isNotBlank() },
-    )
+    /** An unknown or missing tab is Home; a blank agent or chat id is none, and so is a chat with no agent. */
+    fun of(tab: String?, agentId: String?, chatId: String? = null): LaunchTarget {
+      val agent = agentId?.takeIf { it.isNotBlank() }
+      return LaunchTarget(tab?.takeIf { it in TABS } ?: HOME, agent, chatId?.takeIf { agent != null && it.isNotBlank() })
+    }
   }
 }

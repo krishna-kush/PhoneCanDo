@@ -141,6 +141,7 @@ object ManifestDecoder {
   private fun chats(c: JsonFields) = Chats(
     title = c.optObj("title")?.obj("http")?.let { TitleSource(it.string("path"), it.string("json")) },
     active = c.optObj("active")?.obj("http")?.let { ActiveSource(it.string("path"), it.string("json")) },
+    reply = c.optObj("reply")?.obj("http")?.let { ReplySource(it.string("path"), it.string("parser")) },
   )
 
   private fun surfaces(s: JsonFields) = Surfaces(
@@ -167,6 +168,7 @@ object ManifestDecoder {
     a.optString("colorSchemeKey")
     a.optStrings("hide")
     a.optString("sessionUrl")
+    a.optString("sessionPath")
     a.stringMap("spots")
     return a.tree
   }

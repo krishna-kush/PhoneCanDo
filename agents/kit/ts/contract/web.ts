@@ -33,6 +33,8 @@ export type WebAdapterSpec = {
   authUrl: string;
   /** A regex whose group 1 is the chat (session id) a URL shows. */
   sessionUrl?: string;
+  /** The path that shows one chat: {{sessionId}}, and {{origin64}} for the page's origin as base64url. */
+  sessionPath?: string;
   /**
    * Where the app's guide can point in the web UI, on the way to a chat
    * (the first shift's Say hi): per place, a selector whose first match in

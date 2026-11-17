@@ -14,7 +14,7 @@ export function checkRuntime(add: Add, m: Json) {
   const style = engineStyle(m);
   if ('engine' in m) checkEngine(add, m.engine);
   if ('events' in m) checkEvents(add, m.events, m.hooks, style);
-  if ('chats' in m) checkChats(add, m.chats, style);
+  if ('chats' in m) checkChats(add, m.chats, m.hooks, style);
   if ('idle' in m) checkIdle(add, m.idle, m.events, style);
   if ('surfaces' in m) checkSurfaces(add, m.surfaces, style);
   if ('phoneTools' in m) oneOf(add, '/phoneTools', m.phoneTools, PHONE_TOOLS);
@@ -22,10 +22,11 @@ export function checkRuntime(add: Add, m: Json) {
   if ('signIn' in m) checkSignIn(add, m.signIn);
 }
 
-// A chat's title, and the chats running now, over HTTP (server); a tui
-// engine's title comes from its window title (surfaces.chatTitle).
-function checkChats(add: Add, chats: unknown, style: string | null) {
-  if (!fields(add, '/chats', chats, ['title', 'active'], [])) return;
+// A chat's title, the chats running now, and a chat's last reply, over
+// HTTP (server); a tui engine's title comes from its window title
+// (surfaces.chatTitle). The reply is read by a code hook, as an SSE stream is.
+function checkChats(add: Add, chats: unknown, hooks: unknown, style: string | null) {
+  if (!fields(add, '/chats', chats, ['title', 'active', 'reply'], [])) return;
   if (style !== 'server') add('/chats', 'forbidden', 'chats over HTTP need engine.style server');
   const c = chats as Json;
   if (!('title' in c) && !('active' in c)) add('/chats', 'required', 'title or active is required');
@@ -34,6 +35,16 @@ function checkChats(add: Add, chats: unknown, style: string | null) {
     if (!fields(add, `/chats/${key}`, c[key], ['http'], ['http'])) continue;
     const http = httpBlock(add, `/chats/${key}/http`, (c[key] as Json).http, ['json']);
     if (http) string(add, `/chats/${key}/http/json`, http.json, PATTERNS.jsonPointer, MAX.relPath);
+  }
+  if ('reply' in c) checkReply(add, c.reply, hooks);
+}
+
+function checkReply(add: Add, reply: unknown, hooks: unknown) {
+  if (!fields(add, '/chats/reply', reply, ['http'], ['http'])) return;
+  const http = httpBlock(add, '/chats/reply/http', (reply as Json).http, ['parser']);
+  if (!http || !string(add, '/chats/reply/http/parser', http.parser, PATTERNS.hookId, MAX.hookId)) return;
+  if (!(Array.isArray(hooks) && hooks.includes(http.parser))) {
+    add('/chats/reply/http/parser', 'mismatch', `parser ${String(http.parser)} is not in hooks`);
   }
 }
 

@@ -22,7 +22,8 @@ internal fun interface AcpRpc {
 // The kept chat refused (an agent may drop a chat it never answered in:
 // Gemini CLI deletes it) is said (storedFailed), so the driver forgets it.
 // On a chat it opened, the kind's config options are set where the
-// agent offers them; one it refuses is skipped. For a start with a chat
+// agent offers them (those its hook read from HOME on top, with any
+// value); one it refuses is skipped. For a start with a chat
 // of its own, before() names the chat it would have gone back to, so a
 // Check now can give it back. Pure over [rpc].
 internal class AcpChats(
@@ -66,7 +67,7 @@ internal class AcpChats(
   }
 
   fun applyOptions(opened: Opened) {
-    for ((id, value) in AcpAnswers.optionsToSet(opened.answer, setup.options)) {
+    for ((id, value) in AcpAnswers.optionsToSet(opened.answer, setup.options, setup.homeOptions())) {
       try {
         rpc.request(AcpWire.SET_CONFIG_OPTION, AcpWire.setConfigOption(opened.chatId, id, value), OPTION_MS)
       } catch (e: AcpException) {

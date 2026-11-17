@@ -53,6 +53,20 @@ class ScheduleRuns(
     return runs[i]
   }
 
+  /**
+   * The chat the run [seq] ran in, and the agent's reply there; null leaves
+   * that one as it was. The run; null when it is no longer kept. The caller
+   * tells the app (ScheduleEvents.changed).
+   */
+  @Synchronized
+  fun answer(seq: Long, chatId: String?, reply: String?): ScheduleRun? {
+    val i = runs.indexOfFirst { it.seq == seq }
+    if (i < 0) return null
+    runs[i] = runs[i].copy(chatId = chatId ?: runs[i].chatId, reply = reply ?: runs[i].reply)
+    save()
+    return runs[i]
+  }
+
   /** The start or turn the run [seq] began is over: its outcome stands. */
   @Synchronized
   fun settle(seq: Long) {

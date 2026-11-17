@@ -24,7 +24,7 @@ class AcpDecoderTest {
   @Test fun readsEveryPart() {
     val acp = decode(
       """{"argv":["demo",{"when":"bridgeUrl","args":["--mcp","{{bridgeUrl}}"]},"--acp"],
-          "env":{"Z":"1","A":"{{home}}"},"tools":"config","options":{"mode":"default","model":"m"},
+          "env":{"Z":"1","A":"{{home}}"},"tools":"config","options":{"mode":"default","model":"m"},"optionsHook":"demo.pick",
           "meta":{"x":{"settings":"{{home}}/s.json","n":2}},"chat":{"args":["--resume","{{chatId}}"],"at":1}}""",
     )
     assertEquals(
@@ -35,6 +35,7 @@ class AcpDecoderTest {
     assertEquals(listOf("Z" to "1", "A" to "{{home}}"), acp.env.toList())
     assertEquals(AcpTools.CONFIG, acp.tools)
     assertEquals(listOf("mode" to "default", "model" to "m"), acp.options.toList())
+    assertEquals("demo.pick", acp.optionsHook)
     // Meta stays a JSON tree, its templates unrendered.
     assertEquals(JsonPrimitive("{{home}}/s.json"), acp.meta!!["x"]!!.jsonObject["settings"])
     assertEquals(ChatArgs(listOf("--resume", "{{chatId}}"), 1), acp.chat)
@@ -45,6 +46,7 @@ class AcpDecoderTest {
     assertEquals(AcpSpec(listOf(ArgvItem.Text("demo"), ArgvItem.Text("--acp")), emptyMap()), acp)
     assertEquals(AcpTools.SESSION, acp.tools)
     assertNull(acp.meta)
+    assertNull(acp.optionsHook)
     assertNull(acp.chat)
     // No block: no ACP mode.
     val plain = """{"schema":1,"id":"demo","label":"Demo","version":"1","type":"image","channels":["full"],"stability":"preview",
@@ -58,6 +60,7 @@ class AcpDecoderTest {
     assertEquals("/engine/acp/env/A: must be a string, not 1", problem("""{"argv":["demo"],"env":{"A":1}}"""))
     assertEquals("/engine/acp/tools: must be one of session, config, not argv", problem("""{"argv":["demo"],"tools":"argv"}"""))
     assertEquals("/engine/acp/options/mode: must be a string, not true", problem("""{"argv":["demo"],"options":{"mode":true}}"""))
+    assertEquals("/engine/acp/optionsHook: must be a string, not 1", problem("""{"argv":["demo"],"optionsHook":1}"""))
     assertEquals("/engine/acp/meta: must be an object, not an array", problem("""{"argv":["demo"],"meta":[]}"""))
     assertEquals("/engine/acp/chat/args: is required", problem("""{"argv":["demo"],"chat":{}}"""))
     assertEquals("/engine/acp/chat/at: must be an integer", problem("""{"argv":["demo"],"chat":{"args":["{{chatId}}"],"at":"1"}}"""))

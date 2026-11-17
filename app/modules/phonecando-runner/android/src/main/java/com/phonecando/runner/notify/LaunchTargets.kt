@@ -18,13 +18,17 @@ internal object LaunchTargets {
   private const val TAG = "PhoneCanDoLaunch"
   private const val KEY_TAB = "launch_tab"
   private const val KEY_AGENT = "launch_agent"
+  private const val KEY_CHAT = "launch_chat"
   private const val EXTRA_TAB = "com.phonecando.runner.LAUNCH_TAB"
   private const val EXTRA_AGENT = "com.phonecando.runner.LAUNCH_AGENT"
+  private const val EXTRA_CHAT = "com.phonecando.runner.LAUNCH_CHAT"
+  private const val EXTRA_RUN_SCHEDULE = "com.phonecando.runner.LAUNCH_RUN_SCHEDULE"
 
   fun deliver(context: Context, target: LaunchTarget) {
     prefs(context).edit()
       .putString(KEY_TAB, target.tab)
       .putString(KEY_AGENT, target.agentId)
+      .putString(KEY_CHAT, target.chatId)
       .apply()
     PhoneCanDoRunnerModule.emitLaunchTarget(target.toMap())
   }
@@ -34,23 +38,27 @@ internal object LaunchTargets {
     val prefs = prefs(context)
     val tab = prefs.getString(KEY_TAB, null) ?: return null
     val agentId = prefs.getString(KEY_AGENT, null)
-    prefs.edit().remove(KEY_TAB).remove(KEY_AGENT).apply()
-    return LaunchTarget.of(tab, agentId)
+    val chatId = prefs.getString(KEY_CHAT, null)
+    prefs.edit().remove(KEY_TAB).remove(KEY_AGENT).remove(KEY_CHAT).apply()
+    return LaunchTarget.of(tab, agentId, chatId)
   }
 
-  /** Opens PhoneCanDo on `target` (through OpenTargetActivity). */
-  fun intent(context: Context, target: LaunchTarget): Intent =
+  /** Opens PhoneCanDo on `target` (through OpenTargetActivity); with [runSchedule], runs that schedule now first. */
+  fun intent(context: Context, target: LaunchTarget, runSchedule: String? = null): Intent =
     Intent(context, OpenTargetActivity::class.java)
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       .putExtra(EXTRA_TAB, target.tab)
       .putExtra(EXTRA_AGENT, target.agentId)
+      .putExtra(EXTRA_CHAT, target.chatId)
+      .putExtra(EXTRA_RUN_SCHEDULE, runSchedule)
       // Android tells PendingIntents apart by request code and
       // Intent.filterEquals, which ignores extras: with one shared intent the
       // last post would rewrite every earlier tap. The identifier is part of
       // filterEquals (API 29+, our minSdk), so each target gets a
       // PendingIntent of its own; two notices for the same target share
-      // one, which opens the same place. No request-code bookkeeping.
-      .setIdentifier(target.key)
+      // one, which opens the same place. No request-code bookkeeping. A tap
+      // that runs a schedule is its own, so no plain tap ever runs one.
+      .setIdentifier(target.key + runSchedule?.let { "/run/$it" }.orEmpty())
 
   /** Starts PhoneCanDo on `target`; false when Android refused (background start). */
   fun open(context: Context, target: LaunchTarget): Boolean = try {
@@ -61,16 +69,19 @@ internal object LaunchTargets {
     false
   }
 
-  /** A notification's tap: opens PhoneCanDo on `target`. */
-  fun tap(context: Context, target: LaunchTarget): PendingIntent = PendingIntent.getActivity(
-    context, 0, intent(context, target),
+  /** A notification's tap: opens PhoneCanDo on `target` (and runs [runSchedule] now, when given). */
+  fun tap(context: Context, target: LaunchTarget, runSchedule: String? = null): PendingIntent = PendingIntent.getActivity(
+    context, 0, intent(context, target, runSchedule),
     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
   )
 
   fun fromIntent(intent: Intent): LaunchTarget? {
     val tab = intent.getStringExtra(EXTRA_TAB) ?: return null
-    return LaunchTarget.of(tab, intent.getStringExtra(EXTRA_AGENT))
+    return LaunchTarget.of(tab, intent.getStringExtra(EXTRA_AGENT), intent.getStringExtra(EXTRA_CHAT))
   }
+
+  /** The schedule a due notice's tap runs now; null for any other tap. */
+  fun runScheduleOf(intent: Intent): String? = intent.getStringExtra(EXTRA_RUN_SCHEDULE)?.takeIf { it.isNotBlank() }
 
   private fun prefs(context: Context) =
     context.getSharedPreferences(PhoneCanDoServeService.PREFS, Context.MODE_PRIVATE)

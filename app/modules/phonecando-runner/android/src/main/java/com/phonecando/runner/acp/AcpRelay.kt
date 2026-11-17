@@ -14,6 +14,7 @@ import com.phonecando.runner.engine.acp.AcpTurnEnd
 import com.phonecando.runner.messages.Messages
 import com.phonecando.runner.prompts.PermissionPrompts
 import com.phonecando.runner.schedule.Schedules
+import com.phonecando.runner.schedule.reply.RunReply
 
 // The runner's one ACP listener (engine/acp AcpEngines.listener), outside
 // the engine: what an agent's ACP turn does goes on from here.
@@ -22,9 +23,11 @@ import com.phonecando.runner.schedule.Schedules
 //   notification with Allow and Deny); it goes when the agent takes it
 //   back, the turn ends or the engine stops. While a Check now runs for the
 //   agent (checks/now), it is rejected at once instead, with no prompt;
-// - the turn's end: Schedules (a task's turn that ended badly fails its
-//   run) and the capability checks (checks/: an end_turn is a turn end);
-//   no turn running: Messages (a waiting set may go in now).
+// - the turn's end: Schedules (a task's run keeps the turn's chat and its
+//   final text, read off the agent's snapshot now, while its items still
+//   hold the turn; one that ended badly fails) and the capability checks
+//   (checks/: an end_turn is a turn end); no turn running: Messages (a
+//   waiting set may go in now).
 // Set once per process (install), when messaging is first made (every
 // engine start makes it first) or the app's module is. Its calls come on
 // the ACP driver's threads: each is guarded, so nothing here can break one.
@@ -41,7 +44,10 @@ internal class AcpRelay private constructor(private val app: Context) : AcpListe
     Checks.acpTurnEnded(agentId, end.stopReason, end.error)
     PermissionPrompts.end(app, agentId)
     AcpAppEvents.turnEnd(agentId, end)
-    Schedules.peek()?.acpTurnEnded(agentId, end.stopReason, end.error)
+    Schedules.peek()?.let { schedules ->
+      val turn = AcpEngines.of(agentId)?.snapshot()
+      schedules.acpTurnEnded(agentId, end.stopReason, end.error, turn?.chatId, turn?.items?.let(RunReply::ofAcp))
+    }
   }
 
   override fun onBusy(agentId: String, busy: Boolean) = guarded {

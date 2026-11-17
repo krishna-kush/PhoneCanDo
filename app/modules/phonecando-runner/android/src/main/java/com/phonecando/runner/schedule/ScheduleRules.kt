@@ -39,6 +39,12 @@ object ScheduleRules {
   /** A run's text in the log: its first this many characters. */
   const val RUN_TEXT_MAX = 200
 
+  /** A run's reply in the log: at most this many characters, the last of them "…" when cut. */
+  const val REPLY_MAX = 4000
+
+  /** A server run's chat is watched for its end this long after its task went in. */
+  const val REPLY_WAIT_MS = 6 * HOUR_MS
+
   /** A start decided outside an alarm (a wait that ended) goes through an alarm this soon. */
   const val START_ALARM_MS = 1_000L
 

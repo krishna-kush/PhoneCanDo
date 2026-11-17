@@ -30,6 +30,8 @@ class DueRulesTest {
     assertEquals(24 * h, ScheduleRules.LATE_MAX_MS)
     assertEquals(2 * 60_000L, ScheduleRules.LATE_MARK_MS)
     assertEquals(200, ScheduleRules.RUNS_KEPT)
+    assertEquals(4000, ScheduleRules.REPLY_MAX)
+    assertEquals(6 * h, ScheduleRules.REPLY_WAIT_MS)
   }
 
   @Test fun onTimeAndNotYet() {

@@ -13,7 +13,8 @@ import org.json.JSONObject
 object ScheduleJs {
   fun of(s: Schedule): Map<String, Any?> = map(ScheduleJson.write(s))
 
-  fun of(r: ScheduleRun): Map<String, Any?> = map(r.toJson())
+  /** A run, with its chatId and reply null when it has none. */
+  fun of(r: ScheduleRun): Map<String, Any?> = map(r.toJson()) + mapOf("chatId" to r.chatId, "reply" to r.reply)
 
   fun result(r: ScheduleBook.Result): Map<String, Any?> = when (r) {
     is ScheduleBook.Result.Ok -> mapOf("ok" to true, "schedule" to of(r.schedule))

@@ -8,6 +8,7 @@ import com.phonecando.agents.kit.manifest.HomeSurface
 import com.phonecando.agents.kit.manifest.LinuxNeed
 import com.phonecando.agents.kit.manifest.Manifest
 import com.phonecando.agents.kit.manifest.PromptArgs
+import java.io.File
 
 // What ManifestKind.of() refuses: a manifest this build cannot run as it
 // says. Each check throws KindException naming the kind and the reason.
@@ -83,6 +84,7 @@ internal object KindChecks {
       "engine.readiness.http".takeIf { engine.readiness?.http != null },
       "events[].sse".takeIf { manifest.events.any { it is EventSource.Sse } },
       "chats.title".takeIf { manifest.chats?.title != null },
+      "chats.reply".takeIf { manifest.chats?.reply != null },
       "surfaces.web".takeIf { manifest.surfaces?.web != null },
       "a web Home".takeIf { manifest.surfaces?.home == HomeSurface.WEB },
     )
@@ -140,14 +142,27 @@ internal object KindChecks {
   fun hooks(manifest: Manifest, hooks: KindHooks?): Pair<EventSource.Sse, (String) -> EngineEvent?>? {
     val id = manifest.id
     if (hooks != null && hooks.id != id) throw KindException("$id: hooks are ${hooks.id}'s")
-    // Every hook id names one of KindHooks' functions; SSE parsers are the only kind so far.
-    val missing = manifest.hooks.filterNot { hooks?.sseParser(it) != null }
+    // Every hook id names one of KindHooks' functions: an SSE parser, a reply parser or an ACP options reader.
+    val missing = manifest.hooks.filterNot { hooks?.sseParser(it) != null || hooks?.replyParser(it) != null || hooks?.acpOptions(it) != null }
     if (missing.isNotEmpty()) throw KindException("$id: no hook ${missing.joinToString()} in this build")
     val streams = manifest.events.filterIsInstance<EventSource.Sse>()
     if (streams.size > 1) throw KindException("$id: this build reads one event stream per kind")
     val sse = streams.firstOrNull() ?: return null
     val parser = hooks?.sseParser(sse.parser) ?: throw KindException("$id: no sse parser ${sse.parser} in this build")
     return sse to parser
+  }
+
+  /** The parser `chats.reply` names, bound; null when the kind reads no replies. */
+  fun reply(manifest: Manifest, hooks: KindHooks?): ((String) -> String?)? {
+    val source = manifest.chats?.reply ?: return null
+    return hooks?.replyParser(source.parser) ?: throw KindException("${manifest.id}: no reply parser ${source.parser} in this build")
+  }
+
+  /** The reader `engine.acp.optionsHook` names, bound; null when the kind names none. */
+  fun acpOptions(manifest: Manifest, hooks: KindHooks?): ((File) -> Map<String, String>)? {
+    val name = manifest.engine?.acp?.optionsHook ?: return null
+    if (name !in manifest.hooks) throw KindException("${manifest.id}: engine.acp.optionsHook $name is not in hooks")
+    return hooks?.acpOptions(name) ?: throw KindException("${manifest.id}: no ACP options hook $name in this build")
   }
 
   private fun inRange(id: String, name: String, value: Int, range: IntRange) {

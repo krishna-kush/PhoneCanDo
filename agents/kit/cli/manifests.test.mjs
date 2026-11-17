@@ -32,7 +32,7 @@ function makeRoot(files) {
 }
 
 // A native kind with a config folder, a lite overlay and one shared part;
-// its event hook is named after it, as hooks are.
+// its event and reply hooks are named after it, as hooks are.
 function nativeKind(id, prefix, extra = {}) {
   const manifest = {
     ...OPENCODE,
@@ -40,7 +40,8 @@ function nativeKind(id, prefix, extra = {}) {
     prefix,
     payload: { libs: [{ name: `lib${prefix}-engine.so`, from: 'out.bin', role: 'engine', linkage: 'system-only' }] },
     events: [{ sse: { ...OPENCODE.events[0].sse, parser: `${id}.events` } }],
-    hooks: [`${id}.events`],
+    chats: { ...OPENCODE.chats, reply: { http: { ...OPENCODE.chats.reply.http, parser: `${id}.reply` } } },
+    hooks: [`${id}.events`, `${id}.reply`],
     ...extra,
   };
   return {

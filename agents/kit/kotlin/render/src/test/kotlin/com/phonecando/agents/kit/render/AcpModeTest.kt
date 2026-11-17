@@ -1,5 +1,6 @@
 package com.phonecando.agents.kit.render
 
+import com.phonecando.agents.kit.KindHooks
 import com.phonecando.agents.kit.LaunchContext
 import com.phonecando.agents.kit.MessagingLevel
 import com.phonecando.agents.kit.ModelEndpoint
@@ -142,6 +143,42 @@ class AcpModeTest {
     assertNull(withAcp("""{"argv":["demo"]}""").acpMeta(ctx))
     // A meta value is filled once: a value that looks like a placeholder stays as it is.
     assertEquals("""{"p":"{{home}}"}""", withAcp("""{"argv":["demo"],"meta":{"p":"{{password}}"}}""").acpMeta(ctx.copy(password = "{{home}}")))
+  }
+
+  @Test fun anOptionsHookReadsHomeAtEachAsk() {
+    val hooks = object : KindHooks {
+      override val id = "demo"
+      var calls = 0
+
+      override fun acpOptions(name: String): ((File) -> Map<String, String>)? = if (name != "demo.pick") null else { home ->
+        calls++
+        when (home.name) {
+          "broken" -> throw IllegalStateException("bad file")
+          "many" -> (1..12).associate { "o$it" to "v" } + ("" to "x")
+          else -> mapOf("model" to "free/${home.name}")
+        }
+      }
+    }
+    fun withHook(hook: String, listed: List<String>) = ManifestKind.of(
+      ManifestDecoder.decode(
+        base.replace("\"options\": {", "\"optionsHook\": \"$hook\", \"options\": {")
+          .replace("\"phoneTools\"", "\"hooks\": [${listed.joinToString { "\"$it\"" }}], \"phoneTools\""),
+      ),
+      hooks,
+    )
+    val k = withHook("demo.pick", listOf("demo.pick"))
+    assertEquals(mapOf("model" to "free/a"), k.acpHomeOptions(File("/h/a")))
+    assertEquals(mapOf("model" to "free/b"), k.acpHomeOptions(File("/h/b")))
+    assertEquals(2, hooks.calls)
+    // A hook that throws sets nothing; at most 8, none with an empty id.
+    assertEquals(emptyMap(), k.acpHomeOptions(File("/h/broken")))
+    assertEquals((1..8).map { "o$it" }, k.acpHomeOptions(File("/h/many")).keys.toList())
+    // The manifest's own options are still the static ones; a kind without a hook reads nothing.
+    assertEquals(listOf("mode" to "default", "model" to "fast"), k.acpOptions.toList())
+    assertEquals(emptyMap(), kind().acpHomeOptions(File("/h/a")))
+    // The hook must be listed, and this build must have it.
+    assertEquals("demo: engine.acp.optionsHook demo.pick is not in hooks", assertFailsWith<KindException> { withHook("demo.pick", emptyList()) }.message)
+    assertEquals("demo: no hook demo.other in this build", assertFailsWith<KindException> { withHook("demo.other", listOf("demo.other")) }.message)
   }
 
   @Test fun aKindWithoutAnAcpModeHasNone() {

@@ -109,6 +109,28 @@ describe('rules beyond the fixtures', () => {
     assert.ok(extra.problems.some((p) => p.path === '/models/anthropic/anything'));
   });
 
+  it("reads a chat's reply only through a hook it lists", () => {
+    const m = opencode();
+    const unhooked = validate({ ...m, hooks: ['opencode.events'] }, { origin: 'bundled' });
+    assert.ok(unhooked.problems.some((p) => p.path === '/chats/reply/http/parser' && p.code === 'mismatch'));
+    const noParser = validate({ ...m, chats: { ...m.chats, reply: { http: { path: '/m' } } } }, { origin: 'bundled' });
+    assert.ok(noParser.problems.some((p) => p.path === '/chats/reply/http/parser' && p.code === 'required'));
+  });
+
+  it("builds a chat's web path from its id and the page's origin only", () => {
+    const m = opencode();
+    const withPath = (sessionPath: string, sessionUrl: string | null = m.surfaces.web.adapter.sessionUrl) => {
+      const { sessionUrl: _, ...rest } = m.surfaces.web.adapter;
+      const adapter = { ...rest, sessionPath, ...(sessionUrl ? { sessionUrl } : {}) };
+      return validate({ ...m, surfaces: { ...m.surfaces, web: { ...m.surfaces.web, adapter } } }, { origin: 'bundled' }).problems;
+    };
+    const at = '/surfaces/web/adapter/sessionPath';
+    assert.deepEqual(withPath('/server/{{origin64}}/session/{{sessionId}}'), []);
+    assert.ok(withPath('/server/{{port}}/session/{{sessionId}}').some((p) => p.path === at && p.code === 'unknown'));
+    assert.ok(withPath('/server/{{origin64}}').some((p) => p.path === at && p.code === 'required'));
+    assert.ok(withPath('/s/{{sessionId}}', null).some((p) => p.path === at && p.code === 'required'));
+  });
+
   it('reports a missing field once, as required', () => {
     const { licence: _, ...rest } = opencode();
     assert.deepEqual(validate(rest, { origin: 'bundled' }).problems, [

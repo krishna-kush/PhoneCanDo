@@ -271,7 +271,9 @@ internal class EngineLauncher(private val context: Context) {
       when {
         acp -> {
           val bridge = if (inSession) AcpBridge(checkNotNull(bridgeUrl), plan.record.bridgeToken) else null
-          val setup = AcpSetup(sessionCwd(plan, ctx, spec), plan.kind.acpMeta(ctx), plan.kind.acpOptions, bridge, appVersion)
+          val setup = AcpSetup(sessionCwd(plan, ctx, spec), plan.kind.acpMeta(ctx), plan.kind.acpOptions, bridge, appVersion) {
+            plan.kind.acpHomeOptions(plan.home)
+          }
           AcpSpawner.spawn(spec.argv, env, cwd, plan.logFile, setup)
         }
         tui -> TuiSpawner.spawn(spec.argv, env, cwd, handOver = plan.kind.manifest.type == TYPE_IMAGE)

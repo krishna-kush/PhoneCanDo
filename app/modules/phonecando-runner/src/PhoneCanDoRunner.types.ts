@@ -166,6 +166,8 @@ export type NativeOpenUrlAction = 'open' | 'copy' | 'dismiss';
 export type NativeLaunchTarget = {
   tab: 'home' | 'env' | 'settings' | 'checks' | 'models' | 'updates' | 'memory';
   agentId: string | null;
+  /** The chat to open on Home (a scheduled run's notice); absent or null for none. */
+  chatId?: string | null;
 };
 
 /** Why a user kind's JSON would not load: the JSON pointer of the value ('' for the whole file) and what is wrong. */
@@ -337,6 +339,10 @@ export type NativeScheduleRun = {
   late: boolean;
   outcome: NativeScheduleOutcome;
   detail?: string;
+  /** The chat the task ran in; null or absent when the run had none (or ran before we kept it). */
+  chatId?: string | null;
+  /** The agent's final reply, trimmed, at most 4000 characters; null or absent without one. */
+  reply?: string | null;
 };
 
 /** A new schedule from the app; chat defaults to same for a one-off, new for a repeating one. Every's anchor defaults to now. */

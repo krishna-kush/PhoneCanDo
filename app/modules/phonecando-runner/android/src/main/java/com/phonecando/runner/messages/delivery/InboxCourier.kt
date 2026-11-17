@@ -32,7 +32,9 @@ data class ServerSeat(val port: String, val password: String, val sessionId: Str
 // The capability checks (checks/) hear each server answer to a deliver or
 // wake call ([served]; no answer at all is never told) and each set that
 // may wake the agent left in its folder ([wakeSet], with a look at the
-// ids still pending there).
+// ids still pending there). A set a server took with scheduled tasks in it
+// tells the scheduler which chat took each ([scheduled]: its run there
+// keeps that chat and watches it for the reply).
 // IO through the injected folder, seat and post.
 class InboxCourier(
   private val plan: (AgentRecord) -> InboxPlan?,
@@ -44,6 +46,7 @@ class InboxCourier(
   private val fetch: (InboxRequest) -> Pair<Int, String> = { it.exchange(CONNECT_MS, READ_MS) },
   private val served: (agentId: String, call: InboxCall, status: Int) -> Unit = Checks::served,
   private val wakeSet: (agentId: String, ids: List<Long>, pending: () -> Set<Long>) -> Unit = Checks::wakeSetWritten,
+  private val scheduled: (agentId: String, scheduleId: String, sessionId: String) -> Unit = { _, _, _ -> },
 ) : Courier {
   // The ids of the set last written to each agent's pending/.
   private val written = ConcurrentHashMap<String, List<Long>>()
@@ -101,6 +104,7 @@ class InboxCourier(
     if (status >= 0) served(agent.id, call, status)
     if (status in 200..299) {
       failedAt.remove(agent.id)
+      parcel.scheduleIds.forEach { scheduled(agent.id, it, sessionId) }
       return if (waking) Handover.WOKE else Handover.POSTED
     }
     failedAt[agent.id] = clock()

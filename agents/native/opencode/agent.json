@@ -145,6 +145,12 @@
         "json": "/data/title"
       }
     },
+    "reply": {
+      "http": {
+        "path": "/api/session/{{sessionId}}/message?type=assistant&limit=1&order=desc",
+        "parser": "opencode.reply"
+      }
+    },
     "active": {
       "http": {
         "path": "/api/session/active",
@@ -237,6 +243,7 @@
         ],
         "authUrl": "/auth/connect/",
         "sessionUrl": "/session/([^/?#]+)",
+        "sessionPath": "/server/{{origin64}}/session/{{sessionId}}",
         "spots": {
           "projects": "[data-component=\"home-projects-dropdown\"]",
           "addProject": "[data-action=\"home-add-project-row\"]",
@@ -274,7 +281,8 @@
   },
   "phoneTools": "plugin",
   "hooks": [
-    "opencode.events"
+    "opencode.events",
+    "opencode.reply"
   ],
   "signIn": [
     {

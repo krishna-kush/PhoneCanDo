@@ -34,7 +34,8 @@ class ManifestDecoderTest {
       "events": [{ "sse": { "path": "/events", "parser": "demo.events" } }],
       "chats": {
         "title": { "http": { "path": "/chat/{{sessionId}}", "json": "/title" } },
-        "active": { "http": { "path": "/chats/active", "json": "/data" } }
+        "active": { "http": { "path": "/chats/active", "json": "/data" } },
+        "reply": { "http": { "path": "/chat/{{sessionId}}/messages", "parser": "demo.reply" } }
       },
       "idle": { "from": ["events"], "quietSec": 30 },
       "surfaces": {
@@ -46,7 +47,7 @@ class ManifestDecoderTest {
         "terminal": { "client": { "argv": ["tui"], "env": {}, "cwd": "{{projectDir}}" }, "chatTitle": "^T (.+)$" }
       },
       "signIn": [{ "method": "in-ui", "note": "Sign in." }],
-      "hooks": ["demo.events"]
+      "hooks": ["demo.events", "demo.reply"]
     }
   """.trimIndent()
 
@@ -75,6 +76,7 @@ class ManifestDecoderTest {
     assertEquals(listOf(EventSource.Sse("/events", "demo.events")), m.events)
     assertEquals(TitleSource("/chat/{{sessionId}}", "/title"), m.chats!!.title)
     assertEquals(ActiveSource("/chats/active", "/data"), m.chats!!.active)
+    assertEquals(ReplySource("/chat/{{sessionId}}/messages", "demo.reply"), m.chats!!.reply)
     assertEquals(Idle(listOf("events"), 30), m.idle)
     val surfaces = m.surfaces!!
     assertEquals(HomeSurface.WEB, surfaces.home)
@@ -84,7 +86,7 @@ class ManifestDecoderTest {
     assertEquals("{{projectDir}}", surfaces.terminal!!.client!!.cwd)
     assertEquals("^T (.+)$", surfaces.terminal!!.chatTitle)
     assertEquals(JsonPrimitive("in-ui"), m.signIn.single().jsonObject["method"])
-    assertEquals(listOf("demo.events"), m.hooks)
+    assertEquals(listOf("demo.events", "demo.reply"), m.hooks)
   }
 
   @Test fun optionalBlocksMayBeAbsent() {
@@ -283,6 +285,7 @@ class ManifestDecoderTest {
     assertEquals("/state/env/A: must be a string, not 1", problem(with("\"state\":{\"env\":{\"A\":1}}")))
     assertEquals("/state/config: must be a string, not true", problem(with("\"state\":{\"env\":{},\"config\":true}")))
     assertEquals("/chats/title/http: is required", problem(with("\"chats\":{\"title\":{}}")))
+    assertEquals("/chats/reply/http/parser: is required", problem(with("\"chats\":{\"reply\":{\"http\":{\"path\":\"/m\"}}}")))
     assertEquals("/idle/from/0: must be one of events, output, not pty", problem(with("\"idle\":{\"from\":[\"pty\"],\"quietSec\":60}")))
     val web = "\"surfaces\":{\"home\":\"web\",\"web\":"
     assertEquals(

@@ -30,6 +30,18 @@ class LaunchTargetTest {
   }
 
   @Test fun mapIsWhatJsReads() {
-    assertEquals(mapOf("tab" to "env", "agentId" to null), LaunchTarget("env", null).toMap())
+    assertEquals(mapOf("tab" to "env", "agentId" to null, "chatId" to null), LaunchTarget("env", null).toMap())
+    assertEquals(mapOf("tab" to "home", "agentId" to "a1", "chatId" to "ses_1"), LaunchTarget("home", "a1", "ses_1").toMap())
+  }
+
+  @Test fun eachChatHasItsOwnKey() {
+    assertEquals(LaunchTarget("home", "a1", "ses_1"), LaunchTarget.of("home", "a1", "ses_1"))
+    assertNotEquals(LaunchTarget("home", "a1", "ses_1").key, LaunchTarget("home", "a1", "ses_2").key)
+    assertNotEquals(LaunchTarget("home", "a1", "ses_1").key, LaunchTarget("home", "a1").key)
+    // A target without a chat keeps the key it always had.
+    assertEquals("a1/home", LaunchTarget("home", "a1").key)
+    // A blank chat is none, and so is a chat with no agent.
+    assertEquals(LaunchTarget("home", "a1"), LaunchTarget.of("home", "a1", " "))
+    assertEquals(LaunchTarget("home", null), LaunchTarget.of("home", "", "ses_1"))
   }
 }

@@ -4,6 +4,7 @@ import com.phonecando.runner.schedule.FireRules.Action
 import com.phonecando.runner.schedule.FireRules.Engine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -95,12 +96,22 @@ class FireRulesTest {
     assertEquals(Action.SWITCH_TO_ACP_WITH_PROMPT, FireRules.decide(ready(acp.copy(chat = ChatMode.NEW))))
     // Someone uses it, or it left jobs: its waiting hook takes the task in place.
     assertEquals(Action.WAKE, FireRules.decide(ready(acp.copy(viewer = true))))
-    assertEquals(Action.WAKE, FireRules.decide(ready(acp.copy(appInFront = true))))
     assertEquals(Action.WAKE, FireRules.decide(ready(acp.copy(jobs = true))))
     // No hook waiting, a new chat, or no hook wake at all: it asks.
     assertEquals(Action.ASK_USER, FireRules.decide(ready(acp.copy(viewer = true, wakeReady = false))))
-    assertEquals(Action.ASK_USER, FireRules.decide(ready(acp.copy(appInFront = true, chat = ChatMode.NEW))))
+    assertEquals(Action.ASK_USER, FireRules.decide(ready(acp.copy(viewer = true, chat = ChatMode.NEW))))
     assertEquals(Action.ASK_USER, FireRules.decide(ready(acp.copy(jobs = true, kindWakes = false))))
+  }
+
+  @Test fun theAppInFrontNeverKeepsAnAcpKindFromSwitching() {
+    // Home shows an ACP run live; only its terminal on screen or its jobs hold it back.
+    assertEquals(Action.SWITCH_TO_ACP_WITH_PROMPT, FireRules.decide(ready(acp.copy(appInFront = true))))
+    assertEquals(Action.SWITCH_TO_ACP_WITH_PROMPT, FireRules.decide(ready(acp.copy(appInFront = true, chat = ChatMode.NEW))))
+    // Cline as we saw it: ACP, no phone tools, no inbox, terminal idle, the Schedules page open.
+    val cline = acp.copy(kindPrompts = false, kindWakes = false, readsNotices = false)
+    assertEquals(Action.SWITCH_TO_ACP_WITH_PROMPT, FireRules.decide(ready(cline.copy(appInFront = true))))
+    // The rows without an ACP mode keep it: a restart waits for the app to go.
+    assertEquals(Action.ASK_USER, FireRules.decide(ready(tui.copy(chat = ChatMode.NEW, appInFront = true))))
   }
 
   @Test fun otherwiseItAsks() {
@@ -111,5 +122,53 @@ class FireRulesTest {
     assertEquals(Action.ASK_USER, FireRules.decide(ready(tui.copy(kindPrompts = false, wakeReady = false))))
     // A hook kind that wakes but takes no prompt, asked for a new chat.
     assertEquals(Action.ASK_USER, FireRules.decide(ready(tui.copy(kindPrompts = false, chat = ChatMode.NEW))))
+  }
+
+  // ---- why it asks (AskReasons) ----
+
+  @Test fun noReasonWhenItDoesNotAsk() {
+    assertNull(AskReasons.of(tui))
+    assertNull(AskReasons.of(ready(acp)))
+    assertNull(AskReasons.of(ready(tui, idle = false)))
+  }
+
+  @Test fun anAcpKindSaysItsTerminalWasOpenOrItsJobs() {
+    val watched = ready(acp.copy(viewer = true, wakeReady = false))
+    assertEquals(AskReasons.TERMINAL_OPEN, AskReasons.of(watched))
+    // Open on screen comes first.
+    assertEquals(AskReasons.TERMINAL_OPEN, AskReasons.of(watched.copy(jobs = true, jobNames = listOf("npm run dev"))))
+    val jobs = ready(acp.copy(jobs = true, kindWakes = false, jobNames = listOf("npm run dev")))
+    assertEquals("it had jobs running: npm run dev", AskReasons.of(jobs))
+    // Jobs with no names: it was kept running.
+    assertEquals(AskReasons.KEPT_RUNNING, AskReasons.of(jobs.copy(jobNames = emptyList())))
+  }
+
+  @Test fun otherKindsSayWhichRowAsked() {
+    assertEquals(AskReasons.NO_START_TASK, AskReasons.of(tui.copy(kindPrompts = false)))
+    assertEquals(
+      "it had jobs running: vite",
+      AskReasons.of(ready(tui.copy(chat = ChatMode.NEW, jobs = true, jobNames = listOf("vite")))),
+    )
+    assertEquals(AskReasons.APP_OPEN, AskReasons.of(ready(tui.copy(chat = ChatMode.NEW, appInFront = true))))
+    assertEquals(AskReasons.HOOK_NOT_WAITING, AskReasons.of(ready(tui.copy(kindPrompts = false, wakeReady = false))))
+    assertEquals(AskReasons.NO_NEW_CHAT, AskReasons.of(ready(tui.copy(kindPrompts = false, chat = ChatMode.NEW))))
+  }
+
+  @Test fun jobNamesAreTrimmedDedupedAndCut() {
+    assertEquals(
+      "it had jobs running: a, b, c and 2 more",
+      AskReasons.jobs(listOf("a", " b ", "a", "", "c", "d", "e")),
+    )
+    assertEquals(AskReasons.KEPT_RUNNING, AskReasons.jobs(listOf(" ")))
+  }
+
+  @Test fun aTapRunsTheTaskOnlyForAnAgentThatCannotReadItsNotice() {
+    val cline = acp.copy(kindPrompts = false, kindWakes = false, readsNotices = false)
+    assertTrue(AskReasons.tapRuns(cline))
+    assertTrue(AskReasons.tapRuns(tui.copy(kindWakes = false, readsNotices = false)))
+    // It reads the notice (phone tools or an inbox): the notice waits for its next turn.
+    assertFalse(AskReasons.tapRuns(cline.copy(readsNotices = true)))
+    // No way in for the task: nothing to tap.
+    assertFalse(AskReasons.tapRuns(tui.copy(kindPrompts = false, readsNotices = false)))
   }
 }

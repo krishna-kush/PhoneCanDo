@@ -214,6 +214,8 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   acpSnapshot(agentId: string): NativeAcpSnapshot | null;
   /** Stops its running ACP turn; false when none runs. */
   acpCancel(agentId: string): boolean;
+  /** Keeps a chat its ACP mode ran as the one its next terminal launch opens; false when its kind can't open one by id. */
+  keepAcpChat(agentId: string, chatId: string): boolean;
   /** The agent's capability checks, its level now and its last Check now; null for an agent or kind we don't know. */
   agentChecks(agentId: string): NativeAgentChecks | null;
   /** Every kind's messaging level now, by kind id (a capability found not working drops it). */

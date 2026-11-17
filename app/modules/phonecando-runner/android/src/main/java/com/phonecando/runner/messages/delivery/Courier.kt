@@ -8,9 +8,17 @@ import com.phonecando.runner.agents.AgentRecord
  * an extension that reads them itself, and whether they may wake it now
  * (MessagePolicy; the mailbox decides). [newChat]: a scheduled task in it
  * asks for a chat of its own, with this title (a server that can make one
- * makes it before the wake).
+ * makes it before the wake). [scheduleIds]: the schedules whose tasks are
+ * in it (a server says which chat took them).
  */
-data class Parcel(val ids: List<Long>, val text: String, val jsonl: String, val wake: Boolean, val newChat: String? = null)
+data class Parcel(
+  val ids: List<Long>,
+  val text: String,
+  val jsonl: String,
+  val wake: Boolean,
+  val newChat: String? = null,
+  val scheduleIds: List<String> = emptyList(),
+)
 
 /** How a parcel went. */
 enum class Handover {

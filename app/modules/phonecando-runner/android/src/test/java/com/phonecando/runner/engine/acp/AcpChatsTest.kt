@@ -210,4 +210,18 @@ class AcpChatsTest {
     assertTrue(logged.single().contains("model"))
     assertFalse(logged.single().contains("tok"))
   }
+
+  @Test fun optionsFromHomeAreReadAtEachOpen() {
+    val answer = JSONObject(
+      """{"sessionId":"new","configOptions":[{"id":"model","currentValue":"paid","options":[{"value":"paid"}]}]}""",
+    )
+    val agent = FakeAgent(mapOf(AcpWire.SESSION_NEW to { _: JSONObject -> answer }, AcpWire.SET_CONFIG_OPTION to opened))
+    var picked = "free/one"
+    val chats = AcpChats(agent, AcpCaps(), AcpSetup("/w", null, mapOf("model" to "paid"), bridge, "1") { mapOf("model" to picked) })
+    chats.applyOptions(chats.createNew())
+    picked = "free/two"
+    chats.applyOptions(chats.createNew())
+    val sets = agent.calls.filter { it.first == AcpWire.SET_CONFIG_OPTION }.map { it.second.getString("value") }
+    assertEquals(listOf("free/one", "free/two"), sets)
+  }
 }

@@ -53,6 +53,9 @@ class ManifestKindTest {
 
     override fun sseParser(name: String): ((String) -> EngineEvent?)? =
       if (name == "demo.events") { frame -> event.takeIf { frame == "go" } } else null
+
+    override fun replyParser(name: String): ((String) -> String?)? =
+      if (name == "demo.reply") { body -> body.removePrefix("said:").takeIf { body.startsWith("said:") } } else null
   }
 
   // [base] with [patch] merged in at the top level (a null value drops the key).
@@ -139,6 +142,22 @@ class ManifestKindTest {
     val untitled = kind("""{"chats":null}""")
     assertNull(untitled.sessionInfo("7", "pw", "s"))
     assertNull(untitled.parseSessionTitle("""{"name":"x"}"""))
+  }
+
+  @Test fun chatReplies() {
+    val replies = """{"chats":{"reply":{"http":{"path":"/chats/{{sessionId}}/messages?last=1","parser":"demo.reply"}}},
+      "hooks":["demo.events","demo.reply"]}"""
+    val k = kind(replies)
+    assertEquals("http://127.0.0.1:7/chats/a%20b%2Fc/messages?last=1", k.chatReply("7", "pw", "a b/c")!!.url)
+    assertEquals("Done.", k.parseChatReply("said: Done.\n"))
+    assertNull(k.parseChatReply("said:  "))
+    assertNull(k.parseChatReply("not ours"))
+    assertNull(kind().chatReply("7", "pw", "s"))
+    assertNull(kind().parseChatReply("said: x"))
+    assertEquals(
+      "demo: no reply parser demo.nope in this build",
+      refused("""{"chats":{"reply":{"http":{"path":"/m","parser":"demo.nope"}}}}"""),
+    )
   }
 
   @Test fun chatsRunningNow() {
@@ -264,6 +283,14 @@ class ManifestKindTest {
       refused("""{"engine":{"style":"tui","launch":{"argv":["x"]}},"hooks":null}""", null),
     )
     assertEquals(
+      "demo: a tui engine cannot have chats.reply",
+      refused(
+        """{"engine":{"style":"tui","launch":{"argv":["x"]}},"events":null,
+           "chats":{"reply":{"http":{"path":"/m","parser":"demo.reply"}}},"hooks":null}""",
+        null,
+      ),
+    )
+    assertEquals(
       "demo: a tui engine cannot have a web Home",
       assertFailsWith<KindException> { tui("""{"surfaces":{"home":"web"}}""") }.message,
     )
@@ -383,6 +410,8 @@ class ManifestKindTest {
       override val id = manifest.id
 
       override fun sseParser(name: String): ((String) -> EngineEvent?)? = if (name in manifest.hooks) { _ -> null } else null
+
+      override fun replyParser(name: String): ((String) -> String?)? = if (name in manifest.hooks) { _ -> null } else null
     }
     return ManifestKind.of(manifest, hooks, Runtimes.catalog(fixtures))
   }

@@ -6,7 +6,9 @@
 // problems and what it saves (logic/draft.ts), the one-tap times
 // (logic/presets.ts), the timeline across agents (logic/timeline.ts), and
 // the work order's runs coming up and its ruler (logic/nextRuns.ts) and
-// face (logic/faceCue.ts). Imports
+// face (logic/faceCue.ts), a recent run's reply and tap
+// (logic/recentRuns.ts), "How schedules run" (logic/rulesCopy.ts), and the web route that opens the chat a run went
+// to (ui/chat/logic/chatPath.ts). Imports
 // the real pure modules (Node 22.18+ strips their types), so these cannot
 // drift. Times read in UTC.
 // Run: node test_schedule.js (or pnpm check:vectors)
@@ -91,9 +93,13 @@ const at = (d, h, m) => Date.UTC(2026, 10, d, h, m);
     late: true,
     outcome: 'failed',
     detail: 'start failed',
+    chatId: 'ses_1',
+    reply: 'Build is green.',
   };
   t('a run reads as sent', p.asRun(run), run);
   t('a run without detail: null', p.asRun({ ...run, detail: undefined }).detail, null);
+  t('a run from before chats and replies: both null', [p.asRun({ ...run, chatId: undefined, reply: undefined })].map((r) => [r.chatId, r.reply]), [[null, null]]);
+  t('an empty or odd chat and reply: null', [p.asRun({ ...run, chatId: '', reply: 7 })].map((r) => [r.chatId, r.reply]), [[null, null]]);
   t('a run without a name: its agent id', p.asRun({ ...run, agentName: '' }).agentName, 'a1');
   t('a run with an outcome we do not know: dropped', p.asRun({ ...run, outcome: 'x' }), null);
   t('a run without seq: dropped', p.asRun({ ...run, seq: 'four' }), null);
@@ -177,6 +183,16 @@ const at = (d, h, m) => Date.UTC(2026, 10, d, h, m);
       { on: true, nextAt: at(14, 9, 0), timing: every },
     ].map((s) => w.nextRunText(s, NOW)),
     ['off', 'done', 'no next run', 'due since 09:00', 'next in 5 min', 'next tomorrow 09:00'],
+  );
+  t(
+    'a one-off that ran is done (a done mark, no switch); off, coming or repeating is not',
+    [
+      { on: true, nextAt: null, timing: once },
+      { on: false, nextAt: null, timing: once },
+      { on: true, nextAt: NOW + HOUR, timing: once },
+      { on: true, nextAt: null, timing: every },
+    ].map((s) => w.isDone(s)),
+    [true, false, false, false],
   );
 
   // --- copy -----------------------------------------------------------------------
@@ -398,6 +414,43 @@ const at = (d, h, m) => Date.UTC(2026, 10, d, h, m);
   t('a kind that can only start says a running agent is restarted', k2.howTasksReachText({ canWake: false, acp: false }).includes('restarts it'), true);
   t('an ACP mode runs it in the background, in its own app while you use it, else asks you', k2.howTasksReachText({ canWake: true, acp: true }).includes('takes the task in its own app when it can; otherwise it asks you'), true);
 
+  // --- a recent run's reply and tap ---------------------------------------------------
+  const rr = await import(src('ui/schedule/logic/recentRuns.ts'));
+  t('no reply, no quote', [rr.replyExcerpt(null), rr.replyExcerpt(''), rr.replyExcerpt('  \n\n ')], [null, null, null]);
+  t('a reply quotes its first three lines, blanks and fences left out', rr.replyExcerpt('Done.\n\n```ts\n  const a = 1;\n```\nTests pass.\nMore'), 'Done.\nconst a = 1;\nTests pass.');
+  t('a long reply is cut with an ellipsis', [rr.replyExcerpt('x'.repeat(500))].map((x) => [x.length, x.endsWith('…')]), [[400, true]]);
+  const agentsHere = [{ id: 'a1' }, { id: 'a2' }];
+  t('a run opens while its agent is here', [rr.runOpens({ agentId: 'a2' }, agentsHere), rr.runOpens({ agentId: 'gone' }, agentsHere)], [true, false]);
+  t('a run for a screen reader', k2.runLabel({ ...run, late: false, firedAt: NOW - 5 * MIN }, NOW, true, 'Build is green.'), '5 min ago · Builder. failed: start failed. Check. Reply: Build is green.');
+  t('a run without a reply for a screen reader', k2.runLabel({ ...run, late: true, outcome: 'woke', detail: null, firedAt: NOW - 5 * MIN }, NOW, false, null), '5 min ago · late. woke. Check');
+  t('the tap says what it does', k2.OPENS_CHAT, 'Opens the chat');
+
+  // --- the web route to a run's chat ---------------------------------------------------
+  const cp = await import(src('ui/chat/logic/chatPath.ts'));
+  const SESSION = '/session/([^/?#]+)';
+  // opencode's sessionPath (agents/native/opencode/agent.json).
+  const PATH = '/server/{{origin64}}/session/{{sessionId}}';
+  const ORIGIN = 'http://127.0.0.1:4096';
+  // opencode's base64Encode of the origin: base64url, no padding.
+  const SERVER = 'aHR0cDovLzEyNy4wLjAuMTo0MDk2';
+  t('opencode’s path from the origin', cp.fillPath(PATH, ORIGIN, 'ses_9'), `/server/${SERVER}/session/ses_9`);
+  t('base64url: - and _ for + and /, no padding', [cp.fillPath(PATH, 'http://a:1>>>??', 'x'), cp.fillPath(PATH, 'http://a:1/??', 'x')], [
+    '/server/aHR0cDovL2E6MT4-Pj8_/session/x',
+    '/server/aHR0cDovL2E6MS8_Pw/session/x',
+  ]);
+  t('from home, with no page of a chat: the route built from the origin', cp.chatUrl(SESSION, PATH, `${ORIGIN}/`, 'ses_9', [null]), `${ORIGIN}/server/${SERVER}/session/ses_9`);
+  t('on another chat: its route with this chat', cp.chatUrl(SESSION, PATH, `${ORIGIN}/server/abc/session/ses_1#m2`, 'ses_9', [null]), `${ORIGIN}/server/abc/session/ses_9`);
+  t('from home: the last page’s route, on the origin the view is on now', cp.chatUrl(SESSION, PATH, 'http://127.0.0.1:5000/', 'ses_9', ['/server/old/session/ses_1?x=1']), 'http://127.0.0.1:5000/server/old/session/ses_9');
+  t('a last page with no chat: built', cp.chatUrl(SESSION, PATH, `${ORIGIN}/`, 'ses_9', ['/settings']), `${ORIGIN}/server/${SERVER}/session/ses_9`);
+  t('on that chat already: stay', cp.chatUrl(SESSION, PATH, `${ORIGIN}/server/${SERVER}/session/ses_9`, 'ses_9', [null]), null);
+  t('a chat id goes in encoded', cp.chatUrl(SESSION, PATH, `${ORIGIN}/server/abc/session/ses_1`, 'a b/c', []), `${ORIGIN}/server/abc/session/a%20b%2Fc`);
+  t('a kind whose regex would not read the route back: no route', cp.chatUrl('/c/([^/?#]+)', PATH, `${ORIGIN}/`, 'ses_9', [null]), null);
+  t('a kind with no sessionPath goes only by its own pages', [cp.chatUrl(SESSION, null, `${ORIGIN}/`, 'ses_9', [null]), cp.chatUrl(SESSION, null, `${ORIGIN}/`, 'ses_9', ['/x/session/ses_1'])], [null, `${ORIGIN}/x/session/ses_9`]);
+  t('a path with only the chat in it', cp.fillPath('/c/{{sessionId}}', ORIGIN, 'a b'), '/c/a%20b');
+  t('but its own pages still work', cp.chatUrl('/c/([^/?#]+)', PATH, `${ORIGIN}/`, 'ses_9', ['/w/c/ses_1']), `${ORIGIN}/w/c/ses_9`);
+  t('not a URL: no route', cp.chatUrl(SESSION, PATH, 'about:blank', 'ses_9', []), null);
+  t('swap: a path with no chat', cp.swapChat(SESSION, '/', 'x'), null);
+
   // --- the page with nothing on it ---------------------------------------------------
   const e = await import(src('ui/schedule/logic/emptyCopy.ts'));
   const tue = new Date(2026, 10, 17, 9, 30).getTime();
@@ -412,6 +465,45 @@ const at = (d, h, m) => Date.UTC(2026, 10, d, h, m);
   t('a caption for every look, napping and woken', e.EMPTY_LOOKS.every((l) => e.EMPTY_CAPTION[l].asleep && e.EMPTY_CAPTION[l].up && e.EMPTY_FACE[l]), true);
   t('two scenes: the week and the clock', e.EMPTY_LOOKS, ['week', 'clock']);
   t('a random pick lands on each, never past the end', [e.pickLook(0), e.pickLook(0.49), e.pickLook(0.5), e.pickLook(0.999), e.pickLook(1)], ['week', 'week', 'clock', 'clock', 'clock']);
+
+  // --- how schedules run ---------------------------------------------------------------
+  const rc = await import(src('ui/schedule/logic/rulesCopy.ts'));
+  const lim = await import(src('ui/schedule/logic/limits.ts'));
+  t('spans in words', [MIN, 2 * MIN, HOUR, 2 * HOUR, DAY, 3 * DAY].map(rc.spanText), ['a minute', '2 minutes', 'an hour', '2 hours', 'a day', '3 days']);
+  t('the runner timing numbers (ScheduleRules.kt)', [lim.BUSY_WAIT_MS, lim.LATE_MAX_MS, lim.LATE_MARK_MS], [2 * HOUR, DAY, 2 * MIN]);
+  const rk = (label, schedules, canWake, acp) => ({ label, schedules, canWake, acp });
+  const RULE_KINDS = [
+    rk('opencode', true, true, false),
+    rk('Claude Code', true, true, true),
+    rk('Gemini CLI', true, false, true),
+    rk('Codex', true, false, false),
+    rk('Aider', false, false, false),
+  ];
+  t('a kind goes by its flags: ACP mode first, then wake, then start', RULE_KINDS.map(rc.kindPath), ['chat', 'background', 'background', 'terminal', 'none']);
+  t('an ACP kind runs in the background even with no other way in', rc.kindPath(rk('x', false, false, true)), 'background');
+  t('the kinds on each path, in order', rc.kindsByPath(RULE_KINDS), {
+    chat: ['opencode'],
+    background: ['Claude Code', 'Gemini CLI'],
+    terminal: ['Codex'],
+    none: ['Aider'],
+  });
+  const secs = rc.ruleSections(RULE_KINDS);
+  t('four boxes', secs.map((s) => s.id), ['due', 'ask', 'wait', 'after']);
+  t('due: a row per path, kinds named', secs[0].rows.map((x) => [x.id, x.kinds]), [
+    ['chat', 'opencode'],
+    ['background', 'Claude Code · Gemini CLI'],
+    ['terminal', 'Codex'],
+    ['none', 'Aider'],
+  ]);
+  t('a path with no kind is left out (play: opencode only)', rc.ruleSections([RULE_KINDS[0]])[0].rows.map((x) => x.id), ['chat']);
+  t('every box has a barcode and rows', secs.every((s) => s.barcode && s.rows.length > 0), true);
+  const ruleAt = (sec, id) => secs.find((s) => s.id === sec).rows.find((x) => x.id === id);
+  t('busy says the wait', ruleAt('wait', 'busy').body.includes('up to 2 hours'), true);
+  t('missed says the day', ruleAt('wait', 'missed').body.includes('more than a day past'), true);
+  t('late says the minutes', ruleAt('wait', 'late').body.includes('more than 2 minutes'), true);
+  t('stamps are the words runs show', ['busy', 'missed', 'late'].map((id) => ruleAt('wait', id).stamp).concat(ruleAt('ask', 'notice').stamp), ['skipped: busy', 'missed', 'late', 'asked you']);
+  t('the asks: terminal on screen, jobs, cannot start, then the notice', secs[1].rows.map((x) => x.id), ['viewer', 'jobs', 'cannot', 'notice']);
+  t('no ask row blames PhoneCanDo being open (ACP)', secs[1].rows.some((x) => /PhoneCanDo is open/.test(x.head + x.body)), false);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

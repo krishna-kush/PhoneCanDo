@@ -5,7 +5,10 @@ import { fields, list, oneOf, record, regex, string, type Add, type Json } from 
 import { HOMES, MAX, PAIR_METHODS, PALETTE_ROLES, PATTERNS, WEB_SPOTS } from './rules.ts';
 import { command, httpPath, template } from './templates.ts';
 
-const ADAPTER_FIELDS = ['colorSchemeKey', 'cssVars', 'hide', 'authUrl', 'sessionUrl', 'spots'];
+const ADAPTER_FIELDS = ['colorSchemeKey', 'cssVars', 'hide', 'authUrl', 'sessionUrl', 'sessionPath', 'spots'];
+// What a chat's path may carry: the chat, and the page's origin as base64url
+// (a web UI that keeps its chats under the server they live on).
+const SESSION_PATH_PLACEHOLDERS = ['sessionId', 'origin64'];
 const PAIR_FIELDS = ['method', 'path', 'code', 'url'];
 
 export function checkSurfaces(add: Add, surfaces: unknown, style: string | null) {
@@ -58,12 +61,31 @@ function checkAdapter(add: Add, adapter: unknown) {
   }
   string(add, `${at}/authUrl`, a.authUrl, PATTERNS.httpPath, MAX.relPath);
   if ('sessionUrl' in a) regex(add, `${at}/sessionUrl`, a.sessionUrl);
+  if ('sessionPath' in a) {
+    if (!('sessionUrl' in a)) add(`${at}/sessionPath`, 'required', 'a chat path needs sessionUrl to read the chat back');
+    sessionPath(add, `${at}/sessionPath`, a.sessionPath);
+  }
   if ('spots' in a) {
     record(add, `${at}/spots`, a.spots, (path, place, selector) => {
       oneOf(add, path, place, WEB_SPOTS);
       string(add, path, selector, PATTERNS.selector, MAX.selector);
     });
   }
+}
+
+// The path that shows one chat: an http path with {{sessionId}} in it, and
+// no placeholder but SESSION_PATH_PLACEHOLDERS.
+function sessionPath(add: Add, path: string, value: unknown) {
+  if (!string(add, path, value, PATTERNS.httpPath, MAX.relPath)) return;
+  const text = value as string;
+  const names = [...text.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
+  for (const name of names) {
+    if (!SESSION_PATH_PLACEHOLDERS.includes(name)) {
+      add(path, 'unknown', `unknown placeholder {{${name}}} (known: ${SESSION_PATH_PLACEHOLDERS.join(', ')})`);
+    }
+  }
+  if (!names.includes('sessionId')) add(path, 'required', 'a chat path carries {{sessionId}}');
+  if (/\{\{|\}\}/.test(text.replace(/\{\{\w+\}\}/g, ''))) add(path, 'pattern', 'a stray {{ or }}');
 }
 
 // The terminal tab: the kind's TUI as a client of its server, or a shell in

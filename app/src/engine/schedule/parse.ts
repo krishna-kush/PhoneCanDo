@@ -123,6 +123,8 @@ export function asRun(value: unknown): ScheduleRun | null {
     late: raw?.late === true,
     outcome,
     detail: str(raw?.detail) || null,
+    chatId: str(raw?.chatId) || null,
+    reply: str(raw?.reply) || null,
   };
 }
 

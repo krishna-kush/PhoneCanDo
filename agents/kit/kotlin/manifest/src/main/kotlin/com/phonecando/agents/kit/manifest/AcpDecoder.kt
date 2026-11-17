@@ -10,6 +10,7 @@ internal object AcpDecoder {
     env = a.stringMap("env"),
     tools = if (a.has("tools")) ManifestDecoder.enumOf(a, "tools", AcpTools.entries) { it.wire } else AcpTools.SESSION,
     options = a.stringMap("options"),
+    optionsHook = a.optString("optionsHook"),
     meta = a.optObj("meta")?.tree,
     chat = a.optObj("chat")?.let { c -> ChatArgs(c.strings("args"), c.optInt("at")) },
   )

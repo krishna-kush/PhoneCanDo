@@ -268,7 +268,7 @@
           }
         },
         "acp": {
-          "description": "Tui only: the ACP mode, the same agent speaking the Agent Client Protocol on stdin and stdout with no screen, run in launch.cwd. argv and env as a launch's (env on top of the launch env and the state env), never {{prompt}} or {{chatId}}; tools: how it gets the phone tools (session: the bridge goes in session/new; config: its own config names it); options: session config options set on every chat it opens; meta: passed as _meta when a chat opens, its strings templates as env values are, at most 4 KiB as compact JSON (validate.ts); chat: terminal-mode args that open one given chat in place of the resume args, exactly one {{chatId}}, whole.",
+          "description": "Tui only: the ACP mode, the same agent speaking the Agent Client Protocol on stdin and stdout with no screen, run in launch.cwd. argv and env as a launch's (env on top of the launch env and the state env), never {{prompt}} or {{chatId}}; tools: how it gets the phone tools (session: the bridge goes in session/new; config: its own config names it); options: session config options set on every chat it opens; optionsHook: a code hook (listed in hooks) that reads more options from the agent's HOME when a chat opens, set over options; meta: passed as _meta when a chat opens, its strings templates as env values are, at most 4 KiB as compact JSON (validate.ts); chat: terminal-mode args that open one given chat in place of the resume args, exactly one {{chatId}}, whole.",
           "type": "object",
           "additionalProperties": false,
           "required": ["argv"],
@@ -282,6 +282,7 @@
               "propertyNames": { "minLength": 1, "maxLength": 64 },
               "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 64 }
             },
+            "optionsHook": { "$ref": "#/$defs/hookId" },
             "meta": { "type": "object", "additionalProperties": { "$ref": "#/$defs/acpMetaValue" } },
             "chat": {
               "type": "object",
@@ -387,6 +388,23 @@
               "properties": {
                 "path": { "$ref": "#/$defs/httpPath" },
                 "json": { "$ref": "#/$defs/jsonPointer" }
+              }
+            }
+          }
+        },
+        "reply": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["http"],
+          "properties": {
+            "http": {
+              "description": "A chat's last reply (a scheduled task's answer): GET path, then the code hook parser (listed in hooks) reads the agent's final text in it. Asked once a scheduled run in that chat ends.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "parser"],
+              "properties": {
+                "path": { "$ref": "#/$defs/httpPath" },
+                "parser": { "$ref": "#/$defs/hookId" }
               }
             }
           }
@@ -972,6 +990,12 @@
         "sessionUrl": {
           "description": "Group 1 is the chat (session id) a web UI URL shows.",
           "$ref": "#/$defs/regex"
+        },
+        "sessionPath": {
+          "description": "The path that shows one chat: {{sessionId}}, and {{origin64}} for the page's origin as base64url.",
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^/\\S*\\{\\{sessionId\\}\\}\\S*$"
         },
         "spots": {
           "description": "Per place on the way to a chat, the selector of the thing to tap there; the app's guide points at it.",

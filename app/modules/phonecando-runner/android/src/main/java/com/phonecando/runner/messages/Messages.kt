@@ -19,6 +19,7 @@ import com.phonecando.runner.messages.delivery.InboxCourier
 import com.phonecando.runner.messages.delivery.InboxFolder
 import com.phonecando.runner.messages.delivery.KindInbox
 import com.phonecando.runner.messages.delivery.RoutingCourier
+import com.phonecando.runner.schedule.Schedules
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -59,6 +60,7 @@ class Messages private constructor(context: Context) {
     },
     seat = view::serverSeat,
     onError = ::warn,
+    scheduled = { agentId, scheduleId, sessionId -> Schedules.peek()?.delivered(agentId, scheduleId, sessionId) },
   )
 
   private val courier = RoutingCourier(

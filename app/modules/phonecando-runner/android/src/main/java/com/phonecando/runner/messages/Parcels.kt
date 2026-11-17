@@ -10,7 +10,8 @@ import com.phonecando.runner.messages.delivery.Parcel
 // back its text ends with how many still wait; the next hook, or
 // agents_inbox, gets them. The parcel may wake the agent when any of its
 // unread messages may. A scheduled task in it that asks for a new chat
-// names that chat (Parcel.newChat). Pure.
+// names that chat (Parcel.newChat); every scheduled task in it is named by
+// its schedule (Parcel.scheduleIds). Pure.
 object Parcels {
   const val MAX_BYTES = 8 * 1024
 
@@ -38,6 +39,7 @@ object Parcels {
       jsonl = MessageReplies.jsonl(batch, readerImage, kindLabel),
       wake = unread.any(mayWake),
       newChat = batch.firstOrNull { it.scheduled?.newChat == true }?.let { it.scheduled?.chatTitle(it.text) },
+      scheduleIds = batch.mapNotNull { it.scheduled?.scheduleId }.distinct(),
     )
   }
 

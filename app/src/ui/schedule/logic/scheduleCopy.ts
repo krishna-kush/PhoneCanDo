@@ -1,10 +1,11 @@
 // What the schedule screens say: the page's intro and empty lines, the
-// on-time line, who set a schedule, what each run did, the agent page's
-// rows and the runner's refusals in plain words (the editor's own words
-// are editorCopy.ts). Plain and short, like the rest of the app. Pure
-// (zero RN imports).
+// on-time line, who set a schedule, what each run did (and its row for a
+// screen reader), the agent page's rows and the runner's refusals in plain
+// words (the editor's own words are editorCopy.ts). Plain and short, like
+// the rest of the app. Pure (zero RN imports).
 import type { ChatMode, RunOutcome, ScheduleRun, SetBy } from '../../../engine/schedule/types';
 import { messageTime } from '../../messages/logic/messagesCopy.ts';
+import { snippet } from '../../messages/logic/messageView.ts';
 
 /** A palette role (theme/tokens.json) for a line's ink. */
 export type Tone = 'fg' | 'muted' | 'dim' | 'primary' | 'secondaryInk';
@@ -123,6 +124,16 @@ export function runHead(run: ScheduleRun, now: number, withAgent: boolean): stri
 }
 
 export const RECENT_RUNS = 'Recent runs';
+
+/** A recent run's row, tapped. */
+export const OPENS_CHAT = 'Opens the chat';
+
+/** A recent run for a screen reader: its head, what it did, the task, and the reply's first lines when it has one. */
+export function runLabel(run: ScheduleRun, now: number, withAgent: boolean, excerpt: string | null): string {
+  return [runHead(run, now, withAgent), outcomeText(run.outcome, run.detail), snippet(run.text, 80), excerpt ? `Reply: ${excerpt}` : null]
+    .filter(Boolean)
+    .join('. ');
+}
 
 /** "1 schedule", "3 schedules"; empty for none. */
 export function countText(n: number): string {

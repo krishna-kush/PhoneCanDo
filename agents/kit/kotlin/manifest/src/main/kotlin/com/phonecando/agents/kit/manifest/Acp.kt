@@ -17,6 +17,11 @@ data class AcpSpec(
   val tools: AcpTools = AcpTools.SESSION,
   /** Session config options set on every chat it opens, by config id, in manifest order. */
   val options: Map<String, String> = emptyMap(),
+  /**
+   * The code hook (listed in `hooks`) that reads more options from the
+   * agent's HOME when a chat opens, set over [options]; null: none.
+   */
+  val optionsHook: String? = null,
   /** Passed as `_meta` when a chat opens; its strings are templates as env values are. */
   val meta: JsonObject? = null,
   /** Terminal-mode args that open one given chat. */

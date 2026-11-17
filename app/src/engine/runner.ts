@@ -124,6 +124,7 @@ export type RunnerModule = {
   /** ACP mode (engine/acp/, which checks what these return). Absent from native builds older than ACP mode. */
   acpSnapshot?(agentId: string): unknown;
   acpCancel?(agentId: string): boolean;
+  keepAcpChat?(agentId: string, chatId: string): boolean;
   resolvePermission?(requestId: string, optionId: string | null): boolean;
   /** Capability checks (engine/checks/, which checks what these return). Absent from native builds older than checks. */
   agentChecks?(agentId: string): unknown;
@@ -299,16 +300,17 @@ export function isPhoneInUse(): boolean {
 // download) or the RAM warning and, when the reason is one agent (a tap on
 // its notification or alert, its return after phone control, its prompt),
 // that agent. Native binds it when the app opens, so each notification
-// opens its own agent (notify/LaunchTarget.kt).
+// opens its own agent (notify/LaunchTarget.kt). A scheduled run's notice
+// also names the chat it ran in, for Home to open.
 export type LaunchTab = 'home' | 'env' | 'checks' | 'settings' | 'models' | 'updates' | 'memory';
 
-export type LaunchTarget = { tab: LaunchTab; agentId: AgentId | null };
+export type LaunchTarget = { tab: LaunchTab; agentId: AgentId | null; chatId?: string | null };
 
 const LAUNCH_TABS: readonly string[] = ['home', 'env', 'checks', 'settings', 'models', 'updates', 'memory'];
 
 function asLaunchTarget(raw: NativeLaunchTarget | null | undefined): LaunchTarget | null {
   if (!raw || !LAUNCH_TABS.includes(raw.tab)) return null;
-  return { tab: raw.tab as LaunchTab, agentId: raw.agentId || null };
+  return { tab: raw.tab as LaunchTab, agentId: raw.agentId || null, chatId: raw.chatId || null };
 }
 
 // The target waiting for the app (a cold or resumed start), read and

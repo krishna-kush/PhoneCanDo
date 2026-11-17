@@ -66,6 +66,10 @@ export type ScheduleRun = {
   late: boolean;
   outcome: RunOutcome;
   detail: string | null;
+  /** The chat the task ran in (an ACP chat, or the session a server kind took it in); null without one. */
+  chatId: string | null;
+  /** The agent's final reply, trimmed and capped by the runner; null until it has one, or without one. */
+  reply: string | null;
 };
 
 /** A new schedule as you set it in the app. */

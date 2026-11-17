@@ -419,7 +419,9 @@ asks for the terminal again, on the same chat.
   header); an agent without HTTP MCP gets no phone tools in ACP mode, so a
   kind like that sets `tools` `config`. The chat's id is kept as the
   agent's `acpChat`, and the kind's `options` are set where the agent
-  offers them (`session/set_config_option`). A kept chat the agent
+  offers them (`session/set_config_option`), with what its `optionsHook`
+  reads from the agent's HOME at that open on top (`acpHomeOptions`; its
+  value need not be in the option's list). A kept chat the agent
   refuses to reopen is forgotten (an agent gone, a timeout or a sign-in
   first says nothing of the chat, so those keep it); the log says why,
   with what the error's `data` says (`AcpError.detail`: the ACP SDKs put
@@ -1317,7 +1319,7 @@ the store's files, the alarm, the receivers and `LiveFireState`).
   | **kind with an ACP mode:** engine stopped | start in ACP mode with the task as its first prompt (`started`) |
   | engine starting or stopping, or busy (an ACP turn, a run, a question) | wait until idle; 2 h past due `busy` |
   | ready in ACP mode, idle | the task as its next prompt (`woke`) |
-  | ready in terminal mode, idle, nobody with its terminal open, no jobs, not kept running, app not in front | switch to ACP mode with the task as its first prompt (`restarted`) |
+  | ready in terminal mode, idle, nobody with its terminal open, no jobs, not kept running | switch to ACP mode with the task as its first prompt (`restarted`; PhoneCanDo open is no reason to wait, Home shows the run live) |
   | ready in terminal mode, idle, someone using it or jobs left, its hook waiting, same chat | wake it with the task in place, as before ACP mode (`woke`) |
   | ready in terminal mode, idle, otherwise | ask you (`asked`) |
   | **any other kind:** engine stopped, kind takes `engine.prompt` | start with the task as its first prompt (`started`) |
@@ -1365,9 +1367,21 @@ the store's files, the alarm, the receivers and `LiveFireState`).
   first frame and may never go quiet, so it is ready once it has drawn
   something and run its `settleMs` (`TuiReady` `PromptedReady`), not after
   quiet.
-- **Asking you** (`DueNotice`): the task waits as a notice the agent reads
-  in its next turn, and "`<agent>`: scheduled task due" (agent channel, id
-  9400 in the agent's tagged ids) opens that agent.
+- **Asking you** (`DueNotice`, `DueText`): every `asked` run says why in
+  its detail, the schedule's last run and the notice (`AskReasons`, one per
+  row: "its terminal was open on screen", "it had jobs running: `<names>`"
+  or "it was set to keep running", "it can't take a task at start",
+  "PhoneCanDo was open" (a restart only), "its hook wasn't waiting for a
+  message", "it can't take a task in a new chat"; or why a start or wake
+  was refused, or no Alarms & reminders). The task waits as a notice the
+  agent reads in its next turn, and "`<agent>`: scheduled task due" (agent
+  channel, id 9400 in the agent's tagged ids) opens that agent. An agent
+  that can't read that notice (no phone tools and no `inbox`, so its
+  terminal never sees it) with a way in for the task (an ACP mode or
+  `engine.prompt`) gets no notice; its due notice says "Tap to run it now"
+  and the tap (`OpenTargetActivity`, the schedule id in the intent) runs it
+  as Run now before Home opens. That Run now asking again posts no second
+  due notice; its run says why.
 - **A start that fails** (its engine `failed` or `died` before ready)
   turns its run `failed` with why, and the agent's other tasks fail for
   10 minutes rather than start it again (`engine/starts/StartHolds`, which
