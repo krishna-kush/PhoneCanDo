@@ -9,6 +9,19 @@ const path = require('node:path');
 // export:embed). Quiet unless a line changed; a failure stops the build.
 execFileSync(process.execPath, ['--no-warnings', path.join(__dirname, 'scripts/make-barcodes.mjs')], { stdio: 'inherit' });
 
+// The Choose agent step's fans (src/ui/env/new-agent/picker/fans/counts.ts):
+// each agent's GitHub stars, counted afresh as Metro starts when the last
+// count is a few hours old. Offline or rate limited, it keeps the counts it
+// had; it never stops the build.
+try {
+  execFileSync(process.execPath, ['--no-warnings', path.join(__dirname, 'scripts/make-fans.mjs')], {
+    stdio: 'inherit',
+    timeout: 30_000,
+  });
+} catch {
+  console.log('fans: no fresh count this time; the counts we had stay.');
+}
+
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
