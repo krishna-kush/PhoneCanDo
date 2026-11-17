@@ -243,6 +243,12 @@
         "code": "required"
       }
     ],
+    "web-spot-unknown.json": [
+      {
+        "path": "/surfaces/web/adapter/spots/chatBox",
+        "code": "enum"
+      }
+    ],
     "sse-parser-not-hooked.json": [
       {
         "path": "/events/0/sse/parser",

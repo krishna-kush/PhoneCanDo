@@ -63,6 +63,49 @@ const mod = pathToFileURL(path.join(__dirname, '../../src/engine/agents/webAdapt
   const many = webUiFor({ cssVars: {}, authUrl: '/a/', hide: ['header', '[data-x="y"]'] });
   t('every hidden selector in one rule', many.embedScript.includes(`style.textContent = 'header,[data-x="y"]{display:none !important}';`), true);
 
+  // --- spots: where the guide can point in the web UI ---------------------------
+  const { SPOTS_WATCH, readSpots } = await import(mod);
+  t('opencode has every spot on the way to a chat', web.spots, ['projects', 'addProject', 'pickFolder', 'newChat', 'composer']);
+  t('no spots, none to watch', [bare.spots, bare.watchScript(['projects'])], [[], 'window.__phonecandoSpots && window.__phonecandoSpots.watch({});\ntrue;']);
+  t('watch asks only for the places it has', web.watchScript(['projects', 'composer']), `window.__phonecandoSpots && window.__phonecandoSpots.watch(${JSON.stringify({
+    projects: manifest.surfaces.web.adapter.spots.projects,
+    composer: manifest.surfaces.web.adapter.spots.composer,
+  })});\ntrue;`);
+  const box = { x: 14, y: 21, width: 404, height: 40 };
+  t('a spots message', readSpots(JSON.stringify({ phonecandoSpots: { width: 432, spots: { projects: box, nope: box, composer: { x: 'a' } } } })), {
+    width: 432,
+    spots: { projects: box },
+  });
+  t('any other message', [readSpots('hi'), readSpots('{}'), readSpots('null'), readSpots(JSON.stringify({ phonecandoSpots: { width: 0, spots: {} } }))], [null, null, null, null]);
+
+  // The watch script itself, in a page of two buttons: one in front, one
+  // under a dialog. It posts once, and again only on a change.
+  const posted = [];
+  const timers = [];
+  const el = (r, covered) => {
+    const node = { getBoundingClientRect: () => ({ left: r.x, top: r.y, width: r.width, height: r.height }) };
+    node.contains = (hit) => !covered && hit === node;
+    return node;
+  };
+  const front = el(box, false);
+  const under = el({ x: 0, y: 300, width: 100, height: 40 }, true);
+  const page = {
+    innerWidth: 432,
+    innerHeight: 758,
+    ReactNativeWebView: { postMessage: (m) => posted.push(m) },
+    setInterval: (f) => timers.push(f),
+    clearInterval: () => {},
+    document: {
+      querySelectorAll: (s) => ({ '#front': [front], '#under': [under] })[s] ?? [],
+      elementFromPoint: (x, y) => (y < 100 ? front : {}),
+    },
+  };
+  page.window = page;
+  new Function(...Object.keys(page), SPOTS_WATCH)(...Object.values(page));
+  page.__phonecandoSpots.watch({ projects: '#front', newChat: '#under', composer: '#none' });
+  timers[0]();
+  t('the page reports what is in front, once', posted.map((m) => readSpots(m)), [{ width: 432, spots: { projects: box } }]);
+
   console.log(`\nRESULT: ${pass} pass, ${fail} fail`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => {

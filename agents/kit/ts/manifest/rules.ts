@@ -11,6 +11,8 @@ export const LINKAGES = ['system-only'];
 export const ENGINE_STYLES = ['server', 'tui'];
 export const PHONE_TOOLS = ['plugin', 'mcp:config', 'mcp:argv', 'none'];
 export const HOMES = ['web', 'tui'];
+/** The places on the way to a chat a web adapter's `spots` may name, in order. */
+export const WEB_SPOTS = ['projects', 'addProject', 'pickFolder', 'newChat', 'composer'];
 export const PAIR_METHODS = ['POST'];
 export const IDLE_SOURCES = ['events', 'output'];
 /** What a tui engine's PTY output can signal, and the engine events a rule maps it to. */

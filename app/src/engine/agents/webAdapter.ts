@@ -1,18 +1,25 @@
 // A kind's web UI inside our WebView, built from its manifest's web adapter
 // (KindView.web.adapter): the theme script that maps the app palette onto
 // the web UI's CSS variables and color-scheme key, the embed script that
-// hides its own chrome, and how its URLs read. Pure (no RN imports); vectors
-// in scripts/vectors/test_web_adapter.js hold it byte-equal to what opencode's
+// hides its own chrome, how its URLs read, and where its spots are (the
+// guide's places to point at). Pure (no RN imports); vectors in
+// scripts/vectors/test_web_adapter.js hold it byte-equal to what opencode's
 // hand-written adapter produced.
 import type {
   AgentWebUi,
   WebAdapterSpec,
   WebPalette,
+  WebSpot,
+  WebSpotRects,
   WebThemeMode,
 } from '../../../../agents/kit/ts/contract/web.ts';
 
+/** Every web spot, in walking order. */
+const WEB_SPOTS: readonly WebSpot[] = ['projects', 'addProject', 'pickFolder', 'newChat', 'composer'];
+
 export function webUiFor(spec: WebAdapterSpec): AgentWebUi {
   const session = spec.sessionUrl ? new RegExp(spec.sessionUrl) : null;
+  const spots = spec.spots ?? {};
   return {
     themeScript: (mode, palette) => themeScript(spec, mode, palette),
     embedScript: embedScript(spec.hide ?? []),
@@ -21,8 +28,90 @@ export function webUiFor(spec: WebAdapterSpec): AgentWebUi {
       const m = session?.exec(url);
       return m ? decodeURIComponent(m[1]) : null;
     },
+    spots: WEB_SPOTS.filter((place) => spots[place]),
+    watchScript: (places) => {
+      const selectors = Object.fromEntries(places.flatMap((p) => (spots[p] ? [[p, spots[p]]] : [])));
+      return `window.__phonecandoSpots && window.__phonecandoSpots.watch(${JSON.stringify(selectors)});\ntrue;`;
+    },
   };
 }
+
+/** How often a watching page looks for its spots again. */
+const SPOT_EVERY_MS = 150;
+
+/**
+ * Injected at document start: while watching, every SPOT_EVERY_MS the page
+ * finds each place's first match in front and posts where they are, when
+ * that changed, as a WebSpotRects message. In front: laid out, and nothing
+ * (a menu, a dialog) over its middle; one scrolled out of the viewport
+ * still counts, so the guide can say which way to scroll.
+ */
+export const SPOTS_WATCH = `(function () {
+  if (window.__phonecandoSpots) return;
+  var want = {}, last = '', timer = 0;
+  var find = function (selector) {
+    var list = document.querySelectorAll(selector);
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i].getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (cx >= 0 && cy >= 0 && cx < innerWidth && cy < innerHeight) {
+        var hit = document.elementFromPoint(cx, cy);
+        if (!hit || !list[i].contains(hit)) continue;
+      }
+      return { x: Math.round(r.left), y: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) };
+    }
+    return null;
+  };
+  var tick = function () {
+    var spots = {};
+    for (var place in want) {
+      var at = find(want[place]);
+      if (at) spots[place] = at;
+    }
+    var message = JSON.stringify({ phonecandoSpots: { width: innerWidth, spots: spots } });
+    if (message === last || !window.ReactNativeWebView) return;
+    last = message;
+    window.ReactNativeWebView.postMessage(message);
+  };
+  window.__phonecandoSpots = {
+    watch: function (selectors) {
+      want = selectors;
+      last = '';
+      clearInterval(timer);
+      timer = 0;
+      if (Object.keys(want).length > 0) {
+        timer = setInterval(tick, ${SPOT_EVERY_MS});
+        tick();
+      }
+    },
+  };
+})();`;
+
+/** A page message from SPOTS_WATCH; null for any other message or a malformed one. */
+export function readSpots(data: string): WebSpotRects | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    return null;
+  }
+  const body = (parsed as { phonecandoSpots?: unknown } | null)?.phonecandoSpots as
+    | { width?: unknown; spots?: unknown }
+    | undefined;
+  if (!body || !isSize(body.width) || body.width <= 0 || typeof body.spots !== 'object' || body.spots == null) return null;
+  const given = body.spots as Record<string, unknown>;
+  const spots: WebSpotRects['spots'] = {};
+  for (const place of WEB_SPOTS) {
+    const at = given[place] as Record<string, unknown> | undefined;
+    if (at && isSize(at.x) && isSize(at.y) && isSize(at.width) && isSize(at.height)) {
+      spots[place] = { x: at.x, y: at.y, width: at.width, height: at.height };
+    }
+  }
+  return { width: body.width, spots };
+}
+
+const isSize = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 // The web UI reads its scheme key before boot and listens for storage events
 // after, so the app's mode (`system` included) reaches it either way. The

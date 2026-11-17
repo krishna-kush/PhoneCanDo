@@ -166,6 +166,7 @@ object ManifestDecoder {
     a.optString("colorSchemeKey")
     a.optStrings("hide")
     a.optString("sessionUrl")
+    a.stringMap("spots")
     return a.tree
   }
 

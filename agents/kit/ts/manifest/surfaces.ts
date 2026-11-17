@@ -2,10 +2,10 @@
 // TUI), the web UI's pairing and adapter, the terminal tab (a client of the
 // server, or a shell in the agent's image) and the chat title regexes.
 import { fields, list, oneOf, record, regex, string, type Add, type Json } from './primitives.ts';
-import { HOMES, MAX, PAIR_METHODS, PALETTE_ROLES, PATTERNS } from './rules.ts';
+import { HOMES, MAX, PAIR_METHODS, PALETTE_ROLES, PATTERNS, WEB_SPOTS } from './rules.ts';
 import { command, httpPath, template } from './templates.ts';
 
-const ADAPTER_FIELDS = ['colorSchemeKey', 'cssVars', 'hide', 'authUrl', 'sessionUrl'];
+const ADAPTER_FIELDS = ['colorSchemeKey', 'cssVars', 'hide', 'authUrl', 'sessionUrl', 'spots'];
 const PAIR_FIELDS = ['method', 'path', 'code', 'url'];
 
 export function checkSurfaces(add: Add, surfaces: unknown, style: string | null) {
@@ -58,6 +58,12 @@ function checkAdapter(add: Add, adapter: unknown) {
   }
   string(add, `${at}/authUrl`, a.authUrl, PATTERNS.httpPath, MAX.relPath);
   if ('sessionUrl' in a) regex(add, `${at}/sessionUrl`, a.sessionUrl);
+  if ('spots' in a) {
+    record(add, `${at}/spots`, a.spots, (path, place, selector) => {
+      oneOf(add, path, place, WEB_SPOTS);
+      string(add, path, selector, PATTERNS.selector, MAX.selector);
+    });
+  }
 }
 
 // The terminal tab: the kind's TUI as a client of its server, or a shell in

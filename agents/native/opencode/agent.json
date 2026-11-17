@@ -224,7 +224,14 @@
           "[data-slot=\"titlebar-v2\"]"
         ],
         "authUrl": "/auth/connect/",
-        "sessionUrl": "/session/([^/?#]+)"
+        "sessionUrl": "/session/([^/?#]+)",
+        "spots": {
+          "projects": "[data-component=\"home-projects-dropdown\"]",
+          "addProject": "[data-action=\"home-add-project-row\"]",
+          "pickFolder": ".directory-picker [data-slot=\"dialog-footer\"] [data-variant=\"contrast\"]",
+          "newChat": "[data-action=\"home-new-session\"]",
+          "composer": "[data-component=\"composer\"]"
+        }
       }
     },
     "terminal": {

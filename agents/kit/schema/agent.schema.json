@@ -930,6 +930,12 @@
         "sessionUrl": {
           "description": "Group 1 is the chat (session id) a web UI URL shows.",
           "$ref": "#/$defs/regex"
+        },
+        "spots": {
+          "description": "Per place on the way to a chat, the selector of the thing to tap there; the app's guide points at it.",
+          "type": "object",
+          "propertyNames": { "enum": ["projects", "addProject", "pickFolder", "newChat", "composer"] },
+          "additionalProperties": { "type": "string", "maxLength": 256, "pattern": "^[^'\\\\{}\\u0000-\\u001f]+$" }
         }
       }
     }

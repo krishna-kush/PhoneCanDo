@@ -230,7 +230,12 @@ export interface WebAdapter {
   authUrl: string;
   /** A regex whose first group is the chat (session id) a URL shows. */
   sessionUrl?: string;
+  /** Per place on the way to a chat, the selector of the thing to tap there; the app's guide points at it. */
+  spots?: Partial<Record<WebSpot, string>>;
 }
+
+/** The places on the way to a chat in a web UI (rules.ts WEB_SPOTS). */
+export type WebSpot = 'projects' | 'addProject' | 'pickFolder' | 'newChat' | 'composer';
 
 export interface WebSurface {
   pair: WebPair;

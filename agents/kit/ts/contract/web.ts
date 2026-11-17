@@ -33,6 +33,25 @@ export type WebAdapterSpec = {
   authUrl: string;
   /** A regex whose group 1 is the chat (session id) a URL shows. */
   sessionUrl?: string;
+  /**
+   * Where the app's guide can point in the web UI, on the way to a chat
+   * (the first shift's Say hi): per place, a selector whose first match in
+   * front is the thing to tap. A place the web UI lacks is left out.
+   */
+  spots?: Partial<Record<WebSpot, string>>;
+};
+
+/**
+ * The places on the way to a chat in a web UI, in order: the project
+ * list, its Add project, the folder picker's pick, a new chat, the chat
+ * box.
+ */
+export type WebSpot = 'projects' | 'addProject' | 'pickFolder' | 'newChat' | 'composer';
+
+/** Where a web UI's spots are, in its own CSS pixels, with its viewport width to scale them by. */
+export type WebSpotRects = {
+  width: number;
+  spots: Partial<Record<WebSpot, { x: number; y: number; width: number; height: number }>>;
 };
 
 /** The agent's web UI inside our WebView. */
@@ -45,4 +64,12 @@ export type AgentWebUi = {
   isAuthUrl(url: string): boolean;
   /** The chat (its session id) a web UI URL shows; null for any other page. */
   sessionOf(url: string): string | null;
+  /** The spots this web UI has. */
+  spots: readonly WebSpot[];
+  /**
+   * Asks the page to report where [places] are (as messages readSpots
+   * reads) while any are given; none stops it. Needs SPOTS_WATCH
+   * installed at document start.
+   */
+  watchScript(places: readonly WebSpot[]): string;
 };
