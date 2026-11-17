@@ -14,7 +14,7 @@
         <group android:name="lid0" android:pivotX="429.62" android:pivotY="520.02" android:scaleY="0">
           <path android:fillColor="#ffffff" android:pathData="M383.49,413.01h92.25v107.01h-92.25Z"/>
           <group android:name="gaze0">
-            <path android:name="pupil0" android:fillColor="#0c0b09" android:fillAlpha="0" android:pathData="M416.7,445.11h46.13v46.01h-46.13Z"/>
+            <path android:name="pupil0" android:fillColor="#0a0a0a" android:fillAlpha="0" android:pathData="M416.7,445.11h46.13v46.01h-46.13Z"/>
           </group>
           <group android:name="blink0" android:pivotX="429.62" android:pivotY="409.32" android:scaleY="0.03">
             <path android:fillColor="#e1192f" android:pathData="M379.8,409.32h99.63v110.7h-99.63Z"/>
@@ -23,7 +23,7 @@
         <group android:name="lid1" android:pivotX="551.38" android:pivotY="520.02" android:scaleY="0">
           <path android:fillColor="#ffffff" android:pathData="M505.26,413.01h92.25v107.01h-92.25Z"/>
           <group android:name="gaze1">
-            <path android:name="pupil1" android:fillColor="#0c0b09" android:fillAlpha="0" android:pathData="M538.47,445.11h46.13v46.01h-46.13Z"/>
+            <path android:name="pupil1" android:fillColor="#0a0a0a" android:fillAlpha="0" android:pathData="M538.47,445.11h46.13v46.01h-46.13Z"/>
           </group>
           <group android:name="blink1" android:pivotX="551.38" android:pivotY="409.32" android:scaleY="0.03">
             <path android:fillColor="#e1192f" android:pathData="M501.57,409.32h99.63v110.7h-99.63Z"/>

@@ -4,8 +4,8 @@
   "description": "AI that can use your phone.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0c0b09",
-  "theme_color": "#0c0b09",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
   "icons": [
     {
       "src": "/icon-192.png",
