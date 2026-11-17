@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { Mood } from './mood';
 
+/** A napping face's state: up or not, its mood, and the boop that wakes it. */
+export type Nap = { up: boolean; mood: Mood; boop: (boops: number) => void };
+
 /** How long a boop keeps a napping face up before it dozes off again. */
 const UP_MS = 2400;
 
@@ -9,7 +12,7 @@ const UP_MS = 2400;
  * and it stays up until UP_MS after the last tap, then naps again (the
  * face plays both: jolted awake, dozing off). `up` is for its caption.
  */
-export function useNap(): { up: boolean; mood: Mood; boop: (boops: number) => void } {
+export function useNap(): Nap {
   const [nap, setNap] = useState({ up: false, boops: 0 });
 
   useEffect(() => {

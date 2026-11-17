@@ -336,6 +336,21 @@ const at = (d, h, m) => Date.UTC(2026, 10, d, h, m);
   t('a kind that can only start says a running agent is restarted', k2.howTasksReachText({ canWake: false, acp: false }).includes('restarts it'), true);
   t('an ACP mode runs it in the background, in its own app while you use it, else asks you', k2.howTasksReachText({ canWake: true, acp: true }).includes('takes the task in its own app when it can; otherwise it asks you'), true);
 
+  // --- the page with nothing on it ---------------------------------------------------
+  const e = await import(src('ui/schedule/logic/emptyCopy.ts'));
+  const tue = new Date(2026, 10, 17, 9, 30).getTime();
+  t('the week ahead starts today', e.weekAhead(tue).map((d) => d.day), ['Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon']);
+  t('only today is today', e.weekAhead(tue).filter((d) => d.today).length, 1);
+  const ch = await import(src('ui/schedule/logic/clockHands.ts'));
+  t('the clock at 9:30', ch.handAngles(tue), { hour: 285, minute: 180, second: 0 });
+  t('the clock at noon', ch.handAngles(new Date(2026, 10, 17, 12, 0).getTime()), { hour: 0, minute: 0, second: 0 });
+  t('the second hand ticks a sixth of a turn a second', ch.handAngles(new Date(2026, 10, 17, 12, 0, 15).getTime()).second, 90);
+  t('the minute hand creeps on with the seconds', ch.handAngles(new Date(2026, 10, 17, 12, 0, 30).getTime()).minute, 3);
+  t('the hour hand creeps on with the minutes', ch.handAngles(new Date(2026, 10, 17, 15, 30).getTime()).hour, 105);
+  t('a caption for every look, napping and woken', e.EMPTY_LOOKS.every((l) => e.EMPTY_CAPTION[l].asleep && e.EMPTY_CAPTION[l].up && e.EMPTY_FACE[l]), true);
+  t('two scenes: the week and the clock', e.EMPTY_LOOKS, ['week', 'clock']);
+  t('a random pick lands on each, never past the end', [e.pickLook(0), e.pickLook(0.49), e.pickLook(0.5), e.pickLook(0.999), e.pickLook(1)], ['week', 'week', 'clock', 'clock', 'clock']);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => {

@@ -6,7 +6,6 @@ import type { Schedule } from '../../engine/schedule/types';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { useScheduleStore } from '../../state/schedule';
-import AppButton from '../common/AppButton';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PageHeader from '../common/PageHeader';
 import type { BarcodeId } from '../common/rows/barcode/lines';
@@ -26,10 +25,11 @@ import {
   NOT_IN_BUILD,
   NOT_RUNNING,
   RECENT_RUNS,
-  saveLabel,
   SCHEDULES_INTRO,
   SCHEDULES_TITLE,
 } from './logic/scheduleCopy';
+import PageClock from './clock/PageClock';
+import EmptySchedules from './empty/EmptySchedules';
 import { runsFor, type TimelineEntry, timeline } from './logic/timeline';
 import RecentRuns from './RecentRuns';
 import ScheduleRow from './ScheduleRow';
@@ -50,9 +50,11 @@ type Props = {
 // Android's exact alarms are off, then one timeline across agents (on a
 // page for one agent, just its own): what still runs, soonest first under
 // a heading per day, then what is off or done; then what the recent runs
-// did. Each row names its agent as the drawer does. Add opens the editor
-// for an agent that can run schedules; with none, a line says so. The
-// times move on while the page is in front.
+// did. Each row names its agent as the drawer does, and the live alarm
+// clock (clock/) stands at the foot. Add opens the editor for an agent
+// that can run schedules; with none, a line says so. With nothing to
+// list, the empty box (empty/). The times move on while the page is in
+// front.
 export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
   const active = usePageActive();
   const now = useNow(active, TICK_MS);
@@ -83,13 +85,11 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
         <Rows key={day.label} title={day.label} barcode={day.barcode} entries={day.entries} now={now} onEdit={onEdit} />
       ))}
       {line.rest.length > 0 ? <Rows title={NOT_RUNNING} barcode="schedulesOff" entries={line.rest} now={now} onEdit={onEdit} /> : null}
-      {available && empty ? <Note>{emptyText(agentId ? (agent?.name ?? 'this agent') : null)}</Note> : null}
-      {empty && canAdd ? (
-        <Spot id="schedules.addFirst">
-          <AppButton onPress={onAdd}>{saveLabel(false)}</AppButton>
-        </Spot>
+      {available && empty ? (
+        <EmptySchedules text={emptyText(agentId ? (agent?.name ?? 'this agent') : null)} canAdd={canAdd} onAdd={onAdd} still={!active} now={now} />
       ) : null}
       {shownRuns.length > 0 ? <RecentRuns title={RECENT_RUNS} runs={shownRuns} now={now} withAgent={agentId == null} /> : null}
+      {available && !empty ? <PageClock still={!active} /> : null}
     </Screen>
   );
 }

@@ -11,6 +11,9 @@ export type Tone = 'fg' | 'muted' | 'dim' | 'primary' | 'secondaryInk';
 
 export const SCHEDULES_TITLE = 'Schedules';
 
+/** The alarm clock at the page's foot, for a screen reader. */
+export const PAGE_CLOCK = 'The alarm clock, telling the time. Tap to ring it.';
+
 /** Above the list: what these are. */
 export const SCHEDULES_INTRO =
   'Tasks that reach an agent at a set time. You set them here, and an agent can set reminders for itself. A stopped agent starts for its task.';

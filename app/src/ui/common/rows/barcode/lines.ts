@@ -73,6 +73,7 @@ export const BARCODE_LINES = {
   schedulesToday: 'SEIZE THE DAY',
   schedulesTomorrow: 'SLEEP ON IT',
   schedulesOff: 'ON A BREAK',
+  schedulesEmpty: 'CLEAR SKIES',
   recentRuns: 'DONE AND DONE',
   scheduleAgent: 'YOU ARE UP',
 
