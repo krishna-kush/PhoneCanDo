@@ -262,12 +262,15 @@ write('web/public/site.webmanifest', `${JSON.stringify(manifest, null, 2)}\n`);
 
 // The built-in agent's web UI (opencode's, built by its build.sh): the tab
 // icon, touch icon and install icons, laid over the upstream desktop icon
-// set its web build reads them from (packages/app/vite.icons.ts).
+// set its web build reads them from (packages/app/vite.icons.ts). All on a
+// transparent background, like the favicon: they are the payload's build
+// sources, so a change to our background colour must not touch them (it
+// would change the payload's INPUTS and need a new payload version).
 const ENGINE_ICONS = 'agents/native/opencode/build/brand/icons';
 write(`${ENGINE_ICONS}/icon.ico`, ico([16, 32, 48].map((size) => ({ size, data: mark(size, 0.66) }))));
-write(`${ENGINE_ICONS}/icon.png`, mark(512, 0.5, { bg: BG }), 512);
-write(`${ENGINE_ICONS}/ios/AppIcon-60x60@3x.png`, mark(180, 0.5, { bg: BG }), 180);
-write(`${ENGINE_ICONS}/android/mipmap-xxxhdpi/ic_launcher.png`, mark(192, 0.5, { bg: BG }), 192);
+write(`${ENGINE_ICONS}/icon.png`, mark(512, 0.5), 512);
+write(`${ENGINE_ICONS}/ios/AppIcon-60x60@3x.png`, mark(180, 0.5), 180);
+write(`${ENGINE_ICONS}/android/mipmap-xxxhdpi/ic_launcher.png`, mark(192, 0.5), 192);
 
 // ---------- self-check ----------
 for (const { rel, size } of OUT) {

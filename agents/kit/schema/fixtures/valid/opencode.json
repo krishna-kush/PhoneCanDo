@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "opencode",
   "label": "Resident",
-  "version": "2.0.26-android-phonecando.2",
+  "version": "2.0.26-android-phonecando.3",
   "type": "native",
   "prefix": "oc",
   "channels": [
@@ -236,7 +236,9 @@
           "--v2-text-text-accent-hover": "primaryHi",
           "--v2-icon-icon-accent": "primary",
           "--v2-icon-icon-accent-hover": "primaryHi",
-          "--v2-border-border-focus": "primary"
+          "--v2-border-border-focus": "primary",
+          "--phonecando-brand-primary": "primary",
+          "--phonecando-brand-secondary": "secondary"
         },
         "hide": [
           "[data-slot=\"titlebar-v2\"]"

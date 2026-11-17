@@ -33,7 +33,8 @@ export type PaletteRole =
   | 'line'
   | 'lineStrong'
   | 'primary'
-  | 'primaryHi';
+  | 'primaryHi'
+  | 'secondary';
 
 export interface Licence {
   /** Null when unknown; only a kind we do not redistribute may leave it so. */

@@ -117,7 +117,7 @@ These are not scheduled work unless they are also listed in
 
 - Android 10 (API 29) or newer: the payload is built for API 29, so the app's
   minSdk is 29 (`app/plugins/withMinSdk.js`; CI's emulator floor leg runs it).
-- opencode is pinned to the self-built `v2.0.26-android-phonecando.2`
+- opencode is pinned to the self-built `v2.0.26-android-phonecando.3`
   payload. Bumping it requires re-checking the embedded web UI theme override
   (`--v2-*` variables and `opencode-color-scheme`); a rename fails silently.
 - A run cut off mid-task (the phone restarted, PhoneCanDo was updated or

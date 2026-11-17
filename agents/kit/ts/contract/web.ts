@@ -15,6 +15,7 @@ export type WebPalette = {
   lineStrong: string;
   primary: string;
   primaryHi: string;
+  secondary: string;
 };
 
 /**

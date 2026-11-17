@@ -149,6 +149,9 @@ check() {
   key="$(jq -r '.surfaces.web.adapter.colorSchemeKey // empty' "$manifest")"
   if [ -f "$css" ]; then
     for var in $vars; do
+      # Our own --phonecando-* vars are read by our brand patch (the home
+      # wordmark's colours), not upstream's theme, so theme.css never has them.
+      case "$var" in --phonecando-*) continue ;; esac
       n=$((n + 1))
       grep -qF -- "$var:" "$css" || missing+=" \`$var\`"
     done

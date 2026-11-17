@@ -105,6 +105,16 @@ to lead with their own name and never to suggest Anomaly endorses them.
   - the web wordmarks (`ui/src/components/logo.tsx`,
     `ui/src/typography/wordmark/wordmark.tsx`, the About page's animated
     one) as PHONECANDO in square letters with our mark's hard drop shadow;
+  - the new-session screen's big wordmark (`app/src/new-session/`) in our
+    colours at 45% opacity: PHONE and DO in our primary red, CAN in our
+    secondary yellow, the shadow the theme's weak icon colour. `<Logo>`
+    fills its three words from `--logo-phone`, `--logo-can` and `--logo-do`,
+    which only `wordmark.css` sets, from the two vars our app writes on
+    `:root` (agent.json's `cssVars`: `--phonecando-brand-primary` and
+    `--phonecando-brand-secondary`); the shimmer sets them to white, so its
+    sweep stays light. Every other wordmark, the error page's `<Logo>` and
+    the TUI keep the theme's icon colours, and so does this one when the
+    page runs without our app;
   - the page title and manifest name;
   - the About page's built-on line (`settings.about.builtOn`, en only; other
     languages fall back to it);
@@ -120,7 +130,9 @@ to lead with their own name and never to suggest Anomaly endorses them.
   rewords one of its keys; `ci/upstream.sh` runs it with `--check`.
 - `brand/icons/`, written by `scripts/make-logos.mjs` (`pnpm logos`): our
   mark over the upstream desktop icon set that `packages/app/vite.icons.ts`
-  reads for the favicon and install icons.
+  reads for the favicon and install icons. All are on a transparent
+  background, so a change to our theme's background never changes these
+  build sources (and so the payload).
 
 What stays upstream's, on purpose:
 
@@ -212,7 +224,8 @@ decide for you.
   `packages/ui/src/styles/tokens/theme.css` (variable names),
   `packages/ui/src/theme/v2/mapping.ts` (semantic mapping), and
   `packages/app/public/oc-theme-preload.js` (scheme key), then update the
-  adapter. `ci/upstream.sh` checks the names and the key. A rename fails
+  adapter. `ci/upstream.sh` checks the names and the key; it skips our own
+  `--phonecando-*` vars, which only the brand patch reads. A rename fails
   silently: the embedded UI falls back to opencode's palette.
 
 ## Troubleshooting

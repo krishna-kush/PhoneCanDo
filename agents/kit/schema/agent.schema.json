@@ -971,7 +971,7 @@
           "type": "object",
           "propertyNames": { "maxLength": 128, "pattern": "^--[A-Za-z0-9_-]+$" },
           "additionalProperties": {
-            "enum": ["bg", "panel", "panel2", "fg", "muted", "dim", "faint", "line", "lineStrong", "primary", "primaryHi"]
+            "enum": ["bg", "panel", "panel2", "fg", "muted", "dim", "faint", "line", "lineStrong", "primary", "primaryHi", "secondary"]
           }
         },
         "hide": {

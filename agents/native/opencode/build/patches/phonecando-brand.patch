@@ -12,7 +12,7 @@ diff --git a/packages/ui/src/components/logo.tsx b/packages/ui/src/components/lo
      </svg>
    )
  }
-@@ -25,37 +25,46 @@
+@@ -25,37 +25,50 @@
        fill="none"
        xmlns="http://www.w3.org/2000/svg"
      >
@@ -25,6 +25,8 @@ diff --git a/packages/ui/src/components/logo.tsx b/packages/ui/src/components/lo
  }
  
 +// PHONECANDO: square letters with a hard drop shadow, like PhoneCanDo's mark.
++// --logo-phone, --logo-can and --logo-do colour its three words where a
++// parent sets them (the new-session wordmark); unset, it keeps the icon colours.
  export const Logo = (props: { class?: string }) => {
    return (
      <svg
@@ -63,17 +65,19 @@ diff --git a/packages/ui/src/components/logo.tsx b/packages/ui/src/components/lo
 +        <path d="M243 3H261V9H249V27H261V33H243ZM261 9H267V27H261Z" />
 +        <path d="M273 3H297V33H273ZM279 9V27H291V9Z" />
 +      </g>
-+      <g fill="var(--icon-base)">
++      <g fill="var(--logo-phone, var(--icon-base))">
 +        <path d="M0 0H18V6H6V12H18V18H6V30H0ZM18 6H24V12H18Z" />
 +        <path d="M30 0H36V12H48V0H54V30H48V18H36V30H30Z" />
 +        <path d="M60 0H84V30H60ZM66 6V24H78V6Z" />
 +        <path d="M90 0H96V6H102V12H96V30H90ZM108 0H114V30H108V18H102V12H108Z" />
 +        <path d="M120 0H144V6H126V12H138V18H126V24H144V30H120Z" />
 +      </g>
-+      <g fill="var(--icon-strong-base)">
++      <g fill="var(--logo-can, var(--icon-strong-base))">
 +        <path d="M150 0H174V6H156V24H174V30H150Z" />
 +        <path d="M180 0H204V30H198V18H186V30H180ZM186 6V12H198V6Z" />
 +        <path d="M210 0H216V6H222V12H216V30H210ZM228 0H234V30H228V18H222V12H228Z" />
++      </g>
++      <g fill="var(--logo-do, var(--icon-strong-base))">
 +        <path d="M240 0H258V6H246V24H258V30H240ZM258 6H264V24H258Z" />
 +        <path d="M270 0H294V30H270ZM276 6V24H288V6Z" />
        </g>
@@ -171,7 +175,7 @@ diff --git a/packages/app/src/new-session/wordmark.tsx b/packages/app/src/new-se
        <div data-slot="wordmark-reveal" class="relative mx-auto w-4/5">
 -        <Logo class="block aspect-[720/129] w-full opacity-[0.16]" />
 -        <Logo class="wordmark-shimmer absolute inset-0 aspect-[720/129] w-full" />
-+        <Logo class="block aspect-[297/33] w-full opacity-[0.16]" />
++        <Logo class="block aspect-[297/33] w-full opacity-[0.45]" />
 +        <Logo class="wordmark-shimmer absolute inset-0 aspect-[297/33] w-full" />
        </div>
      </div>
@@ -478,3 +482,27 @@ diff --git a/packages/tui/src/mini/footer.prompt.tsx b/packages/tui/src/mini/foo
        ),
      ]
      const hidden = new Set(builtins.map((item) => item.name))
+diff --git a/packages/app/src/new-session/wordmark.css b/packages/app/src/new-session/wordmark.css
+--- a/packages/app/src/new-session/wordmark.css
++++ b/packages/app/src/new-session/wordmark.css
+@@ -1,11 +1,20 @@
+ [data-component="new-session-wordmark"] {
+   --icon-strong-base: var(--icon-base);
+   --wordmark-shimmer-opacity: 0.45;
++  /* PhoneCanDo's colours: PHONE and DO in our primary, CAN in our secondary.
++     The app sets both on :root (agent.json's web adapter cssVars); without
++     them the words keep the icon colours. Only this wordmark sets these. */
++  --logo-phone: var(--phonecando-brand-primary, var(--icon-base));
++  --logo-can: var(--phonecando-brand-secondary, var(--icon-strong-base));
++  --logo-do: var(--phonecando-brand-primary, var(--icon-strong-base));
+ 
+   .wordmark-shimmer {
+     --icon-base: white;
+     --icon-strong-base: white;
+     --icon-weak-base: transparent;
++    --logo-phone: white;
++    --logo-can: white;
++    --logo-do: white;
+ 
+     /* Blend above the base logo's opacity so the sweep only adds light in either theme. */
+     color: white;

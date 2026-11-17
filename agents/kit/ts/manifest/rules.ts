@@ -36,6 +36,7 @@ export const PALETTE_ROLES = [
   'lineStrong',
   'primary',
   'primaryHi',
+  'secondary',
 ];
 
 // The package families an image's OS can have: lre-api's PackageFamily ids,
