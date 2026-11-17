@@ -1,52 +1,36 @@
 import { useState } from 'react';
+import { agentKind } from '../../engine/agents/registry';
 import { copyText } from '../../engine/sharing';
-import { useActiveAgent } from '../../state/agents';
+import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import type { MissionId } from '../../state/logic/starter/missions';
 import { useStarterStore } from '../../state/starter';
-import { useStartNewAgent } from '../env/new-agent/useStartNewAgent';
 import { COPIED, COPY_FAILED } from './copy';
+import { walkAgent } from './walk/logic/walkAgent';
 
-// Where each mission's button goes, with the dare it shows: Say hi copies
-// the dare and opens the chat, the terminal opens with the command typed
-// in (no Enter), Hands opens Settings (Phone control is on it), Want hands?
-// opens Updates and counts as done, a teammate starts New agent, Night
-// shift opens Schedules. `note` says how a copy went.
-export function useMissionGo(missions: readonly MissionId[]) {
-  const agent = useActiveAgent();
-  const push = useAppStore((s) => s.push);
+// What a mission's button does: it never jumps there. Home comes back and
+// the walk starts (walk/), pointing at each thing to tap on the way, so you
+// learn the way by going it. Say hi and the terminal go with the agent the
+// guide knows (walk/logic/walkAgent.ts), switched to first if another is
+// active. Say hi copies its dare first; the terminal's command goes along
+// with the walk and is typed in (no Enter) when the terminal opens. `note`
+// says how a copy went.
+export function useMissionGo() {
   const goHome = useAppStore((s) => s.goHome);
-  const openLinuxTerminal = useAppStore((s) => s.openLinuxTerminal);
-  const newAgent = useStartNewAgent();
   const [note, setNote] = useState<string | null>(null);
 
   const copy = (dare: string) => setNote(copyText(dare) ? COPIED : COPY_FAILED);
 
   const go = (id: MissionId, dare: string | null) => {
     setNote(null);
-    switch (id) {
-      case 'hello':
-        if (dare) copy(dare);
-        goHome();
-        return;
-      case 'terminal':
-        if (agent) openLinuxTerminal(agent.id, dare ?? undefined);
-        return;
-      case 'hands':
-        push({ name: 'settings' });
-        return;
-      case 'upgrade':
-        useStarterStore.getState().markDone('upgrade', missions);
-        push({ name: 'settings-page', page: 'updates' });
-        return;
-      case 'teammate':
-        newAgent.start();
-        return;
-      case 'schedule':
-        push({ name: 'schedules' });
-        return;
-    }
+    if (id === 'hello' && dare) copy(dare);
+    const agents = useAgentsStore.getState();
+    const agentId = walkAgent(id, agents.agents, agents.activeAgentId, (kind) => agentKind(kind).isDefault);
+    const switched = agentId != null && agentId !== agents.activeAgentId;
+    if (switched) void agents.setActiveAgent(agentId);
+    useStarterStore.getState().startWalk(id, id === 'terminal' ? dare : null, agentId, switched);
+    goHome();
   };
 
-  return { go, copy, note, busy: newAgent.busy, error: newAgent.error };
+  return { go, copy, note };
 }

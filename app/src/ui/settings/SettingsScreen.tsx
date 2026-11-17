@@ -10,6 +10,7 @@ import LinkRow from '../common/LinkRow';
 import PageHeader from '../common/PageHeader';
 import RowGroup from '../common/rows/RowGroup';
 import Screen from '../common/Screen';
+import Spot from '../common/spot/Spot';
 import { usePageActive } from '../nav/pageActive';
 import { hubRows, type HubFacts } from './logic/hub';
 import PhoneControlSection from './PhoneControlSection';
@@ -61,13 +62,14 @@ export default function SettingsScreen() {
       <PhoneControlSection channel={facts.channel} />
       <RowGroup title="Everything else" barcode="settingsHub">
         {hubRows(facts).map((row) => (
-          <LinkRow
-            key={row.target}
-            label={row.title}
-            note={row.line}
-            now={row.now}
-            onPress={() => push(row.target === 'about' ? { name: 'about' } : { name: 'settings-page', page: row.target })}
-          />
+          <Spot key={row.target} id={row.target === 'updates' ? 'settings.updates' : null}>
+            <LinkRow
+              label={row.title}
+              note={row.line}
+              now={row.now}
+              onPress={() => push(row.target === 'about' ? { name: 'about' } : { name: 'settings-page', page: row.target })}
+            />
+          </Spot>
         ))}
       </RowGroup>
     </Screen>

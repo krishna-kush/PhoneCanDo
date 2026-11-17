@@ -5,10 +5,12 @@ import { agentKind } from '../../../engine/agents/registry';
 import type { Image } from '../../../engine/linux/types';
 import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
+import { walkDare } from '../../../state/starter';
 import AppButton from '../../common/AppButton';
 import { moodLine } from '../../common/face/lines';
 import { moodOf } from '../../common/face/mood';
 import PlainText from '../../common/PlainText';
+import Spot from '../../common/spot/Spot';
 import { engineIsUp, engineStateWord } from '../logic/engineState';
 import { startFailureCode, startFailureText } from '../logic/errorText';
 import Note from '../parts/Note';
@@ -105,9 +107,12 @@ export default function EngineSection({ agent, image, linux }: Props) {
           </AppButton>
         </XStack>
       )}
-      <AppButton variant="secondary" disabled={!machineReady} onPress={() => openLinuxTerminal(agent.id)}>
-        {linux ? 'Open terminal in the machine' : 'Open terminal'}
-      </AppButton>
+      {/* The first shift's terminal walk leads here, maybe with a command to type in. */}
+      <Spot id="agent.terminal">
+        <AppButton variant="secondary" disabled={!machineReady} onPress={() => openLinuxTerminal(agent.id, walkDare('terminal'))}>
+          {linux ? 'Open terminal in the machine' : 'Open terminal'}
+        </AppButton>
+      </Spot>
     </>
   );
 }

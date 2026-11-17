@@ -16,6 +16,7 @@ import { crewLine } from '../common/face/lines';
 import { moodOf } from '../common/face/mood';
 import LogoMark from '../common/LogoMark';
 import SectionTitle from '../common/SectionTitle';
+import Spot from '../common/spot/Spot';
 import { isPaused } from '../env/logic/titles';
 import { useStartNewAgent } from '../env/new-agent/useStartNewAgent';
 import Note from '../env/parts/Note';
@@ -134,9 +135,11 @@ function DrawerContent({ still }: { still: boolean }) {
             <DownloadRow key={env.id} env={env} onOpen={() => push({ name: 'system', envId: env.id })} />
           ))}
         </YStack>
-        <AppButton loading={newAgent.busy} onPress={newAgent.start}>
-          New agent
-        </AppButton>
+        <Spot id="drawer.newAgent">
+          <AppButton loading={newAgent.busy} onPress={newAgent.start}>
+            New agent
+          </AppButton>
+        </Spot>
         {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
 
         <YStack height={1} backgroundColor="line" marginVertical="3" />
@@ -173,7 +176,9 @@ function DrawerContent({ still }: { still: boolean }) {
             reach={PLACE_REACH}
           />
         ) : null}
-        <LinkRow label="Settings" onPress={() => push({ name: 'settings' })} reach={PLACE_REACH} />
+        <Spot id="drawer.settings" reach={PLACE_REACH}>
+          <LinkRow label="Settings" onPress={() => push({ name: 'settings' })} reach={PLACE_REACH} />
+        </Spot>
         <LinkRow label="About" onPress={() => push({ name: 'about' })} reach={PLACE_REACH} />
 
         <Text fontFamily="mono" fontSize={10} letterSpacing={1.2} color="faint" textTransform="uppercase" marginTop="4">

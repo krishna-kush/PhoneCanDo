@@ -13,8 +13,9 @@ import type { BarcodeId } from '../common/rows/barcode/lines';
 import RowFrame from '../common/rows/RowFrame';
 import RowGroup from '../common/rows/RowGroup';
 import Screen from '../common/Screen';
+import Spot from '../common/spot/Spot';
 import { useNow } from '../common/time/useNow';
-import TextAction from '../drawer/select/TextAction';
+import TextAction, { REACH as TEXT_REACH } from '../drawer/select/TextAction';
 import Note from '../env/parts/Note';
 import { usePageActive } from '../nav/pageActive';
 import LateRunsRow from './LateRunsRow';
@@ -83,7 +84,11 @@ export default function ScheduleList({ agentId, onAdd, onEdit }: Props) {
       ))}
       {line.rest.length > 0 ? <Rows title={NOT_RUNNING} barcode="schedulesOff" entries={line.rest} now={now} onEdit={onEdit} /> : null}
       {available && empty ? <Note>{emptyText(agentId ? (agent?.name ?? 'this agent') : null)}</Note> : null}
-      {empty && canAdd ? <AppButton onPress={onAdd}>{saveLabel(false)}</AppButton> : null}
+      {empty && canAdd ? (
+        <Spot id="schedules.addFirst">
+          <AppButton onPress={onAdd}>{saveLabel(false)}</AppButton>
+        </Spot>
+      ) : null}
       {shownRuns.length > 0 ? <RecentRuns title={RECENT_RUNS} runs={shownRuns} now={now} withAgent={agentId == null} /> : null}
     </Screen>
   );
@@ -118,7 +123,11 @@ function Rows({
 // every agent's, or every agent's; Add while there is an agent to add for.
 function Head({ agentId, canAdd, onAdd }: { agentId: AgentId | null; canAdd: boolean; onAdd: () => void }) {
   const replaceTop = useAppStore((s) => s.replaceTop);
-  const add = canAdd ? <TextAction label="Add" onPress={onAdd} /> : null;
+  const add = canAdd ? (
+    <Spot id="schedules.add" reach={TEXT_REACH}>
+      <TextAction label="Add" onPress={onAdd} />
+    </Spot>
+  ) : null;
   if (!agentId) return <PageHeader kicker="All agents" title={SCHEDULES_TITLE} trailing={add} />;
   return (
     <AgentHead

@@ -5,7 +5,7 @@ import PlainText from '../../common/PlainText';
 // uppercase in the accent, sized like the labels beside them. The press
 // area reaches past the word (as LinkRow's `reach`), so it stays a full
 // touch target without making the line taller.
-const REACH = { x: 10, y: 14 };
+export const REACH = { x: 10, y: 14 };
 
 export default function TextAction({ label, onPress }: { label: string; onPress: () => void }) {
   return (

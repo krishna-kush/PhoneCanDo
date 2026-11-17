@@ -94,17 +94,19 @@ export type MissionCopy = {
   title: string;
   /** What it is. */
   what: string;
-  /** Where it lives in the app. */
-  where: string;
+  /** Where it lives in the app: each thing to tap on the way there, from Home. */
+  where: string[];
   /** How, step by step: at once on a short mission, after Show me how on a long one. */
   steps: string[];
-  /** The button that takes you there. */
+  /** The button that starts the walk there (walk/), a tap at a time. */
   go: string;
   /** The dares it offers, if any. */
   dares?: DareSet;
 };
 
 const NAME_TAP = 'Tap my name (top left)';
+const MY_NAME = 'my name';
+const LEAD = 'Lead the way';
 
 export function missionCopy(id: MissionId, c: StarterContext): MissionCopy {
   switch (id) {
@@ -112,14 +114,14 @@ export function missionCopy(id: MissionId, c: StarterContext): MissionCopy {
       return {
         title: 'Say hi',
         what: 'Home is my chat. Ask for anything and I do it right here, on this phone.',
-        where: 'Home: the chat under my name',
+        where: ['Home', 'my chat box'],
         steps: [
           c.models
             ? 'If the chat asks for a model, pick one: sign in to a provider there, or get one that runs on this phone (tap my name, then Models).'
             : 'If the chat asks for a model, pick one there: sign in to a provider.',
           'Roll a dare, then paste it in the chat and send it.',
         ],
-        go: 'Copy it, open chat',
+        go: 'Copy it, lead the way',
         dares: 'chat',
       };
     case 'terminal':
@@ -128,11 +130,9 @@ export function missionCopy(id: MissionId, c: StarterContext): MissionCopy {
         what: c.linux
           ? 'I live in a real Linux machine (Debian) inside this phone. Its terminal is yours too.'
           : "I work in Android's own shell on this phone. Its terminal is yours too.",
-        where: c.linux
-          ? '⋮ (top right) → Agent settings → Open terminal in the machine'
-          : '⋮ (top right) → Agent settings → Open terminal',
+        where: ['⋮', 'Agent settings', c.linux ? 'Open terminal in the machine' : 'Open terminal'],
         steps: ["Roll a command, open the terminal and press Enter. It's typed in for you."],
-        go: 'Open terminal with it',
+        go: LEAD,
         dares: 'shell',
       };
     case 'hands':
@@ -141,12 +141,12 @@ export function missionCopy(id: MissionId, c: StarterContext): MissionCopy {
         what:
           'Phone control lets me read the screen, tap and type for you: "set a timer", "reply to that". ' +
           "It's off until you switch it on, and I touch nothing until you unlock me with your fingerprint.",
-        where: `${NAME_TAP} → Settings → Phone control`,
+        where: [MY_NAME, 'Settings', 'Phone control'],
         steps: [
           'Open Phone control and follow its steps to switch me on. Android double-checks, so it takes a few taps.',
           'Then copy a dare and paste it in the chat.',
         ],
-        go: 'Open Phone control',
+        go: LEAD,
         dares: 'hands',
       };
     case 'upgrade':
@@ -154,9 +154,9 @@ export function missionCopy(id: MissionId, c: StarterContext): MissionCopy {
         title: 'Want hands?',
         what:
           'This is the starter build: I can think, code and run Linux. The full build also lets me read your screen, tap and type for you.',
-        where: `${NAME_TAP} → Settings → Updates`,
+        where: [MY_NAME, 'Settings', 'Updates'],
         steps: ['The full build installs over this one in one tap and keeps everything you have here.'],
-        go: 'See the full build',
+        go: LEAD,
       };
     case 'teammate':
       return {
@@ -164,7 +164,7 @@ export function missionCopy(id: MissionId, c: StarterContext): MissionCopy {
         what: c.linux
           ? 'More agents, more hands. Add Claude Code, Gemini CLI and more: each gets its own face, and we can message each other.'
           : 'More agents, more hands. Add another one: it gets its own chats and its own face, and we can message each other.',
-        where: `${NAME_TAP} → New agent`,
+        where: [MY_NAME, 'New agent'],
         steps: c.linux
           ? [
               `${NAME_TAP}, then New agent.`,
@@ -172,20 +172,20 @@ export function missionCopy(id: MissionId, c: StarterContext): MissionCopy {
               'Some ask you to sign in to their own account the first time.',
             ]
           : [`${NAME_TAP}, then New agent.`, 'Pick one, and it gets ready.'],
-        go: 'Open New agent',
+        go: LEAD,
       };
     case 'schedule':
       return {
         title: 'Night shift',
         what:
           'Give me a job for later, like "every morning at 8, sum up my notes". I wake up and do it, even after a reboot.',
-        where: `${NAME_TAP} → Schedules`,
+        where: [MY_NAME, 'Schedules', 'Add'],
         steps: [
           'Open Schedules and tap Add.',
           'Pick me, write the job and set the time.',
           'Or just ask me in the chat: "remind me at 6 to stretch".',
         ],
-        go: 'Open Schedules',
+        go: LEAD,
       };
   }
 }

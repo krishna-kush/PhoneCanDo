@@ -1,6 +1,7 @@
 import { Text, YStack } from 'tamagui';
 import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent } from '../../state/agents';
+import Spot from '../common/spot/Spot';
 import CheckHomeBar from '../env/agent/checks/CheckHomeBar';
 import AgentWebView from './AgentWebView';
 import InstallHome from './InstallHome';
@@ -15,7 +16,8 @@ import { useEngineTouch } from './useEngineTouch';
 // to the engine's terminal and the replay restores its screen. An agent not
 // installed in its machine yet (a kind with an install) shows that install.
 // While a check runs, of this agent or another, a bar over it leads back to
-// that check.
+// that check. A TUI's chat box, at its foot, is a spot the first shift's Say
+// hi points at; a web UI marks its own (useWebSpots.ts).
 export default function HomeScreen() {
   const agent = useActiveAgent();
   useEngineTouch(agent?.id ?? null);
@@ -35,7 +37,9 @@ export default function HomeScreen() {
       {agent.needsInstall ? (
         <InstallHome key={agent.id} agent={agent} />
       ) : agentKind(agent.kind).home === 'tui' ? (
-        <AgentTuiHome key={agent.id} agent={agent} />
+        <Spot id="home.chat" fill>
+          <AgentTuiHome key={agent.id} agent={agent} />
+        </Spot>
       ) : (
         <AgentWebView key={agent.id} agent={agent} />
       )}

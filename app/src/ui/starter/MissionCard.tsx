@@ -9,6 +9,7 @@ import Stamp from '../common/Stamp';
 import { DONE_STAMP, NEXT, SHOW_HOW, SKIP, SKIPPED, TRY_IT, WHERE, type MissionCopy } from './copy';
 import DareBox from './DareBox';
 import { daresFor, rollDare } from './logic/dares';
+import WhereKeys from './WhereKeys';
 
 type Props = {
   id: MissionId;
@@ -21,8 +22,6 @@ type Props = {
   fresh: boolean;
   /** The agent's machine is Linux (which dares). */
   linux: boolean;
-  /** Its button is busy (New agent getting ready). */
-  busy: boolean;
   onToggle: () => void;
   onGo: (dare: string | null) => void;
   onCopy: (dare: string) => void;
@@ -32,9 +31,10 @@ type Props = {
 
 // One mission of the first shift: its number and name, and its mark (a
 // DONE stamp, or "skipped" with Try it). Open, it says what it is and
-// where it lives; a short one then shows the steps, its dare and its
-// button at once, a long one asks first: Show me how, or Next (a skip).
-// Skip is there at every step.
+// where it lives, as the keys to tap from Home; a short one then shows the
+// steps, its dare and its button at once, a long one asks first: Show me
+// how, or Next (a skip). The button leads the way there (walk/), pointing
+// at each thing to tap. Skip is there at every step.
 export default function MissionCard({
   id,
   n,
@@ -43,7 +43,6 @@ export default function MissionCard({
   open,
   fresh,
   linux,
-  busy,
   onToggle,
   onGo,
   onCopy,
@@ -102,9 +101,7 @@ export default function MissionCard({
             <PlainText fontFamily="mono" fontSize={11} letterSpacing={1.4} color="dim" textTransform="uppercase">
               {WHERE}
             </PlainText>
-            <PlainText fontFamily="mono" fontSize={13} color="muted">
-              {copy.where}
-            </PlainText>
+            <WhereKeys hops={copy.where} />
           </YStack>
 
           {mark === 'skipped' ? (
@@ -149,7 +146,7 @@ export default function MissionCard({
                     {SKIP}
                   </AppButton>
                 )}
-                <AppButton loading={busy} onPress={() => onGo(copy.dares === 'hands' ? null : dare)}>
+                <AppButton onPress={() => onGo(copy.dares === 'hands' ? null : dare)}>
                   {copy.go}
                 </AppButton>
               </XStack>

@@ -31,6 +31,7 @@ import RecommendCard from './src/ui/recommend/RecommendCard';
 import HelloSheet from './src/ui/starter/HelloSheet';
 import ShiftCard from './src/ui/starter/ShiftCard';
 import ShiftSignals from './src/ui/starter/ShiftSignals';
+import WalkGuide from './src/ui/starter/walk/WalkGuide';
 import { useAgentsStore } from './src/state/agents';
 import { useAppStore } from './src/state/app';
 import { useChecksStore } from './src/state/checks';
@@ -219,6 +220,8 @@ export default function App() {
                 {/* Once, as the first agent comes up: hello, and the first shift's offer. */}
                 <HelloSheet />
                 <ShiftSignals />
+                {/* A mission's Lead the way: the guide over everything. */}
+                <WalkGuide />
               </View>
             )}
           </SafeRoot>

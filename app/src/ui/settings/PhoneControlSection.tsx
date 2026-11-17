@@ -6,6 +6,7 @@ import AgentFace from '../common/face/AgentFace';
 import PlainText from '../common/PlainText';
 import RowFrame from '../common/rows/RowFrame';
 import RowGroup from '../common/rows/RowGroup';
+import Spot from '../common/spot/Spot';
 import Stamp from '../common/Stamp';
 import LockModePicker from '../control-lock/LockModePicker';
 import { useControlLock } from '../control-lock/useControlLock';
@@ -57,7 +58,9 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
       )}
       <RowGroup title={PANEL_TITLE} barcode="phoneControl">
         <StatusRow level={handsLevel(a11y.enabled, a11y.connected, open)} asks={asks} still={!active} />
-        <AccessibilitySetup a11y={a11y} />
+        <Spot id="settings.phone">
+          <AccessibilitySetup a11y={a11y} />
+        </Spot>
         {switchedOn ? null : (
           <RowFrame>
             <PlainText fontSize={13} color="muted">

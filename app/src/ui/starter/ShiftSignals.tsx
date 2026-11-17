@@ -21,14 +21,17 @@ function phoneControlOn(): boolean {
 // when the app sees it happen, shift on or not. Say hi: an agent's run
 // finished well. The terminal: a terminal page opened. Hands: phone
 // control's switch is on (read again on every return to the app, as the
-// switch is flipped in Android's settings). A teammate: a second agent.
-// Night shift: a schedule exists. Want hands? is ticked by its own button.
+// switch is flipped in Android's settings). Want hands?: Settings' Updates
+// page opened. A teammate: a second agent. Night shift: a schedule exists.
 export default function ShiftSignals() {
   const { missions, hands } = useShiftMissions();
   const hydrated = useStarterStore((s) => s.hydrated);
   const agents = useAgentsStore((s) => s.agents.length);
   const schedules = useScheduleStore((s) => s.schedules.length);
   const terminalOpen = useAppStore((s) => s.pages.some((p) => p.route.name === 'terminal'));
+  const updatesOpen = useAppStore((s) =>
+    s.pages.some((p) => p.route.name === 'settings-page' && p.route.page === 'updates'),
+  );
 
   useEffect(() => {
     void useStarterStore.getState().hydrate();
@@ -41,6 +44,7 @@ export default function ShiftSignals() {
       if (missions.includes(id)) useStarterStore.getState().markDone(id, missions);
     };
     if (terminalOpen) seen('terminal');
+    if (updatesOpen) seen('upgrade');
     if (agents > 1) seen('teammate');
     if (schedules > 0) seen('schedule');
     if (hands && phoneControlOn()) seen('hands');
@@ -53,7 +57,7 @@ export default function ShiftSignals() {
       run.remove();
       app.remove();
     };
-  }, [hydrated, missions, hands, terminalOpen, agents, schedules]);
+  }, [hydrated, missions, hands, terminalOpen, updatesOpen, agents, schedules]);
 
   return null;
 }

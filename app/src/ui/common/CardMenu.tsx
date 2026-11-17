@@ -4,12 +4,16 @@ import MenuDots from './MenuDots';
 import MenuEntry from './MenuEntry';
 import MenuItem from './MenuItem';
 import { HIT } from './globals';
+import Spot from './spot/Spot';
+import type { SpotId } from './spot/ids';
 
 export type CardMenuItem = {
   label: string;
   danger?: boolean;
   /** A short mono aside at the row's end, e.g. `cd ~`. */
   hint?: string;
+  /** Marks the row as a spot a guide can point at (common/spot/). */
+  spot?: SpotId;
   onSelect: () => void;
 };
 
@@ -70,15 +74,17 @@ export default function CardMenu({
           {head}
           {items.map((item, i) => (
             <MenuEntry key={item.label} index={i}>
-              <MenuItem
-                label={item.label}
-                danger={item.danger}
-                hint={item.hint}
-                onPress={() => {
-                  setOpen(false);
-                  item.onSelect();
-                }}
-              />
+              <Spot id={item.spot ?? null}>
+                <MenuItem
+                  label={item.label}
+                  danger={item.danger}
+                  hint={item.hint}
+                  onPress={() => {
+                    setOpen(false);
+                    item.onSelect();
+                  }}
+                />
+              </Spot>
             </MenuEntry>
           ))}
         </YStack>

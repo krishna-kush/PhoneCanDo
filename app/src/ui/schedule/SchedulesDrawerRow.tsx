@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAppStore } from '../../state/app';
 import { useScheduleStore } from '../../state/schedule';
 import LinkRow from '../common/LinkRow';
+import Spot from '../common/spot/Spot';
 import { countText, SCHEDULES_TITLE } from './logic/scheduleCopy';
 import { useScheduleAgents } from './useScheduleAgents';
 
@@ -16,11 +17,13 @@ export default function SchedulesDrawerRow({ reach }: { reach: { x: number; y: n
   useEffect(() => useScheduleStore.getState().refreshSchedules(), []);
   if (!available || (runners.length === 0 && count === 0)) return null;
   return (
-    <LinkRow
-      label={SCHEDULES_TITLE}
-      detail={countText(count) || undefined}
-      onPress={() => push({ name: 'schedules' })}
-      reach={reach}
-    />
+    <Spot id="drawer.schedules" reach={reach}>
+      <LinkRow
+        label={SCHEDULES_TITLE}
+        detail={countText(count) || undefined}
+        onPress={() => push({ name: 'schedules' })}
+        reach={reach}
+      />
+    </Spot>
   );
 }

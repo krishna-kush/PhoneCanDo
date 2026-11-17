@@ -6,6 +6,7 @@ import AppButton from '../../common/AppButton';
 import AppInput from '../../common/AppInput';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PageHeader from '../../common/PageHeader';
+import Spot from '../../common/spot/Spot';
 import FormScreen from '../../env/custom-agents/FormScreen';
 import Note from '../../env/parts/Note';
 import { type Draft, draftOf, draftProblems, type Field as FieldName, newDraft, patchOf, withChat } from '../logic/draft';
@@ -119,9 +120,11 @@ export default function ScheduleEditor({ schedule, agentId, onDone }: Props) {
       </Field>
 
       {actions.note ? <Note tone={actions.note.error ? 'error' : 'muted'}>{actions.note.text}</Note> : null}
-      <AppButton onPress={save} loading={actions.busy === 'save'} disabled={!schedule && runners.length === 0}>
-        {saveLabel(schedule != null)}
-      </AppButton>
+      <Spot id={schedule ? null : 'schedules.save'}>
+        <AppButton onPress={save} loading={actions.busy === 'save'} disabled={!schedule && runners.length === 0}>
+          {saveLabel(schedule != null)}
+        </AppButton>
+      </Spot>
       {schedule ? (
         <AppButton variant="secondary" onPress={() => actions.runNow(dirty)} loading={actions.busy === 'run'}>
           {RUN_NOW}

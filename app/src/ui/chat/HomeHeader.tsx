@@ -4,12 +4,15 @@ import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent } from '../../state/agents';
 import { useAppStore } from '../../state/app';
+import { walkDare } from '../../state/starter';
 import CardMenu, { type CardMenuItem } from '../common/CardMenu';
 import ChevronIcon from '../common/ChevronIcon';
 import AgentFace from '../common/face/AgentFace';
 import { useAgentLook } from '../common/face/useAgentLook';
 import { HIT, useTheme } from '../common/globals';
 import LogoMark from '../common/LogoMark';
+import Spot from '../common/spot/Spot';
+import { useSpot } from '../common/spot/useSpot';
 import { useHomeInFront } from '../nav/homeInFront';
 import MenuHead from './MenuHead';
 import MemoryChip from '../memory/indicators/MemoryChip';
@@ -38,12 +41,18 @@ export default function HomeHeader() {
   const openFolderPicker = useAppStore((s) => s.openFolderPicker);
   const openLinuxTerminal = useAppStore((s) => s.openLinuxTerminal);
   const kind = agent ? agentKind(agent.kind) : null;
+  const nameSpot = useSpot('home.name');
 
   const menuItems: CardMenuItem[] =
     agent && kind
       ? [
           ...agentItems(agent, kind, { goHome, openFolderPicker, openLinuxTerminal }),
-          { label: 'Agent settings', hint: '--config', onSelect: () => push({ name: 'agent', agentId: agent.id }) },
+          {
+            label: 'Agent settings',
+            hint: '--config',
+            spot: 'menu.agent',
+            onSelect: () => push({ name: 'agent', agentId: agent.id }),
+          },
         ]
       : [
           { label: 'Settings', hint: '--prefs', onSelect: () => push({ name: 'settings' }) },
@@ -62,6 +71,7 @@ export default function HomeHeader() {
       backgroundColor="panel"
     >
       <XStack
+        ref={nameSpot}
         alignItems="center"
         gap={8}
         flex={1}
@@ -91,7 +101,9 @@ export default function HomeHeader() {
       <ReadingChip agentId={agent?.id ?? null} />
       <NewMessagesChip />
       <MemoryChip />
-      <CardMenu items={menuItems} label="Menu" offset={-24} head={<MenuHead agentId={agent?.id ?? null} />} />
+      <Spot id="home.menu">
+        <CardMenu items={menuItems} label="Menu" offset={-24} head={<MenuHead agentId={agent?.id ?? null} />} />
+      </Spot>
     </XStack>
   );
 }
@@ -106,7 +118,7 @@ function ChipFace({ agentId }: { agentId: Agent['id'] }) {
 type MenuActions = {
   goHome: () => void;
   openFolderPicker: () => void;
-  openLinuxTerminal: (agentId: Agent['id']) => void;
+  openLinuxTerminal: (agentId: Agent['id'], initialInput?: string) => void;
 };
 
 // Ways into the active agent, by what its Home shows. A web home gets its
@@ -124,7 +136,8 @@ function agentItems(agent: Agent, kind: KindView, act: MenuActions): CardMenuIte
     },
   };
   if (kind.home === 'tui') {
-    return [home, { label: 'Open Linux shell', hint: '$ sh', onSelect: () => act.openLinuxTerminal(agent.id) }];
+    // The first shift's terminal walk may carry a command to type in.
+    return [home, { label: 'Open Linux shell', hint: '$ sh', onSelect: () => act.openLinuxTerminal(agent.id, walkDare('terminal')) }];
   }
   return [home, { label: 'Open terminal UI', hint: '>_', onSelect: act.openFolderPicker }];
 }

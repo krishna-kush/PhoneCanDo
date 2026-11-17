@@ -9,6 +9,7 @@ import { useLinuxStore } from '../../../state/linux';
 import PageHeader from '../../common/PageHeader';
 import RowGroup from '../../common/rows/RowGroup';
 import Screen from '../../common/Screen';
+import Spot from '../../common/spot/Spot';
 import Stamp from '../../common/Stamp';
 import SystemLogo from '../list/SystemLogo';
 import { blockedText } from '../logic/agentChoice';
@@ -69,21 +70,22 @@ export default function ChoosePlace({ pick }: { pick: AgentPick }) {
         {places.map((place) => {
           const blocked = blockedOf(place);
           return (
-            <OsRow
-              key={place.key}
-              lead={
-                place.target ? (
-                  <SystemLogo keys={place.logoKeys} size={OS_ROW_LOGO} />
-                ) : (
-                  <OsLogo uri={null} size={OS_ROW_LOGO} fallback="↓" />
-                )
-              }
-              title={place.title}
-              line={blocked ?? place.subtitle}
-              stamp={place.recommended && !blocked ? <Stamp>recommended</Stamp> : undefined}
-              dim={blocked != null || newAgent.busy}
-              onPress={() => choose(place)}
-            />
+            <Spot key={place.key} id={place.recommended && !blocked ? 'newAgent.place' : null}>
+              <OsRow
+                lead={
+                  place.target ? (
+                    <SystemLogo keys={place.logoKeys} size={OS_ROW_LOGO} />
+                  ) : (
+                    <OsLogo uri={null} size={OS_ROW_LOGO} fallback="↓" />
+                  )
+                }
+                title={place.title}
+                line={blocked ?? place.subtitle}
+                stamp={place.recommended && !blocked ? <Stamp>recommended</Stamp> : undefined}
+                dim={blocked != null || newAgent.busy}
+                onPress={() => choose(place)}
+              />
+            </Spot>
           );
         })}
       </RowGroup>

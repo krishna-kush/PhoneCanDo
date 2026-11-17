@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -9,11 +9,12 @@ import { useAppStore } from '../../state/app';
 import { lastPage, rememberPage, restoreUrl } from './lastPage';
 import { useOpenChat } from './useOpenChat';
 import { useWebCover } from './useWebCover';
+import { useWebSpots } from './useWebSpots';
 import { KEY_GUARD } from './webCover';
 import { setWebBackHandler, setWebHomeHandler } from './webNavigation';
 import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
-import { webUiFor } from '../../engine/agents/webAdapter';
+import { SPOTS_WATCH, webUiFor } from '../../engine/agents/webAdapter';
 import { waitForEngine } from '../../engine/connection';
 import { pairWebUi } from '../../engine/engines';
 import { isRunnerAvailable } from '../../engine/runner';
@@ -32,7 +33,8 @@ import { useTheme } from '../common/globals';
 // never strands the user; the TUI (`TerminalScreen`) is untouched — the
 // header menu switches views. Theme and embed scripts come from the kind's web adapter
 // (webAdapter.ts). While a page or the drawer covers it, its page holds no
-// text focus and takes no keys (useWebCover.ts, webCover.ts).
+// text focus and takes no keys (useWebCover.ts, webCover.ts). While a guide
+// looks for the web UI's spots, the page says where they are (useWebSpots.ts).
 export default function AgentWebView({ agent }: { agent: Agent }) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +49,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   // The chat the page shows, if any: a run that ends there is seen.
   const [chatId, setChatId] = useState<string | null>(null);
   const web = useRef<WebView<object>>(null);
+  const frame = useRef<ComponentRef<typeof View>>(null);
   const canGoBackRef = useRef(false);
   const currentUrlRef = useRef('');
   const homeUrlRef = useRef<string | null>(null);
@@ -59,6 +62,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   // Covered by a page or the drawer, the page lets go of the keyboard and
   // takes no keys; told again after each document loads.
   const applyCover = useWebCover(web);
+  const spots = useWebSpots(web, frame, webUi);
 
   // The web UI owns its history and its project-list home. Chrome calls these
   // handlers so Android Back and the Home menu item never strand the user in
@@ -177,7 +181,7 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
       automaticOffset
       style={{ flex: 1, backgroundColor: t.bg }}
     >
-      <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <View ref={frame} collapsable={false} style={{ flex: 1, backgroundColor: t.bg }}>
         {/* WebView<object>: react-native-webview 13.16.2 defaults its extra-props
             type to `undefined`, which leaves no prop valid; object types the same
             on every version. */}
@@ -190,10 +194,12 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
           domStorageEnabled
           sharedCookiesEnabled
           thirdPartyCookiesEnabled
-          injectedJavaScriptBeforeContentLoaded={`${KEY_GUARD}\n${webUi.themeScript(themeMode, t)}`}
+          injectedJavaScriptBeforeContentLoaded={`${KEY_GUARD}\n${SPOTS_WATCH}\n${webUi.themeScript(themeMode, t)}`}
+          onMessage={(e) => spots.onMessage(e.nativeEvent.data)}
           onLoadEnd={(e) => {
             web.current?.injectJavaScript(webUi.themeScript(themeMode, t));
             applyCover();
+            spots.watch();
             const loaded = e.nativeEvent.url;
             if (!webUi.isAuthUrl(loaded)) {
               const target = restoreUrl(loaded, restoreRef.current);

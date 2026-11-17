@@ -32,7 +32,7 @@ export default function ShiftPage() {
   const active = usePageActive();
   const shift = useStarterStore((s) => s.shift);
   const { missions, ctx } = useShiftMissions();
-  const mission = useMissionGo(missions);
+  const mission = useMissionGo();
   const goHome = useAppStore((s) => s.goHome);
   const [line] = useState(() => pageLine(Math.random() * 1000));
   const [boops, setBoops] = useState(0);
@@ -82,7 +82,6 @@ export default function ShiftPage() {
             open={open === id}
             fresh={!doneBefore.has(id)}
             linux={ctx.linux}
-            busy={id === 'teammate' && mission.busy}
             onToggle={() => setPicked(open === id ? null : id)}
             onGo={(dare) => mission.go(id, dare)}
             onCopy={mission.copy}
@@ -95,7 +94,6 @@ export default function ShiftPage() {
         ))}
       </YStack>
       {mission.note ? <Note>{mission.note}</Note> : null}
-      {mission.error ? <Note tone="error">{mission.error}</Note> : null}
 
       {p.next == null ? (
         <Finale

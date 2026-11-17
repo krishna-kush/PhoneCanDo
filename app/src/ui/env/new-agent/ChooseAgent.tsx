@@ -3,6 +3,7 @@ import { useLinuxStore } from '../../../state/linux';
 import AppButton from '../../common/AppButton';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
+import Spot from '../../common/spot/Spot';
 import { anyPlaceOfferEnv, pickLabel, targetLine, targetOfferEnv } from '../logic/agentChoice';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
@@ -45,9 +46,11 @@ export default function ChooseAgent({ target, picked }: { target: NewAgentTarget
       <ModelStep pick={model} />
       {newAgent.busy && target && target.kind !== 'own' ? <ProgressBar label="Making a new agent" fraction={null} /> : null}
       {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}
-      <AppButton loading={newAgent.busy} disabled={selected == null} onPress={next}>
-        {target ? pickLabel(target) : 'Next'}
-      </AppButton>
+      <Spot id="newAgent.next">
+        <AppButton loading={newAgent.busy} disabled={selected == null} onPress={next}>
+          {target ? pickLabel(target) : 'Next'}
+        </AppButton>
+      </Spot>
       <Note>You pick the agent once: to try another, make another agent.</Note>
       {offerEnv.kind === 'linux' ? (
         <AppButton variant="secondary" onPress={() => push({ name: 'custom-agent', kindId: null, forNewAgent: true })}>
