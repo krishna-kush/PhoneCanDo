@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { XStack } from 'tamagui';
 import { HIT, type Theme, useTheme } from '../../../common/globals';
 import PlainText from '../../../common/PlainText';
@@ -10,8 +10,8 @@ import { WHEN_WORDS } from '../../logic/editorCopy';
 
 const KINDS: readonly WhenKind[] = ['once', 'every', 'daily'];
 
-// A slide with a little overshoot, as a lever thrown into its notch.
-const THROW = { damping: 14, stiffness: 260 };
+// A straight slide that slows into its notch, never past it.
+const THROW = { duration: 200, easing: Easing.out(Easing.cubic) };
 
 type Props = { value: WhenKind; onPick: (when: WhenKind) => void };
 
@@ -26,7 +26,7 @@ export default function KindSwitch({ value, onPick }: Props) {
   const place = useSharedValue(at);
 
   useEffect(() => {
-    place.value = reduce ? at : withSpring(at, THROW);
+    place.value = reduce ? at : withTiming(at, THROW);
   }, [at, reduce, place]);
 
   const block = useAnimatedStyle(() => ({

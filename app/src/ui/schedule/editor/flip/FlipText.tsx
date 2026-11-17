@@ -5,8 +5,8 @@ import { useReduceMotion } from '../../../common/useReduceMotion';
 
 type Props = Omit<ComponentProps<typeof PlainText>, 'children'> & { text: string };
 
-// The flap falls past the hinge, then settles.
-const FALL = { duration: 260, easing: Easing.out(Easing.back(1.8)) };
+// The flap falls to the hinge and stops there.
+const FALL = { duration: 220, easing: Easing.out(Easing.cubic) };
 
 // A word or digits on a split-flap board: when the text changes, the new
 // one falls in from the hinge like a departure board's flap. The first
