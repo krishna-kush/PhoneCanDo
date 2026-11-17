@@ -17,21 +17,34 @@ type Opts = {
   htmlUri: string | null;
   /** Writes an answer to the program; drops it when the PTY's host answers itself (an engine's). */
   reply: (text: string) => void;
+  /** Its page is the one in front: the PTY is read only then. */
+  active: boolean;
+  /** Reads the PTY fast for a moment, so the program's next questions get quick answers. */
+  hurry: () => void;
 };
 
 // One terminal's theme: the app's scheme. The page starts in it (it rides
 // on the page's URL, so there is no flash of the other one) and follows a
 // change at once; the program gets its answers and, while it asked for
-// them (DEC mode 2031), a theme report on every change.
-export function useTermTheme({ webRef, htmlUri, reply }: Opts) {
+// them (DEC mode 2031), a theme report on every change. The report waits
+// until the page is in front: a TUI answers it by asking for the colours
+// and drops answers later than 250 ms (opentui), and off screen nobody
+// reads its questions. Then the PTY is read fast, so the answers make it.
+export function useTermTheme({ webRef, htmlUri, reply, active, hurry }: Opts) {
   const scheme = useScheme();
   const look = termLook(scheme);
   const lookRef = useRef<TermLook>(look);
   lookRef.current = look;
   const replyRef = useRef(reply);
   replyRef.current = reply;
+  const hurryRef = useRef(hurry);
+  hurryRef.current = hurry;
   const reports = useRef(false);
   const given = useRef(scheme);
+  const schemeRef = useRef(scheme);
+  schemeRef.current = scheme;
+  // The scheme the program last learned (at its start, or from a report).
+  const told = useRef(scheme);
 
   // Made once per page: a new URL would reload it.
   const uri = useMemo(
@@ -43,8 +56,14 @@ export function useTermTheme({ webRef, htmlUri, reply }: Opts) {
     if (given.current === scheme) return;
     given.current = scheme;
     setPageTheme(webRef, termLook(scheme).xterm);
-    if (reports.current) replyRef.current(themeReport(scheme === 'dark'));
   }, [scheme, webRef]);
+
+  useEffect(() => {
+    if (!active || !reports.current || told.current === scheme) return;
+    told.current = scheme;
+    replyRef.current(themeReport(scheme === 'dark'));
+    hurryRef.current();
+  }, [scheme, active]);
 
   return {
     look,
@@ -63,6 +82,8 @@ export function useTermTheme({ webRef, htmlUri, reply }: Opts) {
       }
       if (m.type === 'themeReports') {
         reports.current = m.on;
+        // A program turning them on asks its theme itself (it starts knowing it).
+        if (m.on) told.current = schemeRef.current;
         return true;
       }
       return false;

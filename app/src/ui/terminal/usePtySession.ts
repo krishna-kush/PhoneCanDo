@@ -64,6 +64,8 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
   const pumpRef = useRef<(() => void) | null>(null);
   const boostTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const boostFn = useRef<(steps: number, postedAt: number) => void>(() => {});
+  // A hurry's end: back to the idle rate (see hurry).
+  const hurryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Scroll telemetry, aggregated per boost window and logged to logcat:
   // bridge delay, step rate, pump ticks vs output bytes. Scroll-only.
   // Size measured by the page before the PTY exists yet (the open effect
@@ -220,6 +222,8 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
       pumpRef.current = null;
       if (boostTimer.current) clearTimeout(boostTimer.current);
       boostTimer.current = null;
+      if (hurryTimer.current) clearTimeout(hurryTimer.current);
+      hurryTimer.current = null;
       fdRef.current = null;
       t.close();
     };
@@ -237,6 +241,8 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
     pollRef.current = null;
     if (boostTimer.current) clearTimeout(boostTimer.current);
     boostTimer.current = null;
+    if (hurryTimer.current) clearTimeout(hurryTimer.current);
+    hurryTimer.current = null;
   }, [active]);
 
   // Apply measured size to both xterm and the PTY.
@@ -274,6 +280,25 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
     boostFn.current(steps, postedAt);
   }
 
+  // The program's next questions need quick answers: after a theme report
+  // a TUI asks for the colours and gives up within 250 ms (opentui), and
+  // the idle pump alone is 60 ms a read. 16 ms for a second, as a scroll's
+  // boost is (a running boost already reads that fast). On screen only.
+  function hurry() {
+    const pump = pumpRef.current;
+    if (pump == null || pollRef.current == null || boostTimer.current != null) return;
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(pump, 16);
+    if (hurryTimer.current) clearTimeout(hurryTimer.current);
+    hurryTimer.current = setTimeout(() => {
+      hurryTimer.current = null;
+      const idle = pumpRef.current;
+      if (pollRef.current == null || idle == null || boostTimer.current != null) return;
+      clearInterval(pollRef.current);
+      pollRef.current = setInterval(idle, 60);
+    }, 1000);
+  }
+
   // What the terminal answers the program (theme/replies.ts). A PTY whose
   // host answers itself (an engine's) has its answers already; the page
   // also parses its replay, whose old queries need none.
@@ -282,5 +307,5 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
     sendText(text);
   }
 
-  return { termSize, error, outputSettled, applySize, sendText, reply, boostPump };
+  return { termSize, error, outputSettled, applySize, sendText, reply, boostPump, hurry };
 }

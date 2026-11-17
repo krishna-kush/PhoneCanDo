@@ -62,7 +62,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
 
   const available = useMemo(() => isTerminalAvailable(), []);
 
-  const { termSize, error: ptyError, outputSettled, applySize, sendText, reply, boostPump } = usePtySession({
+  const { termSize, error: ptyError, outputSettled, applySize, sendText, reply, boostPump, hurry } = usePtySession({
     available,
     htmlUri,
     webRef,
@@ -72,7 +72,7 @@ export default function TerminalView({ transport, active, name, initialInput, on
   });
   // The app's scheme: the page's colours, the views around it, and what
   // the program hears about it (theme/).
-  const theme = useTermTheme({ webRef, htmlUri, reply });
+  const theme = useTermTheme({ webRef, htmlUri, reply, active, hurry });
   const { look } = theme;
   const primary = useTheme().primary;
   // What the user types goes to the program with the view at the bottom,
