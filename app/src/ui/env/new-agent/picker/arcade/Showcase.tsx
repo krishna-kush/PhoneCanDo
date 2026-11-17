@@ -12,10 +12,11 @@ import { ROW_GUTTER } from '../../../../common/rows/place';
 import { usePageActive } from '../../../../nav/pageActive';
 import { offerBadges } from '../../../logic/agentChoice';
 import Badge from '../../../parts/Badge';
-import { ARCADE, makerLine } from '../copy';
+import { ARCADE, HOUSE_PICK_LINE, makerLine } from '../copy';
 import { kindFacts } from '../logic/facts';
 import { playLinks, powerMove } from '../logic/howToPlay';
 import FactRows from './FactRows';
+import HouseStamp from './HouseStamp';
 import HowToPlay from './HowToPlay';
 import PlateRule from './PlateRule';
 import PowerMove from './PowerMove';
@@ -25,7 +26,8 @@ import VsSticker from './vs/VsSticker';
 // The arcade's showcase, on the hard amber shadow: the picked applicant
 // big in its frame (it hops and smiles as it is picked, and hops at a tap
 // like every face, saying something new each time), its name, who makes
-// it and its badges, the VS sticker at its side when there is someone to
+// it, the house pick's stamp landing on the kind a fresh install starts
+// with, and its badges, the VS sticker at its side when there is someone to
 // challenge it, then its stats, each meter filling up again and its coin
 // spinning for every new pick; under a dashed rule each, its power move
 // (what to type in its own app) and How to play, its official pages, when
@@ -79,11 +81,19 @@ export default function Showcase({ offer, look, onChallenge }: Props) {
               {offer.label}
             </PlainText>
             {maker || booped ? (
-              <PlainText fontFamily="mono" fontSize={11} color="dim" numberOfLines={1}>
+              <PlainText fontFamily="mono" fontSize={11} color="dim" numberOfLines={2}>
                 {[maker ? makerLine(maker) : '', booped ? boopLine(booped - 1) : ''].filter(Boolean).join(' · ')}
               </PlainText>
             ) : null}
           </YStack>
+          {kind.isDefault ? (
+            <XStack gap="2" alignItems="center" flexWrap="wrap">
+              <HouseStamp lands />
+              <PlainText fontFamily="mono" fontSize={10} color="secondaryInk">
+                {HOUSE_PICK_LINE}
+              </PlainText>
+            </XStack>
+          ) : null}
           {offerBadges(offer).length ? (
             <XStack gap="2" flexWrap="wrap">
               {offerBadges(offer).map((b) => (

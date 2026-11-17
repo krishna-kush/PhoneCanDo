@@ -8,7 +8,7 @@ export type PlayLinkKey = 'guide' | 'keys' | 'plans' | 'home';
 
 export type PlayLink = { key: PlayLinkKey; label: string; url: string };
 
-/** The links in the order a newcomer wants them, each in a word or two. */
+/** The links in the order a newcomer wants them, each in a word or two; the website by its own name. */
 const LINKS: readonly { key: PlayLinkKey; label: string }[] = [
   { key: 'guide', label: 'Guide' },
   { key: 'keys', label: 'Get a key' },
@@ -19,12 +19,20 @@ const LINKS: readonly { key: PlayLinkKey; label: string }[] = [
 /** Only a whole https address opens: a user kind's manifest is not checked the way ours are. */
 const HTTPS = /^https:\/\/\S+$/;
 
-/** The pages How to play opens, those its kind names, in LINKS order. */
+/** An address's site, without its www.: "opencode.ai" of "https://www.opencode.ai/docs". */
+const SITE = /^https:\/\/(?:www\.)?([^/?#:@]+)/;
+
+/**
+ * The pages How to play opens, those its kind names, in LINKS order. The
+ * website is named by its site ("opencode.ai"), so whose pages these are
+ * shows even when the agent goes by a name of our own.
+ */
 export function playLinks(about: KindAbout | null): PlayLink[] {
   const links: Partial<Record<PlayLinkKey, unknown>> = about?.links ?? {};
   return LINKS.flatMap(({ key, label }) => {
     const url = links[key];
-    return typeof url === 'string' && HTTPS.test(url) ? [{ key, label, url }] : [];
+    if (typeof url !== 'string' || !HTTPS.test(url)) return [];
+    return [{ key, label: key === 'home' ? (SITE.exec(url)?.[1] ?? label) : label, url }];
   });
 }
 

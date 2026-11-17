@@ -8,7 +8,7 @@ import type { PlayLink } from '../logic/howToPlay';
 import Term from './Term';
 
 // How to play: the picked applicant's official pages (its guide, where to
-// get a key, its plans, its website) as small printed tabs that open in
+// get a key, its plans, its website by its site's name) as small printed tabs that open in
 // the browser, the ↗ in amber; when no app opens one, the address to type.
 export default function HowToPlay({ links }: { links: readonly PlayLink[] }) {
   const [msg, setMsg] = useState('');

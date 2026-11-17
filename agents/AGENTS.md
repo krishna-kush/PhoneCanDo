@@ -502,7 +502,9 @@ rest):
   limits; a local model is the `models` block's to say) and its power
   `move`: what you type in its own app (`keys`) to do what it is best
   known for (`does`). Its fans, its repo's GitHub stars, are
-  counted at build time from `licence.source` (app/scripts/make-fans.mjs).
+  counted at build time from `licence.source` (app/scripts/make-fans.mjs);
+  when its `label` doesn't name that repo (a kind under a name of our
+  own), the app shows them as the repo's and they win no VS.
   Shown only, nothing runs from it; free tiers come and go, so recheck it,
   and the date, before a release.
 

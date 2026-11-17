@@ -50,7 +50,8 @@ export function statKey(): KeySection[] {
         { mark: { meter: 1 }, value: `under ${starsText(LOUDER)} stars`, meaning: 'A club crowd, loyal and loud.' },
         { mark: { meter: 0 }, value: NO_REPO, meaning: 'Closed source: nothing to star.' },
       ],
-      note: "Its GitHub stars, counted again with every app build. The Fans row says when the crowd was last counted.",
+      note:
+        "Its GitHub stars, counted again with every app build. The Fans row says when the crowd was last counted. An agent named apart from the repo its code comes from shows that repo's stars by the repo's name, and they win no VS.",
     },
     {
       term: 'Messages',

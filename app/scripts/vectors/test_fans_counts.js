@@ -48,19 +48,27 @@ function t(name, got, want) {
   );
   t('GitHub silent: everything kept', m.merge(kinds, {}, { a: 1, b: 2, d: 4 }), { a: 1, b: 2, c: null, d: 4 });
   t('a new kind never counted: left out until it is', m.merge(kinds, {}, {}), { c: null });
+  t(
+    "a kind moved to another repo: the old repo's count dropped",
+    m.merge(kinds, {}, { a: 1, b: 2, d: 4 }, { a: 'Org/A', b: 'old/b', d: 'org/d' }),
+    { a: 1, c: null, d: 4 },
+  );
 
   // --- freshness ------------------------------------------------------------------
   const at = '2026-11-17T06:00:00Z';
   const hour = 3600_000;
-  t('young counts for the same kinds: kept', m.fresh(at, Date.parse(at) + hour, { a: 1 }, { a: 'x/y' }), true);
-  t(`older than ${m.STALE_HOURS} hours: counted again`, m.fresh(at, Date.parse(at) + 7 * hour, { a: 1 }, { a: 'x/y' }), false);
-  t('a kind added since: counted again', m.fresh(at, Date.parse(at) + hour, { a: 1 }, { a: 'x/y', b: 'x/z' }), false);
-  t('never counted: counted', m.fresh(null, Date.now(), {}, {}), false);
+  const same = { a: 'x/y' };
+  t('young counts for the same kinds: kept', m.fresh(at, Date.parse(at) + hour, { a: 1 }, { a: 'x/y' }, same), true);
+  t(`older than ${m.STALE_HOURS} hours: counted again`, m.fresh(at, Date.parse(at) + 7 * hour, { a: 1 }, { a: 'x/y' }, same), false);
+  t('a kind added since: counted again', m.fresh(at, Date.parse(at) + hour, { a: 1 }, { a: 'x/y', b: 'x/z' }, same), false);
+  t('a kind moved to another repo: counted again', m.fresh(at, Date.parse(at) + hour, { a: 1 }, { a: 'x/z' }, same), false);
+  t('never counted: counted', m.fresh(null, Date.now(), {}, {}, {}), false);
 
   // --- counts.ts ------------------------------------------------------------------
   const now = m.readCounts();
   const text = require('node:fs').readFileSync(m.COUNTS_FILE, 'utf8');
-  t('counts.ts reads back exactly as it was written', m.countsSource(now.at, now.counts), text);
+  t('counts.ts reads back exactly as it was written', m.countsSource(now.at, now.counts, now.repos), text);
+  t("…each kind's repo, as its manifest names it", now.repos, repos);
   t('…no kind in it that agents/ has dropped', Object.keys(now.counts).every((id) => id in repos), true);
   t(
     '…a kind with no repo counts as null',

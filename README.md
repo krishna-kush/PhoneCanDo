@@ -17,16 +17,17 @@
 
 ---
 
-PhoneCanDo runs coding agents on the phone:
-[opencode](https://github.com/anomalyco/opencode) built in, and Claude Code or
+PhoneCanDo runs coding agents on the phone: Resident, our built-in agent,
+built on [OpenCode](https://github.com/anomalyco/opencode), and Claude Code or
 Gemini CLI installed into a Linux machine on the phone. No remote server, no
 relay. The agents, sessions, keys and terminal live on the device. Home is the
-agent's own UI (opencode's web UI, or the agent's TUI); terminals run over our
+agent's own UI (Resident's web UI, or the agent's TUI); terminals run over our
 own JNI PTY.
 
 PhoneCanDo is an independent project. It is not affiliated with or endorsed by
-anomalyco, Anthropic or Google. opencode is MIT-licensed and built into the
-app; other agents are installed from their vendors under their own terms.
+Anomaly (OpenCode's maker), Anthropic or Google. Resident is our build of
+OpenCode under our own name; OpenCode is MIT-licensed by Anomaly. Other agents
+are installed from their vendors under their own terms.
 
 Model calls go to the provider you configure. Your sessions, files and keys
 stay local; the app's network calls are listed in
@@ -36,7 +37,7 @@ stay local; the app's network calls are listed in
 
 | | |
 |---|---|
-| **Chat** | The agent's own UI: opencode's web UI paired with the local engine, or the agent's TUI. |
+| **Chat** | The agent's own UI: Resident's web UI (OpenCode's, under our name) paired with the local engine, or the agent's TUI. |
 | **Several agents** | Pick the agent when you make a machine. Run as many at once as RAM allows (or set a cap in Settings), each with its own engine; switch between them from the header. Near the RAM peak the app warns and lists what runs, and stops the sleepiest itself if you don't. |
 | **Linux machines** | Each agent works in its own Linux image (proot): the Debian-based default ships in the APK, or pick any arm64 image from Docker Hub. Packages you or the agent install stay in that image. It keeps your work apart; it is not a security sandbox. |
 | **Terminal** | A real PTY and TUI, rendered by xterm.js; or a Linux shell inside an agent's image. |
@@ -49,7 +50,7 @@ stay local; the app's network calls are listed in
 ```text
 ┌────────────────────────────── Android ──────────────────────────────┐
 │  React Native + Tamagui                                             │
-│    ├─ Home      web UI (opencode) | agent TUI                       │
+│    ├─ Home      web UI (Resident) | agent TUI                       │
 │    ├─ Terminal  xterm.js ── JNI PTY ── TUI | Linux shell            │
 │    └─ Settings / Env                                                │
 │                                                                     │
@@ -61,11 +62,11 @@ stay local; the app's network calls are listed in
 ## Quick start
 
 **Requirements:** Node 22, pnpm 11, the Android SDK, and `gh` signed in to fetch
-CI's opencode payload. Building that payload here also needs NDK r28c, Zig 0.16,
-Bun 1.4.2 and ~15 GB disk.
+CI's `opencode` payload (Resident's engine). Building that payload here also
+needs NDK r28c, Zig 0.16, Bun 1.4.2 and ~15 GB disk.
 
-The opencode payload is not in git, and the app build does not build it. CI builds
-it from the pins; `./manage agent sync` stages the one that matches them: the
+The `opencode` payload is not in git, and the app build does not build it. CI
+builds it from the pins; `./manage agent sync` stages the one that matches them: the
 staged one when it does, else GitHub's build (kept 14 days), else a build here.
 
 ```sh
@@ -122,7 +123,7 @@ both and drafts the GitHub release; add `--publish` to publish.
 |---|---|
 | Architecture | [`docs/overview/architecture.md`](docs/overview/architecture.md) |
 | App + engine | [`app/docs/README.md`](app/docs/README.md) |
-| opencode build | [`agents/native/opencode/docs/build.md`](agents/native/opencode/docs/build.md) |
+| Resident's engine (OpenCode) build | [`agents/native/opencode/docs/build.md`](agents/native/opencode/docs/build.md) |
 | Phone control | [`pce/README.md`](pce/README.md) |
 | Telemetry (schema, privacy) | [`docs/telemetry.md`](docs/telemetry.md), [`tce/README.md`](tce/README.md) |
 | Research | [`research/README.md`](research/README.md) |

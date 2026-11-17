@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "id": "opencode",
-  "label": "opencode",
-  "version": "2.0.26-android-phonecando.1",
+  "label": "Resident",
+  "version": "2.0.26-android-phonecando.2",
   "type": "native",
   "prefix": "oc",
   "channels": [
@@ -20,14 +20,14 @@
   },
   "about": {
     "checked": "2026-11-17",
-    "maker": "Anomaly (the SST team)",
+    "maker": "PhoneCanDo, built on OpenCode",
     "links": {
       "home": "https://opencode.ai",
       "guide": "https://opencode.ai/docs/",
       "keys": "https://opencode.ai/auth",
       "plans": "https://opencode.ai/zen"
     },
-    "free": { "via": "models", "note": "Free models on OpenCode Zen, for a limited time" },
+    "free": { "via": "models", "note": "Free models on OpenCode Zen for now; your prompts may be used to train them" },
     "move": { "keys": "/agent", "does": "Switches Build to Plan: looks, no edits" }
   },
   "payload": {

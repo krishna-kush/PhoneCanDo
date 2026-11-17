@@ -5,7 +5,7 @@
 // Keyed by the kind's id; a kind without one fails the build, so a new kind
 // gets its joke too.
 export const QUIPS: Record<string, string> = {
-  opencode: 'Came in the box, no machine needed. First to arrive, last to leave.',
+  opencode: 'Already lives here, built on OpenCode. First to arrive, last to leave.',
   aider: 'Commits every change as it goes. Your git log has never been busier.',
   'claude-code': 'Writes itself a to-do list, then ticks every box. A little smug about it.',
   cline: 'Plans, then acts, and checks with you in between. Every. Single. Step.',

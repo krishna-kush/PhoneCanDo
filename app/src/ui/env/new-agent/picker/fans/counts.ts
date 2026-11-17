@@ -19,3 +19,22 @@ export const FANS: Readonly<Record<string, number | null>> = {
   pi: 122414,
   'qwen-code': 30683,
 };
+
+// Whose stars they are: each bundled kind's repo, owner/name, by its id
+// (null: no public repo).
+export const FAN_REPOS: Readonly<Record<string, string | null>> = {
+  opencode: 'anomalyco/opencode',
+  aider: 'Aider-AI/aider',
+  'claude-code': 'anthropics/claude-code',
+  cline: 'cline/cline',
+  codex: 'openai/codex',
+  'copilot-cli': 'github/copilot-cli',
+  crush: 'charmbracelet/crush',
+  'cursor-cli': null,
+  'gemini-cli': 'google-gemini/gemini-cli',
+  goose: 'aaif-goose/goose',
+  'kimi-code': 'MoonshotAI/kimi-code',
+  'mistral-vibe': 'mistralai/mistral-vibe',
+  pi: 'earendil-works/pi',
+  'qwen-code': 'QwenLM/qwen-code',
+};

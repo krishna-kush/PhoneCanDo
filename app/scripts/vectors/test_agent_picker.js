@@ -72,6 +72,7 @@ function seeded(seed) {
   const about = { checked: '2026-11-17', free: { via: 'models', note: 'Free models on Zen' } };
   const base = {
     id: 'opencode',
+    label: 'opencode',
     messaging: 'wakes',
     schedules: true,
     canWake: true,
@@ -98,7 +99,7 @@ function seeded(seed) {
     ['free play', true, 'can wake it', 'wakes or starts it', 'web page'],
   );
   t('…the fans with when the crowd was counted', /^Head count taken|^No head count/.test(facts[1].note), true);
-  const cheerOf = (id) => f.kindFacts({ ...base, id }, NOW)[1].note.replace(/^Head count taken [^.]*\. /, '');
+  const cheerOf = (id) => f.kindFacts({ ...base, id, label: id }, NOW)[1].note.replace(/^Head count taken [^.]*\. /, '');
   const stadium = ['opencode', 'claude-code', 'codex', 'pi', 'gemini-cli'].filter((id) => fans.venueOf(fans.fansOf(id)) === 'stadium');
   t('agents in one venue never share a cheer', new Set(stadium.map(cheerOf)).size, stadium.length);
   t('…its cost a free-play coin, with how far free goes', [facts[0].coin, facts[0].note], [
@@ -136,6 +137,12 @@ function seeded(seed) {
   t('a TUI home: the terminal', bare[3].value, 'terminal');
   const closed = f.kindFacts({ ...base, id: 'cursor-cli' }, NOW)[1];
   t('a kind with no public repo: said so, an empty meter', [closed.term, closed.value, closed.meter], ['Fans', 'no public repo', 0]);
+  const renamed = f.kindFacts({ ...base, label: 'Resident' }, NOW)[1];
+  t(
+    "a kind named apart from its repo: the repo's stars, said as the repo's, with whose they are",
+    [/^opencode's [\d.]+[kM]?$/.test(renamed.value), renamed.meter, /^Stars on anomalyco\/opencode, the repo its code comes from\. Head count/.test(renamed.note)],
+    [true, 3, true],
+  );
   t(
     'every meter within its max',
     facts.every((x) => x.meter == null || (x.meter >= 0 && x.meter <= METER_MAX)),
@@ -175,6 +182,34 @@ function seeded(seed) {
     fans.fansOf('c', { a: 5, b: null }),
     fans.fansOf('constructor', { a: 5 }),
   ], [5, null, undefined, undefined]);
+  const repos = { a: 'anomalyco/opencode', b: 'github/copilot-cli', c: 'earendil-works/pi', d: null };
+  t(
+    "whose stars: the repo's when the name doesn't name it, else its own (any case, letters and digits, either holding the other)",
+    [
+      fans.fansRepo({ id: 'a', label: 'Resident' }, repos),
+      fans.fansRepo({ id: 'a', label: 'OpenCode' }, repos),
+      fans.fansRepo({ id: 'b', label: 'GitHub Copilot CLI' }, repos),
+      fans.fansRepo({ id: 'c', label: 'pi' }, repos),
+      fans.fansRepo({ id: 'd', label: 'Closed' }, repos),
+      fans.fansRepo({ id: 'user.mine', label: 'Mine' }, repos),
+      fans.fansRepo({ id: 'a', label: '…' }, repos),
+    ],
+    ['anomalyco/opencode', null, null, null, null, null, 'anomalyco/opencode'],
+  );
+  t("…said as the repo's", [fans.borrowedStars('anomalyco/opencode', 227393), fans.repoName('a/b')], ["opencode's 227k", 'b']);
+  const fs = require('node:fs');
+  const bundled = ['native', 'image'].flatMap((type) => {
+    const dir = path.join(__dirname, '../../../agents', type);
+    return fs.readdirSync(dir).flatMap((id) => {
+      const file = path.join(dir, id, 'agent.json');
+      return fs.existsSync(file) ? [JSON.parse(fs.readFileSync(file, 'utf8'))] : [];
+    });
+  });
+  t(
+    "the bundled kinds whose stars are another name's: only the one we named ourselves",
+    bundled.filter((m) => fans.fansRepo(m)).map((m) => m.id),
+    ['opencode'],
+  );
   t(
     'venues: a stadium past 100k, an arena past 25k, a club, a closed door',
     [227000, 100000, 99999, 25000, 5400, 0, null].map(fans.venueOf),
@@ -207,17 +242,17 @@ function seeded(seed) {
 
   // --- power move and How to play -------------------------------------------------
   const links = {
-    home: 'https://a.example',
+    home: 'https://www.a.example/start',
     guide: 'https://a.example/docs',
     keys: 'http://a.example/keys',
     plans: 'javascript:alert(1)',
   };
   t(
-    'How to play: https pages only, guide first, website last',
+    'How to play: https pages only, guide first, the website last by its site',
     h.playLinks({ checked: 'x', links }).map((l) => [l.key, l.label]),
     [
       ['guide', 'Guide'],
-      ['home', 'Website'],
+      ['home', 'a.example'],
     ],
   );
   t('…none told: none', h.playLinks(null), []);
@@ -289,6 +324,7 @@ function seeded(seed) {
   const vs = await import(src('ui/env/new-agent/picker/logic/vs.ts'));
   const fighter = (over) => ({
     id: 'user.a',
+    label: over.id ?? 'user.a',
     messaging: 'wakes',
     schedules: true,
     canWake: true,
@@ -319,6 +355,12 @@ function seeded(seed) {
   ]);
   t('…even stats are a tie', vs.vsRows(fighter({}), fighter({ id: 'user.b' })).map((r) => r.winner), ['tie', 'tie', 'tie', null]);
   t('…a custom kind never counted: no fans row, no moves row', vs.vsRows(fighter({}), p1).map((r) => r.term), ['Cost', 'Messages', 'Schedules', 'Home']);
+  const named = vs.vsRows(fighter({ id: 'opencode', label: 'Resident' }), fighter({ id: 'kimi-code' }))[1];
+  t(
+    "…stars on another name's repo: said as the repo's, and nobody takes the row",
+    [/^opencode's [\d.]+[kM]?$/.test(named.left.value), /^[\d.]+[kM]?$/.test(named.right.value), named.winner],
+    [true, true, null],
+  );
   const score = vs.vsScore(rows);
   t('the score counts the stats taken', score, { left: 4, right: 0 });
   t('…and the verdict', [vs.vsVerdict(score), vs.vsVerdict({ left: 1, right: 2 }), vs.vsVerdict({ left: 1, right: 1 })], ['pick', 'challenger', 'draw']);
@@ -358,6 +400,11 @@ function seeded(seed) {
     'a free one: how it plays free',
     f.applicantLabel({ label: 'opencode', origin: 'bundled', stability: 'stable', blocked: null }, { ...kind, models: ['x'] }),
     'opencode, Free on a local model, Messages · delivered, Schedules · starts it',
+  );
+  t(
+    'the house pick: its stamp after its name',
+    f.applicantLabel({ label: 'Resident', origin: 'bundled', stability: 'stable', blocked: null }, { ...kind, isDefault: true }),
+    'Resident, House pick, Messages · delivered, Schedules · starts it',
   );
   t(
     'a blocked one: and why',

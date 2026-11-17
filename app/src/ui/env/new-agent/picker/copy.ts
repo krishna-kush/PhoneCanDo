@@ -15,6 +15,10 @@ export const HOW_TO_PLAY = 'How to play';
 /** Under the applicant's name: who makes it. */
 export const makerLine = (maker: string) => `by ${maker}`;
 
+/** The stamp on the kind a fresh install starts with (its manifest's `default`), and what it means. */
+export const HOUSE_PICK = 'House pick';
+export const HOUSE_PICK_LINE = 'already lives here';
+
 /** When no app opens a link. */
 export const openElsewhere = (url: string) => `Open ${url} in a browser.`;
 

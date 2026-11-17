@@ -36,7 +36,7 @@ export function plateFields(version: string, versionCode: number, channel: strin
 /** The end credits: a role and who played it. */
 export const CREDITS: readonly { role: string; name: string }[] = [
   { role: 'Starring', name: 'A-01' },
-  { role: 'Built-in agent', name: 'opencode' },
+  { role: 'Resident, built on', name: 'OpenCode (MIT)' },
   { role: 'Linux', name: "PRoot, Termux's fork" },
   { role: 'Terminal', name: 'xterm.js' },
   { role: 'Local brains', name: 'llama.cpp' },

@@ -9,6 +9,7 @@ import { useReduceMotion } from '../../../../common/useReduceMotion';
 import { coinOf } from '../logic/coin';
 import { applicantLabel } from '../logic/facts';
 import Coin from './Coin';
+import HouseStamp from './HouseStamp';
 
 /** A tap's pop: up past its size, then a spring back. */
 const POP = { damping: 9, stiffness: 320 };
@@ -29,7 +30,8 @@ type Props = {
 
 // One portrait in the arcade's grid, a radio button: the applicant's face
 // over its name, and in its top corner its coin when it plays free (the
-// stat key at the page's foot says which). Picked, it smiles in a red frame
+// stat key at the page's foot says which); the house pick (the kind a
+// fresh install starts with) wears its stamp in the other. Picked, it smiles in a red frame
 // with the cursor's corner ticks round it; VS mode's challenger the same in
 // amber. A tap pops it;
 // a hold pops it too and challenges the pick with it. One that can't work
@@ -75,6 +77,11 @@ export default function Portrait({ offer, look, picked, challenger = false, onSe
             <Coin coin={coin} size={COIN} />
           </YStack>
         )}
+        {kind.isDefault ? (
+          <YStack position="absolute" top={COIN_AT - 1} left={COIN_AT - 1}>
+            <HouseStamp small />
+          </YStack>
+        ) : null}
         <YStack height={40} justifyContent="flex-end">
           <StillFace mood={picked || challenger ? 'happy' : blocked ? 'asleep' : 'awake'} size={22} mascot={look} />
         </YStack>

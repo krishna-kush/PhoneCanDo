@@ -1,11 +1,11 @@
 // How much the public likes an applicant: its repo's GitHub stars, counted
 // at build time (fans/counts.ts, app/scripts/make-fans.mjs), short ("5.4k",
-// "227k") and as a meter of three; its venue (stadium, arena, club) and,
-// under it, when the crowd was last counted with a cheer of its own. Pure
-// (zero RN imports).
+// "227k") and as a meter of three; whose they are when its name is not its
+// repo's; its venue (stadium, arena, club) and, under it, when the crowd
+// was last counted with a cheer of its own. Pure (zero RN imports).
 import { dayMonthYear } from '../../../../common/dates.ts';
 import { daysFrom, hhmm, HOUR } from '../../../../schedule/logic/clock.ts';
-import { FANS, FANS_AT } from '../fans/counts.ts';
+import { FAN_REPOS, FANS, FANS_AT } from '../fans/counts.ts';
 import { METER_MAX } from './meter.ts';
 
 /** Stars that fill the meter by a segment each, beyond the first. */
@@ -16,6 +16,32 @@ export const LOUDEST = 100_000;
 export function fansOf(kindId: string, counts: Readonly<Record<string, number | null>> = FANS): number | null | undefined {
   return Object.prototype.hasOwnProperty.call(counts, kindId) ? counts[kindId] : undefined;
 }
+
+/**
+ * Whose stars a kind's are when they aren't its own name's: its repo
+ * ("owner/name") when its name doesn't name that repo (a kind named apart
+ * from the project it is built on), else null. A name names its repo when
+ * either holds the other, in letters and digits of any case ("GitHub
+ * Copilot CLI" names copilot-cli).
+ */
+export function fansRepo(kind: { id: string; label: string }, repos: Readonly<Record<string, string | null>> = FAN_REPOS): string | null {
+  const repo = Object.prototype.hasOwnProperty.call(repos, kind.id) ? repos[kind.id] : null;
+  if (!repo) return null;
+  const name = squash(repoName(repo));
+  const label = squash(kind.label);
+  return label && (label.includes(name) || name.includes(label)) ? null : repo;
+}
+
+/** A repo's name, without its owner: "opencode" of "anomalyco/opencode". */
+export const repoName = (repo: string) => repo.slice(repo.indexOf('/') + 1);
+
+/** Stars counted on another name's repo, said as that repo's: "opencode's 227k". */
+export const borrowedStars = (repo: string, stars: number) => `${repoName(repo)}'s ${starsText(stars)}`;
+
+/** Over the Fans note of a kind whose stars are its repo's: whose they are. */
+export const borrowedNote = (repo: string) => `Stars on ${repo}, the repo its code comes from.`;
+
+const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 /** A star count, short: 950, 5.4k, 11k, 227k, 1.2M. */
 export function starsText(stars: number): string {
