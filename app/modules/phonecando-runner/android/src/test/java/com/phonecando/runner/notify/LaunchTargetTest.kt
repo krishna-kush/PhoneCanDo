@@ -23,6 +23,12 @@ class LaunchTargetTest {
     assertNotEquals(LaunchTarget("checks", "a1").key, LaunchTarget("home", "a1").key)
   }
 
+  @Test fun theAppWidePlacesNeedNoAgent() {
+    for (tab in listOf(LaunchTarget.MODELS, LaunchTarget.UPDATES, LaunchTarget.MEMORY)) {
+      assertEquals(LaunchTarget(tab, null), LaunchTarget.of(tab, null))
+    }
+  }
+
   @Test fun mapIsWhatJsReads() {
     assertEquals(mapOf("tab" to "env", "agentId" to null), LaunchTarget("env", null).toMap())
   }

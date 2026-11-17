@@ -7,11 +7,13 @@ import android.util.Log
 import com.phonecando.linux.LinuxHost
 import com.phonecando.linux.jobs.Job
 import com.phonecando.linux.jobs.JobReporter
+import com.phonecando.linux.records.ImageState
 import com.phonecando.models.ModelsHost
 import com.phonecando.models.jobs.ModelJob
 import com.phonecando.runner.PhoneCanDoServeService
 import com.phonecando.runner.update.UpdateDownloads
 import com.phonecando.runner.update.UpdateState
+import com.phonecando.runner.update.UpdateStep
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -40,7 +42,7 @@ internal object JobsAnchor {
   private var serviceUp = false
   private var lastLinuxTick = 0L
   private var lastUpdateTick = 0L
-  private var updateRunning = false
+  private var updateStep: UpdateStep? = null
 
   @Volatile
   private var models: ModelsHost? = null
@@ -67,7 +69,7 @@ internal object JobsAnchor {
     })
     // After the listener, so a download it resumes is held from its start.
     val updateHost = UpdateDownloads.get(app).also { updates = it }
-    updateHost.addListener { if (updateTick(updateHost.running() != null)) changed(app) }
+    updateHost.addListener { if (updateTick(updateHost.running()?.step)) changed(app) }
     updateHost.recoverOnce()
   }
 
@@ -87,6 +89,9 @@ internal object JobsAnchor {
 
   /** An env record's name, for the notification's Linux lines. */
   fun envName(envId: String): String? = linux?.records?.env(envId)?.name
+
+  /** The image is being reset (its job is a reset, not a setup), for the notification's Linux lines. */
+  fun imageResetting(imageId: String): Boolean = linux?.records?.image(imageId)?.state == ImageState.RESETTING
 
   /** The service is up ([up]) or gone: a service gone while jobs run is asked for again on the next job event. */
   fun service(up: Boolean) {
@@ -108,10 +113,11 @@ internal object JobsAnchor {
     listeners.forEach { it.onJobs() }
   }
 
-  // A job's start and end at once; its progress at most every TICK_MS.
+  // A job's start, end and waits (to try again, for a network) at once;
+  // its progress at most every TICK_MS.
   private fun linuxTick(event: Map<String, Any?>): Boolean {
     val now = SystemClock.elapsedRealtime()
-    val edge = event["finished"] == true || event["step"] == JobReporter.START
+    val edge = event["finished"] == true || event["step"] in EDGE_STEPS
     synchronized(lock) {
       if (!edge && now - lastLinuxTick < TICK_MS) return false
       lastLinuxTick = now
@@ -119,12 +125,14 @@ internal object JobsAnchor {
     return true
   }
 
-  // The update download's start and end at once; its progress at most every TICK_MS.
-  private fun updateTick(running: Boolean): Boolean {
+  // The update download's start, end and each new step (a wait, a
+  // re-read) at once; its progress at most every TICK_MS. [step]: null
+  // when none runs.
+  private fun updateTick(step: UpdateStep?): Boolean {
     val now = SystemClock.elapsedRealtime()
     synchronized(lock) {
-      val edge = running != updateRunning
-      updateRunning = running
+      val edge = step != updateStep
+      updateStep = step
       if (!edge && now - lastUpdateTick < TICK_MS) return false
       lastUpdateTick = now
     }
@@ -143,6 +151,8 @@ internal object JobsAnchor {
   }
 
   private const val TAG = "PhoneCanDoJobs"
+
+  private val EDGE_STEPS = setOf(JobReporter.START, JobReporter.RETRY, JobReporter.OFFLINE)
 
   // As often as the model jobs tell (ModelJobs' tick).
   private const val TICK_MS = 2_000L

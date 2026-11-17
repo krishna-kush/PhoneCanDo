@@ -37,6 +37,11 @@ class Job(val id: String, val target: JobTarget, val guestScript: Boolean = fals
   var progress: Progress = Progress(JobReporter.START, 0, null)
     internal set
 
+  /** The step its last event said: [progress]'s, or `retry`/`offline` while a download waits (the notification line). */
+  @Volatile
+  var step: String = JobReporter.START
+    internal set
+
   fun requestCancel() = cancelled.set(true)
 
   /** Waits up to [millis] for the job to end; true when it did. */

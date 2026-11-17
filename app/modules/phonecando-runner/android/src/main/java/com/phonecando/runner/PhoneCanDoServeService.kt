@@ -13,7 +13,6 @@ import android.os.Looper
 import android.os.SystemClock
 import android.text.format.DateFormat
 import android.util.Log
-import com.phonecando.models.jobs.JobTarget
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.checks.Checks
 import com.phonecando.runner.checks.fanout.CheckFanOut
@@ -34,11 +33,11 @@ import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.notify.AppForeground
 import com.phonecando.runner.notify.AppOnScreen
 import com.phonecando.runner.notify.ChatBoard
-import com.phonecando.runner.notify.LinuxJobLines
+import com.phonecando.runner.notify.JobLines
+import com.phonecando.runner.notify.LaunchTarget
 import com.phonecando.runner.notify.ReadingLines
 import com.phonecando.runner.notify.ServiceNotification
 import com.phonecando.runner.notify.TimeLimitNotice
-import com.phonecando.runner.notify.TransferLines
 import com.phonecando.runner.notify.WorkLines
 import com.phonecando.runner.power.WorkLock
 import java.util.Date
@@ -472,21 +471,17 @@ class PhoneCanDoServeService : Service() {
     // A job ended here stays off its line until a look no longer finds it.
     endedJobs.retainAll(states.flatMap { s -> s.refs.map { it.pid } }.toSet())
     val work = WorkLines.of(states, working, names, endingJobs.keys + endedJobs) { clock.format(Date(it)) }
-    val transfers = JobsAnchor.modelJobs().map {
-      TransferLines.of(it.label, it.target.kind == JobTarget.Kind.IMPORT, it.done, it.total)
-    }
-    val linux = LinuxJobLines.of(JobsAnchor.linuxJobs(), JobsAnchor::envName) { image ->
-      agents.firstOrNull { it.imageId == image }?.name
-    }
+    val jobs = JobLines.read(agents)
     val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read, it.total) }
-    val update = JobsAnchor.updateJob()?.let { TransferLines.of(UPDATE_LABEL, false, it.written, it.spec.size) }
     val starts = starting.map { names[it] ?: it }.distinct()
     // A Stop asked (here or in the app): "Stopping …" under a progress bar
     // until the engine is down.
     val stopping = supervisor?.statuses()?.filter { it.state == EngineState.STOPPING }?.map { it.agentId }.orEmpty()
+    // Where a tap lands: an agent kept up, stopping or starting is on its Home.
+    val places = (work.map { it.agentId } + stopping + starting).map { LaunchTarget("home", it) } + jobs.places
     return notification.build(
-      chats, names, running, transfers, reading, linux, work, starts, ::stopIntent, stopping,
-      ::stopJobIntent, endingJobs.values.toList(), AppOnScreen.shown, update,
+      chats, names, running, jobs.transfers, reading, jobs.linux, work, starts, ::stopIntent, stopping,
+      ::stopJobIntent, endingJobs.values.toList(), AppOnScreen.shown, jobs.update, places,
     )
   }
 
@@ -511,9 +506,6 @@ class PhoneCanDoServeService : Service() {
     // What the notification says while it lingers with nothing running and
     // no Stop of ours ended anything.
     private const val NOTHING_LEFT = "Nothing running now"
-
-    // The update download's notification line: "PhoneCanDo update · downloading 45%".
-    private const val UPDATE_LABEL = "PhoneCanDo update"
 
     // A time-limit stop's reason on the engines' statuses (onTimeout), like
     // the memory guard's MemoryRules.STOPPED_REASON.

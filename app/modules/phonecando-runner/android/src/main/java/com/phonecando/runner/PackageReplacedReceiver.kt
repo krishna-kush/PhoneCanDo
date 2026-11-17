@@ -4,11 +4,12 @@ import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.phonecando.runner.notify.LaunchTarget
+import com.phonecando.runner.notify.LaunchTargets
 import com.phonecando.runner.update.UpdateDownloads
 
 // Fires in the NEW build right after an APK replace (the installer killed the
@@ -33,18 +34,17 @@ class PackageReplacedReceiver : BroadcastReceiver() {
     // The user already came back through the installer's "Open" before this
     // broadcast arrived: nothing left to announce.
     if (isForeground(context)) return
-    val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
-    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (context.packageManager.getLaunchIntentForPackage(context.packageName) == null) return
+    // Only lite → full brings phone control, which sits on Settings; full →
+    // full is a plain update, back on Home.
+    val toFull = from == "lite" && channel == "full"
+    val target = LaunchTarget.of(if (toFull) "settings" else "home", null)
 
     val manager = context.getSystemService(NotificationManager::class.java)
     manager.createNotificationChannel(
       NotificationChannel(CHANNEL_ID, "PhoneCanDo updates", NotificationManager.IMPORTANCE_HIGH),
     )
-    val pending = PendingIntent.getActivity(
-      context, 0, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
-    // Only lite → full brings phone control; full → full is a plain update.
-    val text = if (from == "lite" && channel == "full") {
+    val text = if (toFull) {
       "Full build installed. Tap to open and switch on phone control."
     } else {
       "Update installed. Tap to open."
@@ -55,17 +55,12 @@ class PackageReplacedReceiver : BroadcastReceiver() {
         .setContentTitle("PhoneCanDo updated")
         .setContentText(text)
         .setSmallIcon(R.drawable.ic_stat_phonecando)
-        .setContentIntent(pending)
+        .setContentIntent(LaunchTargets.tap(context, target))
         .setAutoCancel(true)
         .build(),
     )
 
-    try {
-      context.startActivity(launch)
-      Log.i(TAG, "relaunch after update: started")
-    } catch (e: Exception) {
-      Log.i(TAG, "relaunch after update blocked: ${e.message}")
-    }
+    Log.i(TAG, if (LaunchTargets.open(context, target)) "relaunch after update: started" else "relaunch after update blocked")
   }
 
   companion object {

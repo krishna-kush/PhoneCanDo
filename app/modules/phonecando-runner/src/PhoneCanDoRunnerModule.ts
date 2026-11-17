@@ -245,6 +245,8 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   updatePlan(agentId: string, family: string): NativeInstallPlan | null;
   versionCheck(agentId: string): NativeVersionCheck | null;
   recordInstall(agentId: string, versionOutput: string): { version: string };
+  /** How far the app's install bar is for the script job, so the notification says the same; null once the run ended. */
+  showInstallShare(jobId: string, agentId: string, fraction: number | null, updating: boolean): void;
   engineTerminalAttach(agentId: string): NativeTerminalAttach;
   engineTerminalRead(viewerId: string, max: number): string | null;
   engineTerminalWrite(viewerId: string, b64: string): void;

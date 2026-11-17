@@ -3,7 +3,8 @@
 // install script for the machine's package family (the runtimes the kind
 // needs, its system packages, its own steps), run it in the image as a job
 // (phases, retries, time and bytes so far and the log's last lines land in
-// installRuns), then run the kind's version check and record the version.
+// installRuns; the runner's notification line gets the bar's share), then
+// run the kind's version check and record the version.
 // The agent's engine refuses to start until that record exists
 // (agent_not_installed).
 //
@@ -22,7 +23,14 @@
 // agent (the kind's update steps), Reinstall after a machine reset. A run
 // never rejects; its record in installRuns says how it went.
 import type { Agent, AgentId } from '../../engine/agents/records';
-import { installPlan, recordInstall, updatePlan, versionCheck, type InstallPlan } from '../../engine/agents/install';
+import {
+  installPlan,
+  recordInstall,
+  showInstallShare,
+  updatePlan,
+  versionCheck,
+  type InstallPlan,
+} from '../../engine/agents/install';
 import { agentKind } from '../../engine/agents/registry';
 import { agentById, engineStatus, listAgents } from '../../engine/engines';
 import { cancelJob, runGuestCommand, runGuestScript } from '../../engine/linux/native';
@@ -30,7 +38,7 @@ import type { Image, ImageId, LinuxJob } from '../../engine/linux/types';
 import { agentsOnImage, prepareAgentImage, useAgentsStore } from '../agents';
 import { useLinuxStore } from '../linux';
 import { followJob } from './followJob';
-import { applyInstall, forgetAgentReinstall, setInstallRun } from './installRuns';
+import { applyInstall, forgetAgentReinstall, installRunOf, setInstallRun } from './installRuns';
 import { failureOf } from './logic/errors';
 import { InstallError, installFailureOf, scriptFailure } from './logic/installErrors';
 import { startRun, type InstallMode } from './logic/installRun';
@@ -112,7 +120,7 @@ async function run(agentId: AgentId, mode: InstallMode): Promise<boolean> {
       applyInstall(agentId, { type: 'stage', stage: 'script' });
       const end = await followJob(
         () => startScript(agent, plan, mode),
-        (p) =>
+        (p) => {
           applyInstall(agentId, {
             type: 'progress',
             phase: p.phase,
@@ -122,7 +130,10 @@ async function run(agentId: AgentId, mode: InstallMode): Promise<boolean> {
             downloadedBytes: p.downloadedBytes,
             rateBytesPerSec: p.rateBytesPerSec,
             online: p.online,
-          }),
+          });
+          const fraction = installRunOf(agentId)?.fraction;
+          if (fraction != null && !p.finished) showInstallShare(p.jobId, agentId, fraction, mode === 'update');
+        },
       );
       const failure = scriptFailure(end);
       if (failure) throw new InstallError(failure);
@@ -140,6 +151,8 @@ async function run(agentId: AgentId, mode: InstallMode): Promise<boolean> {
     applyInstall(agentId, { type: 'failed', failure: installFailureOf(e) });
     return false;
   } finally {
+    const jobId = scriptJobs.get(agentId);
+    if (jobId) showInstallShare(jobId, agentId, null, false);
     scriptJobs.delete(agentId);
   }
 }

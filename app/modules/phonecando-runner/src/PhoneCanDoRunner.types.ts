@@ -164,7 +164,7 @@ export type NativeOpenUrlAction = 'open' | 'copy' | 'dismiss';
 
 /** Where opening the app should land: a tab and, when the reason is one agent, that agent ('checks': its checks). */
 export type NativeLaunchTarget = {
-  tab: 'home' | 'env' | 'settings' | 'checks';
+  tab: 'home' | 'env' | 'settings' | 'checks' | 'models' | 'updates' | 'memory';
   agentId: string | null;
 };
 

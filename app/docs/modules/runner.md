@@ -818,9 +818,13 @@ lists the chats the agents are busy with, the agents kept up by a job they
 left running or are starting, by Keep running, by their own ask or at work
 unseen (`WorkLines.kt`, each with a Stop: `ACTION_STOP_AGENT`), the
 engines starting, the model server reading a prompt, the model jobs and
-the Linux jobs with their share done, or, with none of that, the agents
+the Linux jobs with the share the app's bar shows for them (a download's
+wait for a network or its next try and a re-read said as the app says
+them; a machine's setup over the whole setup; an agent's install or
+update with the share its bar shows in the app, which the app tells the
+runner, `notify/InstallShares.kt`), or, with none of that, the agents
 ready (`notify/ServiceNotification.kt`, `ReadingLines.kt`,
-`TransferLines.kt`, `LinuxJobLines.kt`, `ReadyLines.kt`, channel
+`TransferLines.kt`, `LinuxJobLines.kt`, `JobLines.kt`, `ReadyLines.kt`, channel
 `phonecando-engine`; see Notifications), keeps the CPU awake while any of
 that works (`power/WorkLock.kt`; see Jobs and the idle stop) and stops
 itself once neither an engine nor a job has run for 10 s. The wait
@@ -907,11 +911,14 @@ agents' channel; see Foreground service and lifetime), the update notice
 (4202) and the memory guard's notice (4301, on the agents' channel; see
 Memory guard) are untagged.
 
-- **Where a tap lands.** A `LaunchTarget` names a place (`home`, `env` or
-  `settings`: Home, the agent's page or the systems list, Settings; an open
-  terminal stays on top of any) plus, when the reason is one agent, that
-  agent. Every agent notification's tap, the
-  single-agent engine notification and the bridge's own launch start
+- **Where a tap lands.** A `LaunchTarget` names a place (`home`, `env`,
+  `checks`, `settings`, `models`, `updates` or `memory`: Home, the agent's
+  page or the systems list, the agent's checks, Settings, Models, Settings'
+  Updates, the RAM warning; an open terminal stays on top of any) plus,
+  when the reason is one agent, that agent (`ui/nav/launchTarget.ts` in
+  the app). Every agent notification's tap, the engine notification's
+  (`notify/ServiceTap.kt`), the memory notice's, the update notice's and
+  the bridge's own launch start
   `notify/OpenTargetActivity` (non-exported, `Theme.NoDisplay`,
   `noHistory`) with the target in its intent; it hands the target over
   (`LaunchTargets.deliver`: the runner prefs plus the
@@ -974,8 +981,12 @@ Memory guard) are untagged.
   guessed stop (no alert, no sign of use, the checks skip it). A long
   quiet command stays: the server names its chat. The service re-renders
   only when the board changes (`Engines.Listener.onChats`), never per
-  token. A tap opens the app, on
-  that agent's Home when every listed chat is one agent's.
+  token. A tap opens the app on what it lists (`notify/ServiceTap.kt`,
+  pure): a model job on Models, an agent's install or its machine's setup
+  on the agent's page, a system's download on Systems, the update download
+  on Settings' Updates, an agent kept up, starting or stopping on its
+  Home; when the lines are about several places, on that agent's Home
+  when every listed chat is one agent's, else the app as it was.
 - **Agent alerts.** `EngineStreams` passes every engine event to
   `notify/AgentAlerts.kt`; `notify/AlertRules.kt` (pure) decides. A
   top-level session's verdict (`FINISHED`, `FAILED`) and any session

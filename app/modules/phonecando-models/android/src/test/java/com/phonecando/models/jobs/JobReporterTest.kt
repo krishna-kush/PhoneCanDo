@@ -25,6 +25,19 @@ class JobReporterTest {
   }
 
   @Test
+  fun `the job's step says when it waits, and each wait is told at once`() {
+    val waits = ArrayList<String>()
+    val told = JobReporter(job, {}, onWait = { waits += it.step }, intervalMillis = 250, now = { t })
+    told.report(Progress("verify", 10, 100))
+    assertEquals("verify", job.step)
+    told.retrying(RetryWait(1, 3, 2_000, RetryWait.Reason.NETWORK))
+    told.waitingForNetwork()
+    assertEquals(listOf(JobReporter.RETRY, JobReporter.OFFLINE), waits)
+    told.report(Progress("download", 20, 100))
+    assertEquals("download", job.step)
+  }
+
+  @Test
   fun `transfer bytes have a rate, verifying has none`() {
     reporter.report(Progress("verify", 50, 100))
     assertNull(events.last()["rateBytesPerSec"])

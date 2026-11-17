@@ -23,6 +23,11 @@ export function applyInstall(agentId: AgentId, e: InstallEvent): void {
   });
 }
 
+/** The agent's run now, outside React (the notification's share). */
+export function installRunOf(agentId: AgentId): InstallRun | undefined {
+  return useInstallRuns.getState().runs[agentId];
+}
+
 export function useInstallRun(agentId: AgentId): InstallRun | undefined {
   return useInstallRuns((s) => s.runs[agentId]);
 }

@@ -18,6 +18,8 @@ class JobReporter(
   private val job: ModelJob,
   private val emit: (Map<String, Any?>) -> Unit,
   private val onProgress: (ModelJob) -> Unit = {},
+  /** The job began to wait: the runner's notification says so at once. */
+  private val onWait: (ModelJob) -> Unit = onProgress,
   private val intervalMillis: Long = 250,
   private val now: () -> Long = System::currentTimeMillis,
 ) : ProgressSink, RetrySink {
@@ -44,6 +46,7 @@ class JobReporter(
     if (progress.step in TRANSFER_STEPS) mostDone = maxOf(mostDone, progress.done)
     job.done = progress.done
     job.total = progress.total
+    job.step = progress.step
     onProgress(job)
     val key = progress.step
     val t = now()
@@ -62,6 +65,8 @@ class JobReporter(
     meter.reset()
     lastKey = "$RETRY/${wait.attempt}"
     lastAt = now()
+    job.step = RETRY
+    onWait(job)
     emit(event(null, null, false))
   }
 
@@ -74,6 +79,8 @@ class JobReporter(
     meter.reset()
     lastKey = OFFLINE
     lastAt = now()
+    job.step = OFFLINE
+    onWait(job)
     emit(event(null, null, false))
   }
 

@@ -31,6 +31,17 @@ class JobReporterTest {
     assertEquals(Progress("download", 20, 50), job.progress)
   }
 
+  @Test fun theJobsStepSaysWhenADownloadWaits() {
+    reporter.report(Progress("download", 10, 50))
+    assertEquals("download", job.step)
+    reporter.retrying(RetryWait(1, 3, 2_000, RetryWait.Reason.NETWORK))
+    assertEquals(JobReporter.RETRY, job.step)
+    reporter.waitingForNetwork()
+    assertEquals(JobReporter.OFFLINE, job.step)
+    reporter.report(Progress("download", 11, 50))
+    assertEquals("download", job.step)
+  }
+
   @Test fun theFinalEventAlwaysGoesOutWithTheLastProgress() {
     reporter.report(Progress("download", 10, 50))
     reporter.report(Progress("download", 20, 50))

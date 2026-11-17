@@ -7,6 +7,7 @@ import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.agents.install.AgentInstalls
 import com.phonecando.runner.agents.install.InstallException
+import com.phonecando.runner.notify.InstallShares
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
 
@@ -45,6 +46,13 @@ internal fun ModuleDefinitionBuilder.installFunctions(context: () -> Context) {
   // { version }: the agent's engine may start from now on.
   Function("recordInstall") { agentId: String, versionOutput: String ->
     coded { mapOf("version" to installs().recordInstall(agentId, versionOutput)) }
+  }
+
+  // How far the app's bar says the script job [jobId] installing [agentId]
+  // is (0..1; null when the run ended), so the notification's line says
+  // the same (notify/InstallShares).
+  Function("showInstallShare") { jobId: String, agentId: String, fraction: Double?, updating: Boolean ->
+    InstallShares.set(jobId, agentId, fraction, updating)
   }
 }
 

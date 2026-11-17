@@ -50,6 +50,18 @@ class ModelJobsTest {
   }
 
   @Test
+  fun `a wait is heard at once, and starts the tick over`() {
+    val job = jobs.begin(target, "Qwen")
+    heard.clear()
+    jobs.progressed(job)
+    t = 500
+    jobs.waiting(job)
+    t = 1_000
+    jobs.progressed(job)
+    assertEquals(listOf(1, 1), heard)
+  }
+
+  @Test
   fun `progress is heard at most every tick`() {
     val job = jobs.begin(target, "Qwen")
     heard.clear()

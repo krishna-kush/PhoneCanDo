@@ -26,9 +26,10 @@ import com.phonecando.runner.engine.work.WorkWatch
 // running at all, is there no notification (build gives null) and the
 // service leaves the foreground.
 // Chat titles, jobs and model, system and agent names stay off the lock
-// screen: the public version only counts. Tapping opens the app; on that
-// agent's Home when every chat listed belongs to one agent (or, with none,
-// one engine runs).
+// screen: the public version only counts. Tapping opens the app on what
+// it lists (ServiceTap): a model download on Models, an agent's install on
+// its page, one agent's chats on its Home; the app as it was when the lines
+// are about several places.
 internal class ServiceNotification(private val context: Context) {
   fun createChannel() {
     context.getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -48,7 +49,8 @@ internal class ServiceNotification(private val context: Context) {
    * that takes a few seconds never looks hung; [stopJob]: the intent that
    * stops one job alone; [endingJobs]: the names of the jobs being
    * stopped, a "Stopping …" line each under the same bar; [update]: the
-   * TransferLines line of the update download. With none of
+   * TransferLines line of the update download; [places]: where each line
+   * but the chats' lands (ServiceTap). With none of
    * that, the agents in [running] as ready, unless [onScreen] (the app is
    * in front); null when nothing runs.
    */
@@ -67,14 +69,14 @@ internal class ServiceNotification(private val context: Context) {
     endingJobs: List<String> = emptyList(),
     onScreen: Boolean = false,
     update: String? = null,
+    places: List<LaunchTarget> = emptyList(),
   ): Notification? {
     val kept = work.filter { it.agentId !in stopping }
     val ending = stopping.map { "Stopping ${names[it] ?: it}…" } + endingJobs.map { "Stopping $it…" }
     val extra = ending + kept.map { it.text } + starting.map { "Starting $it" } + listOfNotNull(reading) + transfers + linuxJobs + listOfNotNull(update)
     if (chats.isEmpty() && extra.isEmpty() && running.isEmpty()) return null
-    val agent = chats.map { it.agentId }.distinct().singleOrNull()
-      ?: running.singleOrNull()?.takeIf { chats.isEmpty() }
-    val tap = agent?.let { LaunchTargets.tap(context, LaunchTarget("home", it)) } ?: launchIntent()
+    val target = ServiceTap.of(chats.map { it.agentId }, places, running)
+    val tap = target?.let { LaunchTargets.tap(context, it) } ?: launchIntent()
     if (chats.isEmpty() && extra.isEmpty()) return if (onScreen) null else ready(running.map { names[it] ?: it }, tap)
     val counts = listOf(
       summary(chats), stoppingCount(ending), WorkLines.count(kept), startingCount(starting),

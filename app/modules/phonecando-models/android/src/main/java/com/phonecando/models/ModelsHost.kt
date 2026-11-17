@@ -95,7 +95,7 @@ class ModelsHost private constructor(context: Context) {
    * final records.
    */
   fun run(job: ModelJob, body: (JobReporter) -> Unit) {
-    val reporter = JobReporter(job, { event -> listeners.forEach { it.onProgress(event) } }, jobs::progressed)
+    val reporter = JobReporter(job, { event -> listeners.forEach { it.onProgress(event) } }, jobs::progressed, jobs::waiting)
     executor.execute {
       var error: Throwable? = null
       try {

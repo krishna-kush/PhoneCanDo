@@ -136,6 +136,8 @@ export type RunnerModule = {
   updatePlan(agentId: string, family: string): NativeInstallPlan | null;
   versionCheck(agentId: string): NativeVersionCheck | null;
   recordInstall(agentId: string, versionOutput: string): { version: string };
+  /** The install bar's fraction for the notification (null: the run ended). Absent from native builds older than it. */
+  showInstallShare?(jobId: string, agentId: string, fraction: number | null, updating: boolean): void;
 };
 
 function load(): RunnerModule {
@@ -291,16 +293,18 @@ export function isPhoneInUse(): boolean {
   }
 }
 
-// Where the app should land: Home, the agent's page, what the agent can do
-// (its checks, from a "isn't working" notice) or Settings and, when the
-// reason is one agent (a tap on its notification or alert, its return
-// after phone control, its prompt), that agent. Native binds it when the app opens, so each
-// notification opens its own agent.
-export type LaunchTab = 'home' | 'env' | 'checks' | 'settings';
+// Where the app should land: Home, the agent's page (no agent: Systems),
+// what the agent can do (its checks, from a "isn't working" notice),
+// Settings, Models (a model download), Settings' Updates (the update
+// download) or the RAM warning and, when the reason is one agent (a tap on
+// its notification or alert, its return after phone control, its prompt),
+// that agent. Native binds it when the app opens, so each notification
+// opens its own agent (notify/LaunchTarget.kt).
+export type LaunchTab = 'home' | 'env' | 'checks' | 'settings' | 'models' | 'updates' | 'memory';
 
 export type LaunchTarget = { tab: LaunchTab; agentId: AgentId | null };
 
-const LAUNCH_TABS: readonly string[] = ['home', 'env', 'checks', 'settings'];
+const LAUNCH_TABS: readonly string[] = ['home', 'env', 'checks', 'settings', 'models', 'updates', 'memory'];
 
 function asLaunchTarget(raw: NativeLaunchTarget | null | undefined): LaunchTarget | null {
   if (!raw || !LAUNCH_TABS.includes(raw.tab)) return null;

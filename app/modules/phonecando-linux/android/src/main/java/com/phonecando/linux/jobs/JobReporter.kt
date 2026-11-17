@@ -36,6 +36,7 @@ class JobReporter(
   override fun report(progress: Progress) {
     last = progress
     job.progress = progress
+    job.step = progress.step
     wait = null
     offline = false
     if (progress.step == DOWNLOAD) mostDone = maxOf(mostDone, progress.done)
@@ -55,6 +56,7 @@ class JobReporter(
   override fun retrying(wait: RetryWait) {
     this.wait = wait
     offline = false
+    job.step = RETRY
     throttle.pass("$RETRY/${wait.attempt}")
     emit(event(null, null, false))
   }
@@ -63,6 +65,7 @@ class JobReporter(
   override fun waitingForNetwork() {
     wait = null
     offline = true
+    job.step = OFFLINE
     throttle.pass(OFFLINE)
     emit(event(null, null, false))
   }

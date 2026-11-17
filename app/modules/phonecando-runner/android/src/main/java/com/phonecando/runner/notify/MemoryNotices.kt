@@ -10,7 +10,8 @@ import com.phonecando.runner.memory.MemoryGuard
 // service's and the update notice), on the agents' channel: the warning
 // while memory is short, replaced by what we stopped to free some. The
 // guard posts only while PhoneCanDo is not in front, once per stretch of
-// low memory (later stops update it quietly). A tap opens the app on Home.
+// low memory (later stops update it quietly). A tap opens the app's RAM
+// warning, where you pick what to stop and see what we stopped.
 internal class MemoryNotices(private val context: Context) : MemoryGuard.Alerts {
   private var stoppedShown = false
 
@@ -37,7 +38,7 @@ internal class MemoryNotices(private val context: Context) : MemoryGuard.Alerts 
       .setContentText(text)
       .setStyle(Notification.BigTextStyle().bigText(text))
       .setSmallIcon(R.drawable.ic_stat_phonecando)
-      .setContentIntent(LaunchTargets.tap(context, LaunchTarget.of("home", null)))
+      .setContentIntent(LaunchTargets.tap(context, LaunchTarget(LaunchTarget.MEMORY, null)))
       .setAutoCancel(true)
       .setOnlyAlertOnce(quiet)
       .build()

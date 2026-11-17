@@ -26,6 +26,9 @@ class ModelJob(val id: String, val target: JobTarget, val label: String) {
 
   @Volatile var total: Long? = null
 
+  /** The step its last event said: `retry` or `offline` while it waits, `verify` while it re-reads a resumed part. */
+  @Volatile var step: String = JobReporter.START
+
   val cancel: CancelSignal = CancelSignal { cancelled.get() }
 
   val isCancelled: Boolean get() = cancelled.get()
@@ -91,6 +94,12 @@ class ModelJobs(private val tickMillis: Long = 2_000, private val now: () -> Lon
       true
     }
     if (tell) tellListeners()
+  }
+
+  /** [job] began to wait (to try again, for a network): listeners hear at once, whatever the tick says. */
+  fun waiting(job: ModelJob) {
+    synchronized(lock) { lastTick[job.id] = now() }
+    tellListeners()
   }
 
   fun live(target: JobTarget): ModelJob? = synchronized(lock) { byTarget[target] }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AppState, Keyboard, StatusBar, View } from 'react-native';
+import { AppState, StatusBar, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { TamaguiProvider } from 'tamagui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -10,6 +10,7 @@ import HomeHeader from './src/ui/chat/HomeHeader';
 import HomeScreen from './src/ui/chat/HomeScreen';
 import AppDrawer from './src/ui/drawer/AppDrawer';
 import PageStack from './src/ui/nav/PageStack';
+import { applyLaunchTarget } from './src/ui/nav/launchTarget';
 import { useBackChain } from './src/ui/nav/useBackChain';
 import { useShareLinkOpen } from './src/ui/recommend/useShareLinkOpen';
 import { useSettingsSync } from './src/ui/account/useSettingsSync';
@@ -43,7 +44,6 @@ import {
   isRunnerAvailable,
   onLaunchTarget,
   requestNotificationPermission,
-  type LaunchTarget,
 } from './src/engine/runner';
 import { hideSplash, holdSplash } from './src/engine/splash';
 import { useScheme, useTheme } from './src/ui/common/globals';
@@ -98,32 +98,12 @@ export default function App() {
   useDeskSeats();
 
   useEffect(() => {
-    // Where to land when the app opens for a reason: a tap on an agent's
-    // notification (its alert, its own post, its prompt, its return notice)
-    // or an agent bringing the app back (mobile_return). The target names
-    // Home, the agent's page ('env'), what it can do ('checks': its page,
-    // then its checks) or Settings and, when the reason is one agent, that
-    // agent, which becomes the active one. An open terminal
-    // stays on top whatever the target (stack.ts towardHome). The event
-    // covers the app in front; the pref covers a cold or resumed start.
-    // Until the agents are read, a switch would be undone by the stored
-    // pick, so the target waits for hydration.
-    const applyLaunchTarget = (target: LaunchTarget | null) => {
-      if (!target) return;
-      Keyboard.dismiss();
-      const agents = useAgentsStore.getState();
-      if (target.agentId && target.agentId !== agents.activeAgentId) void agents.setActiveAgent(target.agentId);
-      const app = useAppStore.getState();
-      app.showHome();
-      if (target.tab === 'settings') app.push({ name: 'settings' });
-      if (target.tab === 'env') {
-        app.push(target.agentId ? { name: 'agent', agentId: target.agentId } : { name: 'systems' });
-      }
-      if (target.tab === 'checks' && target.agentId) {
-        app.push({ name: 'agent', agentId: target.agentId });
-        app.push({ name: 'agent-checks', agentId: target.agentId });
-      }
-    };
+    // Where to land when the app opens for a reason: a tap on a
+    // notification or an agent bringing the app back (mobile_return);
+    // applyLaunchTarget (ui/nav/launchTarget.ts) says where each lands. The
+    // event covers the app in front; the pref covers a cold or resumed
+    // start. Until the agents are read, a switch would be undone by the
+    // stored pick, so the target waits for hydration.
     const takeLaunchTarget = () => {
       if (useAgentsStore.getState().hydrated) applyLaunchTarget(consumeLaunchTarget());
     };

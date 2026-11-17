@@ -34,6 +34,19 @@ export function versionCheck(agentId: AgentId): VersionCheck | null {
   return nativeRunner().versionCheck(agentId) ?? null;
 }
 
+/**
+ * How far the install bar for the script job is (0..1), so the runner's
+ * notification line says the same; null once the run ended. Never throws:
+ * the notification is a nicety.
+ */
+export function showInstallShare(jobId: string, agentId: AgentId, fraction: number | null, updating: boolean): void {
+  try {
+    nativeRunner().showInstallShare?.(jobId, agentId, fraction, updating);
+  } catch {
+    // an older native build, or the runner is gone
+  }
+}
+
 /** Parses the check's output and stores the version on the agent (its engine may start from then on). Throws `verify_failed` when nothing matches. */
 export function recordInstall(agentId: AgentId, versionOutput: string): { version: string } {
   return nativeRunner().recordInstall(agentId, versionOutput);
