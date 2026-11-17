@@ -11,9 +11,10 @@ import { useThemeSweep } from './themeSweep';
 // circle of the new theme's background opens from the screen that was
 // tapped, like a light coming on (or going off), with A-01 popping up in
 // the middle to react: lights on, it wakes from a nap, z and all,
-// squints against the glare and blinks its eyes open; lights off, its
-// eyes go wide in the sudden dark, then slowly close into a nap, its z
-// rising as they meet, for a beat. Each runs on the UI thread from its
+// squints against the glare and blinks its eyes open; lights off, it
+// dozes off as any face does (its lids droop, a heavy blink, they drag
+// back up and drift shut, its head nodding), its z rising as they meet,
+// for a beat. Each runs on the UI thread from its
 // first frame (AgentFace's reaction), so the re-render can't stall it.
 // Once the colour covers the app the theme goes in under it
 // (themeSweep.ts), so the slow whole-app re-render happens out of sight;
@@ -77,7 +78,7 @@ export default function ThemeCurtain() {
         {sweep.scheme === 'light' ? (
           <AgentFace mood="awake" reaction="glare" size={44} />
         ) : (
-          <AgentFace mood="asleep" reaction="startle" size={44} />
+          <AgentFace mood="asleep" reaction="doze" size={44} />
         )}
         <Text style={{ fontFamily: 'GeistMono-Regular', fontSize: 11, letterSpacing: 1.6, color: ink.secondaryInk }}>
           {sweep.scheme === 'light' ? 'LIGHTS ON' : 'LIGHTS OFF'}

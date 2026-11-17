@@ -27,7 +27,7 @@ type Props = {
   hearts?: number;
   /**
    * A named change (change/specs.ts's REACTION: the theme sweep's glare
-   * and startle) played as the face appears or when it is newly given,
+   * and doze) played as the face appears or when it is newly given,
    * instead of the one its mood change would pick; pass the reaction's
    * `to` mood with it.
    */

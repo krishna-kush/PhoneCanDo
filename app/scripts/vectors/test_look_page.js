@@ -45,12 +45,12 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   const f = await import(src('ui/common/face/change/specs.ts'));
   const ft = await import(src('ui/common/face/change/timing.ts'));
   t('lights on: the wake-up, then a beat with the eyes open', c.sweepHold('light'), ft.changeMs(f.REACTION.glare) + 130);
-  t('lights off: wide, dozing off, then the nap for a beat', c.sweepHold('dark'), ft.changeMs(f.REACTION.startle) + 400);
-  t('the holds', [c.sweepHold('light'), c.sweepHold('dark')], [780, 1070]);
+  t('lights off: dozing off, then the nap for a beat', c.sweepHold('dark'), ft.changeMs(f.REACTION.doze) + 400);
+  t('the holds', [c.sweepHold('light'), c.sweepHold('dark')], [780, 1860]);
   t('lights on: A-01 is still napping as the colour comes', f.REACTION.glare.sleepMs <= c.SWEEP.growMs, true);
   t('the colour covers the app before either hold ends', c.SWEEP.growMs < Math.min(c.sweepHold('light'), c.sweepHold('dark')), true);
   t('a fast lights-on takes 1.1 s at most', c.sweepHold('light') + c.SWEEP.fadeMs <= 1100, true);
-  t('a fast lights-off takes 1.4 s at most', c.sweepHold('dark') + c.SWEEP.fadeMs <= 1400, true);
+  t('a fast lights-off takes 2.1 s at most', c.sweepHold('dark') + c.SWEEP.fadeMs <= 2100, true);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

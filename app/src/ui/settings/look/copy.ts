@@ -53,12 +53,12 @@ export function rowDrop(down: number, sticky: boolean, keyboardH: number, rowH: 
 /**
  * The theme sweep's beats, in ms: its colour's spread over the app, its
  * fade, and the beat A-01 holds once its reaction is done before the
- * colour lifts: lights on, eyes open; lights off, the nap (shut eyes, the
- * drifting z).
+ * colour lifts: lights on, eyes open; lights off, the nap it dozed off
+ * into (shut eyes, the drifting z).
  */
 export const SWEEP = { growMs: 280, fadeMs: 240, afterMs: { light: 130, dark: 400 } } as const;
 
 /** The least time the sweep covers the app from the tap, however fast the theme goes in under it: A-01's reaction, then its beat. */
 export function sweepHold(scheme: Scheme): number {
-  return changeMs(REACTION[scheme === 'light' ? 'glare' : 'startle']) + SWEEP.afterMs[scheme];
+  return changeMs(REACTION[scheme === 'light' ? 'glare' : 'doze']) + SWEEP.afterMs[scheme];
 }

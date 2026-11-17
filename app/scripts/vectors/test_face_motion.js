@@ -49,24 +49,21 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   t('a later heart is a phase behind', r(m.heartStyle(0, m.REST.beat, 12)), r(m.heartStyle(m.REST.beat, 0, 12)));
 
   // --- reactions ------------------------------------------------------------------
-  const R = sp.REACTION, G = R.glare, S = R.startle, D = R.doze, W = R.wake;
+  const R = sp.REACTION, G = R.glare, D = R.doze, W = R.wake;
   const lids = (c) => c.steps.map((s) => s.lid);
   t('wakers go asleep to awake', [G, W].map((r) => [r.from, r.to]), [['asleep', 'awake'], ['asleep', 'awake']]);
-  t('dozers go awake to asleep', [S, D].map((r) => [r.from, r.to]), [['awake', 'asleep'], ['awake', 'asleep']]);
+  t('doze goes awake to asleep', [D.from, D.to], ['awake', 'asleep']);
   t("each ends on its mood's own lid", Object.values(R).every((r) => r.steps[r.steps.length - 1].lid === m.LID[r.to]), true);
   t('a last step holds nothing', Object.values(R).every((r) => r.steps[r.steps.length - 1].hold === 0), true);
 
-  // glare and startle, the theme sweep's
+  // glare, the theme sweep's lights coming on
   t('glare naps a beat before the light hits', G.sleepMs, 250);
   t('glare squints tighter than a frown, but its pupils show', [G.steps[0].lid < m.LID.oops, G.steps[0].lid > m.LID.asleep], [true, true]);
-  t('glare winces down, startle jumps up', [G.lean > 0, S.lean < 0], [true, true]);
-  t('startle goes wider than open, at once', [S.steps[0].lid > m.LID.awake, S.sleepMs], [true, 0]);
-  t('startle holds wide a beat, then dozes off slowly', [S.steps[0].hold, S.steps[1].ms], [250, 350]);
+  t('glare winces down', G.lean > 0, true);
   t('glare: the "z" goes as the squint comes', [tm.handOverAtMs(G), G.handOverMs], [250, 70]);
-  t('startle: the "z" comes as the lids meet, at once', [tm.handOverAtMs(S), S.handOverMs], [tm.lidsDoneMs(S), 0]);
-  t('the sweep reactions keep their lengths', [tm.changeMs(G), tm.changeMs(S)], [650, 670]);
+  t('glare keeps its length', tm.changeMs(G), 650);
 
-  // doze and wake: any face dozing off or coming to
+  // doze and wake: any face dozing off or coming to, and the sweep's lights going out
   t('doze: droop half shut, a heavy blink, drag up, drift shut', lids(D), [0.5, m.LID.asleep, 0.4, m.LID.asleep]);
   t('doze never goes wide', lids(D).every((l) => l <= m.LID.awake), true);
   t('doze nods down', D.lean > 0, true);
@@ -126,8 +123,8 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   t('a tap once the "z" is in: a jolt from asleep, from the other end', [late.from, lids(late.change), late.at], ['asleep', [1.25, 1], 0]);
   const snapped = sh.shiftTo(dozing, { to: 'asleep', booped: false, now: 5100, snap: true });
   t('out of sight: taken at once', [snapped.from, snapped.to, snapped.change, snapped.id], ['asleep', 'asleep', null, dozing.id + 1]);
-  const named = sh.shiftTo(up, { to: 'asleep', reaction: 'startle', booped: false, now: 9000, snap: false });
-  t('a reaction given plays instead', [named.from, named.change === S], ['awake', true]);
+  const named = sh.shiftTo(first, { to: 'awake', reaction: 'glare', booped: true, now: 9000, snap: false });
+  t('a reaction given plays instead of the jolt', [named.from, named.change === G], ['asleep', true]);
   t('done a beat after its own length', [sh.endsAfterMs(dozing), sh.endsAfterMs(up)], [1460 + sh.END_SLACK_MS, 0]);
   t('a page reading its state is not played', sh.SETTLE_MS, 300);
 

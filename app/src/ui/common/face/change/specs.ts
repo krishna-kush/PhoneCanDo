@@ -25,14 +25,14 @@ export type Change = {
 
 /**
  * A change between awake and asleep with a name, played in one go.
- * The theme sweep's A-01: glare wakes as the lights come on (asleep, "z"
- * and all, then the "z" goes and the pupils come as it squints against
- * the light, holds, and blinks its eyes open); startle dozes off as they
- * go out (its eyes go wide, hold, and slowly close).
- * Any face dozing off or coming to: doze falls asleep at the desk (the
- * lids droop half shut, one heavy blink, drag back up, then drift shut, its
- * head nodding); wake comes to slowly (the "z" drifts off and fades, the
- * lids open half way with a stretch, blink, then open).
+ * Glare, the theme sweep's lights coming on: asleep, "z" and all, then the
+ * "z" goes and the pupils come as it squints against the light, holds,
+ * and blinks its eyes open.
+ * Any face dozing off or coming to (and the sweep's lights going out):
+ * doze falls asleep at the desk (the lids droop half shut, one heavy
+ * blink, drag back up, then drift shut, its head nodding); wake comes to
+ * slowly (the "z" drifts off and fades, the lids open half way with a
+ * stretch, blink, then open).
  * Dozing off, the "z" starts as the lids meet, already in view (Z_SHOWN).
  */
 export const REACTION = {
@@ -47,17 +47,6 @@ export const REACTION = {
     lean: 0.06,
     handOverAt: 250,
     handOverMs: 70,
-  },
-  startle: {
-    from: 'awake',
-    to: 'asleep',
-    sleepMs: 0,
-    steps: [
-      { lid: 1.4, ms: 70, hold: 250 },
-      { lid: LID.asleep, ms: 350, hold: 0 },
-    ],
-    lean: -0.14,
-    handOverMs: 0,
   },
   doze: {
     from: 'awake',
