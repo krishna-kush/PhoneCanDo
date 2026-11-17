@@ -197,7 +197,8 @@ class ManifestKindTest {
     val web = kind(
       """{"surfaces":{"home":"web","web":{"pair":{"method":"POST","path":"/p","code":["/c"],"url":"/u/{{code}}"},
          "adapter":{"cssVars":{"--z":"bg","--a":"fg"},"authUrl":"/in/","x":[1]}},"terminal":{"chatTitle":"^T (.+)$"}},
-         "signIn":[{"method":"in-ui","note":"n"}]}""",
+         "signIn":[{"method":"in-ui","note":"n"}],
+         "about":{"checked":"2026-11-17","links":{"home":"https://d.example"},"free":{"via":"models","note":"f"}}}""",
     )
     val tui = kind()
     val bare = kind("""{"surfaces":null}""")
@@ -208,11 +209,12 @@ class ManifestKindTest {
         """"web":{"adapter":{"cssVars":{"--z":"bg","--a":"fg"},"authUrl":"/in/","x":[1]}},""" +
         """"chatTitle":"^T (.+)$",""" +
         """"signIn":[{"method":"in-ui","note":"n"}],"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,""" +
-        """"payloadPresent":true,"models":[],"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none","schedules":false,"acp":false},""" +
+        """"payloadPresent":true,"models":[],"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none","schedules":false,"acp":false,""" +
+        """"about":{"checked":"2026-11-17","links":{"home":"https://d.example"},"free":{"via":"models","note":"f"}}},""" +
         """{"id":"demo","label":"Demo","version":"1","type":"native","channels":["full"],"stability":"preview",""" +
         """"origin":"bundled","isDefault":true,"home":"tui","web":null,"chatTitle":null,"signIn":[],""" +
         """"requiresLinux":false,"commands":[],"families":null,"runtimes":[],"hasInstall":false,"payloadPresent":true,"models":[],""" +
-        """"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none","schedules":false,"acp":false}]""",
+        """"stateFolder":false,"inbox":"pull","canWake":false,"messaging":"none","schedules":false,"acp":false,"about":null}]""",
       KindView.list(listOf(web, tui), "demo", libs::contains),
     )
     assertEquals("false", KindView.of(tui, false, libs::contains)["isDefault"].toString())

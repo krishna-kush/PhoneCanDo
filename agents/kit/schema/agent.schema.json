@@ -52,6 +52,48 @@
         "source": { "$ref": "#/$defs/url" }
       }
     },
+    "about": {
+      "description": "What the app's Choose agent step (and anyone choosing) tells about the kind, as of `checked`: who makes it, its official links, whether its makers let you use it free and its power move. Shown only; nothing runs from it. Its fans (GitHub stars) are counted at build time from licence.source (app/scripts/make-fans.mjs).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked"],
+      "properties": {
+        "checked": { "description": "The day these facts were last checked (YYYY-MM-DD).", "type": "string", "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$" },
+        "maker": { "$ref": "#/$defs/text" },
+        "links": {
+          "description": "Its official pages: home, the getting-started guide, where you get a key (or sign in for one), its plans and prices.",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "home": { "$ref": "#/$defs/url" },
+            "guide": { "$ref": "#/$defs/url" },
+            "keys": { "$ref": "#/$defs/url" },
+            "plans": { "$ref": "#/$defs/url" }
+          }
+        },
+        "free": {
+          "description": "Free use its makers offer: models they host that cost nothing (models), or a free plan or key with limits (tier); the note says which and how far. Leave it out when neither; a local model on the phone is the `models` block's to say.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["via", "note"],
+          "properties": {
+            "via": { "enum": ["models", "tier"] },
+            "note": { "type": "string", "minLength": 1, "maxLength": 80 }
+          }
+        },
+        "move": {
+          "description": "Its power move: what you type in its own app (a slash command, a prefix, a key) to do the thing it is best known for, and what that does.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["keys", "does"],
+          "properties": {
+            "keys": { "type": "string", "minLength": 1, "maxLength": 24 },
+            "does": { "type": "string", "minLength": 1, "maxLength": 48 }
+          }
+        }
+      }
+    },
     "payload": {
       "type": "object",
       "additionalProperties": false,

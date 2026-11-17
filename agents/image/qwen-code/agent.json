@@ -13,6 +13,16 @@
     "terms": "https://qwenlm.github.io/qwen-code-docs/en/users/support/tos-privacy/",
     "source": "https://github.com/QwenLM/qwen-code"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Qwen team, Alibaba",
+    "links": {
+      "home": "https://qwenlm.github.io/qwen-code-docs/",
+      "guide": "https://qwenlm.github.io/qwen-code-docs/en/users/quickstart/",
+      "keys": "https://modelstudio.console.alibabacloud.com"
+    },
+    "move": { "keys": "/review", "does": "A squad of agents reviews your changes" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git", "rg"],

@@ -13,6 +13,18 @@
     "terms": "https://cline.bot/tos",
     "source": "https://github.com/cline/cline"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Cline Bot Inc.",
+    "links": {
+      "home": "https://cline.bot",
+      "guide": "https://docs.cline.bot/usage/cli-overview",
+      "keys": "https://app.cline.bot",
+      "plans": "https://cline.bot/pricing"
+    },
+    "free": { "via": "models", "note": "Free promo models with a Cline account; they rotate" },
+    "move": { "keys": "Tab", "does": "Flips between Plan and Act modes" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git", "rg"],

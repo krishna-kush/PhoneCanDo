@@ -55,6 +55,10 @@ export const SECRET_PLACEHOLDER = 'password';
 // with, in the order it prefers them, and what its env and args may fill in.
 // `modelKey` (the model server's key) only ever lands in an env value.
 export const MODEL_APIS = ['openai-chat', 'openai-responses', 'anthropic'];
+/** What `about` holds (about.ts), its official links, and how its makers let you use it free. */
+export const ABOUT_KEYS = ['checked', 'maker', 'links', 'free', 'move'];
+export const ABOUT_LINKS = ['home', 'guide', 'keys', 'plans'];
+export const FREE_VIA = ['models', 'tier'];
 export const MODEL_PLACEHOLDERS = ['baseUrl', 'model', 'contextWindow', 'modelKey'];
 export const MODEL_SECRET_PLACEHOLDER = 'modelKey';
 
@@ -141,6 +145,8 @@ export const PATTERNS = {
   prefix: '^[a-z][a-z0-9]*$',
   spdx: '^[A-Za-z0-9][A-Za-z0-9.+-]*(?: (?:AND|OR|WITH) [A-Za-z0-9][A-Za-z0-9.+-]*)*$',
   url: '^https://[^\\s]+$',
+  /** A day, YYYY-MM-DD (about.checked). */
+  day: '^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$',
   relPath: '^(?!/)(?!.*//)(?!.*/$)(?!(?:.*/)?\\.\\.?(?:/|$))[^\\\\\\u0000]+$',
   libName: '^lib[a-z][a-z0-9]*-[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.so$',
   libFrom: '^[^/\\\\\\u0000]+$',
@@ -199,6 +205,9 @@ export const MAX = {
   id: 64,
   text: 64,
   note: 200,
+  freeNote: 80,
+  moveKeys: 24,
+  moveDoes: 48,
   name: 64,
   prefix: 16,
   url: 512,
@@ -241,6 +250,8 @@ const DEFAULT_FIELDS = ['default'];
 const PACKAGING_FIELDS = ['prefix', 'payload', 'build', 'config'];
 /** What the kind needs from its machine (kinds.ts checks it). */
 const NEEDS_FIELDS = ['requires'];
+/** What the Choose agent step tells about the kind (about.ts checks it). */
+const ABOUT_FIELDS = ['about'];
 /** How an image kind is installed into its machine (install.ts checks these). */
 export const INSTALL_FIELDS = ['install', 'update', 'versionCheck'];
 /** What runs and how the app shows it (runtime.ts checks these). */
@@ -254,6 +265,7 @@ export const INBOX_FIELDS = ['inbox'];
 export const FIELDS = [
   ...REQUIRED,
   ...DEFAULT_FIELDS,
+  ...ABOUT_FIELDS,
   ...PACKAGING_FIELDS,
   ...NEEDS_FIELDS,
   ...RUNTIME_FIELDS,

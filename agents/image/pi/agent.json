@@ -12,6 +12,16 @@
     "notice": "NOTICE.md",
     "source": "https://github.com/earendil-works/pi"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Mario Zechner",
+    "links": {
+      "home": "https://pi.dev",
+      "guide": "https://docs.pi.dev/latest",
+      "keys": "https://docs.pi.dev/latest/providers"
+    },
+    "move": { "keys": "/tree", "does": "Jumps back to any turn and branches off" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git", "rg"],

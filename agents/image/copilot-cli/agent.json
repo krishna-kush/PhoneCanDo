@@ -13,6 +13,18 @@
     "terms": "https://docs.github.com/en/site-policy/github-terms/github-terms-for-additional-products-and-features",
     "source": "https://github.com/github/copilot-cli"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "GitHub",
+    "links": {
+      "home": "https://github.com/features/copilot",
+      "guide": "https://docs.github.com/en/copilot/get-started/cli-quickstart",
+      "keys": "https://github.com/settings/personal-access-tokens/new",
+      "plans": "https://github.com/features/copilot/plans"
+    },
+    "free": { "via": "tier", "note": "Copilot Free: limited agent use on small models" },
+    "move": { "keys": "/delegate your task", "does": "Sends it to GitHub's cloud agent for a PR" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git"]

@@ -10,6 +10,20 @@ export type KindSignIn = {
   note?: string;
 };
 
+/** How a kind's makers let you use it free: models they host at no cost, or a free plan or key with limits. */
+export type KindFreeVia = 'models' | 'tier';
+
+/** What the Choose agent step tells about a kind (the manifest's `about`, verbatim), as of `checked` (YYYY-MM-DD). */
+export type KindAbout = {
+  checked: string;
+  maker?: string;
+  /** Its official pages: home, the getting-started guide, where you get a key, its plans. */
+  links?: { home?: string; guide?: string; keys?: string; plans?: string };
+  free?: { via: KindFreeVia; note: string };
+  /** Its power move: what you type in its own app (`keys`) to do what it is best known for (`does`). */
+  move?: { keys: string; does: string };
+};
+
 export type KindView = {
   /** The kind's id: its folder name and its manifest id. */
   id: string;
@@ -62,6 +76,8 @@ export type KindView = {
   /** It has an ACP mode (the manifest's `engine.acp`): the same agent on pipes with no screen, where
       scheduled tasks and waking messages run while nobody watches; Home switches it back to its TUI. */
   acp: boolean;
+  /** What the Choose agent step tells about it: maker, official links, free use, its move; null when its manifest says nothing. */
+  about: KindAbout | null;
 };
 
 /** How far other agents' messages reach an agent of a kind (kit-api MessagingLevel), best first. */

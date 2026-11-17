@@ -8,7 +8,8 @@ import kotlinx.serialization.json.JsonObject
 // (Inbox.kt) and a tui engine's ACP mode (Acp.kt) included. Fields only the build, CI or the kit CLI use
 // (build, licence, the payload's sources…) are not modelled. Templates stay
 // unrendered here: kit-render fills their {{placeholders}}. Blocks we only
-// hand on to the app (the web adapter, signIn) stay JSON trees, verbatim.
+// hand on to the app (the web adapter, signIn, about) stay JSON trees,
+// verbatim.
 data class Manifest(
   /** Where it came from: packaged with the app, or added by the user. */
   val origin: Origin,
@@ -51,6 +52,8 @@ data class Manifest(
   val phoneTools: PhoneTools?,
   /** The sign-in options the app shows, verbatim; empty when the manifest has none. */
   val signIn: JsonArray,
+  /** What the Choose agent step tells about the kind (`about`: maker, links, free use, stars), verbatim; null when it has none. */
+  val about: JsonObject? = null,
   /** The code hooks this kind uses, by id (agents/builtin registers them). */
   val hooks: List<String>,
   /** How it takes a local model (`models`), in the order it prefers the APIs; empty: it does not. */

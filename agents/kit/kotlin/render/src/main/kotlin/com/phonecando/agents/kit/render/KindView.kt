@@ -25,9 +25,10 @@ import kotlinx.serialization.json.put
 // agents_inbox tool, whether one can wake it, and the level all that makes
 // (MessagingLevel: wakes, delivered, inbox, none), whether it can run
 // scheduled tasks (it starts with a first prompt, `engine.prompt`, an idle
-// agent of it can be woken, `inbox.wake`, or it has an ACP mode), and
-// whether it has an ACP mode (`engine.acp`). Never a template or a secret:
-// launches, requests and the TUI client are rendered natively.
+// agent of it can be woken, `inbox.wake`, or it has an ACP mode), whether
+// it has an ACP mode (`engine.acp`), and what the Choose agent step tells
+// about it (`about`, verbatim). Never a template or a secret: launches,
+// requests and the TUI client are rendered natively.
 object KindView {
   fun of(kind: ManifestKind, isDefault: Boolean, libExists: (String) -> Boolean): JsonObject {
     val manifest = kind.manifest
@@ -57,6 +58,7 @@ object KindView {
       put("messaging", kind.messaging.wire)
       put("schedules", kind.runsSchedules)
       put("acp", kind.speaksAcp)
+      put("about", manifest.about ?: JsonNull)
     }
   }
 

@@ -13,6 +13,18 @@
     "terms": "https://geminicli.com/docs/resources/tos-privacy/",
     "source": "https://github.com/google-gemini/gemini-cli"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Google",
+    "links": {
+      "home": "https://geminicli.com",
+      "guide": "https://geminicli.com/docs/get-started/",
+      "keys": "https://aistudio.google.com/app/apikey",
+      "plans": "https://geminicli.com/docs/resources/quota-and-pricing/"
+    },
+    "free": { "via": "tier", "note": "A free API key: 250 requests a day, Flash only" },
+    "move": { "keys": "/plan your goal", "does": "Researches read-only, then drafts a plan" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git", "rg"],

@@ -48,6 +48,7 @@ object ManifestDecoder {
       surfaces = m.optObj("surfaces")?.let(::surfaces),
       phoneTools = if (m.has("phoneTools")) enumOf(m, "phoneTools", PhoneTools.entries) { it.wire } else null,
       signIn = m.optArray("signIn") ?: JsonArray(emptyList()),
+      about = m.optObj("about")?.tree,
       hooks = m.optStrings("hooks"),
       models = m.optObj("models")?.let(::models).orEmpty(),
       inbox = m.optObj("inbox")?.let(InboxDecoder::inbox),

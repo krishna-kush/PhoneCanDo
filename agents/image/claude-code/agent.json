@@ -13,6 +13,17 @@
     "terms": "https://code.claude.com/docs/en/legal-and-compliance",
     "source": "https://github.com/anthropics/claude-code"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Anthropic",
+    "links": {
+      "home": "https://claude.com/product/claude-code",
+      "guide": "https://code.claude.com/docs/en/quickstart",
+      "keys": "https://platform.claude.com/settings/keys",
+      "plans": "https://claude.com/pricing"
+    },
+    "move": { "keys": "/init", "does": "Writes a CLAUDE.md guide for your repo" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git", "rg"],

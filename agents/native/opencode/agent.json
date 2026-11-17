@@ -18,6 +18,18 @@
     "notice": "NOTICE.md",
     "source": "https://github.com/anomalyco/opencode"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Anomaly (the SST team)",
+    "links": {
+      "home": "https://opencode.ai",
+      "guide": "https://opencode.ai/docs/",
+      "keys": "https://opencode.ai/auth",
+      "plans": "https://opencode.ai/zen"
+    },
+    "free": { "via": "models", "note": "Free models on OpenCode Zen, for a limited time" },
+    "move": { "keys": "/agent", "does": "Switches Build to Plan: looks, no edits" }
+  },
   "payload": {
     "libs": [
       {

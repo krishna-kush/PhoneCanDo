@@ -306,6 +306,20 @@ export interface SignIn {
   note?: string;
 }
 
+/** How a kind's makers let you use it free: models they host at no cost, or a free plan or key with limits. */
+export type FreeVia = 'models' | 'tier';
+
+/** What the Choose agent step tells about a kind, as of `checked` (YYYY-MM-DD). Shown only. */
+export interface About {
+  checked: string;
+  maker?: string;
+  /** Its official pages (https): home, the getting-started guide, where you get a key, its plans. */
+  links?: { home?: string; guide?: string; keys?: string; plans?: string };
+  free?: { via: FreeVia; note: string };
+  /** Its power move: what you type in its own app to do what it is best known for, and what that does. */
+  move?: { keys: string; does: string };
+}
+
 export interface Manifest {
   schema: 1;
   id: string;
@@ -318,6 +332,7 @@ export interface Manifest {
   /** The kind a fresh install starts with; at most one bundled kind sets it, never a user's. */
   default?: boolean;
   licence: Licence;
+  about?: About;
   payload?: { libs: PayloadLib[] };
   build?: { toolchains: Toolchain[] };
   config?: ConfigAsset;

@@ -12,6 +12,16 @@
     "notice": "NOTICE.md",
     "source": "https://github.com/aaif-goose/goose"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Block, now the AAIF",
+    "links": {
+      "home": "https://goose-docs.ai",
+      "guide": "https://goose-docs.ai/docs/quickstart/",
+      "keys": "https://goose-docs.ai/docs/getting-started/providers/"
+    },
+    "move": { "keys": "/builtin memory", "does": "Gives goose a memory of your ways" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git"]

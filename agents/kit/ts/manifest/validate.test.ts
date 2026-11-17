@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
+  ABOUT_KEYS,
+  ABOUT_LINKS,
   ACP_FIELDS,
   ACP_TOOLS,
   ANY_FAMILY,
@@ -13,6 +15,7 @@ import {
   EVENT_SOURCES,
   FAMILIES,
   FIELDS,
+  FREE_VIA,
   HOMES,
   IDLE_SOURCES,
   INBOX_FORMATS,
@@ -152,12 +155,16 @@ describe('validator and schema agree', () => {
     assert.deepEqual(props.inbox.properties.server.properties.create.properties.method.enum, INBOX_METHODS);
     assert.deepEqual(Object.keys(props.engine.properties.acp.properties), ACP_FIELDS);
     assert.deepEqual(props.engine.properties.acp.properties.tools.enum, ACP_TOOLS);
+    assert.deepEqual(Object.keys(props.about.properties), ABOUT_KEYS);
+    assert.deepEqual(Object.keys(props.about.properties.links.properties), ABOUT_LINKS);
+    assert.deepEqual(props.about.properties.free.properties.via.enum, FREE_VIA);
   });
 
   it('has the same patterns', () => {
     assert.equal(props.id.pattern, PATTERNS.id);
     assert.equal(props.prefix.pattern, PATTERNS.prefix);
     assert.equal(props.licence.properties.spdx.pattern, PATTERNS.spdx);
+    assert.equal(props.about.properties.checked.pattern, PATTERNS.day);
     assert.equal(defs.name.pattern, PATTERNS.name);
     assert.equal(defs.url.pattern, PATTERNS.url);
     assert.equal(defs.relPath.pattern, PATTERNS.relPath);
@@ -219,6 +226,12 @@ describe('validator and schema agree', () => {
     for (const def of [defs.inboxHookText, defs.inboxBodyText, defs.inboxCreateText, defs.inboxCall.properties.path]) {
       assert.equal(def.maxLength, MAX.template);
     }
+  });
+
+  it('has the same about limits', () => {
+    assert.equal(props.about.properties.free.properties.note.maxLength, MAX.freeNote);
+    assert.equal(props.about.properties.move.properties.keys.maxLength, MAX.moveKeys);
+    assert.equal(props.about.properties.move.properties.does.maxLength, MAX.moveDoes);
   });
 
   it('has the same install rules', () => {

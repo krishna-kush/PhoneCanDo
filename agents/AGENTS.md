@@ -484,6 +484,16 @@ rest):
   loopback, so a sign-in page can return to a localhost port in it. A
   machine usually has no `xdg-open`, so Kimi Code and Vibe just show
   their link.
+- `about` is what the app's Choose agent step tells someone picking, as
+  of `checked`: the `maker`, official `links` (`home`, `guide`, `keys`,
+  `plans`; https only), the free use its makers offer (`free.via`:
+  `models` they host at no cost, or a `tier`, a free plan or key with
+  limits; a local model is the `models` block's to say) and its power
+  `move`: what you type in its own app (`keys`) to do what it is best
+  known for (`does`). Its fans, its repo's GitHub stars, are
+  counted at build time from `licence.source` (app/scripts/make-fans.mjs).
+  Shown only, nothing runs from it; free tiers come and go, so recheck it,
+  and the date, before a release.
 
 ### User-added kinds
 
@@ -568,10 +578,10 @@ again.
 ## 7. Adding a kind
 
 1. `./manage agent new <id> --native|--image` scaffolds the folder.
-2. Fill in `agent.json` and `NOTICE.md`. For image kinds, that is the
-   install block (§4, Image kinds); a new runtime is its own plugin in
-   `runtimes/<id>/`, which depends on no kind and no other runtime.
-   `kit-cli render-install` prints the script the phone runs. Steps and
+2. Fill in `agent.json` (its `about` too) and `NOTICE.md`. For image
+   kinds, that is the install block (§4, Image kinds); a new runtime is
+   its own plugin in `runtimes/<id>/`, which depends on no kind and no
+   other runtime. `kit-cli render-install` prints the script the phone runs. Steps and
    runtime scripts may run again (retries), so make each one safe to rerun
    from wherever the last try stopped: `mkdir -p`, `rm -f`, download to a
    file and then run it, and never append to a file a rerun would append

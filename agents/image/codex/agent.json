@@ -13,6 +13,17 @@
     "terms": "https://openai.com/policies/row-terms-of-use/",
     "source": "https://github.com/openai/codex"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "OpenAI",
+    "links": {
+      "home": "https://chatgpt.com/codex",
+      "guide": "https://learn.chatgpt.com/docs/codex/cli",
+      "keys": "https://platform.openai.com/api-keys",
+      "plans": "https://chatgpt.com/pricing"
+    },
+    "move": { "keys": "/goal your aim", "does": "Keeps working until the goal is met" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git", "rg"]

@@ -7,9 +7,9 @@
 // agents/kit/cli/manifests.mjs. The runtime blocks are in runtime.ts, the
 // install blocks in install.ts, the instructions file and the agent's own
 // state folder in state.ts, how other agents' messages reach it in
-// inbox.ts, a tui engine's ACP mode in acp.ts, the rules per type and
-// origin in kinds.ts. A
-// runtime plugin's manifest has its own validator (runtime-plugin.ts).
+// inbox.ts, what the Choose agent step tells about it in about.ts, a tui
+// engine's ACP mode in acp.ts, the rules per type and origin in kinds.ts.
+// A runtime plugin's manifest has its own validator (runtime-plugin.ts).
 import {
   fields,
   isObject,
@@ -23,6 +23,7 @@ import {
   type Add,
   type Json,
 } from './primitives.ts';
+import { checkAbout } from './about.ts';
 import { checkAcp } from './acp.ts';
 import { checkInbox } from './inbox.ts';
 import { checkInstall } from './install.ts';
@@ -82,6 +83,7 @@ export function validate(json: unknown, options: ValidateOptions): ValidationRes
   oneOf(add, '/stability', json.stability, STABILITIES);
   if ('default' in json && typeof json.default !== 'boolean') add('/default', 'type', 'must be true or false');
   if ('licence' in json) checkLicence(add, json.licence);
+  if ('about' in json) checkAbout(add, json.about);
   if ('payload' in json) checkPayload(add, json.payload, json.prefix);
   if ('build' in json) checkBuild(add, json.build);
   if ('config' in json) checkConfig(add, json.config);

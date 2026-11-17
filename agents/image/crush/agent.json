@@ -13,6 +13,16 @@
     "terms": "https://github.com/charmbracelet/crush/blob/main/LICENSE.md",
     "source": "https://github.com/charmbracelet/crush"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Charm",
+    "links": {
+      "home": "https://charm.land/crush",
+      "guide": "https://github.com/charmbracelet/crush",
+      "keys": "https://hyper.charm.land"
+    },
+    "move": { "keys": "Ctrl+L", "does": "Swaps the model mid-chat, keeps context" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git"]

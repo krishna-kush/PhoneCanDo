@@ -16,6 +16,18 @@
     "terms": "https://legal.mistral.ai/terms",
     "source": "https://github.com/mistralai/mistral-vibe"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Mistral AI",
+    "links": {
+      "home": "https://mistral.ai/products/vibe/",
+      "guide": "https://docs.mistral.ai/vibe/code/cli/install-setup",
+      "keys": "https://chat.mistral.ai/code/extensions",
+      "plans": "https://mistral.ai/pricing/"
+    },
+    "free": { "via": "tier", "note": "Mistral's Free plan: a few coding sessions" },
+    "move": { "keys": "/loop every 5m …", "does": "Repeats a prompt on a timer" }
+  },
   "requires": {
     "linux": "required",
     "commands": [

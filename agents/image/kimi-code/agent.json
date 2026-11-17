@@ -16,6 +16,17 @@
     "terms": "https://www.kimi.com/user/agreement/modelUse",
     "source": "https://github.com/MoonshotAI/kimi-code"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Moonshot AI",
+    "links": {
+      "home": "https://www.kimi.com/code",
+      "guide": "https://moonshotai.github.io/kimi-code/en/guides/getting-started.html",
+      "keys": "https://www.kimi.com/code/console",
+      "plans": "https://www.kimi.com/membership/pricing"
+    },
+    "move": { "keys": "/swarm your task", "does": "Runs a swarm of parallel subagents" }
+  },
   "requires": {
     "linux": "required",
     "commands": [

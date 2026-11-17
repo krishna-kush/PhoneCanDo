@@ -12,6 +12,16 @@
     "notice": "NOTICE.md",
     "source": "https://github.com/Aider-AI/aider"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Paul Gauthier",
+    "links": {
+      "home": "https://aider.chat",
+      "guide": "https://aider.chat/docs/install.html",
+      "keys": "https://aider.chat/docs/llms.html"
+    },
+    "move": { "keys": "/undo", "does": "Takes back its last commit" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["git"],

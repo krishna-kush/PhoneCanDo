@@ -13,6 +13,17 @@
     "terms": "https://cursor.com/terms-of-service",
     "source": "https://cursor.com/cli"
   },
+  "about": {
+    "checked": "2026-11-17",
+    "maker": "Anysphere",
+    "links": {
+      "home": "https://cursor.com/cli",
+      "guide": "https://cursor.com/docs/cli/overview",
+      "keys": "https://cursor.com/dashboard/api",
+      "plans": "https://cursor.com/pricing"
+    },
+    "move": { "keys": "& your task", "does": "Hands the chat to a cloud agent" }
+  },
   "requires": {
     "linux": "required",
     "commands": ["bash", "git"]
