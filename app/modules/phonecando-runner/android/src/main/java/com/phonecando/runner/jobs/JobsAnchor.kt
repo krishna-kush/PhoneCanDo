@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 // Linux job (env download, machine setup, agent install) or PhoneCanDo's
 // own update download (update/) runs: when one
 // runs and our foreground service is down, it starts the service
-// (ACTION_HOLD), which lists the jobs in its one notification and stops
+// (ACTION_HOLD), which shows each job in a notification of its own and stops
 // itself once neither an engine nor a job runs. A model is gigabytes, a
 // Linux system hundreds of megabytes, and Android freezes a background
 // app's process seconds after it leaves the screen. The service says when
@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 // start; if Android refuses anyway, the job still runs while the process
 // lives and resumes later where it stopped.
 internal object JobsAnchor {
-  /** The jobs began, ended or moved on (Linux jobs and the update download at most every [TICK_MS]). */
+  /** The jobs began, ended or moved on (Linux jobs and the update download at most every [TICK_MS]), or the app told an install's share. */
   fun interface Listener {
     fun onJobs()
   }
@@ -86,6 +86,15 @@ internal object JobsAnchor {
 
   /** The update download running, if any. */
   fun updateJob(): UpdateState? = updates?.running()
+
+  /**
+   * The app told how far an install's script is (notify/InstallShares):
+   * listeners hear it at once, so the notification says what the app's bar
+   * says now, not what it said at the script's last event.
+   */
+  fun sharesChanged() {
+    listeners.forEach { it.onJobs() }
+  }
 
   /** An env record's name, for the notification's Linux lines. */
   fun envName(envId: String): String? = linux?.records?.env(envId)?.name
@@ -154,6 +163,7 @@ internal object JobsAnchor {
 
   private val EDGE_STEPS = setOf(JobReporter.START, JobReporter.RETRY, JobReporter.OFFLINE)
 
-  // As often as the model jobs tell (ModelJobs' tick).
-  private const val TICK_MS = 2_000L
+  // As often as the model jobs tell (ModelJobs' tick) and a guest script
+  // reports (its pulse): about as often as the app's bars move.
+  private const val TICK_MS = 1_000L
 }

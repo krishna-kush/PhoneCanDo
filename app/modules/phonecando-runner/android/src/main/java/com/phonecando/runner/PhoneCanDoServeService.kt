@@ -30,13 +30,15 @@ import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.work.WorkWatch
 import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.models.prompt.PromptReading
+import com.phonecando.runner.notify.AgentItems
 import com.phonecando.runner.notify.AppForeground
 import com.phonecando.runner.notify.AppOnScreen
 import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.JobLines
-import com.phonecando.runner.notify.LaunchTarget
 import com.phonecando.runner.notify.ReadingLines
+import com.phonecando.runner.notify.ServiceItems
 import com.phonecando.runner.notify.ServiceNotification
+import com.phonecando.runner.notify.ServicePlan
 import com.phonecando.runner.notify.TimeLimitNotice
 import com.phonecando.runner.notify.WorkLines
 import com.phonecando.runner.power.WorkLock
@@ -54,11 +56,11 @@ import java.util.concurrent.RejectedExecutionException
 // Linux modules' hosts; this service is their anchor: it runs start
 // requests (ACTION_START from the module's startEngine, one at a time on
 // its own thread), holds for jobs (ACTION_HOLD, jobs/JobsAnchor), shows
-// one notification listing the running agents' chats, the agents kept up
-// by what they left running (with Stop: ACTION_STOP_JOB for one job,
-// ACTION_STOP_AGENT for the agent with all of it), the engines
-// starting, the model server reading a prompt and the jobs (with none of
-// that, the agents ready), keeps the CPU awake while any of that works
+// one notification per agent at work (its chats, what it left running,
+// with Stop: ACTION_STOP_JOB for one job, ACTION_STOP_AGENT for the agent
+// with all of it; starting, stopping) and per job (the model server
+// reading a prompt too), bundled under its own (notify/ServicePlan; with
+// none of that, the agents ready), keeps the CPU awake while any of that works
 // (power/WorkLock), and stops itself once nothing has run for 10 s
 // (stopIfIdle).
 // It is in the foreground while anything of ours runs, idle engines too
@@ -76,6 +78,12 @@ class PhoneCanDoServeService : Service() {
   private val main = Handler(Looper.getMainLooper())
   private lateinit var starts: ExecutorService
   private lateinit var notification: ServiceNotification
+  private lateinit var items: ServiceItems
+
+  // Main thread only: the service's own notification as last posted, so
+  // an unchanged one is not posted again (Android drops an app's updates
+  // past about five a second); null when something else was posted since.
+  private var lastSummary: ServicePlan.Summary? = null
   private lateinit var workLock: WorkLock
 
   // Main thread only. A stop is stopSelf(lastStartId): a newer
@@ -89,9 +97,10 @@ class PhoneCanDoServeService : Service() {
   private val starting = ArrayList<String>()
 
   // Main thread only: the jobs a Stop from the notification ends now (root
-  // pid → name), each a "Stopping …" line, and those it ended, kept off
-  // their agent's line until a look no longer finds them.
-  private val endingJobs = LinkedHashMap<Int, String>()
+  // pid → its agent and name), each a "Stopping …" line on its agent's,
+  // and those it ended, kept off their agent's line until a look no longer
+  // finds them.
+  private val endingJobs = LinkedHashMap<Int, AgentItems.EndingJob>()
   private val endedJobs = HashSet<Int>()
 
   // Main thread only: what the last Stop from the notification ended
@@ -132,7 +141,7 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
-  // Jobs begin, end and move on (at most every 2 s each).
+  // Jobs begin, end and move on (at most every 1 s each), or an install's share is told.
   private val jobsListener = JobsAnchor.Listener {
     main.post {
       render()
@@ -161,6 +170,7 @@ class PhoneCanDoServeService : Service() {
     // and offers what an earlier process left cut off (cutoff/).
     CutOffs.get(this).look(CutOffLook.Trigger.START)
     notification = ServiceNotification(this).also { it.createChannel() }
+    items = ServiceItems(this).also { it.clearStale() }
     workLock = WorkLock(this)
     starts = Executors.newSingleThreadExecutor { r ->
       Thread(r, "phonecando-engine-start").apply { isDaemon = true }
@@ -253,7 +263,7 @@ class PhoneCanDoServeService : Service() {
     val job = WorkWatch.Job(intent.getStringExtra(EXTRA_JOB_NAME) ?: "the job", pid, intent.getLongExtra(EXTRA_JOB_START, 0L))
     val watch = Engines.work() ?: return
     if (pid in endingJobs) return
-    endingJobs[pid] = job.name
+    endingJobs[pid] = AgentItems.EndingJob(agentId, job.name)
     render()
     Thread({
       watch.stopJob(agentId, job)
@@ -324,6 +334,7 @@ class PhoneCanDoServeService : Service() {
     for (id in pendingRequests) EngineRequests.complete(id, failure("the engine service stopped"))
     pendingRequests.clear()
     main.removeCallbacksAndMessages(null)
+    items.clear()
     // Engines still running (the system ended the service): end them off
     // the main thread, which can take up to 3 s. When nothing runs, a start
     // that arrives right after must not be caught by a late stop-all. The
@@ -350,6 +361,7 @@ class PhoneCanDoServeService : Service() {
     workLock.release()
     stopForeground(STOP_FOREGROUND_REMOVE)
     foreground = false
+    items.clear()
     stopSelf()
     Engines.peek()?.takeIf { it.anyLive() }?.let {
       // The runs they had going are kept and offered back (cutoff/).
@@ -362,7 +374,8 @@ class PhoneCanDoServeService : Service() {
   // Away from the app, Android refuses a later startForeground (as it
   // does a new start of this service), so a refusal is logged and what
   // runs goes on unheld.
-  private fun goForeground(shown: Notification? = content()) {
+  private fun goForeground(shown: Notification? = plan().summary?.let(notification::summary)) {
+    lastSummary = null
     // The manifest's type below Android 14, where specialUse does not exist.
     val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
       ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
@@ -377,19 +390,22 @@ class PhoneCanDoServeService : Service() {
     }
   }
 
-  // The notification while anything of ours runs, in the foreground (an
-  // idle engine too, as ready, with the app away). With nothing running,
-  // or only idle engines with the app on screen, it goes: at once with
-  // the app in front, which may bring it back any time; away, only
-  // after LINGER_MS of still nothing, as stopIfIdle waits, since work
-  // often follows at once (meanwhile it says how it ended, the last Stop's
-  // "… stopped" or NOTHING_LEFT, never the old lines and their Stop
-  // buttons).
+  // The notifications while anything of ours runs, in the foreground (an
+  // idle engine too, as ready, with the app away): the items first, then
+  // the service's own, which heads them. With nothing running, or only
+  // idle engines with the app on screen, they go: at once with the app in
+  // front, which may bring them back any time; away, the items at once and
+  // the service's own only after LINGER_MS of still nothing, as stopIfIdle
+  // waits, since work often follows at once (meanwhile it says how it
+  // ended, the last Stop's "… stopped" or NOTHING_LEFT, never the old lines
+  // and their Stop buttons).
   private fun render() {
     if (timedOut) return
     holdCpu()
-    val content = content()
-    if (content == null) {
+    val plan = plan()
+    val summary = plan.summary
+    if (summary == null) {
+      items.clear()
       if (!foreground) return
       main.removeCallbacks(leaveWhenStillQuiet)
       if (AppOnScreen.shown || AppForeground.isForeground(this)) {
@@ -401,6 +417,7 @@ class PhoneCanDoServeService : Service() {
       val text = ended ?: NOTHING_LEFT
       if (text != doneShown) {
         doneShown = text
+        lastSummary = null
         try {
           getSystemService(NotificationManager::class.java).notify(ServiceNotification.NOTIFICATION_ID, notification.done(text))
         } catch (e: Exception) {
@@ -414,24 +431,30 @@ class PhoneCanDoServeService : Service() {
     ended = null
     doneShown = null
     main.removeCallbacks(leaveWhenStillQuiet)
+    items.show(plan.items) { item, sortKey, since -> notification.item(item, sortKey, since, ::stopIntent, ::stopJobIntent) }
     if (!foreground) {
-      goForeground(content)
+      goForeground(notification.summary(summary))
+      if (foreground) lastSummary = summary
       return
     }
+    if (summary == lastSummary) return
     try {
-      getSystemService(NotificationManager::class.java).notify(ServiceNotification.NOTIFICATION_ID, content)
+      getSystemService(NotificationManager::class.java).notify(ServiceNotification.NOTIFICATION_ID, notification.summary(summary))
+      lastSummary = summary
     } catch (e: Exception) {
       Log.w(TAG, "notification update failed", e)
     }
   }
 
-  private val leaveWhenStillQuiet = Runnable { if (content() == null) leaveForeground() }
+  private val leaveWhenStillQuiet = Runnable { if (plan().summary == null) leaveForeground() }
 
   // Nothing of ours runs: the notification goes, and the service with it
   // once stopIfIdle's wait is over.
   private fun leaveForeground() {
     stopForeground(STOP_FOREGROUND_REMOVE)
     foreground = false
+    items.clear()
+    lastSummary = null
     ended = null
     doneShown = null
   }
@@ -451,12 +474,12 @@ class PhoneCanDoServeService : Service() {
     workLock.hold(need)
   }
 
-  // The chats the engines are busy with, each with its agent's name, the
-  // agents kept up by their jobs, the agents starting, the prompt a model
-  // server reads, the model jobs and the Linux jobs; with none of those,
-  // the engines running, as ready, with the app away; null when nothing
-  // runs, or only those with the app on screen.
-  private fun content(): Notification? {
+  // The agents at work (their chats, what they left running, starting,
+  // stopping), the prompt a model server reads and the jobs, each its own
+  // notification; with none of those, the engines running, as ready, with
+  // the app away; no summary when nothing runs, or only those with the app
+  // on screen (notify/ServicePlan).
+  private fun plan(): ServicePlan.Plan {
     val supervisor = Engines.peek()
     val agents = AgentStores.get(this).all()
     val names = agents.associate { it.id to it.name }
@@ -471,18 +494,13 @@ class PhoneCanDoServeService : Service() {
     // A job ended here stays off its line until a look no longer finds it.
     endedJobs.retainAll(states.flatMap { s -> s.refs.map { it.pid } }.toSet())
     val work = WorkLines.of(states, working, names, endingJobs.keys + endedJobs) { clock.format(Date(it)) }
-    val jobs = JobLines.read(agents)
-    val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read, it.total) }
-    val starts = starting.map { names[it] ?: it }.distinct()
-    // A Stop asked (here or in the app): "Stopping …" under a progress bar
+    // A Stop asked (here or in the app): "Stopping…" under a running bar
     // until the engine is down.
     val stopping = supervisor?.statuses()?.filter { it.state == EngineState.STOPPING }?.map { it.agentId }.orEmpty()
-    // Where a tap lands: an agent kept up, stopping or starting is on its Home.
-    val places = (work.map { it.agentId } + stopping + starting).map { LaunchTarget("home", it) } + jobs.places
-    return notification.build(
-      chats, names, running, jobs.transfers, reading, jobs.linux, work, starts, ::stopIntent, stopping,
-      ::stopJobIntent, endingJobs.values.toList(), AppOnScreen.shown, jobs.update, places,
-    )
+    val agentItems = AgentItems.of(chats, names, work, starting.distinct(), stopping, endingJobs.values.toList())
+    val reading = supervisor?.promptReading()?.let { ReadingLines.item(it.modelId, it.modelName, it.read, it.total, it.agentIds) }
+    val jobs = listOfNotNull(reading) + JobLines.read(agents)
+    return ServicePlan.of(agentItems, jobs, chats, running, names, AppOnScreen.shown)
   }
 
   private fun failure(detail: String): Result<Int> =

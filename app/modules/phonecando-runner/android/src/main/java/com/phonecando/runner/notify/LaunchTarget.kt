@@ -17,17 +17,18 @@ data class LaunchTarget(val tab: String, val agentId: String?) {
   fun toMap(): Map<String, Any?> = mapOf("tab" to tab, "agentId" to agentId)
 
   companion object {
+    const val HOME = "home"
     const val ENV = "env"
     const val CHECKS = "checks"
     const val MODELS = "models"
     const val UPDATES = "updates"
     const val MEMORY = "memory"
 
-    val TABS = setOf("home", ENV, "settings", CHECKS, MODELS, UPDATES, MEMORY)
+    val TABS = setOf(HOME, ENV, "settings", CHECKS, MODELS, UPDATES, MEMORY)
 
     /** An unknown or missing tab is Home; a blank agent id is none. */
     fun of(tab: String?, agentId: String?) = LaunchTarget(
-      tab?.takeIf { it in TABS } ?: "home",
+      tab?.takeIf { it in TABS } ?: HOME,
       agentId?.takeIf { it.isNotBlank() },
     )
   }

@@ -7,6 +7,7 @@ import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.agents.install.AgentInstalls
 import com.phonecando.runner.agents.install.InstallException
+import com.phonecando.runner.jobs.JobsAnchor
 import com.phonecando.runner.notify.InstallShares
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
@@ -53,6 +54,7 @@ internal fun ModuleDefinitionBuilder.installFunctions(context: () -> Context) {
   // the same (notify/InstallShares).
   Function("showInstallShare") { jobId: String, agentId: String, fraction: Double?, updating: Boolean ->
     InstallShares.set(jobId, agentId, fraction, updating)
+    JobsAnchor.sharesChanged()
   }
 }
 

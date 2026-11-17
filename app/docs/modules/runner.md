@@ -813,18 +813,21 @@ per-kind code; every number is in `WorkRules.kt`.
 background, and the process while a job runs: a model download or import,
 or a Linux job (an env download, a machine's setup or reset, an agent
 install). It runs the start requests, holds for jobs (`ACTION_HOLD` from
-`jobs/JobsAnchor.kt`; `models.md` → Jobs), shows one notification that
-lists the chats the agents are busy with, the agents kept up by a job they
-left running or are starting, by Keep running, by their own ask or at work
-unseen (`WorkLines.kt`, each with a Stop: `ACTION_STOP_AGENT`), the
-engines starting, the model server reading a prompt, the model jobs and
-the Linux jobs with the share the app's bar shows for them (a download's
-wait for a network or its next try and a re-read said as the app says
-them; a machine's setup over the whole setup; an agent's install or
-update with the share its bar shows in the app, which the app tells the
-runner, `notify/InstallShares.kt`), or, with none of that, the agents
-ready (`notify/ServiceNotification.kt`, `ReadingLines.kt`,
-`TransferLines.kt`, `LinuxJobLines.kt`, `JobLines.kt`, `ReadyLines.kt`, channel
+`jobs/JobsAnchor.kt`; `models.md` → Jobs), shows one notification per
+agent at work, each with its own tap and Stop buttons (its chats; kept up
+by a job it left running or is starting, by Keep running, by its own ask
+or at work unseen, `WorkLines.kt`, Stop: `ACTION_STOP_JOB`,
+`ACTION_STOP_AGENT`; starting; stopping; `notify/AgentItems.kt`) and one
+per job, each with its bar: the model server reading a prompt, the model
+jobs and the Linux jobs with the share the app's bar shows for them (a
+download's wait for a network or its next try and a re-read said as the
+app says them; a machine's setup over the whole setup; an agent's install
+or update with the share its bar shows in the app, which the app tells the
+runner, `notify/InstallShares.kt`, and which redraws it at once), bundled
+under its own notification, which counts them; with none of that, its own
+is the agents ready (`notify/ServicePlan.kt`, `ServiceItems.kt`,
+`ServiceNotification.kt`, `ReadingLines.kt`, `TransferLines.kt`,
+`LinuxJobLines.kt`, `JobLines.kt`, `ReadyLines.kt`, channel
 `phonecando-engine`; see Notifications), keeps the CPU awake while any of
 that works (`power/WorkLock.kt`; see Jobs and the idle stop) and stops
 itself once neither an engine nor a job has run for 10 s. The wait
@@ -858,7 +861,7 @@ still nothing with the app away, where Android refuses a later
 (`stopIfIdle`).
 
 `JobsAnchor` listens to the models module's jobs and to `LinuxHost`'s
-(their begin and end at once, their progress at most every 2 s). When a
+(their begin and end at once, their progress at most every 1 s). When a
 job runs and the service is down it starts the service; the service tells
 it when it starts and ends, so a service gone while jobs still run is
 asked for again on the next job event. A refused start (Android lets a
@@ -906,7 +909,8 @@ holds its "come back to me" notice, the `/app` return notice or an alert
 (below), so there is never more than one; its own posts (`/notify`) take
 4600-8695, one per title, its prompts 9000-9255, its links to open
 9300-9363, a due task 9400 (Schedules), a run cut off 9470 (Cut-off runs)
-and its permission questions 9500-9563. The engine service (4101), its time-limit notice (4102, on the
+and its permission questions 9500-9563. The engine service (4101; its
+items 4103, tagged `phonecando-item:<key>`), its time-limit notice (4102, on the
 agents' channel; see Foreground service and lifetime), the update notice
 (4202) and the memory guard's notice (4301, on the agents' channel; see
 Memory guard) are untagged.
@@ -916,8 +920,8 @@ Memory guard) are untagged.
   page or the systems list, the agent's checks, Settings, Models, Settings'
   Updates, the RAM warning; an open terminal stays on top of any) plus,
   when the reason is one agent, that agent (`ui/nav/launchTarget.ts` in
-  the app). Every agent notification's tap, the engine notification's
-  (`notify/ServiceTap.kt`), the memory notice's, the update notice's and
+  the app). Every agent notification's tap, the engine notifications'
+  (each item's own; the bundle's head, `notify/ServiceTap.kt`), the memory notice's, the update notice's and
   the bridge's own launch start
   `notify/OpenTargetActivity` (non-exported, `Theme.NoDisplay`,
   `noHistory`) with the target in its intent; it hands the target over
@@ -936,11 +940,19 @@ Memory guard) are untagged.
   null saved state, so a listener would replay an old tap; the trampoline
   reads each tap once and is never restored. Recents replays
   (`FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`) carry no target.
-- **The service notification lists chats, not engines.** One line per
-  chat: its title, then its agent, then its state ("Working", "Waiting for
-  your answer", "Stopped with an error", "Done"), waiting first and newest
-  first within a state; collapsed, the counts ("1 waiting for your answer ·
-  2 working"), and only the counts on the lock screen (public version).
+- **The service's notifications list agents at work and jobs, not
+  engines.** Each agent at work has its own, titled with its name, a tap
+  on its Home: one line per chat, its title then its state ("Working",
+  "Waiting for your answer", "Stopped with an error", "Done"), waiting
+  first and newest first within a state, then what keeps it up, with its
+  Stop buttons (three at most), and "Starting" or "Stopping…". Each job
+  has its own, with its bar and a tap on its place. They bundle under the
+  service's own (`setGroup`, which is the group summary): the counts ("1
+  waiting for your answer · 1 job running"). Only one that changed is
+  posted again (Android drops an app's updates past about five a second);
+  they are plain notifications, so the service's first start takes down
+  any an earlier process left. The lock screen gets each one's public
+  version: counts or the kind of thing, no names or titles.
   With no chat, job, start or stop to list but engines running, it is one
   quiet line naming them, "Claude Code, opencode ready" (three names at
   most, then "and 2 more"; `notify/ReadyLines.kt`, pure), with no buttons,

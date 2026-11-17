@@ -13,7 +13,7 @@ class LinuxJobLinesTest {
   private val shares = mapOf("job-3" to InstallShares.Share("a1", 0.345, updating = false))
 
   private fun lines(vararg jobs: Job) =
-    LinuxJobLines.of(jobs.toList(), envs::get, { agents[it.target.id] }, resetting = { it == "i2" }, installShare = shares::get)
+    LinuxJobLines.of(jobs.toList(), envs::get, { agents[it.target.id] }, resetting = { it == "i2" }, installShare = shares::get).map { it.line }
 
   @Test fun eachJobNamesItsEnvOrAgent() {
     val env = Job("job-1", JobTarget.env("e1"))
@@ -27,8 +27,8 @@ class LinuxJobLinesTest {
   }
 
   @Test fun aScriptSaysTheAppsShareOnceToldAndWhetherItUpdates() {
-    assertEquals("Claude Code · installing", LinuxJobLines.script("Claude Code", null))
-    assertEquals("Claude Code · updating 99%", LinuxJobLines.script("Claude Code", InstallShares.Share("a1", 0.999, updating = true)))
+    assertEquals(JobLine("Claude Code", "installing", null), LinuxJobLines.script("Claude Code", null))
+    assertEquals(JobLine("Claude Code", "updating 99%", 0.999), LinuxJobLines.script("Claude Code", InstallShares.Share("a1", 0.999, updating = true)))
   }
 
   // The app's setupFraction: unpacking is most of it, the other steps say

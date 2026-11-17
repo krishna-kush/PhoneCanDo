@@ -48,7 +48,7 @@ class ModelJob(val id: String, val target: JobTarget, val label: String) {
  * (the runner keeps its foreground service up and its notification current
  * from these). Pure apart from the clock.
  */
-class ModelJobs(private val tickMillis: Long = 2_000, private val now: () -> Long = System::currentTimeMillis) {
+class ModelJobs(private val tickMillis: Long = 1_000, private val now: () -> Long = System::currentTimeMillis) {
   fun interface Listener {
     fun onJobs()
   }

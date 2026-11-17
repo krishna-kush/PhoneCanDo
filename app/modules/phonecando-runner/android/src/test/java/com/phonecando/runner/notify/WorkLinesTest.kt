@@ -17,10 +17,9 @@ class WorkLinesTest {
     )
     val lines = WorkLines.of(states, working = emptySet(), names = names, time = time)
     assertEquals(
-      listOf("Claude Code · running npm run dev, sleep 600 +1 more", "opencode · kept running"),
+      listOf("running npm run dev, sleep 600 +1 more", "kept running"),
       lines.map { it.text },
     )
-    assertEquals("2 agents kept running", WorkLines.count(lines))
   }
 
   @Test fun eachJobComesWithItsRootForAStopOfItsOwn() {
@@ -28,7 +27,7 @@ class WorkLinesTest {
     val vite = WorkWatch.Job("vite", 30, 300)
     val states = listOf(WorkWatch.State("a2", listOf(server.name, vite.name), active = false, kept = false, refs = listOf(server, vite)))
     val lines = WorkLines.of(states, working = emptySet(), names = names, time = time)
-    assertEquals(listOf(WorkLines.Line("a2", "opencode", "opencode · running python3 -m http.server, vite", listOf(server, vite))), lines)
+    assertEquals(listOf(WorkLines.Line("a2", "opencode", "running python3 -m http.server, vite", listOf(server, vite))), lines)
   }
 
   @Test fun aJobBeingStoppedIsOffItsLineAtOnce() {
@@ -36,20 +35,19 @@ class WorkLinesTest {
     val vite = WorkWatch.Job("vite", 30, 300)
     val both = WorkWatch.State("a2", listOf(server.name, vite.name), active = false, kept = false, refs = listOf(server, vite))
     val one = WorkLines.of(listOf(both), working = emptySet(), names = names, time = time, ending = setOf(22))
-    assertEquals(listOf("opencode · running vite"), one.map { it.text })
+    assertEquals(listOf("running vite"), one.map { it.text })
     assertEquals(listOf(vite), one.single().jobs)
     // Its only job stopping, and nothing else to keep it listed: no line.
     val alone = WorkWatch.State("a2", listOf(server.name), active = false, kept = false, refs = listOf(server))
     assertEquals(emptyList<WorkLines.Line>(), WorkLines.of(listOf(alone), emptySet(), names, setOf(22), time))
     // Kept running: it stays, with nothing left to stop alone.
     val kept = alone.copy(kept = true)
-    assertEquals(listOf("opencode · kept running"), WorkLines.of(listOf(kept), emptySet(), names, setOf(22), time).map { it.text })
+    assertEquals(listOf("kept running"), WorkLines.of(listOf(kept), emptySet(), names, setOf(22), time).map { it.text })
   }
 
   @Test fun aWorkingAgentHasItsChatLineInstead() {
     val states = listOf(WorkWatch.State("a1", listOf("npm test"), active = true, kept = false))
     assertEquals(emptyList<WorkLines.Line>(), WorkLines.of(states, working = setOf("a1"), names = names, time = time))
-    assertEquals("", WorkLines.count(emptyList()))
   }
 
   @Test fun anAgentThatAskedToStayUpShowsWhyAndUntilWhen() {
@@ -61,7 +59,7 @@ class WorkLinesTest {
       WorkWatch.State("a3", emptyList(), active = false, kept = true, ask = ask),
     )
     assertEquals(
-      listOf("Claude Code · kept running: waiting for Tester's answer (until t42)", "opencode · running vite", "Codex · kept running"),
+      listOf("kept running: waiting for Tester's answer (until t42)", "running vite", "kept running"),
       WorkLines.of(states, working = emptySet(), names = names, time = time).map { it.text },
     )
   }
@@ -75,7 +73,7 @@ class WorkLinesTest {
       WorkWatch.State("a3", emptyList(), active = false, kept = false, printing = true),
     )
     assertEquals(
-      listOf("Claude Code · running npm run dev", "opencode · running vite, tsc", "Codex · active"),
+      listOf("running npm run dev", "running vite, tsc", "active"),
       WorkLines.of(states, working = emptySet(), names = names, time = time).map { it.text },
     )
   }

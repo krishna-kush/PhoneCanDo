@@ -3,8 +3,8 @@ package com.phonecando.runner.notify
 import com.phonecando.linux.jobs.Job
 import com.phonecando.linux.jobs.JobTarget
 
-// One running Linux job as a notification line, with the share the app's
-// bar shows for it:
+// One running Linux job as its notification's line, with the share the
+// app's bar shows for it:
 // - an env's download as a transfer: "Ubuntu 24.04 · downloading 45%", and
 //   its waits and re-reads (TransferLines);
 // - its machine's setup over the whole setup: "Claude Code · setting up
@@ -27,7 +27,7 @@ internal object LinuxJobLines {
     imageAgent: (Job) -> String?,
     resetting: (String) -> Boolean = { false },
     installShare: (String) -> InstallShares.Share? = { null },
-  ): List<String> =
+  ): List<JobLine> =
     jobs.map { job ->
       val id = job.target.id
       val progress = job.progress
@@ -37,17 +37,17 @@ internal object LinuxJobLines {
           val label = imageAgent(job) ?: IMAGE
           when {
             job.guestScript -> script(label, installShare(job.id))
-            resetting(id) -> withShare("$label · resetting", unpackShare(progress.step, progress.done, progress.total))
-            else -> withShare("$label · setting up", setupShare(progress.step, progress.done, progress.total))
+            resetting(id) -> withShare(label, "resetting", unpackShare(progress.step, progress.done, progress.total))
+            else -> withShare(label, "setting up", setupShare(progress.step, progress.done, progress.total))
           }
         }
       }
     }
 
   /** "Claude Code · installing 34%", "… · updating 34%"; no share before the app told one. */
-  fun script(label: String, share: InstallShares.Share?): String {
+  fun script(label: String, share: InstallShares.Share?): JobLine {
     val verb = if (share?.updating == true) "updating" else "installing"
-    return withShare("$label · $verb", share?.fraction)
+    return withShare(label, verb, share?.fraction)
   }
 
   /** The whole setup in 0..1, as the app's setupFraction (env/logic/steps.ts): where the step starts, plus its own bytes while unpacking. */
@@ -62,8 +62,8 @@ internal object LinuxJobLines {
     if (step == UNPACK && total != null && total > 0) (done.toDouble() / total).coerceIn(0.0, 1.0) else null
 
   // Whole percent, rounded down, so it never says 100% before the end.
-  private fun withShare(line: String, share: Double?): String =
-    if (share == null) line else "$line ${(share * 100).toInt().coerceIn(0, 100)}%"
+  private fun withShare(label: String, verb: String, share: Double?): JobLine =
+    JobLine(label, if (share == null) verb else "$verb ${(share * 100).toInt().coerceIn(0, 100)}%", share)
 
   private const val UNPACK = "unpack"
 
