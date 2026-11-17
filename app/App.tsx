@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState, Keyboard, StatusBar, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { TamaguiProvider } from 'tamagui';
@@ -69,6 +69,10 @@ export default function App() {
   const prefsHydrated = useAppStore((s) => s.hydrated);
   const agentsHydrated = useAgentsStore((s) => s.hydrated);
   const hasAgents = useAgentsStore((s) => s.agents.length > 0);
+  // Set up from no agent: the setup screen stays for its finale once the
+  // first agent exists, then lets Home show.
+  const [inSetup, setInSetup] = useState(false);
+  if (agentsHydrated && !hasAgents && !inSetup) setInSetup(true);
 
   // Android Back walks what the screen shows: a step inside a page, the
   // drawer, the top page, the web UI's history, then leaves the app.
@@ -186,9 +190,9 @@ export default function App() {
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <KeyboardTracker />
           <SafeRoot backgroundColor={t.panel} onLayout={hideSplash}>
-            {!hasAgents ? (
+            {!hasAgents || inSetup ? (
               // No agent yet: setup creates the first one, then Home shows.
-              <FirstLaunchScreen />
+              <FirstLaunchScreen onFinished={() => setInSetup(false)} />
             ) : (
               // One box inside the safe area: the pages and the drawer are
               // absolute layers, which SafeRoot's padding would not hold.

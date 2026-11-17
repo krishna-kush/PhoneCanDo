@@ -1,56 +1,65 @@
-import { Text, YStack } from 'tamagui';
-import AppButton from '../common/AppButton';
-import LogoLoader from '../common/LogoLoader';
-import LogoMark from '../common/LogoMark';
+import { useEffect, useRef } from 'react';
+import { YStack } from 'tamagui';
+import { agentKind } from '../../engine/agents/registry';
+import { useAgentsStore } from '../../state/agents';
 import Screen from '../common/Screen';
 import { stepLabel } from '../env/logic/steps';
-import Note from '../env/parts/Note';
-import ProgressBar from '../env/parts/ProgressBar';
 import { setupNote, setupTitle } from './copy';
-import SetupSteps from './SetupSteps';
+import { FINALE_MS, stageOf } from './logic/stage';
+import SetupBody from './SetupBody';
 import { useFirstLaunch } from './useFirstLaunch';
 import { useSetupProgress } from './useSetupProgress';
 
-// Shown by App while no agent exists: makes the first agent (the default
-// kind, never asked) and its machine (Default env, offline, about half a
-// minute), or the Android path where Linux is unavailable. A failure says
+/** The status line at the finale. */
+const READY = 'Ready';
+
+// Shown by App while no agent exists, and for the finale once the first
+// one does: sets up the first agent (the default kind, never asked) and
+// its machine (Default env, offline, about half a minute), or the Android
+// path where Linux is unavailable, as an arcade's loading screen with
+// the agent running to the flag (arcade/). Once the agent exists the finale plays
+// for FINALE_MS, then [onFinished] lets App show Home. A failure says
 // why, with Retry and, on the Linux path, Continue without Linux.
-export default function FirstLaunchScreen() {
-  const { ctx, imageId, phase, retry, skipLinux } = useFirstLaunch();
+export default function FirstLaunchScreen({ onFinished }: { onFinished: () => void }) {
+  const { ctx, imageId, phase, look, kindId, retry, skipLinux } = useFirstLaunch();
   const progress = useSetupProgress(imageId);
+  const made = useAgentsStore((s) => s.agents.length > 0);
+  const finished = useRef(onFinished);
+  finished.current = onFinished;
+
+  useEffect(() => {
+    if (!made) return;
+    const t = setTimeout(() => finished.current(), FINALE_MS);
+    return () => clearTimeout(t);
+  }, [made]);
 
   const linux = ctx.path === 'linux';
-  const failed = phase.kind === 'failed';
-  const note = setupNote(ctx);
+  const failed = phase.kind === 'failed' && !made;
   const where = progress.failedStep ? `Setup stopped while ${stepLabel(progress.failedStep).toLowerCase()}. ` : '';
 
   return (
     <Screen pillClearance={false}>
-      <YStack flex={1} justifyContent="center" gap="4" paddingVertical="6">
-        {failed ? <LogoMark size={18} /> : <LogoLoader size={18} />}
-        <Text fontSize={24} fontWeight="700">
-          {setupTitle(ctx)}
-        </Text>
-        {note && !failed ? <Note>{note}</Note> : null}
-        {linux ? (
-          <>
-            <SetupSteps current={progress.phase} allDone={progress.imageReady} />
-            {!failed ? <ProgressBar label={progress.label} fraction={progress.fraction} /> : null}
-          </>
-        ) : !failed ? (
-          <ProgressBar label="Getting ready" fraction={null} />
-        ) : null}
-        {phase.kind === 'failed' ? (
-          <YStack gap="3">
-            <Note tone="error">{`${where}${phase.reason}`}</Note>
-            <AppButton onPress={retry}>Retry</AppButton>
-            {linux ? (
-              <AppButton variant="secondary" onPress={skipLinux}>
-                Continue without Linux
-              </AppButton>
-            ) : null}
-          </YStack>
-        ) : null}
+      <YStack flex={1} justifyContent="center" paddingVertical="6">
+        <SetupBody
+          title={setupTitle(ctx)}
+          note={setupNote(ctx)}
+          scene={{
+            state: {
+              stage: stageOf(ctx.path, progress.phase, progress.imageReady),
+              fraction: progress.fraction,
+              done: made,
+              failed,
+            },
+            mascot: look,
+            agentName: kindId ? agentKind(kindId).label : '',
+            label: made ? READY : progress.label,
+          }}
+          failure={
+            phase.kind === 'failed' && !made
+              ? { text: `${where}${phase.reason}`, onRetry: retry, onSkip: linux ? skipLinux : null }
+              : undefined
+          }
+        />
       </YStack>
     </Screen>
   );

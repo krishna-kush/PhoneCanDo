@@ -24,7 +24,8 @@ export type SetupPhase = { kind: 'working' } | { kind: 'failed'; reason: string 
 // keeps; more agents come from the menu later. Retry runs the same path
 // again (setup reuses the image it already made); Continue without Linux
 // drops that image and takes the Android path. Success needs nothing here:
-// App swaps this screen out as soon as the first agent exists. Everything the steps share is in refs or state setters, so a
+// App swaps this screen out once the first agent exists (after its
+// finale). Everything the steps share is in refs or state setters, so a
 // step started in one render finishes right in a later one.
 export function useFirstLaunch() {
   const [ctx, setCtx] = useState<SetupContext>({ path: 'linux', play: false, noLinux: null });
