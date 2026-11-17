@@ -8,28 +8,31 @@ import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
 import AgentPicker from './AgentPicker';
 import ModelStep from './ModelStep';
+import { useApplicantLooks } from './picker/useApplicantLooks';
 import { useModelPick } from './useModelPick';
 import { useNewAgent } from './useNewAgent';
 import { useOffers } from './useOffers';
 
-// New agent, step 1: which kind, and, for a kind that takes a local model
-// while one fits this phone, its model (the Model step). The default kind
-// starts picked, or `picked` (a custom one just added from here). Without
-// a place yet (the drawer's New agent), Next goes on to pick where it runs
-// (ChoosePlace), judged then; with one (New agent here, Android only) it is
-// judged against that place and this step makes the agent.
+// New agent, step 1: which kind (each an applicant in a mascot of its own,
+// the picked one's the new agent keeps), and, for a kind that takes a local
+// model while one fits this phone, its model (the Model step). The default
+// kind starts picked, or `picked` (a custom one just added from here).
+// Without a place yet (the drawer's New agent), Next goes on to pick where
+// it runs (ChoosePlace), judged then; with one (New agent here, Android
+// only) it is judged against that place and this step makes the agent.
 export default function ChooseAgent({ target, picked }: { target: NewAgentTarget | null; picked: string | null }) {
   const push = useAppStore((s) => s.push);
   const envs = useLinuxStore((s) => s.envs);
   const linuxAvailable = useLinuxStore((s) => s.status.available);
   const offerEnv = target ? targetOfferEnv(target, envs) : anyPlaceOfferEnv(linuxAvailable);
   const { offers, selected, select } = useOffers(offerEnv, picked);
+  const looks = useApplicantLooks(offers);
   const model = useModelPick(selected);
   const newAgent = useNewAgent();
 
   const next = () => {
     if (!selected) return;
-    const pick = { kindId: selected, modelId: model.modelId };
+    const pick = { kindId: selected, modelId: model.modelId, look: looks[selected] };
     if (target) newAgent.make(target, pick);
     else push({ name: 'new-agent-place', pick });
   };
@@ -38,7 +41,7 @@ export default function ChooseAgent({ target, picked }: { target: NewAgentTarget
     <Screen>
       <PageHeader kicker="new agent · who" title="Choose agent" />
       <Note>{target ? targetLine(target, envs) : 'Pick the agent first; where it runs comes next.'}</Note>
-      <AgentPicker offers={offers} selected={selected} onSelect={select} />
+      <AgentPicker offers={offers} selected={selected} onSelect={select} looks={looks} />
       <ModelStep pick={model} />
       {newAgent.busy && target && target.kind !== 'own' ? <ProgressBar label="Making a new agent" fraction={null} /> : null}
       {newAgent.error ? <Note tone="error">{newAgent.error}</Note> : null}

@@ -1,20 +1,18 @@
 import { YStack } from 'tamagui';
-import type { Offer } from '../../../engine/agents/offers';
 import { noOfferText } from '../logic/agentChoice';
 import Note from '../parts/Note';
-import KindOption from './KindOption';
+import ArcadePicker from './picker/arcade/ArcadePicker';
+import type { PickerProps } from './picker/props';
 
-type Props = { offers: readonly Offer[]; selected: string | null; onSelect: (kindId: string) => void };
-
-// The kinds a creation step offers, in offers.ts order, one picked. First
-// launch shows it too.
-export default function AgentPicker({ offers, selected, onSelect }: Props) {
-  const none = noOfferText(offers);
+// The kinds a creation step offers, in offers.ts order, one picked, as an
+// arcade's character select (picker/arcade/), each standing as an applicant
+// in its own mascot (picker/useApplicantLooks.ts). First launch shows it
+// too.
+export default function AgentPicker(props: PickerProps) {
+  const none = noOfferText(props.offers);
   return (
-    <YStack gap="2" accessibilityRole="radiogroup">
-      {offers.map((o) => (
-        <KindOption key={o.id} offer={o} selected={o.id === selected} onSelect={() => onSelect(o.id)} />
-      ))}
+    <YStack gap="3">
+      <ArcadePicker {...props} />
       {none ? <Note tone="error">{none}</Note> : null}
     </YStack>
   );

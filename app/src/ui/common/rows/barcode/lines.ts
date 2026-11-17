@@ -19,6 +19,9 @@ export const BARCODE_LINES = {
   mascotStage: 'STRIKE A POSE',
   newAgentModel: 'PICK A BRAIN',
 
+  // New agent
+  arcadeShowcase: 'INSERT COIN',
+
   // Systems
   systems: 'MULTIVERSE',
   systemAgents: 'ROOMMATES',
