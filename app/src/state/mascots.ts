@@ -4,6 +4,7 @@
 // agent's look goes the next time the list is read (ui/common/face/useMascotPicks.ts).
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import { isWearable } from '../../../mascot/designs.ts';
 import { readLook, type Look } from '../../../mascot/look.ts';
 import { assignLooks, pickLook } from '../../../mascot/pick.ts';
 import type { AgentId } from '../engine/agents/records';
@@ -65,6 +66,8 @@ export const useMascotsStore = create<MascotsState>((set, get) => ({
   },
 
   setLook: (id, look) => {
+    // Our own characters' outfits (mascot/designs.ts OURS: the guide A-09's) are never an agent's.
+    if (!isWearable(look.design)) return;
     const looks = { ...get().looks, [id]: look };
     set({ looks });
     save(looks);

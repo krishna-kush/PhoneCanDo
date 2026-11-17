@@ -64,7 +64,8 @@ const ui = (p) => src('ui/env/logic', p);
   const coded = Object.assign(new Error('Docker Hub said 429'), { code: 'rate_limited' });
   t('failure of a rejection', failureOfError(coded), { code: 'rate_limited', message: 'Docker Hub said 429' });
 
-  const { nextAgentName, nameTaken } = await import(flows('names.ts'));
+  const { nextAgentName, nameTaken, nameReserved } = await import(flows('names.ts'));
+  t('A-series serials are reserved, case and spaces aside', [nameReserved(' a-09 '), nameReserved('A-01'), nameReserved('A-07'), nameReserved('opencode 1a'), nameReserved('A-9'), nameReserved('A-091'), nameReserved('A-01 helper')], [true, true, true, false, false, false, false]);
   t('a new agent carries its desk', nextAgentName('opencode', [], '1a'), 'opencode 1a');
   t('the next desk', nextAgentName('opencode', ['opencode 1a'], '1b'), 'opencode 1b');
   t('a name taken by hand gets a number', nextAgentName('opencode', ['OpenCode 2A'], '2a'), 'opencode 2a 2');
