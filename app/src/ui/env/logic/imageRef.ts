@@ -3,6 +3,7 @@
 // typo is caught here, not after a network round trip. Only Docker Hub can
 // list versions; another registry's image goes straight to the download
 // (its tag, else `latest`). Pure (zero RN imports).
+import type { Env } from '../../../engine/linux/types';
 
 export type ImageRef =
   | { ok: true; repo: string; tag: string | null; hub: boolean }
@@ -45,6 +46,17 @@ export function imageRefProblem(reason: 'empty' | 'digest' | 'invalid'): string 
     case 'invalid':
       return "That isn't a valid image name. Names use lowercase letters, digits, dots, dashes and slashes.";
   }
+}
+
+/** Where an image downloads from, as people know it: Docker Hub, else its registry's host (`ghcr.io`). */
+export function registryOf(image: string): string {
+  const first = image.split('/')[0].toLowerCase();
+  return isHubRepo(image) || HUB_DOMAINS.has(first) ? 'Docker Hub' : first;
+}
+
+/** Where a system's download comes from (Docker Hub, a registry's host); none for one that downloads nothing. */
+export function downloadSource(env: Env | null | undefined): string | undefined {
+  return env?.source.kind === 'registry' ? registryOf(env.source.image) : undefined;
 }
 
 /** Whether a parsed repo lives on Docker Hub (the only registry we can list versions of). */

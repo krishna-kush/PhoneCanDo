@@ -44,6 +44,29 @@ export function stepFraction(step: string | null | undefined, done: number, tota
   return Math.min(1, Math.max(0, done / total));
 }
 
+/**
+ * A system download's spot on its parcel run (common/route): its bytes, never
+ * a re-read's count (verify climbs from zero again), so null keeps A-01
+ * where it stands; paused while it waits to try again or for a network.
+ */
+export function downloadSpot(p: Pick<LinuxProgress, 'step' | 'done' | 'total'> | null | undefined): { fraction: number | null; paused: boolean } {
+  if (!p) return { fraction: null, paused: false };
+  return {
+    fraction: p.step === 'verify' ? null : stepFraction(p.step, p.done, p.total),
+    paused: p.step === 'retry' || p.step === 'offline',
+  };
+}
+
+/**
+ * A system download you paused, from where its job got to (null: not seen
+ * this run): A-01's spot (never a re-read's count) and its line.
+ */
+export function pausedDownload(last: { step: string; done: number; total: number | null } | null | undefined): { fraction: number | null; label: string } {
+  const fraction = last && last.step !== 'verify' ? stepFraction(last.step, last.done, last.total) : null;
+  if (fraction == null || !last?.total) return { fraction: null, label: 'Paused' };
+  return { fraction, label: `Paused · ${formatBytes(last.done)} of ${formatBytes(last.total)}` };
+}
+
 /** "Unpacking · 42%", "Downloading · 42% · 120 MB of 290 MB", or just the step. */
 export function progressLine(step: string | null | undefined, done: number, total: number | null): string {
   const f = stepFraction(step, done, total);
@@ -94,6 +117,13 @@ const SETUP_SPAN: Record<string, [number, number]> = {
   seed: [0.93, 0.96],
   measure: [0.96, 1],
 };
+
+/** Where each of SETUP_PHASES spans in setupFraction's whole, what comes before unpacking counted in the first. */
+export const PHASE_SPANS: readonly (readonly [number, number])[] = [
+  [0, SETUP_SPAN.unpack[1]],
+  SETUP_SPAN.detect,
+  [SETUP_SPAN.fixups[0], SETUP_SPAN.measure[1]],
+];
 
 /** The whole image setup in [0, 1]: where the step starts, plus its own bytes for unpacking. */
 export function setupFraction(step: string | null | undefined, done: number, total: number | null): number {

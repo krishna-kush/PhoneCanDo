@@ -10,8 +10,14 @@ export function targetKey(target: Target): TargetKey {
   return `${target.kind}:${target.id}`;
 }
 
-/** A finished job, kept so a flow that asks after the last event still learns how it ended. */
-export type FinishedJob = { target: Target; failure: JobFailure | null; seq: number };
+/** Where a job had got to: its step and its count of it. */
+export type JobSpot = { step: string; done: number; total: number | null };
+
+/**
+ * A finished job, kept so a flow that asks after the last event still
+ * learns how it ended, and where it got to (a paused download's spot).
+ */
+export type FinishedJob = { target: Target; failure: JobFailure | null; seq: number; last: JobSpot | null };
 
 export type ProgressSlice = {
   /** The running job's last event, per target; gone once it finishes. A
@@ -30,15 +36,18 @@ export const EMPTY_PROGRESS: ProgressSlice = { progress: {}, finished: {}, seq: 
 export function applyProgress(slice: ProgressSlice, p: LinuxProgress): ProgressSlice {
   const key = targetKey(p.target);
   if (!p.finished) return { ...slice, progress: { ...slice.progress, [key]: p } };
-  const { [key]: _done, ...progress } = slice.progress;
+  const { [key]: running, ...progress } = slice.progress;
   const failure = failureOf(p.error, p.errorCode);
+  // The last running event says how far it got; the closing one may not carry its count.
+  const from = running ?? p;
+  const last = { step: from.step, done: from.done, total: from.total };
   const seq = slice.seq + 1;
   const kept = Object.entries(slice.finished)
     .sort(([, a], [, b]) => b.seq - a.seq)
     .slice(0, FINISHED_KEEP - 1);
   const finished = Object.fromEntries([
     ...kept,
-    [p.jobId, { target: p.target, failure, seq }],
+    [p.jobId, { target: p.target, failure, seq, last }],
   ]) as Record<string, FinishedJob>;
   return { progress, finished, seq };
 }

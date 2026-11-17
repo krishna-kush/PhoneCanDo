@@ -40,9 +40,19 @@ export function osLine(os: OsInfo | null): string | null {
   return `${osName(os)} · ${os.family ?? 'no package manager'}`;
 }
 
+/**
+ * A download you paused: stopped by your Pause, what it fetched kept for
+ * Resume (a download stopped by its job's cancel ends `cancelled`, and a
+ * cancelled one never resumes by itself at the next start).
+ */
+export function isPaused(env: Pick<Env, 'state' | 'errorCode'>): boolean {
+  return env.state === 'failed' && env.errorCode === 'cancelled';
+}
+
 /** An env's line under its title: its state while not ready, else "OS · size". */
-export function envSubtitle(env: Pick<Env, 'state' | 'source' | 'os' | 'sizeBytes'>): string {
+export function envSubtitle(env: Pick<Env, 'state' | 'source' | 'os' | 'sizeBytes' | 'errorCode'>): string {
   if (env.state === 'downloading') return 'Downloading';
+  if (isPaused(env)) return 'Paused';
   if (env.state === 'failed') return 'Download stopped';
   const os = env.source.kind === 'android' ? "Android's own shell" : osLine(env.os);
   const size = env.sizeBytes > 0 ? formatBytes(env.sizeBytes) : null;

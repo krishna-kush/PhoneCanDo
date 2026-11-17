@@ -17,11 +17,12 @@ import { useSlidInList } from '../../nav/slidIn';
 import { linuxFailureText, recordErrorText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
 import { agentCountOf, type EnvRow } from '../logic/sections';
-import { downloadLine, stepFraction } from '../logic/steps';
+import { isPaused } from '../logic/titles';
 import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
 import MachineRow from './MachineRow';
+import SystemDownload from './SystemDownload';
 
 // Agent rows drawn as the page opens; the rest come once it has slid in.
 const FIRST_SCREEN_ROWS = 6;
@@ -49,8 +50,8 @@ function deleteMessage(env: Env): string {
   }
 }
 
-// One system's page body: its download (progress and Cancel, or why it
-// stopped and Retry), the agents on it (each machine a row of one group,
+// One system's page body: its download (its parcel run and Pause; paused,
+// Resume; or why it stopped and Retry), the agents on it (each machine a row of one group,
 // with every agent that shares it, and New agent here, on a machine of its
 // own, as the last row), then Delete system, offered only once no machine
 // comes from it.
@@ -76,32 +77,42 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
   const makingFirst = env?.state === 'ready' && (ownRun?.phase === 'downloading' || ownRun?.phase === 'making-agent');
   const machines = rows.filter((r) => r.image != null).length;
   const canAddAgent = env != null && env.state === 'ready' && (env.source.kind === 'android' || linuxAvailable);
+  const paused = env != null && isPaused(env);
   const canRetry = env?.state === 'failed' && env.source.kind === 'registry' && linuxAvailable;
   // Opens the agent's page itself, or Choose agent when there is a choice.
   const newAgent = () => env && newAgentHere.start({ kind: 'env', envId: env.id });
   // A failed download has no machines yet: once it is done, the first agent is made like New env does.
   const retry = () =>
     env && run('retry', () => new Promise<void>((resolve, reject) => void retryOwnEnv(env.id, resolve).catch(reject)));
-  const failedWhy = env?.state === 'failed' ? recordErrorText(env) : null;
+  const failedWhy = env?.state === 'failed' && !paused ? recordErrorText(env) : null;
   const agents = agentCountOf(rows);
 
   return (
     <>
       {env?.state === 'downloading' ? (
         <YStack gap="2">
-          <ProgressBar
-            label={progress ? downloadLine(progress) : 'Downloading'}
-            fraction={progress ? stepFraction(progress.step, progress.done, progress.total) : null}
-          />
+          <SystemDownload env={env} />
           {progress ? (
             <AppButton variant="secondary" onPress={() => cancelJob(progress.jobId)}>
-              Cancel download
+              Pause
             </AppButton>
           ) : null}
         </YStack>
       ) : null}
 
-      {env?.state === 'failed' ? (
+      {env && paused ? (
+        <YStack gap="2">
+          <SystemDownload env={env} />
+          <Note>Paused. What it fetched stays on the phone; Resume carries on from there.</Note>
+          {canRetry ? (
+            <AppButton loading={busy === 'retry'} onPress={retry}>
+              Resume
+            </AppButton>
+          ) : null}
+        </YStack>
+      ) : null}
+
+      {env?.state === 'failed' && !paused ? (
         <YStack gap="2">
           <Note tone="error">{`The download stopped.${failedWhy ? ` ${failedWhy}` : ''}`}</Note>
           {canRetry ? (

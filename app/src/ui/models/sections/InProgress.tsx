@@ -8,6 +8,7 @@ import SectionTitle from '../../common/SectionTitle';
 import Note from '../../env/parts/Note';
 import ProgressBar from '../../env/parts/ProgressBar';
 import { modelErrorText } from '../logic/errorText';
+import { downloadRoute } from '../logic/downloadRoute';
 import { fraction, jobLine } from '../logic/modelText';
 import ModelPanel from '../parts/ModelPanel';
 import { useAction } from '../useAction';
@@ -42,13 +43,15 @@ function DownloadPanel({ download, job }: { download: ModelDownload; job: ModelP
   const running = job ? !job.finished : download.jobId != null;
   const jobId = job && !job.finished ? job.jobId : download.jobId;
   const failure = job?.finished && job.errorCode && job.errorCode !== 'cancelled' ? job : null;
-  const done = running && job ? job.done : download.doneBytes;
-  const total = running && job ? job.total : download.sizeBytes;
+  const spot = downloadRoute(download, job && !job.finished ? job : undefined, running);
   return (
     <ModelPanel title={download.name} lines={[download.repo]}>
       <ProgressBar
         label={running ? jobLine(job, null) || 'Starting' : jobLine(undefined, download)}
-        fraction={fraction(done, total)}
+        fraction={spot.fraction}
+        from="Hugging Face"
+        working={spot.working}
+        paused={spot.paused}
       />
       {failure ? <Note tone="error">{modelErrorText(failure.errorCode ?? 'internal', failure.error ?? '')}</Note> : null}
       {action.error ? <Note tone="error">{action.error}</Note> : null}

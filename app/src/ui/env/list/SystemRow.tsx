@@ -5,7 +5,7 @@ import PlainText from '../../common/PlainText';
 import OpenRow from '../../common/rows/OpenRow';
 import type { EnvRow } from '../logic/sections';
 import { systemAgentsLine } from '../logic/systemAgents';
-import { envSubtitle, envTitle } from '../logic/titles';
+import { envSubtitle, envTitle, isPaused } from '../logic/titles';
 import SystemDownload from './SystemDownload';
 import SystemMark from './SystemMark';
 
@@ -16,13 +16,14 @@ const LOGO = 40;
 
 // One system, a row of the key opening its page (an OpenRow): its mark
 // (the OS's logo, unboxed), its name, OS and size (red once its download
-// stopped) and its agents in amber capitals, then its download's bar while
-// it comes in.
+// stopped, not when you paused it) and its agents in amber capitals, then
+// its download's parcel run while it comes in or waits paused.
 export default function SystemRow({ env, rows, onOpen }: Props) {
   const title = env ? envTitle(env.source) : "Machines we can't place";
   const sub = env ? envSubtitle(env) : 'Their system or machine is missing';
   const count = systemAgentsLine(rows);
-  const failed = env?.state === 'failed';
+  const paused = env != null && isPaused(env);
+  const failed = env?.state === 'failed' && !paused;
   return (
     <OpenRow label={`${title}, ${sub}, ${count}`} onPress={onOpen}>
       <YStack gap="2">
@@ -40,7 +41,7 @@ export default function SystemRow({ env, rows, onOpen }: Props) {
             </PlainText>
           </YStack>
         </XStack>
-        {env?.state === 'downloading' ? <SystemDownload env={env} /> : null}
+        {env && (env.state === 'downloading' || paused) ? <SystemDownload env={env} /> : null}
       </YStack>
     </OpenRow>
   );

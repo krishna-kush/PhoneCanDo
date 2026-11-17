@@ -16,6 +16,7 @@ import { crewLine } from '../common/face/lines';
 import { moodOf } from '../common/face/mood';
 import LogoMark from '../common/LogoMark';
 import SectionTitle from '../common/SectionTitle';
+import { isPaused } from '../env/logic/titles';
 import { useStartNewAgent } from '../env/new-agent/useStartNewAgent';
 import Note from '../env/parts/Note';
 import AgentRow from './AgentRow';
@@ -49,7 +50,7 @@ function channel(): string {
 // What the drawer holds: every agent (tap to switch, › for its page, a long
 // press or Select to pick several, with the selection's bar pinned below, a
 // hold and slide to move it; the list scrolls only while no row is lifted),
-// Own envs still downloading, New agent, then the app's other places:
+// Own envs still downloading (or paused), New agent, then the app's other places:
 // First shift (while it runs), Models, Systems, Custom agents, Schedules (while an agent can run them),
 // Messages (once agents can talk to each other), Settings, About. Memoised: the drawer's own renders (open, shut)
 // pass the same `still` until its slide ends. Mounting it starts the
@@ -65,7 +66,7 @@ function DrawerContent({ still }: { still: boolean }) {
   const goHome = useAppStore((s) => s.goHome);
   const linuxAvailable = useLinuxStore((s) => s.status.available);
   const envs = useLinuxStore((s) => s.envs);
-  const downloading = envs.filter((e) => e.state === 'downloading');
+  const downloading = envs.filter((e) => e.state === 'downloading' || isPaused(e));
   const modelsOffered = useModelsStore((s) => s.device.supported);
   const modelCount = useModelsStore((s) => s.models.length);
   const customCount = useKindsStore((s) => s.userKinds.length);

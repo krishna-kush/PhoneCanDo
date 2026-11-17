@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,models,memory,messages,schedule,recommend,account,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,models,memory,messages,schedule,recommend,account,update,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -54,7 +54,17 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `COMING` there and in `docs/planning/todo.md`) and `useSettingsSync.ts`,
   mounted once in `App.tsx`: a signed-in person's settings follow them
   (`state/flows/settingsSync.ts`, pure keys and merge in
-  `state/logic/settingsSync/`).
+  `state/logic/settingsSync/`). `update/` is the in-app update's box,
+  mounted once over every page: two taps, Download (stops nothing; the
+  parcel's trip drawn by `common/route/`, which every download with a
+  known size draws too (models, Linux systems), the box can hide, the
+  download carries on natively; Settings → Updates shows the same trip,
+  `parts/UpdateCard.tsx`) then Install (what it will stop first,
+  `stops/`, pure lines in `logic/stops.ts`; if Android's installer comes
+  back without installing, runs it cut short are offered back and the
+  other agents it stopped start again); the flows are `state/flows/update/`, the store
+  `state/update.ts`, the GitHub manifest, download and installer hand-off
+  `engine/updates/`.
   `accessibility/` is the whole Accessibility setup guide: `guide.ts`
   (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
   hook, the step list, the Settings block and the agent's dialog.
@@ -89,7 +99,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   biometrics, `backGesture.ts` the back gesture's progress, `memory.ts` the
   memory guard's reading, `runLimits.ts` the run caps, `keepRunning.ts` an
   agent's Keep running, `splash.ts` the launch splash, `pick.ts` Android's
-  date and time dialogs). Agents and engines:
+  date and time dialogs, `updates/` the in-app update: `manifest.ts` (the
+  release repo's `REPO`, which the release scripts set), `download.ts` and
+  `native.ts` (the runner downloads the APK, `runner/update/`),
+  `install.ts`). Agents and engines:
   `engines.ts`, `ensureEngine.ts`, `connection.ts`; agent kinds through
   `agents/registry.ts` (each kind's `KindView`, from the runner's
   `listKinds`), `agents/webAdapter.ts`, `agents/records.ts` and
@@ -146,6 +159,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   kinds), `memory.ts` (the memory guard's reading, the warning's
   episode), `messages.ts` (unread counts, the message log, the screen
   queue), `schedule.ts` (the schedules, their runs, exact alarms),
+  `update.ts` (the in-app update's step, its download, the box up or not),
   `keyboard.ts` (keyboard open; the per-frame room is a UI-thread
   value in `ui/common/keyboard/room.ts`), `recommend.ts` (the "Having
   fun?" card's runs, last ask and answer), `share.ts` (the links this

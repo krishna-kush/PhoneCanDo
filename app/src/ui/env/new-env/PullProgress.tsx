@@ -11,7 +11,8 @@ import AppCard from '../../common/AppCard';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import { failureText, linuxFailureText, recordErrorText } from '../logic/errorText';
-import { downloadLine, stepFraction } from '../logic/steps';
+import { isPaused } from '../logic/titles';
+import SystemDownload from '../list/SystemDownload';
 import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
@@ -19,7 +20,8 @@ import ProgressBar from '../parts/ProgressBar';
 // Own env, the download. Leaving keeps it going (the drawer and the
 // systems list show it too). The run started on the confirm page makes the
 // agent once the download is done; this page then opens that agent in its
-// place. A failed download offers Retry or deleting the env; a failed agent
+// place. Pause keeps what it fetched for Resume; a failed download offers
+// Retry or deleting the env; a failed agent
 // (or none made: a Retry after a restart with a choice of agent), New agent
 // here.
 export default function PullProgress({ repo, tag, envId }: { repo: string; tag: string; envId: string }) {
@@ -58,27 +60,38 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
   // Ready, but no run will make its agent (it failed, or the app restarted since).
   const needsAgent = env?.state === 'ready' && !making && !hasMachine;
   const agentFailure = run?.phase === 'failed' && run.during === 'agent' ? failureText(run.failure) : null;
-  const downloadFailure = env?.state === 'failed' ? recordErrorText(env) : null;
+  const paused = env != null && isPaused(env);
+  const downloadFailure = env?.state === 'failed' && !paused ? recordErrorText(env) : null;
 
   return (
     <Screen>
-      <PageHeader kicker="new agent · download" title="Downloading" />
+      <PageHeader kicker="new agent · download" title={paused ? 'Paused' : 'Downloading'} />
       <AppCard title={`${repo}:${tag}`} subtitle="Own env" chevron={false} />
 
       {!env ? <Note>This download is gone.</Note> : null}
 
       {env?.state === 'downloading' ? (
         <>
-          <ProgressBar
-            label={progress ? downloadLine(progress) : 'Starting'}
-            fraction={progress ? stepFraction(progress.step, progress.done, progress.total) : null}
-          />
+          <SystemDownload env={env} />
           <Note>You can leave this page; the download keeps going, and the menu and the systems list show it.</Note>
           {progress ? (
             <AppButton variant="secondary" onPress={() => cancelJob(progress.jobId)}>
-              Cancel download
+              Pause
             </AppButton>
           ) : null}
+        </>
+      ) : null}
+
+      {env && paused ? (
+        <>
+          <SystemDownload env={env} />
+          <Note>Paused. What it fetched stays on the phone; Resume carries on from there.</Note>
+          <AppButton loading={busy === 'retry'} onPress={retry}>
+            Resume
+          </AppButton>
+          <AppButton variant="secondary" loading={busy === 'delete'} onPress={remove}>
+            Delete this download
+          </AppButton>
         </>
       ) : null}
 
@@ -97,7 +110,7 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
 
       {env?.state === 'ready' && hasMachine && !making ? <Note>Downloaded. Its agents are in the menu.</Note> : null}
 
-      {env?.state === 'failed' ? (
+      {env?.state === 'failed' && !paused ? (
         <>
           <Note tone="error">{`The download stopped.${downloadFailure ? ` ${downloadFailure}` : ''}`}</Note>
           <AppButton loading={busy === 'retry'} onPress={retry}>

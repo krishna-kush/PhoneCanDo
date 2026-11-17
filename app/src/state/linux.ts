@@ -15,6 +15,7 @@ import { changedFields } from './logic/keepUnchanged';
 import {
   applyProgress,
   EMPTY_PROGRESS,
+  type FinishedJob,
   targetKey,
   type ProgressSlice,
   type Target,
@@ -69,6 +70,17 @@ export const useLinuxStore = create<LinuxState>((set, get) => ({
 
   refreshLinux: () => set(changedFields(get(), readRecords())),
 }));
+
+/** The newest finished job of an env or image this app saw end, with where it got to. */
+export function useLastFinished(target: Target | null): FinishedJob | undefined {
+  return useLinuxStore((s) => {
+    if (!target) return undefined;
+    const key = targetKey(target);
+    let newest: FinishedJob | undefined;
+    for (const f of Object.values(s.finished)) if (targetKey(f.target) === key && (!newest || f.seq > newest.seq)) newest = f;
+    return newest;
+  });
+}
 
 /** The running job's last event for an env or image, if one runs. */
 export function useTargetProgress(target: Target | null): LinuxProgress | undefined {

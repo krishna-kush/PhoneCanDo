@@ -111,6 +111,16 @@ const model = (over) => ({
   t('held: one gone falls back', ms.heldModel(takes, [small], 'deleted'), null);
   t('held: a kind that takes none drops it', ms.heldModel(takesNone, [small], 'small'), null);
 
+  // --- ui/models/logic/downloadRoute ---------------------------------------
+  const dr = await import(src('ui/models/logic', 'downloadRoute.ts'));
+  const kept = { doneBytes: 40, sizeBytes: 100 };
+  t('route: paused naps where it stopped', dr.downloadRoute(kept, undefined, false), { fraction: 0.4, working: false, paused: true });
+  t('route: resuming hops at its kept spot', dr.downloadRoute(kept, { step: 'start', done: 0, total: null }, true), { fraction: 0.4, working: true, paused: false });
+  t('route: re-reading never runs back to the start', dr.downloadRoute(kept, { step: 'verify', done: 10, total: 100 }, true), { fraction: 0.4, working: true, paused: false });
+  t('route: bytes move it', dr.downloadRoute(kept, { step: 'download', done: 55, total: 100 }, true), { fraction: 0.55, working: false, paused: false });
+  t('route: waiting for a network naps', dr.downloadRoute(kept, { step: 'offline', done: 55, total: 100 }, true), { fraction: 0.55, working: false, paused: true });
+  t('route: no size yet', dr.downloadRoute({ doneBytes: 0, sizeBytes: 0 }, undefined, true), { fraction: null, working: true, paused: false });
+
   // --- ui/models/logic/modelText -------------------------------------------
   const mt = await import(src('ui/models/logic', 'modelText.ts'));
   t('fits', mt.verdictText(ram('fits')), 'Fits this phone');

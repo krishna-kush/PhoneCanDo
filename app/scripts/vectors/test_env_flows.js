@@ -95,7 +95,12 @@ const ui = (p) => src('ui/env/logic', p);
   t('running job kept', s.progress['image:i1'].jobId, 'j1');
   s = applyProgress(s, ev('j1', 'i1', { finished: true, error: 'full', errorCode: 'no_space' }));
   t('finished drops progress', s.progress['image:i1'], undefined);
-  t('finished job recorded', s.finished.j1, { target: { kind: 'image', id: 'i1' }, failure: { code: 'no_space', message: 'full' }, seq: 1 });
+  t('finished job recorded', s.finished.j1, {
+    target: { kind: 'image', id: 'i1' },
+    failure: { code: 'no_space', message: 'full' },
+    seq: 1,
+    last: { step: 'unpack', done: 1, total: 4 },
+  });
   s = applyProgress(s, ev('j2', 'i1'));
   t('next job shows', s.progress['image:i1'].jobId, 'j2');
   s = applyProgress(s, ev('j2', 'i1', { finished: true }));
@@ -141,7 +146,7 @@ const ui = (p) => src('ui/env/logic', p);
     "You're at your cap for agents running at once, and none has sat idle long enough to make room. Stop one, or raise the cap in Settings → Agents & models.",
   );
 
-  const { stepLabel, stepFraction, progressLine, downloadLine, setupPhase, setupFraction } = await import(ui('steps.ts'));
+  const { stepLabel, stepFraction, progressLine, downloadLine, downloadSpot, setupPhase, setupFraction } = await import(ui('steps.ts'));
   t('known step', stepLabel('detect'), 'Detecting the system');
   t('unknown step readable', stepLabel('fetch_index'), 'Fetch index');
   t('no step', stepLabel(null), 'Getting ready');
@@ -165,6 +170,15 @@ const ui = (p) => src('ui/env/logic', p);
   );
   t('offline line', downloadLine({ step: 'offline', done: 1, total: 4 }), 'No network: it goes on by itself when one is back');
   t('download line passes through', downloadLine({ step: 'download', done: 120e6, total: 290e6 }), 'Downloading · 41% · 120 MB of 290 MB');
+  t('spot: bytes move A-01', downloadSpot({ step: 'download', done: 1, total: 4 }), { fraction: 0.25, paused: false });
+  t('spot: a re-read keeps its spot', downloadSpot({ step: 'verify', done: 1, total: 4 }), { fraction: null, paused: false });
+  t('spot: waits nap', [downloadSpot({ step: 'offline', done: 1, total: 4 }).paused, downloadSpot({ step: 'retry', done: 1, total: 4 }).paused], [true, true]);
+  const { pausedDownload } = await import(ui('steps.ts'));
+  t('paused at its spot', pausedDownload({ step: 'download', done: 65e6, total: 152e6 }), { fraction: 65e6 / 152e6, label: 'Paused · 65 MB of 152 MB' });
+  t('paused, spot not known', [pausedDownload(null), pausedDownload({ step: 'verify', done: 1, total: 4 }), pausedDownload({ step: 'resolve', done: 0, total: null })], [
+    { fraction: null, label: 'Paused' }, { fraction: null, label: 'Paused' }, { fraction: null, label: 'Paused' },
+  ]);
+  t('spot: none yet', [downloadSpot(undefined), downloadSpot({ step: 'resolve', done: 0, total: null })], [{ fraction: null, paused: false }, { fraction: null, paused: false }]);
   t('phase before unpack', setupPhase('space'), -1);
   t('phase of measure', setupPhase('measure'), 2);
   t('setup starts at 0', setupFraction('start', 0, null), 0);
@@ -255,9 +269,12 @@ const ui = (p) => src('ui/env/logic', p);
     ['missing:gone', ['y', 'x']],
   ]);
 
-  const { envSubtitle, DEFAULT_ENV_TITLE } = await import(ui('titles.ts'));
+  const { envSubtitle, isPaused, DEFAULT_ENV_TITLE } = await import(ui('titles.ts'));
   t('downloading env line', envSubtitle({ state: 'downloading', source: { kind: 'registry' }, os: null, sizeBytes: 0 }), 'Downloading');
   t('android env line', envSubtitle({ state: 'ready', source: { kind: 'android' }, os: null, sizeBytes: 0 }), "Android's own shell");
+  const stopped = (errorCode) => ({ state: 'failed', source: { kind: 'registry' }, os: null, sizeBytes: 0, errorCode });
+  t('paused: your Pause, not a failure', [isPaused(stopped('cancelled')), isPaused(stopped('network')), isPaused({ state: 'downloading', errorCode: null })], [true, false, false]);
+  t('paused env line', [envSubtitle(stopped('cancelled')), envSubtitle(stopped('network'))], ['Paused', 'Download stopped']);
   t('default title', DEFAULT_ENV_TITLE, 'Debian-based (Default)');
 
   // --- New agent's place step (ui/env/logic/places.ts) ---------------------
