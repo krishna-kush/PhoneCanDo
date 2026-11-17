@@ -7,6 +7,7 @@ import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { useChecksStore } from '../../state/checks';
 import { useMessagesStore, useUnread } from '../../state/messages';
+import AgentFace from '../common/face/AgentFace';
 import { useAgentLook } from '../common/face/useAgentLook';
 import PageHeader from '../common/PageHeader';
 import { useNow } from '../common/time/useNow';
@@ -156,11 +157,14 @@ export default function MessagesPage({ agentId }: Props) {
   );
 }
 
+/** The agent's face in the head, in dp. */
+const FACE = 32;
+
 // A row the day boxes have not placed (they place every row in the list): a box of its own.
 const LONE = { title: null, gap: false, last: true };
 
-// The page's head: the agent it is filtered to (its desk, name and unread
-// count) with All to see every message, or every agent's.
+// The page's head: the agent it is filtered to (its own face, its desk,
+// name and unread count) with All to see every message, or every agent's.
 function Head({ agentId, onAll }: { agentId: AgentId | null; onAll: () => void }) {
   if (!agentId) return <PageHeader kicker="All agents" title="Messages" />;
   return <AgentHead agentId={agentId} onAll={onAll} />;
@@ -168,13 +172,22 @@ function Head({ agentId, onAll }: { agentId: AgentId | null; onAll: () => void }
 
 function AgentHead({ agentId, onAll }: { agentId: AgentId; onAll: () => void }) {
   const name = useAgentsStore((s) => s.agents.find((a) => a.id === agentId)?.name ?? null);
-  const { desk } = useAgentLook(agentId);
+  const { desk, mood, mascot } = useAgentLook(agentId);
+  const active = usePageActive();
   const unread = unreadText(useUnread(agentId));
   const kicker = [desk, name, unread].filter(Boolean).join(' · ');
-  return <PageHeader kicker={kicker} title="Messages" trailing={<TextAction label="All" onPress={onAll} />} />;
+  return (
+    <PageHeader
+      kicker={kicker}
+      title="Messages"
+      leading={<AgentFace mood={mood} mascot={mascot} size={FACE} still={!active} />}
+      trailing={<TextAction label="All" onPress={onAll} />}
+    />
+  );
 }
 
 function EmptyLine({ agentId }: { agentId: AgentId | null }) {
   const name = useAgentsStore((s) => (agentId ? (s.agents.find((a) => a.id === agentId)?.name ?? null) : null));
-  return <EmptyInbox text={emptyText(agentId ? (name ?? 'this agent') : null)} />;
+  const agent = agentId ? { id: agentId, name: name ?? 'this agent' } : null;
+  return <EmptyInbox text={emptyText(agent?.name ?? null)} agent={agent} />;
 }

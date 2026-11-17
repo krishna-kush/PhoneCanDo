@@ -3,12 +3,24 @@ import { XStack, YStack } from 'tamagui';
 import PlainText from './PlainText';
 
 // A page's head: an optional mono kicker over the title (the site's
-// fig-label: an amber rule, then the words), and an action on the right.
+// fig-label: an amber rule, then the words), an optional mark on the left
+// (an agent's face on its own page) and an action on the right.
 // No back arrow: Android's Back (the gesture or the key) goes back. The
 // title truncates so the action never leaves the screen.
-export default function PageHeader({ title, kicker, trailing }: { title: string; kicker?: string; trailing?: ReactNode }) {
+export default function PageHeader({
+  title,
+  kicker,
+  leading,
+  trailing,
+}: {
+  title: string;
+  kicker?: string;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+}) {
   return (
     <XStack alignItems="flex-end" gap="2" paddingTop="2" paddingBottom="1">
+      {leading}
       <YStack flex={1} minWidth={0} gap={6}>
         {kicker ? (
           <XStack alignItems="center" gap="2">

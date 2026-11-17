@@ -102,7 +102,7 @@ export function emptyText(agentName: string | null): string {
 /** The empty page's box. */
 export const EMPTY_TITLE = 'Inbox · empty';
 
-/** Under the empty page's line: A-01 dozing, or up for a moment after a tap. */
-export function napLine(up: boolean): string {
-  return up ? 'A-01 · nothing yet, back to sleep' : 'A-01 · napping by the inbox';
+/** Under the empty page's line: who dozes there (A-01, or the agent the page is for), or up for a moment after a tap. */
+export function napLine(up: boolean, who = 'A-01'): string {
+  return up ? `${who} · nothing yet, back to sleep` : `${who} · napping by the inbox`;
 }

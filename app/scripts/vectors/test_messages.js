@@ -259,6 +259,7 @@ const HOUR = 60 * MIN;
   t('handed the screen, not driving yet', qu.screenWord({ holder: B, reserved: true, waiting: [] }), 'its turn');
   t('free', qu.screenWord({ holder: null, reserved: false, waiting: [R] }), 'free');
   t('the empty page naps', c.napLine(false), 'A-01 · napping by the inbox');
+  t("an agent's empty page naps", c.napLine(true, 'Coder'), 'Coder · nothing yet, back to sleep');
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
