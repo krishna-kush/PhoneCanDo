@@ -18,7 +18,9 @@ package com.phonecando.runner.cutoff
 //   counts the hours the phone was off) nor the last exit's time (none
 //   after a reboot, none before Android 11) says when the run stopped.
 // - In this life: an engine that died on its own, and a stop by Android
-//   that kept runs (Held.SYSTEM), are offered at once (offerNow).
+//   that kept runs (Held.SYSTEM), are offered at once (offerNow); so are
+//   the runs a self-update's stop kept when you cancel its installer
+//   (cancelled).
 object CutOffLook {
   const val MAX_AGE_MS = 24 * 60 * 60_000L
 
@@ -36,6 +38,8 @@ object CutOffLook {
     UPDATE("update"),
     CLOSED("closed"),
     DIED("died"),
+    /** A self-update stopped it, and you cancelled the installer. */
+    INSTALL("install"),
     ;
 
     companion object {
@@ -97,6 +101,15 @@ object CutOffLook {
     if (mine.isEmpty()) return null
     return Offer(agentId, mine, if (mine.any { it.diedAt != null }) Why.DIED else Why.CLOSED)
   }
+
+  /**
+   * You cancelled a self-update's installer after its stop kept runs
+   * (Held.UPDATE) in [life]: one offer per agent, stale runs left out.
+   */
+  fun cancelled(runs: List<CutOffRun>, life: String): List<Offer> =
+    runs.filter { it.life == life && it.held == Held.UPDATE && !stale(it) }
+      .groupBy { it.agentId }
+      .map { (agentId, mine) -> Offer(agentId, mine, Why.INSTALL) }
 
   /** When it was last looked at, its agent had shown no sign of work for STALE_MS. */
   fun stale(run: CutOffRun): Boolean = run.checkedAt - run.seenAt > STALE_MS

@@ -10,11 +10,14 @@ import com.phonecando.linux.jobs.JobReporter
 import com.phonecando.models.ModelsHost
 import com.phonecando.models.jobs.ModelJob
 import com.phonecando.runner.PhoneCanDoServeService
+import com.phonecando.runner.update.UpdateDownloads
+import com.phonecando.runner.update.UpdateState
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 
-// Keeps the app's process alive while a model job (download, import) or a
-// Linux job (env download, machine setup, agent install) runs: when one
+// Keeps the app's process alive while a model job (download, import), a
+// Linux job (env download, machine setup, agent install) or PhoneCanDo's
+// own update download (update/) runs: when one
 // runs and our foreground service is down, it starts the service
 // (ACTION_HOLD), which lists the jobs in its one notification and stops
 // itself once neither an engine nor a job runs. A model is gigabytes, a
@@ -25,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 // start; if Android refuses anyway, the job still runs while the process
 // lives and resumes later where it stopped.
 internal object JobsAnchor {
-  /** The jobs began, ended or moved on (Linux jobs at most every [TICK_MS]). */
+  /** The jobs began, ended or moved on (Linux jobs and the update download at most every [TICK_MS]). */
   fun interface Listener {
     fun onJobs()
   }
@@ -36,12 +39,17 @@ internal object JobsAnchor {
   private var state = HoldRule.State()
   private var serviceUp = false
   private var lastLinuxTick = 0L
+  private var lastUpdateTick = 0L
+  private var updateRunning = false
 
   @Volatile
   private var models: ModelsHost? = null
 
   @Volatile
   private var linux: LinuxHost? = null
+
+  @Volatile
+  private var updates: UpdateDownloads? = null
 
   /** Once per process (the runner module's create, the service's); idempotent. */
   fun install(context: Context) {
@@ -57,17 +65,25 @@ internal object JobsAnchor {
 
       override fun onChanged() {}
     })
+    // After the listener, so a download it resumes is held from its start.
+    val updateHost = UpdateDownloads.get(app).also { updates = it }
+    updateHost.addListener { if (updateTick(updateHost.running() != null)) changed(app) }
+    updateHost.recoverOnce()
   }
 
   fun addListener(listener: Listener) = listeners.addIfAbsent(listener)
 
   fun removeListener(listener: Listener) = listeners.remove(listener)
 
-  fun anyRunning(): Boolean = models?.jobs?.anyRunning() == true || linux?.jobs?.anyRunning() == true
+  fun anyRunning(): Boolean =
+    models?.jobs?.anyRunning() == true || linux?.jobs?.anyRunning() == true || updateJob() != null
 
   fun modelJobs(): List<ModelJob> = models?.jobs?.running().orEmpty()
 
   fun linuxJobs(): List<Job> = linux?.jobs?.running().orEmpty()
+
+  /** The update download running, if any. */
+  fun updateJob(): UpdateState? = updates?.running()
 
   /** An env record's name, for the notification's Linux lines. */
   fun envName(envId: String): String? = linux?.records?.env(envId)?.name
@@ -81,7 +97,8 @@ internal object JobsAnchor {
   }
 
   private fun changed(context: Context) {
-    val running = modelJobs().map { "model:${it.id}" } + linuxJobs().map { "linux:${it.id}" }
+    val running = modelJobs().map { "model:${it.id}" } + linuxJobs().map { "linux:${it.id}" } +
+      listOfNotNull(updateJob()?.let { "update:${it.spec.name}" })
     val ask = synchronized(lock) {
       val step = HoldRule.onJobs(state, running.toSet(), serviceUp)
       state = step.state
@@ -98,6 +115,18 @@ internal object JobsAnchor {
     synchronized(lock) {
       if (!edge && now - lastLinuxTick < TICK_MS) return false
       lastLinuxTick = now
+    }
+    return true
+  }
+
+  // The update download's start and end at once; its progress at most every TICK_MS.
+  private fun updateTick(running: Boolean): Boolean {
+    val now = SystemClock.elapsedRealtime()
+    synchronized(lock) {
+      val edge = running != updateRunning
+      updateRunning = running
+      if (!edge && now - lastUpdateTick < TICK_MS) return false
+      lastUpdateTick = now
     }
     return true
   }

@@ -32,6 +32,8 @@ import type {
   NativeShareResult,
   NativeTerminalAttach,
   NativeTerminalTheme,
+  NativeUpdateDownload,
+  NativeUpdateSpec,
   NativeUserKind,
   NativeVersionCheck,
 } from './PhoneCanDoRunner.types';
@@ -87,6 +89,8 @@ export type {
   NativeShareResult,
   NativeTerminalAttach,
   NativeTerminalTheme,
+  NativeUpdateDownload,
+  NativeUpdateSpec,
   NativeUserKind,
   NativeVersionCheck,
 } from './PhoneCanDoRunner.types';
@@ -105,6 +109,8 @@ type RunnerEvents = {
   phonecandoAcp(e: NativeAcpEvent): void;
   /** An agent's checks or its Check now run changed (state, part, step, a row, movement, reading); read agentChecks again. */
   phonecandoChecks(e: { agentId: string }): void;
+  /** The self-update's download moved: a step, or its bytes (about four times a second). */
+  phonecandoUpdateDownload(e: NativeUpdateDownload): void;
 };
 
 declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
@@ -148,8 +154,14 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   stopEngine(agentId: string): Promise<void>;
   /** [keepRuns]: the runs the agents have going are kept and offered back after (a self-update). */
   stopAllEngines(keepRuns: boolean): Promise<void>;
-  /** The self-update's installer came back without installing: the runs stopAllEngines(true) kept go. */
-  updateCancelled(): void;
+  /** The self-update's installer came back without installing: the runs stopAllEngines(true) kept are offered back; resolves with those agents. */
+  updateCancelled(): Promise<string[]>;
+  /** Starts the self-update's download (runner/update/), or finds it running or done. */
+  startUpdateDownload(spec: NativeUpdateSpec): Promise<NativeUpdateDownload>;
+  /** Stops it; its part, a finished APK and its record go. */
+  stopUpdateDownload(): void;
+  /** Where it stands; null for none. */
+  updateDownloadState(): NativeUpdateDownload | null;
   /** Stops the agents on the model first, then its server; resolves with the agents it stopped. */
   stopModel(modelId: string): Promise<string[]>;
   runLimits(): NativeRunLimits;

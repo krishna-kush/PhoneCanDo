@@ -104,10 +104,12 @@ internal fun ModuleDefinitionBuilder.engineFunctions(context: () -> Context) {
   }
 
   // The self-update's installer came back without installing (you
-  // cancelled it): the runs stopAllEngines(true) kept go (cutoff/).
-  Function("updateCancelled") {
-    CutOffs.peek()?.updateCancelled()
-    Unit
+  // cancelled it): the runs stopAllEngines(true) kept are offered at once
+  // (cutoff/). Resolves with the agents offered, which the app leaves for
+  // their notice's Continue while it starts the others again.
+  AsyncFunction("updateCancelled") { promise: Promise ->
+    val cutOffs = CutOffs.peek() ?: return@AsyncFunction promise.resolve(emptyList<String>())
+    cutOffs.updateCancelled { promise.resolve(it) }
   }
 
   // Engines we run plus any process tagged with an agent; reads /proc.

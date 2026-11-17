@@ -50,6 +50,7 @@ object CutOffText {
     Why.UPDATE -> "PhoneCanDo was updated"
     Why.CLOSED -> "Android closed PhoneCanDo"
     Why.DIED -> "It stopped by itself"
+    Why.INSTALL -> "An update that didn't go ahead stopped it"
   }
 
   private fun lead(why: Why): String = when (why) {
@@ -57,5 +58,6 @@ object CutOffText {
     Why.UPDATE -> "PhoneCanDo was updated"
     Why.CLOSED -> "Android closed PhoneCanDo"
     Why.DIED -> "your program stopped by itself"
+    Why.INSTALL -> "PhoneCanDo stopped for an update that then didn't go ahead"
   }
 }

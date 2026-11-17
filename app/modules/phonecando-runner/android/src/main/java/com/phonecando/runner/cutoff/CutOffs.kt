@@ -65,8 +65,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 //   at" in its detail, and it stays failed; the agent counts as brought
 //   back (BringRules: twice in 6 hours, then Open only).
 // - Dismiss, or a swipe, drops the agent's runs. A self-update you cancel
-//   drops the runs its stop kept (updateCancelled): the agents stay
-//   stopped, as any stop leaves them.
+//   offers the runs its stop kept at once, one notice per agent
+//   (updateCancelled); the app starts the other agents it stopped again.
 // Its work runs on one thread; a listener call reads what it needs where it
 // is called (whether a hold is on) and passes it on.
 class CutOffs private constructor(context: Context) {
@@ -198,10 +198,22 @@ class CutOffs private constructor(context: Context) {
   /** Dismiss (or a swipe) on [agentId]'s notice: its runs go. */
   fun dismiss(agentId: String, done: () -> Unit) = later(done) { settle(agentId) }
 
-  /** You cancelled the installer of a self-update: the runs its stop kept go (the agents stay stopped). */
-  fun updateCancelled() = later({}) {
-    hold = null
-    save(book.copy(runs = CutOffRules.unheld(book.runs, Held.UPDATE, life)))
+  /**
+   * You cancelled the installer of a self-update: the runs its stop kept
+   * are offered at once (its notice's Continue goes on in the same chat),
+   * stale ones go. [done] gets the agents offered, which the app leaves
+   * stopped for their Continue (a start of its own would settle them).
+   */
+  fun updateCancelled(done: (List<String>) -> Unit) {
+    var offered = emptyList<String>()
+    later({ done(offered) }) {
+      hold = null
+      val offers = CutOffLook.cancelled(book.runs, life)
+      val kept = offers.flatMap { it.runs }.toSet()
+      save(book.copy(runs = CutOffRules.unheld(book.runs, Held.UPDATE, life) + kept))
+      offers.forEach(::offer)
+      offered = offers.map { it.agentId }
+    }
   }
 
   /**

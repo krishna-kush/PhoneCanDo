@@ -88,6 +88,15 @@ dependencies {
   implementation 'com.phonecando.lme:lme-store:0.1.0-dev'
   implementation 'com.phonecando.lme:lme-host:0.1.0-dev'
 
+  // Our shared network code (network/, withNetworkCompositeBuild.js): the
+  // update APK's resumable, verified download (update/), its retries and
+  // its resume list.
+  implementation 'com.phonecando.network:network-http:0.1.0-dev'
+  implementation 'com.phonecando.network:network-download:0.1.0-dev'
+  implementation 'com.phonecando.network:network-retry:0.1.0-dev'
+  // Whether the phone is online.
+  implementation project(':phonecando-network')
+
   // The Linux module's running jobs (LinuxHost's JobRegistry: env downloads,
   // machine setup, agent installs), which keep our service up like model
   // jobs (jobs/JobsAnchor.kt).

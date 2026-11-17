@@ -33,6 +33,24 @@ export type NativeInstallPlan = { script: string; timeoutSec: number; phases: st
 /** The kind's version check: argv to run in the machine (its runtimes on PATH) and the pattern whose group 1 is the version. */
 export type NativeVersionCheck = { argv: string[]; pattern: string };
 
+/** The self-update's download (runner/update/): its build, its file once done, and where it stands. */
+export type NativeUpdateDownload = {
+  version: string;
+  versionCode: number;
+  name: string;
+  /** The finished APK's absolute path; null until done. */
+  path: string | null;
+  step: 'download' | 'verify' | 'retry' | 'offline' | 'done' | 'failed' | 'stopped';
+  written: number;
+  total: number;
+  /** One line, its code first; only once failed. */
+  error: string | null;
+  errorCode: string | null;
+};
+
+/** What to download: GitHub's asset URL and its name, size and sha256 from latest.json. */
+export type NativeUpdateSpec = { url: string; name: string; size: number; sha256: string; versionCode: number; version: string };
+
 /** How an agent's engine runs: its TUI on our terminal, or ACP mode (pipes, no screen). */
 export type NativeEngineMode = 'terminal' | 'acp';
 

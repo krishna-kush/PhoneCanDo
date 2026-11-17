@@ -48,8 +48,8 @@ import java.util.concurrent.RejectedExecutionException
 
 // The foreground service that keeps the agents' engines alive while the app
 // is in the background, and the process while a model job (download,
-// import) or a Linux job (env download, machine setup, agent install)
-// runs. Its type is specialUse, which Android gives no time limit
+// import), a Linux job (env download, machine setup, agent install) or
+// our own update download (update/) runs. Its type is specialUse, which Android gives no time limit
 // (dataSync gets 6 hours in 24 on Android 15+). The engines themselves live
 // in the process's EngineSupervisor (engine/), the jobs in the models and
 // Linux modules' hosts; this service is their anchor: it runs start
@@ -479,13 +479,14 @@ class PhoneCanDoServeService : Service() {
       agents.firstOrNull { it.imageId == image }?.name
     }
     val reading = supervisor?.promptReading()?.let { ReadingLines.of(it.modelName, it.read, it.total) }
+    val update = JobsAnchor.updateJob()?.let { TransferLines.of(UPDATE_LABEL, false, it.written, it.spec.size) }
     val starts = starting.map { names[it] ?: it }.distinct()
     // A Stop asked (here or in the app): "Stopping …" under a progress bar
     // until the engine is down.
     val stopping = supervisor?.statuses()?.filter { it.state == EngineState.STOPPING }?.map { it.agentId }.orEmpty()
     return notification.build(
       chats, names, running, transfers, reading, linux, work, starts, ::stopIntent, stopping,
-      ::stopJobIntent, endingJobs.values.toList(), AppOnScreen.shown,
+      ::stopJobIntent, endingJobs.values.toList(), AppOnScreen.shown, update,
     )
   }
 
@@ -510,6 +511,9 @@ class PhoneCanDoServeService : Service() {
     // What the notification says while it lingers with nothing running and
     // no Stop of ours ended anything.
     private const val NOTHING_LEFT = "Nothing running now"
+
+    // The update download's notification line: "PhoneCanDo update · downloading 45%".
+    private const val UPDATE_LABEL = "PhoneCanDo update"
 
     // A time-limit stop's reason on the engines' statuses (onTimeout), like
     // the memory guard's MemoryRules.STOPPED_REASON.

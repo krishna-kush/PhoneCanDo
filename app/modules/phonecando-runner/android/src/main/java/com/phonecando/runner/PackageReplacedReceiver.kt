@@ -9,10 +9,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.phonecando.runner.update.UpdateDownloads
 
 // Fires in the NEW build right after an APK replace (the installer killed the
-// old process). It acts only on PhoneCanDo's own self-update: updates.ts sets
-// a mark (markPending) right before it hands the APK to Android's installer,
+// old process). It acts only on PhoneCanDo's own self-update: updates/install.ts
+// sets a mark (markPending) right before it hands the APK to Android's installer,
 // so dev reinstalls, adb installs and stale marks stay quiet, and the play
 // channel, which Play updates, never acts. Android blocks background apps
 // from opening a screen, so the direct launch only works where the OEM
@@ -21,6 +22,10 @@ import android.util.Log
 // the notification (clearNotice).
 class PackageReplacedReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent) {
+    // Whatever the mark says: the downloaded APK this build came from, and
+    // any other left in files/updates/, goes once this build is the
+    // recorded one or newer (update/CleanRules). It never throws.
+    UpdateDownloads.cleanAfterInstall(context)
     if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
     val channel = channelOf(context)
     if (channel == "play") return

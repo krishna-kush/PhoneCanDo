@@ -118,4 +118,19 @@ class CutOffLookTest {
     assertEquals(Why.CLOSED, CutOffLook.offerNow(runs, "a2", "new")!!.why)
     assertNull(CutOffLook.offerNow(runs, "a3", "new"))
   }
+
+  @Test fun aCancelledInstallOffersTheRunsItsStopKept() {
+    val runs = listOf(
+      run(life = "new").copy(held = Held.UPDATE),
+      run(life = "new", chatId = "second").copy(held = Held.UPDATE),
+      run(life = "new", agentId = "a2").copy(held = Held.UPDATE),
+      run(life = "new", agentId = "a3"),
+      run(life = "old", agentId = "a4").copy(held = Held.UPDATE),
+      run(life = "new", agentId = "a5", seenAt = now - CutOffLook.STALE_MS - 10).copy(held = Held.UPDATE, checkedAt = now),
+    )
+    val offers = CutOffLook.cancelled(runs, "new")
+    assertEquals(listOf("a1", "a2"), offers.map { it.agentId })
+    assertEquals(2, offers.first().runs.size)
+    assertTrue(offers.all { it.why == Why.INSTALL })
+  }
 }

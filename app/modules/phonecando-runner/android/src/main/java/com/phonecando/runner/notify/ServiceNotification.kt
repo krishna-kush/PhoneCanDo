@@ -17,7 +17,8 @@ import com.phonecando.runner.engine.work.WorkWatch
 // with all of it, MAX_ACTIONS at most, as Android shows no more),
 // then the agents starting, then a model server reading a prompt
 // (ReadingLines), then the model downloads and imports running
-// (TransferLines), then the Linux jobs (LinuxJobLines). Engines that only
+// (TransferLines), then the Linux jobs (LinuxJobLines), then PhoneCanDo's
+// own update download (TransferLines too). Engines that only
 // run get one quiet line with no buttons (ReadyLines): away from the app,
 // Android stops a service out of the foreground about a minute later, and
 // the agents with it. With the app on screen that line is not needed, so
@@ -46,7 +47,8 @@ internal class ServiceNotification(private val context: Context) {
    * job's, with no Stop button, under a running progress bar, so a stop
    * that takes a few seconds never looks hung; [stopJob]: the intent that
    * stops one job alone; [endingJobs]: the names of the jobs being
-   * stopped, a "Stopping …" line each under the same bar. With none of
+   * stopped, a "Stopping …" line each under the same bar; [update]: the
+   * TransferLines line of the update download. With none of
    * that, the agents in [running] as ready, unless [onScreen] (the app is
    * in front); null when nothing runs.
    */
@@ -64,10 +66,11 @@ internal class ServiceNotification(private val context: Context) {
     stopJob: (String, WorkWatch.Job) -> PendingIntent? = { _, _ -> null },
     endingJobs: List<String> = emptyList(),
     onScreen: Boolean = false,
+    update: String? = null,
   ): Notification? {
     val kept = work.filter { it.agentId !in stopping }
     val ending = stopping.map { "Stopping ${names[it] ?: it}…" } + endingJobs.map { "Stopping $it…" }
-    val extra = ending + kept.map { it.text } + starting.map { "Starting $it" } + listOfNotNull(reading) + transfers + linuxJobs
+    val extra = ending + kept.map { it.text } + starting.map { "Starting $it" } + listOfNotNull(reading) + transfers + linuxJobs + listOfNotNull(update)
     if (chats.isEmpty() && extra.isEmpty() && running.isEmpty()) return null
     val agent = chats.map { it.agentId }.distinct().singleOrNull()
       ?: running.singleOrNull()?.takeIf { chats.isEmpty() }
@@ -76,6 +79,7 @@ internal class ServiceNotification(private val context: Context) {
     val counts = listOf(
       summary(chats), stoppingCount(ending), WorkLines.count(kept), startingCount(starting),
       if (reading != null) READING else "", transferCount(transfers), linuxCount(linuxJobs),
+      if (update != null) UPDATE else "",
     )
     val summary = counts.filter { it.isNotEmpty() }.joinToString(" · ")
     val builder = base(tap)
@@ -194,6 +198,9 @@ internal class ServiceNotification(private val context: Context) {
     const val NOTIFICATION_ID = 4101
     // No model name, so the lock screen may show it.
     private const val READING = "reading the prompt"
+
+    // The update download, counted for the lock screen.
+    private const val UPDATE = "update coming in"
 
     // InboxStyle shows about five lines; the rest are counted.
     private const val MAX_LINES = 5

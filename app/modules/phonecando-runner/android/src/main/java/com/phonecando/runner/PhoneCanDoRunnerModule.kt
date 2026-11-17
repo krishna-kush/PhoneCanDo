@@ -25,6 +25,7 @@ import com.phonecando.runner.api.pickFunctions
 import com.phonecando.runner.api.runLimitFunctions
 import com.phonecando.runner.api.scheduleFunctions
 import com.phonecando.runner.api.shareFunctions
+import com.phonecando.runner.api.updateFunctions
 import com.phonecando.runner.api.userKindFunctions
 import com.phonecando.runner.bridge.BridgePrompts
 import com.phonecando.runner.checks.fanout.ChecksEvents
@@ -40,6 +41,7 @@ import com.phonecando.runner.prompts.OpenUrlPrompts
 import com.phonecando.runner.prompts.PermissionPrompts
 import com.phonecando.runner.schedule.ScheduleEvents
 import com.phonecando.runner.schedule.Schedules
+import com.phonecando.runner.update.UpdateEvents
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
@@ -110,6 +112,7 @@ class PhoneCanDoRunnerModule : Module() {
     Events(
       "phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory",
       "phonecandoMessages", "phonecandoRunFinished", ScheduleEvents.NAME, AcpAppEvents.NAME, ChecksEvents.NAME,
+      UpdateEvents.NAME,
     )
 
     OnCreate {
@@ -128,7 +131,9 @@ class PhoneCanDoRunnerModule : Module() {
       // manifest that lacks the provider.
       appContext.reactContext?.let { TelemetryRecorder.install(it) }
       Engines.addListener(engineListener)
-      // Model jobs and Linux jobs keep the process in the foreground.
+      // Model jobs, Linux jobs and the update download keep the process in
+      // the foreground (the update download's cleanup after an install and
+      // its resume run there, once per process).
       appContext.reactContext?.let { JobsAnchor.install(it) }
       // Schedules tell the app when they change; making them arms their
       // alarm again (gone after a force-stop until something reads them).
@@ -146,6 +151,7 @@ class PhoneCanDoRunnerModule : Module() {
         instance = null
         ScheduleEvents.listener = null
         ChecksEvents.sink = null
+        UpdateEvents.sink = null
       }
     }
     // The app comes on screen: the service drops its ready line.
@@ -189,6 +195,7 @@ class PhoneCanDoRunnerModule : Module() {
     acpFunctions({ context() }) { sendEvent(AcpAppEvents.NAME, it) }
     checksFunctions({ context() }) { sendEvent(ChecksEvents.NAME, it) }
     scheduleFunctions { context() }
+    updateFunctions({ context() }) { sendEvent(UpdateEvents.NAME, it) }
     pickFunctions { appContext.currentActivity }
 
     Function("getPrefix") {
@@ -304,7 +311,7 @@ class PhoneCanDoRunnerModule : Module() {
       }
     }
 
-    // updates.ts calls this right before it hands the APK to Android's
+    // updates/install.ts calls this right before it hands the APK to Android's
     // installer, so PackageReplacedReceiver in the new build knows the update
     // is PhoneCanDo's own; Play, adb and dev reinstalls leave no mark.
     Function("markSelfUpdatePending") {

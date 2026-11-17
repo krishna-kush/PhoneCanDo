@@ -1732,14 +1732,48 @@ seed never blocks a start.
 APK and audits it; `./manage release <version>` builds both and drafts the
 GitHub release (`../../../docs/release/android.md`).
 
+## Self-update download
+
+The update's Download step runs natively (`update/`, `api/UpdateFunctions.kt`),
+so it goes on while the user keeps working and with no JS around.
+`startUpdateDownload(spec)` takes latest.json's APK (`url`, `name`, `size`,
+`sha256`, `versionCode`, `version`), refuses anything but one of our GitHub
+release assets with a plain `.apk` name, and downloads it into
+`files/updates/<name>` through `<name>.part` beside it, on network's
+`FileDownloader` under its `RetryLoop`: a dropped connection resumes with
+`Range`, no network waits for one, and the file becomes the APK only once
+its size and sha256 match. One download at a time: starting another spec
+stops the old one and deletes its files. While it runs our jobs anchor
+keeps the foreground service up and the CPU awake, with a "PhoneCanDo
+update · downloading 45%" line in its notification. The spec and its step
+are kept in `files/state/update-download.json`, the name on
+`files/state/update-downloads-to-resume.txt`, so a process death, or a
+network that stayed down, resumes it once on the next start (`JobsAnchor.install`
+→ `UpdateDownloads.recoverOnce`). `updateDownloadState()` reads where it is
+(`done` only while the finished APK is there whole), every change is the
+`phonecandoUpdateDownload` event, and `stopUpdateDownload()` drops all of
+it: the job, its `.part` or finished APK, the record and the resume entry.
+After an install, at each process start and in `PackageReplacedReceiver`,
+the record and everything in `files/updates/` go once the installed build's
+`versionCode` is the recorded one or newer (also the old JS downloader's
+APKs: with no record nothing there is ours). A failed cleanup never blocks
+anything.
+
 ## Self-update install
 
-`installDownloaded` in `src/engine/updates.ts` hands the downloaded APK to
-Android's installer screen with `ACTION_VIEW`. The update dialog first
-checks Android's "Install unknown apps" switch for PhoneCanDo
-(`canRequestPackageInstalls()`); when it is off, the dialog explains it and
-opens that settings page itself, then installs once the user comes back
-with it on, instead of Android's own prompt landing on top of the dialog.
+An update takes two taps (`src/state/flows/update/`): Download, which
+stops nothing, then Install. Install first checks Android's "Install
+unknown apps" switch for PhoneCanDo (`canRequestPackageInstalls()`); when
+it is off, the update box explains it and opens that settings page itself,
+then installs once the user comes back with it on, instead of Android's own
+prompt landing on top of the box. Then `stopForInstall` in
+`src/engine/updates/install.ts` stops every engine (`stopAllEngines(true)`:
+the runs they have going are kept for the new build's cut-off notices),
+and `openInstaller` hands the APK to Android's installer screen with
+`ACTION_VIEW`. Back without an install, `updateCancelled()` offers those
+runs at once (cut-off notices, `Why.INSTALL`, Continue goes on in the same
+chat) and resolves with their agents; the app starts the other agents it
+stopped again (a start of its own would settle an offer).
 Play Protect allows lite installing full because the originating app is
 PhoneCanDo, not a browser (`docs/release/upgrade-test.md`).
 
