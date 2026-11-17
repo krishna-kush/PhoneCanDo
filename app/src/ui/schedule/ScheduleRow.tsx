@@ -8,7 +8,8 @@ import { ROW_GUTTER } from '../common/rows/place';
 import AgentLine from './AgentLine';
 import type { TimelineEntry } from './logic/timeline';
 import { byText, lastRunText, outcomeTone, setByLine } from './logic/scheduleCopy';
-import { nextRunText, timingText } from './logic/timingText';
+import { isDone, nextRunText, timingText } from './logic/timingText';
+import DoneMark from './DoneMark';
 import OnOffToggle from './OnOffToggle';
 
 type Props = {
@@ -20,12 +21,14 @@ type Props = {
 // One schedule, agent first: the agent as the drawer shows it (face, name,
 // serial, kind, state), then the task (two lines at most), when it runs
 // next, who set it and its chat, and what its last run did. A tap opens
-// the editor; the square on the right switches it on or off.
+// the editor; the square on the right switches it on or off, or for a
+// one-off that ran is a done mark (a new time in the editor brings it back).
 export default function ScheduleRow({ entry, now, onEdit }: Props) {
   const t = useTheme();
   const [error, setError] = useState<string | null>(null);
   const s = entry.schedule;
   const when = `${nextRunText(s, now)} · ${timingText(s.timing, now)}`;
+  const done = isDone(s);
 
   return (
     <XStack alignItems="stretch">
@@ -37,13 +40,13 @@ export default function ScheduleRow({ entry, now, onEdit }: Props) {
         accessibilityLabel={`${entry.agent?.name ?? ''}. ${s.text}. ${when}. ${byText(s.by)}`}
         accessibilityHint="Opens it to change or delete"
       >
-        <YStack paddingHorizontal={ROW_GUTTER} paddingVertical="3" gap="2" opacity={s.on ? 1 : 0.6}>
+        <YStack paddingHorizontal={ROW_GUTTER} paddingVertical="3" gap="2" opacity={s.on && !done ? 1 : 0.6}>
           <AgentLine agentId={s.agentId} agent={entry.agent} />
           <PlainText fontSize={15} lineHeight="21px" numberOfLines={2} ellipsizeMode="tail">
             {s.text}
           </PlainText>
           <YStack gap={2}>
-            <PlainText fontFamily="mono" fontSize={12} color={s.on ? 'secondaryInk' : 'dim'} numberOfLines={2}>
+            <PlainText fontFamily="mono" fontSize={12} color={s.on && !done ? 'secondaryInk' : 'dim'} numberOfLines={2}>
               {when}
             </PlainText>
             <PlainText fontFamily="mono" fontSize={11} color="dim" numberOfLines={1}>
@@ -62,7 +65,7 @@ export default function ScheduleRow({ entry, now, onEdit }: Props) {
           ) : null}
         </YStack>
       </Pressable>
-      <OnOffToggle schedule={s} onError={setError} />
+      {done ? <DoneMark /> : <OnOffToggle schedule={s} onError={setError} />}
     </XStack>
   );
 }

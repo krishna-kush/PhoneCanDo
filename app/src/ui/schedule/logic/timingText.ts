@@ -70,13 +70,22 @@ export function whenText(at: number, now: number): string {
 }
 
 /**
+ * A one-off that ran: still on (the runner never turns it off), with no
+ * next run. Its row shows a done mark, not a switch that would do nothing.
+ */
+export function isDone(s: Pick<Schedule, 'on' | 'nextAt' | 'timing'>): boolean {
+  return s.on && s.nextAt == null && s.timing.type === 'once';
+}
+
+/**
  * Its next run as a row says it: "next in 12 min", "next tomorrow 09:00";
  * "due since 14:30" while a run waits (the agent busy); "off"; "done" for
  * a one-off that ran.
  */
 export function nextRunText(s: Pick<Schedule, 'on' | 'nextAt' | 'timing'>, now: number): string {
   if (!s.on) return 'off';
-  if (s.nextAt == null) return s.timing.type === 'once' ? 'done' : 'no next run';
+  if (isDone(s)) return 'done';
+  if (s.nextAt == null) return 'no next run';
   if (s.nextAt <= now) return `due since ${hhmm(s.nextAt)}`;
   return `next ${whenText(s.nextAt, now)}`;
 }
