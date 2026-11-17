@@ -2,9 +2,11 @@
 // (src/engine/schedule/parse.ts), and how the Schedules page and its
 // editor show and build it: clock times and days (logic/clock.ts), the
 // timing and next run in words (logic/timingText.ts), the copy
-// (logic/scheduleCopy.ts), the editor's form, problems and what it saves
-// (logic/draft.ts), the one-tap times (logic/presets.ts), and the timeline
-// across agents (logic/timeline.ts). Imports
+// (logic/scheduleCopy.ts, logic/editorCopy.ts), the editor's form,
+// problems and what it saves (logic/draft.ts), the one-tap times
+// (logic/presets.ts), the timeline across agents (logic/timeline.ts), and
+// the work order's runs coming up and its ruler (logic/nextRuns.ts) and
+// face (logic/faceCue.ts). Imports
 // the real pure modules (Node 22.18+ strips their types), so these cannot
 // drift. Times read in UTC.
 // Run: node test_schedule.js (or pnpm check:vectors)
@@ -326,6 +328,66 @@ const at = (d, h, m) => Date.UTC(2026, 10, d, h, m);
   t('an interval preset is picked when the form says it', pr.isEvery({ ...base, every: '30', unit: 'min' }, pr.EVERY_PRESETS[1]), true);
   t('weekdays in any order', pr.isDays({ ...base, days: ['fri', 'mon', 'tue', 'wed', 'thu'] }, pr.DAYS_PRESETS[1]), true);
   t('every day is no days', pr.isDays(base, pr.DAYS_PRESETS[0]), true);
+
+  // --- the work order: runs coming up, the ruler, its words, the face ---------------------
+  const nr = await import(src('ui/schedule/logic/nextRuns.ts'));
+  const ec = await import(src('ui/schedule/logic/editorCopy.ts'));
+  const fc = await import(src('ui/schedule/logic/faceCue.ts'));
+  t('day tile', [c.dayTile(at(13, 0, 0), NOW), c.dayTile(at(14, 0, 0), NOW), c.dayTile(at(18, 0, 0), NOW)], [
+    { near: 'Today', date: 'Fri 13 Nov' },
+    { near: 'Tomorrow', date: 'Sat 14 Nov' },
+    { near: 'In 5 days', date: 'Wed 18 Nov' },
+  ]);
+  const oneOff = { type: 'once', at: at(13, 11, 0) };
+  t('a one-off runs once, then never', [nr.nextAfter(oneOff, NOW), nr.nextAfter(oneOff, at(13, 11, 0))], [at(13, 11, 0), null]);
+  t('a one-off that passed has no runs', nr.nextRuns({ type: 'once', at: at(13, 9, 0) }, NOW, 3), []);
+  t('a new interval: one interval from now, then on', nr.nextRuns({ type: 'every', minutes: 30, anchor: NOW }, NOW, 3), [
+    NOW + 30 * MIN,
+    NOW + 60 * MIN,
+    NOW + 90 * MIN,
+  ]);
+  t('an interval stays on its grid', nr.nextAfter({ type: 'every', minutes: 60, anchor: at(13, 9, 0) }, NOW), at(13, 11, 0));
+  t('an anchor ahead is the next run', nr.nextAfter({ type: 'every', minutes: 60, anchor: at(13, 12, 0) }, NOW), at(13, 12, 0));
+  t('daily: past today’s time, from tomorrow', nr.nextRuns({ type: 'daily', time: '09:00', days: [] }, NOW, 3), [
+    at(14, 9, 0),
+    at(15, 9, 0),
+    at(16, 9, 0),
+  ]);
+  t('daily: later today', nr.nextAfter({ type: 'daily', time: '18:00', days: [] }, NOW), at(13, 18, 0));
+  t('daily on weekdays skips the weekend', nr.nextRuns({ type: 'daily', time: '09:00', days: ['mon', 'tue', 'wed', 'thu', 'fri'] }, NOW, 3), [
+    at(16, 9, 0),
+    at(17, 9, 0),
+    at(18, 9, 0),
+  ]);
+  const savedEvery = { type: 'every', minutes: 60, anchor: at(12, 9, 0) };
+  const asEvery = { ...fresh, when: 'every', every: '1', unit: 'hours' };
+  t('board: a new one-off', nr.boardTiming(fresh, null, NOW), { type: 'once', at: at(13, 11, 0) });
+  t('board: an interval left as saved keeps its anchor', nr.boardTiming(asEvery, savedEvery, NOW), savedEvery);
+  t('board: a changed interval counts from now', nr.boardTiming({ ...asEvery, every: '2' }, savedEvery, NOW), { type: 'every', minutes: 120, anchor: NOW });
+  t('board: nothing while the form can’t say', nr.boardTiming({ ...asEvery, every: 'x' }, null, NOW), null);
+  t(
+    'how far off',
+    [30 * 1000, 25 * MIN, 2 * HOUR + 5 * MIN, 2 * HOUR, 14 * HOUR + 20 * MIN, 47 * HOUR, 3 * DAY + HOUR].map((d) => nr.untilText(NOW + d, NOW)),
+    ['in under a minute', 'in 25 min', 'in 2 h 5 min', 'in 2 h', 'in 14 h', 'in 47 h', 'in 3 days'],
+  );
+  t('board rows: how far off on the first only', nr.boardRows([at(13, 11, 0), at(14, 11, 0)], NOW), [
+    { at: at(13, 11, 0), day: 'Today', time: '11:00', until: 'in 40 min' },
+    { at: at(14, 11, 0), day: 'Tomorrow', time: '11:00', until: null },
+  ]);
+  t('ruler: every 6 hours', nr.rulerMarks({ type: 'every', minutes: 360, anchor: NOW }, NOW, DAY), [0.25, 0.5, 0.75, 1]);
+  t('ruler: every 15 min prints a barcode', nr.rulerMarks({ type: 'every', minutes: 15, anchor: NOW }, NOW, DAY).length, 96);
+  t(
+    'how busy an interval keeps it',
+    [15, 60, 24 * 60, 200, 2 * 24 * 60, 36 * 60].map(ec.perDayText),
+    ['96 runs a day', '24 runs a day', '1 run a day', 'about 7 runs a day', 'a run every 2 days', 'a run every 36 hours'],
+  );
+  t('ticket tags', [ec.ticketTag(null), ec.ticketTag('s0123456789ab')], ['Draft', 'No. 89AB']);
+  t('task length', ec.lengthText('  Check it  '), '8 / 4000');
+  t(
+    'the face',
+    [fc.faceCue(null, false), fc.faceCue(null, true), fc.faceCue('added', true), fc.faceCue('sent', false), fc.faceCue('deleted', false)],
+    [{}, { mood: 'busy' }, { mood: 'happy', hearts: 2 }, { mood: 'happy', hearts: 1 }, { mood: 'asleep' }],
+  );
 
   // --- how tasks reach a kind (Choose agent, agent page) ---------------------------------
   const k2 = await import(src('ui/schedule/logic/scheduleCopy.ts'));

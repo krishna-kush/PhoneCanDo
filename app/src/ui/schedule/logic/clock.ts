@@ -75,6 +75,13 @@ export function dayLabel(day: number, now: number): string {
   return dateText(day, now);
 }
 
+/** A day on the editor's tile: how far off it is ("Today", "Tomorrow", "In 5 days") over its date ("Tue 18 Nov"). */
+export function dayTile(day: number, now: number): { near: string; date: string } {
+  const n = daysFrom(now, day);
+  const near = n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `In ${n} days`;
+  return { near, date: dateText(day, now) };
+}
+
 /** The barcode line on a day's box (common/rows/barcode/): today's, tomorrow's, or its weekday's. */
 export function dayBarcode(day: number, now: number): BarcodeId {
   const n = daysFrom(now, day);

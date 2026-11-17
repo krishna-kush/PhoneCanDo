@@ -3,10 +3,18 @@ import { Animated, Easing } from 'react-native';
 import { useTheme } from './globals';
 import { useReduceMotion } from './useReduceMotion';
 
+type Props = {
+  children: string;
+  slam?: boolean;
+  tone?: 'primary' | 'secondary';
+  /** Across a whole card (a work order filed): twice the size, inked heavier, on the card's paper. */
+  big?: boolean;
+};
+
 // The site's rubber stamp (.stamp): a red outline label tilted -4°, for a
 // moment worth marking (ACTIVE, RECOMMENDED, READY). `slam` lands it like a
 // stamp on paper the first time it shows.
-export default function Stamp({ children, slam = false, tone = 'primary' }: { children: string; slam?: boolean; tone?: 'primary' | 'secondary' }) {
+export default function Stamp({ children, slam = false, tone = 'primary', big = false }: Props) {
   const t = useTheme();
   const reduce = useReduceMotion();
   const land = useRef(new Animated.Value(slam ? 0 : 1)).current;
@@ -25,18 +33,19 @@ export default function Stamp({ children, slam = false, tone = 'primary' }: { ch
     <Animated.Text
       style={{
         alignSelf: 'flex-start',
-        paddingHorizontal: 7,
-        paddingVertical: 4,
-        borderWidth: 1,
+        paddingHorizontal: big ? 14 : 7,
+        paddingVertical: big ? 6 : 4,
+        borderWidth: big ? 3 : 1,
         borderColor: ink,
+        backgroundColor: big ? t.panel : undefined,
         color: ink,
-        fontFamily: 'GeistMono-Regular',
-        fontSize: 10,
-        letterSpacing: 1.4,
+        fontFamily: big ? 'GeistMono-Bold' : 'GeistMono-Regular',
+        fontSize: big ? 22 : 10,
+        letterSpacing: big ? 4 : 1.4,
         textTransform: 'uppercase',
         opacity: land.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.9, 0.9] }),
         transform: [
-          { rotate: '-4deg' },
+          { rotate: big ? '-7deg' : '-4deg' },
           { scale: land.interpolate({ inputRange: [0, 1], outputRange: [1.8, 1] }) },
         ],
       }}

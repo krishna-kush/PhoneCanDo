@@ -1,8 +1,8 @@
 // What the schedule screens say: the page's intro and empty lines, the
-// on-time line, who set a schedule, what each run did, the editor's
-// labels and hints, the agent page's rows and the runner's refusals in
-// plain words. Plain and short, like the rest of the app. Pure (zero RN
-// imports).
+// on-time line, who set a schedule, what each run did, the agent page's
+// rows and the runner's refusals in plain words (the editor's own words
+// are editorCopy.ts). Plain and short, like the rest of the app. Pure
+// (zero RN imports).
 import type { ChatMode, RunOutcome, ScheduleRun, SetBy } from '../../../engine/schedule/types';
 import { messageTime } from '../../messages/logic/messagesCopy.ts';
 
@@ -130,51 +130,15 @@ export function countText(n: number): string {
   return n === 1 ? '1 schedule' : `${n} schedules`;
 }
 
-// The editor.
-
-export function editorTitle(editing: boolean): string {
-  return editing ? 'Edit schedule' : 'New schedule';
-}
-
-export const AGENT_LABEL = 'Agent';
-export const TASK_LABEL = 'Task';
-export const TASK_PLACEHOLDER = 'Check the nightly build and fix what broke.';
-export const TASK_HINT = 'The agent gets this as a task from you at that time.';
-export const AGENT_SET_NOTE = 'The agent set this one for itself. You can still change or delete it.';
-export const OFF_NOTE = "It's switched off: it won't run until you switch it on in the list.";
-export const WHEN_LABEL = 'When';
-export const TIME_PLACEHOLDER = '09:00';
-export const EVERY_HINT = 'At least every 15 minutes. The first run is one interval from now.';
-export const DAYS_HINT = 'None picked: every day.';
-export const CHAT_LABEL = 'Chat';
-
-export const WHEN_WORDS = { once: 'Once', every: 'Every', daily: 'Daily' } as const;
-export const UNIT_WORDS = { min: 'min', hours: 'hours' } as const;
+// Shared with the editor (its own words are editorCopy.ts).
 
 export function chatLabel(chat: ChatMode): string {
   return chat === 'new' ? 'New chat' : 'Same chat';
 }
 
-export function chatNote(chat: ChatMode): string {
-  return chat === 'new' ? 'Each run starts a fresh chat.' : 'Each run goes on in the chat it was in last.';
-}
-
 export function saveLabel(editing: boolean): string {
   return editing ? 'Save' : 'Add schedule';
 }
-
-export const RUN_NOW = 'Run now';
-
-/** After Run now; with changes not saved yet, it ran as saved. */
-export function runNowSent(dirty: boolean): string {
-  return dirty ? 'Running it now, as saved. Save to keep your changes.' : 'Running it now.';
-}
-
-export const CANCEL = 'Cancel';
-export const DELETE = 'Delete';
-export const DELETE_TITLE = 'Delete this schedule?';
-export const DELETE_MESSAGE = "It won't run again. Its past runs stay in the list.";
-export const DELETE_FAILED = "Couldn't delete it.";
 
 // The agent page.
 
