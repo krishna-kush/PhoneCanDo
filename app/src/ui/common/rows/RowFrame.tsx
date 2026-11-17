@@ -19,7 +19,7 @@ type Props = {
   children: ReactNode;
   /** A row you press: Android's ripple across it, and RowPress for what moves with it. */
   press?: Press;
-  /** Half faded: it is busy and takes no press. */
+  /** Half faded: it is busy (or can't be picked) and takes no press: no ripple, no lean, disabled to a screen reader. */
   dim?: boolean;
   /**
    * How far the press area reaches past its slot on each side (the padding
@@ -69,9 +69,9 @@ export default function RowFrame({ children, press, dim = false, reach, bare = f
     <RowPress.Provider value={pressed}>
       <Pressable
         onPress={dim ? undefined : press.onPress}
-        onPressIn={() => sink(1)}
-        onPressOut={() => sink(0)}
-        android_ripple={{ color: grouped ? t.secondarySoft : t.line }}
+        onPressIn={dim ? undefined : () => sink(1)}
+        onPressOut={dim ? undefined : () => sink(0)}
+        android_ripple={dim ? undefined : { color: grouped ? t.secondarySoft : t.line }}
         style={
           reach && {
             marginHorizontal: -reach.x,
@@ -83,7 +83,7 @@ export default function RowFrame({ children, press, dim = false, reach, bare = f
         accessibilityRole={press.role}
         accessibilityLabel={press.label}
         accessibilityHint={press.hint}
-        accessibilityState={press.state}
+        accessibilityState={dim ? { ...press.state, disabled: true } : press.state}
       >
         {body}
       </Pressable>
