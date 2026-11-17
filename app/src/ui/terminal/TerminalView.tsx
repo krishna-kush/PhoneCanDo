@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Asset } from 'expo-asset';
-import { TextInput } from 'react-native';
+import { Linking, TextInput } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { errorMessage } from '../../engine/errors/message';
@@ -15,6 +15,7 @@ import { keyboardRoom } from '../common/keyboard/room';
 import { arrowSeq, wheelSeq } from './keys';
 import type { PtyEnd, PtyTransport } from './transport/types';
 import LogoLoader from '../common/LogoLoader';
+import { isWebLink } from '../common/promptQueue';
 import { useTheme } from '../common/globals';
 import { useTermTheme, type ThemePageMsg } from './theme/useTermTheme';
 import { isTerminalAvailable, TerminalGestureHost } from '../../engine/terminal';
@@ -29,6 +30,8 @@ type PageMsg =
   | { type: 'scrolled'; up: boolean }
   | { type: 'input'; data: string }
   | { type: 'title'; title: string }
+  /** A link the program printed (OSC 8) was tapped. */
+  | { type: 'link'; uri: string }
   | ThemePageMsg;
 
 type Props = {
@@ -182,6 +185,10 @@ export default function TerminalView({ transport, active, name, initialInput, on
         boostPump(n, msg.t ?? Date.now());
       } else if (msg.type === 'scrolled') {
         scrolledUp.current = msg.up;
+      } else if (msg.type === 'link') {
+        // Your own tap on it: a web link opens at once, as a link in any
+        // terminal app does; anything else (file://, a scheme) stays put.
+        if (isWebLink(msg.uri)) Linking.openURL(msg.uri.trim()).catch(() => {});
       }
       // 'input' from the page is ignored: RN input owns the keyboard.
       // The page runs with disableStdin precisely because WebView IME

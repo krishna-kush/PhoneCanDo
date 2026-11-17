@@ -46,7 +46,16 @@
     // Unfocused cursor renders as a solid block, not hollow: our page never
     // holds window focus steadily (IME interplay), and hollowness reads as
     // "broken". The RN input owns real focus; this is display-only.
-    cursorInactiveStyle: 'block'
+    cursorInactiveStyle: 'block',
+    // A link a TUI prints (OSC 8) goes to the app, which hands a web link
+    // to Android. xterm's own handler asks with confirm() and then opens a
+    // window, and a WebView does neither: the tap showed a "file://" dialog
+    // and went nowhere.
+    linkHandler: {
+      activate: function (e, uri) {
+        post({ type: 'link', uri: String(uri || '').slice(0, 4096) });
+      }
+    }
   });
   var el = document.getElementById('term');
 
