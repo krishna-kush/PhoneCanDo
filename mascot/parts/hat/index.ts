@@ -17,15 +17,19 @@ import { crown } from './crown.ts';
 import { halo } from './halo.ts';
 import { hardhat } from './hardhat.ts';
 import { headband } from './headband.ts';
+import { headlamp } from './headlamp.ts';
 import { headphones } from './headphones.ts';
 import { headset } from './headset.ts';
 import { horns } from './horns.ts';
+import { mapHat } from './mapHat.ts';
 import { mohawk } from './mohawk.ts';
 import { mortarboard } from './mortarboard.ts';
 import { party } from './party.ts';
+import { pillbox } from './pillbox.ts';
 import { propeller } from './propeller.ts';
 import { santa } from './santa.ts';
 import { shades } from './shades.ts';
+import { signpost } from './signpost.ts';
 import { sprout } from './sprout.ts';
 import { tophat } from './tophat.ts';
 import { tuft } from './tuft.ts';
@@ -50,15 +54,19 @@ export const HATS = {
   halo,
   hardhat,
   headband,
+  headlamp,
   headphones,
   headset,
   horns,
+  mapHat,
   mohawk,
   mortarboard,
   party,
+  pillbox,
   propeller,
   santa,
   shades,
+  signpost,
   sprout,
   tophat,
   tuft,

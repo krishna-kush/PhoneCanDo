@@ -72,6 +72,9 @@ export const DESIGNS = [
   { id: 'gentleman', name: 'Gentleman', hat: 'tophat', face: 'monocle' },
   { id: 'mustache', name: 'Mustache', face: 'mustache' },
   { id: 'shy', name: 'Shy', face: 'blush' },
+  { id: 'usher', name: 'Usher', hat: 'pillbox', neck: 'bowtie' },
+  { id: 'miner', name: 'Miner', hat: 'headlamp', neck: 'scarf' },
+  { id: 'navigator', name: 'Navigator', hat: 'mapHat' },
 ] as const satisfies readonly Design[];
 
 /**
@@ -81,11 +84,24 @@ export const DESIGNS = [
  */
 export const EARNED = [{ id: 'shift-lead', name: 'Shift lead', hat: 'hardhat', neck: 'medal' }] as const satisfies readonly Design[];
 
-export type DesignId = (typeof DESIGNS)[number]['id'] | (typeof EARNED)[number]['id'];
+/**
+ * Our own characters' outfits, each one A-series unit's alone (its serial,
+ * A-01 up, is its name, which the app never lets an agent take): never
+ * picked at random, never offered in a picker, never an agent's look.
+ * A-09 is the app's guide, who leads the way on its first shift: a
+ * signpost on its head, its arrow pointing the way it looks.
+ */
+export const OURS = [{ id: 'a09', name: 'A-09', hat: 'signpost' }] as const satisfies readonly Design[];
 
-const BY_ID = new Map<string, Design>([...DESIGNS, ...EARNED].map((d) => [d.id, d]));
+export type DesignId = (typeof DESIGNS)[number]['id'] | (typeof EARNED)[number]['id'] | (typeof OURS)[number]['id'];
+
+const BY_ID = new Map<string, Design>([...DESIGNS, ...EARNED, ...OURS].map((d) => [d.id, d]));
+const OUR_IDS = new Set<string>(OURS.map((d) => d.id));
 
 /** A design by its id; null for one we no longer have. */
 export const designOf = (id: string): Design | null => BY_ID.get(id) ?? null;
 
 export const isDesignId = (id: unknown): id is DesignId => typeof id === 'string' && BY_ID.has(id);
+
+/** A design an agent may wear: any but our own characters'. */
+export const isWearable = (id: unknown): id is DesignId => isDesignId(id) && !OUR_IDS.has(id);

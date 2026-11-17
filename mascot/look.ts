@@ -2,7 +2,7 @@
 // agent keeps, and what a page hands round.
 
 import { SHAPES, type Shape } from './body.ts';
-import { isDesignId, type DesignId } from './designs.ts';
+import { isWearable, type DesignId } from './designs.ts';
 
 export type Look = {
   design: DesignId;
@@ -18,10 +18,14 @@ export const lookKey = (l: Look) => `${l.design}:${l.shape}:${l.swap ? 1 : 0}`;
 
 export const sameLook = (a: Look, b: Look) => lookKey(a) === lookKey(b);
 
-/** A look read back from storage, or null when it is not one (or names a design we no longer have). */
+/**
+ * An agent's look read back from storage, or null when it is not one (or
+ * names a design we no longer have, or one of our own characters', which
+ * no agent wears).
+ */
 export function readLook(v: unknown): Look | null {
   if (!v || typeof v !== 'object') return null;
   const { design, shape, swap } = v as Record<string, unknown>;
-  if (!isDesignId(design) || !SHAPES.includes(shape as Shape) || typeof swap !== 'boolean') return null;
+  if (!isWearable(design) || !SHAPES.includes(shape as Shape) || typeof swap !== 'boolean') return null;
   return { design, shape: shape as Shape, swap };
 }
