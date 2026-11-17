@@ -9,6 +9,7 @@ import Note from '../parts/Note';
 import ProgressBar from '../parts/ProgressBar';
 import AgentPicker from './AgentPicker';
 import ModelStep from './ModelStep';
+import StatKey from './picker/arcade/StatKey';
 import { useApplicantLooks } from './picker/useApplicantLooks';
 import { useModelPick } from './useModelPick';
 import { useNewAgent } from './useNewAgent';
@@ -21,6 +22,7 @@ import { useOffers } from './useOffers';
 // Without a place yet (the drawer's New agent), Next goes on to pick where
 // it runs (ChoosePlace), judged then; with one (New agent here, Android
 // only) it is judged against that place and this step makes the agent.
+// The stat key at its foot explains every level the showcase shows.
 export default function ChooseAgent({ target, picked }: { target: NewAgentTarget | null; picked: string | null }) {
   const push = useAppStore((s) => s.push);
   const envs = useLinuxStore((s) => s.envs);
@@ -57,6 +59,7 @@ export default function ChooseAgent({ target, picked }: { target: NewAgentTarget
           Add your own agent
         </AppButton>
       ) : null}
+      <StatKey />
     </Screen>
   );
 }

@@ -3,8 +3,9 @@
 // templates or secrets (KindView); a field the list leaves out reads as its
 // default (stateFolder: false; inbox: pull, so its agents read messages
 // only when they ask; canWake: false; messaging: none; schedules: false;
-// acp: false, no ACP mode). Read and parsed once per JS run, and
-// again after a custom agent kind is saved or deleted (reloadKinds). Screens
+// acp: false, no ACP mode; about: null, nothing told). Read and parsed once
+// per JS run, and again after a custom agent kind is saved or deleted
+// (reloadKinds). Screens
 // look up the kind of the agent in question (`agentKind(agent.kind)`); there
 // is no app-wide kind.
 import type { KindView } from '../../../../agents/kit/ts/contract/view.ts';
@@ -28,6 +29,7 @@ export function allKinds(): KindView[] {
         messaging: levelOf(k.messaging),
         schedules: k.schedules === true,
         acp: k.acp === true,
+        about: k.about != null && typeof k.about === 'object' ? k.about : null,
       }));
     } catch {
       // No native runner (Expo Go, web): no kinds, and no agents either.
@@ -78,6 +80,7 @@ export function agentKind(id: AgentKindId): KindView {
     messaging: 'none',
     schedules: false,
     acp: false,
+    about: null,
   };
   unknown.set(id, standIn);
   return standIn;

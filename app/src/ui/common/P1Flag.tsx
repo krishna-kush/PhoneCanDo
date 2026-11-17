@@ -18,9 +18,8 @@ const ON_MS = 700;
 const OFF_MS = 300;
 
 // The player's flag, red with "P1" on it, blinking as an arcade's player
-// cursor does (Choose agent's picked applicant, the setup screen's player
-// line); it holds still while `still` (its page is
-// covered) or with reduce motion.
+// cursor does (the setup screen's player line); it holds still while
+// `still` (its page is covered) or with reduce motion.
 export default function P1Flag({ still = false, small = false }: { still?: boolean; small?: boolean }) {
   const reduce = useReduceMotion();
   const on = useSharedValue(1);

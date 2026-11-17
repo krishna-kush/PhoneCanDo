@@ -12,9 +12,16 @@ const GAP = 8;
 const SIDES = 32;
 
 // The arcade's grid of portraits, as many to a row as fit, sharing the
-// row evenly (the last row keeps the same widths). It starts from the
-// window's width, so it lays out right the first time.
-export default function PortraitGrid({ offers, selected, onSelect, looks }: PickerProps) {
+// row evenly (the last row keeps the same widths), the pick and VS mode's
+// challenger marked. It starts from the window's width, so it lays out right the
+// first time.
+type Props = PickerProps & {
+  challenger: string | null;
+  /** A hold on a portrait: put that kind up against the pick (VS mode). */
+  onChallenge: (kindId: string) => void;
+};
+
+export default function PortraitGrid({ offers, selected, challenger, onSelect, onChallenge, looks }: Props) {
   const window = useWindowDimensions().width;
   const [width, setWidth] = useState(window - SIDES);
   const columns = columnsFor(width, MIN_CELL, GAP);
@@ -23,7 +30,15 @@ export default function PortraitGrid({ offers, selected, onSelect, looks }: Pick
       {rowsOf(offers, columns).map((row) => (
         <XStack key={row[0].id} gap={GAP}>
           {row.map((o) => (
-            <Portrait key={o.id} offer={o} look={looks[o.id]} picked={o.id === selected} onSelect={() => onSelect(o.id)} />
+            <Portrait
+              key={o.id}
+              offer={o}
+              look={looks[o.id]}
+              picked={o.id === selected}
+              challenger={o.id === challenger}
+              onSelect={() => onSelect(o.id)}
+              onChallenge={selected ? () => onChallenge(o.id) : undefined}
+            />
           ))}
           {Array.from({ length: columns - row.length }, (_, i) => (
             <YStack key={i} flex={1} />
