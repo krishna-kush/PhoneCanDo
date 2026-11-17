@@ -8,6 +8,7 @@ import { clock } from '../logic/clock';
 import type { SceneProps } from './props';
 import StatusLine from './StatusLine';
 import Headline from './Headline';
+import OnceTag from './OnceTag';
 import TipBox from './TipBox';
 import Track from './Track';
 import { useElapsed } from './useElapsed';
@@ -17,8 +18,10 @@ import { useElapsed } from './useElapsed';
 // bar of four levels, one a stage, that the agent runs along (unpacking
 // fills its level as it goes, the quick ones dash through theirs) to the
 // flag; the player line and a running clock over it, a tip under it, a
-// new one every few seconds. At the finale: STAGE CLEAR! and the agent
-// jumps for joy; on a failure: CONTINUE? over Retry.
+// new one every few seconds. While the machine unpacks, the first level,
+// which plays only once ever: ONCE ONLY under the headline. At the
+// finale: STAGE CLEAR! and the agent jumps for joy; on a failure:
+// CONTINUE? over Retry.
 export default function ArcadeScene({ state, mascot, agentName, label }: SceneProps) {
   const running = !state.done && !state.failed;
   const elapsed = useElapsed(running);
@@ -36,7 +39,10 @@ export default function ArcadeScene({ state, mascot, agentName, label }: ScenePr
               {`${ARCADE.time.toUpperCase()} ${clock(elapsed)}`}
             </PlainText>
           </XStack>
-          <Headline state={state} />
+          <YStack gap="2">
+            <Headline state={state} />
+            {running && state.stage === 0 ? <OnceTag /> : null}
+          </YStack>
           <Track state={state} at={overall(state)} mascot={mascot} />
           <TipBox elapsed={elapsed} />
         </YStack>

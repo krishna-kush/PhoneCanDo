@@ -15,7 +15,7 @@ export function setupTitle({ path }: SetupContext): string {
 }
 
 export function setupNote({ path, play, noLinux }: SetupContext): string | null {
-  if (path === 'linux') return 'Takes about half a minute. No internet needed.';
+  if (path === 'linux') return 'Takes about half a minute, and only ever this once. No internet needed.';
   if (play) return null;
   if (noLinux === 'unavailable') return "Linux isn't available in this build, so your agent uses Android's own shell.";
   if (noLinux === 'skipped') return "Your agent uses Android's own shell. You can add a Linux agent later: tap its name up top, then New agent.";
@@ -25,11 +25,13 @@ export function setupNote({ path, play, noLinux }: SetupContext): string | null 
 /** Each stage's short name, for the track's levels. */
 export const STAGE_SHORT = ['Unpack', 'Detect', 'Set up', 'Start'] as const;
 
-/** Arcade: the headline as it goes, ends or stops, the player line, the clock and the tips. */
+/** Arcade: the headline as it goes, ends or stops, the once-only level's tag, the player line, the clock and the tips. */
 export const ARCADE = {
   loading: 'Now loading',
   clear: 'Stage clear!',
   stopped: 'Continue?',
+  /** Under the headline while the machine unpacks: first launch runs once ever (App's `setUp`). */
+  once: { tag: 'Once only', line: 'Bonus level: it never replays.' },
   player: (name: string) => `Player 1 · ${name}`,
   time: 'Time',
   tip: 'Tip',

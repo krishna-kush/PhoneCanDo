@@ -83,11 +83,17 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   in `agent/checks/logic/`), New agent (`new-agent/`;
   `new-env/` downloads a Linux), Systems (`list/`) and Custom agents
   (`custom-agents/`); pure parts in `env/logic/`. `setup/` is first
-  launch (the first agent and its machine). `starter/` is the first
+  launch (the first agent and its machine), once ever (prefs `setUp`):
+  with every agent deleted later, Home shows the empty office and its
+  NOW HIRING sign instead (`chat/noAgents/`). `starter/` is the first
   shift, a newcomer's guide: the hello sheet once the first agent is up,
   the Home card and drawer row while it runs, its page of missions (each
   ticked when `ShiftSignals.tsx` sees it happen, any skipped; long ones
-  ask before they show how), dares and the finale's earned mascot
+  ask before they show how; a mission's button never jumps there: `walk/`
+  leads the way from Home a tap at a time, pointing at each thing to tap,
+  a spot marked with `common/spot/`, with A-09, our guide, saying where
+  (`walk/guide.ts`); pure walks and layout in `walk/logic/`), dares and
+  the finale's earned mascot
   (`copy.ts`, `logic/dares.ts`, `reward.ts` pure; which missions and the
   marks are `state/logic/starter/`). Settings and About are
   app-wide only: Phone control sits on Settings itself, then a hub of rows
@@ -126,7 +132,9 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   deps), built on `theme/logo.json`: the body and its five shapes
   (`body.ts`), the parts a unit wears (`parts/{hat,neck,face}/`, a file
   each), the designs (`designs.ts`: a new design is a line; `EARNED` ones
-  are never picked at random, the app unlocks them), random picks
+  are never picked at random, the app unlocks them; `OURS` are our own
+  A-series characters' outfits, never an agent's, as an A-series serial is
+  never an agent's name), random picks
   (`pick.ts`) and the layout every side draws from (`layout/figure.ts`:
   blocks, eyes and marks, face on, side on or from behind; `layout/path.ts`
   SVG paths). The site's cards, backdrop and `/mascots` page and the app's

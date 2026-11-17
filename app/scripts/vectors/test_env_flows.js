@@ -327,6 +327,12 @@ const ui = (p) => src('ui/env/logic', p);
   t('linux title', setupTitle({ path: 'linux', play: false, noLinux: null }), 'Setting up your Linux machine');
   t('play title', setupTitle({ path: 'android', play: true, noLinux: 'unavailable' }), 'Getting your agent ready');
   t('play says nothing of Linux', setupNote({ path: 'android', play: true, noLinux: 'unavailable' }), null);
+  t('setting up Linux says it is a once-only step', /once/.test(setupNote({ path: 'linux', play: false, noLinux: null })), true);
+  const office = await import(src('ui/chat/noAgents/copy.ts'));
+  t('the empty office: its sign flickers a letter it has, A-01 dozes or wakes', [
+    office.SIGN.flicker >= 0 && office.SIGN.flicker < office.SIGN.hiring.length,
+    office.officeLine(false) !== office.officeLine(true),
+  ], [true, true]);
   t('unavailable note', setupNote({ path: 'android', play: false, noLinux: 'unavailable' }), "Linux isn't available in this build, so your agent uses Android's own shell.");
 
   console.log(`\nRESULT: ${pass} pass, ${fail} fail`);

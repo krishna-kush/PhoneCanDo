@@ -1,10 +1,11 @@
-import { Text, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent } from '../../state/agents';
 import Spot from '../common/spot/Spot';
 import CheckHomeBar from '../env/agent/checks/CheckHomeBar';
 import AgentWebView from './AgentWebView';
 import InstallHome from './InstallHome';
+import NoAgents from './noAgents/NoAgents';
 import AgentTuiHome from './tui/AgentTuiHome';
 import { useEngineTouch } from './useEngineTouch';
 
@@ -22,15 +23,8 @@ export default function HomeScreen() {
   const agent = useActiveAgent();
   useEngineTouch(agent?.id ?? null);
 
-  if (!agent) {
-    return (
-      <YStack flex={1} backgroundColor="bg" padding="4" justifyContent="center">
-        <Text color="muted" fontFamily="mono">
-          No agent yet. Tap the name up top to add one.
-        </Text>
-      </YStack>
-    );
-  }
+  // Every agent deleted: first launch never runs again, so the empty office offers a new one.
+  if (!agent) return <NoAgents />;
   return (
     <YStack flex={1}>
       <CheckHomeBar activeId={agent.id} />

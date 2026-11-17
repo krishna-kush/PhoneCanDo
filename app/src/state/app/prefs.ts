@@ -1,6 +1,7 @@
 // The user's app-wide choices, kept in AsyncStorage: theme, the terminal's
 // extra keys, the update offer (lite's switch, the build already offered at
-// a launch) and the restricted-settings guide's progress.
+// a launch), the restricted-settings guide's progress and whether first
+// launch's setup has run on this phone.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StateCreator } from 'zustand';
 import type { AppState } from '../app';
@@ -12,6 +13,7 @@ const EXTRA_KEYS_STICKY_KEY = 'phonecando.extraKeysSticky.v1';
 const UPDATE_PROMPT_MUTED_KEY = 'phonecando.updatePromptMuted.v1';
 const UPDATE_OFFERED_KEY = 'phonecando.updateOffered.v1';
 const A11Y_STEP_KEY = 'phonecando.a11yStep.v3';
+const SET_UP_KEY = 'phonecando.setUp.v1';
 
 export type PrefsSlice = {
   hydrated: boolean;
@@ -33,6 +35,12 @@ export type PrefsSlice = {
    * was showing: run the guide anyway. In-memory only.
    */
   a11yGuideForced: boolean;
+  /**
+   * First launch's setup has run on this phone, or an agent was ever here:
+   * it never runs again, and with every agent deleted Home offers a new
+   * one instead. This phone only.
+   */
+  setUp: boolean;
 
   hydrate: () => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
@@ -41,6 +49,8 @@ export type PrefsSlice = {
   setUpdateOffered: (versionCode: number) => Promise<void>;
   setA11yStep: (step: 1 | 2 | 3) => Promise<void>;
   setA11yGuideForced: (forced: boolean) => void;
+  /** Setup has run (or an agent is here): for good. */
+  markSetUp: () => Promise<void>;
 };
 
 // Persistence is best-effort: the in-memory value applies for this run.
@@ -60,23 +70,25 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
   updateOffered: 0,
   a11yStep: 1,
   a11yGuideForced: false,
+  setUp: false,
 
   hydrate: async () => {
     // The launch splash waits for this (the first frame's theme), so a read
     // failure still ends in hydrated, on the defaults.
     let stored: readonly (readonly [string, string | null])[] = [];
     try {
-      stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY, UPDATE_OFFERED_KEY]);
+      stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY, UPDATE_OFFERED_KEY, SET_UP_KEY]);
     } catch {
       // unreadable: defaults for this run
     }
-    const [theme, sticky, muted, step, offered] = stored.map(([, v]) => v);
+    const [theme, sticky, muted, step, offered, setUp] = stored.map(([, v]) => v);
     set({
       themeMode: theme === 'light' || theme === 'dark' ? theme : 'system',
       extraKeysSticky: sticky === '1',
       updatePromptMuted: muted === '1',
       updateOffered: Number.parseInt(offered ?? '0', 10) || 0,
       a11yStep: step === '2' ? 2 : step === '3' ? 3 : 1,
+      setUp: setUp === '1',
       hydrated: true,
     });
   },
@@ -107,4 +119,9 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
   },
 
   setA11yGuideForced: (a11yGuideForced) => set({ a11yGuideForced }),
+
+  markSetUp: async () => {
+    set({ setUp: true });
+    await save(SET_UP_KEY, '1');
+  },
 });

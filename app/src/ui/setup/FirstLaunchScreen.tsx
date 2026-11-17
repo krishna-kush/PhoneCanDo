@@ -13,13 +13,15 @@ import { useSetupProgress } from './useSetupProgress';
 /** The status line at the finale. */
 const READY = 'Ready';
 
-// Shown by App while no agent exists, and for the finale once the first
-// one does: sets up the first agent (the default kind, never asked) and
+// Shown by App at first launch, while no agent exists yet, and for the
+// finale once the first one does: sets up the first agent (the default kind, never asked) and
 // its machine (Default env, offline, about half a minute), or the Android
 // path where Linux is unavailable, as an arcade's loading screen with
 // the agent running to the flag (arcade/). Once the agent exists the finale plays
 // for FINALE_MS, then [onFinished] lets App show Home. A failure says
-// why, with Retry and, on the Linux path, Continue without Linux.
+// why, with Retry and, on the Linux path, Continue without Linux. It runs
+// once ever (App's `setUp`): with every agent deleted later, Home offers a
+// new one instead (chat/noAgents/).
 export default function FirstLaunchScreen({ onFinished }: { onFinished: () => void }) {
   const { ctx, imageId, phase, look, kindId, retry, skipLinux } = useFirstLaunch();
   const progress = useSetupProgress(imageId);

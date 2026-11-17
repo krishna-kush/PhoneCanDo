@@ -70,10 +70,17 @@ export default function App() {
   const prefsHydrated = useAppStore((s) => s.hydrated);
   const agentsHydrated = useAgentsStore((s) => s.hydrated);
   const hasAgents = useAgentsStore((s) => s.agents.length > 0);
-  // Set up from no agent: the setup screen stays for its finale once the
-  // first agent exists, then lets Home show.
+  const setUp = useAppStore((s) => s.setUp);
+  // First launch: no agent, and setup never ran here. The setup screen
+  // stays for its finale once the first agent exists, then lets Home show.
+  // It runs once ever: with every agent deleted later, Home offers a new
+  // one instead (chat/noAgents/).
   const [inSetup, setInSetup] = useState(false);
-  if (agentsHydrated && !hasAgents && !inSetup) setInSetup(true);
+  if (agentsHydrated && prefsHydrated && !hasAgents && !setUp && !inSetup) setInSetup(true);
+  // An agent here means setup has run, on installs from before the flag too.
+  useEffect(() => {
+    if (prefsHydrated && hasAgents && !setUp) void useAppStore.getState().markSetUp();
+  }, [prefsHydrated, hasAgents, setUp]);
 
   // Android Back walks what the screen shows: a step inside a page, the
   // drawer, the top page, the web UI's history, then leaves the app.
@@ -191,8 +198,8 @@ export default function App() {
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <KeyboardTracker />
           <SafeRoot backgroundColor={t.panel} onLayout={hideSplash}>
-            {!hasAgents || inSetup ? (
-              // No agent yet: setup creates the first one, then Home shows.
+            {inSetup ? (
+              // First launch: setup creates the first agent, then Home shows.
               <FirstLaunchScreen onFinished={() => setInSetup(false)} />
             ) : (
               // One box inside the safe area: the pages and the drawer are
