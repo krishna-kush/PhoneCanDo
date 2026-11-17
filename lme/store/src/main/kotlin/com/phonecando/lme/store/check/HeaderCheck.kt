@@ -5,6 +5,7 @@ import com.phonecando.lme.api.model.ModelShape
 import com.phonecando.lme.gguf.read.GgufReader
 import com.phonecando.lme.gguf.shape.ModelShapes
 import java.io.File
+import java.io.InputStream
 
 /** A model file's GGUF header, read and checked before the file becomes a model. */
 internal object HeaderCheck {
@@ -15,8 +16,11 @@ internal object HeaderCheck {
      * @throws LmeException.InvalidGguf when it is not a model llama.cpp can
      *   serve, or its `split.count` does not match [parts]
      */
-    fun shape(file: File, parts: Int): ModelShape {
-        val header = file.inputStream().use { GgufReader.read(it) }
+    fun shape(file: File, parts: Int): ModelShape = file.inputStream().use { shape(it, parts) }
+
+    /** The same from [input], read only as far as the header goes. */
+    fun shape(input: InputStream, parts: Int): ModelShape {
+        val header = GgufReader.read(input)
         val split = ModelShapes.splitCount(header)
         if (split != parts.toLong()) {
             throw LmeException.InvalidGguf(

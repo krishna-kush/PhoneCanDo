@@ -9,6 +9,7 @@ import com.phonecando.lme.api.model.ModelSource
 import com.phonecando.lme.api.model.ServeChoices
 import com.phonecando.lme.api.serve.MeasuredMemory
 import com.phonecando.lme.store.check.HeaderCheck
+import com.phonecando.lme.store.check.HeaderPeek
 import com.phonecando.lme.store.download.DownloadRequest
 import com.phonecando.lme.store.download.PendingDownload
 import com.phonecando.lme.store.ids.IdMaker
@@ -36,7 +37,9 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * The models on the phone (see [ModelLayout]): download from a URL with
  * resume, import from a stream, list, delete. A file becomes part of a model
- * only after its size, sha256 and GGUF header check out. Blocking; one
+ * only after its size, sha256 and GGUF header check out; a download's header
+ * is read from the network first, so one that is no model never downloads.
+ * Blocking; one
  * instance per models dir; the host runs one job per model at a time.
  *
  * HTTP goes through [http]; a Hugging Face token passed to [download] is
@@ -121,6 +124,12 @@ class ModelStore(
         val pending = state.download(id) ?: throw LmeException.NotFound("download $id")
         makeDir(layout.dir(id))
         checkSpace(pending.sizeBytes - bytesOnDisk(pending) + reserved(state.downloads, except = id))
+        val first = pending.files.first()
+        val firstTarget = layout.file(id, first.name)
+        if (!(firstTarget.isFile && firstTarget.length() == first.sizeBytes)) {
+            // Its header first, from the network: a file that is no model fails now, not after gigabytes.
+            rejectingBadGguf(id) { HeaderPeek.shape(RangeOpener.of(http, first.url, headersFor(first.url, token), first.name), pending.files.size) }
+        }
         val total = pending.sizeBytes
         var base = 0L
         for (file in pending.files) {
@@ -135,14 +144,7 @@ class ModelStore(
             }
             base += file.sizeBytes
         }
-        val shape = try {
-            HeaderCheck.shape(layout.file(id, pending.files.first().name), pending.files.size)
-        } catch (e: LmeException) {
-            if (e !is LmeException.InvalidGguf && e !is LmeException.TooLarge) throw e
-            registry.update { it.without(id) }
-            TreeDelete.delete(layout.dir(id).toPath())
-            throw e
-        }
+        val shape = rejectingBadGguf(id) { HeaderCheck.shape(firstTarget, pending.files.size) }
         val record = ModelRecord(
             id = id,
             name = shape.name ?: pending.name,
@@ -280,6 +282,16 @@ class ModelStore(
         val source = record.source as? ModelSource.HuggingFace ?: return false
         return source.repo == request.repo && source.revision == request.revision &&
             record.files.map { it.name to it.sha256 } == request.files.map { it.name to it.sha256 }
+    }
+
+    /** Runs [check]; a file that is no model we can serve takes download [id] and its files with it. */
+    private fun <T> rejectingBadGguf(id: String, check: () -> T): T = try {
+        check()
+    } catch (e: LmeException) {
+        if (e !is LmeException.InvalidGguf && e !is LmeException.TooLarge) throw e
+        registry.update { it.without(id) }
+        TreeDelete.delete(layout.dir(id).toPath())
+        throw e
     }
 
     private fun diskNames(): Set<String> = layout.root.list()?.toSet().orEmpty()

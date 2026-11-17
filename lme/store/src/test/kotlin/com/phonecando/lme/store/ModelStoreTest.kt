@@ -166,7 +166,8 @@ class ModelStoreTest {
         val bytes = TestModels.gguf(padding = 20_000)
         val served = Served(bytes)
         val url = "$hub/m.gguf"
-        fake.on(url, { Served(bytes, breakAfter = 7000).answer(it) }, served::answer)
+        // Each try reads the header first, then downloads.
+        fake.on(url, served::answer, { Served(bytes, breakAfter = 7000).answer(it) }, served::answer)
         val pending = store.startDownload(DownloadRequest("acme/m-GGUF", sha, listOf(RemoteFile("m.gguf", url, bytes.size.toLong(), served.sha256))))
 
         assertThrows<LmeException.Network> { store.download(pending.id) }
@@ -201,10 +202,11 @@ class ModelStoreTest {
     }
 
     @Test
-    fun `a download that is no model is removed with its files`() {
+    fun `a download that is no model is turned away by its header before it downloads`() {
         val notAModel = ByteArray(1000) { 9 }
         val pending = store.startDownload(DownloadRequest("acme/m-GGUF", sha, listOf(serve("x.gguf", notAModel))))
-        assertThrows<LmeException.InvalidGguf> { store.download(pending.id) }
+        assertEquals("no GGUF magic", assertThrows<LmeException.InvalidGguf> { store.download(pending.id) }.reason)
+        assertEquals(1, fake.requests.size)
         assertTrue(store.downloads().isEmpty())
         assertFalse(File(root, pending.id).exists())
 
