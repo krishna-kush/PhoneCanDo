@@ -45,7 +45,7 @@ jobs:
    `release-staged` artifact), which anyone signed in to GitHub could
    otherwise download for a day.
 3. **`pr`**: commits `app/app.json`, `app/package.json`,
-   `app/src/engine/updates.ts` and `web/src/data/release.json` (both APKs'
+   `app/src/engine/updates/manifest.ts` and `web/src/data/release.json` (both APKs'
    size and sha256) to `release/v<ver>` and opens a pull request to `prod`.
 
 ## Release from GitHub

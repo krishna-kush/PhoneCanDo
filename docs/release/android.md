@@ -84,7 +84,7 @@ The script:
    - The working tree has any change, untracked files included. This is
      checked before the script bumps the version files, so its own bump never
      counts. `--upload-only` allows exactly those three files to differ
-     (`app/app.json`, `app/package.json`, `app/src/engine/updates.ts`).
+     (`app/app.json`, `app/package.json`, `app/src/engine/updates/manifest.ts`).
    - GitHub does not have the commit (`repos/<repo>/commits/<sha>` answers
      404 or 422): push it first.
    - CI on the commit is not green. These block when they failed, were
@@ -177,7 +177,7 @@ The script:
    staged copy). This runs before the version bump, so a failed download
    leaves no edited files.
 4. Bumps `app/app.json` (`expo.version`, `android.versionCode`) and
-   `app/package.json`, and sets the repo in `app/src/engine/updates.ts`.
+   `app/package.json`, and sets the repo in `app/src/engine/updates/manifest.ts`.
 5. Runs `expo prebuild -p android --no-install --no-clean` once (the
    channels are flavors of one project; without `--no-clean` Expo CLI
    regenerates `app/android`, which `--clean` asks for explicitly), then

@@ -10,7 +10,7 @@ import { runPreflight } from './preflight.mjs';
 import { ciBlocks, ciProblems, preflightReport } from './report.mjs';
 
 const REPO = 'krishna-kush/PhoneCanDo';
-const VERSION_FILES = ['app/app.json', 'app/package.json', 'app/src/engine/updates.ts'];
+const VERSION_FILES = ['app/app.json', 'app/package.json', 'app/src/engine/updates/manifest.ts'];
 const loadCi = () => JSON.parse(readFileSync(new URL('./ci/fixtures/prod-a872e7b.json', import.meta.url), 'utf8'));
 const SHA = loadCi().sha;
 
@@ -145,7 +145,7 @@ test('dirty tree: refused, never overridable, and CI is still shown', () => {
 });
 
 test('upload-only: the three bumped version files are allowed', () => {
-  const git = fakeGit({ porcelain: ' M app/app.json\0 M app/package.json\0 M app/src/engine/updates.ts\0' });
+  const git = fakeGit({ porcelain: ' M app/app.json\0 M app/package.json\0 M app/src/engine/updates/manifest.ts\0' });
   const result = preflight({ git, allowDirty: VERSION_FILES });
   assert.equal(result.proceed, true);
   assert.match(result.gates[0].summary, /^clean \(version files may differ/);

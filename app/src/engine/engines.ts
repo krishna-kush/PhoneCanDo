@@ -139,10 +139,20 @@ export function stopAllEngines(keepRuns = false): Promise<void> {
   return nativeRunner().stopAllEngines(keepRuns);
 }
 
-/** The self-update's installer came back without installing: the runs stopAllEngines(true) kept go. */
-export function updateCancelled(): void {
-  if (!isRunnerAvailable()) return;
-  nativeRunner().updateCancelled();
+/**
+ * The self-update's installer came back without installing: the runs
+ * stopAllEngines(true) kept are offered back at once (each agent's notice
+ * has Continue). Resolves with those agents: a start of the app's own
+ * would settle their offer, so they wait for Continue.
+ */
+export async function updateCancelled(): Promise<string[]> {
+  if (!isRunnerAvailable()) return [];
+  try {
+    const offered = await nativeRunner().updateCancelled();
+    return Array.isArray(offered) ? offered : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Any engine, or any process an engine started, still alive. */

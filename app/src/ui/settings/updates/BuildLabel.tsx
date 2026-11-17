@@ -7,13 +7,13 @@ import { ROW_GUTTER } from '../../common/rows/place';
 import Stamp from '../../common/Stamp';
 import { type Channel, labelFields, labelStamp, tapeWord } from './copy';
 
-type Props = { channel: Channel; version: string; versionCode: number };
+type Props = { channel: Channel; version: string };
 
 // The build on this phone as a parcel's shipping label, on the site's hard
 // amber shadow: red tape across its top, the version big where an address
-// goes, its build, channel and contents, a faint barcode, and a stamp
+// goes, its channel and contents, a faint barcode, and a stamp
 // that slams on as the page opens (Delivered, Starter, Play keeps it).
-export default function BuildLabel({ channel, version, versionCode }: Props) {
+export default function BuildLabel({ channel, version }: Props) {
   return (
     <Plate>
       <XStack justifyContent="space-between" gap="3" paddingHorizontal={ROW_GUTTER} paddingVertical={8} backgroundColor="primary">
@@ -31,7 +31,7 @@ export default function BuildLabel({ channel, version, versionCode }: Props) {
         <PlainText fontSize={28} fontWeight="700" letterSpacing={-0.4}>
           {`v${version}`}
         </PlainText>
-        {labelFields(channel, versionCode).map((f) => (
+        {labelFields(channel).map((f) => (
           <FieldLine key={f.term} term={f.term} value={f.value} lines={2} />
         ))}
         <YStack paddingTop="2">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { XStack } from 'tamagui';
-import { useAppStore } from '../../../state/app';
+import { checkNow } from '../../../state/flows/update/check';
 import AppButton from '../../common/AppButton';
 import AgentFace from '../../common/face/AgentFace';
 import PlainText from '../../common/PlainText';
@@ -8,14 +8,14 @@ import { usePageActive } from '../../nav/pageActive';
 import { type Channel, courierLine, type Errand } from './copy';
 
 // How long A-01 looks about after a tap on Check; the answer itself comes
-// in the update dialog, whenever GitHub replies.
+// in the update box, whenever GitHub replies.
 const ERRAND_MS = 2500;
 
 // A-01 as the courier on the porch, and (full) Check for updates: a tap
-// asks for the check as before (the store's update prompt) and A-01 hops
-// and looks about for a moment, then says the answer pops up.
+// asks GitHub and A-01 hops and looks about for a moment, then says the
+// answer pops up. Shown while no newer build is known; one that is shows
+// in its place (update/parts/UpdateCard).
 export default function Courier({ channel }: { channel: Channel }) {
-  const requestUpdatePrompt = useAppStore((s) => s.requestUpdatePrompt);
   const active = usePageActive();
   const [errand, setErrand] = useState<Errand>('idle');
   const [hops, setHops] = useState(0);
@@ -29,7 +29,7 @@ export default function Courier({ channel }: { channel: Channel }) {
   const check = () => {
     setHops((n) => n + 1);
     setErrand('running');
-    requestUpdatePrompt();
+    void checkNow();
   };
 
   return (

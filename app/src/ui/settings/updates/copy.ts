@@ -22,9 +22,8 @@ export function labelStamp(c: Channel): string {
 }
 
 /** The label's lines under its version. */
-export function labelFields(c: Channel, versionCode: number): Field[] {
+export function labelFields(c: Channel): Field[] {
   return [
-    { term: 'Build', value: String(versionCode) },
     { term: 'Channel', value: c },
     // Only full has phone control: lite is the starter, Play doesn't allow it.
     { term: 'Contents', value: c === 'full' ? 'chat, terminal, eyes and hands' : 'chat + terminal' },
@@ -43,7 +42,7 @@ export function routeFields(c: Channel): Field[] {
   return [
     { term: 'From', value: 'Our GitHub releases' },
     { term: 'When', value: 'Two seconds after each launch, quietly' },
-    { term: 'Install', value: "We download it, Android's installer asks you" },
+    { term: 'Install', value: 'Two taps: download while you work, then install when it suits you' },
   ];
 }
 

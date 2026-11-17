@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { dirtyEntries, parsePorcelain } from './worktree.mjs';
 
-const VERSION_FILES = ['app/app.json', 'app/package.json', 'app/src/engine/updates.ts'];
+const VERSION_FILES = ['app/app.json', 'app/package.json', 'app/src/engine/updates/manifest.ts'];
 const z = (...records) => `${records.join('\0')}\0`;
 
 test('parses -z records, renames with their source, paths with spaces', () => {
@@ -27,16 +27,16 @@ test('any change stops a normal release, version files included', () => {
 });
 
 test('upload-only: the three version files may be edited in place, staged or not', () => {
-  const entries = parsePorcelain(z(' M app/app.json', 'M  app/package.json', 'MM app/src/engine/updates.ts'));
+  const entries = parsePorcelain(z(' M app/app.json', 'M  app/package.json', 'MM app/src/engine/updates/manifest.ts'));
   assert.deepEqual(dirtyEntries(entries, VERSION_FILES), []);
 });
 
 test('upload-only: anything beyond the version files, or not an in-place edit, still counts', () => {
-  const entries = parsePorcelain(z(' M app/app.json', ' M app/src/ui/chat/Chat.tsx', ' D app/package.json', 'UU app/src/engine/updates.ts'));
+  const entries = parsePorcelain(z(' M app/app.json', ' M app/src/ui/chat/Chat.tsx', ' D app/package.json', 'UU app/src/engine/updates/manifest.ts'));
   assert.deepEqual(dirtyEntries(entries, VERSION_FILES).map((e) => `${e.code} ${e.path}`), [
     ' M app/src/ui/chat/Chat.tsx',
     ' D app/package.json',
-    'UU app/src/engine/updates.ts',
+    'UU app/src/engine/updates/manifest.ts',
   ]);
   const renamed = parsePorcelain(z('R  app/app.json', 'app/app.old.json'));
   assert.equal(dirtyEntries(renamed, VERSION_FILES).length, 1);

@@ -179,7 +179,7 @@ jobs:
             dist/release/v${{ inputs.version }}/
             app/app.json
             app/package.json
-            app/src/engine/updates.ts
+            app/src/engine/updates/manifest.ts
           retention-days: 1
           if-no-files-found: error
 
@@ -279,7 +279,7 @@ jobs:
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/release-files"
-          for f in app/app.json app/package.json app/src/engine/updates.ts web/src/data/release.json; do
+          for f in app/app.json app/package.json app/src/engine/updates/manifest.ts web/src/data/release.json; do
             mkdir -p "$out/$(dirname "$f")"
             cp "$f" "$out/$f"
           done
@@ -321,7 +321,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          files=(app/app.json app/package.json app/src/engine/updates.ts web/src/data/release.json)
+          files=(app/app.json app/package.json app/src/engine/updates/manifest.ts web/src/data/release.json)
           for f in "${files[@]}"; do cp "$RUNNER_TEMP/release-files/$f" "$f"; done
           branch="release/v$VERSION"
           git config user.name 'github-actions[bot]'

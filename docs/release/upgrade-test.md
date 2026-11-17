@@ -12,8 +12,8 @@ installs its own update, so this has to be measured on a device.
 
 ## How to measure
 
-Build lite with `./manage build lite`. Its update dialog offers the live full
-release; the Update button hands the APK to Android's installer screen
+Build lite with `./manage build lite`. Its update box offers the live full
+release; Download, then Install, hands the APK to Android's installer screen
 (`ACTION_VIEW`), the production path. Play Protect's verdict is visible in
 logcat (`./manage device log`): look for `VerifyApps` lines with
 `Originating app`, `Installer app` and the final `VERIFICATION_ALLOW` or block.
@@ -42,12 +42,13 @@ the rule and this measurement fails.
    then open it from the Files app. It should install (lite has no sensitive
    permission). Allow "install unknown apps" for Files if asked.
 3. Start capture on the computer: `./manage device log | tee upgrade-test.log`
-4. Open PhoneCanDo. About two seconds later the dialog offers the full build.
-   Settings → About should say channel `lite`.
-5. Tap "Install full build". If "Install unknown apps" is off for PhoneCanDo,
-   the app says so first ("One quick OK from Android"); allow it in Android's
-   settings and come back, and the install starts by itself. Note exactly what
-   appears.
+4. Open PhoneCanDo. About two seconds later the update box offers the full
+   build. Settings → About should say channel `lite`.
+5. Tap "Download it" and wait for the download (the box comes back by itself
+   if you hide it), then tap "Install it". If "Install unknown apps" is off
+   for PhoneCanDo, the app says so first ("One quick OK from Android"); allow
+   it in Android's settings and come back, and the install carries on by
+   itself. Note exactly what appears.
 6. On full: Settings → Accessibility → PhoneCanDo. Note whether the toggle is
    greyed out ("restricted setting") and whether App info → ⋮ → "Allow
    restricted settings" unlocks it.

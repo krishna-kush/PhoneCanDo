@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getBuildChannel } from '../../engine/runner';
 import { runLimits } from '../../engine/runLimits';
-import { installedVersion } from '../../engine/updates';
+import { installedVersion } from '../../engine/updates/manifest';
 import { useAccountStore } from '../../state/account';
 import { useAppStore } from '../../state/app';
 import { useShareStore } from '../../state/share';
+import { useUpdateFact } from '../update/useUpdateFact';
 import LinkRow from '../common/LinkRow';
 import PageHeader from '../common/PageHeader';
 import RowGroup from '../common/rows/RowGroup';
@@ -26,7 +27,7 @@ export default function SettingsScreen() {
   const themeMode = useAppStore((s) => s.themeMode);
   const extraKeysSticky = useAppStore((s) => s.extraKeysSticky);
   const telemetry = useAppStore((s) => s.telemetry);
-  const updateReady = useAppStore((s) => s.updateReady);
+  const update = useUpdateFact();
   const signedIn = useAccountStore((s) => s.signedIn);
   const email = useAccountStore((s) => s.account?.email ?? s.profile?.email ?? null);
   const signInOffered = useAccountStore((s) => s.supported && s.configured);
@@ -48,7 +49,7 @@ export default function SettingsScreen() {
     limits,
     telemetry: telemetry.ready && telemetry.available ? telemetry.enabled : null,
     version: installedVersion().version,
-    updateReady,
+    update,
     account: { signedIn, email, offered: signInOffered },
     sharesSent,
   };

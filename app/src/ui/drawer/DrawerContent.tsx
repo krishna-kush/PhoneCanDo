@@ -3,7 +3,7 @@ import { ScrollView } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { messagesAvailable } from '../../engine/messages/native';
 import { getBuildChannel, isRunnerAvailable } from '../../engine/runner';
-import { installedVersion } from '../../engine/updates';
+import { installedVersion } from '../../engine/updates/manifest';
 import { useAgentsStore } from '../../state/agents';
 import { useAppStore } from '../../state/app';
 import { useKindsStore } from '../../state/kinds';

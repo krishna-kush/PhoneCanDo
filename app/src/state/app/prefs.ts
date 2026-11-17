@@ -19,14 +19,10 @@ export type PrefsSlice = {
   themeMode: ThemeMode;
   /** The terminal's extra keys stay up with the keyboard down too (else they come and go with it). */
   extraKeysSticky: boolean;
-  /** Bumped by Settings → Updates; UpdateDialog re-checks GitHub on change. */
-  updatePromptNonce: number;
   /** Lite: stop opening the full-build pitch on launch (Settings → Updates). */
   updatePromptMuted: boolean;
   /** The newest versionCode the update box opened for by itself at a launch (0: none); this phone only. */
   updateOffered: number;
-  /** A newer build the launch's background check found ("1.0.3"); null when none or not checked. In-memory only. */
-  updateReady: string | null;
   /**
    * Restricted-settings guide progress: 1 Android's note, 2 App info (Allow
    * restricted settings), 3 the Accessibility switch.
@@ -41,10 +37,8 @@ export type PrefsSlice = {
   hydrate: () => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setExtraKeysSticky: (sticky: boolean) => Promise<void>;
-  requestUpdatePrompt: () => void;
   setUpdatePromptMuted: (muted: boolean) => Promise<void>;
   setUpdateOffered: (versionCode: number) => Promise<void>;
-  setUpdateReady: (version: string | null) => void;
   setA11yStep: (step: 1 | 2 | 3) => Promise<void>;
   setA11yGuideForced: (forced: boolean) => void;
 };
@@ -62,10 +56,8 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
   hydrated: false,
   themeMode: 'system',
   extraKeysSticky: false,
-  updatePromptNonce: 0,
   updatePromptMuted: false,
   updateOffered: 0,
-  updateReady: null,
   a11yStep: 1,
   a11yGuideForced: false,
 
@@ -99,8 +91,6 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
     await save(EXTRA_KEYS_STICKY_KEY, extraKeysSticky ? '1' : '0');
   },
 
-  requestUpdatePrompt: () => set((s) => ({ updatePromptNonce: s.updatePromptNonce + 1 })),
-
   setUpdatePromptMuted: async (updatePromptMuted) => {
     set({ updatePromptMuted });
     await save(UPDATE_PROMPT_MUTED_KEY, updatePromptMuted ? '1' : '0');
@@ -110,8 +100,6 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
     set({ updateOffered });
     await save(UPDATE_OFFERED_KEY, String(updateOffered));
   },
-
-  setUpdateReady: (updateReady) => set({ updateReady }),
 
   setA11yStep: async (a11yStep) => {
     set({ a11yStep });

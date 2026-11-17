@@ -5,6 +5,7 @@
 // sits on Settings itself, above them. Pure (zero RN imports).
 import type { RunLimits } from '../../../engine/runLimits';
 import type { SettingsPageId } from '../../../state/app/routes';
+import type { UpdateStep } from '../../../state/logic/update/steps.ts';
 import * as account from '../../account/copy.ts';
 import * as refer from '../../recommend/copy.ts';
 import { capsLine } from './caps.ts';
@@ -18,8 +19,8 @@ export type HubFacts = {
   /** Usage stats on or off; null while unknown or not in this build. */
   telemetry: boolean | null;
   version: string;
-  /** A newer build the launch's background check found ("1.0.3"); null when none. */
-  updateReady: string | null;
+  /** A newer build a check found ("1.0.3"), where its update stands and its download's percent; null when none. */
+  update: { version: string; step: UpdateStep | null; pct: number | null } | null;
   /** Who is signed in; `offered` when this phone and build can sign in at all. */
   account: { signedIn: boolean; email: string | null; offered: boolean };
   /** Links shared from this phone (and the account). */
@@ -61,11 +62,18 @@ export function hubRows(f: HubFacts): HubRow[] {
       target: 'updates',
       title: 'Updates',
       line: updatesLine(f.channel),
-      now: f.updateReady ? `v${f.updateReady} is out · you have v${f.version}` : `v${f.version} · ${f.channel}`,
+      now: updatesNow(f),
     },
     { target: 'refer', title: refer.ROW_TITLE, line: refer.ROW_LINE, now: refer.rowNow(f.sharesSent) },
     { target: 'about', title: 'About', line: 'Version, licences, and a mascot that likes boops', now: `v${f.version}` },
   ];
+}
+
+function updatesNow({ update: u, version, channel }: HubFacts): string {
+  if (!u) return `v${version} · ${channel}`;
+  if (u.step === 'downloading') return u.pct == null ? `v${u.version} · downloading` : `v${u.version} · downloading ${u.pct}%`;
+  if (u.step === 'downloaded') return `v${u.version} downloaded · ready to install`;
+  return `v${u.version} is out · you have v${version}`;
 }
 
 function updatesLine(channel: string): string {

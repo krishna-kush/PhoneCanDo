@@ -80,7 +80,7 @@ export const GROUPS = [
 ];
 
 const FOOTER = [
-  'Setup: Node 22+. GITHUB_REPO comes from app/src/engine/updates.ts,',
+  'Setup: Node 22+. GITHUB_REPO comes from app/src/engine/updates/manifest.ts,',
   'PHONECANDO_RELEASE_ENV from the repo-root .env (release signing, TCE_READ_TOKEN;',
   '.env.example lists the keys), ANDROID_HOME from /opt/android-sdk. build and',
   'release run the limits check first, then ask to show the data report (Enter',

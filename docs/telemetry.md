@@ -196,7 +196,7 @@ The server drops names that are not in this list:
 |---|---|
 | `update.check.none`, `update.check.newer`, `update.check.failed` | result of an update check |
 | `update.offered` | the update dialog offered a newer build |
-| `update.accepted`, `update.cancelled` | you started or cancelled it |
+| `update.accepted`, `update.cancelled` | you started or walked away from a step: `stage` is `download` or `install` when you start one, and where you left it when you cancel (`offer`, `downloading`, `install`, `permission`, `installer`) |
 | `update.downloaded`, `update.failed` | how the download and hand-off went |
 | `update.installed` | first launch on a higher `versionCode` (so it also counts Play and adb updates), with `from` and `to` |
 | `a11y.step.<n>.reached`, `a11y.step.<n>.done` | step `n` (0–99) of the accessibility setup guide shown / finished |

@@ -52,7 +52,7 @@ const APP_PKG = join(APP, 'package.json');
 const RELEASE_JSON = join(ROOT, 'web/src/data/release.json');
 // The site's second opinion: the release and commit three AIs ruled on.
 const HEARING_JSON = join(ROOT, 'web/src/data/secondOpinion.json');
-const UPDATES_TS = join(APP, 'src/engine/updates.ts');
+const UPDATES_TS = join(APP, 'src/engine/updates/manifest.ts');
 // What a release edits before building; --upload-only finds them bumped.
 const VERSION_FILES = [APP_JSON, APP_PKG, UPDATES_TS];
 const apkFor = (flavor) =>
@@ -208,7 +208,7 @@ function main() {
       ].join(', ')}`,
     );
     for (const line of linuxPlan(preflight, assets)) console.log(line);
-    console.log('File edits OK: app/app.json, app/package.json, app/src/engine/updates.ts');
+    console.log('File edits OK: app/app.json, app/package.json, app/src/engine/updates/manifest.ts');
     console.log('After the uploads: web/src/data/release.json');
     console.log(
       `Manifest: ${JSON.stringify(

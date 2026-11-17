@@ -19,7 +19,7 @@ export function releaseEnv() {
   env.ANDROID_HOME ??= '/opt/android-sdk';
   env.PHONECANDO_RELEASE_ENV ??= localEnvFile();
   if (!env.GITHUB_REPO) {
-    const match = readFileSync(join(APP, 'src/engine/updates.ts'), 'utf8').match(/const REPO = '([^']+)'/);
+    const match = readFileSync(join(APP, 'src/engine/updates/manifest.ts'), 'utf8').match(/const REPO = '([^']+)'/);
     if (match) env.GITHUB_REPO = match[1];
   }
   return env;

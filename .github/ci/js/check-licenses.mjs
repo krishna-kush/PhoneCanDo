@@ -15,12 +15,12 @@
 //   texts     each license the dialog names has its full text there exactly
 //             once (other entries point to it), in licenses.ts or the
 //             ./license-texts/ modules it interpolates.
-//   repo      both files point at our releases page, app/src/engine/updates.ts
+//   repo      both files point at our releases page, app/src/engine/updates/manifest.ts
 //             REPO (the repo the app updates from).
 //
 //   node .github/ci/js/check-licenses.mjs [--notices <md>] [--app <licenses.ts>]
 // The flags read other copies (e.g. a deliberately broken one in a scratch
-// dir); pins, build files and updates.ts always come from the repo.
+// dir); pins, build files and updates/manifest.ts always come from the repo.
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { ROOT, createReport, summary } from './lib.mjs';
@@ -200,8 +200,8 @@ for (const [start, [end, license]] of needed) {
 }
 
 // repo
-const repo = readFileSync(join(ROOT, 'app/src/engine/updates.ts'), 'utf8').match(/const REPO = '([^']+)'/)?.[1];
-if (!repo) r.error("no `const REPO = '...'` in app/src/engine/updates.ts", 'app/src/engine/updates.ts');
+const repo = readFileSync(join(ROOT, 'app/src/engine/updates/manifest.ts'), 'utf8').match(/const REPO = '([^']+)'/)?.[1];
+if (!repo) r.error("no `const REPO = '...'` in app/src/engine/updates/manifest.ts", 'app/src/engine/updates/manifest.ts');
 for (const [text, file] of [[notesText, NOTICES], [appText, APP]]) {
   if (repo && !text.includes(`https://github.com/${repo}/releases`)) r.error(`no link to https://github.com/${repo}/releases (source offer)`, file);
   for (const [, other] of text.matchAll(/github\.com\/([\w.-]+\/PhoneCanDo)\b/gi)) {

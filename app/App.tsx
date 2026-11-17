@@ -23,7 +23,7 @@ import SafeRoot from './src/ui/common/SafeRoot';
 import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
 import PermissionDialog from './src/ui/chat/background/PermissionDialog';
 import UnlockDialog from './src/ui/common/UnlockDialog';
-import UpdateDialog from './src/ui/common/UpdateDialog';
+import UpdateBox from './src/ui/update/UpdateBox';
 import ThemeCurtain from './src/ui/settings/look/ThemeCurtain';
 import KeyboardTracker from './src/ui/common/keyboard/KeyboardTracker';
 import MemoryGuard from './src/ui/memory/MemoryGuard';
@@ -222,7 +222,7 @@ export default function App() {
           <AccessibilityDialog />
           <OpenUrlDialog />
           <PermissionDialog />
-          <UpdateDialog />
+          <UpdateBox />
           <ThemeCurtain />
         </SafeAreaProvider>
         </KeyboardProvider>

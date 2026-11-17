@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getBuildChannel, isRunnerAvailable } from '../../engine/runner';
-import { installedVersion } from '../../engine/updates';
+import { installedVersion } from '../../engine/updates/manifest';
 import { useAppStore } from '../../state/app';
 import { useStarterStore } from '../../state/starter';
 import LicensesDialog from '../common/LicensesDialog';

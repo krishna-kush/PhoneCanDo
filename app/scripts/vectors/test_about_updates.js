@@ -64,8 +64,9 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('channels', ['full', 'lite', 'play', '', 'beta'].map(u.channelOf), ['full', 'lite', 'play', 'full', 'full']);
   t('tape words', ['full', 'lite', 'play'].map(u.tapeWord), ['Full build', 'Starter build', 'Via Play']);
   t('stamps', ['full', 'lite', 'play'].map(u.labelStamp), ['Delivered', 'Starter', 'Play keeps it']);
-  t('label lines', u.labelFields('full', 12).map((f) => f.value), ['12', 'full', 'chat, terminal, eyes and hands']);
-  t('only full has eyes and hands', ['lite', 'play'].map((c) => u.labelFields(c, 1)[2].value), ['chat + terminal', 'chat + terminal']);
+  t('label lines: no build number', u.labelFields('full').map((f) => f.term), ['Channel', 'Contents']);
+  t('label lines', u.labelFields('full').map((f) => f.value), ['full', 'chat, terminal, eyes and hands']);
+  t('only full has eyes and hands', ['lite', 'play'].map((c) => u.labelFields(c)[1].value), ['chat + terminal', 'chat + terminal']);
 
   // --- updates: the route and the errand ---------------------------------------
   t('full comes from GitHub', u.routeFields('full')[0].value, 'Our GitHub releases');

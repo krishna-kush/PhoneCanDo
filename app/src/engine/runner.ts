@@ -86,7 +86,7 @@ export type RunnerModule = {
   startEngine(agentId: string, mode?: EngineMode): Promise<{ port: string | null }>;
   stopEngine(agentId: string): Promise<void>;
   stopAllEngines(keepRuns: boolean): Promise<void>;
-  updateCancelled(): void;
+  updateCancelled(): Promise<string[]>;
   isAnyEngineAlive(): boolean;
   touchEngine(agentId: string): void;
   dismissAgentAlert(agentId: string): void;

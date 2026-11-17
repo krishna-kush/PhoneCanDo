@@ -103,6 +103,8 @@ export const BARCODE_LINES = {
   liteBox: 'UNBOX ME',
   buildLabel: 'HOT OFF CI',
   buildRoute: 'ON ITS WAY',
+  installStops: 'LIGHTS OUT',
+  parcelLabel: 'FRESH BAKED',
 
   // Account and telling a friend
   crewPass: 'ALL ACCESS',

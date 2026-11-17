@@ -12,7 +12,7 @@
 //   vectors         every app/scripts/vectors/*.js runs from `check:vectors`
 //                   (AGENTS.md rule 4: keep vectors in sync or delete them).
 //   versions        app/package.json version == app/app.json expo.version,
-//                   and updates.ts REPO == web/src/data/release.json repo
+//                   and updates/manifest.ts REPO == web/src/data/release.json repo
 //                   (scripts/release-android.mjs writes them together).
 //
 //   node .github/ci/js/check-wiring.mjs
@@ -72,12 +72,12 @@ const appJson = readJson('app/app.json');
 const vOk = pkgs.app.version === appJson.expo?.version;
 ok('app/package.json version == app/app.json expo.version', vOk, `${pkgs.app.version} / ${appJson.expo?.version}`);
 if (!vOk) r.error(`version ${pkgs.app.version} != app.json ${appJson.expo?.version} (release-android.mjs bumps both)`, 'app/package.json');
-const updates = readFileSync(join(ROOT, 'app/src/engine/updates.ts'), 'utf8');
+const updates = readFileSync(join(ROOT, 'app/src/engine/updates/manifest.ts'), 'utf8');
 const repo = /const REPO = '([^']+)'/.exec(updates)?.[1];
 const release = readJson('web/src/data/release.json');
 const rOk = Boolean(repo) && repo === release.repo;
-ok('updates.ts REPO == web release.json repo', rOk, `${repo} / ${release.repo}`);
-if (!rOk) r.error(`REPO ${repo} != web/src/data/release.json repo ${release.repo}`, 'app/src/engine/updates.ts');
+ok('updates/manifest.ts REPO == web release.json repo', rOk, `${repo} / ${release.repo}`);
+if (!rOk) r.error(`REPO ${repo} != web/src/data/release.json repo ${release.repo}`, 'app/src/engine/updates/manifest.ts');
 
 // ---------- ./manage dispatch (dry run) ----------
 // In a child node, with no terminal on stdin, so build's "show the usage
