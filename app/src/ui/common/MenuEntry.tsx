@@ -1,6 +1,9 @@
 import { useEffect, type ReactNode } from 'react';
-import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
+import Animated, { Easing, Extrapolation, interpolate, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useReduceMotion } from './useReduceMotion';
+
+/** A row's slide in: eased out with a barely there sway as it lands, not a spring's back and forth. */
+const DEAL = { duration: 260, easing: Easing.out(Easing.back(1.2)) };
 
 // One row of an opening menu: it slides in from the right a beat after the
 // one above it, so the rows deal out like cards. In place at once under
@@ -10,7 +13,7 @@ export default function MenuEntry({ index, children }: { index: number; children
   const shown = useSharedValue(0);
 
   useEffect(() => {
-    shown.value = reduce ? 1 : withDelay(30 + index * 45, withSpring(1, { damping: 13, stiffness: 240 }));
+    shown.value = reduce ? 1 : withDelay(30 + index * 45, withTiming(1, DEAL));
   }, [index, reduce, shown]);
 
   const style = useAnimatedStyle(() => ({
