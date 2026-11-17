@@ -223,11 +223,11 @@ sideways (`parts/HfFilters.tsx`, `logic/filters.ts`).
 
 An agent of a kind with a `models` block picks its model on its own page
 (Env → agent → Model); a pick restarts a running agent. A new agent can
-get one as it is made: Choose agent and first launch show a Model step
-when the kind has a `models` block and a model on the phone passes the RAM
-gate (`state/flows/logic/modelStep.ts`). "The agent's own setup" starts
-picked; a model that cannot be set takes the new agent back out and says
-why.
+get one as it is made: Choose agent shows a Model step when the kind has
+a `models` block and a model on the phone passes the RAM gate
+(`state/flows/logic/modelStep.ts`); first launch never asks, so its agent
+starts on its own setup. "The agent's own setup" starts picked; a model
+that cannot be set takes the new agent back out and says why.
 
 A card says "Context 48k of 256k: reduced so it runs well on this phone"
 when automatic serves less than the trained context (k is 1024 tokens, as

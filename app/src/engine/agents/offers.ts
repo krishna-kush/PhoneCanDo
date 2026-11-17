@@ -100,13 +100,13 @@ export function preselect(offers: readonly Offer[], defaultId: string | null): s
 }
 
 /**
- * The kind to go on with without asking: the one already picked when it can
- * still be made here (first launch falling back from Linux to Android), else
- * the sole offer; null when the step has to ask.
+ * The kind first launch sets up, never asking: the one already picked when
+ * it can still be made here (falling back from Linux to Android), else the
+ * default kind, else the first that can; null when none can.
  */
-export function autoPick(offers: readonly Offer[], picked: string | null): string | null {
+export function setupPick(offers: readonly Offer[], picked: string | null, defaultId: string | null): string | null {
   if (picked != null && offers.some((o) => o.id === picked && o.blocked == null)) return picked;
-  return soleOffer(offers)?.id ?? null;
+  return preselect(offers, defaultId);
 }
 
 /** An env record as the offers see it. */

@@ -20,12 +20,3 @@ export function setupNote({ path, play, noLinux }: SetupContext): string | null 
   if (noLinux === 'skipped') return "Your agent uses Android's own shell. You can add a Linux agent later: tap its name up top, then New agent.";
   return null;
 }
-
-export const CHOOSE_TITLE = 'Choose your agent';
-
-/** Over Choose agent: what the pick means here (never Linux on play). */
-export function chooseNote({ path, play }: SetupContext): string {
-  const pick = 'Pick the agent to set up first; you can add more from the menu (tap the name up top).';
-  if (path === 'linux') return `${pick} It gets its own Linux machine.`;
-  return play ? pick : `${pick} It uses Android's own shell, so agents that need Linux can't run.`;
-}

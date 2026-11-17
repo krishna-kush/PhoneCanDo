@@ -1,9 +1,9 @@
 // The Choose agent step: which kinds a creation path offers for a channel
 // and an env (src/engine/agents/offers.ts: hidden, blocked, order, the
-// preselection and when the step is skipped), then its words, its env per
-// target and before any place (src/ui/env/logic/agentChoice.ts)
-// and first launch's line over it (src/ui/setup/copy.ts). Imports the real
-// pure modules (Node 22.18+ strips their types), so these cannot drift.
+// preselection, when the step is skipped and the kind first launch sets up
+// without asking), then its words, its env per target and before any
+// place (src/ui/env/logic/agentChoice.ts). Imports the real pure modules
+// (Node 22.18+ strips their types), so these cannot drift.
 // Run: node test_agent_offers.js (or pnpm check:vectors)
 'use strict';
 const path = require('node:path');
@@ -38,7 +38,7 @@ const ids = (offers) => offers.map((o) => o.id);
 const blocks = (offers) => Object.fromEntries(offers.map((o) => [o.id, o.blocked]).sort(([a], [b]) => (a < b ? -1 : 1)));
 
 (async () => {
-  const { offersFor, soleOffer, preselect, autoPick, offerEnvOf } = await import(src('engine/agents/offers.ts'));
+  const { offersFor, soleOffer, preselect, setupPick, offerEnvOf } = await import(src('engine/agents/offers.ts'));
 
   // --- hidden ------------------------------------------------------------
   const opencode = kind('opencode', { label: 'opencode' });
@@ -98,11 +98,13 @@ const blocks = (offers) => Object.fromEntries(offers.map((o) => [o.id, o.blocked
   t('default user kind preselected too', preselect(two, 'user.top'), 'user.top');
   t('blocked default: first available', preselect(offersFor({ channel: 'full', env: android, kinds: [top, zed] }), 'user.top'), 'zed');
   t('nothing available', preselect(offersFor({ channel: 'full', env: android, kinds: [top] }), 'user.top'), null);
-  t('picked kind kept when it can run', autoPick(two, 'user.top'), 'user.top');
-  t('picked kind dropped on Android, two left: ask', autoPick(offersFor({ channel: 'full', env: android, kinds: [top, zed, alpha] }), 'user.top'), null);
-  t('picked kind dropped, still shown blocked: ask', autoPick(offersFor({ channel: 'full', env: android, kinds: [top, zed] }), 'user.top'), null);
-  t('nothing picked, one kind', autoPick(one, null), 'opencode');
-  t('picked kind dropped, the only other one hidden: take it', autoPick(offersFor({ channel: 'play', env: android, kinds: [top, zed] }), 'user.top'), 'zed');
+  // first launch never asks
+  t('first launch: the default kind', setupPick(two, null, 'opencode'), 'opencode');
+  t('first launch: a kind picked before kept when it can run', setupPick(two, 'user.top', 'opencode'), 'user.top');
+  t('first launch: picked kind dropped on Android, the default', setupPick(offersFor({ channel: 'full', env: android, kinds: [top, zed, opencode] }), 'user.top', 'opencode'), 'opencode');
+  t('first launch: picked and default both blocked, the first that can', setupPick(offersFor({ channel: 'full', env: android, kinds: [top, zed, alpha] }), 'user.top', 'user.top'), 'alpha');
+  t('first launch: none can run, none', setupPick(offersFor({ channel: 'full', env: android, kinds: [top] }), null, 'user.top'), null);
+  t('first launch: no kinds, none', setupPick([], null, 'opencode'), null);
 
   const os = (family) => ({ id: 'alpine', versionId: '3.22', idLike: [], prettyName: null, family, shell: '/bin/sh' });
   t('env record', offerEnvOf({ source: { kind: 'registry', image: 'alpine', tag: '3', digest: 'd' }, state: 'ready', os: os('apk') }), {
@@ -148,13 +150,6 @@ const blocks = (offers) => Object.fromEntries(offers.map((o) => [o.id, o.blocked
   const { anyPlaceOfferEnv } = await import(src('ui/env/logic/agentChoice.ts'));
   t('with Linux: judged against any ready Linux', anyPlaceOfferEnv(true), { kind: 'linux', family: null, ready: true });
   t('without Linux: Android only', anyPlaceOfferEnv(false), { kind: 'android', family: null, ready: true });
-
-  // --- first launch -------------------------------------------------------
-  const { CHOOSE_TITLE, chooseNote } = await import(src('ui/setup/copy.ts'));
-  t('setup choose title', CHOOSE_TITLE, 'Choose your agent');
-  t('play never says Linux', /Linux/.test(chooseNote({ path: 'android', play: true, noLinux: 'unavailable' })), false);
-  t('Android says what cannot run', chooseNote({ path: 'android', play: false, noLinux: 'skipped' }),
-    "Pick the agent to set up first; you can add more from the menu (tap the name up top). It uses Android's own shell, so agents that need Linux can't run.");
 
   console.log(`\nRESULT: ${pass} pass, ${fail} fail`);
   process.exit(fail ? 1 : 0);

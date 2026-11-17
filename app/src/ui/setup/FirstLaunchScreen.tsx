@@ -6,37 +6,33 @@ import Screen from '../common/Screen';
 import { stepLabel } from '../env/logic/steps';
 import Note from '../env/parts/Note';
 import ProgressBar from '../env/parts/ProgressBar';
-import ChooseFirstAgent from './ChooseFirstAgent';
-import { CHOOSE_TITLE, setupNote, setupTitle } from './copy';
+import { setupNote, setupTitle } from './copy';
 import SetupSteps from './SetupSteps';
 import { useFirstLaunch } from './useFirstLaunch';
 import { useSetupProgress } from './useSetupProgress';
 
-// Shown by App while no agent exists: makes the first agent and its machine
-// (Default env, offline, about half a minute), or the Android path where
-// Linux is unavailable; Choose agent first when there is a choice of kind.
-// A failure says why, with Retry and, on the Linux path, Continue without
-// Linux.
+// Shown by App while no agent exists: makes the first agent (the default
+// kind, never asked) and its machine (Default env, offline, about half a
+// minute), or the Android path where Linux is unavailable. A failure says
+// why, with Retry and, on the Linux path, Continue without Linux.
 export default function FirstLaunchScreen() {
-  const { ctx, imageId, phase, choose, retry, skipLinux } = useFirstLaunch();
+  const { ctx, imageId, phase, retry, skipLinux } = useFirstLaunch();
   const progress = useSetupProgress(imageId);
 
   const linux = ctx.path === 'linux';
   const failed = phase.kind === 'failed';
-  const choosing = phase.kind === 'choosing';
   const note = setupNote(ctx);
   const where = progress.failedStep ? `Setup stopped while ${stepLabel(progress.failedStep).toLowerCase()}. ` : '';
 
   return (
     <Screen pillClearance={false}>
       <YStack flex={1} justifyContent="center" gap="4" paddingVertical="6">
-        {failed || choosing ? <LogoMark size={18} /> : <LogoLoader size={18} />}
+        {failed ? <LogoMark size={18} /> : <LogoLoader size={18} />}
         <Text fontSize={24} fontWeight="700">
-          {choosing ? CHOOSE_TITLE : setupTitle(ctx)}
+          {setupTitle(ctx)}
         </Text>
-        {choosing ? <ChooseFirstAgent ctx={ctx} onChoose={choose} /> : null}
-        {note && !failed && !choosing ? <Note>{note}</Note> : null}
-        {choosing ? null : linux ? (
+        {note && !failed ? <Note>{note}</Note> : null}
+        {linux ? (
           <>
             <SetupSteps current={progress.phase} allDone={progress.imageReady} />
             {!failed ? <ProgressBar label={progress.label} fraction={progress.fraction} /> : null}

@@ -4,11 +4,16 @@
 // the RAM gate; the agent's own setup (null) is the default, and a pick
 // that the kind or the phone cannot take falls back to it.
 import type { KindView } from '../../../../../agents/kit/ts/contract/view.ts';
+import type { Look } from '../../../../../mascot/look.ts';
 import type { AgentKindId } from '../../../engine/agents/registry';
 import type { LocalModel, ModelId, RamCheck } from '../../../engine/models/types';
 
-/** What a creation path makes: the kind, and the local model it runs on (null: the agent's own setup). */
-export type AgentPick = { kindId: AgentKindId; modelId: ModelId | null };
+/**
+ * What a creation path makes: the kind, the local model it runs on (null:
+ * the agent's own setup) and the mascot it wears, the face it was picked by
+ * on Choose agent (left out: one at random, as for any agent).
+ */
+export type AgentPick = { kindId: AgentKindId; modelId: ModelId | null; look?: Look };
 
 type KindLike = Pick<KindView, 'models'>;
 type ModelLike = Pick<LocalModel, 'id' | 'ram'>;

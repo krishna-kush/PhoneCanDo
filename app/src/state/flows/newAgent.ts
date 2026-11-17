@@ -1,6 +1,8 @@
 // A new agent on its machine, as every creation path makes it: of the kind
 // picked, at the next desk in its machine's room (state/desks.ts) and named
-// after both ("opencode 1a", "opencode 1b"), on the local model picked for it, set as the agent page's Model section sets it
+// after both ("opencode 1a", "opencode 1b"), wearing the mascot it was
+// picked by (else one at random, state/mascots.ts), on the local model
+// picked for it, set as the agent page's Model section sets it
 // (agentModel.ts). Whether a path asks for that model is the Model step
 // (logic/modelStep.ts) over the kinds and the models on this phone.
 import type { Agent } from '../../engine/agents/records';
@@ -10,6 +12,7 @@ import type { ImageId } from '../../engine/linux/types';
 import { useAgentsStore } from '../agents';
 import { useDesksStore } from '../desks';
 import { deskCode } from '../logic/desks';
+import { useMascotsStore } from '../mascots';
 import { useModelsStore } from '../models';
 import { chooseAgentModel } from './agentModel';
 import { hasModelStep, type AgentPick } from './logic/modelStep';
@@ -39,6 +42,7 @@ export async function makeAgent(imageId: ImageId, pick: AgentPick): Promise<Agen
     imageId,
   });
   desks.bind(agent.id, seat);
+  if (pick.look) useMascotsStore.getState().setLook(agent.id, pick.look);
   if (pick.modelId == null) return agent;
   const set = await chooseAgentModel(agent.id, pick.modelId);
   if (set.ok) return agent;
