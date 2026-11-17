@@ -4,6 +4,7 @@ import { YStack } from 'tamagui';
 import { useNow } from '../../common/time/useNow';
 import { useReduceMotion } from '../../common/useReduceMotion';
 import { handAngles } from '../logic/clockHands';
+import { ringBuzz } from './feel';
 
 /** The clock's body, and how far its amber shadow stands off. */
 const S = 60;
@@ -17,7 +18,7 @@ const RATTLES = 7;
 const TICK_MS = 1000;
 
 type Props = {
-  /** Bump it to ring the clock once: it rattles on its feet. */
+  /** Bump it to ring the clock once: it rattles on its feet, and the phone buzzes with each rattle. */
   rings: number;
   /** Out of sight: it stops ticking and never rattles. */
   still: boolean;
@@ -35,7 +36,10 @@ export default function AlarmClock({ rings, still }: Props) {
   const { hour, minute, second } = handAngles(now);
 
   useEffect(() => {
-    if (!rings || reduce || still) return;
+    if (!rings || still) return;
+    // Felt even when it may not move.
+    ringBuzz(RATTLE_MS, RATTLES);
+    if (reduce) return;
     const swing = (to: number) => withTiming(to, { duration: RATTLE_MS, easing: Easing.inOut(Easing.quad) });
     tilt.value = withSequence(...Array.from({ length: RATTLES }, (_, i) => swing(i % 2 ? -7 : 7)), swing(0));
   }, [rings, reduce, still, tilt]);
