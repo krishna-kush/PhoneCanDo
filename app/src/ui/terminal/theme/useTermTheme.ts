@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import type { WebView } from 'react-native-webview';
 import { useScheme } from '../../common/globals';
 import { termLook, type TermLook, type XtermTheme } from './palette';
-import { answer, themeReport, type TermQuery } from './replies';
+import { answer, themeChange, type TermQuery } from './replies';
 
 /** What the page says about the program's queries (terminal.js). */
 export type ThemePageMsg =
@@ -26,10 +26,11 @@ type Opts = {
 // One terminal's theme: the app's scheme. The page starts in it (it rides
 // on the page's URL, so there is no flash of the other one) and follows a
 // change at once; the program gets its answers and, while it asked for
-// them (DEC mode 2031), a theme report on every change. The report waits
-// until the page is in front: a TUI answers it by asking for the colours
-// and drops answers later than 250 ms (opentui), and off screen nobody
-// reads its questions. Then the PTY is read fast, so the answers make it.
+// them (DEC mode 2031), a theme report on every change, with the new
+// colours in the same write (replies.ts themeChange: a TUI asks for them
+// and drops late answers). The report waits until the page is in front,
+// where the PTY is read: the program's own questions and its redraw come
+// back quickly then, and faster still for a moment (hurry).
 export function useTermTheme({ webRef, htmlUri, reply, active, hurry }: Opts) {
   const scheme = useScheme();
   const look = termLook(scheme);
@@ -61,7 +62,7 @@ export function useTermTheme({ webRef, htmlUri, reply, active, hurry }: Opts) {
   useEffect(() => {
     if (!active || !reports.current || told.current === scheme) return;
     told.current = scheme;
-    replyRef.current(themeReport(scheme === 'dark'));
+    replyRef.current(themeChange(lookRef.current.colors));
     hurryRef.current();
   }, [scheme, active]);
 

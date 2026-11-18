@@ -280,10 +280,11 @@ export function usePtySession({ available, htmlUri, webRef, transport, active, o
     boostFn.current(steps, postedAt);
   }
 
-  // The program's next questions need quick answers: after a theme report
-  // a TUI asks for the colours and gives up within 250 ms (opentui), and
-  // the idle pump alone is 60 ms a read. 16 ms for a second, as a scroll's
-  // boost is (a running boost already reads that fast). On screen only.
+  // The program's next questions and redraw come back quickly: after a
+  // theme report a TUI asks for the colours (it has them already, with the
+  // report) and repaints, and the idle pump alone is 60 ms a read. 16 ms
+  // for a second, as a scroll's boost is (a running boost already reads
+  // that fast). On screen only.
   function hurry() {
     const pump = pumpRef.current;
     if (pump == null || pollRef.current == null || boostTimer.current != null) return;

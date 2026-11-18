@@ -4,8 +4,9 @@
 // and RN answers through the PTY: the colours asked for (OSC 4 / 10 / 11 /
 // 12, `rgb:rrrr/gggg/bbbb` as xterm words it, ending in ST as xterm.js
 // does), dark or light (CSI ? 996 n gets CSI ? 997 ; 1 n dark, ; 2 n light:
-// contour's colour palette update notifications; the same report goes out
-// on a change of theme while the program has DEC mode 2031 on), primary
+// contour's colour palette update notifications; the same report, with the
+// new foreground and background, goes out on a change of theme while the
+// program has DEC mode 2031 on), primary
 // device attributes (as xterm.js answers them) and the operating status
 // (OK). Programs send those last two after a colour query to learn that no
 // more answers are coming. Pure, no RN imports.
@@ -55,6 +56,18 @@ export function answer(query: TermQuery, colors: TermColors): string {
 /** The theme report: the answer to CSI ? 996 n, and what mode 2031 sends on a change. */
 export function themeReport(dark: boolean): string {
   return `\x1b[?997;${dark ? 1 : 2}n`;
+}
+
+/**
+ * What mode 2031 sends on a change: the report, then the new foreground and
+ * background as OSC 10 and 11 answers. A TUI answers the report by asking
+ * for those two and drops answers later than 250 ms (opentui); our trip
+ * (its question through the PTY, the page and back) often takes longer, and
+ * it then keeps the old mode. With the colours in the same write it settles
+ * at once; the answers to its own questions come later and change nothing.
+ */
+export function themeChange(colors: TermColors): string {
+  return themeReport(colors.dark) + dynamicAnswers(FOREGROUND, '?;?', colors);
 }
 
 // OSC 4: index;spec pairs, `?` for a spec asks for that entry.

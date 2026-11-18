@@ -23,7 +23,7 @@ const light = { dark: false, foreground: '#1a1a1a', background: '#ffffff', curso
 const ST = '\x1b\\';
 
 (async () => {
-  const { answer, themeReport, paletteRgb } = await import(src('ui/terminal/theme/replies.ts'));
+  const { answer, themeReport, themeChange, paletteRgb } = await import(src('ui/terminal/theme/replies.ts'));
   const osc = (code, data, colors = dark) => answer({ q: 'osc', code, data }, colors);
 
   t('background, as xterm words it', osc(11, '?'), `\x1b]11;rgb:0a0a/0a0a/0a0a${ST}`);
@@ -41,6 +41,12 @@ const ST = '\x1b\\';
   t('theme query, dark', answer({ q: 'theme' }, dark), '\x1b[?997;1n');
   t('theme query, light', answer({ q: 'theme' }, light), '\x1b[?997;2n');
   t('theme report on a change to light', themeReport(false), '\x1b[?997;2n');
+  t(
+    'a change to light: the report, then foreground and background',
+    themeChange(light),
+    `\x1b[?997;2n\x1b]10;rgb:1a1a/1a1a/1a1a${ST}\x1b]11;rgb:ffff/ffff/ffff${ST}`,
+  );
+  t('a change to dark', themeChange(dark), `\x1b[?997;1n\x1b]10;rgb:e6e6/e6e6/e6e6${ST}\x1b]11;rgb:0a0a/0a0a/0a0a${ST}`);
   t('device attributes, as xterm.js', answer({ q: 'attributes' }, light), '\x1b[?1;2c');
   t('status OK', answer({ q: 'status' }, light), '\x1b[0n');
 
