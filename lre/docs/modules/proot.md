@@ -197,11 +197,14 @@ Every app release that ships `libproot.so` attaches it
 
 ## Licence
 
-`lre/proot/LICENSE`: our scripts, pins, patches and talloc config are MIT;
+`lre/proot/LICENSE`: our scripts, pins, patches and talloc config are
+GPL-2.0-or-later;
 `talloc/memset_explicit.c` is part of the talloc build and under talloc's
 LGPL-3.0-or-later. proot is GPL-2.0-or-later and talloc
-LGPL-3.0-or-later; neither is stored here. See
-`../../../THIRD_PARTY_NOTICES.md`.
+LGPL-3.0-or-later; neither is stored here. The shipped `libproot.so` links
+talloc in statically, and LGPL-3.0 can't combine with GPL-2.0 alone, so it
+goes out under GPL-3.0-or-later, as proot's "or any later version" allows.
+See `../../../THIRD_PARTY_NOTICES.md`.
 
 ## CI
 

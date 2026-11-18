@@ -4,6 +4,7 @@
 // us. A plate like the rest of the manual's, closed by the privacy note's
 // pondering mark, then the second opinion (source/) for whoever won't read
 // it all. Every path here must exist on the default branch.
+import licenseSummary from '../../../../legal/summary.json';
 import { site } from '../../data/site';
 import SecondOpinion from './source/SecondOpinion.astro';
 
@@ -62,7 +63,8 @@ const files: { path: string; href: string; title: string; text: string }[] = [
     path: 'LICENSE',
     href: blob('LICENSE'),
     title: 'What you may do with it',
-    text: 'Source-available: read it, study it, contribute to it. Anything else, using, copying or redistributing the code, needs our written permission.',
+    // The short version, the app's too: legal/summary.json.
+    text: `Source-available. ${licenseSummary.lines.join(' ')}`,
   },
 ];
 ---

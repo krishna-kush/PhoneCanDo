@@ -1,35 +1,305 @@
-PhoneCanDo Source-Available License 1.0
+PhoneCanDo Source-Available License 1.1
 
 Copyright (c) 2026 Krishna Kushwaha. All rights reserved.
 
-This source code is published so you can read it and contribute to the
-official PhoneCanDo project. No other rights are granted.
+This source code is published so you can read it, contribute to the official
+PhoneCanDo project and run it for yourself as this license allows. Every
+right not expressly granted below is reserved.
+
+1. Definitions
+
+"Copyright holder" means Krishna Kushwaha, anyone who later holds the
+copyright in the Software by a written assignment or by inheritance, and
+anyone either of them authorises, in a document they sign, to act for them
+under this license.
+
+"Official repository" means https://github.com/krishna-kush/PhoneCanDo.
+
+"Official website" means https://phonecando.app.
+
+"Official release" means the source code of a release the copyright holder
+tags in the official repository, or of the official repository's default
+branch, as the copyright holder publishes it there. Pull requests, other
+branches, forks, and commits that only forks contain are not official
+releases, even where GitHub shows them under the official repository's
+address.
+
+"Software" means the material the copyright holder publishes in the
+official repository, and anything built from it: source code, builds, APKs
+and other binaries, assets, images, mascots, designs, text, documentation,
+videos and the website, in whole or in part. Third-party components
+(section 10) are not part of the Software.
+
+"Official app" means the PhoneCanDo app as the copyright holder publishes it
+through its official channels (the official website, the official
+repository's releases and app stores it publishes to).
+
+"Modified version" means any changed, extended, translated, ported or
+derived version of the Software, or any work that includes part of it,
+except your own files and work under section 11.
+
+"Personal use" means use by you alone, as an individual, on devices you own
+or control, and not for any employer, client, business or organisation.
+
+"Contribution" means a pull request, patch or issue submitted to the
+official repository.
+
+"Written permission" means a document signed by the copyright holder, on
+paper or with an electronic signature, that names you and says what it
+allows.
+
+2. The official app
+
+You may install and use the official app for any purpose, personal or
+commercial, as a tool in your own work. Get it only from its official
+channels. You may share links to its official download page, but not its
+files. A company or organisation may install the official app, unchanged
+and from its official channels, on devices its own staff use, including
+through its own device management.
+
+You may not, without written permission from the copyright holder:
+- sell, rent or lease the official app, or charge anyone for access to it;
+- offer it, its agents or its features to others as a service;
+- preinstall it on devices you sell, rent out or give away as a business,
+  or hand out devices with it as part of something you sell;
+- charge others to install or set it up for them.
+
+A service means letting people outside your own company or organisation
+use or control the app or its agents, directly or by passing their requests
+on to the agents automatically. Using it yourself in your own work,
+including paid work for clients, is not a service.
+
+As an individual, you may give away or lend a device of your own with the
+official app on it, as long as it is not part of a business.
+
+If you got the official app from an app store, you keep any right to use it
+that the store's terms give you, even if this license ends for you.
+
+3. The source code
 
 You may:
-- view, clone, and study the source code;
-- build and run it locally solely to develop and test a contribution;
-- submit contributions (pull requests, patches, issues) to the official
-  repository.
+- View, clone and study the source code.
+- Fork the official repository on GitHub, as GitHub's Terms of Service
+  allow. Beyond those Terms, this license lets a fork hold only changes you
+  have submitted as contributions, or have been preparing for less than 60
+  days.
+- Build the Software and run it on up to three devices of your own to
+  develop and test a contribution, while you prepare it and while it waits
+  for a decision under section 4b. Such builds are for testing that change,
+  not for everyday use or an organisation's ongoing work; everyday use falls
+  under section 4.
+- Submit contributions to the official repository.
 
-You may not, without prior written permission from the copyright holder:
-- use the software, in whole or in part, for any purpose other than the
-  contribution work above;
-- copy, modify, merge, publish, distribute, sublicense, sell, or otherwise
-  make the software available to anyone;
-- publish, distribute, or sell any app, product, or service built from it.
+These uses are allowed even if someone pays you for them.
 
-Contributions: by submitting a contribution, you grant the copyright holder
-a perpetual, irrevocable, worldwide, royalty-free, non-exclusive license to
-use, reproduce, modify, distribute, sublicense, and relicense your
-contribution under any terms, and you confirm you have the right to grant it.
-You keep copyright in your contribution.
+Nothing in this license limits the rights GitHub's Terms of Service give
+GitHub, its affiliates and its users over the official repository, and this
+license gives no right beyond them.
 
-No warranty: the software is provided "as is", without warranty or condition
-of any kind, express or implied, including merchantability, fitness for a
-particular purpose, and non-infringement. In no event will the copyright
-holder be liable for any claim, damages, or other liability arising from the
-software or its use.
+4. Your own builds
 
-This is a source-available license, not an open source license. The official
-PhoneCanDo app published by the copyright holder is the only app distributed
-under this license.
+a. Unmodified: you may build an official release, unmodified, and use that
+   build for your personal use. Choosing among the build options an official
+   release itself offers is not a modification.
+b. Modified: you may use a modified version for your personal use only while
+   every change in it that is not in an official release was submitted by
+   you, complete and in good faith, as a contribution (section 7), and is
+   still waiting for a decision. Once the copyright holder merges one of
+   those contributions, with or without changes, or declines it, you must
+   stop using every build that contains your version of it within 30 days.
+   You may then use the official app, or a build of an official release
+   that includes what was merged. A contribution counts as declined when it
+   is closed without being merged, for any reason, or when 180 days pass
+   after it was submitted without a merge. Submitting a contribution again,
+   or one much like a declined one, does not start a new period.
+c. No build, modified or not, may bypass, unlock or remove paid features,
+   limits tied to a paid plan, license checks or this license's notices.
+
+5. What you may not do
+
+Unless you have written permission from the copyright holder, you may not:
+
+a. Use any build other than the official app, or any part of the source
+   code, for any commercial purpose. This includes selling it, offering it
+   as a paid or free app or service, using it to earn money from ads,
+   subscriptions or donations, using it inside a company or organisation,
+   and using it for client work. This does not limit the uses sections 2
+   and 3 allow.
+b. Use the Software in any way sections 2 to 4 do not allow. Viewing the
+   official website and the official repository, and sharing links to them,
+   are always allowed.
+c. Share the Software, or a modified version, with anyone: not friends,
+   family, classmates, coworkers or your team, not in private and not in
+   public, not for free and not for money. This covers sending or copying
+   files, builds or code by any means (APKs, files, repositories, app
+   stores, chats or devices), including builds section 4 allows and the
+   official app's files. It does not stop you from:
+   - lending or giving away a device, or installing the official app on
+     your organisation's devices, as section 2 allows;
+   - keeping a GitHub fork as section 3 allows;
+   - sharing links to the official website, the official repository or the
+     official download page, including the app's own share links;
+   - sharing short excerpts, screenshots or the copyright holder's published
+     videos to talk about PhoneCanDo;
+   - sharing your own files and work as section 11 allows.
+d. Make a modified version for any purpose sections 3 and 4 do not allow,
+   or publish one, except in a GitHub fork as section 3 allows.
+e. Copy any part of the Software into another project, product or service.
+f. Use the source code or documentation of the Software (the files in the
+   official repository, not the official website's pages) to train or
+   fine-tune machine learning models, as data to test or benchmark them, or
+   in a dataset. This is a reservation of rights under
+   Article 4(3) of Directive (EU) 2019/790 and every similar law. Running
+   models in the official app, and checking or comparing them there, is
+   normal use and is allowed, and so is using an AI tool to help you read
+   the code or prepare a contribution.
+g. Sublicense the Software or grant anyone else any right to it.
+h. Remove or change this license or any copyright notice in a copy or build
+   you keep or share. Proposing a change to them in a contribution is
+   allowed.
+
+6. Names and marks
+
+This license grants no right to use the PhoneCanDo name, logos, mascots or
+other brand features, except to say truthfully that something is, works
+with or is about PhoneCanDo. You may not use them in the name, icon or
+listing of any app, product or service, or in a way that suggests the
+copyright holder made or endorses it.
+
+7. Contributions
+
+By submitting a contribution, you grant the copyright holder a perpetual,
+irrevocable, worldwide, royalty-free, non-exclusive license to use,
+reproduce, modify, distribute, sublicense and relicense your contribution
+under any terms, and you confirm you have the right to grant it. You keep
+copyright in your contribution.
+
+You also grant the copyright holder, and everyone who gets the Software
+from the copyright holder, a perpetual, irrevocable, worldwide,
+royalty-free license to make, use, sell, import and otherwise deal in your
+contribution and the Software under any patent you can license that your
+contribution, alone or combined with the Software it was made for, would
+infringe.
+
+You consent to the copyright holder changing, adapting or leaving out your
+contribution, and you will not assert any moral right in it against the
+copyright holder or anyone the copyright holder licenses. If someone
+infringes the copyright in your contribution as part of the Software, you
+will join or support, at the copyright holder's cost, any action the
+copyright holder takes against them.
+
+These rights do not lapse however long they go unused. You give them in
+return for the copyright holder reviewing your contribution and for the
+rights section 4b gives you.
+
+Sign off every commit of a pull request (git commit -s) to confirm that you
+agree to this section. Pull requests whose commits are not signed off may
+be refused.
+
+8. Changes to this license
+
+Only the copyright holder may publish a new version of this license. A new
+version counts only once the copyright holder has published it both in the
+official repository and in a release of the official app. A change anyone
+else makes to the license file, including through a pull request, is not a
+new version.
+
+A new version that only adds rights applies as soon as it is published. A
+new version that takes rights away applies to you once you have been told
+about it (for example in the official app or on the official website) and
+have accepted it, or have kept using the Software for 30 days after being
+told. It never makes earlier use a breach. If you do not accept a new
+version, you must stop using the Software and delete every copy and build
+of it that you hold, except as section 2 allows for app-store copies.
+
+9. Termination
+
+Every permission in this license is given on the conditions in sections 2
+to 6; any use outside them is not licensed.
+
+If you break any term of this license, every permission it gives you ends
+at once and automatically, and getting another copy of the Software does
+not give you a new license. You must then stop using the Software and
+delete every copy and build of it, original or modified, that you hold,
+except as section 2 allows for app-store copies. Sections 6, 7, 9, 10, 11,
+12 and 13 still apply after termination. The copyright holder may restore
+your rights by written permission.
+
+10. Third-party components
+
+Third-party code included in or downloaded by the Software keeps its own
+license, and nothing in this license restricts what that license lets you
+do with it. THIRD_PARTY_NOTICES.md lists the components the official app
+ships and their licenses.
+
+These files of ours are under a different license, as their notices say:
+lre/proot/ (GPL-2.0-or-later), except lre/proot/talloc/memset_explicit.c
+(LGPL-3.0-or-later). Apart from third-party code, no other file is under a
+different license, whatever notice it carries, unless this section lists
+it; a notice added by anyone other than the copyright holder changes
+nothing.
+
+You may extract, change and share third-party components under their own
+licenses, and doing so is never a breach of this license. For a component
+we build with changes of our own, that covers the upstream code and the
+changes its license requires us to offer under it, such as our changes to
+PRoot and talloc. Our other changes stay under this license.
+
+For each binary the official app ships that contains an LGPL library, you
+may modify that binary for your own use, including by relinking it with a
+changed version of the library, and reverse engineer it to debug those
+changes. Sections 4 and 5 do not limit this.
+
+The complete corresponding source of the GPL and LGPL components the
+official app ships is published on the official repository's releases page,
+or offered in writing in THIRD_PARTY_NOTICES.md where it says so.
+
+11. Your files and your work
+
+What you make with the official app, such as your projects, code, text and
+the output of its agents, is yours; this license claims no right in it. The
+notes and settings the app writes into your own files (such as the block it
+adds to an agent's instructions file) may stay there, and you may keep,
+change and share those files as part of your work. This does not let you
+share the app's programs, tools or other parts of the Software.
+
+12. No warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OR CONDITION OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NON-INFRINGEMENT. TO THE EXTENT THE LAW ALLOWS, THE
+COPYRIGHT HOLDER WILL NOT BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY ARISING FROM THE SOFTWARE OR ITS USE, INCLUDING ANYTHING ITS
+AGENTS DO.
+
+Nothing in this license limits or excludes any liability that the law does
+not allow to be limited or excluded.
+
+13. General
+
+You accept this license by installing or using the official app, by
+building or running the Software, or by submitting a contribution.
+
+The rights this license gives are worldwide and last for the full term of
+copyright, unless they end under section 8 or 9.
+
+Nothing in this license limits rights the law gives you that cannot be
+limited by agreement, such as the exceptions for computer programs in the
+copyright law where you live.
+
+This license is subject to the rights that GitHub's Terms of Service, and
+the terms of the app stores the official app is published to, give their
+operators and users. Apart from that, this license, with any written
+permission or paid terms the copyright holder gives you, is the whole
+agreement about the Software.
+
+If any part of this license cannot be enforced, that part is narrowed as
+far as the law allows, or removed where it cannot be narrowed, and the rest
+still applies.
+
+Indian law governs this license, and the courts of India have jurisdiction
+over any dispute about it. This does not stop the copyright holder from
+seeking relief for infringement in any country.
+
+This is a source-available license, not an open source license. Parts of
+the official app are under the licenses in section 10.

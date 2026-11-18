@@ -1,0 +1,13 @@
+Our files in this folder (the build scripts, pins, patches and brand files in
+build/, the config, the Kotlin hooks and the docs) are part of PhoneCanDo and
+are licensed under the PhoneCanDo Source-Available License. See the root
+LICENSE file: ../../../LICENSE
+
+Our patches stay under that licence when they are built into the opencode
+payload (liboc-engine.so, liboc-opentui.so). Section 10 of that licence lets
+you modify the payload for your own use, including relinking it with changed
+versions of the LGPL libraries in it.
+
+opencode and opentui themselves are MIT, and the payload also carries Bun and
+the libraries it links; NOTICE.md lists them and points to their entries in
+../../../THIRD_PARTY_NOTICES.md.

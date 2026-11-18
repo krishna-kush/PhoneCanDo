@@ -182,11 +182,12 @@ network-download + network-retry <- oci
 
 ## 8. Licences
 
-- Our code is under the repo licence (`LICENSE`); `lre/proot/` is MIT
-  (`lre/proot/LICENSE`), except `talloc/memset_explicit.c` (talloc's
+- Our code is under the repo licence (`LICENSE`); `lre/proot/` is
+  GPL-2.0-or-later (`lre/proot/LICENSE`), except `talloc/memset_explicit.c` (talloc's
   LGPL-3.0-or-later).
 - proot (GPL-2.0-or-later) and talloc (LGPL-3.0-or-later) are downloaded,
-  never stored here. Every app release that ships `libproot.so` attaches
+  never stored here. The shipped `libproot.so`, with talloc linked in, goes
+  out under GPL-3.0-or-later. Every app release that ships `libproot.so` attaches
   `phonecando-proot-<version>-source.tar.gz`
   (`lre/proot/source-tarball.sh`).
 - Each Default image release carries the exact Debian source packages of

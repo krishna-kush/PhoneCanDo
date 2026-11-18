@@ -194,7 +194,7 @@ builds, tests, limits): `../../lre/docs/README.md`.
   catalog), `image` (setup, reset, delete) and `cli` (the same download and
   setup on a plain JVM, for CI); dependency law in `../../lre/AGENTS.md`.
   Beside it: `lre/launcher/` (C), `lre/proot/` (a pinned termux/proot build;
-  MIT build scripts) and `lre/images/default/` (the Default image build; its
+  GPL-2.0-or-later build scripts) and `lre/images/default/` (the Default image build; its
   `lock.json` names the image the APK ships). `app/modules/phonecando-linux/`
   is the Android host: env and image records (`files/state/envs.json`,
   `images.json`), long jobs with progress events, setup, reset, delete, the

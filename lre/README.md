@@ -19,8 +19,8 @@ What lives here:
   (`settings.gradle.kts`).
 - `launcher/` — our C launcher every guest command goes through;
   `launcher/src/conf.h` is the `launch.conf` contract.
-- `proot/` — build scripts for the pinned termux/proot fork (MIT,
-  `proot/LICENSE`; proot itself is GPL-2.0-or-later).
+- `proot/` — build scripts for the pinned termux/proot fork (GPL-2.0-or-later
+  like proot itself, `proot/LICENSE`).
 - `images/default/` — the Default image build and `lock.json`, the image
   the APK ships.
 

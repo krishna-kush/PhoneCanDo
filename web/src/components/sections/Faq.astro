@@ -1,4 +1,5 @@
 ---
+import licenseSummary from "../../../../legal/summary.json";
 import { site } from "../../data/site";
 import RollDie from "./faq/RollDie.astro";
 ---
@@ -139,8 +140,7 @@ import RollDie from "./faq/RollDie.astro";
             <a href={site.repo} target="_blank" rel="noreferrer">
                 GitHub
             </a>{" "}
-            under a source-available license. You can read it and
-            contribute; you cannot copy, use, or redistribute it.
+            under a source-available license. In short: {licenseSummary.lines.join(" ")}
             The official app is the only distributed build.
         </p>
     </details>

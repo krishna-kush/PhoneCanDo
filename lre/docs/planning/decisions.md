@@ -23,8 +23,9 @@
   python and cross-answers to build parts proot never uses.
 - **No 32-bit loader:** we ship arm64 guests only, and a `-m32` build is
   impossible on arm64 hosts.
-- **MIT build scripts for proot:** our scripts, pins, patches and talloc
-  config are ours to license and go into the GPL source tarball; proot and
+- **GPL build scripts for proot:** our scripts, pins, patches and talloc
+  config are GPL-2.0-or-later, like proot, and go into its source tarball
+  (they were MIT until 2026-11-18); proot and
   talloc keep their licences and are downloaded, never stored.
 - **Both data-dir spellings bound and listed as `same`:** inside the app
   process `getcwd()` says `/data/data/<pkg>` while Context says

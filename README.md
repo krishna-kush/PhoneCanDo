@@ -137,9 +137,9 @@ accessibility service. See [`docs/api/security.md`](docs/api/security.md) and
 
 ## License
 
-Source-available, not OSI open source. You may read the code and contribute;
-you may not copy, use, or distribute it. The official app published by the
-copyright holder is the only distributed build. See [`LICENSE`](LICENSE).
+Source-available, not OSI open source. The terms are in [`LICENSE`](LICENSE);
+the short version the app and the site show is
+[`legal/summary.json`](legal/summary.json).
 
 Third-party code keeps its own license. Required notices are in
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md); every release must include
@@ -149,4 +149,5 @@ them.
 
 Read [`AGENTS.md`](AGENTS.md) before changing native, IME, sizing or automation
 code. Issues and pull requests are welcome; by submitting one you agree to the
-contribution terms in [`LICENSE`](LICENSE).
+contribution terms in section 7 of [`LICENSE`](LICENSE). Sign off every commit
+of a pull request (`git commit -s`); CI checks it.

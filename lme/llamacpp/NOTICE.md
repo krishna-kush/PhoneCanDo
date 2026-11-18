@@ -3,34 +3,13 @@
 ## Our scripts
 
 The files in this folder (`pins.env`, `build.sh`, `build-host.sh`,
-`verify.sh`, `stage.sh`, our patches in `patches/` and this notice) are
-under the MIT License below. It does not cover the rest of the PhoneCanDo
-repository, which keeps its own licence (`../../LICENSE`). llama.cpp and
-KleidiAI are downloaded at build time, never stored here.
-
-```
-MIT License
-
-Copyright (c) 2026 Krishna Kushwaha
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+`verify.sh`, `stage.sh`, our patches in `patches/` and this notice) are part
+of PhoneCanDo and under its licence, the PhoneCanDo Source-Available License
+(`../../LICENSE`). Their versions in the commits before the one that moved
+them to that licence were published under the MIT License, and those
+versions stay under it. The MIT License does not cover any later change.
+llama.cpp and KleidiAI keep their own licences (below) and are downloaded at
+build time, never stored here.
 
 ## What `libllama-server.so` contains
 
