@@ -41,8 +41,8 @@ answers both.
 | `batch` | `POST /v1/batch` | app identity, device, sessions, events, errors → D1; `share.sent` / `share.install` events also add `share_links` / `share_installs` (`core/share.ts`) |
 | `report` | `POST /v1/report` | a user's Send report → `reports`; also upserts the phone's `devices` row (pins its verifier) |
 | `forget` | `POST /v1/forget` | Delete my data: every row of that device, its share links with their counts and installs, and its own install through a link |
-| `hit` | `POST /v1/hit` | site page view → Analytics Engine, +1 on `site_daily` |
-| `download` | `GET /v1/dl/lite`, `GET /v1/dl/full` | count (Analytics Engine; +1 on `site_daily` only for a person's browser: `Sec-Fetch-Mode: navigate` and no bot user agent, else the point's class is `bot`; with `?i=<code>` also +1 `download` on that share link's `share_daily`), then 302 to the current version's GitHub APK |
+| `hit` | `POST /v1/hit` | site page view → Analytics Engine, +1 on `site_daily`; with a `campaign` tag that is in the `campaigns` table, +1 `open` on `campaign_daily` |
+| `download` | `GET /v1/dl/lite`, `GET /v1/dl/full` | count (Analytics Engine; +1 on `site_daily` only for a person's browser: `Sec-Fetch-Mode: navigate` and no bot user agent, else the point's class is `bot`; with `?i=<code>` also +1 `download` on that share link's `share_daily`, or with a `?c=<tag>` that is in the `campaigns` table +1 `download` on `campaign_daily`), then 302 to the current version's GitHub APK |
 | `share_open` | `GET /i/<code>` (site host) | a share link opened: +1 `open` on `share_daily` for a person's browser (the download rule), then 302 to `/?i=<code>` |
 | `share_stats` | `POST /v1/share/stats` | each share code's totals (opened, downloaded, installed, using, last day); no identity |
 | `health` | `GET /v1/health` | public capacity facts: database size, limit, ratios, `ingestPaused`, the retention switch and the oldest kept row's age per table (`HealthResponse` in `core/schema/wire.ts`); no identity, never cached |
@@ -105,7 +105,9 @@ command (Deploys).
 
 `scripts/data.mjs` (`./manage data`, `pnpm -C tce data`) reads what the app and
 the site have sent: devices, installs and versions, sessions with engine and
-phone health, events, errors, reports, site traffic, and the GitHub counters.
+phone health, events, errors, reports, site traffic, the GitHub counters, the share links and the campaign links
+(`./manage campaign add <tag> "<note>"` adds a tag to the D1 `campaigns` list; it
+counts at once, no push).
 In a terminal it is a full-screen view: tabs (`1`–`9`, arrows), scrolling, the
 stack frames of an error and the note, phone and log of a report (enter),
 the window (`w`: 7, 30 or 90 days), our tester devices (`t`, hidden by
@@ -186,3 +188,6 @@ cf d1 migrations apply 64a28b32-a61f-4ad8-b9a4-c7ae7cea8b66 --dir tce/stores/sql
 
 Migrations must stay backward compatible with the Worker still live (add
 columns and tables; never drop or rename in the same release).
+
+Migration `0005_campaigns.sql` adds `campaigns` and `campaign_daily`; apply it
+before pushing the Worker that counts campaign links.

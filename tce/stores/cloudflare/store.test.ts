@@ -29,7 +29,7 @@ import {
 import { createStorageGuardState } from './guard.ts';
 import { createCloudflareStore } from './store.ts';
 import type { CloudflareStoreEnv } from './store.ts';
-import { DB, MIGRATIONS, TABLES, V1, V2, count, failingDataset, memoryLog, recordingDataset, reset } from './local-d1.test-support.ts';
+import { DB, MIGRATIONS, TABLES, V1, V2, count, failingDataset, listCampaigns, memoryLog, recordingDataset, reset } from './local-d1.test-support.ts';
 
 /** Compile-time: the store binds no R2 bucket any more (cold storage was removed). */
 const noArchiveBinding: 'ARCHIVE' extends keyof CloudflareStoreEnv ? never : true = true;
@@ -38,6 +38,7 @@ storeContract(
   'cloudflare (local D1)',
   async (opts: MakeOptions = {}): Promise<StoreUnderTest> => {
     await reset();
+    await listCampaigns(opts.campaigns);
     const env: CloudflareStoreEnv = {
       DB,
       PAGEVIEWS: opts.failingPointSink ? failingDataset() : recordingDataset(),

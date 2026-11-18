@@ -15,7 +15,9 @@ export type TableName =
   | 'site_daily'
   | 'share_links'
   | 'share_daily'
-  | 'share_installs';
+  | 'share_installs'
+  | 'campaign_daily'
+  | 'campaigns';
 
 /**
  * Tables `forget` clears for a device: its own rows, the share links it sent
@@ -266,4 +268,33 @@ export interface ShareInstallRow {
 export interface ArchiveRowMap {
   events: EventRow;
   errors: ErrorRow;
+}
+
+/** What campaign_daily counts per tag: a page view of `/?c=<tag>`, or a download from it. */
+export type CampaignStep = 'open' | 'download';
+
+/**
+ * Opens and downloads per campaign tag (a `?c=<tag>` whose tag is in
+ * campaigns) and UTC day, no identity, no owner. Upsert on (tag, step, day):
+ * count += the incoming count; a tag not in campaigns adds nothing.
+ */
+export interface CampaignDailyRow {
+  day: string;
+  tag: string;
+  step: CampaignStep;
+  count: number;
+}
+
+/**
+ * A campaign tag we made (migration 0005): only these count in
+ * campaign_daily. Written by `./manage campaign add` with the cf CLI, never
+ * by an op; no identity, no owner.
+ */
+export interface CampaignRow {
+  /** core/campaign.ts CAMPAIGN_TAG. */
+  tag: string;
+  /** Where the link was posted, for us. */
+  note: string;
+  /** The UTC day it was added, YYYY-MM-DD. */
+  added: string;
 }

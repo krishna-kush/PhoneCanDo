@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createMemoryStore, type MemoryStore } from '../../stores/memory/index.ts';
 import { callHttp, fakeCtx, type FakeCtx } from '../../testkit/ctx.ts';
-import { DAY_MS, SITE_HOST, SITE_ORIGIN, T0, UA, hitRequest, httpRequest, type HttpRequestOverrides } from '../../testkit/fixtures.ts';
+import { CAMPAIGN_TAG, DAY_MS, SITE_HOST, SITE_ORIGIN, T0, UA, campaignRow, hitRequest, httpRequest, type HttpRequestOverrides } from '../../testkit/fixtures.ts';
 import { err } from '../result.ts';
 import { LIMITS } from '../schema/limits.ts';
 import { hitOp, originAllowed } from './hit.ts';
@@ -196,5 +196,61 @@ describe('hit run', () => {
     });
     assert.deepEqual(await hit(ctx, hitRequest()), { ok: true, value: { status: 204 } });
     assert.equal(ctx.log.entries[0]!.level, 'error');
+  });
+});
+
+describe('hit from a campaign page (campaign)', () => {
+  /** A ctx over a store listing CAMPAIGN_TAG, recording every tag handed to countCampaignStep. */
+  function listed(): { ctx: FakeCtx<MemoryStore>; asked: string[] } {
+    const store = createMemoryStore({ campaigns: [campaignRow()] });
+    const asked: string[] = [];
+    const ctx = setup({
+      ...store,
+      countCampaignStep: (row) => {
+        asked.push(row.tag);
+        return store.countCampaignStep(row);
+      },
+    });
+    return { ctx, asked };
+  }
+
+  it('adds +1 open on campaign_daily for a tag in campaigns from a person, besides the page view', async () => {
+    const { ctx } = listed();
+    await hit(ctx, { path: '/', campaign: CAMPAIGN_TAG });
+    await hit(ctx, { path: '/', campaign: CAMPAIGN_TAG }, { headers: { userAgent: UA.desktop } });
+    assert.deepEqual(ctx.store.tables.campaign_daily, [{ day: '2026-11-01', tag: CAMPAIGN_TAG, step: 'open', count: 2 }]);
+    assert.equal(ctx.store.pagePoints.length, 2);
+  });
+
+  it('hands any well-formed tag to the store, which counts nothing for one not in campaigns', async () => {
+    const { ctx, asked } = listed();
+    assert.deepEqual(await hit(ctx, { path: '/', campaign: 'never-made' }), { ok: true, value: { status: 204 } });
+    assert.deepEqual(asked, ['never-made']);
+    assert.deepEqual(ctx.store.tables.campaign_daily, []);
+    assert.equal(ctx.store.pagePoints.length, 1);
+  });
+
+  it('ignores a malformed tag, a bot, and a caller over the rate limit', async () => {
+    const { ctx, asked } = listed();
+    for (const campaign of ['HN', 'hn ', 'h'.repeat(25), '']) {
+      assert.deepEqual(await hit(ctx, { path: '/', campaign }), { ok: true, value: { status: 204 } }, campaign);
+    }
+    await hit(ctx, { path: '/', campaign: CAMPAIGN_TAG }, { headers: { userAgent: UA.bot } });
+    await hit(ctx, { path: '/', campaign: CAMPAIGN_TAG }, { limited: true });
+    assert.deepEqual(asked, []);
+    assert.deepEqual(ctx.store.tables.campaign_daily, []);
+    assert.equal(ctx.store.pagePoints.length, 5);
+  });
+
+  it('rejects a campaign that is not a string', async () => {
+    const r = await hit(setup(), { path: '/', campaign: 7 });
+    assert.deepEqual(!r.ok && [r.error.code, r.error.field], ['bad_request', 'campaign']);
+  });
+
+  it('still answers 204 when the campaign count fails', async () => {
+    const store = createMemoryStore();
+    const ctx = setup({ ...store, countCampaignStep: async () => err('unavailable', 'db down') });
+    assert.deepEqual(await hit(ctx, { path: '/', campaign: CAMPAIGN_TAG }), { ok: true, value: { status: 204 } });
+    assert.equal(ctx.log.entries.at(-1)!.level, 'warn');
   });
 });

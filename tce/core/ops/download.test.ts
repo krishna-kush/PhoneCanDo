@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createMemoryStore, type MemoryStore } from '../../stores/memory/index.ts';
 import { callHttp, fakeCtx, type FakeCtx } from '../../testkit/ctx.ts';
-import { DAY_MS, SHARE_CODE, SITE_HOST, T0, UA, httpRequest, type HttpRequestOverrides } from '../../testkit/fixtures.ts';
+import { CAMPAIGN_TAG, DAY_MS, SHARE_CODE, SITE_HOST, T0, UA, campaignRow, httpRequest, type HttpRequestOverrides } from '../../testkit/fixtures.ts';
 import type { HttpResponse } from '../op.ts';
 import { err, type TceResult } from '../result.ts';
 import { apkUrl, downloadOp } from './download.ts';
@@ -174,5 +174,57 @@ describe('download from a share link (?i=)', () => {
     const r = await download(failing, 'lite', { query: { i: SHARE_CODE } });
     assert.equal(r.ok && r.value.status, 302);
     assert.equal(failing.log.entries.at(-1)!.level, 'warn');
+  });
+});
+
+describe('download from a campaign page (?c=)', () => {
+  /** A ctx over a store listing CAMPAIGN_TAG, recording every tag handed to countCampaignStep. */
+  function listed(): { ctx: FakeCtx<MemoryStore>; asked: string[] } {
+    const store = createMemoryStore({ campaigns: [campaignRow()] });
+    const asked: string[] = [];
+    const ctx = setup({
+      ...store,
+      countCampaignStep: (row) => {
+        asked.push(row.tag);
+        return store.countCampaignStep(row);
+      },
+    });
+    return { ctx, asked };
+  }
+
+  it('adds +1 download for a tag in campaigns when the download counts in site_daily, then redirects', async () => {
+    const { ctx } = listed();
+    const r = await download(ctx, 'lite', { query: { c: CAMPAIGN_TAG } });
+    assert.deepEqual(r, { ok: true, value: { status: 302, location: LITE, headers: { 'Cache-Control': 'no-store' } } });
+    await download(ctx, 'full', { query: { c: CAMPAIGN_TAG } });
+    assert.deepEqual(ctx.store.tables.campaign_daily, [{ day: '2026-11-01', tag: CAMPAIGN_TAG, step: 'download', count: 2 }]);
+  });
+
+  it('hands any well-formed tag to the store, which counts nothing for one not in campaigns', async () => {
+    const { ctx, asked } = listed();
+    const r = await download(ctx, 'lite', { query: { c: 'never-made' } });
+    assert.equal(r.ok && r.value.status, 302);
+    assert.deepEqual(asked, ['never-made']);
+    assert.deepEqual(ctx.store.tables.campaign_daily, []);
+  });
+
+  it('counts nothing for a malformed tag, a bot, a HEAD, or over the rate limit', async () => {
+    const { ctx, asked } = listed();
+    for (const c of ['HN', 'h n', 'h'.repeat(25), '']) await download(ctx, 'lite', { query: { c } });
+    await download(ctx, 'lite', { query: { c: CAMPAIGN_TAG }, headers: { secFetchMode: null, userAgent: 'curl/8.5.0' } });
+    await download(ctx, 'lite', { query: { c: CAMPAIGN_TAG }, method: 'HEAD' });
+    await download(ctx, 'lite', { query: { c: CAMPAIGN_TAG }, limited: true });
+    assert.deepEqual(asked, []);
+    assert.deepEqual(ctx.store.tables.campaign_daily, []);
+  });
+
+  it('lets a valid share code win: the share link counts, the campaign does not', async () => {
+    const { ctx } = listed();
+    await download(ctx, 'lite', { query: { i: SHARE_CODE, c: CAMPAIGN_TAG } });
+    assert.equal(ctx.store.tables.campaign_daily.length, 0);
+    assert.equal(ctx.store.tables.share_daily[0]?.count, 1);
+    // A malformed `i` is ignored, so the campaign counts.
+    await download(ctx, 'lite', { query: { i: 'nope', c: CAMPAIGN_TAG } });
+    assert.deepEqual(ctx.store.tables.campaign_daily.map((r) => r.count), [1]);
   });
 });

@@ -6,13 +6,17 @@
 // Analytics points are kept in pagePoints/downloadPoints (the detail sink) and
 // counted in site_daily (the permanent rollup). Share links follow
 // core/store.ts: the first device keeps a code, one install per device, never
-// through its own link.
+// through its own link; campaign steps are plain per-day counts, only for a
+// tag in its campaigns table (seeded through MemoryStoreOptions.campaigns: no
+// op writes it).
 
 import { err, ok, type TceResult } from '../../core/result.ts';
 import { compareSiteDaily, downloadRollup, pageViewRollup } from '../../core/site-daily.ts';
 import type {
   ArchivableTable,
   ArchiveRowMap,
+  CampaignDailyRow,
+  CampaignRow,
   DeviceRow,
   DownloadPoint,
   ErrorRow,
@@ -48,6 +52,8 @@ export interface TableRows {
   share_links: ShareLinkRow;
   share_daily: ShareDailyRow;
   share_installs: ShareInstallRow;
+  campaign_daily: CampaignDailyRow;
+  campaigns: CampaignRow;
 }
 
 /** Live read-only view: each property returns copies of the table's current rows, in insertion order. */
@@ -68,6 +74,11 @@ export interface MemoryStoreOptions {
    * sink failure never fails the rollup, core/store.ts).
    */
   failingPointSink?: boolean;
+  /**
+   * The campaigns table's rows: the tags countCampaignStep counts. In
+   * production only `./manage campaign add` writes them, so no Store method does.
+   */
+  campaigns?: readonly CampaignRow[];
 }
 
 // NOT NULL columns per table, mirroring stores/sql/migrations/, so
@@ -98,6 +109,8 @@ const REQUIRED: { readonly [T in TableName]: readonly (keyof TableRows[T])[] } =
   share_links: ['code', 'device_id', 'created'],
   share_daily: ['code', 'step', 'day', 'count'],
   share_installs: ['device_id', 'code', 'ts', 'day'],
+  campaign_daily: ['tag', 'step', 'day', 'count'],
+  campaigns: ['tag', 'note', 'added'],
 };
 
 const SEP = '\u0000';
@@ -116,6 +129,8 @@ const KEY: { readonly [T in TableName]: (row: TableRows[T]) => string } = {
   share_links: (r) => r.code,
   share_daily: (r) => r.code + SEP + r.step + SEP + r.day,
   share_installs: (r) => r.device_id,
+  campaign_daily: (r) => r.tag + SEP + r.step + SEP + r.day,
+  campaigns: (r) => r.tag,
 };
 
 /** The first NOT NULL violation in `row`, or null. */
@@ -190,7 +205,7 @@ export function mergeSession(stored: SessionRow, incoming: SessionRow): SessionR
   };
 }
 
-/** A fresh, empty in-memory store. */
+/** A fresh in-memory store, empty but for `opts.campaigns`. */
 export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
   const data: { [T in TableName]: Map<string, TableRows[T]> } = {
     devices: new Map(),
@@ -205,6 +220,8 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
     share_links: new Map(),
     share_daily: new Map(),
     share_installs: new Map(),
+    campaign_daily: new Map(),
+    campaigns: new Map(),
   };
   const pagePoints: PagePoint[] = [];
   const downloadPoints: DownloadPoint[] = [];
@@ -222,6 +239,9 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
     put(table, row);
     return true;
   };
+
+  // A tag listed twice keeps its first row, as the SQL table's primary key would.
+  for (const c of opts.campaigns ?? []) insertOrIgnore('campaigns', c);
 
   const upsert = <T extends 'devices' | 'installs' | 'sessions'>(
     table: T,
@@ -244,6 +264,30 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
     if (!counted) return ok(undefined);
     const stored = data.site_daily.get(KEY.site_daily(rollup));
     put('site_daily', stored ? { ...stored, count: stored.count + rollup.count } : rollup);
+    return ok(undefined);
+  };
+
+  /**
+   * +row.count on a per-day count table, after the checks a SQL store makes:
+   * NOT NULL columns, a YYYY-MM-DD day and the CHECK on `field` (`valid`).
+   * `counts` false: the row passes the checks and adds nothing (a campaign
+   * tag not in campaigns, as the SQL statement's WHERE EXISTS).
+   */
+  const addCount = <T extends 'share_daily' | 'campaign_daily'>(
+    table: T,
+    row: TableRows[T],
+    field: string,
+    valid: boolean,
+    message: string,
+    counts = true,
+  ): TceResult<void> => {
+    const bad = missingColumn(table, row);
+    if (bad !== null) return err('internal', `memory store: ${bad} must not be null`, bad);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(row.day)) return err('bad_request', 'day must be YYYY-MM-DD', 'day');
+    if (!valid) return err('bad_request', message, field);
+    if (!counts) return ok(undefined);
+    const stored = data[table].get(KEY[table](row));
+    put(table, stored ? { ...stored, count: stored.count + row.count } : row);
     return ok(undefined);
   };
 
@@ -377,13 +421,12 @@ export function createMemoryStore(opts: MemoryStoreOptions = {}): MemoryStore {
     },
 
     async countShareStep(row: ShareDailyRow): Promise<TceResult<void>> {
-      const bad = missingColumn('share_daily', row);
-      if (bad !== null) return err('internal', `memory store: ${bad} must not be null`, bad);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(row.day)) return err('bad_request', 'day must be YYYY-MM-DD', 'day');
-      if (row.step !== 'open' && row.step !== 'download') return err('bad_request', "step must be 'open' or 'download'", 'step');
-      const stored = data.share_daily.get(KEY.share_daily(row));
-      put('share_daily', stored ? { ...stored, count: stored.count + row.count } : row);
-      return ok(undefined);
+      return addCount('share_daily', row, 'step', row.step === 'open' || row.step === 'download', "step must be 'open' or 'download'");
+    },
+
+    async countCampaignStep(row: CampaignDailyRow): Promise<TceResult<void>> {
+      const listed = data.campaigns.has(row.tag);
+      return addCount('campaign_daily', row, 'step', row.step === 'open' || row.step === 'download', "step must be 'open' or 'download'", listed);
     },
 
     async shareStats(codes: readonly string[]): Promise<TceResult<ShareLinkStats[]>> {

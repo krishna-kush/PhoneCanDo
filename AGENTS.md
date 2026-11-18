@@ -299,7 +299,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   to `prod`). Read `tce/AGENTS.md`; open work in `tce/docs/planning/todo.md`.
   Only `app/src/engine/telemetry/` imports it; a new field ships with its
   line in `docs/telemetry.md`. Share links (`/i/<code>`, `/v1/share/stats`)
-  are tce too.
+  are tce too, and so are campaign links (`/?c=<tag>`): only tags in the D1
+  `campaigns` list count, added with `./manage campaign add`.
 - `accounts/` — optional Google sign-in's server (own pnpm package, zero
   runtime deps): checks Google ID tokens, sessions, the share-link list and
   the synced settings a signed-in person keeps; own D1 `phonecando-accounts`, never joined with

@@ -156,6 +156,8 @@ export interface HitRequest {
   path: string;
   /** document.referrer; only its host is kept. */
   ref?: string;
+  /** The page's `?c=<tag>`: counted only when the tag is in the campaigns table (`./manage campaign add`). */
+  campaign?: string;
 }
 
 /**

@@ -4,6 +4,8 @@
 
 import type { HttpRequest } from '../core/op.ts';
 import type {
+  CampaignDailyRow,
+  CampaignRow,
   DeviceRow,
   DownloadPoint,
   ErrorRow,
@@ -91,6 +93,8 @@ export const STRANGER_VERIFIER = 'a6510c843d0ba18fc7430941efed86256b23d241f80bd6
 export const SHARE_CODE = 'k7q2m9xa';
 export const SHARE_CODE_2 = 'p3rt8wnb';
 export const SHARE_CODE_3 = 'zz22hh44';
+/** A campaign tag (core/campaign.ts CAMPAIGN_TAG); campaignRow() lists it in the campaigns table. */
+export const CAMPAIGN_TAG = 'hn';
 
 export const SITE_HOST = 'phonecando.app';
 export const SITE_ORIGIN = `https://${SITE_HOST}`;
@@ -271,6 +275,16 @@ export function shareDailyRow(over: Partial<ShareDailyRow> = {}): ShareDailyRow 
 /** A share_installs row: DEVICE_ID_2 installed through SHARE_CODE at T0. */
 export function shareInstallRow(over: Partial<ShareInstallRow> = {}): ShareInstallRow {
   return { device_id: DEVICE_ID_2, code: SHARE_CODE, ts: T0, day: '2026-11-01', ...over };
+}
+
+/** A campaigns row: CAMPAIGN_TAG, made on T0's UTC day (what `./manage campaign add` writes). */
+export function campaignRow(over: Partial<CampaignRow> = {}): CampaignRow {
+  return { tag: CAMPAIGN_TAG, note: 'Hacker News launch post', added: '2026-11-01', ...over };
+}
+
+/** A campaign_daily row: one open of CAMPAIGN_TAG on T0's UTC day. */
+export function campaignDailyRow(over: Partial<CampaignDailyRow> = {}): CampaignDailyRow {
+  return { day: '2026-11-01', tag: CAMPAIGN_TAG, step: 'open', count: 1, ...over };
 }
 
 /** One device, one install, one session with one event and one error. */

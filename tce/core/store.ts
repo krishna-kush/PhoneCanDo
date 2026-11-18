@@ -7,6 +7,7 @@ import type { TceResult } from './result.ts';
 import type {
   ArchivableTable,
   ArchiveRowMap,
+  CampaignDailyRow,
   DeviceRow,
   DownloadPoint,
   ErrorRow,
@@ -108,6 +109,14 @@ export interface Store {
    * closed, like the site_daily rollup; bad_request for a malformed day.
    */
   countShareStep(row: ShareDailyRow): Promise<TceResult<void>>;
+
+  /**
+   * +row.count on campaign_daily (tag, step, day): a campaign page's view or
+   * download, no identity. Counts only a tag in the campaigns table, checked
+   * in the same write (ok and nothing added for any other tag). Gated and
+   * checked like countShareStep.
+   */
+  countCampaignStep(row: CampaignDailyRow): Promise<TceResult<void>>;
 
   /**
    * All-time counts per share code, one entry per distinct code in the order

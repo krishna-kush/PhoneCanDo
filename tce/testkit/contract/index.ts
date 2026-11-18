@@ -2,7 +2,8 @@
 // storeContract('<name>', make) once; every case gets a fresh store from
 // make() and closes it afterwards. Checks go through the Store interface
 // (listExpired exposes event/error rows, listSiteDaily the rollup, forget
-// per-table counts, countReportsSince reports, shareStats share counts). When make() also returns
+// per-table counts, countReportsSince reports, shareStats share counts; campaign
+// counts only through dump). When make() also returns
 // `dump`, merged device, install, session, report and GitHub values are
 // checked as well; without it those value checks are skipped. stores/memory
 // is the reference. One file per concern registers its cases; harness.ts is
@@ -10,6 +11,7 @@
 
 import { describe } from 'node:test';
 import { applyBatchCases } from './apply-batch.ts';
+import { campaignCases } from './campaign.ts';
 import { forgetCases } from './forget.ts';
 import { githubCases } from './github.ts';
 import type { Make, StoreContractOptions } from './harness.ts';
@@ -35,6 +37,7 @@ export function storeContract(name: string, make: Make, opts: StoreContractOptio
     githubCases(make);
     siteDailyCases(make, opts);
     shareCases(make);
+    campaignCases(make);
     usageCases(make);
   });
 }

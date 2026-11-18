@@ -1,8 +1,9 @@
 // What the stores/cloudflare test files share: one local D1 from wrangler's
 // getPlatformProxy (workerd + local D1 persisted into a temp dir; no account,
 // no network) with every shared migration applied in file order, a reset
-// between cases, and recording fakes for Analytics Engine (it has no local
-// emulation). Test-only: nothing in stores/cloudflare imports it.
+// between cases, the campaigns list a case asks for, and recording fakes for
+// Analytics Engine (it has no local emulation). Test-only: nothing in
+// stores/cloudflare imports it.
 
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,8 +12,10 @@ import { fileURLToPath } from 'node:url';
 import { after } from 'node:test';
 import { getPlatformProxy } from 'wrangler';
 import type { Logger } from '../../core/op.ts';
-import type { TableName } from '../../core/schema/rows.ts';
+import type { CampaignRow, TableName } from '../../core/schema/rows.ts';
+import { buildInserts } from '../sql/chunk.ts';
 import { splitSqlStatements } from '../sql/split.ts';
+import { CAMPAIGNS } from '../sql/tables.ts';
 import { SHARED_MIGRATIONS_DIR, loadMigrations } from '../sqlite/migrate.ts';
 
 // No usage metrics from the test run.
@@ -52,11 +55,18 @@ export const TABLES: readonly TableName[] = [
   'share_links',
   'share_daily',
   'share_installs',
+  'campaign_daily',
+  'campaigns',
 ];
 
 /** Empty every table, so each case starts from a clean database. */
 export async function reset(): Promise<void> {
   await DB.batch(TABLES.map((t) => DB.prepare(`DELETE FROM ${t}`)));
+}
+
+/** Lists `rows` in the campaigns table (what `./manage campaign add` does on the live D1). */
+export async function listCampaigns(rows: readonly CampaignRow[] = []): Promise<void> {
+  if (rows.length) await DB.batch(buildInserts(CAMPAIGNS, rows).map((s) => DB.prepare(s.sql).bind(...s.params)));
 }
 
 /** Rows of `SELECT count(*)` for a table. */

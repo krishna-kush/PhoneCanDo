@@ -39,15 +39,23 @@ describe('Cloudflare host (index.ts) over getPlatformProxy', () => {
   const w = useWorker();
   const { assets, call, count, ctx, downloads, logs, pageviews, pending, postJson, printed, rollup } = w;
 
-  it('has the eight tables from migration 0001, the verifier column from 0002, site_daily from 0003 and the share tables from 0004', async () => {
+  it('has the eight tables from migration 0001, the verifier column from 0002, site_daily from 0003, the share tables from 0004 and the campaign counts and list from 0005', async () => {
     assert.deepEqual(
-      MIGRATIONS.map((m) => m.name).slice(0, 4),
-      ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql', '0004_share.sql'],
+      MIGRATIONS.map((m) => m.name).slice(0, 5),
+      [
+        '0001_init.sql',
+        '0002_ownership_indexes.sql',
+        '0003_site_daily.sql',
+        '0004_share.sql',
+        '0005_campaigns.sql',
+      ],
     );
     const rows = await w.env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE '\\_%' ESCAPE '\\' ORDER BY name").all<{ name: string }>();
     assert.deepEqual(
       rows.results.map((r) => r.name).filter((n) => n !== 'd1_migrations' && !n.startsWith('sqlite_')),
       [
+        'campaign_daily',
+        'campaigns',
         'devices',
         'errors',
         'events',

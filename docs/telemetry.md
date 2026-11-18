@@ -92,6 +92,7 @@ downloads are not added to `site_daily`, while Delete my data keeps working.
 | `share_links`, `share_daily`, `share_installs` (your share links, their daily opens and downloads, and the installs that came through them) | until the sharing phone's Delete my data; a phone's own install through a link also until that phone's Delete my data |
 | `github_assets_daily`, `github_repo_daily` | kept (aggregate counters, no people) |
 | `site_daily` (daily page view and download totals) | kept (counts per day, path or channel, and country; no people) |
+| `campaigns`, `campaign_daily` (our campaign tags, their daily opens and downloads) | kept (counts per tag and day; no people) |
 | Analytics Engine (site views and downloads in detail) | about 3 months (Cloudflare's limit) |
 | D1 point-in-time backups (Time Travel) | 7 days on the free plan (30 on a paid plan): a deleted row is fully gone after that |
 | Cloudflare Workers Logs (only the Worker's own log lines: operation, status, error code, request id; per-request invocation logs, which would hold headers and the IP, are turned off) | 3 days (7 on a paid plan); for debugging, not copied anywhere |
@@ -286,8 +287,9 @@ is no other copy.
 
 ## Site page views (`POST /v1/hit`, Analytics Engine `phonecando_pageviews`, `site_daily`)
 
-The site's one inline script sends `path` (no query string) and `ref`
-(`document.referrer`) once per page load. Stored in Analytics Engine for about
+The site's one inline script sends `path` (no query string), `ref`
+(`document.referrer`) and, on a campaign link's page, `campaign` (the `?c=`
+tag; see [Campaigns](#campaigns-campaigns-campaign_daily)) once per page load. Stored in Analytics Engine for about
 3 months: path (≤ 200 chars), the referrer's host only (≤ 100; none for links
 within the site), country, and a user-agent class (`bot`, `android`, `ios`,
 `desktop`, `other`). Also counted, for good, in the D1 table `site_daily`: +1
@@ -336,6 +338,23 @@ totals: `opened`, `downloaded`, `installed`, `using` and the last day with
 any of them. It needs no identity: a code is the link itself, so whoever
 holds a link can read its counts, and nothing else. Nobody can see who opened,
 downloaded or installed.
+
+## Campaigns (`campaigns`, `campaign_daily`)
+
+A campaign link is the site with a tag, `https://phonecando.app/?c=<tag>`
+(lowercase letters, digits and `-`, at most 24), one tag per place we post it.
+Only tags we added count: the list is the D1 table `campaigns` (tag, a note,
+the day added), changed only with `./manage campaign add`; any other tag is
+ignored. On a campaign page the page-view beacon also sends `campaign`, and
+the download buttons and QR code carry `?c=<tag>` to `/v1/dl`. A share code
+(`?i=`) on the same page wins and the tag is ignored.
+
+| Step | How it is counted | What is kept |
+|---|---|---|
+| Opened | `POST /v1/hit` with `campaign`, from a client that is not a bot | `campaign_daily`: +1 on (tag, `open`, UTC day) |
+| Downloaded | `GET /v1/dl/<channel>?c=<tag>`: a download that counts in `site_daily` also adds +1 | `campaign_daily`: +1 on (tag, `download`, UTC day) |
+
+No ID, no IP, nothing about the person; the file still comes from GitHub.
 
 ## Capacity (`GET /v1/health`)
 

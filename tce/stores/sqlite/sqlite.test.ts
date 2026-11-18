@@ -27,12 +27,21 @@ describe('migrations', () => {
   test('a new file gets the shared and local schema; a reopen applies nothing and keeps data', async () => {
     const path = dbPath();
     const first = openSqliteDatabase(path, { clock });
-    assert.deepEqual(first.applied, ['0001_init.sql', '0002_ownership_indexes.sql', '0003_site_daily.sql', '0004_share.sql', 'sqlite/0001_points.sql']);
+    assert.deepEqual(first.applied, [
+      '0001_init.sql',
+      '0002_ownership_indexes.sql',
+      '0003_site_daily.sql',
+      '0004_share.sql',
+      '0005_campaigns.sql',
+      'sqlite/0001_points.sql',
+    ]);
     const tables = (first.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as { name: string }[]).map(
       (r) => r.name,
     );
     assert.deepEqual(tables, [
       '_tce_migrations',
+      'campaign_daily',
+      'campaigns',
       'devices',
       'errors',
       'events',
@@ -63,6 +72,7 @@ describe('migrations', () => {
         { name: '0002_ownership_indexes.sql', applied_at: T0 },
         { name: '0003_site_daily.sql', applied_at: T0 },
         { name: '0004_share.sql', applied_at: T0 },
+        { name: '0005_campaigns.sql', applied_at: T0 },
         { name: 'sqlite/0001_points.sql', applied_at: T0 },
       ],
     );
@@ -133,7 +143,13 @@ describe('migrations', () => {
       .run(DEVICE_ID, T0, T0);
     old.close();
     const upgraded = openSqliteDatabase(path, { clock });
-    assert.deepEqual(upgraded.applied, ['0002_ownership_indexes.sql', '0003_site_daily.sql', '0004_share.sql', 'sqlite/0001_points.sql']);
+    assert.deepEqual(upgraded.applied, [
+      '0002_ownership_indexes.sql',
+      '0003_site_daily.sql',
+      '0004_share.sql',
+      '0005_campaigns.sql',
+      'sqlite/0001_points.sql',
+    ]);
     assert.deepEqual({ ...(upgraded.db.prepare('SELECT device_id, verifier FROM devices').get() as object) }, { device_id: DEVICE_ID, verifier: null });
     upgraded.close();
   });

@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import type { TestContext } from 'node:test';
 import type { TceResult } from '../../core/result.ts';
-import type { ArchivableTable, ForgettableTable, TableName } from '../../core/schema/rows.ts';
+import type { ArchivableTable, CampaignRow, ForgettableTable, TableName } from '../../core/schema/rows.ts';
 import type { BatchCounts, BatchWrite, Store } from '../../core/store.ts';
 import { DAY_MS, T0, batchWrite } from '../fixtures.ts';
 
@@ -28,6 +28,12 @@ export interface StoreContractOptions {
 export interface MakeOptions {
   /** Build the store with an analytics sink whose every write fails (throws or rejects). */
   failingPointSink?: boolean;
+  /**
+   * Build the store with these rows in its campaigns table (migration 0005).
+   * Every store honours it: no Store method writes the list (in production
+   * `./manage campaign add` does), so this is how the contract seeds it.
+   */
+  campaigns?: readonly CampaignRow[];
 }
 
 /** One row as a plain record. */
@@ -48,6 +54,8 @@ const PRIMARY_KEYS: Readonly<Record<TableName, readonly string[]>> = {
   share_links: ['code'],
   share_daily: ['code', 'step', 'day'],
   share_installs: ['device_id'],
+  campaign_daily: ['tag', 'step', 'day'],
+  campaigns: ['tag'],
 };
 const TABLES = Object.keys(PRIMARY_KEYS) as TableName[];
 /** Later than any fixture row, so listExpired returns everything. */

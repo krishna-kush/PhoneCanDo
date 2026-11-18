@@ -7,7 +7,7 @@ import { createMemoryStore } from './index.ts';
 storeContract(
   'memory',
   async (opts) => {
-    const store = createMemoryStore({ failingPointSink: opts?.failingPointSink === true });
+    const store = createMemoryStore({ failingPointSink: opts?.failingPointSink === true, campaigns: opts?.campaigns ?? [] });
     return { store, dump: async (table) => store.tables[table] };
   },
   { pointSinkFailure: true },

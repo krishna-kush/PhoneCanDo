@@ -18,6 +18,8 @@
 
 import type { TableSpec } from './chunk.ts';
 import type {
+  CampaignDailyRow,
+  CampaignRow,
   DeviceRow,
   ErrorRow,
   EventRow,
@@ -331,6 +333,28 @@ export const SHARE_DAILY: TableSpec<ShareDailyRow> = {
  * skips a link the same device owns (stores/sql/share.ts, shareInstallInsert).
  */
 export const SHARE_INSTALL_COLUMNS = columnsOf<ShareInstallRow>()(['device_id', 'code', 'ts', 'day']);
+
+/**
+ * campaign_daily: upsert on (tag, step, day); count adds the incoming count, as
+ * share_daily does. Its insert is not a plain spec insert: it also skips a tag
+ * that is not in campaigns (stores/sql/campaign.ts, campaignStepStatement).
+ */
+export const CAMPAIGN_DAILY: TableSpec<CampaignDailyRow> = {
+  table: 'campaign_daily',
+  columns: columnsOf<CampaignDailyRow>()(['tag', 'step', 'day', 'count']),
+  onConflict: 'ON CONFLICT (tag, step, day) DO UPDATE SET count = campaign_daily.count + excluded.count',
+};
+
+/**
+ * campaigns (migration 0005): the tags that count. No op writes it
+ * (`./manage campaign add` does, with the cf CLI); tests list tags with it. A
+ * tag already listed keeps its note and day.
+ */
+export const CAMPAIGNS: TableSpec<CampaignRow> = {
+  table: 'campaigns',
+  columns: columnsOf<CampaignRow>()(['tag', 'note', 'added']),
+  onConflict: 'ON CONFLICT (tag) DO NOTHING',
+};
 
 /** Read/delete shape of a table the retention cron drains. */
 export interface RetentionSpec {

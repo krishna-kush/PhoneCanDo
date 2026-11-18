@@ -1,29 +1,16 @@
 ---
-import { encode } from "uqr";
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
 import Steps from "./install/Steps.astro";
 import { dlUrl, site } from "../../data/site";
+import { plateQr } from "../../lib/plateQr";
 
 // The plate's code is real: the starter's download route (absolute, on the
 // API host), so a visitor on a computer can scan the
-// download onto the phone. Encoded at build time, so the page ships one SVG
-// path and no script. Each run of dark modules in a row is one rectangle;
-// the 4-module border is the spec's quiet zone.
-const qr = encode(dlUrl("lite"), { ecc: "M", border: 4 });
-const qrPath = qr.data
-    .map((row, y) => {
-        let d = "";
-        for (let x = 0; x < row.length; x++) {
-            if (!row[x]) continue;
-            const start = x;
-            while (row[x + 1]) x++;
-            const run = x - start + 1;
-            d += `M${start} ${y}h${run}v1h-${run}z`;
-        }
-        return d;
-    })
-    .join("");
+// download onto the phone. Encoded at build time, so a plain page ships one
+// SVG path and no QR encoder; a share or campaign link's page redraws it
+// with the ?i= or ?c= the buttons carry (the script below).
+const qr = plateQr(dlUrl("lite"));
 
 // The computer install, per OS, as three separate commands: download, check
 // the file against the SHA-256 pinned here, install. Two spaces before the
@@ -125,8 +112,9 @@ const pcScripts = [
                         shape-rendering="crispEdges"
                         role="img"
                         aria-label={`QR code for the starter APK, v${site.version}`}
+                        data-qr-of={dlUrl("lite")}
                     >
-                        <path d={qrPath} />
+                        <path d={qr.path} />
                     </svg>
                 </span>
                 <p class="install-qr-cap">
@@ -214,17 +202,48 @@ const pcScripts = [
 </section>
 
 <script>
-    // A share link (/i/<code>) lands here as /?i=<code>: the download
-    // buttons carry the code on so /v1/dl credits the link, the hero says a
-    // friend sent it, and on Android a button opens the app through the same
-    // link (the app counts the install). Pattern: tce/core/share.ts.
-    const code = new URLSearchParams(location.search).get("i");
-    if (code && /^[a-km-np-z2-9]{8}$/.test(code)) {
+    import { campaignOf } from "../../data/campaigns";
+
+    // Every download button on the page carries `name=value` on to /v1/dl,
+    // and the plate's QR code is drawn again to carry it too.
+    const carryOn = (name: "i" | "c", value: string) => {
         for (const a of document.querySelectorAll<HTMLAnchorElement>('a[href*="/v1/dl/"]')) {
             const url = new URL(a.href);
-            url.searchParams.set("i", code);
+            url.searchParams.set(name, value);
             a.href = url.href;
         }
+        void redrawQr(name, value);
+    };
+
+    // The QR code's encoder (uqr) loads only here, on a share or campaign
+    // link's page; plain pages keep the build-time code and never fetch it.
+    // If it fails to load, the plain code stays.
+    async function redrawQr(name: "i" | "c", value: string) {
+        const svg = document.querySelector<SVGSVGElement>("svg[data-qr-of]");
+        const path = svg?.querySelector("path");
+        if (!svg?.dataset.qrOf || !path) return;
+        const url = new URL(svg.dataset.qrOf);
+        url.searchParams.set(name, value);
+        try {
+            const { plateQr } = await import("../../lib/plateQr");
+            const qr = plateQr(url.href);
+            svg.setAttribute("viewBox", `0 0 ${qr.size} ${qr.size}`);
+            path.setAttribute("d", qr.path);
+        } catch {
+            // Keep the plain code: it still downloads the app.
+        }
+    }
+
+    const params = new URLSearchParams(location.search);
+
+    // A share link (/i/<code>) lands here as /?i=<code>: the download
+    // buttons carry the code on so /v1/dl credits the link, the hero says a
+    // friend sent it, and on Android a button opens the app
+    // through the same link (the app counts the install). Pattern:
+    // tce/core/share.ts.
+    const code = params.get("i");
+    if (code && /^[a-km-np-z2-9]{8}$/.test(code)) {
+        carryOn("i", code);
         const friend = document.querySelector<HTMLElement>("[data-friend]");
         if (friend) friend.hidden = false;
         const open = document.querySelector<HTMLAnchorElement>("[data-open-app]");
@@ -234,6 +253,13 @@ const pcScripts = [
             open.hidden = false;
         }
     }
+
+    // A campaign link (/?c=<tag>, any tag of the right shape): the buttons
+    // carry the tag, so /v1/dl counts the download for it when it is one of
+    // ours (the server ignores any other); the file still comes plain from
+    // GitHub. Never on a share link's page.
+    const campaign = campaignOf(params);
+    if (campaign) carryOn("c", campaign);
 
     // The computer commands open on the visitor's OS, guessed from the
     // browser; the tabs switch it.

@@ -1,17 +1,22 @@
 // testkit's Store contract against the node:sqlite store: in memory, and on a
 // WAL file, each case on a fresh database. For the failing-sink case the store
 // is assembled from the same database and driver with a points sink that throws.
+// The campaigns list (MakeOptions.campaigns) is inserted on the same
+// connection, as `./manage campaign add` does on D1.
 
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after } from 'node:test';
 import type { Logger } from '../../core/op.ts';
-import type { TableName } from '../../core/schema/rows.ts';
+import type { CampaignRow, TableName } from '../../core/schema/rows.ts';
 import { storeContract } from '../../testkit/contract/index.ts';
 import type { MakeOptions, StoreUnderTest } from '../../testkit/contract/index.ts';
+import { buildInserts } from '../sql/chunk.ts';
+import type { SqlDriver } from '../sql/driver.ts';
 import { createSqlStore } from '../sql/store.ts';
 import type { PointsSink } from '../sql/store.ts';
+import { CAMPAIGNS } from '../sql/tables.ts';
 import { createSqliteStore, openSqliteDatabase } from './store.ts';
 
 const tmp = mkdtempSync(join(tmpdir(), 'tce-sqlite-contract-'));
@@ -31,12 +36,18 @@ const FAILING_SINK: PointsSink = {
   },
 };
 
+/** Lists `rows` in the campaigns table. */
+async function listCampaigns(driver: SqlDriver, rows: readonly CampaignRow[] = []): Promise<void> {
+  if (rows.length) await driver.batch(buildInserts(CAMPAIGNS, rows));
+}
+
 /** A fresh store at `path` with a dump hook on the same connection. */
 function make(path: (i: number) => string): (opts?: MakeOptions) => Promise<StoreUnderTest> {
   return async (opts: MakeOptions = {}) => {
     const file = path(n++);
     if (opts.failingPointSink) {
       const h = openSqliteDatabase(file);
+      await listCampaigns(h.driver, opts.campaigns);
       return {
         store: createSqlStore(h.driver, { points: FAILING_SINK }, quiet),
         close: async () => h.close(),
@@ -44,6 +55,7 @@ function make(path: (i: number) => string): (opts?: MakeOptions) => Promise<Stor
       };
     }
     const s = createSqliteStore(file, { log: quiet });
+    await listCampaigns(s.driver, opts.campaigns);
     return {
       store: s.store,
       close: s.close,

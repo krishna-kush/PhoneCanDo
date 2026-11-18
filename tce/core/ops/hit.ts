@@ -4,7 +4,13 @@
 // country, UA class; the store also counts it in the site_daily rollup) and
 // always answers 204, even when the store is down or the caller is over the
 // host's rate limit (then nothing is written).
+//
+// `campaign`: the page was opened through a campaign link (`/?c=<tag>`). A
+// well-formed tag from a client that does not name itself a bot is handed to
+// the store, which adds +1 `open` on campaign_daily only for a tag in the
+// campaigns table (core/campaign.ts); anything else is ignored.
 
+import { campaignTagOf } from '../campaign.ts';
 import type { HttpOp, HttpRequest, HttpResponse, RequestCtx, TceConfig } from '../op.ts';
 import { writePointSafely } from '../points.ts';
 import { cleanPath, refHost } from '../referrer.ts';
@@ -20,6 +26,8 @@ export interface HitInput {
   path: string;
   refHost: string | null;
   uaClass: UaClass;
+  /** The well-formed campaign tag the page was opened with, or null. */
+  campaign: string | null;
   /** Over the host's rate limit: answer 204 without writing a point. */
   limited: boolean;
 }
@@ -45,7 +53,7 @@ function originHost(origin: string): string | null {
 }
 
 /**
- * Validate a hit: origin first (forbidden), then `{ path, ref? }`. A referrer
+ * Validate a hit: origin first (forbidden), then `{ path, ref?, campaign? }`. A referrer
  * on the page's own host is internal navigation, so the site host comes from
  * Origin: the beacon is posted to the API host, not to the page's host.
  */
@@ -57,11 +65,19 @@ export function parseHit(req: HttpRequest, config: TceConfig): TceResult<HitInpu
   const o = r.object(req.body, '');
   const rawPath = r.string(o.path, 'path', RAW_READ_CAP);
   const ref = r.optionalString(o.ref, 'ref', RAW_READ_CAP);
-  if (r.error) return r.done({ path: '', refHost: null, uaClass: 'other', limited: req.limited });
+  // Read whole: a cut tag could match one we made.
+  const campaign = r.optionalString(o.campaign, 'campaign', RAW_READ_CAP);
+  if (r.error) return r.done({ path: '', refHost: null, uaClass: 'other', campaign: null, limited: req.limited });
   const path = cleanPath(rawPath);
   if (path === null) return err('bad_request', "must start with '/'", 'path');
   const siteHost = originHost(req.headers.origin ?? '') ?? req.headers.host;
-  return ok({ path, refHost: refHost(ref, siteHost), uaClass: uaClass(req.headers.userAgent), limited: req.limited });
+  return ok({
+    path,
+    refHost: refHost(ref, siteHost),
+    uaClass: uaClass(req.headers.userAgent),
+    campaign: campaignTagOf(campaign),
+    limited: req.limited,
+  });
 }
 
 /** POST /v1/hit. */
@@ -88,6 +104,10 @@ export const hitOp: HttpOp<HitInput> = {
       uaClass: input.uaClass,
     };
     await writePointSafely(ctx.log, 'page', () => ctx.store.writePagePoint(point));
+    if (input.campaign !== null && input.uaClass !== 'bot') {
+      const row = { day: point.day, tag: input.campaign, step: 'open' as const, count: 1 };
+      await writePointSafely(ctx.log, 'campaign open', () => ctx.store.countCampaignStep(row));
+    }
     return ok({ status: 204 });
   },
 };

@@ -129,6 +129,8 @@ describe('forget', () => {
         share_links: [],
         share_daily: [],
         share_installs: [],
+        campaign_daily: [],
+        campaigns: [],
       },
     );
     assert.equal(ctx.store.tables.devices.some((d) => d.device_id === DEVICE_ID), false);

@@ -12,7 +12,13 @@
 // `?i=<code>`: the download came from a share link's page (`/?i=<code>`, see
 // share-open.ts); a download that counts in site_daily also adds +1
 // `download` for that code in share_daily. A bad code is ignored.
+//
+// `?c=<tag>`: the download came from a campaign page (`/?c=<tag>`); a counted
+// download with a well-formed tag adds +1 `download` on campaign_daily when
+// the tag is in the campaigns table (the store checks). A share code wins:
+// with a valid `i`, `c` is ignored.
 
+import { campaignTagOf } from '../campaign.ts';
 import type { HttpOp, HttpResponse, RequestCtx } from '../op.ts';
 import { writePointSafely } from '../points.ts';
 import { refHost } from '../referrer.ts';
@@ -40,6 +46,8 @@ export interface DownloadInput {
   navigation: boolean;
   /** The share link the download came from (`?i=`), or null. */
   shareCode: string | null;
+  /** The well-formed campaign tag the download came from (`?c=`), or null; null whenever shareCode is set. */
+  campaign: string | null;
 }
 
 /** GitHub release asset URL of the arm64 APK for `channel` at `version`. */
@@ -65,6 +73,7 @@ export const downloadOp: HttpOp<DownloadInput> = {
   parse(req) {
     const channel = req.params.channel;
     if (channel !== 'lite' && channel !== 'full') return err('not_found', 'unknown download channel', 'channel');
+    const shareCode = shareCodeOf(req.query['i']);
     return ok({
       channel,
       userAgent: req.headers.userAgent,
@@ -72,7 +81,8 @@ export const downloadOp: HttpOp<DownloadInput> = {
       host: req.headers.host,
       countable: req.method !== 'HEAD' && !req.limited,
       navigation: req.headers.secFetchMode === 'navigate',
-      shareCode: shareCodeOf(req.query['i']),
+      shareCode,
+      campaign: shareCode === null ? campaignTagOf(req.query['c']) : null,
     });
   },
 
@@ -94,6 +104,9 @@ export const downloadOp: HttpOp<DownloadInput> = {
       if (person && input.shareCode !== null) {
         const row = { day: point.day, code: input.shareCode, step: 'download' as const, count: 1 };
         await writePointSafely(ctx.log, 'share download', () => ctx.store.countShareStep(row));
+      } else if (person && input.campaign !== null) {
+        const row = { day: point.day, tag: input.campaign, step: 'download' as const, count: 1 };
+        await writePointSafely(ctx.log, 'campaign download', () => ctx.store.countCampaignStep(row));
       }
     }
     // no-store: the target moves with every release, so a cached redirect would serve an old APK.

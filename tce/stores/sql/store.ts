@@ -12,6 +12,7 @@ import type { BatchCounts, BatchWrite, PointOptions, Store, StoreUsage } from '.
 import type {
   ArchivableTable,
   ArchiveRowMap,
+  CampaignDailyRow,
   DeviceRow,
   DownloadPoint,
   ForgettableTable,
@@ -26,6 +27,7 @@ import type {
 import type { ShareLinkStats } from '../../core/schema/wire.ts';
 import { STATEMENT_LIMITS, buildInserts, buildKeyedDeletes, placeholders, toSqlValue } from './chunk.ts';
 import type { SqlDriver, SqlStatement, SqlValue } from './driver.ts';
+import { campaignStepStatement } from './campaign.ts';
 import {
   SHARE_FORGET_STATEMENTS,
   shareBatchStatements,
@@ -276,6 +278,24 @@ export function createSqlStore(
   }
 
   /**
+   * One +count upsert on a per-day count table (share_daily, campaign_daily):
+   * bad_request from the statement builder as is, skipped (ok, logged with
+   * `fields`) while the storage gate is closed, like the site_daily rollup.
+   */
+  function addCount(op: string, build: () => TceResult<SqlStatement>, fields: Record<string, unknown>): Promise<TceResult<void>> {
+    return guard(op, async () => {
+      const stmt = build();
+      if (!stmt.ok) return stmt;
+      if (paused()) {
+        log.warn(`tce sql store: ${op} skipped; storage is nearly full`, fields);
+        return ok(undefined);
+      }
+      await runBatch([stmt.value]);
+      return ok(undefined);
+    });
+  }
+
+  /**
    * A point's two writes (Store.writePagePoint): hand it to the points sink,
    * then add it to the site_daily rollup (`rollup` null: sink only). A sink
    * failure is logged and never stops the rollup, so the answer is the
@@ -398,16 +418,11 @@ export function createSqlStore(
     },
 
     countShareStep(row: ShareDailyRow): Promise<TceResult<void>> {
-      return guard('countShareStep', async () => {
-        const stmt = shareStepStatement(row);
-        if (!stmt.ok) return stmt;
-        if (paused()) {
-          log.warn('tce sql store: countShareStep skipped; storage is nearly full', { day: row.day, step: row.step });
-          return ok(undefined);
-        }
-        await runBatch([stmt.value]);
-        return ok(undefined);
-      });
+      return addCount('countShareStep', () => shareStepStatement(row), { day: row.day, step: row.step });
+    },
+
+    countCampaignStep(row: CampaignDailyRow): Promise<TceResult<void>> {
+      return addCount('countCampaignStep', () => campaignStepStatement(row), { day: row.day, step: row.step });
     },
 
     shareStats(codes: readonly string[]): Promise<TceResult<ShareLinkStats[]>> {

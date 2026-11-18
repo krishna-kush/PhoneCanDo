@@ -141,7 +141,12 @@ const themeInit = `(() => {
         <script is:inline define:vars={{ hitUrl }}>
             // Page view, first party: one POST to our own Worker on the API
             // host (tce, POST /v1/hit) with the path (no query string) and the
-            // referrer, of which only the host is kept. Sent as a string, so
+            // referrer, of which only the host is kept. On a campaign link
+            // (?c=<tag> with a tag's shape, the rule of data/campaigns.ts; a
+            // share link's ?i= wins) it adds that tag as campaign; the server
+            // counts it only when it is one of ours (the list is in our
+            // database, never in the page) and ignores any other. Nothing
+            // else of the query string goes. Sent as a string, so
             // text/plain: a JSON content type would make the cross-origin
             // beacon need a CORS preflight, which sendBeacon cannot do. No cookie, no id,
             // nothing stored in the browser; country comes from the edge.
@@ -156,7 +161,11 @@ const themeInit = `(() => {
                 if (location.protocol !== "https:") return;
                 if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") return;
                 if (typeof nav.sendBeacon !== "function") return;
-                nav.sendBeacon(hitUrl, JSON.stringify({ path: location.pathname, ref: document.referrer }));
+                const hit = { path: location.pathname, ref: document.referrer };
+                const params = new URLSearchParams(location.search);
+                const tag = params.has("i") ? null : params.get("c");
+                if (tag !== null && /^[a-z0-9-]{1,24}$/.test(tag)) hit.campaign = tag;
+                nav.sendBeacon(hitUrl, JSON.stringify(hit));
             })();
         </script>
     </body>
