@@ -51,8 +51,8 @@ for (const [name, dark] of [['dark', true], ['light', false]]) {
   const scheme = tokens[name];
   const hue = theme[name].hue;
   hue.primary = scale(scheme.primary, scheme, dark);
-  // On a light page yellow text takes the yellow's ink; the bright yellow is for dark ones.
-  hue.secondary = scale(dark ? scheme.secondary : scheme.secondaryInk, scheme, dark);
+  // Our secondary yellow in both modes, as the app wears it.
+  hue.secondary = scale(scheme.secondary, scheme, dark);
   hue.interactive = '$hue.primary';
   hue.accent = '$hue.secondary';
 }
