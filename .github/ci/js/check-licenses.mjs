@@ -47,15 +47,26 @@ const SHIPPED = [
   ['libllama-server.so', 'llama.cpp', 'libllama-server.so', ['lme/llamacpp/pins.env', /^LLAMACPP_VERSION=(\S+)$/m]],
   ['KleidiAI (static in libllama-server.so)', 'KleidiAI', 'libllama-server.so', ['lme/llamacpp/pins.env', /^KLEIDIAI_VERSION=(\S+)$/m]],
   ['xxHash (static in libllama-server.so)', 'xxHash', 'libllama-server.so'],
+  // liboc-engine.so is opencode compiled around Bun's official runtime, which
+  // links JavaScriptCore/WebKit (LGPL) and ICU statically. Bun's Android build
+  // leaves out TinyCC (scripts/build/config.ts: tinycc off for abi=android;
+  // the binary has only its "TinyCC is disabled" stubs), so it is not here.
+  ['liboc-engine.so (Bun runtime)', 'Bun', 'liboc-engine.so', ['agents/native/opencode/build/pins.env', /^BUN_VERSION=(\S+)$/m]],
+  ['JavaScriptCore/WebKit (static in liboc-engine.so)', 'JavaScriptCore', 'liboc-engine.so'],
+  ['JavaScriptCore/WebKit written source offer', 'JavaScriptCore', 'hi@phonecando.app'],
+  ['ICU (static in liboc-engine.so)', 'ICU', 'liboc-engine.so'],
 ];
 
 // Start and end phrases of each full license text (whitespace-insensitive);
 // each start phrase must be unique to its text, since it is also how we
 // count copies. A license may need several texts (LGPL-3.0 incorporates
 // GPL-3.0; PRoot, our one GPL-2.0-or-later component, carries GNU C Library
-// definitions under LGPL-2.1-or-later).
+// definitions under LGPL-2.1-or-later; JavaScriptCore's LGPL-2.0-or-later
+// parts are taken under LGPL-2.1).
 const TEXTS = {
-  'MIT License': [['Permission is hereby granted, free of charge, to any person obtaining a copy of this software', 'OTHER DEALINGS IN THE SOFTWARE.']],
+  // Up to "sublicense": ICU's own older license (ICU 1.8.1 to 57.1) opens with
+  // the same words but grants no sublicensing, and it is a text of its own.
+  'MIT License': [['Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense', 'OTHER DEALINGS IN THE SOFTWARE.']],
   'SIL Open Font License 1.1': [['SIL OPEN FONT LICENSE Version 1.1', 'OTHER DEALINGS IN THE FONT SOFTWARE.']],
   // The BSD texts share their first clauses; each starts at what only it has.
   'BSD-3-Clause': [['Neither the name of', 'EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.']],
@@ -70,6 +81,13 @@ const TEXTS = {
     ['This version of the GNU Lesser General Public License incorporates', 'choose that version for the Library.'],
     ['The GNU General Public License is a free, copyleft license for', 'why-not-lgpl.html>.'],
   ],
+  'LGPL-2.0-or-later': [
+    ['GNU LIBRARY GENERAL PUBLIC LICENSE Version 2, June 1991', "That's all there is to it!"],
+    ['GNU LESSER GENERAL PUBLIC LICENSE Version 2.1, February 1999', "That's all there is to it!"],
+  ],
+  'Unicode-3.0': [['UNICODE LICENSE V3', 'SPDX-License-Identifier: Unicode-3.0']],
+  'zlib License': [["This software is provided 'as-is', without any express or implied warranty.", 'This notice may not be removed or altered from any source distribution.']],
+  'MPL-2.0': [['Mozilla Public License Version 2.0', 'defined by the Mozilla Public License, v. 2.0.']],
   // The packages' own texts ship inside the image (/usr/share/doc/*/copyright).
   'per-package licenses': [],
   // No text to carry: a public-domain dedication asks for none.
