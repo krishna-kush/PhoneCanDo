@@ -19,6 +19,31 @@ export function nextWindow(days) {
 }
 
 /**
+ * The tabs [from, to) the tab row shows in `room` columns: all of them when
+ * they fit, else a run around the active one, with a column kept on each side
+ * for the ‹ › that say more are hidden.
+ */
+export function tabRange(widths, active, room) {
+  if (widths.reduce((a, b) => a + b, 0) <= room) return [0, widths.length];
+  let from = active;
+  let to = active + 1;
+  let used = widths[active];
+  const fits = (w) => used + w <= room - 2;
+  for (let grew = true; grew; ) {
+    grew = false;
+    if (to < widths.length && fits(widths[to])) {
+      used += widths[to++];
+      grew = true;
+    }
+    if (from > 0 && fits(widths[from - 1])) {
+      used += widths[--from];
+      grew = true;
+    }
+  }
+  return [from, to];
+}
+
+/**
  * Runs until the user quits. `load({ days, testers })` resolves a model
  * (scripts/data/model.mjs) or rejects with a message to show.
  */
@@ -48,11 +73,13 @@ export function runTui({ load, days, testers, style, stdin = process.stdin, stdo
         .filter(Boolean)
         .join(style.dim(' · '));
       const top = `${title}${' '.repeat(Math.max(1, w - width(title) - width(facts) - 1))}${style.dim(facts)}`;
-      const tabs = TABS.map((t, i) => {
-        const label = ` ${i + 1} ${t.title} `;
-        return i === st.tab ? style.inverse(style.accent(label)) : style.dim(label);
-      }).join('');
-      return [top, ` ${tabs}`, style.dim('─'.repeat(w))];
+      const labels = TABS.map((t, i) => ` ${i + 1} ${t.title} `);
+      const [from, to] = tabRange(labels.map(width), st.tab, w - 1);
+      const tabs = labels
+        .slice(from, to)
+        .map((label, k) => (from + k === st.tab ? style.inverse(style.accent(label)) : style.dim(label)))
+        .join('');
+      return [top, ` ${from > 0 ? style.dim('‹') : ''}${tabs}${to < labels.length ? style.dim('›') : ''}`, style.dim('─'.repeat(w))];
     }
 
     function footer(w) {

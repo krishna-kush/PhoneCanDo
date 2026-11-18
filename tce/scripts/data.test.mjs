@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { d1Statements } from './data/queries.mjs';
-import { FRAME, LOG, NOTE } from './data/sample.test-support.mjs';
+import { FRAME, LOG, NOTE, SHARE_CODE } from './data/sample.test-support.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./data.mjs', import.meta.url));
 const STUB = new URL('./data/fetch-stub.test-support.mjs', import.meta.url).href;
@@ -42,7 +42,8 @@ test('with a read token: the full report, aggregates only, nothing secret', asyn
   assert.match(out, new RegExp(`via API token · last 30 days .* · testers left out · ${(STATEMENTS * 10).toLocaleString('en-US')} rows read`));
   assert.match(out, /Google Pixel 9/); // the Devices tab
   assert.match(out, /news\.ycombinator\.com/); // Analytics Engine detail
-  for (const secret of [TOKEN, NOTE, FRAME, ...LOG.split('\n')]) assert.ok(!out.includes(secret), `leaked: ${secret}`);
+  for (const secret of [TOKEN, NOTE, FRAME, SHARE_CODE, ...LOG.split('\n')]) assert.ok(!out.includes(secret), `leaked: ${secret}`);
+  assert.match(out, /^▌ CAMPAIGNS$/m);
 });
 
 test('the token from the env file; nothing else in it is read or printed', async () => {
@@ -72,6 +73,27 @@ test('--json carries the details for local use', async () => {
   assert.equal(model.meta.days, 7);
   assert.equal(model.reports[0].note, NOTE);
   assert.ok(!out.includes(TOKEN));
+});
+
+test('before migration 0005: reads again without each of its tables, and says they are not set up yet', async () => {
+  const { code, out } = await run(['--report'], { ...withToken, STUB_CF: 'premigration' });
+  assert.equal(code, 0, out);
+  assert.match(out, /^▌ SHARE LINKS$/m);
+  assert.match(out, /Counts not set up yet: campaign_daily is not on the database/);
+  assert.match(out, /The list is not set up yet: campaigns is not on the database/);
+  const { out: json } = await run(['--json'], { ...withToken, STUB_CF: 'premigration' });
+  assert.deepEqual(JSON.parse(json).meta.missing, ['campaigns', 'campaign_daily']);
+});
+
+test('the Campaigns tab lists the campaigns table read in the same batch', async () => {
+  const { code, out } = await run(['--json'], withToken);
+  assert.equal(code, 0, out);
+  const { campaigns } = JSON.parse(out);
+  assert.deepEqual(campaigns.tags.map((t) => [t.tag, t.listed, t.note]), [
+    ['hn', true, 'Hacker News launch post'],
+    ['old-post', false, ''],
+    ['reddit', true, 'r/androiddev thread'],
+  ]);
 });
 
 test('GitHub Actions never reads (public logs)', async () => {

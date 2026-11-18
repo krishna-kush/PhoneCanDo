@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { red } from '../terminal/style.mjs';
 import { agent } from './commands/agent.mjs';
 import { build, release } from './commands/apk-builds.mjs';
+import { campaign } from './commands/campaign.mjs';
 import { android, check, logos, prebuild, web, xterm } from './commands/dev.mjs';
 import { image } from './commands/image.mjs';
 import { apk, device } from './commands/phone.mjs';
@@ -21,6 +22,7 @@ export const COMMANDS = {
   logos,
   xterm,
   web,
+  campaign,
   agent,
   image,
   apk,

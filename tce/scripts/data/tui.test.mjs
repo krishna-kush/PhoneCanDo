@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { buildModel } from './model.mjs';
 import { makeStyle, stripAnsi, width } from './paint.mjs';
 import { NOW, sampleAe, sampleResults } from './sample.test-support.mjs';
-import { nextWindow, runTui } from './tui.mjs';
+import { nextWindow, runTui, tabRange } from './tui.mjs';
 
 const COLS = 100;
 const ROWS = 40;
@@ -51,6 +51,15 @@ test('nextWindow cycles 7 → 30 → 90 → 7', () => {
   assert.equal(nextWindow(14), 30);
 });
 
+test('tabRange: every tab when they fit, else a run around the active one with room for ‹ ›', () => {
+  const widths = [10, 10, 10, 10, 10];
+  assert.deepEqual(tabRange(widths, 2, 50), [0, 5]);
+  assert.deepEqual(tabRange(widths, 0, 32), [0, 3]);
+  assert.deepEqual(tabRange(widths, 4, 32), [2, 5]);
+  assert.deepEqual(tabRange(widths, 2, 22), [2, 4]);
+  assert.deepEqual(tabRange(widths, 1, 5), [1, 2]); // the active tab always shows; the row is clipped
+});
+
 test('tabs, list selection, details, window, testers, help and quit', async () => {
   const t = terminal();
   const calls = [];
@@ -83,6 +92,14 @@ test('tabs, list selection, details, window, testers, help and quit', async () =
   t.stdin.write('\r');
   await until(() => has(t, 'Engine log tail') && has(t, 'worker exited with code 137'), 'the report detail');
   t.stdin.write('\x7f');
+
+  t.stdin.write('1');
+  t.stdin.write('\x1b[D'); // left, from the first tab round to the last
+  await until(() => has(t, '── Campaigns') && has(t, '11 Campaigns'), 'the Campaigns tab, its label scrolled into the tab row');
+  assert.ok(t.screen().every((row) => width(row ?? '') <= COLS), 'the tab row is wider than the terminal');
+  assert.ok(has(t, '‹') && !has(t, '1 Overview'));
+  t.stdin.write('\x1b[D');
+  await until(() => has(t, 'Links sent') && has(t, '10 Share links'), 'the Share links tab');
 
   t.stdin.write('w');
   await until(() => calls.length === 2, 'a reload for the next window');

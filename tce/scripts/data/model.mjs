@@ -2,6 +2,7 @@
 // screens draw: totals, daily series filled for every day of the window, and
 // ranked lists. Pure: rows in, plain objects out. Device ids never enter it.
 
+import { campaignsModel, shareModel } from './links/model.mjs';
 import { androidName, plural } from './paint.mjs';
 import { windowOf } from './queries.mjs';
 
@@ -131,8 +132,11 @@ function githubModel(r, days) {
   };
 }
 
-/** The whole model for one refresh. */
-export function buildModel({ results: r, ae = null, now, days, testers = false, source = '', database = '', rowsRead = 0 }) {
+/**
+ * The whole model for one refresh. `missing` lists the new tables the
+ * database lacks (links/new-tables.mjs).
+ */
+export function buildModel({ results: r, ae = null, now, days, testers = false, source = '', database = '', rowsRead = 0, missing = [] }) {
   const w = windowOf(now, days);
   const t = r.totals?.[0] ?? {};
   const sd = r.sessionsDaily ?? [];
@@ -143,7 +147,7 @@ export function buildModel({ results: r, ae = null, now, days, testers = false, 
   const boot = (r.boot ?? []).map((h) => ({ bucket: n(h.bucket), n: n(h.n) }));
 
   return {
-    meta: { now, days, since: w.since, sinceDay: w.sinceDay, today: w.today, dayList: w.days, testers, source, database, rowsRead },
+    meta: { now, days, since: w.since, sinceDay: w.sinceDay, today: w.today, dayList: w.days, testers, source, database, rowsRead, missing },
     totals: {
       devices: n(t.devices),
       devicesActive: n(t.devices_active),
@@ -226,5 +230,7 @@ export function buildModel({ results: r, ae = null, now, days, testers = false, 
     site: siteModel(r, w.days),
     ae: aeModel(ae),
     github: githubModel(r, w.days),
+    share: shareModel(r, w.days),
+    campaigns: campaignsModel(r, w.days, missing),
   };
 }

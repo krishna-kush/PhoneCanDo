@@ -5,7 +5,12 @@
 // 5M a day (the footer and the report print the total). Scans are shared where
 // one GROUP BY can answer several questions (sessions: daily counts and engine
 // health in one pass; events and errors: totals from the grouped rows), and
-// event and error windows use their `received` index.
+// event and error windows use their `received` index. Until migration 0005 is
+// on the database a refresh takes one more batch per missing table: each
+// failed one names the missing table up front and fails before reading
+// anything (links/new-tables.mjs).
+
+import { linkStatements, newestTableRead } from './links/queries.mjs';
 
 const DAY_MS = 86_400_000;
 /** Windows offered by the interactive `w` key; any 1..365 works with --days. */
@@ -27,15 +32,18 @@ export function windowOf(now, days) {
 /**
  * The D1 batch: [{ name, sql }]. `testers` keeps our own test phones in
  * (Settings → About, long press marks them); by default they are left out.
+ * `missing` lists the new tables (links/queries.mjs NEW_TABLES) the database
+ * does not have yet; statements that read the new tables come first, newest
+ * table first.
  */
-export function d1Statements({ now, days, testers = false }) {
+export function d1Statements({ now, days, testers = false, missing = [] }) {
   const { since, sinceDay } = windowOf(now, days);
   // Rows keyed by device: everything but our test phones.
   const real = testers ? '1 = 1' : 'device_id NOT IN (SELECT device_id FROM devices WHERE tester = 1)';
   const dev = testers ? '1 = 1' : 'tester = 0';
   const active = `${dev} AND last_seen >= ${since}`;
   const day = (col) => `date(${col} / 1000, 'unixepoch')`;
-  return [
+  const statements = [
     {
       name: 'totals',
       sql: `SELECT
@@ -165,7 +173,12 @@ FROM github_assets_daily WHERE day >= '${isoDay(since - DAY_MS)}' GROUP BY day O
       sql: `SELECT day, stars, forks, watchers, views, view_uniques, clones, clone_uniques FROM github_repo_daily
 WHERE day >= '${sinceDay}' OR day = (SELECT max(day) FROM github_repo_daily) ORDER BY day`,
     },
+    ...linkStatements({ since, sinceDay, real, testers, missing }),
   ];
+  // Why first, the newest table first: a database without a new table fails
+  // the batch at its first statement, before any scan, and the newest table
+  // is the one most likely missing. The sort is stable, so the rest keep order.
+  return statements.sort((a, b) => newestTableRead(b.sql) - newestTableRead(a.sql));
 }
 
 /**

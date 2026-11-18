@@ -16,12 +16,16 @@
 // TCE_READ_TOKEN and CLOUDFLARE_ACCOUNT_ID may sit in the repo-root .env (or
 // the file PHONECANDO_RELEASE_ENV names); only those two keys are read.
 // Every refresh is one D1 batch and its rows read count toward the free plan's
-// 5M a day; the output says how many. Tester devices are left out unless
+// 5M a day; the output says how many. Until migration 0005 is applied it
+// reads again without each table it adds that is missing
+// (scripts/data/links/new-tables.mjs). The Campaigns tab lists D1's campaigns
+// table (./manage campaign add). Tester devices are left out unless
 // --testers. Only on our own machines: it skips itself under GitHub Actions
 // (public logs) and Workers Builds (usage data stays out of Cloudflare's build
 // logs). A failed read exits 1; ./manage build and release go on regardless.
 import { parseArgs } from 'node:util';
 import { withEnvFile } from './data/env-file.mjs';
+import { readWithNewTables } from './data/links/new-tables.mjs';
 import { buildModel } from './data/model.mjs';
 import { colorWanted, makeStyle } from './data/paint.mjs';
 import { aeStatements, d1Statements } from './data/queries.mjs';
@@ -93,12 +97,21 @@ const source = chosen.kind === 'token' ? tokenSource(chosen) : cliSource();
 /** One refresh: the D1 batch and the Analytics Engine detail in parallel, as a model. */
 async function load({ days: window, testers }) {
   const now = Date.now();
-  const statements = d1Statements({ now, days: window, testers });
   const [d1, ae] = await Promise.all([
-    source.d1(db.database_id, statements),
+    readWithNewTables((missing) => source.d1(db.database_id, d1Statements({ now, days: window, testers, missing }))),
     source.ae(aeStatements({ days: window, pageviews: datasets.PAGEVIEWS, downloads: datasets.DOWNLOADS })).catch((e) => ({ results: {}, problem: e.message })),
   ]);
-  return buildModel({ results: d1.results, ae, now, days: window, testers, source: source.label, database: db.database_name ?? db.database_id, rowsRead: d1.rowsRead });
+  return buildModel({
+    results: d1.results,
+    missing: d1.missing,
+    ae,
+    now,
+    days: window,
+    testers,
+    source: source.label,
+    database: db.database_name ?? db.database_id,
+    rowsRead: d1.rowsRead,
+  });
 }
 
 const interactive = !args.report && !args.json && process.stdin.isTTY && process.stdout.isTTY && !env.CI;

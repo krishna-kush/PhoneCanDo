@@ -16,10 +16,10 @@
 // `site_daily` rollup in D1 (kept forever; scripts/site-daily.mjs), and the
 // `cf analytics-engine sql query` commands for the ~3-month detail in
 // Analytics Engine.
-import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { cfD1Query } from './cf-d1.mjs';
 import { renderSiteDaily, siteDailyQueries } from './site-daily.mjs';
 import { formatTable } from './text-table.mjs';
 import { ROOT, d1DatabaseOf, readWranglerConfig } from './wrangler-config.mjs';
@@ -133,25 +133,9 @@ function d1Query(databaseId, statements) {
   for (const s of statements) {
     if (!/^\s*(select|with)\b/i.test(s)) throw new Error(`refusing a non-SELECT statement: ${s.slice(0, 40)}`);
   }
-  const r = spawnSync('cf', ['d1', 'query', databaseId, '--sql', statements.join(';\n')], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  if (r.error?.code === 'ENOENT') throw new Error('the cf CLI is not on PATH (npm i -g cf, then cf auth login; with nvm, source it first)');
-  if (r.error) throw r.error;
-  if (r.status !== 0) throw new Error(`cf d1 query exited ${r.status}:\n${(r.stderr || r.stdout).trim()}`);
-  let parsed;
-  try {
-    parsed = JSON.parse(r.stdout);
-  } catch {
-    throw new Error(`cf d1 query printed something other than JSON:\n${r.stdout.slice(0, 500)}`);
-  }
-  // The API's `result` (an array with one entry per statement), bare or wrapped.
-  const results = Array.isArray(parsed) ? parsed : parsed.result;
-  if (!Array.isArray(results) || results.length !== statements.length) {
-    throw new Error(`cf d1 query returned ${Array.isArray(results) ? results.length : 'no'} result sets for ${statements.length} statements`);
-  }
-  return results.map((res, i) => {
-    if (res.success === false) throw new Error(`statement ${i + 1} failed: ${JSON.stringify(res.error ?? res)}`);
-    return res.results ?? [];
-  });
+  const results = cfD1Query(databaseId, statements.join(';\n'));
+  if (results.length !== statements.length) throw new Error(`cf d1 query returned ${results.length} result sets for ${statements.length} statements`);
+  return results;
 }
 
 function d1Section() {

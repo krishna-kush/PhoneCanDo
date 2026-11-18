@@ -1,12 +1,14 @@
 // Sample D1 and Analytics Engine rows for the data script's tests, keyed by
-// the statement names in queries.mjs. NOTE, LOG and FRAME are details that the
-// build report must never print.
+// the statement names in queries.mjs. NOTE, LOG, FRAME and SHARE_CODE are
+// details that the build report must never print.
 
 const DAY_MS = 86_400_000;
 export const NOW = Date.parse('2026-11-06T12:00:00Z');
 export const NOTE = 'Terminal froze after rotating the phone';
 export const LOG = 'serve: listening on 127.0.0.1:4097\nserve: worker exited with code 137';
 export const FRAME = 'at renderChat (<app>/ChatWebScreen.tsx:88:12)';
+/** The top link's code: the interactive view shows it, the build report never. */
+export const SHARE_CODE = 'k7mnpq2x';
 
 const day = (back) => new Date(NOW - back * DAY_MS).toISOString().slice(0, 10);
 
@@ -121,6 +123,34 @@ export function sampleResults() {
     githubRepo: [
       { day: day(3), stars: 10, forks: 1, watchers: 2, views: null, view_uniques: null, clones: null, clone_uniques: null },
       { day: day(0), stars: 14, forks: 2, watchers: 3, views: 120, view_uniques: 30, clones: null, clone_uniques: null },
+    ],
+    // Share links and campaigns: day '' holds every day before the window.
+    shareLinks: [{ links: 40, links_new: 6, sharers: 12 }],
+    shareDaily: [
+      { day: '', step: 'open', n: 200 },
+      { day: '', step: 'download', n: 60 },
+      { day: day(1), step: 'open', n: 30 },
+      { day: day(0), step: 'download', n: 10 },
+    ],
+    shareInstalls: [
+      { day: '', n: 14, still_using: 9 },
+      { day: day(1), n: 4, still_using: 1 },
+    ],
+    shareTop: [
+      { code: SHARE_CODE, installs: 8, still_using: 4, opens: 70, downloads: 20 },
+      { code: 'bcdefghj', installs: 3, still_using: 3, opens: 9, downloads: 4 },
+    ],
+    shareSecond: [{ came: 18, sharers: 3, installs: 4 }],
+    campaignDaily: [
+      { tag: 'hn', step: 'open', day: '', n: 300, last_day: day(9) },
+      { tag: 'hn', step: 'open', day: day(1), n: 50, last_day: day(1) },
+      { tag: 'hn', step: 'download', day: day(1), n: 35, last_day: day(1) },
+      { tag: 'old-post', step: 'open', day: '', n: 4, last_day: day(40) },
+    ],
+    // The campaigns table, oldest first: hn counted, reddit never; old-post is no longer listed.
+    campaignList: [
+      { tag: 'hn', note: 'Hacker News launch post', added: day(10) },
+      { tag: 'reddit', note: 'r/androiddev thread', added: day(2) },
     ],
   };
 }

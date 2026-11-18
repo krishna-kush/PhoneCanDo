@@ -58,7 +58,15 @@ export const GROUPS = [
     ],
     [],
   ],
-  ['Website (web/)', [['web dev|build|preview', "the site's dev server, build or a preview of the build"]], []],
+  [
+    'Website (web/)',
+    [
+      ['web dev|build|preview', "the site's dev server, build or a preview of the build"],
+      ['campaign add <tag> "<note>"', 'list a campaign link, phonecando.app/?c=<tag>'],
+      ['campaign list', 'every campaign: note, day added and link'],
+    ],
+    ['A campaign counts as soon as it is added (D1 table campaigns, cf CLI): no push.'],
+  ],
   [
     'Phone and APK files',
     [
