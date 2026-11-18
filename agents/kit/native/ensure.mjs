@@ -100,6 +100,26 @@ async function ask(rl, kind, choice) {
   }
 }
 
+/**
+ * Every kind's pick, asked before any work starts, in `plans`' order; then
+ * closes `rl` (null: no questions, the defaults). An open readline keeps the
+ * terminal raw, where Ctrl+C is a byte nobody reads, so a download or build
+ * run with it open could not be stopped. Ctrl+C at a question quits.
+ */
+export async function askAll(rl, plans, askOne = ask) {
+  rl?.on?.('SIGINT', () => {
+    rl.close();
+    process.kill(process.pid, 'SIGINT');
+  });
+  try {
+    const picks = [];
+    for (const { kind, choice } of plans) picks.push(await askOne(rl, kind, choice));
+    return picks;
+  } finally {
+    rl?.close();
+  }
+}
+
 function act(kind, action, { root, github, log = console.log }) {
   const dest = defaultDest(root, kind.id);
   if (action.action === 'download') {
@@ -182,26 +202,23 @@ async function main(argv) {
     process.exit(1);
   }
   const rl = told ? null : createInterface({ input: process.stdin, output: process.stdout });
+  // Every question first, then the work, so Ctrl+C stops a download or build.
+  const picks = await askAll(rl, plans);
   let failed = 0;
-  try {
-    for (const { kind, choice } of plans) {
-      const pick = await ask(rl, kind, choice);
-      const action = choice.actions[pick];
-      if (!action) {
-        console.error(red(`  ${kind.id}: ${choice.note}; nothing to stage`));
-        failed++;
-        continue;
-      }
-      try {
-        act(kind, action, { root, github });
-      } catch (error) {
-        console.error(red(`  ${kind.id}: ${error.message}`));
-        failed++;
-      }
+  plans.forEach(({ kind, choice }, i) => {
+    const action = choice.actions[picks[i]];
+    if (!action) {
+      console.error(red(`  ${kind.id}: ${choice.note}; nothing to stage`));
+      failed++;
+      return;
     }
-  } finally {
-    rl?.close();
-  }
+    try {
+      act(kind, action, { root, github });
+    } catch (error) {
+      console.error(red(`  ${kind.id}: ${error.message}`));
+      failed++;
+    }
+  });
   process.exit(failed ? 1 : 0);
 }
 
