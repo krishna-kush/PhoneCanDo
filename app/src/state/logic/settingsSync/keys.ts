@@ -1,7 +1,8 @@
 // Which settings follow a signed-in person to every phone (docs/accounts.md,
 // Settings), and the check on a value read back from the account. Never
 // synced: the usage-stats switch, Phone control's lock mode, keys and tokens,
-// agents. Pure (zero RN imports).
+// agents, the license agreement (each install agrees itself). Pure (zero RN
+// imports).
 
 /** The synced settings, as this phone holds them. */
 export type SyncedSettings = {

@@ -20,20 +20,26 @@ type Props = {
   footer?: ReactElement;
   /** The panel; mounted anew each time the sheet opens. A list in it is a SheetScroll. */
   children: ReactNode;
+  /**
+   * Only the panel's own buttons close it: no drag, scrim tap or Back.
+   * Back runs [onBlocked] instead (the license ask leaves the app with it).
+   */
+  locked?: boolean;
+  onBlocked?: () => void;
 };
 
 // A sheet over everything, as Android's own bottom sheet
 // (react-native-true-sheet, Material's BottomSheetBehavior): a drag down, a
 // flick, a tap on the scrim or Back closes it the way any Android sheet
-// closes, and a long list (SheetScroll) scrolls before the sheet moves. It
-// sits in the activity over every page and the drawer; our dialogs, windows
+// closes (unless `locked`), and a long list (SheetScroll) scrolls before the
+// sheet moves. It sits in the activity over every page and the drawer; our dialogs, windows
 // of their own, still open above it. Our look on it: the panel's colour with
 // the strong line on top, square corners, the theme's scrim.
 //
 // Each opening mounts a sheet of its own (a new key) that presents itself
 // once mounted. A dismissal while the parent still asks for it open was the
 // user's, so it calls onClose; one the parent asked for does not.
-export default function BottomSheet({ open, onClose, header, footer, children }: Props) {
+export default function BottomSheet({ open, onClose, header, footer, children, locked = false, onBlocked }: Props) {
   const t = useTheme();
   const scheme = useScheme();
   const reduce = useReduceMotion();
@@ -73,7 +79,7 @@ export default function BottomSheet({ open, onClose, header, footer, children }:
   }, [open, reduce]);
 
   // Back from a page or the drawer comes down our chain, not the sheet's own listener.
-  useBackInterceptor(mounted && open, () => void sheet.current?.dismiss(!reduce));
+  useBackInterceptor(mounted && open, () => (locked ? onBlocked?.() : void sheet.current?.dismiss(!reduce)));
 
   if (!mounted) return null;
   return (
@@ -95,6 +101,8 @@ export default function BottomSheet({ open, onClose, header, footer, children }:
       footer={footer}
       style={styles.content}
       scrollableRef={list}
+      dismissible={!locked}
+      onDismissAttempt={() => onBlocked?.()}
       onDidDismiss={() => dismissed(round)}
     >
       <ScrollSlot.Provider value={list}>{children}</ScrollSlot.Provider>

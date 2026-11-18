@@ -1,10 +1,11 @@
 // The user's app-wide choices, kept in AsyncStorage: theme, the terminal's
 // extra keys, the update offer (lite's switch, the build already offered at
-// a launch), the restricted-settings guide's progress and whether first
-// launch's setup has run on this phone.
+// a launch), the restricted-settings guide's progress, whether first
+// launch's setup has run on this phone and the license version agreed to.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StateCreator } from 'zustand';
 import type { AppState } from '../app';
+import { licenseAgreement, readLicenseAgreed, type LicenseAgreed } from '../logic/licenseAgreed';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -14,6 +15,7 @@ const UPDATE_PROMPT_MUTED_KEY = 'phonecando.updatePromptMuted.v1';
 const UPDATE_OFFERED_KEY = 'phonecando.updateOffered.v1';
 const A11Y_STEP_KEY = 'phonecando.a11yStep.v3';
 const SET_UP_KEY = 'phonecando.setUp.v1';
+const LICENSE_AGREED_KEY = 'phonecando.licenseAgreed.v1';
 
 export type PrefsSlice = {
   hydrated: boolean;
@@ -41,6 +43,11 @@ export type PrefsSlice = {
    * one instead. This phone only.
    */
   setUp: boolean;
+  /**
+   * The license version this install agreed to, and when; null: never
+   * (the license gate is up, ui/terms/). This install only, never synced.
+   */
+  licenseAgreed: LicenseAgreed | null;
 
   hydrate: () => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
@@ -51,6 +58,8 @@ export type PrefsSlice = {
   setA11yGuideForced: (forced: boolean) => void;
   /** Setup has run (or an agent is here): for good. */
   markSetUp: () => Promise<void>;
+  /** I agree, on the license gate: to [version], now. */
+  agreeToLicense: (version: string) => Promise<void>;
 };
 
 // Persistence is best-effort: the in-memory value applies for this run.
@@ -71,17 +80,18 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
   a11yStep: 1,
   a11yGuideForced: false,
   setUp: false,
+  licenseAgreed: null,
 
   hydrate: async () => {
     // The launch splash waits for this (the first frame's theme), so a read
     // failure still ends in hydrated, on the defaults.
     let stored: readonly (readonly [string, string | null])[] = [];
     try {
-      stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY, UPDATE_OFFERED_KEY, SET_UP_KEY]);
+      stored = await AsyncStorage.multiGet([THEME_MODE_KEY, EXTRA_KEYS_STICKY_KEY, UPDATE_PROMPT_MUTED_KEY, A11Y_STEP_KEY, UPDATE_OFFERED_KEY, SET_UP_KEY, LICENSE_AGREED_KEY]);
     } catch {
       // unreadable: defaults for this run
     }
-    const [theme, sticky, muted, step, offered, setUp] = stored.map(([, v]) => v);
+    const [theme, sticky, muted, step, offered, setUp, agreed] = stored.map(([, v]) => v);
     set({
       themeMode: theme === 'light' || theme === 'dark' ? theme : 'system',
       extraKeysSticky: sticky === '1',
@@ -89,6 +99,7 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
       updateOffered: Number.parseInt(offered ?? '0', 10) || 0,
       a11yStep: step === '2' ? 2 : step === '3' ? 3 : 1,
       setUp: setUp === '1',
+      licenseAgreed: readLicenseAgreed(agreed),
       hydrated: true,
     });
   },
@@ -123,5 +134,11 @@ export const createPrefsSlice: StateCreator<AppState, [], [], PrefsSlice> = (set
   markSetUp: async () => {
     set({ setUp: true });
     await save(SET_UP_KEY, '1');
+  },
+
+  agreeToLicense: async (version) => {
+    const licenseAgreed = licenseAgreement(version, new Date());
+    set({ licenseAgreed });
+    await save(LICENSE_AGREED_KEY, JSON.stringify(licenseAgreed));
   },
 });

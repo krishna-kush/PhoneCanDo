@@ -10,6 +10,9 @@
 //                                   built-in agent's web UI icons
 //   scripts/make-tui-theme.mjs   -> the built-in agent's TUI theme
 //                                   (agents/native/opencode/config/themes/)
+//   app/scripts/license-text.mjs -> app/src/ui/terms/licenseText.ts (the
+//                                   LICENSE text and version the app's
+//                                   license gate asks you to agree to)
 //
 // PNGs (and the PNGs inside an .ico) compare by header + inflated pixel
 // stream: a different zlib build
@@ -65,6 +68,13 @@ const GENERATORS = [
     fix: 'pnpm tui-theme',
     script: 'scripts/make-tui-theme.mjs',
     inputs: ['theme/tokens.json', 'scripts/tui-theme/opencode.json'],
+    ignore: [],
+  },
+  {
+    name: 'license text',
+    fix: 'node app/scripts/license-text.mjs',
+    script: 'app/scripts/license-text.mjs',
+    inputs: ['LICENSE'],
     ignore: [],
   },
 ];

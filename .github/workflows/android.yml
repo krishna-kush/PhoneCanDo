@@ -49,6 +49,7 @@ on:
       - 'tce/core/**'
       # App colours and icons (app/tamagui.config.ts, app/src/globals/theme.ts).
       - 'theme/**'
+      - 'legal/**'
       # The About page's barcode encoder, shared with the site (app/src/ui/settings/Barcode.tsx).
       - 'web/src/lib/code128.ts'
       - 'network/**'
@@ -125,6 +126,7 @@ on:
       - 'tce/core/**'
       # App colours and icons (app/tamagui.config.ts, app/src/globals/theme.ts).
       - 'theme/**'
+      - 'legal/**'
       # The About page's barcode encoder, shared with the site (app/src/ui/settings/Barcode.tsx).
       - 'web/src/lib/code128.ts'
       - 'network/**'

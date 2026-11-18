@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,models,memory,messages,schedule,recommend,account,update,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,models,memory,messages,schedule,recommend,account,update,terms,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -68,6 +68,12 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   other agents it stopped start again); the flows are `state/flows/update/`, the store
   `state/update.ts`, the GitHub manifest, download and installer hand-off
   `engine/updates/`.
+  `terms/` is agreeing to our license (prefs `licenseAgreed`): at first
+  launch the first shift's hello takes it (either button; it can't close
+  before), and later a locked sheet asks on its own (1.0.0 installs, each new
+  license version); its short version is `legal/summary.json` (the site reads
+  it too), the full text `licenseText.ts`, generated from `LICENSE` by
+  `app/scripts/license-text.mjs`.
   `accessibility/` is the whole Accessibility setup guide: `guide.ts`
   (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
   hook, the step list, the Settings block and the agent's dialog.
@@ -277,7 +283,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `lre/docs/planning/todo.md`.
   `lre/launcher/` is our clean-room C multi-call launcher (the launch.conf
   contract is `src/conf.h`); `lre/proot/` builds the termux proot fork from
-  pinned sources (MIT build scripts, `lre/proot/LICENSE`);
+  pinned sources (GPL-2.0-or-later build scripts, `lre/proot/LICENSE`);
   `lre/images/default/` builds the baked Default image, and its `lock.json`
   names the one the APK ships (`./manage image build|fetch|stage
   [--local]|lock`). The pure-JVM Gradle build (`cd lre && ./gradlew build`)

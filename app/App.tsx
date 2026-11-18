@@ -25,6 +25,7 @@ import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
 import PermissionDialog from './src/ui/chat/background/PermissionDialog';
 import UnlockDialog from './src/ui/common/UnlockDialog';
 import UpdateBox from './src/ui/update/UpdateBox';
+import LicenseAsk from './src/ui/terms/LicenseAsk';
 import ThemeCurtain from './src/ui/settings/look/ThemeCurtain';
 import KeyboardTracker from './src/ui/common/keyboard/KeyboardTracker';
 import MemoryGuard from './src/ui/memory/MemoryGuard';
@@ -218,6 +219,9 @@ export default function App() {
           <PermissionDialog />
           <UpdateBox />
           <ThemeCurtain />
+          {/* The license asking on its own, after onboarding (the hello sheet
+              asks there): 1.0.0 installs and each new license version. */}
+          <LicenseAsk />
         </SafeAreaProvider>
         </KeyboardProvider>
       </TamaguiProvider>
