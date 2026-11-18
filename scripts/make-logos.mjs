@@ -34,6 +34,10 @@ const YELLOW = rgba(tokens.dark.secondary);
 const LIGHT_RED = rgba(tokens.light.primary);
 const LIGHT_YELLOW = rgba(tokens.light.secondary);
 const BG = rgba(tokens.dark.bg);
+// Android's launcher icon sits on white like the system's own apps (a
+// launcher never swaps it with dark mode), so it wears the light colours.
+const ICON_BG = rgba(tokens.light.bg);
+const LIGHT_INKS = { front: LIGHT_RED, shadow: LIGHT_YELLOW };
 const WHITE = { r: 255, g: 255, b: 255, a: 255 };
 const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
 
@@ -222,9 +226,9 @@ function splashWake(scheme) {
 // splash resources from these, so app/android/ (its gitignored output) is
 // never written here: a second copy there broke the build on duplicate
 // resources.
-write('app/assets/icon.png', mark(1024, 0.56, { bg: BG }), 1024);
-write('app/assets/android-icon-background.png', solid(1024, BG), 1024);
-write('app/assets/android-icon-foreground.png', mark(1024, 0.34), 1024);
+write('app/assets/icon.png', mark(1024, 0.56, { bg: ICON_BG, ...LIGHT_INKS }), 1024);
+write('app/assets/android-icon-background.png', solid(1024, ICON_BG), 1024);
+write('app/assets/android-icon-foreground.png', mark(1024, 0.34, LIGHT_INKS), 1024);
 write('app/assets/android-icon-monochrome.png', mark(1024, 0.34, { mono: true }), 1024);
 // The launch splash (app/plugins/withSplash.js): the mark waking up as A-01,
 // dark and light, each in its scheme's brand colours. The plugin copies them
