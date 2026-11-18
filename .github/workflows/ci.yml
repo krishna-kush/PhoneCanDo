@@ -3,8 +3,9 @@ name: CI
 # Fast main gate for the app, the site and the repo's own tooling: typecheck
 # and key/reconcile vectors, the Android JS bundle and config plugins without
 # a prebuild or device, generated-file drift, the theme spec, the website
-# build and script wiring. Runs on every push to prod, every PR, nightly (to
-# catch upstream drift) and on demand. Branch protection: require `ci-ok`.
+# build, script wiring and fork PRs' sign-off (LICENSE section 7). Runs on
+# every push to prod, every PR, nightly (to catch upstream drift) and on
+# demand. Branch protection: require `ci-ok`.
 # Native builds, the PCE, the engine and deep site checks have their own
 # workflows (android.yml, pce.yml, agents.yml, agent-payload.yml, lre.yml,
 # proot.yml, web.yml).
@@ -270,17 +271,44 @@ jobs:
         run: node .github/ci/js/check-wiring.mjs
       # THIRD_PARTY_NOTICES.md and the app's Licenses dialog list the same
       # components under the same licenses, every shipped third-party item
-      # (proot, talloc, xz, kotlinx-serialization, the Debian image) has an
-      # entry, and each license's full text is in the dialog exactly once.
+      # (proot, talloc, xz, kotlinx-serialization, the Debian image, Bun with
+      # JavaScriptCore and ICU) has an entry, and each license's full text is
+      # in the dialog exactly once.
       - name: Licence notices in sync (notices, dialog, shipped items)
         run: node .github/ci/js/check-licenses.mjs
+
+  signoff:
+    # A pull request from a fork: every commit is signed off (git commit -s),
+    # the contributor's record of agreeing to section 7 of LICENSE. Pushes,
+    # our own branches and bots pass at once, so ci-ok never sees a skip.
+    name: commits signed off
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Sign-off rules (node --test)
+        run: node --test ".github/ci/js/signoff/*.test.mjs"
+      - name: Every commit signed off
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REPO: ${{ github.repository }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node .github/ci/js/check-signoff.mjs
 
   ci-ok:
     # The one check to require in branch protection: green only when every
     # gate above succeeded (a skipped or cancelled gate counts as a failure).
     name: ci-ok
     if: always()
-    needs: [app, vectors, app-bundle, generated, theme, web, scripts]
+    needs: [app, vectors, app-bundle, generated, theme, web, scripts, signoff]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

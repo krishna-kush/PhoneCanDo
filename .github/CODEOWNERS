@@ -1,0 +1,16 @@
+# The license, the notices, the files that say how each part is licensed and
+# the workflows that publish releases need our review before they change: a
+# change to LICENSE that lands in a release could otherwise change what
+# everyone may do (LICENSE section 8). This takes effect once prod's branch
+# protection has "Require review from Code Owners" on.
+/LICENSE                           @krishna-kush
+**/LICENSE                         @krishna-kush
+/THIRD_PARTY_NOTICES.md            @krishna-kush
+**/NOTICE.md                       @krishna-kush
+/app/src/ui/common/licenses.ts     @krishna-kush
+/app/src/ui/common/license-texts/  @krishna-kush
+/app/src/ui/terms/                 @krishna-kush
+/legal/                            @krishna-kush
+/.github/CODEOWNERS                @krishna-kush
+/.github/workflows/                @krishna-kush
+/.github/ci/                       @krishna-kush
