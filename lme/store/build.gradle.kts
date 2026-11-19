@@ -20,7 +20,7 @@ dependencies {
     testImplementation(testFixtures("com.phonecando.network:network-download:0.1.0-dev"))
     testImplementation(testFixtures(project(":gguf")))
     testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
