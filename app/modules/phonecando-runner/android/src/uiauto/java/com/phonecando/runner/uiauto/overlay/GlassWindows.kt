@@ -15,8 +15,10 @@ import com.phonecando.runner.presence.glass.walls.Area
 // below): the stage over the whole screen, which never takes a touch; the
 // grip, a see-through spot just over the mascot where it rests; the card
 // beside it; and the watch, one see-through pixel that hears of every
-// touch elsewhere (TouchWatch). All laid out in the screen's own pixels,
-// bars and cutouts included, the same places the agent's touches use.
+// touch elsewhere (TouchWatch). The stage lies over the grip and the card,
+// so the mascot's speech shows in front of its card. All laid out in the
+// screen's own pixels, bars and cutouts included, the same places the
+// agent's touches use.
 // Main thread.
 internal class GlassWindows(private val context: Context) {
   private val manager = context.getSystemService(WindowManager::class.java)
@@ -44,12 +46,14 @@ internal class GlassWindows(private val context: Context) {
     card.visibility = View.GONE
     val added = mutableListOf<View>()
     try {
-      manager.addView(stage, params("PhoneCanDo glass", LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, touch = false))
-      added += stage
       manager.addView(grip, gp)
       added += grip
       manager.addView(card, cp)
       added += card
+      // Over the card, so what the mascot says shows in front of it; it
+      // never takes a touch, so taps still reach the card and the grip.
+      manager.addView(stage, params("PhoneCanDo glass", LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, touch = false))
+      added += stage
       manager.addView(watch, wp)
       added += watch
     } catch (e: Exception) {
