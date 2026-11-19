@@ -36,6 +36,7 @@ export default function PermissionDialog() {
     <SlipDialog open={prompt !== null} onClose={() => answer(null)} slip="slipPermission">
       {prompt ? <SlipFrom agentId={prompt.agentId} name={prompt.agentName} asks={ASKS} /> : null}
       <PermissionQuestion
+        agentId={prompt?.agentId ?? ''}
         agentName={prompt?.agentName ?? ''}
         title={prompt?.title}
         toolKind={prompt?.toolKind}

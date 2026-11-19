@@ -124,6 +124,10 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('allow once leads', copy.mainOption(opts('allow_always', 'allow_once', 'reject_once')), 'o1');
   t('else the first allow', copy.mainOption(opts('reject_once', 'allow_always')), 'o1');
   t('no allow, no lead', copy.mainOption(opts('reject_once')), null);
+  t('allow everything says which way it is', [copy.allowAllNote(true), copy.allowAllNote(false)], [
+    'Runs every command, edit and step in the background without asking you.',
+    'Asks you before each command, edit or step in the background.',
+  ]);
   t('the thought toggle', [copy.thoughtLabel(false), copy.thoughtLabel(true)], ['Thinking ▸', 'Thinking ▾']);
 
   // --- Home's phase --------------------------------------------------------------

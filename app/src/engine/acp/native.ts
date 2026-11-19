@@ -1,6 +1,6 @@
 // Engine seam for ACP mode (types.ts): an agent's turn while it runs
-// without a screen, Stop, and the answer to its permission question,
-// through the phonecando-runner module (engine/runner.ts). Native sends
+// without a screen, Stop, the answer to its permission question and its
+// "Allow everything" (on, the runner allows every question itself), through the phonecando-runner module (engine/runner.ts). Native sends
 // phonecandoAcp on each change to a turn (an item, busy, a question asked
 // or gone, the end). A native build from before ACP mode reads as no turn
 // and answers nothing.
@@ -55,6 +55,31 @@ export function resolvePermission(requestId: string, optionId: string | null): b
     return runner().resolvePermission?.(requestId, optionId) === true;
   } catch {
     return false;
+  }
+}
+
+/** Whether this build can keep "Allow everything". */
+export function canAllowAll(): boolean {
+  return typeof runner().setAllowsAll === 'function';
+}
+
+/** Whether the agent's "Allow everything" is on; false where this build can't tell. */
+export function allowsAll(agentId: AgentId): boolean {
+  try {
+    return runner().allowsAll?.(agentId) === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Saves "Allow everything" and returns it as kept; null when this build cannot keep it. */
+export function setAllowsAll(agentId: AgentId, on: boolean): boolean | null {
+  const m = runner();
+  if (typeof m.setAllowsAll !== 'function') return null;
+  try {
+    return m.setAllowsAll(agentId, on) === true;
+  } catch {
+    return null;
   }
 }
 

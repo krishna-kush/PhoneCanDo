@@ -48,6 +48,7 @@ import com.phonecando.runner.notify.AgentAlerts
 import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.notify.ChatTracker
 import com.phonecando.runner.notify.SilentTurnNotice
+import com.phonecando.runner.prompts.AllowAll
 import com.phonecando.runner.prompts.OpenUrlPrompts
 import com.phonecando.runner.schedule.Schedules
 import java.util.concurrent.ConcurrentHashMap
@@ -499,7 +500,8 @@ internal class EngineSupervisor(
   // An ACP engine's driver, told back here: a failed opening fails the
   // start, a turn's start and end change its status, what it hears marks
   // it used, its local model at work is a sign of life, and a silent turn
-  // (left to Check now while it has the agent) stops it.
+  // (left to Check now while it has the agent) stops it. Its "Allow
+  // everything" answers its questions, except a Check now's (it rejects them).
   private fun driver(agentId: String, proc: AcpProcess, plan: LaunchPlan) = AcpAgent(
     agentId = agentId,
     process = proc,
@@ -523,6 +525,7 @@ internal class EngineSupervisor(
       override fun onCaps(caps: AcpCaps) = AcpListing.save(context, plan.kind.id, caps.list)
     },
     ownTools = { ownTools },
+    allowsAll = { AllowAll.get(context).isOn(agentId) && !CheckNow.owns(agentId) },
   )
 
   // Our own tools' names, every channel's: an ACP agent's question about one never reaches you (OwnTools).
@@ -869,9 +872,10 @@ internal class EngineSupervisor(
     }
   }
 
-  /** Drops a deleted agent's slot and its Keep running; stop it first. */
+  /** Drops a deleted agent's slot, its Keep running and its Allow everything; stop it first. */
   fun forget(agentId: String) {
     KeepRunning.get(context).forget(agentId)
+    AllowAll.get(context).forget(agentId)
     lock.withLock {
       val slot = slots[agentId] ?: return
       if (!slot.state.live) slots.remove(agentId)

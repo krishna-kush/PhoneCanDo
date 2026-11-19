@@ -5,12 +5,14 @@ import com.phonecando.runner.acp.AcpAppEvents
 import com.phonecando.runner.agents.AgentStores
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.engine.acp.AcpEngines
+import com.phonecando.runner.prompts.AllowAll
 import com.phonecando.runner.prompts.PermissionPrompts
 import expo.modules.kotlin.modules.ModuleDefinitionBuilder
 
 // An agent's ACP turn for JS (the background view on Home; the TS types are
 // NativeAcpSnapshot and friends): what it shows now, Stop, and the answer
-// to a permission question. What changes is the phonecandoAcp event,
+// to a permission question, and the agent's "Allow everything"
+// (prompts/AllowAll). What changes is the phonecandoAcp event,
 // through [emit] (AcpAppEvents).
 internal fun ModuleDefinitionBuilder.acpFunctions(context: () -> Context, emit: (Map<String, Any?>) -> Unit) {
   AcpAppEvents.sink = emit
@@ -47,5 +49,17 @@ internal fun ModuleDefinitionBuilder.acpFunctions(context: () -> Context, emit: 
   // offers, or the agent did not take it.
   Function("resolvePermission") { requestId: String, optionId: String? ->
     PermissionPrompts.resolve(context(), requestId, optionId)
+  }
+
+  // Whether the agent's "Allow everything" is on.
+  Function("allowsAll") { agentId: String ->
+    AllowAll.get(context()).isOn(agentId)
+  }
+
+  // Returns the switch as kept.
+  Function("setAllowsAll") { agentId: String, on: Boolean ->
+    val store = AllowAll.get(context())
+    store.set(agentId, on)
+    store.isOn(agentId)
   }
 }

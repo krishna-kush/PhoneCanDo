@@ -18,6 +18,7 @@ import Note from '../parts/Note';
 import AgentGone from './AgentGone';
 import AgentHero from './AgentHero';
 import AgentScheduleRows from './AgentScheduleRows';
+import AllowAllRow from './AllowAllRow';
 import { hasModelSetting, installDetail, machineDetail, modelDetail } from './agentSettings';
 import ChecksRow from './checks/ChecksRow';
 import DangerSection from './DangerSection';
@@ -31,7 +32,8 @@ import { useMissingTools } from './useMissingTools';
 // One agent: its face and name (Rename), its engine and the ways in, then
 // its settings as a group of rows that open their own pages (Mascot, Model
 // for a kind that can use one, Machine, Install for a kind with one, What
-// it can do: what we have seen it do) and Keep running, a switch, its
+// it can do: what we have seen it do), Keep running and, for a kind with
+// a background (ACP) mode, Allow everything, both switches, its
 // Messages and Schedules groups, then Reset and Delete.
 // What needs a look now shows here too: a machine still setting up, an
 // install running or stopped, tools the machine lacks (on the Machine row).
@@ -99,6 +101,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
         ) : null}
         <ChecksRow agentId={agentId} />
         <KeepRunningRow agentId={agentId} />
+        {kind.acp ? <AllowAllRow agentId={agentId} /> : null}
       </RowGroup>
       <AgentMessageRows agent={agent} />
       <AgentScheduleRows agent={agent} />

@@ -84,6 +84,19 @@ export function mainOption(options: readonly AcpOption[]): string | null {
   return (options.find((o) => o.kind === 'allow_once') ?? options.find((o) => o.kind.startsWith('allow')))?.optionId ?? null;
 }
 
+/** The key that allows this step and every later one of any kind, from now on (the agent's "Allow everything"). */
+export const ALLOW_ALL = 'Allow everything';
+
+/** "Allow everything" on its agent page. */
+export const ALLOW_ALL_TITLE = 'Allow everything';
+
+/** The line under the agent page's "Allow everything". */
+export function allowAllNote(on: boolean): string {
+  return on
+    ? 'Runs every command, edit and step in the background without asking you.'
+    : 'Asks you before each command, edit or step in the background.';
+}
+
 /** The thought row's toggle. */
 export function thoughtLabel(open: boolean): string {
   return open ? 'Thinking ▾' : 'Thinking ▸';

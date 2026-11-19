@@ -132,6 +132,8 @@ export type RunnerModule = {
   acpCancel?(agentId: string): boolean;
   keepAcpChat?(agentId: string, chatId: string): boolean;
   resolvePermission?(requestId: string, optionId: string | null): boolean;
+  allowsAll?(agentId: string): boolean;
+  setAllowsAll?(agentId: string, on: boolean): boolean;
   /** Capability checks (engine/checks/, which checks what these return). Absent from native builds older than checks. */
   agentChecks?(agentId: string): unknown;
   kindLevels?(): unknown;

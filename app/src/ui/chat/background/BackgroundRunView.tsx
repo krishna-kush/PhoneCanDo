@@ -107,6 +107,7 @@ export default function BackgroundRunView({ agentId, name, busy }: Props) {
       {permission ? (
         <YStack borderTopWidth={1} borderColor="lineStrong" backgroundColor="panel" padding="4">
           <PermissionQuestion
+            agentId={agentId}
             agentName={name}
             title={permission.title}
             toolKind={permission.toolKind}
