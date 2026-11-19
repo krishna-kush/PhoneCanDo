@@ -1,3 +1,4 @@
+#!/bin/sh
 # Seeded by PhoneCanDo into ~/.phonecando/goose and run by goose's launch,
 # with the phone tools on, before goose starts: lets our phonecando
 # extension's tools run without goose's approval prompt (approve and

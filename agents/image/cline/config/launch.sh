@@ -1,3 +1,4 @@
+#!/bin/sh
 # PhoneCanDo's launch of Cline: agent.json's engine.launch (the TUI) and
 # engine.acp (`launch.sh --acp`). POSIX sh, seeded into
 # /root/.phonecando/cline on every start. Then `exec cline "$@"`.
