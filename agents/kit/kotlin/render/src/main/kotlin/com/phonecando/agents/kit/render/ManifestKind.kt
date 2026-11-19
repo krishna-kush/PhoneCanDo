@@ -375,8 +375,9 @@ class ManifestKind private constructor(
      * manifest names that [hooks] lacks, an install without a version
      * check, a state block that does not fit the kind, a userState path
      * the machine's agents share, an inbox it cannot use (InboxChecks), an
-     * ACP mode it cannot run (AcpChecks), or a runtime [runtimes] lacks or
-     * provides too old.
+     * ACP mode it cannot run (AcpChecks), MCP phone tools without the
+     * setting that trusts them (PhoneToolsChecks), or a runtime [runtimes]
+     * lacks or provides too old.
      */
     fun of(manifest: Manifest, hooks: KindHooks?, runtimes: Map<String, RuntimePlugin> = emptyMap()): ManifestKind {
       KindChecks.engine(manifest)
@@ -395,6 +396,7 @@ class ManifestKind private constructor(
       KindChecks.userState(manifest)
       InboxChecks.check(manifest)
       AcpChecks.check(manifest)
+      PhoneToolsChecks.check(manifest)
       val stream = KindChecks.hooks(manifest, hooks)
       val reply = KindChecks.reply(manifest, hooks)
       val homeOptions = KindChecks.acpOptions(manifest, hooks)

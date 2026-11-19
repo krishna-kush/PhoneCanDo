@@ -22,7 +22,12 @@ Every setting is a flag, so `~/.codex/config.toml` stays yours.
 - `--sandbox danger-full-access`: Codex's Linux sandbox (bubblewrap,
   seccomp, user namespaces) cannot work under proot. The agent's machine
   is the boundary: Codex can change anything in it, but nothing outside
-  it. Approvals stay as your config says.
+  it. Approvals stay as your config says, except for our phone tools.
+- `mcp_servers.phonecando.default_tools_approval_mode="approve"`: our
+  phone tools never ask, since the phone-control lock is their check;
+  every other tool and MCP server still asks as your config says (Codex's
+  config reference; `requires_mcp_tool_approval_for_mode` in 0.170.0
+  `core/src/mcp_tool_call.rs`).
 - `features.daemon_auto_start=false`: no shared background daemon left
   running after the engine.
 - `tui.terminal_title=["thread-name"]`: the window title is the chat's

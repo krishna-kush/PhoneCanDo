@@ -208,7 +208,8 @@ class InboxSeamTest {
     val pulls = ManifestKind.of(
       ManifestDecoder.decode(
         """{"schema":1,"id":"demo","label":"Demo","version":"1","type":"native","channels":["full"],"stability":"preview",
-           "engine":{"style":"tui","launch":{"argv":["{{home}}/demo"]}},"phoneTools":"mcp:config"}""",
+           "engine":{"style":"tui","launch":{"argv":["{{home}}/demo"]}},"phoneTools":"mcp:config",
+           "phoneToolsTrust":{"in":"argv","has":"demo"}}""",
       ),
       null,
     )

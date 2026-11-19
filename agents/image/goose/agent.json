@@ -29,7 +29,7 @@
   "config": {
     "dir": "config",
     "into": ".phonecando/goose",
-    "required": ["config.yaml"]
+    "required": ["config.yaml", "trust.sh"]
   },
   "install": {
     "families": ["apt", "apk", "dnf", "pacman", "zypper"],
@@ -70,7 +70,7 @@
       "argv": [
         "sh",
         "-c",
-        "if [ -n \"${GOOSE_PATH_ROOT:-}\" ]; then cfg=\"$GOOSE_PATH_ROOT/config/config.yaml\"; else cfg=\"$HOME/.config/goose/config.yaml\"; fi; if [ -z \"${GOOSE_PROVIDER:-}\" ] && ! grep -qsE '^(active_provider|GOOSE_PROVIDER):' \"$cfg\"; then /root/.local/bin/goose configure || exit; fi; for a; do if [ \"$a\" = --text ]; then exec /root/.local/bin/goose run --interactive \"$@\"; fi; done; exec /root/.local/bin/goose session \"$@\"",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then sh /root/.phonecando/goose/trust.sh || true; fi; if [ -n \"${GOOSE_PATH_ROOT:-}\" ]; then cfg=\"$GOOSE_PATH_ROOT/config/config.yaml\"; else cfg=\"$HOME/.config/goose/config.yaml\"; fi; if [ -z \"${GOOSE_PROVIDER:-}\" ] && ! grep -qsE '^(active_provider|GOOSE_PROVIDER):' \"$cfg\"; then /root/.local/bin/goose configure || exit; fi; for a; do if [ \"$a\" = --text ]; then exec /root/.local/bin/goose run --interactive \"$@\"; fi; done; exec /root/.local/bin/goose session \"$@\"",
         "goose"
       ],
       "env": {
@@ -106,6 +106,7 @@
     "terminal": { "shell": true }
   },
   "phoneTools": "mcp:config",
+  "phoneToolsTrust": { "in": "trust.sh", "has": "phonecando__$n" },
   "signIn": [
     { "method": "api-key", "note": "On first start goose runs its own setup (goose configure): pick a provider and paste its API key. Run goose configure in this machine's terminal to change it." }
   ],

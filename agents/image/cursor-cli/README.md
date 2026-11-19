@@ -12,9 +12,12 @@ musl).
 ## Launch
 
 - `cursor-agent`, not `agent`, which another CLI also installs.
+- Through `sh -c`, which first runs `phonecando-trust.mjs` when the phone
+  tools are on (see Phone tools), then `exec`s `cursor-agent "$@"`; so
+  `resume` and the ACP chat's args go in at 4, past the script's `$0`.
 - `--plugin-dir /root/.phonecando/cursor`: the runner seeds `config/`
   there, a Cursor plugin (`.cursor-plugin/plugin.json`) loaded for this
-  run only, so `~/.cursor/` stays yours.
+  run only, so `~/.cursor/` stays yours but for our trust entries.
 - Cursor has no switch to turn its own updates off.
 - `resume` adds `--continue`; with no saved chat Cursor exits 1 and the
   runner's resume fallback starts it without.
@@ -75,6 +78,26 @@ The plugin's `mcp.json`: `${env:PHONECANDO_BRIDGE_URL}/mcp` with
 `Bearer ${env:PHONECANDO_BRIDGE_TOKEN}`, which Cursor resolves from the
 environment. Cursor asks you to approve the server
 (`plugin-phonecando-phonecando`) the first time.
+
+Our phone tools never ask after that, since the phone-control lock is
+their check: Cursor reads per-tool trust only from `permissions.allow` in
+`~/.cursor/cli-config.json` (or a project's `.cursor/cli.json`), not from a
+plugin. A plugin's `beforeMCPExecution` hook cannot do it: "Returning
+`allow` from a hook does not override the MCP approval system" (Cursor
+staff, forum.cursor.com/t/155434). So the launch runs
+`phonecando-trust.mjs` with Cursor's bundled `node` (next to the
+`cursor-agent` script it links to). It adds `Mcp(phonecando:*)` and
+`Mcp(plugin-phonecando-phonecando:*)` when they are missing and leaves
+every other key and entry alone. Cursor matches the server part against
+the server's identifier, `plugin-<plugin>-<name>` for a plugin's
+(2026.11.19's `mcp-translation.js` and `matchesMcpPattern`). The script
+leaves a file that does not parse alone. A missing file gets just our
+entries, and Cursor fills in its other defaults on its first read (it
+merges a partial file over them), though without its default
+`Shell(ls)`. Cursor's own tools ask as before. ACP mode reads the same
+list, but its env has no `PHONECANDO_BRIDGE_URL` (the bridge comes in
+the chat), so it is not wrapped. Its permission questions about our tools
+are answered by the runner.
 
 ## Local models
 

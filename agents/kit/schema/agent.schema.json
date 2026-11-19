@@ -478,6 +478,16 @@
       "then": { "required": ["web"] }
     },
     "phoneTools": { "enum": ["plugin", "mcp:config", "mcp:argv", "none"] },
+    "phoneToolsTrust": {
+      "description": "MCP phone tools only, and required on every bundled kind that has them: where the kind's own setting that runs our phonecando server's tools without asking is. in: argv (engine.launch.argv holds has) or a file in config.dir (it holds has; a bundled kind only).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["in", "has"],
+      "properties": {
+        "in": { "$ref": "#/$defs/relPath" },
+        "has": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
+    },
     "hooks": {
       "description": "Code hooks (bundled kinds only), named <id>.<name> and registered in agents/builtin.",
       "type": "array",
@@ -677,6 +687,16 @@
       "$comment": "state.config moves config.into, so it needs a config block.",
       "if": { "not": { "required": ["config"] } },
       "then": { "properties": { "state": { "properties": { "config": false } } } }
+    },
+    {
+      "$comment": "A trust in our phone tools goes with MCP phone tools; one in a file needs the config folder.",
+      "if": { "required": ["phoneToolsTrust"] },
+      "then": {
+        "required": ["phoneTools"],
+        "properties": { "phoneTools": { "enum": ["mcp:config", "mcp:argv"] } },
+        "if": { "properties": { "phoneToolsTrust": { "properties": { "in": { "not": { "const": "argv" } } } } } },
+        "then": { "required": ["config"], "properties": { "config": { "required": ["dir"] } } }
+      }
     },
     {
       "$comment": "Blocks that talk to the engine over HTTP need a server engine.",

@@ -114,6 +114,13 @@ tools are off (`codex`). `plugin` means the CLI's own extension adds the
 server (`pi`). With no way at all, say `"phoneTools": "none"`; every kind
 names it. Rules: [Phone tools](../../agents/AGENTS.md#phone-tools).
 
+Our tools never wait on your CLI's own approval prompt; the phone-control
+lock is their check. So with `mcp:config` or `mcp:argv`, also load your
+CLI's setting that trusts that one server (never its shell or file tools),
+and name where it is: `"phoneToolsTrust": { "in": "settings.json", "has":
+"mcp__phonecando" }`, with `in` a file in your config folder or `"argv"`,
+and `has` the text that must be there.
+
 ### Scheduled tasks
 
 A scheduled task starts the agent with the task as its first prompt. Your

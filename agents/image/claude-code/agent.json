@@ -138,6 +138,7 @@
     "chatTitle": "^\\S (?!Claude Code$)(.+)$"
   },
   "phoneTools": "mcp:argv",
+  "phoneToolsTrust": { "in": "settings.json", "has": "mcp__phonecando__*" },
   "signIn": [
     { "method": "browser", "note": "Pick a sign-in method in Claude Code (it asks on first start, or run /login); the phone offers to open the sign-in page." },
     { "method": "paste-code", "note": "If the page shows a code instead of returning, paste it at Claude Code's \"Paste code here\" prompt." },

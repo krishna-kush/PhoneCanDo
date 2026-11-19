@@ -46,6 +46,7 @@
     ],
     "required": [
       "phonecando-mcp.mjs",
+      "phonecando-trust.mjs",
       "AGENTS.md"
     ]
   },
@@ -123,7 +124,7 @@
       "argv": [
         "sh",
         "-c",
-        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then node \"$KIMI_CODE_HOME/phonecando-mcp.mjs\" \"$KIMI_CODE_HOME/mcp.json\" \"$PHONECANDO_BRIDGE_URL/mcp\" || true; fi; exec /root/.local/bin/kimi \"$@\"",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then node \"$KIMI_CODE_HOME/phonecando-mcp.mjs\" \"$KIMI_CODE_HOME/mcp.json\" \"$PHONECANDO_BRIDGE_URL/mcp\" || true; node \"$KIMI_CODE_HOME/phonecando-trust.mjs\" \"$KIMI_CODE_HOME/config.toml\" || true; fi; exec /root/.local/bin/kimi \"$@\"",
         "kimi"
       ],
       "env": {
@@ -147,7 +148,7 @@
       "argv": [
         "sh",
         "-c",
-        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then node \"$KIMI_CODE_HOME/phonecando-mcp.mjs\" \"$KIMI_CODE_HOME/mcp.json\" \"$PHONECANDO_BRIDGE_URL/mcp\" || true; fi; exec /root/.local/bin/kimi acp \"$@\"",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then node \"$KIMI_CODE_HOME/phonecando-mcp.mjs\" \"$KIMI_CODE_HOME/mcp.json\" \"$PHONECANDO_BRIDGE_URL/mcp\" || true; node \"$KIMI_CODE_HOME/phonecando-trust.mjs\" \"$KIMI_CODE_HOME/config.toml\" || true; fi; exec /root/.local/bin/kimi acp \"$@\"",
         "kimi"
       ],
       "tools": "config",
@@ -206,6 +207,10 @@
     "chatTitle": "^(?!Kimi Code$)(.+)$"
   },
   "phoneTools": "mcp:argv",
+  "phoneToolsTrust": {
+    "in": "phonecando-trust.mjs",
+    "has": "mcp__phonecando__*"
+  },
   "signIn": [
     {
       "method": "device-code",

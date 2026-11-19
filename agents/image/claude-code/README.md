@@ -20,6 +20,10 @@ image-kind rules: `agents/AGENTS.md` §4.
   `--continue` too (code.claude.com/docs/en/cli-reference; tried with
   2.1.306). `--` ends `--mcp-config`, which takes several values and
   would read the task as one more.
+- `config/settings.json` allows `mcp__phonecando__*`: our phone tools
+  never ask, since the phone-control lock is their check. Every other
+  tool asks by your own rules, and a deny or ask rule of yours still wins
+  (code.claude.com/docs/en/permissions, MCP).
 - The window title is `<glyph> <title>` (`✳` idle, `◐`/`◑` working), and
   `Claude Code` until the chat has a title; `surfaces.chatTitle` skips
   that default.

@@ -235,6 +235,17 @@ class ManifestDecoderTest {
     )
   }
 
+  @Test fun readsPhoneToolsTrust() {
+    assertNull(ManifestDecoder.decode(user).phoneToolsTrust)
+    val argv = ManifestDecoder.decode(with("\"phoneToolsTrust\":{\"in\":\"argv\",\"has\":\"approve\"}")).phoneToolsTrust!!
+    assertEquals(PhoneToolsTrust("argv", "approve"), argv)
+    assertTrue(argv.inArgv)
+    assertFalse(ManifestDecoder.decode(with("\"phoneToolsTrust\":{\"in\":\"settings.json\",\"has\":\"x\"}")).phoneToolsTrust!!.inArgv)
+    assertEquals("/phoneToolsTrust/has: is required", problem(with("\"phoneToolsTrust\":{\"in\":\"argv\"}")))
+    assertEquals("/phoneToolsTrust/in: must be a string, not 1", problem(with("\"phoneToolsTrust\":{\"in\":1,\"has\":\"x\"}")))
+    assertEquals("/phoneToolsTrust: must be an object, not a string", problem(with("\"phoneToolsTrust\":\"argv\"")))
+  }
+
   @Test fun readsTheDefaultFlag() {
     assertFalse(ManifestDecoder.decode(user).isDefault)
     assertTrue(ManifestDecoder.decode(with("\"default\":true")).isDefault)

@@ -192,8 +192,10 @@ function runtime(id, extra = {}) {
   };
 }
 const GEMINI = JSON.parse(readFileSync(join(REPO_ROOT, 'agents/kit/schema/fixtures/valid/gemini-cli.json'), 'utf8'));
-const imageKind = (requires, install = GEMINI.install) => ({
-  'agents/image/gemini-cli/agent.json': { ...GEMINI, requires: { ...GEMINI.requires, ...requires }, install },
+const GEMINI_SETTINGS = '{ "mcpServers": { "phonecando": { "trust": true } } }\n';
+const imageKind = (requires, install = GEMINI.install, extra = {}) => ({
+  'agents/image/gemini-cli/agent.json': { ...GEMINI, requires: { ...GEMINI.requires, ...requires }, install, ...extra },
+  'agents/image/gemini-cli/config/settings.json': GEMINI_SETTINGS,
 });
 
 describe('runtime folder rules', () => {
@@ -234,6 +236,33 @@ describe('runtime folder rules', () => {
     assert.deepEqual(codes(makeRoot({ ...imageKind({}, own), ...xbpsOnly })), []);
     const twoRuntimes = { ...imageKind({ runtimes: ['node', 'py'] }, own), ...xbpsOnly, ...runtime('py', { families: ['apk'] }) };
     assert.deepEqual(codes(makeRoot(twoRuntimes)), ['agents/image/gemini-cli/agent.json /requires/runtimes mismatch']);
+  });
+});
+
+describe('phone tools trust', () => {
+  const settings = 'agents/image/gemini-cli/config/settings.json';
+  const trust = (t) => ({ phoneToolsTrust: { ...GEMINI.phoneToolsTrust, ...t } });
+
+  it('wants the config file it names, holding its text', () => {
+    assert.deepEqual(codes(makeRoot({ ...imageKind({}), ...runtime('node') })), []);
+    const other = { ...imageKind({}, GEMINI.install, trust({ in: 'other.json' })), ...runtime('node') };
+    assert.deepEqual(codes(makeRoot(other)), ['agents/image/gemini-cli/agent.json /phoneToolsTrust/in missing']);
+    const untrusted = { ...imageKind({}), ...runtime('node'), [settings]: '{ "mcpServers": { "phonecando": {} } }\n' };
+    assert.deepEqual(codes(makeRoot(untrusted)), ['agents/image/gemini-cli/agent.json /phoneToolsTrust/has missing']);
+  });
+
+  it('wants the overlay copy too when the file is full-only', () => {
+    const config = { ...GEMINI.config, overlay: 'config-lite', fullOnly: ['settings.json'] };
+    const kind = { ...imageKind({}, GEMINI.install, { config }), ...runtime('node') };
+    const lite = 'agents/image/gemini-cli/config-lite/settings.json';
+    assert.deepEqual(codes(makeRoot({ ...kind, [lite]: GEMINI_SETTINGS })), []);
+    assert.deepEqual(codes(makeRoot({ ...kind, [lite]: '{}\n' })), ['agents/image/gemini-cli/agent.json /phoneToolsTrust/has missing']);
+  });
+
+  it('reads no file for a trust in argv', () => {
+    const argv = { ...GEMINI.engine, launch: { ...GEMINI.engine.launch, argv: ['gemini', '--trust-phonecando'] } };
+    const kind = imageKind({}, GEMINI.install, { engine: argv, ...trust({ in: 'argv', has: '--trust-phonecando' }) });
+    assert.deepEqual(codes(makeRoot({ ...kind, [settings]: '{}\n', ...runtime('node') })), []);
   });
 });
 

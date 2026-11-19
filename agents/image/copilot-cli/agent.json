@@ -77,7 +77,8 @@
           "when": "bridgeUrl",
           "args": [
             "--additional-mcp-config",
-            "{\"mcpServers\":{\"phonecando\":{\"type\":\"http\",\"url\":\"{{bridgeUrl}}/mcp\",\"headers\":{\"Authorization\":\"Bearer ${PHONECANDO_BRIDGE_TOKEN}\"},\"tools\":[\"*\"]}}}"
+            "{\"mcpServers\":{\"phonecando\":{\"type\":\"http\",\"url\":\"{{bridgeUrl}}/mcp\",\"headers\":{\"Authorization\":\"Bearer ${PHONECANDO_BRIDGE_TOKEN}\"},\"tools\":[\"*\"]}}}",
+            "--allow-tool=phonecando"
           ]
         }
       ],
@@ -132,6 +133,7 @@
     "terminal": { "shell": true }
   },
   "phoneTools": "mcp:argv",
+  "phoneToolsTrust": { "in": "argv", "has": "--allow-tool=phonecando" },
   "signIn": [
     { "method": "device-code", "note": "Run /login in Copilot: it shows a code and github.com/login/device; enter the code there and approve. Needs a Copilot plan (Free included)." },
     { "method": "api-key", "note": "A fine-grained token with the Copilot Requests permission works too: set COPILOT_GITHUB_TOKEN in this machine's environment." }

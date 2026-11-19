@@ -10,6 +10,10 @@ export const TOOLCHAINS = ['bun', 'ndk', 'rust', 'zig'];
 export const LINKAGES = ['system-only'];
 export const ENGINE_STYLES = ['server', 'tui'];
 export const PHONE_TOOLS = ['plugin', 'mcp:config', 'mcp:argv', 'none'];
+/** The phoneTools that load our tools as an MCP server, whose calls the agent would ask about (phone-tools.ts). */
+export const MCP_PHONE_TOOLS = ['mcp:config', 'mcp:argv'];
+/** phoneToolsTrust.in when the trust is in engine.launch.argv; any other value is a file in config.dir. */
+export const TRUST_IN_ARGV = 'argv';
 export const HOMES = ['web', 'tui'];
 /** The places on the way to a chat a web adapter's `spots` may name, in order. */
 export const WEB_SPOTS = ['projects', 'addProject', 'pickFolder', 'newChat', 'composer'];
@@ -240,6 +244,8 @@ export const MAX = {
   acpOptions: 8,
   /** The most UTF-8 bytes an ACP mode's meta holds, as compact JSON. */
   acpMetaBytes: 4096,
+  /** The text a kind's trust in our phone tools holds (phoneToolsTrust.has). */
+  trustHas: 256,
 };
 
 /** Config fields that describe the bundled asset folder, so need config.dir. */
@@ -257,6 +263,8 @@ const ABOUT_FIELDS = ['about'];
 export const INSTALL_FIELDS = ['install', 'update', 'versionCheck'];
 /** What runs and how the app shows it (runtime.ts checks these). */
 export const RUNTIME_FIELDS = ['engine', 'events', 'chats', 'idle', 'surfaces', 'phoneTools', 'hooks', 'signIn'];
+/** The setting that trusts our phone tools in the agent's own prompts (phone-tools.ts checks it). */
+export const TRUST_FIELDS = ['phoneToolsTrust'];
 /** How a local model is wired into the kind (models.ts checks it). */
 export const MODEL_FIELDS = ['models'];
 /** The agent's global instructions, its own state folder and the kind's default state (state.ts checks these). */
@@ -270,6 +278,7 @@ export const FIELDS = [
   ...PACKAGING_FIELDS,
   ...NEEDS_FIELDS,
   ...RUNTIME_FIELDS,
+  ...TRUST_FIELDS,
   ...INSTALL_FIELDS,
   ...MODEL_FIELDS,
   ...STATE_FIELDS,

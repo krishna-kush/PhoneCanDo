@@ -118,6 +118,7 @@
     "terminal": { "shell": true }
   },
   "phoneTools": "mcp:config",
+  "phoneToolsTrust": { "in": "settings.json", "has": "\"trust\": true" },
   "signIn": [
     { "method": "api-key", "note": "On first start pick \"Use Gemini API key\" and paste a key from aistudio.google.com/app/apikey, or put GEMINI_API_KEY=<key> in ~/.gemini/.env in this machine." },
     { "method": "paste-code", "note": "\"Sign in with Google\" prints a link (the machine has no display, so no browser opens): open it, sign in, then paste the code the page shows at \"Enter the authorization code\"." }

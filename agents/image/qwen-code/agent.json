@@ -127,6 +127,7 @@
     "chatTitle": "^(?:[^\\x00-\\x7F]+ )?(?![^\\x00-\\x7F]+ )(?!Qwen - )(.+?)\\s*$"
   },
   "phoneTools": "mcp:config",
+  "phoneToolsTrust": { "in": "settings.json", "has": "\"trust\": true" },
   "signIn": [
     { "method": "api-key", "note": "On first start pick a provider under \"Connect a Provider\" (QwenCloud, Alibaba ModelStudio or another) and paste its API key." },
     { "method": "device-code", "note": "\"Qwen Account with Subscription\" (a Plus or Pro plan) prints a link: open it, sign in and approve; Qwen Code picks it up by itself." }

@@ -79,6 +79,11 @@ the next turn. Copilot cuts `additionalContext` at 10 KB.
 because Copilot rejects a `${…}` in an MCP `url` (and exits). The header
 stays `Bearer ${PHONECANDO_BRIDGE_TOKEN}`, which Copilot expands.
 
+Our phone tools never ask, since the phone-control lock is their check:
+the same item adds `--allow-tool=phonecando`, "Allow all tools from a
+server" (Copilot CLI command reference, Tool permission patterns; 1.0.114),
+which trusts only our server, never shell, write or another server.
+
 ## Local models
 
 None: Copilot CLI takes a model server only from its own config.

@@ -103,7 +103,9 @@
             "-c",
             "mcp_servers.phonecando.bearer_token_env_var=\"PHONECANDO_BRIDGE_TOKEN\"",
             "-c",
-            "mcp_servers.phonecando.tool_timeout_sec=300"
+            "mcp_servers.phonecando.tool_timeout_sec=300",
+            "-c",
+            "mcp_servers.phonecando.default_tools_approval_mode=\"approve\""
           ]
         }
       ],
@@ -151,6 +153,7 @@
     "chatTitle": "^(.+)$"
   },
   "phoneTools": "mcp:argv",
+  "phoneToolsTrust": { "in": "argv", "has": "mcp_servers.phonecando.default_tools_approval_mode=\"approve\"" },
   "signIn": [
     { "method": "browser", "note": "Pick \"Sign in with ChatGPT\": the phone offers to open the sign-in page, which returns to Codex on localhost:1455 in this machine." },
     { "method": "device-code", "note": "Or pick the device code sign-in (turn it on first in ChatGPT's security settings): open the link it shows and enter the code." },

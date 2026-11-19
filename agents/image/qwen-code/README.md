@@ -86,6 +86,10 @@ for the next turn. Qwen escapes `<` and `>` in hook context.
 
 `mcpServers.phonecando`: `httpUrl` `${PHONECANDO_BRIDGE_URL}/mcp` with
 `Bearer ${PHONECANDO_BRIDGE_TOKEN}`, expanded when Qwen loads settings.
+`trust: true` on that server only, so our phone tools never ask: the
+phone-control lock is their check. Qwen's own tools still ask as its
+settings say. Trust counts only in a trusted folder, which every folder is
+while `security.folderTrust.enabled` stays off, Qwen's default (0.28.0).
 While the server can't be reached Qwen shows `1 MCP offline`, and the
 first start waits on it for a while.
 

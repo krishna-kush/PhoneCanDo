@@ -112,7 +112,10 @@ wait for the next turn.
 
 `mcpServers.phonecando`: `httpUrl` `${PHONECANDO_BRIDGE_URL}/mcp` with
 `Bearer ${PHONECANDO_BRIDGE_TOKEN}`, expanded when Gemini loads settings.
-Each phone tool asks for approval like any tool.
+`trust: true` on that server only, so our phone tools never ask: the
+phone-control lock is their check (0.69.0: a settings rule allowing
+`mcp_phonecando_*`, in every mode but plan). Gemini's own tools still ask
+as its settings say. Trust counts only in a trusted folder (Notes).
 
 ## Local models
 

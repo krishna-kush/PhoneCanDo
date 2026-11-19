@@ -22,7 +22,8 @@ import kotlin.test.assertTrue
 // options, the chat args a terminal launch opens a chat with, what it makes
 // of messaging and schedules, and what of() refuses.
 class AcpModeTest {
-  // A native TUI kind with phone tools, an own state folder, a local model and an ACP mode.
+  // A native TUI kind with phone tools, an own state folder, a local model and an ACP mode
+  // (its program's name stands in for the setting that trusts our phone tools).
   private val base = """
     {
       "schema": 1, "id": "demo", "label": "Demo", "version": "1", "type": "native",
@@ -42,7 +43,8 @@ class AcpModeTest {
         }
       },
       "models": { "openai-chat": { "env": { "MODEL": "{{model}}" }, "args": ["--model", "{{model}}"] } },
-      "phoneTools": "mcp:argv"
+      "phoneTools": "mcp:argv",
+      "phoneToolsTrust": { "in": "argv", "has": "demo" }
     }
   """.trimIndent()
 

@@ -580,6 +580,30 @@
         "path": "/engine/acp/env/PATH",
         "code": "reserved"
       }
+    ],
+    "phone-tools-trust-missing.json": [
+      {
+        "path": "/phoneToolsTrust",
+        "code": "required"
+      }
+    ],
+    "phone-tools-trust-not-in-argv.json": [
+      {
+        "path": "/phoneToolsTrust/has",
+        "code": "mismatch"
+      }
+    ],
+    "phone-tools-trust-without-mcp.json": [
+      {
+        "path": "/phoneToolsTrust",
+        "code": "forbidden"
+      }
+    ],
+    "user-phone-tools-trust-file.json": [
+      {
+        "path": "/phoneToolsTrust/in",
+        "code": "forbidden"
+      }
     ]
   }
 }

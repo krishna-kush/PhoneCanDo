@@ -8,7 +8,8 @@
 // install blocks in install.ts, the instructions file and the agent's own
 // state folder in state.ts, how other agents' messages reach it in
 // inbox.ts, what the Choose agent step tells about it in about.ts, a tui
-// engine's ACP mode in acp.ts, the rules per type and origin in kinds.ts.
+// engine's ACP mode in acp.ts, the setting that trusts our phone tools in
+// phone-tools.ts, the rules per type and origin in kinds.ts.
 // A runtime plugin's manifest has its own validator (runtime-plugin.ts).
 import {
   fields,
@@ -47,6 +48,7 @@ import {
   USER_OPTIONAL,
 } from './rules.ts';
 import { checkModels } from './models.ts';
+import { checkPhoneToolsTrust } from './phone-tools.ts';
 import { checkRuntime } from './runtime.ts';
 import { checkState } from './state.ts';
 import type { Problem, ValidateOptions, ValidationResult } from './types.ts';
@@ -90,6 +92,7 @@ export function validate(json: unknown, options: ValidateOptions): ValidationRes
   if ('requires' in json) checkRequires(add, json.requires);
   checkInstall(add, json);
   checkRuntime(add, json);
+  checkPhoneToolsTrust(add, json, user);
   if ('models' in json) checkModels(add, json.models);
   checkState(add, json);
   checkInbox(add, json);

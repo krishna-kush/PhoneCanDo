@@ -91,6 +91,13 @@
     ],
     "pattern": "^(\\d+\\.\\d+\\.\\d+)"
   },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/claude-code",
+    "required": [
+      "settings.json"
+    ]
+  },
   "instructions": ".claude/CLAUDE.md",
   "state": {
     "env": {
@@ -208,6 +215,10 @@
     "chatTitle": "^\\S (?!Claude Code$)(.+)$"
   },
   "phoneTools": "mcp:argv",
+  "phoneToolsTrust": {
+    "in": "settings.json",
+    "has": "mcp__phonecando"
+  },
   "signIn": [
     {
       "method": "browser",

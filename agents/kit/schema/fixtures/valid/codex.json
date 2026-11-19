@@ -53,7 +53,9 @@
     "style": "tui",
     "launch": {
       "argv": [
-        "{{libDir}}/libcx-engine.so"
+        "{{libDir}}/libcx-engine.so",
+        "-c",
+        "mcp_servers.phonecando.default_tools_approval_mode=\"approve\""
       ]
     },
     "resume": {
@@ -68,6 +70,10 @@
     "home": "tui"
   },
   "phoneTools": "mcp:config",
+  "phoneToolsTrust": {
+    "in": "argv",
+    "has": "mcp_servers.phonecando.default_tools_approval_mode"
+  },
   "inbox": {
     "reader": true
   }

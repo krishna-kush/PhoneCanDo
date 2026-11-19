@@ -364,6 +364,8 @@ export interface Manifest {
   idle?: Idle;
   surfaces?: Surfaces;
   phoneTools?: PhoneTools;
+  /** Where the setting that trusts our phone tools is; every bundled MCP kind names it (phone-tools.ts). */
+  phoneToolsTrust?: PhoneToolsTrust;
   /** Code hooks (bundled kinds only): <id>.<name>, registered in agents/builtin. */
   hooks?: string[];
   signIn?: SignIn[];
@@ -374,6 +376,16 @@ export interface Manifest {
   /** How the kind takes a local model, by wire API in the order it prefers them. */
   models?: Partial<Record<ModelApi, ModelWiring>>;
   inbox?: Inbox;
+}
+
+/**
+ * The kind's own setting that lets our "phonecando" MCP server's tools run
+ * without asking: `in` "argv" (engine.launch.argv) or a file in config.dir,
+ * and `has`, text that must appear there.
+ */
+export interface PhoneToolsTrust {
+  in: string;
+  has: string;
 }
 
 /** How a hook event's output is read: as it is, or as JSON (the messages go in as a JSON string's content). */

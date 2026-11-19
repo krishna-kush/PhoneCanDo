@@ -119,7 +119,7 @@
       "argv": [
         "sh",
         "-c",
-        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then VIBE_MCP_SERVERS='[{\"name\":\"phonecando\",\"transport\":\"streamable-http\",\"url\":\"'\"$PHONECANDO_BRIDGE_URL\"'/mcp\",\"auth\":{\"type\":\"static\",\"api_key_env\":\"PHONECANDO_BRIDGE_TOKEN\"}}]'; export VIBE_MCP_SERVERS; fi; exec /root/.local/bin/vibe \"$@\"",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then VIBE_MCP_SERVERS='[{\"name\":\"phonecando\",\"transport\":\"streamable-http\",\"url\":\"'\"$PHONECANDO_BRIDGE_URL\"'/mcp\",\"auth\":{\"type\":\"static\",\"api_key_env\":\"PHONECANDO_BRIDGE_TOKEN\"}}]'; export VIBE_MCP_SERVERS; p='{\"permission\":\"always\"}'; t=; for n in mobile_ping mobile_battery mobile_notify mobile_focus mobile_share mobile_open mobile_clipboard agents_list agents_send agents_status agents_inbox agents_wait agents_keep_running schedule_add schedule_list schedule_cancel mobile_describe mobile_observe mobile_act mobile_pack mobile_return mobile_request_unlock mobile_open_accessibility mobile_hand_over mobile_wait_for_user; do t=\"$t${t:+,}\\\"phonecando_$n\\\":$p\"; done; VIBE_TOOLS=\"{$t}\"; export VIBE_TOOLS; fi; exec /root/.local/bin/vibe \"$@\"",
         "vibe"
       ],
       "env": {
@@ -149,7 +149,7 @@
       "argv": [
         "sh",
         "-c",
-        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then VIBE_MCP_SERVERS='[{\"name\":\"phonecando\",\"transport\":\"streamable-http\",\"url\":\"'\"$PHONECANDO_BRIDGE_URL\"'/mcp\",\"auth\":{\"type\":\"static\",\"api_key_env\":\"PHONECANDO_BRIDGE_TOKEN\"}}]'; export VIBE_MCP_SERVERS; fi; exec /root/.local/bin/vibe-acp \"$@\"",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then VIBE_MCP_SERVERS='[{\"name\":\"phonecando\",\"transport\":\"streamable-http\",\"url\":\"'\"$PHONECANDO_BRIDGE_URL\"'/mcp\",\"auth\":{\"type\":\"static\",\"api_key_env\":\"PHONECANDO_BRIDGE_TOKEN\"}}]'; export VIBE_MCP_SERVERS; p='{\"permission\":\"always\"}'; t=; for n in mobile_ping mobile_battery mobile_notify mobile_focus mobile_share mobile_open mobile_clipboard agents_list agents_send agents_status agents_inbox agents_wait agents_keep_running schedule_add schedule_list schedule_cancel mobile_describe mobile_observe mobile_act mobile_pack mobile_return mobile_request_unlock mobile_open_accessibility mobile_hand_over mobile_wait_for_user; do t=\"$t${t:+,}\\\"phonecando_$n\\\":$p\"; done; VIBE_TOOLS=\"{$t}\"; export VIBE_TOOLS; fi; exec /root/.local/bin/vibe-acp \"$@\"",
         "vibe-acp"
       ],
       "tools": "config"
@@ -202,6 +202,7 @@
     "chatTitle": "^(?:>> |\\? )?(?!Vibe(?: - |$))(.+?)(?: - (?:Action Required|Task Complete))?$"
   },
   "phoneTools": "mcp:argv",
+  "phoneToolsTrust": { "in": "argv", "has": "p='{\"permission\":\"always\"}'" },
   "signIn": [
     {
       "method": "browser",

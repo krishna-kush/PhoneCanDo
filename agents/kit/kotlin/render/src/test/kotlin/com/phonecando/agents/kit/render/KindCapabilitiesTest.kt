@@ -110,7 +110,7 @@ class KindCapabilitiesTest {
     // In ACP mode: phone tools need phone tools, messages need inbox hooks.
     assertEquals(
       listOf(TOOLS, MESSAGES, ACP, ACP_TOOLS),
-      declared(demo(engine = acp, fields = ""","phoneTools":"mcp:argv","inbox":{"reader":true}""")),
+      declared(demo(engine = acp, fields = ""","phoneTools":"mcp:argv","phoneToolsTrust":{"in":"argv","has":"demo"},"inbox":{"reader":true}""")),
     )
     assertEquals(listOf(MESSAGES, ACP, ACP_MESSAGES), declared(demo(engine = acp, fields = hooks)))
   }
@@ -152,10 +152,11 @@ class KindCapabilitiesTest {
     assertEquals(setOf(TOOLS, TASK, CHAT), changed("engine.launch.cwd", JsonPrimitive("{{home}}")))
     assertEquals(setOf(TASK), changed("engine.prompt", Json.parseToJsonElement("""{"args":["{{prompt}}"]}""")))
     assertEquals(setOf(TOOLS, ACP_TOOLS), changed("phoneTools", JsonPrimitive("mcp:config")))
+    assertEquals(setOf(TOOLS, ACP_TOOLS), changed("phoneToolsTrust.has", JsonPrimitive("mcp__phonecando__")))
     assertEquals(setOf(STATE), changed("state.env.CLAUDE_CONFIG_DIR", JsonPrimitive("{{stateDir}}/c")))
     assertEquals(
       setOf(TOOLS, MESSAGES, WAKE, ACP_TOOLS, ACP_MESSAGES),
-      changed("config", Json.parseToJsonElement("""{"into":".phonecando/claude-code"}""")),
+      changed("config", Json.parseToJsonElement("""{"dir":"config","into":".phonecando/claude"}""")),
     )
     // Parts no capability rests on.
     assertEquals(emptySet(), changed("label", JsonPrimitive("Claude")))

@@ -27,6 +27,7 @@ import {
   LINUX_NEEDS,
   MAX,
   MAX_USER_MANIFEST_BYTES,
+  MCP_PHONE_TOOLS,
   PAIR_METHODS,
   PALETTE_ROLES,
   PATTERNS,
@@ -40,6 +41,7 @@ import {
   SIGN_IN_METHODS,
   STABILITIES,
   TOOLCHAINS,
+  TRUST_IN_ARGV,
 } from './rules.ts';
 import type { Origin } from './types.ts';
 import { validate } from './validate.ts';
@@ -248,6 +250,15 @@ describe('validator and schema agree', () => {
     for (const def of [defs.inboxHookText, defs.inboxBodyText, defs.inboxCreateText, defs.inboxCall.properties.path]) {
       assert.equal(def.maxLength, MAX.template);
     }
+  });
+
+  it('has the same phone tools trust', () => {
+    const trust = props.phoneToolsTrust;
+    assert.equal(trust.properties.has.maxLength, MAX.trustHas);
+    assert.equal(trust.properties.in.$ref, '#/$defs/relPath');
+    const rule = schema.allOf.find((r: { if?: { required?: string[] } }) => r.if?.required?.[0] === 'phoneToolsTrust');
+    assert.deepEqual(rule.then.properties.phoneTools.enum, MCP_PHONE_TOOLS);
+    assert.equal(rule.then.if.properties.phoneToolsTrust.properties.in.not.const, TRUST_IN_ARGV);
   });
 
   it('has the same about limits', () => {

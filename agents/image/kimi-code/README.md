@@ -15,8 +15,9 @@ is archived.
 
 ## Launch
 
-- An `sh -c` wrapper: before Kimi starts it runs our
-  `phonecando-mcp.mjs` (below), then execs Kimi with its args.
+- An `sh -c` wrapper: with the phone tools on, before Kimi starts it runs
+  our `phonecando-mcp.mjs` and `phonecando-trust.mjs` (below), then execs
+  Kimi with its args.
 - `KIMI_CODE_HOME=~/.kimi-code-agent`: the agent has a Kimi folder of its
   own, so we can add our MCP server without touching yours
   (`~/.kimi-code`, which a `kimi` you run by hand in a terminal still uses,
@@ -33,7 +34,8 @@ is archived.
 ## State
 
 - Global instructions: `~/.kimi-code-agent/AGENTS.md`, seeded when absent.
-- Our config (`config/`: `phonecando-mcp.mjs`, `AGENTS.md`) is seeded into
+- Our config (`config/`: `phonecando-mcp.mjs`, `phonecando-trust.mjs`,
+  `AGENTS.md`) is seeded into
   the agent's Kimi folder; a second Kimi Code agent on the machine gets a
   folder of its own (`KIMI_CODE_HOME` in its state folder, our config
   seeded there too).
@@ -46,7 +48,7 @@ Agent Client Protocol (ACP) server over stdio" in `kimi --help`, 2.6.1).
 
 - The launch's `sh -c` wrapper with only the `exec` changed, so
   `phonecando-mcp.mjs` first writes the bridge's current URL into
-  `$KIMI_CODE_HOME/mcp.json`.
+  `$KIMI_CODE_HOME/mcp.json` (and `phonecando-trust.mjs` checks our rule).
 - `tools: config`: Kimi's ACP chats load that `mcp.json` too (2.6.1
   `agent-core-v2` `configLoader.ts` reads `<KIMI_CODE_HOME>/mcp.json`;
   servers from session/new are added on top). With `session` the runner
@@ -79,10 +81,27 @@ Kimi reads no variables in `mcp.json`, so the bridge's URL (its port can
 change) is written each time, while the token stays in the environment,
 named by `bearerTokenEnvVar`.
 
+Our tools never ask, since the phone-control lock is their check:
+`phonecando-trust.mjs` appends one rule to the agent's
+`$KIMI_CODE_HOME/config.toml`, `[[permission.rules]]` with `decision =
+"allow"` and `pattern = "mcp__phonecando__*"` (Kimi names an MCP tool
+`mcp__<server>__<tool>` and matches the pattern as a glob, in every
+permission mode; 2.6.3 `docs/en/customization/mcp.md`,
+`permissionRules/matchesRule.ts`, `permissionPolicyService.ts`). Kimi takes
+permission rules from no other file, so this is the one thing we add
+there: only when the file names that pattern nowhere yet, keeping the rest
+of it as it is, and never when you set `permission.rules` in a form an
+appended table would clash with (`rules = [...]`, `permission = {...}`).
+Your own `deny` and `ask` rules still come first; its shell and file tools
+still ask. A missing file gets the rule alone, and Kimi fills in the rest
+as for no file (`configService.ts`: a section the file lacks takes its
+default).
+
 ## Messages
 
 Pull only (no `inbox` block): Kimi's hooks live in the same `config.toml`
-as its sign-in and providers, so we add none; other agents' messages wait
+as its sign-in and providers, where we add only the phone tools' one rule
+(Phone tools, above) and no hooks; other agents' messages wait
 until Kimi calls `agents_inbox`, which its seeded `AGENTS.md` asks it to
 do when a task starts, and every phone tool's result says how many are
 unread.

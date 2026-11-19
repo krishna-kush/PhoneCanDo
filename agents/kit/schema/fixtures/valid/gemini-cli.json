@@ -64,6 +64,13 @@
     ],
     "pattern": "(\\d+\\.\\d+\\.\\d+)"
   },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/gemini",
+    "required": [
+      "settings.json"
+    ]
+  },
   "instructions": ".gemini/GEMINI.md",
   "state": {
     "env": {
@@ -107,5 +114,9 @@
       "shell": true
     }
   },
-  "phoneTools": "mcp:config"
+  "phoneTools": "mcp:config",
+  "phoneToolsTrust": {
+    "in": "settings.json",
+    "has": "\"trust\": true"
+  }
 }

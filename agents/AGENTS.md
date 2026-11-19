@@ -313,6 +313,13 @@ URL uses `{{bridgeUrl}}` in a `when: bridgeUrl` item, so it drops out with
 no bridge. The token is only ever an env reference that the agent expands
 itself, never in argv or on disk.
 
+Our tools never wait on the agent's own approval prompt: the phone-control
+lock is their check. So every bundled `mcp:argv` or `mcp:config` kind trusts
+our `phonecando` server (never its shell or file tools) and says where, in
+`phoneToolsTrust {in, has}`: `in` is `argv` (`engine.launch.argv` holds
+`has`) or a file in `config.dir` (`kit/cli/manifests.mjs` checks it holds
+`has`). A user-added kind may leave it out, and can trust only in argv.
+
 The same bridge serves the agent tools (`shared/phone-tools/agents.ts`:
 `agents_list`, `agents_send`, `agents_inbox`, `agents_wait`; `keep.ts`:
 `agents_keep_running`, to stay up while idle; `schedule.ts`:
@@ -566,7 +573,8 @@ whose hook config calls the script needs nothing more.
 
 A check belongs to the exact setting it tested. `KindCapabilities.key` is
 the manifest's `version` and a hash of the parts that capability rests on
-(for `tools`: `phoneTools`, `engine.launch` and `config`). Change one of
+(for `tools`: `phoneTools`, `phoneToolsTrust`, `engine.launch` and
+`config`). Change one of
 those parts, or ship a new version, and its check reads Not checked yet
 again.
 

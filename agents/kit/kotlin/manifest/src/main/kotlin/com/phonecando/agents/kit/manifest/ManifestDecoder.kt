@@ -47,6 +47,7 @@ object ManifestDecoder {
       idle = m.optObj("idle")?.let { Idle(oneOf(it, "from", IDLE_SOURCES), it.int("quietSec")) },
       surfaces = m.optObj("surfaces")?.let(::surfaces),
       phoneTools = if (m.has("phoneTools")) enumOf(m, "phoneTools", PhoneTools.entries) { it.wire } else null,
+      phoneToolsTrust = m.optObj("phoneToolsTrust")?.let { PhoneToolsTrust(it.string("in"), it.string("has")) },
       signIn = m.optArray("signIn") ?: JsonArray(emptyList()),
       about = m.optObj("about")?.tree,
       hooks = m.optStrings("hooks"),

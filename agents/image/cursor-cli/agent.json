@@ -31,7 +31,7 @@
   "config": {
     "dir": "config",
     "into": ".phonecando/cursor",
-    "required": [".cursor-plugin/plugin.json", "hooks/hooks.json", "mcp.json"]
+    "required": [".cursor-plugin/plugin.json", "hooks/hooks.json", "mcp.json", "phonecando-trust.mjs"]
   },
   "install": {
     "families": ["apt", "dnf", "pacman", "zypper"],
@@ -63,16 +63,23 @@
   "engine": {
     "style": "tui",
     "launch": {
-      "argv": ["/root/.local/bin/cursor-agent", "--plugin-dir", "/root/.phonecando/cursor"],
+      "argv": [
+        "sh",
+        "-c",
+        "if [ -n \"${PHONECANDO_BRIDGE_URL:-}\" ]; then \"$(dirname \"$(readlink -f /root/.local/bin/cursor-agent)\")/node\" /root/.phonecando/cursor/phonecando-trust.mjs || true; fi; exec /root/.local/bin/cursor-agent \"$@\"",
+        "cursor-agent",
+        "--plugin-dir",
+        "/root/.phonecando/cursor"
+      ],
       "cwd": "{{projectDir}}"
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
-    "resume": { "args": ["--continue"], "at": 1 },
+    "resume": { "args": ["--continue"], "at": 4 },
     "prompt": { "args": ["--", "{{prompt}}"] },
     "acp": {
       "argv": ["/root/.local/bin/cursor-agent", "acp"],
       "tools": "session",
-      "chat": { "args": ["--resume", "{{chatId}}"], "at": 1 }
+      "chat": { "args": ["--resume", "{{chatId}}"], "at": 4 }
     }
   },
   "events": [
@@ -103,6 +110,7 @@
     "terminal": { "shell": true }
   },
   "phoneTools": "mcp:config",
+  "phoneToolsTrust": { "in": "phonecando-trust.mjs", "has": "Mcp(phonecando:*)" },
   "signIn": [
     { "method": "browser", "note": "Press a key at \"Press any key to log in\" (or run /login): open the Cursor link it shows and sign in with your Cursor account." },
     { "method": "api-key", "note": "A Cursor API key works too: set CURSOR_API_KEY in this machine's environment." }

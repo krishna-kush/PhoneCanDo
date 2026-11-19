@@ -49,7 +49,11 @@ the same PyPI package (3.1.1 `entry_points.txt`:
 in `~/.local/bin`.
 
 - The launch's `sh -c` wrapper with only the `exec` changed, so it sets
-  `VIBE_MCP_SERVERS` as in terminal mode.
+  `VIBE_MCP_SERVERS` and `VIBE_TOOLS` as in terminal mode. `vibe-acp`
+  builds its config from the same layers (3.1.3 `acp/entrypoint.py`
+  `build_default_orchestrator`) and asks through the same permission
+  service, so our tools run at once there too; its `request_permission`
+  names a call only by id, with no title the runner could match.
 - `tools: config`: `vibe-acp` takes no MCP servers in session/new (its
   handshake offers no `mcpCapabilities`), so the bridge comes through
   that env layer.
@@ -87,6 +91,14 @@ The `sh` fills in the URL because that layer takes JSON with no
 variables; Vibe reads the token from the environment per request. Vibe
 merges `mcp_servers` from every layer by name, so yours in
 `~/.vibe/config.toml` stay.
+
+Our tools never ask, since the phone-control lock is their check: the
+wrapper also sets `VIBE_TOOLS` to `permission = "always"` for each one by
+name (`phonecando_<tool>`, the server's name and the tool's, 3.1.3
+`mcp/tools.py`; Vibe's `[tools.<name>]` takes no pattern), and only for
+ours, so its shell and file tools still ask. That layer deep-merges
+`tools`, so what you set for other tools stays; a tool we add to the
+bridge joins the wrapper's list.
 
 ## Local models
 

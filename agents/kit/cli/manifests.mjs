@@ -16,6 +16,9 @@
 //     config.into (configInstructions; each in the overlay too when
 //     full-only), every shared part, agents/shared/<name>/ with its
 //     part.json, and every runtime's install scripts;
+//   - a kind whose trust in our phone tools is in a config file
+//     (phoneToolsTrust.in) has that file in config.dir (and in the overlay
+//     when full-only), and it holds phoneToolsTrust.has;
 //   - every runtime a kind needs exists and provides the major version it
 //     needs; the families the kind names are ones each of its runtimes
 //     installs on, at least one family is left that they all do, and its
@@ -26,7 +29,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseRuntimeNeed } from '../ts/manifest/install.ts';
-import { ANY_FAMILY, FAMILIES, PATTERNS } from '../ts/manifest/rules.ts';
+import { ANY_FAMILY, FAMILIES, PATTERNS, TRUST_IN_ARGV } from '../ts/manifest/rules.ts';
 import { ONE_SHOT_FILE, validateOneShot } from '../ts/manifest/one-shot.ts';
 import { validateRuntime } from '../ts/manifest/runtime-plugin.ts';
 import { validate } from '../ts/manifest/validate.ts';
@@ -153,6 +156,7 @@ function loadOne(root, folder, name, dir, problems) {
       if (fullOnly && overlay) has(path, join(config.overlay, rel), 'file');
       if (fullOnly && !config.overlay) add(path, 'missing', `${rel} is full-only and no overlay replaces it`);
     }
+    checkTrustFile(manifest, overlay, has, (rel) => readFileSync(join(dir, rel), 'utf8'), add);
     for (const part of config.shared ?? []) {
       const loaded = loadPart(root, part, add);
       if (loaded) parts.push(loaded);
@@ -160,6 +164,20 @@ function loadOne(root, folder, name, dir, problems) {
   }
   checkOneShot(manifest, folder, name, dir, problems);
   return { id: manifest.id, type: manifest.type, dir, manifest, parts };
+}
+
+// A trust in our phone tools that a config file holds: the file, each copy
+// that ships (the overlay's too when it is full-only), holds `has`.
+function checkTrustFile(manifest, overlay, has, read, add) {
+  const { config, phoneToolsTrust: trust } = manifest;
+  if (!trust || trust.in === TRUST_IN_ARGV) return;
+  const fullOnly = (config.fullOnly ?? []).some((g) => matchesGlob(trust.in, g));
+  for (const base of fullOnly && overlay ? [config.dir, config.overlay] : [config.dir]) {
+    const rel = join(base, trust.in);
+    if (has('/phoneToolsTrust/in', rel, 'file') && !read(rel).includes(trust.has)) {
+      add('/phoneToolsTrust/has', 'missing', `${rel} holds no ${JSON.stringify(trust.has)}`);
+    }
+  }
 }
 
 // A models block is offered on the phone only once CI's local-model check

@@ -21,6 +21,8 @@ glibc or musl, so Alpine works (with `libgcc`).
   nor the agent's config file (`~/.config/goose/config.yaml`, or
   `$GOOSE_PATH_ROOT/config/config.yaml` for an agent with its own state
   folder) names a provider.
+- With the phone tools on, the wrapper first runs our seeded `trust.sh`
+  (Phone tools, below).
 - `GOOSE_ADDITIONAL_CONFIG_FILES` names our seeded `config/config.yaml`.
   goose reads it after `/etc/goose/config.yaml` and before your own
   `config.yaml`, which wins, and never writes to it.
@@ -78,6 +80,20 @@ No hooks. OSC 7501, unprompted, with the usual map. Its bell
 Our config file adds the `phonecando` extension (`streamable_http`,
 `${PHONECANDO_BRIDGE_URL}/mcp`, `Bearer ${PHONECANDO_BRIDGE_TOKEN}`, both
 read through `env_keys`).
+
+Our tools never ask, since the phone-control lock is their check. goose's
+own mode, `auto`, runs every tool without asking; in `approve` or
+`smart_approve`, a tool in `user.always_allow` of goose's `permission.yaml`
+still runs at once. That file is the only place for it (v1.60.1
+`crates/goose/src/config/permission.rs`: `permission.yaml` in the config
+folder, `~/.config/goose` or `$GOOSE_PATH_ROOT/config`), it takes each
+tool's full name with no wildcard (`phonecando__<tool>`, the extension's
+key and the tool, `agents/extension_manager/mod.rs`), and goose refuses to
+start on one it can't read. So `trust.sh` (POSIX sh) writes a missing or
+empty file whole and otherwise adds only our missing names, and only to the
+plain block shape goose writes itself; a file in any other shape, or a
+link, stays as it is. Only our tools are listed: goose's shell and file
+tools ask as before, and a tool we add to the bridge joins `trust.sh`.
 
 ## Messages
 

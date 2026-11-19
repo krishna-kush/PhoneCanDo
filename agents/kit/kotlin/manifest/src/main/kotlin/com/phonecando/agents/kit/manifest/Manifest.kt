@@ -50,6 +50,8 @@ data class Manifest(
   val surfaces: Surfaces?,
   /** How the kind reaches the phone tools (`phoneTools`); null when the manifest does not say, which is none. */
   val phoneTools: PhoneTools?,
+  /** Where the kind's own setting that trusts our phone tools is (`phoneToolsTrust`); null when it names none. */
+  val phoneToolsTrust: PhoneToolsTrust? = null,
   /** The sign-in options the app shows, verbatim; empty when the manifest has none. */
   val signIn: JsonArray,
   /** What the Choose agent step tells about the kind (`about`: maker, links, free use, stars), verbatim; null when it has none. */
@@ -88,6 +90,21 @@ enum class PhoneTools(val wire: String) {
   MCP_ARGV("mcp:argv"),
 
   NONE("none"),
+}
+
+/**
+ * The kind's own setting that runs our "phonecando" MCP server's tools
+ * without asking, since the phone-control lock is their check: in the launch
+ * args ([ARGV]) or in a file of its packaged config ([place], relative to
+ * `config.dir`), holding [has].
+ */
+data class PhoneToolsTrust(val place: String, val has: String) {
+  val inArgv: Boolean get() = place == ARGV
+
+  companion object {
+    /** `in` when the trust is in `engine.launch.argv`. */
+    const val ARGV = "argv"
+  }
 }
 
 /** Whether a kind needs a Linux image. */

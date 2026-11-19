@@ -55,12 +55,12 @@ object KindCapabilities {
 
   /** The manifest parts [capability] rests on, as dotted paths in agent.json. */
   internal fun parts(capability: Capability): List<String> = when (capability) {
-    Capability.TOOLS -> listOf("phoneTools", "engine.launch", "config")
+    Capability.TOOLS -> listOf("phoneTools", "phoneToolsTrust", "engine.launch", "config")
     Capability.MESSAGES, Capability.WAKE -> listOf("inbox", "config")
     Capability.TASK -> listOf("engine.prompt", "engine.launch")
     Capability.STATE -> listOf("state")
     Capability.ACP -> listOf("engine.acp")
-    Capability.ACP_TOOLS -> listOf("engine.acp", "phoneTools", "config")
+    Capability.ACP_TOOLS -> listOf("engine.acp", "phoneTools", "phoneToolsTrust", "config")
     Capability.ACP_MESSAGES -> listOf("engine.acp", "inbox", "config")
     Capability.CHAT -> listOf("engine.acp.chat", "engine.launch")
   }

@@ -448,7 +448,8 @@ class ManifestKindTest {
       "state-config-without-config", "user-state-shared", "inbox-server-on-tui", "inbox-template-no-messages",
       "inbox-wake-unsupported", "inbox-json-unquoted", "prompt-on-server", "prompt-not-whole", "inbox-create-placeholder",
       "acp-on-server", "acp-chat-no-chat-id", "acp-chat-two-chat-ids", "acp-argv-chat-id", "acp-argv-prompt", "acp-tools-unknown",
-      "acp-options-too-many", "acp-image-argv-host-path", "user-acp-path",
+      "acp-options-too-many", "acp-image-argv-host-path", "user-acp-path", "phone-tools-trust-missing",
+      "phone-tools-trust-not-in-argv", "phone-tools-trust-without-mcp", "user-phone-tools-trust-file",
     )
     for (name in refused) {
       val e = runCatching { fixture(File(fixtures, "invalid/$name.json")) }.exceptionOrNull()
