@@ -34,7 +34,7 @@ dependencies {
     api(project(":api"))
     api("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:aidl:13.1.5")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     testImplementation(kotlin("test-junit"))
     testImplementation("junit:junit:4.13.2")
