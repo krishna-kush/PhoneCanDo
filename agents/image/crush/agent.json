@@ -27,6 +27,11 @@
     "linux": "required",
     "commands": ["bash", "git"]
   },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/crush",
+    "required": ["crush.json"]
+  },
   "install": {
     "families": ["apt", "apk", "dnf", "pacman", "zypper"],
     "packages": {
@@ -40,7 +45,8 @@
       "rm -rf /tmp/crush-install && mkdir -p /tmp/crush-install && curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/charmbracelet/crush/releases/latest | sed -n 's#.*/tag/v##p' >/tmp/crush-install/version && [ -s /tmp/crush-install/version ]",
       "cd /tmp/crush-install && v=$(cat version) && f=crush_${v}_Linux_arm64.tar.gz && curl -fsSLO \"https://github.com/charmbracelet/crush/releases/download/v$v/$f\" && curl -fsSLO \"https://github.com/charmbracelet/crush/releases/download/v$v/checksums.txt\" && grep \" $f\\$\" checksums.txt | sha256sum -c -",
       "cd /tmp/crush-install && v=$(cat version) && tar -xzof crush_${v}_Linux_arm64.tar.gz && mkdir -p \"$HOME/.local/bin\" && cp crush_${v}_Linux_arm64/crush \"$HOME/.local/bin/.crush.new\" && chmod 755 \"$HOME/.local/bin/.crush.new\" && mv -f \"$HOME/.local/bin/.crush.new\" \"$HOME/.local/bin/crush\"",
-      "rm -rf /tmp/crush-install"
+      "rm -rf /tmp/crush-install",
+      "mkdir -p /etc/crush && if [ ! -e /etc/crush/crush.json ] || [ -L /etc/crush/crush.json ]; then ln -sfn /root/.phonecando/crush/crush.json /etc/crush/crush.json; fi"
     ],
     "timeoutSec": 1200
   },
@@ -49,7 +55,8 @@
       "rm -rf /tmp/crush-install && mkdir -p /tmp/crush-install && curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/charmbracelet/crush/releases/latest | sed -n 's#.*/tag/v##p' >/tmp/crush-install/version && [ -s /tmp/crush-install/version ]",
       "cd /tmp/crush-install && v=$(cat version) && f=crush_${v}_Linux_arm64.tar.gz && curl -fsSLO \"https://github.com/charmbracelet/crush/releases/download/v$v/$f\" && curl -fsSLO \"https://github.com/charmbracelet/crush/releases/download/v$v/checksums.txt\" && grep \" $f\\$\" checksums.txt | sha256sum -c -",
       "cd /tmp/crush-install && v=$(cat version) && tar -xzof crush_${v}_Linux_arm64.tar.gz && mkdir -p \"$HOME/.local/bin\" && cp crush_${v}_Linux_arm64/crush \"$HOME/.local/bin/.crush.new\" && chmod 755 \"$HOME/.local/bin/.crush.new\" && mv -f \"$HOME/.local/bin/.crush.new\" \"$HOME/.local/bin/crush\"",
-      "rm -rf /tmp/crush-install"
+      "rm -rf /tmp/crush-install",
+      "mkdir -p /etc/crush && if [ ! -e /etc/crush/crush.json ] || [ -L /etc/crush/crush.json ]; then ln -sfn /root/.phonecando/crush/crush.json /etc/crush/crush.json; fi"
     ]
   },
   "versionCheck": {
@@ -85,7 +92,14 @@
     "home": "tui",
     "terminal": { "shell": true }
   },
-  "phoneTools": "none",
+  "phoneTools": "mcp:config",
+  "phoneToolsTrust": { "in": "crush.json", "has": "^mcp_phonecando_" },
+  "inbox": {
+    "hooks": {
+      "PostToolUse": { "format": "json", "template": { "context": "{{messages}}" } },
+      "PostToolUseFailure": { "format": "json", "template": { "context": "{{messages}}" } }
+    }
+  },
   "signIn": [
     { "method": "api-key", "note": "On first start Crush asks for a provider and its API key (or set one, such as ANTHROPIC_API_KEY or OPENAI_API_KEY, in this machine's environment)." }
   ]

@@ -1,0 +1,37 @@
+{
+  "mcp": {
+    "phonecando": {
+      "type": "http",
+      "url": "${PHONECANDO_BRIDGE_URL}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${PHONECANDO_BRIDGE_TOKEN}"
+      },
+      "sessionless": true,
+      "timeout": 30
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "name": "phonecando-trust",
+        "matcher": "^mcp_phonecando_",
+        "command": "echo '{\"decision\":\"allow\"}'",
+        "timeout": 5
+      }
+    ],
+    "PostToolUse": [
+      {
+        "name": "phonecando-inbox",
+        "command": "sh /root/.phonecando/bin/phonecando-inbox PostToolUse",
+        "timeout": 10
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "name": "phonecando-inbox",
+        "command": "sh /root/.phonecando/bin/phonecando-inbox PostToolUseFailure",
+        "timeout": 10
+      }
+    ]
+  }
+}

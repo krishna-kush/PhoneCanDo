@@ -35,7 +35,7 @@ why. Latest results: [status.md](../status.md).
 
 ### ACP-03 Kinds without ACP mode still work as before
 
-- **Agents:** opencode (A-01), top, Aider (A-08).
+- **Agents:** opencode (A-01), top, Crush.
 - **Setup:** none.
 - **Steps:** Open each agent's Home, give it a short task, then stop it.
 - **Expect:** Each works as it did before ACP mode: its own UI on Home, no
