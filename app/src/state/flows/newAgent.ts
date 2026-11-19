@@ -1,5 +1,5 @@
 // A new agent on its machine, as every creation path makes it: of the kind
-// picked, at the next desk in its machine's room (state/desks.ts) and named
+// picked, at the first free desk in its machine's room (state/desks.ts) and named
 // after both ("opencode 1a", "opencode 1b"), wearing the mascot it was
 // picked by (else one at random, state/mascots.ts), on the local model
 // picked for it, set as the agent page's Model section sets it
@@ -34,14 +34,14 @@ export async function makeAgent(imageId: ImageId, pick: AgentPick): Promise<Agen
   const kind = agentKind(pick.kindId);
   const desks = useDesksStore.getState();
   await desks.hydrate();
-  // Taken before the agent exists, so its name carries the code; one a failed make took stays retired.
-  const seat = desks.take(imageId);
+  // Read before the agent exists, so its name carries the code; bound in the same tick, so no one else gets it.
+  const seat = desks.peek(imageId);
   const agent = createAgent({
     kind: kind.id,
     name: nextAgentName(kind.label, listAgents().map((a) => a.name), deskCode(seat)),
     imageId,
   });
-  desks.bind(agent.id, seat);
+  desks.bind(agent.id, imageId, seat);
   if (pick.look) useMascotsStore.getState().setLook(agent.id, pick.look);
   if (pick.modelId == null) return agent;
   const set = await chooseAgentModel(agent.id, pick.modelId);

@@ -1,10 +1,10 @@
 // Agent names: the kind's label and the agent's desk code ("opencode 1a",
 // "opencode 1b": state/logic/desks.ts), so a new name says where the agent
-// sits and is never one a deleted agent had. Names route the agents'
-// messages to each other, so no two agents share one. An A-series serial
-// (A-01, the brand mark; A-04, the app's front desk; A-07, the site's
-// Little; A-09, the app's guide) is our own characters' name, never an
-// agent's. Pure.
+// sits; a deleted agent's code is free again, and so is its name. Names
+// route the agents' messages to each other, so no two agents share one. An
+// A-series serial (A-01, the brand mark; A-04, the app's front desk; A-07,
+// the site's Little; A-09, the app's guide) is our own characters' name,
+// never an agent's. Pure.
 
 const key = (name: string) => name.trim().toLowerCase();
 

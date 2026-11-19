@@ -6,12 +6,13 @@ import { kindLevelNow, useChecksStore } from '../../../state/checks';
 import { useMessagesStore } from '../../../state/messages';
 import AppButton from '../../common/AppButton';
 import AppCard from '../../common/AppCard';
-import { useRoom } from '../../common/desk/useDesk';
+import { useDesk, useRoom } from '../../common/desk/useDesk';
 import RowFrame from '../../common/rows/RowFrame';
 import RowGroup from '../../common/rows/RowGroup';
 import { unreadText } from '../../messages/logic/messagesCopy';
 import AgentLine from '../list/AgentLine';
 import SystemLogo from '../list/SystemLogo';
+import { deskNote } from '../logic/deskText';
 import { formatBytes } from '../logic/format';
 import { missingToolsLine, notPackagedLine } from '../logic/hints';
 import { logoKeys } from '../logic/osLogo';
@@ -26,7 +27,8 @@ import { useMissingTools } from './useMissingTools';
 type Props = { agent: Agent; image: Image | undefined; env: Env | undefined; linux: boolean };
 
 // The agent's machine page body: which env it comes from (with its OS's
-// logo, as on Systems), its room (state/desks.ts), the detected OS, its size, every agent on a machine
+// logo, as on Systems), its room (state/desks.ts) and how desk codes are
+// given, the detected OS, its size, every agent on a machine
 // agents share (this one first, the others open their pages; each says
 // whether it is working now and its unread messages, or that it can't
 // read them at its kind's level now), its setup
@@ -43,6 +45,7 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
   const unread = useMessagesStore((s) => s.unread);
   const levels = useChecksStore((s) => s.levels);
   const room = useRoom(image?.id);
+  const desk = useDesk(agent.id);
 
   if (!image) {
     return (
@@ -69,6 +72,7 @@ export default function MachineSection({ agent, image, env, linux }: Props) {
         icon={env ? <SystemLogo keys={logoKeys(env)} size={32} /> : undefined}
         chevron={false}
       />
+      <Note>{deskNote(room, desk)}</Note>
       {mates.length > 0 ? (
         <>
           <RowGroup title={machineAgentsTitle(mates.length + 1)} barcode="machineAgents">
