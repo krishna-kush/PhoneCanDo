@@ -70,7 +70,7 @@ Opening Home switches the agent back to its terminal UI. A message for a
 busy agent still gets in only through hooks or `agents_inbox`, and the
 terminal UI's status needs `events` (below). Rules: [ACP
 mode](../../agents/AGENTS.md#acp-mode). Examples: `qwen-code`,
-`claude-code` (an adapter), `cline` (argv only).
+`claude-code` (an adapter), `cline` (`tools: config`).
 
 ## If it has no ACP mode: feature by feature
 
@@ -91,8 +91,10 @@ mode](../../agents/AGENTS.md#acp-mode). Examples: `qwen-code`,
 copies into the machine on every start (`"config": { "dir": "config",
 "into": ".phonecando/mycli" }`). So your CLI must load one more settings
 file named by a flag or an env var (Claude Code's `--settings`, Qwen
-Code's `QWEN_CODE_SYSTEM_SETTINGS_PATH`). One that reads hooks or MCP
-servers only from its own config file gets neither.
+Code's `QWEN_CODE_SYSTEM_SETTINGS_PATH`), or a system-wide file under
+`/etc` that an install step links to ours, unless you have a file of your
+own there (`codex`, `crush`). One that reads hooks or MCP servers only
+from its own config file gets neither.
 
 ### Phone tools
 
@@ -107,6 +109,10 @@ reference that your CLI expands itself, never in argv or on disk:
   "httpUrl": "${PHONECANDO_BRIDGE_URL}/mcp",
   "headers": { "Authorization": "Bearer ${PHONECANDO_BRIDGE_TOKEN}" } } } }
 ```
+
+A CLI that expands nothing there, but hands its env to a stdio MCP
+server, can run a small relay of ours that reads the bridge from that env
+(`cline`'s `config/phonecando-mcp.mjs`).
 
 A flag that needs the URL as `{{bridgeUrl}}` goes in a launch item
 `{ "when": "bridgeUrl", "args": [...] }`, so it drops out when phone

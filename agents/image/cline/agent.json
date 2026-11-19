@@ -30,6 +30,12 @@
     "commands": ["bash", "git", "rg"],
     "runtimes": ["node>=22"]
   },
+  "config": {
+    "dir": "config",
+    "into": ".phonecando/cline",
+    "keep": ["cline_mcp_settings.json"],
+    "required": ["cline_mcp_settings.json", "phonecando-mcp.mjs", "phonecando.js", "launch.sh"]
+  },
   "install": {
     "families": ["apt", "dnf", "pacman", "zypper"],
     "packages": {
@@ -52,31 +58,55 @@
     "argv": ["/root/.local/bin/cline", "--version"],
     "pattern": "(\\d+\\.\\d+\\.\\d+)"
   },
+  "state": {
+    "env": { "CLINE_DIR": "{{stateDir}}/cline" }
+  },
   "userState": [".cline"],
   "engine": {
     "style": "tui",
     "launch": {
-      "argv": ["/root/.local/bin/cline"],
+      "argv": ["sh", "/root/.phonecando/cline/launch.sh"],
       "env": {
-        "CLINE_NO_AUTO_UPDATE": "1"
+        "CLINE_NO_AUTO_UPDATE": "1",
+        "CLINE_MCP_SETTINGS_PATH": "/root/.phonecando/cline/cline_mcp_settings.json",
+        "CLINE_PLUGIN_IDLE_TIMEOUT_MS": "2147483647"
       },
       "cwd": "{{projectDir}}"
     },
     "readiness": { "output": { "settleMs": 500, "timeoutSec": 120 } },
+    "resume": { "args": ["--phonecando-continue"] },
     "prompt": { "args": ["--tui", "--", "{{prompt}}"] },
     "acp": {
-      "argv": ["sh", "-c", "f=\"$HOME/.cline/data/settings/providers.json\"; if [ -z \"${CLINE_PROVIDER:-}\" ] && [ -f \"$f\" ]; then CLINE_PROVIDER=$(node -e 'try{const p=JSON.parse(require(\"fs\").readFileSync(process.argv[1],\"utf8\")).lastUsedProvider;if(typeof p===\"string\"&&/^[\\w.:\\/@-]+$/.test(p))process.stdout.write(p)}catch(e){}' \"$f\"); [ -n \"$CLINE_PROVIDER\" ] && export CLINE_PROVIDER || unset CLINE_PROVIDER; fi; exec /root/.local/bin/cline --acp \"$@\"", "cline"],
+      "argv": ["sh", "/root/.phonecando/cline/launch.sh", "--acp"],
+      "env": { "CLINE_SESSION_BACKEND_MODE": "local" },
+      "tools": "config",
       "optionsHook": "cline.model",
       "chat": { "args": ["--tui", "--id", "{{chatId}}"] }
     }
   },
-  "idle": { "from": ["output"], "quietSec": 120 },
+  "events": [
+    {
+      "hook": {
+        "map": {
+          "RunStart": "working",
+          "AskUser": "waiting",
+          "AskDone": "working",
+          "RunDone": "finished",
+          "RunFailed": "failed",
+          "RunStopped": "stopped"
+        }
+      }
+    }
+  ],
+  "inbox": { "reader": true, "wake": "reader" },
+  "idle": { "from": ["output", "events"], "quietSec": 120 },
   "surfaces": {
     "home": "tui",
     "terminal": { "shell": true },
     "chatTitle": "^(?!Cline$)(?:> )?(.+)$"
   },
-  "phoneTools": "none",
+  "phoneTools": "mcp:config",
+  "phoneToolsTrust": { "in": "phonecando.js", "has": "phonecando__" },
   "hooks": ["cline.model"],
   "signIn": [
     { "method": "device-code", "note": "Pick \"Sign in with Cline\" on first start: it shows a code and authkit.cline.bot/device; open that page and enter the code." },

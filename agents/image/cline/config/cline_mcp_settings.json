@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "phonecando": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/root/.phonecando/cline/phonecando-mcp.mjs"],
+      "env": {
+        "PHONECANDO_MCP_URL": "${env:PHONECANDO_BRIDGE_URL}",
+        "PHONECANDO_MCP_TOKEN": "${env:PHONECANDO_BRIDGE_TOKEN}"
+      },
+      "timeout": 300
+    }
+  }
+}

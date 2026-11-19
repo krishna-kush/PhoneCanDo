@@ -103,15 +103,21 @@ These are not scheduled work unless they are also listed in
   app. When a check finds an agent's ACP mode not working (a
   sign-in only ACP mode wants), it falls back to its hooks: Claude Code is
   woken only while the hook it leaves after a turn still waits (about an
-  hour), pi through its reader, Gemini, Qwen, Copilot, Cursor and Vibe get
-  messages in their turns but are never woken, and Kimi and goose read them
-  only when they check their inbox. Codex gets them in its turns but is
-  never woken or started. aider, crush and cline have no phone tools, so
-  messages to them are refused. Kimi and Vibe agents keep their own home folder
+  hour), pi and Cline through their plugins, Gemini, Qwen, Copilot,
+  Cursor and Vibe get messages in their turns but are never woken, and
+  Kimi and goose read them only when they check their inbox. Codex gets
+  them in its turns but is never woken or started. Crush has no ACP mode:
+  it gets them after its tool calls but is never woken or started. Kimi
+  and Vibe agents keep their own home folder
   (`~/.kimi-code-agent`, `~/.vibe-agent`), so a `kimi` or `vibe` run by hand
   in a terminal signs in on its own.
 - The bridge shell runs as the PhoneCanDo UID, so its package listing is
   filtered; it is not proof an app is missing.
+- An agent whose kind a later version no longer ships (Aider, dropped
+  after 1.0) can't start: its Home and page say so, and its machine, files
+  and work folder stay, with a terminal in the machine, until you delete
+  it. Nothing moves it to another kind: you can add it back as a custom
+  agent (a button there opens the form).
 
 ## opencode payload and platform
 
@@ -127,8 +133,8 @@ These are not scheduled work unless they are also listed in
   → Cut-off runs). It needs notifications allowed, the notice comes after
   the first unlock, and runs older than a day, or whose agent showed no
   sign of work for an hour before, are not offered. Kinds that
-  cannot reopen their chat with a first prompt (aider, crush, cline, Gemini
-  CLI and Kimi in their own app) get Open instead, and you go on yourself. What the agent left running
+  cannot reopen their chat with a first prompt (crush, Gemini CLI and Kimi
+  in their own app) get Open instead, and you go on yourself. What the agent left running
   (servers, builds) is not brought back. A force stop or a swipe that ended
   PhoneCanDo, quitting an agent's TUI yourself (Ctrl+C, `/exit`) and
   cancelling an update's installer count as your stop: nothing is offered.

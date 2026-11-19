@@ -43,6 +43,8 @@ everything about that kind:
 - native only: `build/` (build.sh, pins.env, patches), `ci/` and
   `payload.lock` (§2, Native payloads)
 - optional `kotlin/` hooks
+- `test/`, node tests of the scripts in its config (a relay, a plugin;
+  never packaged)
 - docs
 
 An image kind with no code has exactly the shape a user-added agent has.
@@ -215,8 +217,7 @@ phonecando-linux <- kit-api   (ProjectDir only: the machine's shell starts in th
   (`launch.cwd: "{{projectDir}}"`), and the machine's shell and the TUI
   client's folder picker start there. The runner makes it before each
   launch, `phonecando-linux` before each shell. Not HOME itself: Claude
-  Code never saves its folder trust for HOME (it asks on every start), and
-  Aider warns there.
+  Code never saves its folder trust for HOME (it asks on every start).
 
 ### ACP mode
 
@@ -312,6 +313,14 @@ we ship names it (`./manage agent check` requires it). Argv that needs the
 URL uses `{{bridgeUrl}}` in a `when: bridgeUrl` item, so it drops out with
 no bridge. The token is only ever an env reference that the agent expands
 itself, never in argv or on disk.
+
+An agent that expands no env references in its MCP settings, or that
+prints or logs what it expanded, can still get the bridge when it hands
+its env to the stdio MCP servers it starts: a small relay in its
+`config/` reads the URL and token from that env and passes each
+JSON-RPC line to the bridge (Cline's `phonecando-mcp.mjs`; loopback
+only, no HTTP proxy, never prints the token). The settings name only the
+relay's command.
 
 Our tools never wait on the agent's own approval prompt: the phone-control
 lock is their check. So every bundled `mcp:argv` or `mcp:config` kind trusts
@@ -497,7 +506,14 @@ rest):
   agent with a state folder of its own: `state.config`) on every start.
   We never write into the agent's own config files, so a
   kind that loads hooks or MCP servers only from those, with no flag or
-  variable for one more file, gets no hooks or no phone tools.
+  variable for one more file, gets no hooks or no phone tools. A
+  system-wide layer the agent merges under yours (Codex's
+  `/etc/codex/hooks.json`, Crush's `/etc/crush/crush.json`) counts as one
+  more file: an install and update step links it to ours unless the path
+  already holds a file of your own. The one exception is the trust in
+  our server (`phoneToolsTrust`) of a kind that takes it from nowhere
+  else: its launch adds that one rule to its own file when missing,
+  touching nothing else (`cursor-cli`, `kimi-code`, `goose`).
 - Updates: the agent's own update check or self-update is off wherever
   it has a switch; "Update agent" runs `update.steps`.
 - Sign-in happens inside the agent, and we never take part. `signIn`

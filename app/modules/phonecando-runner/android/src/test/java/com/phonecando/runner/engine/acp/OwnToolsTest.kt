@@ -21,6 +21,8 @@ class OwnToolsTest {
       "phonecando:mobile_click",
       "mobile_click (phonecando MCP Server)",
       "agents_list (phonecando)",
+      "phonecando__mobile_click",
+      "phonecando__agents_list: to=\"Ada\"\nand more",
       "  mobile_click  ",
     )) assertTrue(t, OwnTools.isOurs(t, names))
   }
@@ -34,6 +36,9 @@ class OwnToolsTest {
       "mobile_click (other MCP Server)",
       "mcp__phonecando__rm_rf",
       "mobile_clicks",
+      "phonecando__rm_rf: x",
+      "phonecando__mobile_click; rm -rf",
+      "other__mobile_click",
       "",
     )) assertFalse(t, OwnTools.isOurs(t, names))
     assertFalse(OwnTools.isOurs("mobile_click", emptySet()))

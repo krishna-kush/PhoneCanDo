@@ -6,7 +6,9 @@ package com.phonecando.runner.engine.acp
 // and never reaches you. A question is ours only when its tool call's
 // title is one of our tool names, bare or with our server's name round it
 // as agents write it (mcp__phonecando__x, phonecando/x, phonecando.x,
-// phonecando:x, "x (phonecando MCP Server)"); a shell command or anything
+// phonecando:x, "x (phonecando MCP Server)", and Cline's phonecando__x,
+// with its arguments after ": " when the call has any; the name before
+// them is the agent's, never the model's); a shell command or anything
 // else that merely mentions one still asks. Allow-once keeps the agent's
 // own saved rules as they were. Pure.
 internal object OwnTools {
@@ -15,6 +17,7 @@ internal object OwnTools {
     Regex("^mcp__${server}__(.+)$"),
     Regex("^$server[/.:](.+)$"),
     Regex("^(.+?) \\($server(?: MCP Server)?\\)$", RegexOption.IGNORE_CASE),
+    Regex("^${server}__([A-Za-z0-9_]+)(?:: .*)?$", RegexOption.DOT_MATCHES_ALL),
   )
 
   /** [title] (a permission question's tool call) names one of [names]. */
