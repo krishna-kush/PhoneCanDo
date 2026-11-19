@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { XStack, YStack } from 'tamagui';
-import { DESIGNS, EARNED, type DesignId } from '../../../../../../../mascot/designs.ts';
+import { EARNED, type DesignId } from '../../../../../../../mascot/designs.ts';
 import type { Look } from '../../../../../../../mascot/look.ts';
+import { AGENT_DESIGNS } from '../../../../../state/logic/agentLooks';
 import { useStarterStore } from '../../../../../state/starter';
 import { lockedLabel } from '../../../../starter/copy';
 import { isEarned } from '../../../../starter/reward';
@@ -45,7 +46,7 @@ export default function Wardrobe({ estimate, mascot, onPick, onLocked, still }: 
   const columns = columnsFor(width, MIN_TILE, GAP);
 
   const rack = [
-    ...DESIGNS.map((d) => ({ d, locked: false })),
+    ...AGENT_DESIGNS.map((d) => ({ d, locked: false })),
     ...EARNED.map((d) => ({ d, locked: !isEarned(d.id, earned) })),
   ].map(({ d, locked }) => ({
     id: d.id,

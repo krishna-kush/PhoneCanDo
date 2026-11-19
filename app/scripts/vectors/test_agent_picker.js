@@ -39,7 +39,7 @@ function seeded(seed) {
 
   // --- applicants' faces ----------------------------------------------------------
   const ids = ['opencode', 'claude-code', 'gemini-cli', 'codex', 'aider'];
-  const agents = [{ design: 'plain', shape: 'square', swap: false }];
+  const agents = [{ design: 'coder', shape: 'square', swap: false }];
   const looks = a.applicantLooks(ids, {}, agents, seeded(7));
   const keys = new Set(p.allLooks().map(l.lookKey));
   t('a face for every applicant', Object.keys(looks), ids);
@@ -50,7 +50,9 @@ function seeded(seed) {
   );
   const designs = ids.map((id) => looks[id].design);
   t('no two applicants wear the same design', new Set(designs).size, ids.length);
-  t("none wears an agent's design", designs.includes('plain'), false);
+  t("none wears an agent's design", designs.includes('coder'), false);
+  const alone = a.applicantLooks(ids, {}, [], seeded(3));
+  t("none wears plain, A-01's own", ids.some((id) => alone[id].design === 'plain'), false);
   t('nothing new: the same record back', a.applicantLooks(ids, looks, agents, seeded(1)) === looks, true);
   const more = a.applicantLooks([...ids, 'user.mine'], looks, agents, seeded(2));
   t(

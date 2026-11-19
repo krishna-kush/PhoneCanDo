@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Look } from '../../../../../../../mascot/look.ts';
-import { pickLook } from '../../../../../../../mascot/pick.ts';
+import { pickAgentLook } from '../../../../../state/logic/agentLooks';
 import { useReduceMotion } from '../../../../common/useReduceMotion';
 import { shuffleTimes } from '../logic/shuffle';
 
@@ -40,7 +40,7 @@ export function useShuffle(look: Look, pick: () => Look, keep: (look: Look) => v
     setRun({ from: look, preview: null, landed: false });
     const last = TIMES.shows.length - 1;
     timers.current = TIMES.shows.map((at, i) =>
-      setTimeout(() => setRun((r) => r && { ...r, preview: i === last ? chosen : pickLook([], Math.random), landed: i === last }), at),
+      setTimeout(() => setRun((r) => r && { ...r, preview: i === last ? chosen : pickAgentLook([], Math.random), landed: i === last }), at),
     );
     timers.current.push(
       setTimeout(() => {

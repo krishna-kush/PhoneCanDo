@@ -191,7 +191,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   fun?" card's runs, last ask and answer), `share.ts` (the links this
   phone shared, what they did), `account.ts` (who is signed in),
   `settingsSync.ts` (when each synced setting last changed here),
-  `mascots.ts` (each agent's mascot, picked at random), `desks.ts`
+  `mascots.ts` (each agent's mascot, picked at random, never plain: A-01's own, `logic/agentLooks.ts`), `desks.ts`
   (each agent's desk code, "1b": its machine's room and its desk there,
   the first free ones; the A-numbers are our own characters'), `starter.ts`
   (the first shift's marks and reward), `checks.ts` (each kind's level

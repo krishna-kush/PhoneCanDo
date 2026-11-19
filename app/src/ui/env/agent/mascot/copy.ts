@@ -1,11 +1,12 @@
 // The Mascot page's words, and its row's on the agent page. Pure (zero RN
 // imports).
 import type { Shape } from '../../../../../../mascot/body.ts';
-import { DESIGNS, EARNED, type Design } from '../../../../../../mascot/designs.ts';
+import { EARNED, type Design } from '../../../../../../mascot/designs.ts';
 import type { Look } from '../../../../../../mascot/look.ts';
 import { FACES } from '../../../../../../mascot/parts/face/index.ts';
 import { HATS } from '../../../../../../mascot/parts/hat/index.ts';
 import { NECKS } from '../../../../../../mascot/parts/neck/index.ts';
+import { AGENT_DESIGNS } from '../../../../state/logic/agentLooks.ts';
 
 export const MASCOT_TITLE = 'Mascot';
 
@@ -16,7 +17,7 @@ export const SWAP = 'Swap colours';
 export const SHAPE_TITLE = 'Shape';
 
 /** The rack's head, with how many there are, earned ones too. */
-export const WARDROBE_TITLE = `Wardrobe · ${DESIGNS.length + EARNED.length}`;
+export const WARDROBE_TITLE = `Wardrobe · ${AGENT_DESIGNS.length + EARNED.length}`;
 
 /** A locked design's name on its tile: not given away until it is earned. */
 export const LOCKED_NAME = '???';
@@ -29,9 +30,9 @@ export const SHAPE_LABEL: Record<Shape, string> = {
   taller: 'Taller',
 };
 
-const RACK: readonly string[] = [...DESIGNS, ...EARNED].map((d) => d.id);
+const RACK: readonly string[] = [...AGENT_DESIGNS, ...EARNED].map((d) => d.id);
 
-/** A design's number on the rack, as the site's wardrobe counts them: "07". */
+/** A design's number on the rack (no plain: A-01's own), from "01". */
 export const designNumber = (id: string) => String(RACK.indexOf(id) + 1).padStart(2, '0');
 
 /** The stage's kicker: "No. 07 · Tall". */

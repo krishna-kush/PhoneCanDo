@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Look } from '../../../../mascot/look.ts';
-import { pickLook } from '../../../../mascot/pick.ts';
 import { setupPick } from '../../engine/agents/offers';
 import type { ImageId } from '../../engine/linux/types';
 import { getBuildChannel } from '../../engine/runner';
 import { continueWithoutLinux, setUpFirstAgent, type SetupPath } from '../../state/flows/firstLaunch';
+import { pickAgentLook } from '../../state/logic/agentLooks';
 import { defaultKindId, offersForEnv } from '../../state/flows/kindOffers';
 import { linuxErrorCode } from '../../state/flows/logic/errors';
 import type { AgentPick } from '../../state/flows/logic/modelStep';
@@ -32,7 +32,7 @@ export function useFirstLaunch() {
   const [imageId, setImageId] = useState<ImageId | null>(null);
   const [phase, setPhase] = useState<SetupPhase>({ kind: 'working' });
   // No agent exists yet, so any look is nobody's.
-  const [look] = useState<Look>(() => pickLook([], Math.random));
+  const [look] = useState<Look>(() => pickAgentLook([], Math.random));
   const [kindId, setKindId] = useState<string | null>(null);
   const started = useRef(false);
   /** The kind being set up, once taken. */

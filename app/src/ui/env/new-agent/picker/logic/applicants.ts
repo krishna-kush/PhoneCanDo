@@ -1,9 +1,9 @@
 // The faces on the Choose agent step: each kind on offer stands there as
 // an applicant wearing a mascot, a look unlike every agent's here and each
-// other's (mascot/pick.ts), and the one picked is the look the new agent
+// other's (state/logic/agentLooks.ts), and the one picked is the look the new agent
 // keeps (state/flows/newAgent.ts). Pure (zero RN imports).
 import type { Look } from '../../../../../../../mascot/look.ts';
-import { pickLook } from '../../../../../../../mascot/pick.ts';
+import { pickAgentLook } from '../../../../../state/logic/agentLooks.ts';
 
 /**
  * A look for each id in [ids]: one in [kept] stays; a new one is picked
@@ -24,7 +24,7 @@ export function applicantLooks(
       next[id] = kept[id];
       continue;
     }
-    next[id] = pickLook(worn, rand);
+    next[id] = pickAgentLook(worn, rand);
     worn.push(next[id]);
     changed = true;
   }

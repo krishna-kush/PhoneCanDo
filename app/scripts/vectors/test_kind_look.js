@@ -33,6 +33,8 @@ const repo = (...parts) => pathToFileURL(path.join(__dirname, '../../..', ...par
   t('the same id, the same mascot', l.lookKey(c.kindLook('aider')), l.lookKey(c.kindLook('aider')));
   const many = new Set(['aider', 'goose', 'crush', 'amp', 'cline', 'plandex', 'mentat', 'kilo'].map((id) => l.lookKey(c.kindLook(id))));
   t('eight ids, more than one mascot', many.size > 1, true);
+  const kinds = Array.from({ length: 200 }, (_, i) => `kind-${i}`);
+  t("no kind wears plain, A-01's own", kinds.some((id) => c.kindLook(id).design === 'plain'), false);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

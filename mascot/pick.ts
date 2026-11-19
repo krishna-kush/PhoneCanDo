@@ -9,21 +9,24 @@ import { lookKey, type Look } from './look.ts';
 /** How often the amber block comes out in front. */
 const SWAP = 0.3;
 
+/** Designs a pick may wear: DESIGNS, or a part of them. */
+type Rack = readonly (typeof DESIGNS)[number][];
+
 const pick = <T>(rand: () => number, list: readonly T[]): T => list[Math.min(list.length - 1, Math.floor(rand() * list.length))];
 
-/** Every look there is: each design in each shape, either ink in front. */
-export function allLooks(): Look[] {
-  return DESIGNS.flatMap((d) => SHAPES.flatMap((shape) => [false, true].map((swap) => ({ design: d.id, shape, swap }))));
+/** Every look there is among [designs]: each in each shape, either ink in front. */
+export function allLooks(designs: Rack = DESIGNS): Look[] {
+  return designs.flatMap((d) => SHAPES.flatMap((shape) => [false, true].map((swap) => ({ design: d.id, shape, swap }))));
 }
 
-/** A look for a newcomer among [taken], from [rand] (0 to 1, as Math.random). */
-export function pickLook(taken: readonly Look[], rand: () => number): Look {
+/** A look for a newcomer among [taken], in one of [designs], from [rand] (0 to 1, as Math.random). */
+export function pickLook(taken: readonly Look[], rand: () => number, designs: Rack = DESIGNS): Look {
   const worn = new Set<string>(taken.map((l) => l.design));
-  const fresh = DESIGNS.filter((d) => !worn.has(d.id));
+  const fresh = designs.filter((d) => !worn.has(d.id));
   if (fresh.length) return { design: pick(rand, fresh).id, shape: pick(rand, SHAPES), swap: rand() < SWAP };
   const had = new Set(taken.map(lookKey));
-  const open = allLooks().filter((l) => !had.has(lookKey(l)));
-  return pick(rand, open.length ? open : allLooks());
+  const open = allLooks(designs).filter((l) => !had.has(lookKey(l)));
+  return pick(rand, open.length ? open : allLooks(designs));
 }
 
 /**
@@ -36,12 +39,13 @@ export function assignLooks(
   looks: Readonly<Record<string, Look>>,
   ids: readonly string[],
   rand: () => number,
+  designs: Rack = DESIGNS,
 ): Readonly<Record<string, Look>> {
   const next: Record<string, Look> = {};
   let changed = false;
   for (const id of ids) {
     const kept = looks[id];
-    next[id] = kept ?? pickLook(Object.values(next), rand);
+    next[id] = kept ?? pickLook(Object.values(next), rand, designs);
     changed ||= !kept;
   }
   if (!ids.length) return looks;

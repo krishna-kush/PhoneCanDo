@@ -4,10 +4,9 @@
 // agent's look goes the next time the list is read (ui/common/face/useMascotPicks.ts).
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { isWearable } from '../../../mascot/designs.ts';
-import { readLook, type Look } from '../../../mascot/look.ts';
-import { assignLooks, pickLook } from '../../../mascot/pick.ts';
+import type { Look } from '../../../mascot/look.ts';
 import type { AgentId } from '../engine/agents/records';
+import { assignAgentLooks, isAgentDesign, pickAgentLook, readAgentLook } from './logic/agentLooks';
 
 const KEY = 'phonecando.mascots.v1';
 
@@ -34,7 +33,7 @@ function parse(raw: string | null): Looks {
   try {
     const kept: Record<AgentId, Look> = {};
     for (const [id, v] of Object.entries(JSON.parse(raw ?? '{}') as Record<string, unknown>)) {
-      const look = readLook(v);
+      const look = readAgentLook(v);
       if (look) kept[id] = look;
     }
     return kept;
@@ -59,19 +58,19 @@ export const useMascotsStore = create<MascotsState>((set, get) => ({
   },
 
   assign: (ids) => {
-    const looks = assignLooks(get().looks, ids, Math.random);
+    const looks = assignAgentLooks(get().looks, ids, Math.random);
     if (looks === get().looks) return;
     set({ looks });
     save(looks);
   },
 
   setLook: (id, look) => {
-    // Our own characters' outfits (mascot/designs.ts RESERVED: the guide A-09's, the front desk A-04's) are never an agent's.
-    if (!isWearable(look.design)) return;
+    // Our own characters' outfits (mascot/designs.ts RESERVED: the guide A-09's, the front desk A-04's; plain, A-01's) are never an agent's.
+    if (!isAgentDesign(look.design)) return;
     const looks = { ...get().looks, [id]: look };
     set({ looks });
     save(looks);
   },
 
-  surprise: () => pickLook(Object.values(get().looks), Math.random),
+  surprise: () => pickAgentLook(Object.values(get().looks), Math.random),
 }));

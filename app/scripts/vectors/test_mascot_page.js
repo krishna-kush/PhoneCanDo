@@ -45,9 +45,10 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('a shuffle of one', s.shuffleTimes(1, 100, 2), { shows: [0], lands: 100 });
 
   // --- words ----------------------------------------------------------------------
-  t('the first design is No. 01', c.designNumber('plain'), '01');
+  t('the first design is No. 01, plain being A-01\'s own', c.designNumber('coder'), '01');
+  t('plain is not on the rack', c.designNumber('plain'), '00');
   t('the earned one hangs last', c.designNumber('shift-lead'), c.WARDROBE_TITLE.split(' · ')[1]);
-  t('the stage kicker', c.stageKicker({ design: 'coder', shape: 'tall', swap: true }), 'No. 02 · Tall');
+  t('the stage kicker', c.stageKicker({ design: 'tester', shape: 'tall', swap: true }), 'No. 02 · Tall');
   t('what a design wears', c.wornLine({ id: 'x', name: 'X', hat: 'tophat', neck: 'bowtie' }), 'Top hat · Bow tie');
   t('nothing worn', c.wornLine({ id: 'plain', name: 'Plain' }), 'Nothing on');
 
