@@ -126,6 +126,9 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
     c.missionCopy('hello', { linux: true, models: false }).steps[0].includes('Models'),
   ], [true, false]);
   t('a teammate without Linux: no Claude Code', c.missionCopy('teammate', { linux: false, models: false }).what.includes('Claude Code'), false);
+  t('hands: the bank apps question, while it is still to come', [true, false].map((q) =>
+    c.missionCopy('hands', { linux: true, models: true, bankQuestion: q }).steps.some((x) => x.includes('bank apps'))), [true, false]);
+  t('hands: the dare stays the last step', c.missionCopy('hands', { linux: true, models: true, bankQuestion: true }).steps.at(-1), 'Then copy a dare and paste it in the chat.');
   t('kicker', c.shiftKicker(2, 5), 'first shift · 2/5');
   t('card line', [c.cardLine('Say hi'), c.cardLine(null)], ['Next: Say hi', 'All stamped! See how you did']);
   t('reward owed', [c.rewardOwed(1), c.rewardOwed(2)], [

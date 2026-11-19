@@ -10,6 +10,12 @@ export type StarterContext = {
   linux: boolean;
   /** Local models are offered on this phone (the drawer's Models). */
   models: boolean;
+  /**
+   * The Auto off question still comes after the switch (ui/accessibility/
+   * auto-off/): its first turn-on on this install has not happened, or it
+   * has and the question is not answered yet.
+   */
+  bankQuestion?: boolean;
 };
 
 export const SHIFT_TITLE = 'First shift';
@@ -144,6 +150,7 @@ export function missionCopy(id: MissionId, c: StarterContext): MissionCopy {
         where: [MY_NAME, 'Settings', 'Phone control'],
         steps: [
           'Open Phone control and follow its steps to switch me on. Android double-checks, so it takes a few taps.',
+          ...(c.bankQuestion ? ['Back here, A-01 has one quick question about bank apps. Pick either, no wrong answers.'] : []),
           'Then copy a dare and paste it in the chat.',
         ],
         go: LEAD,

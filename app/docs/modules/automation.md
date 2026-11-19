@@ -63,8 +63,13 @@ minutes after it connects (`AutoOffRules`). It marks itself the cause, so
 the 503 below says so and the agent asks through
 `phone_open_accessibility`; only the user switches it back on. The app
 offers it once, after the switch's first turn-on on this install (marked
-natively at that first bind; a switch on before never brings it), after a
-first shift walk ends (`ui/accessibility/auto-off/`).
+natively at that first bind; a switch on before never brings it), while
+the switch is on and PhoneCanDo is in front (`ui/accessibility/auto-off/`);
+in the first shift's Give me hands walk, A-09 calls it on a note atop it.
+An agent whose `phone_open_accessibility` brought that turn-on waits for
+the answer too (`PromptFlows.accessibility`, within its 4 minutes): its
+dialog closes as the switch comes on, and the call returns once the user
+has answered, so the agent never drives over the question.
 
 ## Implemented slice (2026-10-30)
 

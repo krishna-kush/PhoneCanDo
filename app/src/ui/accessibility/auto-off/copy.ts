@@ -81,6 +81,10 @@ export const ASK_YES = 'Clock out on my own';
 export const ASK_NO = 'Stay on duty';
 export const ASK_WHERE = 'Change it anytime: Settings → Phone control → Auto off.';
 
+/** On the ask while the first shift's Give me hands walk is on: A-09, our guide, calls it. */
+export const SHIFT_FROM = 'A-09 · first shift';
+export const SHIFT_LINE = 'Pop quiz! No wrong answers, only shy bank apps.';
+
 // Once Auto off has turned the service off, until it runs again.
 export const CLOCKED_OUT_STAMP = 'clocked out';
 export const CLOCKED_OUT_LINE = 'clocked out · Auto off · back when you switch me on';
