@@ -1,7 +1,5 @@
 <!-- What this changes and why. -->
 
-
-
 ---
 
 - [ ] I agree to the contribution terms in section 7 of the

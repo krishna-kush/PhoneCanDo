@@ -171,8 +171,8 @@ then again for an agent whose look changed or a new agent.
   popping up off its head (`ui/common/face/`).
 - **The hand-over card:** while you have the phone's controls, a card
   under Home's header (`ui/presence/HandOverCard.tsx`) says so. Watch:
-  "<name> handed you the phone: <why>" (or "You have the controls" when you
-  took them) with Your turn; paused: "<name> is paused" with Leave it and
+  "`<name>` handed you the phone: `<why>`" (or "You have the controls" when
+  you took them) with Your turn; paused: "`<name>` is paused" with Leave it and
   Start me again. Its buttons are the runner's `presenceAct`; the card goes
   when the frame says the hand-over ended, from here, the overlay or the
   notification.
