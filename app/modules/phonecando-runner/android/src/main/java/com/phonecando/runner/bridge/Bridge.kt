@@ -117,6 +117,7 @@ object Bridge {
       onDrive = Presence::publish,
       handOver = Presence.store::handOver,
       onPaused = Presence.store::pausedCall,
+      leftStopped = Presence.store::leftStopped,
     )
     val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val ports = BridgePorts.candidates(prefs.getInt(KEY_PORT, 0))

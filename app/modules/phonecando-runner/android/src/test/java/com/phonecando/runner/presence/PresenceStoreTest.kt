@@ -93,6 +93,23 @@ class PresenceStoreTest {
     assertEquals(listOf("freeze a1", "thaw a1, give back"), fx.log)
   }
 
+  @Test fun leaveWhileItsRunGoesOnKeepsItOffTheScreenUntilThatRunEnds() {
+    store.user(UserAct.STOP)
+    assertTrue(store.user(UserAct.LEAVE))
+    // The screen goes now, and its turn is stopped where its kind can.
+    assertNull(store.handOver())
+    assertEquals(listOf("freeze a1", "thaw a1, give back", "stop a1"), fx.log)
+    assertTrue(store.leftStopped("a1"))
+    assertFalse(store.leftStopped("a2"))
+    // Still calling the screen: each call stops its turn again; no hand-over of its own.
+    store.pausedCall("a1")
+    assertEquals("stop a1", fx.log.last())
+    assertNull(store.agent("a1", "opencode", "x", private = false))
+    // Its run ended: the bridge gives the screen back as for any run, and its next run drives.
+    assertFalse(store.runEnded("a1"))
+    assertFalse(store.leftStopped("a1"))
+  }
+
   @Test fun aResumeKeepsTheScreenForTheRunToCome() {
     store.user(UserAct.STOP)
     store.runEnded("a1")

@@ -19,8 +19,11 @@ import kotlin.concurrent.withLock
 // up. A Stop ends a wait at once: the agent really stops (ends its turn),
 // and the note sends it on when you start it again. A screen call of a
 // paused agent's after its first (pausedCall) means it did not stop: its
-// turn is stopped where its kind can (Effects.stopTurn). Pure apart from the
-// effects; the clock is injected.
+// turn is stopped where its kind can (Effects.stopTurn). Leave it keeps it
+// stopped: the screen goes at once, and a run still going stays off it
+// (leftStopped: its screen calls are refused as paused, each stops its
+// turn) until that run ends; its next run drives as normal. Pure apart
+// from the effects; the clock is injected.
 class PresenceStore(private val clock: () -> Long, private val effects: Effects) {
   interface Effects {
     /** The agent driving the screen now, else the one holding it, idle or not; null when nobody. */
@@ -29,7 +32,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
     /** A hand-over for [seat] began: its time on the screen stands still. */
     fun freeze(seat: ScreenLease.Seat)
 
-    /** Its hand-over ended: its time runs again; [giveBack]: and the screen goes, its run having ended meanwhile. */
+    /** Its hand-over ended: its time runs again; [giveBack]: and the screen goes (its run ended meanwhile, or you left it stopped). */
     fun thaw(agentId: String, giveBack: Boolean)
 
     /** [agentId] keeps calling the screen while you stopped it: stop its turn where its kind can. */
@@ -63,9 +66,15 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
   // Screen calls refused in the Stop now (paused_by_user).
   private var pausedCalls = 0
   private val runOver = HashSet<String>()
+
+  // Left stopped while their run still went on: off the screen until it ends.
+  private val left = HashSet<String>()
   private val statuses = LinkedHashMap<String, AgentStatus>()
 
   fun handOver(): HandOver? = lock.withLock { handOver }
+
+  /** You left [agentId] stopped and the run it was stopped in still goes on: it stays off the screen. */
+  fun leftStopped(agentId: String): Boolean = lock.withLock { agentId in left }
 
   fun statuses(): Map<String, AgentStatus> = lock.withLock { LinkedHashMap(statuses) }
 
@@ -89,7 +98,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
    */
   fun agent(agentId: String, agentName: String, why: String, private: Boolean): HandOver? {
     val (step, giveBack) = lock.withLock {
-      val step = HandsRules.agent(agentId, agentName, why, private, handOver, clock())
+      val step = if (agentId in left) HandsRules.Step.Refused else HandsRules.agent(agentId, agentName, why, private, handOver, clock())
       step to apply(step)
     }
     after(step, giveBack)
@@ -130,6 +139,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
    */
   fun pausedCall(agentId: String) {
     val again = lock.withLock {
+      if (agentId in left) return@withLock true
       val now = handOver
       if (now?.agentId != agentId || now.mode != HandMode.PAUSED) return
       ++pausedCalls > 1
@@ -146,6 +156,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
     val (cleared, held) = lock.withLock {
       val held = handOver?.agentId == agentId
       if (held) runOver += agentId
+      left -= agentId
       (statuses.remove(agentId) != null) to held
     }
     if (cleared) effects.changed()
@@ -156,6 +167,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
   fun forget(agentId: String) {
     val (ended, cleared) = lock.withLock {
       runOver -= agentId
+      left -= agentId
       val ended = handOver?.takeIf { it.agentId == agentId }
       if (ended != null) {
         handOver = null
@@ -173,6 +185,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
       val had = handOver != null || statuses.isNotEmpty()
       handOver = null
       runOver.clear()
+      left.clear()
       statuses.clear()
       turned.signalAll()
       had
@@ -206,7 +219,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
   }
 
   // Under the lock: the step's new state; true when the screen goes back
-  // with the end (the run ended meanwhile and you left it stopped).
+  // with the end: you left it stopped (a run still going stays off it).
   private fun apply(step: HandsRules.Step): Boolean = when (step) {
     is HandsRules.Step.Started -> {
       handOver = step.handOver
@@ -219,7 +232,9 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
       pausedCalls = 0
       turned.signalAll()
       val ended = runOver.remove(step.handOver.agentId)
-      ended && step.then == HandsRules.Then.NONE
+      val leave = step.then == HandsRules.Then.NONE
+      if (leave && !ended) left += step.handOver.agentId
+      leave
     }
     HandsRules.Step.Refused -> false
   }
@@ -234,6 +249,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
         val h = step.handOver
         effects.thaw(h.agentId, giveBack)
         if (step.then == HandsRules.Then.RESUME) effects.resume(h.agentId, h.mode)
+        if (leftStopped(h.agentId)) effects.stopTurn(h.agentId)
       }
       HandsRules.Step.Refused -> return false
     }

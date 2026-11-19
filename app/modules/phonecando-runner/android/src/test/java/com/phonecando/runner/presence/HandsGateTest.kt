@@ -34,6 +34,11 @@ class HandsGateTest {
     for (r in screen) assertEquals(r.path, Refusal.PAUSED_BY_USER, HandsGate.check("a1", r, paused))
   }
 
+  @Test fun anAgentLeftStoppedStaysOffTheScreenWithNoHandOver() {
+    for (r in screen) assertEquals(r.path, Refusal.PAUSED_BY_USER, HandsGate.check("a1", r, null, left = true))
+    for (r in other) assertNull(HandsGate.check("a1", r, null, left = true))
+  }
+
   @Test fun anyOtherAgentIsTurnedAway() {
     for (h in listOf(watch, paused)) {
       for (r in screen) assertEquals(r.path, Refusal.USER_HAS_CONTROLS, HandsGate.check("a2", r, h))

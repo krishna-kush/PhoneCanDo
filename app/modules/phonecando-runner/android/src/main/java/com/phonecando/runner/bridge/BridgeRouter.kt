@@ -29,7 +29,8 @@ typealias RouteHandler = (BridgeCall) -> Reply
 // only observe (WATCH; it needs no lease, its time standing still) or
 // nothing at all (PAUSED: paused_by_user, told to end its turn; a repeat
 // call stops its turn, `onPaused`); every other agent gets
-// user_has_controls. Pure: the
+// user_has_controls. An agent you left stopped gets paused_by_user too
+// until the run it was stopped in ends (`leftStopped`). Pure: the
 // automation host, the lock, the lease, the hand-over, the agent checks
 // and the handlers are injected.
 class BridgeRouter(
@@ -47,6 +48,8 @@ class BridgeRouter(
   private val handOver: () -> HandOver? = { null },
   // A screen request of an agent you stopped was refused.
   private val onPaused: (agentId: String) -> Unit = {},
+  // You left the agent stopped and the run it was stopped in goes on.
+  private val leftStopped: (agentId: String) -> Boolean = { false },
 ) {
   fun handle(agent: AgentRecord, method: String, path: String, body: String): Reply {
     val route = Route.find(method, path)
@@ -66,7 +69,8 @@ class BridgeRouter(
 
     // Only full builds have a driver to hand the controls over from.
     val hands = if (full && route.screen) handOver() else null
-    when (HandsGate.check(agent.id, route, hands)) {
+    val left = full && route.screen && leftStopped(agent.id)
+    when (HandsGate.check(agent.id, route, hands, left)) {
       HandsGate.Refusal.PAUSED_BY_USER -> {
         onPaused(agent.id)
         return Reply.pausedByUser(HandsText.PAUSED)

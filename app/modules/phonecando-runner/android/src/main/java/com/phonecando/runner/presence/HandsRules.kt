@@ -9,7 +9,8 @@ import com.phonecando.runner.bridge.ScreenLease
 //   STOP          WATCH on                                       the same hand-over turns PAUSED
 //   GIVE_BACK     WATCH on                                       ends: a waiting call returns back, else the resume note
 //   START_AGAIN   PAUSED on                                      ends: a waiting call returns back, else the resume note
-//   LEAVE         PAUSED on                                      ends: no note; its next run drives as normal
+//   LEAVE         PAUSED on                                      ends: no note, the screen goes; a run still going stays
+//                                                                off it (PresenceStore), its next run drives as normal
 // Nothing here stops an agent's run: a paused agent keeps working on
 // whatever is not the screen, and only its screen calls are refused.
 //   anything else                                                not now
