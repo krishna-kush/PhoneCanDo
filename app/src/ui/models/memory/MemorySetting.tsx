@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { memoryCheck } from '../../../engine/models/native';
 import type { KvCacheChoice, LocalModel, MemoryChoices, MemoryPlan, RamShare } from '../../../engine/models/types';
 import { useAgentsStore } from '../../../state/agents';
 import { chooseModelMemory } from '../../../state/flows/modelMemory';
-import AppButton from '../../common/AppButton';
+import ActionDeck from '../../common/actions/ActionDeck';
 import PlainText from '../../common/PlainText';
 import RowGroup from '../../common/rows/RowGroup';
 import { startFailureCode, startFailureText } from '../../env/logic/errorText';
@@ -176,14 +176,13 @@ export default function MemorySetting({ model, onDone }: Props) {
         <Note>{restartNote(running)}</Note>
       ) : null}
       {error ? <Note tone="error">{error}</Note> : null}
-      <XStack gap="2">
-        <AppButton flex={1} loading={busy} disabled={!changed || refused(plan)} onPress={() => void save()}>
-          Save
-        </AppButton>
-        <AppButton flex={1} variant="secondary" disabled={busy} onPress={onDone}>
-          {error ? 'Close' : 'Cancel'}
-        </AppButton>
-      </XStack>
+      <ActionDeck
+        barcode="deckModelMemory"
+        actions={[
+          { label: 'Save', role: 'go', loading: busy, disabled: !changed || refused(plan), onPress: () => void save() },
+          { label: error ? 'Close' : 'Cancel', role: 'back', disabled: busy, onPress: onDone },
+        ]}
+      />
     </YStack>
   );
 }

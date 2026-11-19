@@ -4,7 +4,7 @@ import { useAppStore } from '../../../state/app';
 import { installAgent } from '../../../state/flows/installAgent';
 import { forgetAgentReinstall } from '../../../state/flows/installRuns';
 import { forgetReinstall } from '../../../state/flows/resetAgentImage';
-import AppButton from '../../common/AppButton';
+import ActionDeck from '../../common/actions/ActionDeck';
 import { agentReinstallLine, reinstallLine } from '../logic/hints';
 import Note from '../parts/Note';
 
@@ -35,42 +35,36 @@ export default function ReinstallOffer({ agent, imageId, offer, agentReinstall, 
 
   return (
     <>
-      {agentReinstall ? (
-        <>
-          <Note>{agentReinstallLine(agent.name)}</Note>
-          <AppButton
-            onPress={() => {
+      {agentReinstall ? <Note>{agentReinstallLine(agent.name)}</Note> : null}
+      {offer ? <Note>{reinstallLine(offer.packages)}</Note> : null}
+      <ActionDeck
+        barcode="deckReinstall"
+        actions={[
+          agentReinstall && {
+            label: `Reinstall ${agent.name}`,
+            role: 'go',
+            onPress: () => {
               forgetAgentReinstall(agent.id);
               void installAgent(agent.id);
-            }}
-          >
-            {`Reinstall ${agent.name}`}
-          </AppButton>
-        </>
-      ) : null}
-      {offer ? (
-        <>
-          <Note>{reinstallLine(offer.packages)}</Note>
-          <AppButton
-            variant="secondary"
-            onPress={() => {
+            },
+          },
+          offer && {
+            label: 'Open terminal with the install command',
+            onPress: () => {
               forgetPackages();
               openLinuxTerminal(agent.id, offer.installCommand);
-            }}
-          >
-            Open terminal with the install command
-          </AppButton>
-        </>
-      ) : null}
-      <AppButton
-        variant="ghost"
-        onPress={() => {
-          forgetAgentReinstall(agent.id);
-          forgetPackages();
-        }}
-      >
-        Dismiss
-      </AppButton>
+            },
+          },
+          {
+            label: 'Dismiss',
+            role: 'back',
+            onPress: () => {
+              forgetAgentReinstall(agent.id);
+              forgetPackages();
+            },
+          },
+        ]}
+      />
     </>
   );
 }

@@ -3,10 +3,9 @@ import { YStack } from 'tamagui';
 import type { AgentId } from '../../../engine/agents/records';
 import type { Schedule } from '../../../engine/schedule/types';
 import { useAgentsStore } from '../../../state/agents';
-import AppButton from '../../common/AppButton';
+import ActionDeck from '../../common/actions/ActionDeck';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PageHeader from '../../common/PageHeader';
-import Spot from '../../common/spot/Spot';
 import { useNow } from '../../common/time/useNow';
 import FormScreen from '../../env/custom-agents/FormScreen';
 import Note from '../../env/parts/Note';
@@ -141,24 +140,22 @@ export default function ScheduleEditor({ schedule, agentId, onDone }: Props) {
         </Ticket>
 
         {actions.note ? <Note tone={actions.note.error ? 'error' : 'muted'}>{actions.note.text}</Note> : null}
-        <Spot id={schedule ? null : 'schedules.save'}>
-          <AppButton onPress={save} loading={actions.busy === 'save'} disabled={!schedule && runners.length === 0}>
-            {saveLabel(schedule != null)}
-          </AppButton>
-        </Spot>
-        {schedule ? (
-          <AppButton variant="secondary" onPress={() => actions.runNow(dirty)} loading={actions.busy === 'run'}>
-            {RUN_NOW}
-          </AppButton>
-        ) : null}
-        <AppButton variant="ghost" onPress={onDone}>
-          {CANCEL}
-        </AppButton>
-        {schedule ? (
-          <AppButton variant="danger" onPress={() => setDoomed(true)} loading={actions.busy === 'delete'}>
-            {DELETE}
-          </AppButton>
-        ) : null}
+        <ActionDeck
+          barcode="deckSchedule"
+          actions={[
+            {
+              label: saveLabel(schedule != null),
+              role: 'go',
+              onPress: () => void save(),
+              loading: actions.busy === 'save',
+              disabled: !schedule && runners.length === 0,
+              spot: schedule ? null : 'schedules.save',
+            },
+            schedule && { label: RUN_NOW, onPress: () => actions.runNow(dirty), loading: actions.busy === 'run' },
+            { label: CANCEL, role: 'back', onPress: onDone },
+            schedule && { label: DELETE, role: 'danger', onPress: () => setDoomed(true), loading: actions.busy === 'delete' },
+          ]}
+        />
       </YStack>
 
       <ConfirmDialog

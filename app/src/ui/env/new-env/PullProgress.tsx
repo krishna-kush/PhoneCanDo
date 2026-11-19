@@ -6,7 +6,7 @@ import { retryOwnEnv } from '../../../state/flows/createOwnEnv';
 import { useOwnEnvRun } from '../../../state/flows/ownEnvRuns';
 import { removeEnv } from '../../../state/flows/rowActions';
 import { useLinuxStore, useTargetProgress } from '../../../state/linux';
-import AppButton from '../../common/AppButton';
+import ActionDeck from '../../common/actions/ActionDeck';
 import AppCard from '../../common/AppCard';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
@@ -61,7 +61,8 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
   const needsAgent = env?.state === 'ready' && !making && !hasMachine;
   const agentFailure = run?.phase === 'failed' && run.during === 'agent' ? failureText(run.failure) : null;
   const paused = env != null && isPaused(env);
-  const downloadFailure = env?.state === 'failed' && !paused ? recordErrorText(env) : null;
+  const failed = env?.state === 'failed' && !paused;
+  const downloadFailure = failed ? recordErrorText(env) : null;
 
   return (
     <Screen>
@@ -74,11 +75,6 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
         <>
           <SystemDownload env={env} />
           <Note>You can leave this page; the download keeps going, and the menu and the systems list show it.</Note>
-          {progress ? (
-            <AppButton variant="secondary" onPress={() => cancelJob(progress.jobId)}>
-              Pause
-            </AppButton>
-          ) : null}
         </>
       ) : null}
 
@@ -86,47 +82,35 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
         <>
           <SystemDownload env={env} />
           <Note>Paused. What it fetched stays on the phone; Resume carries on from there.</Note>
-          <AppButton loading={busy === 'retry'} onPress={retry}>
-            Resume
-          </AppButton>
-          <AppButton variant="secondary" loading={busy === 'delete'} onPress={remove}>
-            Delete this download
-          </AppButton>
         </>
       ) : null}
 
       {making ? <ProgressBar label="Downloaded. Making the agent's machine" fraction={null} /> : null}
 
       {needsAgent ? (
-        <>
-          <Note tone={agentFailure ? 'error' : 'muted'}>
-            {agentFailure ? `Downloaded, but the agent wasn't made. ${agentFailure}` : 'Downloaded.'}
-          </Note>
-          <AppButton loading={newAgentHere.busy} onPress={() => newAgentHere.start({ kind: 'env', envId })}>
-            New agent here
-          </AppButton>
-        </>
+        <Note tone={agentFailure ? 'error' : 'muted'}>
+          {agentFailure ? `Downloaded, but the agent wasn't made. ${agentFailure}` : 'Downloaded.'}
+        </Note>
       ) : null}
 
       {env?.state === 'ready' && hasMachine && !making ? <Note>Downloaded. Its agents are in the menu.</Note> : null}
 
-      {env?.state === 'failed' && !paused ? (
-        <>
-          <Note tone="error">{`The download stopped.${downloadFailure ? ` ${downloadFailure}` : ''}`}</Note>
-          <AppButton loading={busy === 'retry'} onPress={retry}>
-            Retry
-          </AppButton>
-          <AppButton variant="secondary" loading={busy === 'delete'} onPress={remove}>
-            Delete this env
-          </AppButton>
-        </>
-      ) : null}
+      {failed ? <Note tone="error">{`The download stopped.${downloadFailure ? ` ${downloadFailure}` : ''}`}</Note> : null}
 
       {error ? <Note tone="error">{error}</Note> : null}
       {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
-      <AppButton variant="ghost" onPress={() => finishCreation({ name: 'system', envId })}>
-        See this system
-      </AppButton>
+      <ActionDeck
+        barcode="deckDownload"
+        actions={[
+          paused && { label: 'Resume', role: 'go', loading: busy === 'retry', onPress: retry },
+          failed && { label: 'Retry', role: 'go', loading: busy === 'retry', onPress: retry },
+          needsAgent && { label: 'New agent here', role: 'go', loading: newAgentHere.busy, onPress: () => newAgentHere.start({ kind: 'env', envId }) },
+          env?.state === 'downloading' && progress && { label: 'Pause', onPress: () => cancelJob(progress.jobId) },
+          { label: 'See this system', role: 'back', onPress: () => finishCreation({ name: 'system', envId }) },
+          paused && { label: 'Delete this download', role: 'danger', loading: busy === 'delete', onPress: remove },
+          failed && { label: 'Delete this env', role: 'danger', loading: busy === 'delete', onPress: remove },
+        ]}
+      />
     </Screen>
   );
 }

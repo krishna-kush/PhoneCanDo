@@ -5,7 +5,7 @@ import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
 import { copyKind, deleteKind, shareKind } from '../../../state/flows/userKinds';
 import { useKindsStore } from '../../../state/kinds';
-import AppButton from '../../common/AppButton';
+import ActionDeck from '../../common/actions/ActionDeck';
 import type { CardMenuItem } from '../../common/CardMenu';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import PageHeader from '../../common/PageHeader';
@@ -80,10 +80,13 @@ export default function CustomAgentList() {
       {items.length > 0 ? <KindRows items={items} /> : null}
       {kinds.length === 0 ? <Note>None yet.</Note> : null}
       {note ? <Note tone={note.error ? 'error' : 'muted'}>{note.text}</Note> : null}
-      <AppButton onPress={() => push({ name: 'custom-agent', kindId: null })}>Add your own agent</AppButton>
-      <AppButton variant="secondary" onPress={() => push({ name: 'custom-agent-import' })}>
-        Import
-      </AppButton>
+      <ActionDeck
+        barcode="deckCustomKinds"
+        actions={[
+          { label: 'Add your own agent', role: 'go', onPress: () => push({ name: 'custom-agent', kindId: null }) },
+          { label: 'Import', onPress: () => push({ name: 'custom-agent-import' }) },
+        ]}
+      />
       <Note>To use one, make a new agent in an env and pick it.</Note>
       <ConfirmDialog
         open={doomed != null}

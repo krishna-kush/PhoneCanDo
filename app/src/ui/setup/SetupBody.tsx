@@ -1,5 +1,5 @@
 import { Text, YStack } from 'tamagui';
-import AppButton from '../common/AppButton';
+import ActionDeck from '../common/actions/ActionDeck';
 import Note from '../env/parts/Note';
 import ArcadeScene from './arcade/ArcadeScene';
 import type { SceneProps } from './arcade/props';
@@ -26,12 +26,13 @@ export default function SetupBody({ title, note, scene, failure }: Props) {
       {failure ? (
         <YStack gap="3">
           <Note tone="error">{failure.text}</Note>
-          <AppButton onPress={failure.onRetry}>Retry</AppButton>
-          {failure.onSkip ? (
-            <AppButton variant="secondary" onPress={failure.onSkip}>
-              Continue without Linux
-            </AppButton>
-          ) : null}
+          <ActionDeck
+            barcode="deckSetup"
+            actions={[
+              { label: 'Retry', role: 'go', onPress: failure.onRetry },
+              failure.onSkip && { label: 'Continue without Linux', onPress: failure.onSkip },
+            ]}
+          />
         </YStack>
       ) : null}
     </YStack>

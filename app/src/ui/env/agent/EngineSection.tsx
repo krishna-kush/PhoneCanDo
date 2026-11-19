@@ -6,11 +6,10 @@ import type { Image } from '../../../engine/linux/types';
 import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
 import { walkDare } from '../../../state/starter';
-import AppButton from '../../common/AppButton';
+import ActionDeck from '../../common/actions/ActionDeck';
 import { moodLine } from '../../common/face/lines';
 import { moodOf } from '../../common/face/mood';
 import PlainText from '../../common/PlainText';
-import Spot from '../../common/spot/Spot';
 import { engineIsUp, engineStateWord } from '../logic/engineState';
 import { startFailureCode, startFailureText } from '../logic/errorText';
 import Note from '../parts/Note';
@@ -79,40 +78,24 @@ export default function EngineSection({ agent, image, linux }: Props) {
       ) : null}
       {!machineReady ? <Note>It can start once its machine is ready.</Note> : null}
       {machineReady && !ready ? <Note>It can start once it's installed.</Note> : null}
-      {up ? (
-        <AppButton variant="secondary" loading={busy === 'stop'} onPress={stop}>
-          Stop
-        </AppButton>
-      ) : (
-        <AppButton loading={busy === 'start'} disabled={!ready} onPress={start}>
-          Start
-        </AppButton>
-      )}
-      {kind.home === 'tui' ? (
-        <AppButton variant="secondary" disabled={!ready} onPress={() => follow(goHome)}>
-          {`Open ${kind.label} home`}
-        </AppButton>
-      ) : (
-        <XStack gap="2">
-          <AppButton flex={1} variant="secondary" disabled={!ready} onPress={() => follow(goHome)}>
-            Open chat
-          </AppButton>
-          <AppButton
-            flex={1}
-            variant="secondary"
-            disabled={!ready}
-            onPress={() => follow(openFolderPicker)}
-          >
-            Open TUI
-          </AppButton>
-        </XStack>
-      )}
-      {/* The first shift's terminal walk leads here, maybe with a command to type in. */}
-      <Spot id="agent.terminal">
-        <AppButton variant="secondary" disabled={!machineReady} onPress={() => openLinuxTerminal(agent.id, walkDare('terminal'))}>
-          {linux ? 'Open terminal in the machine' : 'Open terminal'}
-        </AppButton>
-      </Spot>
+      {/* The first shift's terminal walk leads to Open terminal, maybe with a command to type in. */}
+      <ActionDeck
+        barcode="deckEngine"
+        actions={[
+          !up && { label: 'Start', role: 'go', loading: busy === 'start', disabled: !ready, onPress: start },
+          kind.home === 'tui'
+            ? { label: `Open ${kind.label} home`, disabled: !ready, onPress: () => follow(goHome) }
+            : { label: 'Open chat', disabled: !ready, onPress: () => follow(goHome) },
+          kind.home !== 'tui' && { label: 'Open TUI', disabled: !ready, onPress: () => follow(openFolderPicker) },
+          {
+            label: linux ? 'Open terminal in the machine' : 'Open terminal',
+            disabled: !machineReady,
+            onPress: () => openLinuxTerminal(agent.id, walkDare('terminal')),
+            spot: 'agent.terminal',
+          },
+          up && { label: 'Stop', loading: busy === 'stop', onPress: stop },
+        ]}
+      />
     </>
   );
 }

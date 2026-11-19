@@ -7,7 +7,7 @@ import { useAppStore } from '../../state/app';
 import { agentHome } from '../../engine/engines';
 import { folderExists, listSubfolders } from '../../engine/files';
 import { isRunnerAvailable } from '../../engine/runner';
-import AppButton from '../common/AppButton';
+import ActionDeck from '../common/actions/ActionDeck';
 import AppCard from '../common/AppCard';
 import PageHeader from '../common/PageHeader';
 import Screen from '../common/Screen';
@@ -92,12 +92,13 @@ export default function FolderPicker() {
           </YStack>
         </ScrollView>
       </YStack>
-      <AppButton onPress={() => cwd != null && openTerminalDir(cwd)} disabled={cwd == null}>
-        Open terminal UI here
-      </AppButton>
-      <AppButton variant="secondary" onPress={back}>
-        Cancel
-      </AppButton>
+      <ActionDeck
+        barcode="deckFolder"
+        actions={[
+          { label: 'Open terminal UI here', role: 'go', disabled: cwd == null, onPress: () => cwd != null && openTerminalDir(cwd) },
+          { label: 'Cancel', role: 'back', onPress: back },
+        ]}
+      />
     </Screen>
   );
 }

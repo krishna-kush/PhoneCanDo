@@ -126,6 +126,22 @@ export const BARCODE_LINES = {
   accountComing: 'SOON-ISH',
   shareLinks: 'WORD OF MOUTH',
   shareFunnel: 'GOING VIRAL',
+
+  // A page's buttons (actions/ActionDeck)
+  deckSchedule: 'PUSH IT',
+  deckDownload: 'ARE WE THERE',
+  deckEngine: 'VROOM VROOM',
+  deckReinstall: 'AGAIN AGAIN',
+  deckImport: 'NEW RECRUIT',
+  deckCustomAgent: 'SIGN HERE',
+  deckFolder: 'WHERE TO',
+  deckCustomKinds: 'DIY',
+  deckAccount: 'SEE YA',
+  deckSetup: 'TRY TRY AGAIN',
+  deckModelMemory: 'BRAIN SIZE',
+  deckInstall: 'FRESH COAT',
+  deckChooseAgent: 'PLAYER ONE',
+  deckCheckNow: 'POP QUIZ',
 } as const;
 
 /** A box's barcode line, by what the box is. */

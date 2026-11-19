@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { XStack } from 'tamagui';
 import { useAccountStore } from '../../state/account';
 import { deleteMyAccount, signOutOfAccount } from '../../state/flows/account';
-import AppButton from '../common/AppButton';
+import ActionDeck from '../common/actions/ActionDeck';
 import ConfirmDialog from '../common/ConfirmDialog';
 import BoopFace from '../common/face/BoopFace';
 import PlainText from '../common/PlainText';
@@ -62,18 +62,19 @@ export default function SignedInBlock({ onDeleted }: { onDeleted: (message: stri
       <PlainText fontSize={13} color="muted">
         {WHAT_WE_KEEP}
       </PlainText>
-      <AppButton variant="secondary" loading={busy === 'signOut'} disabled={busy != null} onPress={() => void signOutOfAccount()}>
-        {SIGN_OUT}
-      </AppButton>
       <PlainText fontSize={13} color="muted">
         {SIGN_OUT_NOTE}
       </PlainText>
-      <AppButton variant="danger" loading={busy === 'delete'} disabled={busy != null} onPress={() => setConfirm(true)}>
-        {DELETE}
-      </AppButton>
       <PlainText fontSize={13} color="muted">
         {DELETE_NOTE}
       </PlainText>
+      <ActionDeck
+        barcode="deckAccount"
+        actions={[
+          { label: SIGN_OUT, loading: busy === 'signOut', disabled: busy != null, onPress: () => void signOutOfAccount() },
+          { label: DELETE, role: 'danger', loading: busy === 'delete', disabled: busy != null, onPress: () => setConfirm(true) },
+        ]}
+      />
       <ConfirmDialog
         open={confirm}
         onClose={() => setConfirm(false)}

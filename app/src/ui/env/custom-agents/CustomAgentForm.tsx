@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../../state/app';
-import AppButton from '../../common/AppButton';
+import ActionDeck from '../../common/actions/ActionDeck';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
 import Note from '../parts/Note';
@@ -56,10 +56,13 @@ export default function CustomAgentForm({ kindId, forNewAgent }: Props) {
         <KindReviewView review={k.ready.review} />
         <SafetyNotes />
         {k.saveError ? <Note tone="error">{k.saveError}</Note> : null}
-        <AppButton onPress={save}>{kindId ? 'Save changes' : 'Save agent'}</AppButton>
-        <AppButton variant="secondary" onPress={k.edit}>
-          Back to the form
-        </AppButton>
+        <ActionDeck
+          barcode="deckCustomAgent"
+          actions={[
+            { label: kindId ? 'Save changes' : 'Save agent', role: 'go', onPress: save },
+            { label: 'Back to the form', role: 'back', onPress: k.edit },
+          ]}
+        />
       </Screen>
     );
   }

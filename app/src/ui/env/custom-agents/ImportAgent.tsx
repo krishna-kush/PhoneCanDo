@@ -1,4 +1,5 @@
 import { useAppStore } from '../../../state/app';
+import ActionDeck from '../../common/actions/ActionDeck';
 import AppButton from '../../common/AppButton';
 import PageHeader from '../../common/PageHeader';
 import Screen from '../../common/Screen';
@@ -44,10 +45,13 @@ export default function ImportAgent() {
           <Note tone="error">{`It replaces your agent ${im.ready.replaces} (${im.ready.review.id}).`}</Note>
         ) : null}
         {im.saveError ? <Note tone="error">{im.saveError}</Note> : null}
-        <AppButton onPress={add}>{im.ready.replaces ? 'Replace agent' : 'Add agent'}</AppButton>
-        <AppButton variant="secondary" onPress={im.edit}>
-          Back
-        </AppButton>
+        <ActionDeck
+          barcode="deckImport"
+          actions={[
+            { label: im.ready.replaces ? 'Replace agent' : 'Add agent', role: 'go', onPress: add },
+            { label: 'Back', role: 'back', onPress: im.edit },
+          ]}
+        />
       </Screen>
     );
   }

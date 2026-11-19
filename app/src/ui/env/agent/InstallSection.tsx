@@ -5,7 +5,7 @@ import { useAppStore } from '../../../state/app';
 import { installAgent } from '../../../state/flows/installAgent';
 import { useInstallRun } from '../../../state/flows/installRuns';
 import { stoppedByInstall } from '../../../state/flows/logic/machineTenants';
-import AppButton from '../../common/AppButton';
+import ActionDeck from '../../common/actions/ActionDeck';
 import PlainText from '../../common/PlainText';
 import { versionLine } from '../logic/installText';
 import { updateStopsLine } from '../logic/sharedMachineText';
@@ -42,22 +42,15 @@ export default function InstallSection({ agent, image }: Props) {
         </PlainText>
       ) : null}
       <InstallStatus agent={agent} image={image} fill />
-      {installed && !running ? (
-        <>
-          <AppButton
-            variant="secondary"
-            disabled={image?.state !== 'ready'}
-            onPress={() => void installAgent(agent.id, 'update')}
-          >
-            Update agent
-          </AppButton>
-          <Note>{updateStopsLine(stopped.map((a) => a.name))}</Note>
-        </>
-      ) : null}
+      {installed && !running ? <Note>{updateStopsLine(stopped.map((a) => a.name))}</Note> : null}
       {!running ? (
-        <AppButton variant="ghost" onPress={() => push({ name: 'agent-install-log', agentId: agent.id })}>
-          Last install log
-        </AppButton>
+        <ActionDeck
+          barcode="deckInstall"
+          actions={[
+            installed && { label: 'Update agent', disabled: image?.state !== 'ready', onPress: () => void installAgent(agent.id, 'update') },
+            { label: 'Last install log', role: 'back', onPress: () => push({ name: 'agent-install-log', agentId: agent.id }) },
+          ]}
+        />
       ) : null}
     </>
   );
