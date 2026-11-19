@@ -28,6 +28,7 @@
   box-shadow: calc(var(--u) * 0.35) calc(var(--u) * 0.35) 0 var(--amber);
 }
 .intro .note::after { content: ''; position: absolute; left: 18%; right: 18%; top: 42%; height: calc(var(--u) * 0.3); background: var(--dim); }
+.intro .note-trail path { fill: none; stroke: var(--fg); stroke-linecap: round; }
 .intro .zzz { position: absolute; left: 0; top: 0; font: 600 calc(var(--u) * 3) / 1 var(--mono); color: var(--amber-ink); }
 .intro .moon { position: absolute; left: 0; top: 0; border-radius: 50%; background: var(--amber); box-shadow: 0 0 calc(var(--u) * 6) var(--amber-line); }
 .intro .moon i { position: absolute; border-radius: 50%; background: var(--bg); }
