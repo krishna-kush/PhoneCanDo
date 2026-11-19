@@ -62,11 +62,11 @@ internal class CardBack(private val palette: Palette, dp: Float) : Drawable() {
     }
     val (side, along) = t
     path.moveTo(r.left, r.top)
-    if (side == Side.TOP) notch(r.left, r.top, r.right, along, half, -margin, horizontal = true)
+    if (side == Side.TOP) notch(r.top, r.left, r.right, along, half, -margin, horizontal = true)
     path.lineTo(r.right, r.top)
     if (side == Side.RIGHT) notch(r.right, r.top, r.bottom, along, half, margin, horizontal = false)
     path.lineTo(r.right, r.bottom)
-    if (side == Side.BOTTOM) notchBack(r.right, r.bottom, r.left, along, half, margin, horizontal = true)
+    if (side == Side.BOTTOM) notchBack(r.bottom, r.right, r.left, along, half, margin, horizontal = true)
     path.lineTo(r.left, r.bottom)
     if (side == Side.LEFT) notchBack(r.left, r.bottom, r.top, along, half, -margin, horizontal = false)
     path.close()
