@@ -1,14 +1,14 @@
 {
   "repo": "krishna-kush/PhoneCanDo",
-  "version": "1.0.0",
-  "released": "2026-11-16",
+  "version": "1.1.0",
+  "released": "2026-11-19",
   "label": null,
   "lite": {
-    "size": 188065833,
-    "sha256": "6f6048cbe6bc6ec88e2057e983ec694a8211c3640fdf475deb21418c445a1727"
+    "size": 188504839,
+    "sha256": "eb22cb068c2c4d8a7fb0aae8b3c690f41131e55937efaa651b4ba936e26c714f"
   },
   "full": {
-    "size": 188451862,
-    "sha256": "b80aa00d8092fea7c2332e514b4b4f0ef6c1712b48efc4c17994ea9c08966b81"
+    "size": 189067108,
+    "sha256": "8284742a0660a1f8ac148be9cc24cfe28f496f8d274fa5d815dfbab4cf0b9521"
   }
 }
