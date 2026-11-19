@@ -7,6 +7,7 @@ import { boopLine } from '../../common/face/lines';
 import { useAgentLook } from '../../common/face/useAgentLook';
 import PlainText from '../../common/PlainText';
 import Stamp from '../../common/Stamp';
+import DrawerKey from '../../drawer/key/DrawerKey';
 import { usePageActive } from '../../nav/pageActive';
 
 type Props = {
@@ -18,7 +19,7 @@ type Props = {
   trailing?: ReactNode;
 };
 
-// The head of an agent's page: its face, big (tap it: it hops and says
+// The head of an agent's page: the drawer key, its face, big (tap it: it hops and says
 // something), its desk and kind, its name and where it runs.
 export default function AgentHero({ agent, place, fresh, trailing }: Props) {
   const look = useAgentLook(agent.id);
@@ -28,6 +29,7 @@ export default function AgentHero({ agent, place, fresh, trailing }: Props) {
 
   return (
     <XStack alignItems="center" gap="3" paddingTop="2">
+      <DrawerKey />
       <BoopFace mood={look.mood} mascot={look.mascot} size={44} still={!active} label={`${agent.name}'s face. Tap it.`} onBoop={setBoops} hitSlop={8} />
       <YStack flex={1} minWidth={0} gap={4}>
         <XStack alignItems="center" gap="2">

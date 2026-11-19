@@ -3,11 +3,12 @@ import { useAgentsStore } from '../../state/agents';
 import { useAppStore, type TerminalSession } from '../../state/app';
 import CardMenu, { type CardMenuItem } from '../common/CardMenu';
 import { HIT } from '../common/globals';
+import DrawerKey from '../drawer/key/DrawerKey';
 import MemoryChip from '../memory/indicators/MemoryChip';
 import { usePageActive } from '../nav/pageActive';
 import TerminalScreen from './TerminalScreen';
 
-// A terminal as a page: a bar saying what it is attached to (the folder of
+// A terminal as a page: the drawer key and a bar saying what it is attached to (the folder of
 // a terminal UI, whose machine a Linux shell runs in) with its ⋮ menu,
 // over the terminal itself. Back closes it, as does the menu (no button
 // of its own: Android's Back is the way back). It holds the
@@ -40,6 +41,7 @@ export default function TerminalPage({ session }: { session: TerminalSession }) 
         borderColor="line"
         backgroundColor="panel"
       >
+        <DrawerKey />
         <YStack flex={1} minWidth={0}>
           <Text fontFamily="mono" fontSize={10} letterSpacing={1.4} color="dim" textTransform="uppercase" numberOfLines={1}>
             {kicker}

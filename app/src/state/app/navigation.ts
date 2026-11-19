@@ -25,7 +25,7 @@ import {
 export type NavigationSlice = {
   /** The pages above Home, bottom first; empty: Home is in front. */
   pages: Page[];
-  /** The side drawer (agents, New agent, Models, Systems, Settings) over Home. */
+  /** The side drawer (agents, New agent, Models, Systems, Settings) over Home or a page. */
   drawerOpen: boolean;
 
   push: (route: Route) => void;

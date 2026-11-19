@@ -29,9 +29,10 @@ function refresh() {
   useMessagesStore.getState().refreshMessages();
 }
 
-// The side drawer over Home, from the left: the header's agent chip opens
-// it; the scrim, a swipe to the left or Back (which pulls it in under the
-// thumb first, nav/backWorklet.ts) closes it. The swipe follows the finger
+// The side drawer over Home or a page, from the left: Home's agent chip or
+// a page's drawer key (key/) opens it; the scrim, a swipe to the left or
+// Back (which pulls it in under the thumb first, nav/backWorklet.ts)
+// closes it. The swipe follows the finger
 // on the UI thread (react-native-gesture-handler), so a busy JS thread
 // never holds it back. Not from the screen's left edge: on gesture
 // navigation that edge is Back. Its content mounts shut, off screen, once

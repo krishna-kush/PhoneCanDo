@@ -30,7 +30,10 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
   the one Back handler (`useBackChain.ts`). `drawer/` is the side menu,
-  opened from Home's header (a hold and slide moves an agent: `reorder/`,
+  opened from Home's header or any page's drawer key (`drawer/key/`, first
+  in `PageHeader`, an agent's hero and a terminal's bar: three bunks, the
+  first three agents asleep or awake in them, `key/logic/bunks.ts` pure)
+  (a hold and slide moves an agent: `reorder/`,
   the order kept in `state/logic/agentOrder.ts`). `common/face/` is A-01, the site's mascot, as
   each agent's face, in the agent's own mascot (`state/mascots.ts`, changed
   on its Mascot page, `env/agent/mascot/`); it plays every change of mood

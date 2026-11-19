@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Text, type TextStyle } from 'react-native';
+import { Text, type TextProps, type TextStyle } from 'react-native';
 import { monoFace } from '../../../tamagui.config';
 import { useTheme, type Theme } from './globals';
 
@@ -26,6 +26,9 @@ type Props = {
   flexShrink?: number;
   minWidth?: number;
   width?: number;
+  onLayout?: TextProps['onLayout'];
+  /** Its laid-out lines, as the platform measured them (lettersMiddle.ts). */
+  onTextLayout?: TextProps['onTextLayout'];
 };
 
 // A line of text drawn as React Native's own Text, for the text repeated on
@@ -44,6 +47,8 @@ export default function PlainText({
   numberOfLines,
   ellipsizeMode,
   userSelect,
+  onLayout,
+  onTextLayout,
   ...layout
 }: Props) {
   const t = useTheme();
@@ -63,6 +68,8 @@ export default function PlainText({
       selectable={userSelect ? userSelect === 'text' : undefined}
       numberOfLines={numberOfLines}
       ellipsizeMode={ellipsizeMode}
+      onLayout={onLayout}
+      onTextLayout={onTextLayout}
       style={style}
     >
       {children}
