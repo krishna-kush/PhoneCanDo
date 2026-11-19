@@ -15,10 +15,11 @@ agents/
 │   ├── kotlin/manifest/ kit-manifest: the manifest model the phone reads + ManifestDecoder (strict types, user rules)
 │   ├── kotlin/render/  kit-render: ManifestKind, templates, launch/client rendering, InboxSeam, KindView, KindCapabilities
 │   ├── kotlin/term/    kit-term: a TUI's output stream: SignalScanner, SignalRules, ScreenRing, ProgramStatus; TermReplies, TermTheme
-│   ├── kotlin/cli/     kit-cli: render-install, render-model for CI (a leaf; ships nowhere)
+│   ├── kotlin/cli/     kit-cli: render-install, render-model, render-launch for CI (a leaf; ships nowhere)
 │   ├── ts/contract/    the TS view types the app reads (KindView, web adapter, PTY recipe; import type only)
 │   ├── ts/manifest/    manifest types, rules + validate.ts (pure, zero imports; the one full validator),
-│   │                   runtime-plugin.ts (the runtime.json validator), one-shot.ts (one-shot.json)
+│   │                   runtime-plugin.ts (the runtime.json validator), one-shot.ts (one-shot.json),
+│   │                   probes.ts (probes.json)
 │   ├── schema/         agent.schema.json, runtime.schema.json + valid/invalid fixtures
 │   ├── scripts/        phonecando-event, phonecando-open, phonecando-inbox: POSIX sh a kind's hooks call in the guest
 │   ├── native/         a native payload's way into the APK: inputs (the sources digest), build, stage
@@ -40,6 +41,8 @@ everything about that kind:
 - `NOTICE.md`
 - config assets
 - `one-shot.json` with a `models` block (CI only, never packaged; §4)
+- image only: `probes.json`, what CI asks of the kind at its newest release
+  (CI only, never packaged; §4, Probes)
 - native only: `build/` (build.sh, pins.env, patches), `ci/` and
   `payload.lock` (§2, Native payloads)
 - optional `kotlin/` hooks
@@ -536,6 +539,52 @@ rest):
   Shown only, nothing runs from it; free tiers come and go, so recheck it,
   and the date, before a release.
 
+### Probes
+
+An image kind installs its newest upstream release, so an update can drop
+a flag, a config key or an ACP capability we rely on before a phone
+notices. `agents-latest.yml` installs every image kind weekly at its
+newest release, in a clean arm64 container (the local-model check's
+machine), with no sign-in, model or secret:
+
+- `kit-cli render-install --family apt`, run as the phone's install job
+  runs it; the version check's line is the version installed.
+- The config seeded as the runner seeds it for the full channel
+  (`config.dir`, the shared parts, the kit's scripts in
+  `.phonecando/bin`).
+- Each probe in `probes.json` (validator `kit/ts/manifest/probes.ts`,
+  checked by `kit/cli/manifests.mjs`), run as the kind's terminal launch
+  runs (`kit-cli render-launch`): its cwd, its launch env and the runner's,
+  its runtimes on PATH. The bridge is `http://127.0.0.1:9`, a port nothing
+  serves (a probe may look for that URL in an MCP list), and the token is
+  a stand-in.
+
+`.github/ci/agents-latest/leg.mjs` runs one kind; a kind with no
+`probes.json` is installed and version-checked only. A failure names the
+kind, the probe and what is missing (an annotation and a row in the run's
+summary). The file has at least one of:
+
+- `help`: `[{argv, has, env?}]`. The combined output holds each `has`
+  string (plain text, colours stripped); the exit code does not count. Use
+  it for the flags and subcommands our launch, resume, prompt, chat and ACP
+  args pass. Never name a flag the CLI hides from its help.
+- `run`: `[{argv, env?, has?}]`. Exits 0 and holds each `has` string. Use
+  it to prove the agent still takes our config or keys: an MCP list that
+  reads our settings, a config check. Only commands that need no sign-in
+  and wait for no input.
+- `acp`: `{require}`, a kind with `engine.acp` only. The ACP mode, started
+  as the runner starts it, is sent the runner's `initialize`
+  (`AcpWire.initialize`); each dotted path (`agentCapabilities.loadSession`)
+  must be truthy in the answer, where an empty object counts as offered.
+
+`argv[0]` is a guest command or an absolute guest path, as a launch's. The
+other items and env values may name `{{home}}`, `{{projectDir}}` and, for a
+kind with a config folder, `{{config}}` (its config dir). Env names the
+host owns (`PHONECANDO_*`, `HOME`, `TMPDIR`, `LD_*`) are refused. Probe
+what the kind's `agent.json`, `config/`, `phoneToolsTrust` and README say
+we rely on, each `has` string checked against the release's own source or
+CLI reference, and say in the README's notes where the evidence is.
+
 ### User-added kinds
 
 Origin `user`, stored at `files/state/agent-kinds/user/<id>.json` on the
@@ -627,7 +676,8 @@ again.
    runtime scripts may run again (retries), so make each one safe to rerun
    from wherever the last try stopped: `mkdir -p`, `rm -f`, download to a
    file and then run it, and never append to a file a rerun would append
-   to again. For native kinds, add `build/` and `ci/`. A `models` block
+   to again. An image kind gets a `probes.json` (§4, Probes). For native
+   kinds, add `build/` and `ci/`. A `models` block
    comes with `one-shot.json` and goes in only once the local-model check
    passes (§4, Local models).
 3. Add code hooks only when data can't say it. Register them with one line
@@ -636,7 +686,8 @@ again.
    `./manage agent <id> build --stage` (the scaffold wrote `payload.lock`;
    lock again whenever the version changes).
 5. CI path filters (repo `AGENTS.md` rule 11) already cover `agents/**`
-   through `agents.yml`, `agent-payload.yml` and `android.yml`. A new input
+   through `agents.yml`, `agent-payload.yml` and `android.yml`, and an image
+   kind's manifest, config and probes through `agents-latest.yml`. A new input
    outside `agents/` needs its own filter line.
 
 ## 8. Verify
