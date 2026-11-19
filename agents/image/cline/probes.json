@@ -1,0 +1,12 @@
+{
+  "help": [
+    { "argv": ["/root/.local/bin/cline", "--help"], "has": ["[prompt]", "--tui", "--id <session-id>", "--acp"] },
+    { "argv": ["/root/.local/bin/cline", "history", "--help"], "has": ["--json", "--limit <count>"] }
+  ],
+  "run": [
+    { "argv": ["/root/.local/bin/cline", "history", "--json", "--limit", "1"], "has": ["["] },
+    { "argv": ["/root/.local/bin/cline", "config", "mcp"], "has": ["phonecando [stdio]"] },
+    { "argv": ["sh", "{{config}}/launch.sh", "config", "plugins"], "has": ["plugins/phonecando.js"] }
+  ],
+  "acp": { "require": ["agentCapabilities.loadSession"] }
+}

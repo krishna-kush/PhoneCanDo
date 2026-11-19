@@ -1,0 +1,11 @@
+{
+  "help": [
+    { "argv": ["/root/.local/bin/goose", "--help"], "has": ["configure"] },
+    { "argv": ["/root/.local/bin/goose", "session", "--help"], "has": ["-r, --resume", "--session-id"] },
+    { "argv": ["/root/.local/bin/goose", "run", "--help"], "has": ["-t, --text", "-s, --interactive", "-r, --resume"] }
+  ],
+  "run": [
+    { "argv": ["/root/.local/bin/goose", "info", "--verbose"], "has": ["phonecando:", "type: streamable_http"] }
+  ],
+  "acp": { "require": ["agentCapabilities.loadSession"] }
+}

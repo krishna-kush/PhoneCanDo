@@ -1,0 +1,29 @@
+{
+  "help": [
+    {
+      "argv": ["/root/.local/bin/copilot", "--help"],
+      "has": ["--acp", "--no-auto-update", "--additional-mcp-config", "--allow-tool", "--continue", "--resume", "--interactive"]
+    }
+  ],
+  "run": [
+    {
+      "argv": [
+        "/root/.local/bin/copilot",
+        "--no-auto-update",
+        "--additional-mcp-config",
+        "{\"mcpServers\":{\"phonecando\":{\"type\":\"http\",\"url\":\"http://127.0.0.1:9/mcp\",\"headers\":{\"Authorization\":\"Bearer ${PHONECANDO_BRIDGE_TOKEN}\"},\"tools\":[\"*\"]}}}",
+        "--allow-tool=phonecando",
+        "mcp",
+        "list"
+      ],
+      "has": ["phonecando"]
+    }
+  ],
+  "acp": {
+    "require": [
+      "agentCapabilities.loadSession",
+      "agentCapabilities.mcpCapabilities.http",
+      "agentCapabilities.sessionCapabilities.list"
+    ]
+  }
+}

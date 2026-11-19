@@ -1,0 +1,66 @@
+{
+  "help": [
+    {
+      "argv": ["/root/.local/bin/codex", "--help"],
+      "has": ["--sandbox", "danger-full-access", "--config", "--model"]
+    },
+    {
+      "argv": ["/root/.local/bin/codex", "resume", "--help"],
+      "has": ["--last", "--sandbox", "--config"]
+    },
+    {
+      "argv": ["/root/.local/bin/codex", "exec", "--help"],
+      "has": ["--skip-git-repo-check"]
+    }
+  ],
+  "run": [
+    {
+      "argv": [
+        "/root/.local/bin/codex",
+        "-c",
+        "check_for_update_on_startup=false",
+        "-c",
+        "features.daemon_auto_start=false",
+        "-c",
+        "tui.notification_method=\"osc9\"",
+        "-c",
+        "tui.notification_condition=\"always\"",
+        "-c",
+        "tui.terminal_title=[\"thread-name\"]",
+        "-c",
+        "mcp_servers.phonecando.url=\"http://127.0.0.1:9/mcp\"",
+        "-c",
+        "mcp_servers.phonecando.bearer_token_env_var=\"PHONECANDO_BRIDGE_TOKEN\"",
+        "-c",
+        "mcp_servers.phonecando.tool_timeout_sec=300",
+        "-c",
+        "mcp_servers.phonecando.default_tools_approval_mode=\"approve\"",
+        "mcp",
+        "list"
+      ],
+      "has": ["phonecando", "PHONECANDO_BRIDGE_TOKEN"]
+    },
+    {
+      "argv": [
+        "/root/.local/bin/codex",
+        "-c",
+        "model_providers.local.name=\"On this phone\"",
+        "-c",
+        "model_providers.local.base_url=\"http://127.0.0.1:9/v1\"",
+        "-c",
+        "model_providers.local.env_key=\"LOCAL_MODEL_KEY\"",
+        "-c",
+        "model_providers.local.wire_api=\"responses\"",
+        "-c",
+        "model_providers.local.stream_idle_timeout_ms=3600000",
+        "-c",
+        "model_provider=\"local\"",
+        "-c",
+        "model_context_window=32768",
+        "mcp",
+        "list"
+      ],
+      "env": { "LOCAL_MODEL_KEY": "ci" }
+    }
+  ]
+}

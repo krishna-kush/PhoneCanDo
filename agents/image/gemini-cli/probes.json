@@ -1,0 +1,9 @@
+{
+  "help": [
+    { "argv": ["/root/.local/bin/gemini", "--help"], "has": [" --acp", "--resume", "\"latest\""] }
+  ],
+  "run": [
+    { "argv": ["/root/.local/bin/gemini", "mcp", "list"], "has": ["phonecando: http://127.0.0.1:9/mcp (http)"] }
+  ],
+  "acp": { "require": ["agentCapabilities.loadSession"] }
+}

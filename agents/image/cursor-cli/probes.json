@@ -1,0 +1,19 @@
+{
+  "help": [
+    { "argv": ["/root/.local/bin/cursor-agent", "--help"], "has": ["[prompt...]", "--plugin-dir <path>", "--continue", "--resume"] }
+  ],
+  "run": [
+    {
+      "argv": [
+        "sh",
+        "-c",
+        "\"$(dirname \"$(readlink -f /root/.local/bin/cursor-agent)\")/node\" \"$1\" && cat \"$2\"",
+        "trust",
+        "{{config}}/phonecando-trust.mjs",
+        "{{home}}/.cursor/cli-config.json"
+      ],
+      "has": ["Mcp(phonecando:*)", "Mcp(plugin-phonecando-phonecando:*)"]
+    }
+  ],
+  "acp": { "require": ["agentCapabilities.loadSession", "agentCapabilities.mcpCapabilities.http"] }
+}

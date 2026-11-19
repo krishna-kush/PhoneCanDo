@@ -1,0 +1,15 @@
+{
+  "help": [
+    {
+      "argv": ["/root/.local/bin/claude", "--help"],
+      "has": ["--settings", "--mcp-config", "--continue", "--resume", "--permission-mode", "--print"]
+    }
+  ],
+  "acp": {
+    "require": [
+      "agentCapabilities.loadSession",
+      "agentCapabilities.mcpCapabilities.http",
+      "agentCapabilities.sessionCapabilities.list"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "help": [
+    {
+      "argv": ["/root/.local/bin/pi", "--help"],
+      "has": ["--continue", "--session <path|id>", "--extension, -e", "--mode <mode>", "--no-themes", "End option parsing"]
+    }
+  ],
+  "run": [
+    {
+      "argv": [
+        "sh",
+        "-c",
+        "out=$(/root/.local/bin/pi-phonecando --help 2>&1); printf '%s\\n' \"$out\"; case \"$out\" in *'Failed to load extension'*) exit 1;; esac"
+      ],
+      "has": ["--extension, -e"]
+    }
+  ],
+  "acp": {
+    "require": ["agentCapabilities.loadSession", "agentCapabilities.sessionCapabilities.list"]
+  }
+}

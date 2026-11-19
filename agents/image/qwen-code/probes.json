@@ -1,0 +1,12 @@
+{
+  "help": [
+    {
+      "argv": ["/root/.local/bin/qwen", "--help"],
+      "has": [" --acp", "--continue", "--resume", "--prompt-interactive", "--auth-type", "\"openai\""]
+    }
+  ],
+  "run": [
+    { "argv": ["/root/.local/bin/qwen", "mcp", "list"], "has": ["phonecando: http://127.0.0.1:9/mcp (http)"] }
+  ],
+  "acp": { "require": ["agentCapabilities.loadSession"] }
+}

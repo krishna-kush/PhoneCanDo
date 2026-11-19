@@ -1,0 +1,25 @@
+{
+  "help": [
+    {
+      "argv": ["/root/.local/bin/kimi", "--help"],
+      "has": ["--continue", "--session", "--prompt"]
+    },
+    {
+      "argv": ["/root/.local/bin/kimi", "acp", "--help"],
+      "has": ["Agent Client Protocol"]
+    }
+  ],
+  "run": [
+    {
+      "argv": [
+        "sh",
+        "-c",
+        "node {{config}}/phonecando-trust.mjs {{config}}/config.toml && /root/.local/bin/kimi doctor config {{config}}/config.toml && grep -F mcp__phonecando__ {{config}}/config.toml"
+      ],
+      "has": ["OK config.toml", "mcp__phonecando__*"]
+    }
+  ],
+  "acp": {
+    "require": ["agentCapabilities.loadSession", "agentCapabilities.sessionCapabilities.list"]
+  }
+}

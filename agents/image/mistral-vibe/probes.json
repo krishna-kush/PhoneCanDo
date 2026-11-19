@@ -1,0 +1,17 @@
+{
+  "help": [
+    {
+      "argv": ["/root/.local/bin/vibe", "--help"],
+      "has": ["--continue", "INITIAL_PROMPT"]
+    }
+  ],
+  "run": [
+    {
+      "argv": ["/root/.local/bin/vibe", "config", "schema"],
+      "has": ["streamable-http", "api_key_env"]
+    }
+  ],
+  "acp": {
+    "require": ["agentCapabilities.loadSession", "agentCapabilities.sessionCapabilities.list"]
+  }
+}

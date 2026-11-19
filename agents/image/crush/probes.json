@@ -1,0 +1,8 @@
+{
+  "help": [
+    { "argv": ["/root/.local/bin/crush", "--help"], "has": ["--continue"] }
+  ],
+  "run": [
+    { "argv": ["/root/.local/bin/crush", "models"] }
+  ]
+}
