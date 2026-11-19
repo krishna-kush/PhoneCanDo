@@ -89,9 +89,14 @@ export const EARNED = [{ id: 'shift-lead', name: 'Shift lead', hat: 'hardhat', n
  * A-01 up, is its name, which the app never lets an agent take): never
  * picked at random, never offered in a picker, never an agent's look.
  * A-09 is the app's guide, who leads the way on its first shift: a
- * signpost on its head, its arrow pointing the way it looks.
+ * signpost on its head, its arrow pointing the way it looks. A-04 is the
+ * front desk, who asks you when the app itself needs a yes (a delete to
+ * confirm): a clerk's eyeshade and a name badge.
  */
-export const OURS = [{ id: 'a09', name: 'A-09', hat: 'signpost' }] as const satisfies readonly Design[];
+export const OURS = [
+  { id: 'a09', name: 'A-09', hat: 'signpost' },
+  { id: 'a04', name: 'A-04', hat: 'eyeshade', neck: 'badge' },
+] as const satisfies readonly Design[];
 
 export type DesignId = (typeof DESIGNS)[number]['id'] | (typeof EARNED)[number]['id'] | (typeof OURS)[number]['id'];
 

@@ -14,6 +14,7 @@ import { catEars } from './catEars.ts';
 import { chef } from './chef.ts';
 import { cowboy } from './cowboy.ts';
 import { crown } from './crown.ts';
+import { eyeshade } from './eyeshade.ts';
 import { halo } from './halo.ts';
 import { hardhat } from './hardhat.ts';
 import { headband } from './headband.ts';
@@ -51,6 +52,7 @@ export const HATS = {
   chef,
   cowboy,
   crown,
+  eyeshade,
   halo,
   hardhat,
   headband,
