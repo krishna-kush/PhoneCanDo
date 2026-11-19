@@ -4,5 +4,6 @@
 import { registerRoot } from 'remotion';
 import { Films } from '../engine/render/Films.tsx';
 import { fieldNotes } from './field-notes/film.tsx';
+import { intro } from './intro/film.tsx';
 
-registerRoot(() => <Films films={[fieldNotes]} />);
+registerRoot(() => <Films films={[intro, fieldNotes]} />);

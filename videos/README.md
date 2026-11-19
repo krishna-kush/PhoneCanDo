@@ -46,6 +46,16 @@ films/     one folder per film
   <id>/      beats.ts (tempo, shots), film.tsx (picture), sound.ts, score/
 ```
 
+The films:
+
+- `intro`: the 50-second intro we publish, in all three shapes. It came
+  over from `video/`, the package this one replaced: its scenes' scripts
+  are `script/`, its music `score/`, and its picture (`picture/`) is still
+  built by hand into one element, every element set from the beat each
+  frame, which `film.tsx` builds once and draws at each frame. Its CSS is
+  scoped under `.intro`.
+- `field-notes`: a rough cut, parked (`films/field-notes/todo.md`).
+
 One law, kept by `engine/law.test.ts`: **engine ← brand ← films**. The
 engine never imports the brand or a film, the brand never imports a film,
 no film imports another, and `beats/`, `motion/` and `sound/` import
