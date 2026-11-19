@@ -12,6 +12,7 @@ import com.phonecando.runner.agents.install.InstallGate
 import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.bridge.Bridge
 import com.phonecando.runner.bridge.BridgeHandle
+import com.phonecando.runner.bridge.mcp.McpToolAssets
 import com.phonecando.runner.checks.Checks
 import com.phonecando.runner.checks.now.CheckNow
 import com.phonecando.runner.checks.rules.CheckRules
@@ -517,7 +518,11 @@ internal class EngineSupervisor(
 
       override fun onSilent(reason: String) = onAcpSilent(agentId, proc, reason)
     },
+    ownTools = { ownTools },
   )
+
+  // Our own tools' names, every channel's: an ACP agent's question about one never reaches you (OwnTools).
+  private val ownTools: Set<String> by lazy { McpToolAssets.load(context, full = true).map { it.name }.toSet() }
 
   // A server is ready when its health probe answers; a TUI by its kind's
   // readiness, and only an exit other than 0 is its death.

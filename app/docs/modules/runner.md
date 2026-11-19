@@ -449,7 +449,11 @@ asks for the terminal again, on the same chat.
   plan; at most 200 items and 64 Ki characters a turn; a reopened chat's
   replay shows nothing), its permission questions wait for an answer (from
   the app or a notice, see Notifications) and `cancel` answers them
-  cancelled. Any other request of the agent's (`fs/*`, `terminal/*`) is
+  cancelled. A question about one of our own tools is answered allow-once
+  at once and never shows (`OwnTools`: its title is one of the bridge's
+  tool names, bare or with our server's name round it, as
+  `mcp__phonecando__x` or `x (phonecando MCP Server)`): the phone-control
+  lock is their check, not the agent's approval. Any other request of the agent's (`fs/*`, `terminal/*`) is
   refused. `AcpEngines.of(agentId)` is the ready driver for the rest of
   the runner, and `AcpEngines.listener` hears every item, question, busy
   change and turn end.

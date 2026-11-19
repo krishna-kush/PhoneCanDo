@@ -49,6 +49,8 @@ internal class AcpAgent(
   /** Forgets the kept chat (AgentStore.clearAcpChat). */
   private val forgetChat: () -> Unit,
   private val hooks: Hooks,
+  /** Our own tools' names: a question about one is allowed here (OwnTools). */
+  private val ownTools: () -> Set<String> = { emptySet() },
 ) : AcpAgentHandle {
   /** What the supervisor hears; on the driver's threads. */
   interface Hooks {
@@ -336,7 +338,8 @@ internal class AcpAgent(
     }
   }
 
-  // On the reader thread: a permission question waits for its answer; we offer nothing else.
+  // On the reader thread: a permission question waits for its answer, but
+  // one about our own tools is allowed at once (OwnTools); we offer nothing else.
   private fun onRequest(request: AcpWire.Request) {
     heard()
     synchronized(lock) { running }?.let(::sign)
@@ -345,6 +348,11 @@ internal class AcpAgent(
       return
     }
     val ask = AcpAnswers.permissionAsk("acp-$agentId-${ASKS.incrementAndGet()}", request.params)
+    val allow = if (OwnTools.isOurs(ask.title, ownTools())) OwnTools.allow(ask.options) else null
+    if (allow != null) {
+      connection.reply(request.id, AcpWire.permissionSelected(allow.optionId))
+      return
+    }
     synchronized(lock) { asks[ask.requestId] = OpenAsk(request.id, ask) }
     emit(AcpEvents.asked())
     tell { it.onPermission(agentId, ask) }
