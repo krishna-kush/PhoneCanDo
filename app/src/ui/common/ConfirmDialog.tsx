@@ -1,6 +1,13 @@
-import { Modal } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import AppButton from './AppButton';
+import type { AgentId } from '../../engine/agents/records';
+import DeckKeys from './actions/DeckKeys';
+import AgentFace from './face/AgentFace';
+import { DESK_LOOK } from './slip/desk';
+import SlipDialog from './slip/SlipDialog';
+import SweatFace from './slip/SweatFace';
+
+/** Faces drawn by the title when it deletes agents; more just make the row long. */
+const MAX_FACES = 3;
 
 type Props = {
   open: boolean;
@@ -10,15 +17,21 @@ type Props = {
   confirmLabel?: string;
   /** The button that only closes it, when "Cancel" says too little (the choice it leaves you with). */
   cancelLabel?: string;
-  /** Red for a delete or a restart; primary for a way on that undoes nothing. */
+  /** A delete or a restart, which can't be undone; primary for a way on that undoes nothing. */
   confirmVariant?: 'danger' | 'primary';
+  /** The agents it would delete: their own faces sweat by the title, in place of the front desk's. */
+  agentIds?: readonly AgentId[];
   onConfirm: () => void;
 };
 
-// Centered confirm dialog (not a bottom sheet): dimmed backdrop, panel card,
-// destructive + cancel side by side. Used for every delete/remove confirm,
-// and for a choice worth a second look (sharing a machine), so they all
-// look and behave identically. Android back dismisses via onRequestClose.
+// Centered confirm dialog (not a bottom sheet), used for every
+// delete/remove confirm and for a choice worth a second look (sharing a
+// machine), so they all look and behave identically. One that can't be
+// undone has hazard tape across its top and the front desk (A-04, slip/
+// desk.ts) sweating by its title (deleting agents, their own faces
+// instead), its keys a way back and, under the "can't be undone" rule, the
+// act; a calm one is plain, its act the main key. A tap on the dim or
+// Android back closes it.
 export default function ConfirmDialog({
   open,
   onClose,
@@ -27,46 +40,40 @@ export default function ConfirmDialog({
   confirmLabel = 'Delete',
   cancelLabel = 'Cancel',
   confirmVariant = 'danger',
+  agentIds = [],
   onConfirm,
 }: Props) {
+  const danger = confirmVariant === 'danger';
+  const faces = agentIds.slice(0, MAX_FACES);
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <YStack
-        flex={1}
-        backgroundColor="scrimSoft"
-        alignItems="center"
-        justifyContent="center"
-        padding="5"
-        onPress={onClose}
-      >
-        <YStack
-          backgroundColor="panel"
-          borderWidth={1}
-          borderColor="lineStrong"
-          borderRadius={0}
-          padding="4"
-          gap="3"
-          width="100%"
-          maxWidth={360}
-        >
+    <SlipDialog open={open} onClose={onClose} scrimCloses hazard={danger}>
+      <XStack alignItems="center" gap="3">
+        {danger && faces.length > 0 ? (
+          <XStack gap="2">
+            {faces.map((id) => (
+              <SweatFace key={id} agentId={id} size={faces.length > 1 ? 24 : 30} />
+            ))}
+          </XStack>
+        ) : danger ? (
+          <AgentFace mood="sweaty" mascot={DESK_LOOK} size={30} />
+        ) : null}
+        <YStack flex={1}>
           <Text fontSize={19} fontWeight="700">
             {title}
           </Text>
-          {message ? (
-            <Text fontSize={15} color="color10">
-              {message}
-            </Text>
-          ) : null}
-          <XStack gap="2" marginTop="2">
-            <AppButton variant="secondary" flex={1} onPress={onClose}>
-              {cancelLabel}
-            </AppButton>
-            <AppButton variant={confirmVariant} flex={1} onPress={onConfirm}>
-              {confirmLabel}
-            </AppButton>
-          </XStack>
         </YStack>
-      </YStack>
-    </Modal>
+      </XStack>
+      {message ? (
+        <Text fontSize={15} color="color10">
+          {message}
+        </Text>
+      ) : null}
+      <DeckKeys
+        actions={[
+          { label: confirmLabel, role: danger ? 'danger' : 'go', onPress: onConfirm },
+          { label: cancelLabel, role: 'back', onPress: onClose },
+        ]}
+      />
+    </SlipDialog>
   );
 }

@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
 import { confirmUser, NO_SCREEN_LOCK } from '../../engine/auth';
 import { errorMessage } from '../../engine/errors/message';
 import * as runner from '../../engine/runner';
 import { track } from '../../engine/telemetry';
 import { unlockLasts } from '../control-lock/modes';
-import AppButton from './AppButton';
-import { askerTitle, unlockCoversLine, waitingLine } from './promptQueue';
+import DeckKeys from './actions/DeckKeys';
+import PlainText from './PlainText';
+import { unlockCoversLine, waitingLine } from './promptQueue';
+import SlipDialog from './slip/SlipDialog';
+import SlipField from './slip/SlipField';
+import SlipFrom from './slip/SlipFrom';
 import { markAnswered, pendingUnlockIds, useBridgePrompts } from './useBridgePrompts';
+
+/** After its desk, on the slip. */
+const ASKS = 'wants to control the phone';
 
 // An agent asks the bridge for phone-control permission; this modal is the
 // only UI that answers it. It sits over whatever tab is open (the bridge
@@ -16,7 +21,8 @@ import { markAnswered, pendingUnlockIds, useBridgePrompts } from './useBridgePro
 // oldest waiting prompt is an unlock. In install and launch modes the lock
 // is one switch for the phone, so a successful unlock answers every
 // waiting unlock; in ask mode the yes is this agent's alone (the bridge
-// gives it its own unlock) and the next agent asks again.
+// gives it its own unlock) and the next agent asks again. A permission
+// slip from the agent: its face, and why it asks when it says.
 export default function UnlockDialog() {
   const { current, queue } = useBridgePrompts();
   const prompt = current?.kind === 'unlock' ? current : null;
@@ -81,59 +87,26 @@ export default function UnlockDialog() {
   }
 
   return (
-    <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={close}>
-      <YStack
-        flex={1}
-        backgroundColor="scrimSoft"
-        alignItems="center"
-        justifyContent="center"
-        padding="5"
-      >
-        <YStack
-          backgroundColor="panel"
-          borderWidth={1}
-          borderColor="lineStrong"
-          borderRadius={0}
-          padding="4"
-          gap="3"
-          width="100%"
-          maxWidth={360}
-        >
-          <Text fontSize={19} fontWeight="700">
-            {prompt ? askerTitle(prompt) : 'Permission required'}
-          </Text>
-          <Text fontSize={15} color="color10">
-            PhoneCanDo needs permission to perform automated actions on this device. Unlock with
-            biometrics or your device PIN to continue.
-          </Text>
-          {prompt ? (
-            <Text fontSize={13} color="color10">
-              {unlockLasts(mode, prompt.agentName)}
-            </Text>
-          ) : null}
-          <Text fontSize={13} color="color10">
-            The AI cannot unlock this; only you can.
-          </Text>
-          {note ? (
-            <Text fontSize={13} color="color10">
-              {note}
-            </Text>
-          ) : null}
-          {msg ? (
-            <Text fontSize={13} color="color10">
-              {msg}
-            </Text>
-          ) : null}
-          <XStack gap="2" marginTop="2">
-            <AppButton variant="secondary" flex={1} onPress={close} disabled={busy}>
-              Not now
-            </AppButton>
-            <AppButton flex={1} onPress={unlock} disabled={busy}>
-              {busy ? 'Unlocking…' : 'Unlock'}
-            </AppButton>
-          </XStack>
-        </YStack>
-      </YStack>
-    </Modal>
+    <SlipDialog open={prompt !== null} onClose={close} slip="slipUnlock">
+      {prompt ? <SlipFrom agentId={prompt.agentId} name={prompt.agentName} asks={ASKS} /> : null}
+      {prompt?.reason ? <SlipField label="Why" value={prompt.reason} lines={6} /> : null}
+      <PlainText fontSize={15} color="muted">
+        PhoneCanDo needs permission to perform automated actions on this device. Unlock with biometrics or your device
+        PIN to continue.
+      </PlainText>
+      {[prompt ? unlockLasts(mode, prompt.agentName) : '', 'The AI cannot unlock this; only you can.', note, msg]
+        .filter((line) => line)
+        .map((line) => (
+          <PlainText key={line} fontSize={13} color="muted">
+            {line}
+          </PlainText>
+        ))}
+      <DeckKeys
+        actions={[
+          { label: busy ? 'Unlocking…' : 'Unlock', role: 'go', disabled: busy, onPress: () => void unlock() },
+          { label: 'Not now', role: 'back', disabled: busy, onPress: close },
+        ]}
+      />
+    </SlipDialog>
   );
 }

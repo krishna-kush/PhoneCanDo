@@ -117,14 +117,11 @@ const ui = (p) => src('ui/env/logic', p);
     'The reset removed the system packages gemini needs. Reinstall it to bring them back; your projects and chats stay.');
 
   // --- the open link prompt -----------------------------------------------
-  const { urlHost, openUrlTitle, isWebLink } = await import(src('ui/common/promptQueue.ts'));
+  const { urlHost, isWebLink } = await import(src('ui/common/promptQueue.ts'));
   t('host of a link', urlHost('https://Accounts.Google.com/o/oauth2?x=1'), 'accounts.google.com');
   t('user info is not the host', urlHost('https://accounts.google.com@evil.example/x'), 'evil.example');
   t('port kept', urlHost('http://localhost:8085/callback'), 'localhost:8085');
   t('host before a query', urlHost('https://example.com?a=b'), 'example.com');
-  t('title names agent and host', openUrlTitle({ agentName: 'gemini', url: 'https://github.com/login/device' }), 'gemini wants to open github.com');
-  t('title without a name', openUrlTitle({ agentName: '', url: 'https://x.dev/' }), 'An agent wants to open x.dev');
-  t('title without a link', openUrlTitle({ agentName: 'gemini', url: null }), 'gemini wants to open a link');
   t('https link', isWebLink('https://x.dev/a'), true);
   t('http link', isWebLink('http://localhost:1/'), true);
   t('intent link refused', isWebLink('intent://scan/#Intent;scheme=zxing;end'), false);

@@ -48,19 +48,25 @@ export function toolFailed(status: string | null): boolean {
   return status === 'failed';
 }
 
-const KIND_LINES: Record<string, string> = {
-  read: 'It reads files.',
-  edit: 'It changes files.',
-  delete: 'It deletes files.',
-  move: 'It moves or renames files.',
-  search: 'It searches.',
-  execute: 'It runs a command.',
-  fetch: 'It goes to the network.',
+const KIND_ASKS: Record<string, string> = {
+  read: 'Read files',
+  edit: 'Change files',
+  delete: 'Delete files',
+  move: 'Move files',
+  search: 'Search',
+  execute: 'Run a command',
+  fetch: 'Go online',
 };
 
-/** What kind of step it asks about, in a sentence; null for a kind we have no words for. */
-export function toolKindLine(kind: string | null | undefined): string | null {
-  return (kind && KIND_LINES[kind]) || null;
+/** What it asks to do, in a few words, as the slip's field labels its step; "Take a step" for a kind we have no words for. */
+export function toolKindAsk(kind: string | null | undefined): string {
+  return (kind && KIND_ASKS[kind]) || 'Take a step';
+}
+
+/** An answer's key: the one that allows it once leads, a no is the way back, the rest sit beside it. */
+export function answerRole(option: AcpOption, main: string | null): 'go' | 'more' | 'back' {
+  if (option.optionId === main) return 'go';
+  return option.kind.startsWith('reject') ? 'back' : 'more';
 }
 
 /** The permission question's heading. */

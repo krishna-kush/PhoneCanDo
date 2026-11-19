@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { YStack } from 'tamagui';
 import type { AgentChecks } from '../../../../engine/checks/types';
 import { useChecksStore } from '../../../../state/checks';
-import AppButton from '../../../common/AppButton';
+import ActionDeck from '../../../common/actions/ActionDeck';
 import ConfirmDialog from '../../../common/ConfirmDialog';
 import PlainText from '../../../common/PlainText';
 import { useShowScreenEnd } from '../../../common/screenEnd';
@@ -56,16 +56,13 @@ export default function CheckNowBlock({ agentId, name, checks, now }: Props) {
       {run?.state === 'running' ? (
         <RunningCheck agentId={agentId} name={name} run={run} />
       ) : checks.checkNow ? (
-        <YStack gap="2">
-          {choices.rest ? (
-            <AppButton variant="secondary" onPress={() => ask('rest')}>
-              {CHECK_REST}
-            </AppButton>
-          ) : null}
-          <AppButton variant={choices.rest ? 'ghost' : 'secondary'} onPress={() => ask('all')}>
-            {choices.all}
-          </AppButton>
-        </YStack>
+        <ActionDeck
+          barcode="deckCheckNow"
+          actions={[
+            choices.rest && { label: CHECK_REST, role: 'go', onPress: () => ask('rest') },
+            { label: choices.all, role: choices.rest ? 'more' : 'go', onPress: () => ask('all') },
+          ]}
+        />
       ) : (
         <Note>{checks.checkNowWhy ?? "It can't start with a task, so only real use checks it."}</Note>
       )}
@@ -89,6 +86,7 @@ export default function CheckNowBlock({ agentId, name, checks, now }: Props) {
         title={rest ? CHECK_REST_TITLE : choices.all === CHECK_ALL ? CHECK_ALL_TITLE : CHECK_NOW_TITLE}
         message={rest ? checkRestMessage(name, rest, checks.checkModel) : checkNowMessage(name, checks.parts, checks.checkModel)}
         confirmLabel={rest ? CHECK_REST : choices.all}
+        confirmVariant="primary"
         onConfirm={start}
       />
     </YStack>

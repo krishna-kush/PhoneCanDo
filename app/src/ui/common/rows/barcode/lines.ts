@@ -142,6 +142,12 @@ export const BARCODE_LINES = {
   deckInstall: 'FRESH COAT',
   deckChooseAgent: 'PLAYER ONE',
   deckCheckNow: 'POP QUIZ',
+
+  // What an agent asks you (slip/SlipDialog)
+  slipPermission: 'MAY I PLEASE',
+  slipLink: 'KNOCK KNOCK',
+  slipUnlock: 'OPEN SESAME',
+  slipAccess: 'LET ME IN',
 } as const;
 
 /** A box's barcode line, by what the box is. */

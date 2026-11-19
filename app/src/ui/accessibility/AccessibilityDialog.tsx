@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Modal } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
 import * as runner from '../../engine/runner';
-import AppButton from '../common/AppButton';
-import { askerTitle, waitingLine } from '../common/promptQueue';
+import DeckKeys from '../common/actions/DeckKeys';
+import PlainText from '../common/PlainText';
+import { waitingLine } from '../common/promptQueue';
+import SlipDialog from '../common/slip/SlipDialog';
+import SlipFrom from '../common/slip/SlipFrom';
 import { markAnswered, useBridgePrompts } from '../common/useBridgePrompts';
 import { COPY } from './guide';
 import StepLinks from './StepLinks';
 import StepList from './StepList';
 import { useAccessibilitySteps } from './useAccessibilitySteps';
+
+/** After its desk, on the slip. */
+const ASKS = 'needs Accessibility';
 
 // An agent asks the bridge for accessibility; this dialog sits over the
 // chat while the bridge waits for PhoneCanDo's service to connect, so the
@@ -17,7 +21,8 @@ import { useAccessibilitySteps } from './useAccessibilitySteps';
 // accessibility request and reports to that request alone. During the guide
 // it stays open between trips; it closes once the service connects (every
 // waiting request then returns and its prompt is gone), and "Not now" tells
-// this request's bridge call to stop waiting.
+// this request's bridge call to stop waiting. A permission slip from the
+// agent, with its face.
 export default function AccessibilityDialog() {
   const { current, queue } = useBridgePrompts();
   const prompt = current?.kind === 'accessibility' ? current : null;
@@ -62,71 +67,36 @@ export default function AccessibilityDialog() {
   const waiting = waitingLine(queue.length - 1);
 
   return (
-    <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={close}>
-      <YStack
-        flex={1}
-        backgroundColor="scrimSoft"
-        alignItems="center"
-        justifyContent="center"
-        padding="5"
-      >
-        <YStack
-          backgroundColor="panel"
-          borderWidth={1}
-          borderColor="lineStrong"
-          borderRadius={0}
-          padding="4"
-          gap="3"
-          width="100%"
-          maxWidth={360}
-        >
-          <Text fontSize={19} fontWeight="700">
-            {steps.guided
-              ? `Unlock phone control · step ${steps.step} of ${steps.total}`
-              : 'Accessibility permission'}
-          </Text>
-          {prompt ? (
-            <Text fontSize={15} fontWeight="700">
-              {askerTitle(prompt)}
-            </Text>
-          ) : null}
-          <Text fontSize={15} color="color10">
-            {COPY.dialogNeed}
-            {steps.guided ? COPY.dialogGuided : COPY.dialogPlain}
-          </Text>
-          {steps.guided ? <StepList step={steps.step} note={steps.note} /> : null}
-          <Text fontSize={13} color="color10">
-            {COPY.dialogOnlyYou}
-          </Text>
-          {waiting ? (
-            <Text fontSize={13} color="color10">
-              {waiting}
-            </Text>
-          ) : null}
-          {msg ? (
-            <Text fontSize={13} color="color10">
-              {msg}
-            </Text>
-          ) : null}
-          <XStack gap="2" marginTop="2">
-            <AppButton variant="secondary" flex={1} onPress={close}>
-              Not now
-            </AppButton>
-            <AppButton flex={1} onPress={openStep}>
-              {steps.guided ? steps.copy.button : 'Open settings'}
-            </AppButton>
-          </XStack>
-          <StepLinks
-            links={[
-              ...(steps.alt ? [{ label: steps.alt.label, onPress: runAlt }] : []),
-              ...(steps.guided
-                ? steps.fixes.map((fix) => ({ label: fix.label, onPress: () => steps.goTo(fix.to) }))
-                : []),
-              ...(steps.canForce ? [{ label: COPY.forceGuide, onPress: steps.forceGuide }] : []),
-            ]}
-          />
-        </YStack>
-      </YStack>
-    </Modal>
+    <SlipDialog open={prompt !== null} onClose={close} slip="slipAccess">
+      {prompt ? <SlipFrom agentId={prompt.agentId} name={prompt.agentName} asks={ASKS} /> : null}
+      <PlainText fontSize={17} fontWeight="700">
+        {steps.guided ? `Unlock phone control · step ${steps.step} of ${steps.total}` : 'Accessibility permission'}
+      </PlainText>
+      <PlainText fontSize={15} color="muted">
+        {COPY.dialogNeed}
+        {steps.guided ? COPY.dialogGuided : COPY.dialogPlain}
+      </PlainText>
+      {steps.guided ? <StepList step={steps.step} note={steps.note} /> : null}
+      {[COPY.dialogOnlyYou, waiting, msg]
+        .filter((line) => line)
+        .map((line) => (
+          <PlainText key={line} fontSize={13} color="muted">
+            {line}
+          </PlainText>
+        ))}
+      <DeckKeys
+        actions={[
+          { label: steps.guided ? steps.copy.button : 'Open settings', role: 'go', onPress: openStep },
+          { label: 'Not now', role: 'back', onPress: close },
+        ]}
+      />
+      <StepLinks
+        links={[
+          ...(steps.alt ? [{ label: steps.alt.label, onPress: runAlt }] : []),
+          ...(steps.guided ? steps.fixes.map((fix) => ({ label: fix.label, onPress: () => steps.goTo(fix.to) })) : []),
+          ...(steps.canForce ? [{ label: COPY.forceGuide, onPress: steps.forceGuide }] : []),
+        ]}
+      />
+    </SlipDialog>
   );
 }

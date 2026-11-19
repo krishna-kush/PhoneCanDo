@@ -23,11 +23,6 @@ export function samePrompts(a: readonly BridgePrompt[], b: readonly BridgePrompt
   return a.length === b.length && a.every((p, i) => p.requestId === b[i].requestId);
 }
 
-/** The dialog's heading for any prompt: which agent is asking. */
-export function askerTitle(p: BridgePrompt): string {
-  return `${p.agentName || 'An agent'} wants to control the phone`;
-}
-
 /** The host a link goes to, as the user should judge it: no user info before
     an `@`, lowercased, its port kept (a sign-in may call back to localhost). */
 export function urlHost(url: string): string {
@@ -40,12 +35,6 @@ export function urlHost(url: string): string {
 /** Only web links open from a prompt (native checks the same before it asks). */
 export function isWebLink(url: string | null | undefined): boolean {
   return typeof url === 'string' && /^https?:\/\/[^\s]+$/i.test(url.trim());
-}
-
-/** The open_url dialog's heading: "gemini wants to open accounts.google.com". */
-export function openUrlTitle(p: Pick<BridgePrompt, 'agentName' | 'url'>): string {
-  const host = p.url ? urlHost(p.url) : '';
-  return `${p.agentName || 'An agent'} wants to open ${host || 'a link'}`;
 }
 
 // One unlock opens the gate for the whole phone, so it answers every

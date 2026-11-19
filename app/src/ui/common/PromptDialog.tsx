@@ -1,7 +1,7 @@
-import { Modal } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
-import AppButton from './AppButton';
+import { Text } from 'tamagui';
+import DeckKeys from './actions/DeckKeys';
 import AppInput from './AppInput';
+import SlipDialog from './slip/SlipDialog';
 
 type Props = {
   open: boolean;
@@ -15,7 +15,8 @@ type Props = {
 };
 
 // Text-input dialog in the ConfirmDialog style (centered modal, not a bottom
-// sheet). Used for create/rename prompts so they all look identical.
+// sheet), plain: no mascot, the deck's keys. Used for create/rename prompts
+// so they all look identical.
 export default function PromptDialog({
   open,
   onClose,
@@ -27,45 +28,24 @@ export default function PromptDialog({
   onConfirm,
 }: Props) {
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <YStack
-        flex={1}
-        backgroundColor="scrimSoft"
-        alignItems="center"
-        justifyContent="center"
-        padding="5"
-      >
-        <YStack
-          backgroundColor="panel"
-          borderWidth={1}
-          borderColor="lineStrong"
-          borderRadius={0}
-          padding="4"
-          gap="3"
-          width="100%"
-          maxWidth={360}
-        >
-          <Text fontSize={19} fontWeight="700">
-            {title}
-          </Text>
-          <AppInput
-            value={value}
-            onChangeText={onChangeText}
-            placeholder={placeholder}
-            autoFocus
-            onSubmitEditing={onConfirm}
-            returnKeyType="done"
-          />
-          <XStack gap="2" marginTop="2">
-            <AppButton variant="secondary" flex={1} onPress={onClose}>
-              Cancel
-            </AppButton>
-            <AppButton flex={1} onPress={onConfirm}>
-              {confirmLabel}
-            </AppButton>
-          </XStack>
-        </YStack>
-      </YStack>
-    </Modal>
+    <SlipDialog open={open} onClose={onClose}>
+      <Text fontSize={19} fontWeight="700">
+        {title}
+      </Text>
+      <AppInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        autoFocus
+        onSubmitEditing={onConfirm}
+        returnKeyType="done"
+      />
+      <DeckKeys
+        actions={[
+          { label: confirmLabel, role: 'go', onPress: onConfirm },
+          { label: 'Cancel', role: 'back', onPress: onClose },
+        ]}
+      />
+    </SlipDialog>
   );
 }

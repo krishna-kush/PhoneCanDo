@@ -109,7 +109,15 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
     'waiting', 'running', 'done', 'failed', 'weird one', '',
   ]);
   t('a failed step is trouble', [copy.toolFailed('failed'), copy.toolFailed('completed')], [true, false]);
-  t('step kinds', ['execute', 'edit', 'think', null].map(copy.toolKindLine), ['It runs a command.', 'It changes files.', null, null]);
+  t('what it asks to do', ['execute', 'fetch', 'think', null].map(copy.toolKindAsk), ['Run a command', 'Go online', 'Take a step', 'Take a step']);
+  {
+    const o = (optionId, kind) => ({ optionId, name: kind, kind });
+    t(
+      'answer keys: allow once leads, a no is the way back',
+      [o('a', 'allow_once'), o('b', 'allow_always'), o('c', 'reject_once'), o('d', 'reject_always')].map((x) => copy.answerRole(x, 'a')),
+      ['go', 'more', 'back', 'back'],
+    );
+  }
   t('who asks', [copy.permissionTitle('Qwen'), copy.permissionTitle('')], ['Qwen asks before it goes on', 'An agent asks before it goes on']);
   t('the step, or a stand-in', [copy.permissionStep(' Run ls '), copy.permissionStep(''), copy.permissionStep(undefined)], ['Run ls', 'A tool step', 'A tool step']);
   const opts = (...kinds) => kinds.map((kind, i) => ({ optionId: `o${i}`, name: kind, kind }));

@@ -105,6 +105,7 @@ export default function SelectBar({ picked, all, onToggleAll, onEnd }: Props) {
         onClose={() => setConfirm(false)}
         title={deleteTitle(names)}
         message={deleteMessage(names, bytes, chosen.length === agents.length, staying)}
+        agentIds={chosen.map((a) => a.id)}
         onConfirm={remove}
       />
     </YStack>

@@ -80,6 +80,7 @@ export default function ShareMachineList({ pick, choices, busy, onShare }: Props
         message={shareMessage(nextAgentName(label, agents.map((a) => a.name), code), names)}
         cancelLabel="Its own machine (recommended)"
         confirmLabel="Share"
+        confirmVariant="primary"
         onConfirm={share}
       />
     </>

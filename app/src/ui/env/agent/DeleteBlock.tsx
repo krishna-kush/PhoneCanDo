@@ -70,6 +70,7 @@ export default function DeleteBlock({ agent, image }: { agent: Agent; image: Ima
         onClose={() => setConfirm(false)}
         title={`Delete ${agent.name}?`}
         message={message}
+        agentIds={[agent.id]}
         onConfirm={remove}
       />
     </>

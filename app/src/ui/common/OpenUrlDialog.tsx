@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react';
-import { Linking, Modal } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
+import { Linking } from 'react-native';
 import * as runner from '../../engine/runner';
 import type { OpenUrlAction } from '../../engine/runner';
-import AppButton from './AppButton';
-import { isWebLink, openUrlTitle, waitingLine } from './promptQueue';
+import DeckKeys from './actions/DeckKeys';
+import PlainText from './PlainText';
+import { isWebLink, urlHost, waitingLine } from './promptQueue';
+import SlipDialog from './slip/SlipDialog';
+import SlipField from './slip/SlipField';
+import SlipFrom from './slip/SlipFrom';
 import { markAnswered, useBridgePrompts } from './useBridgePrompts';
+
+/** After its desk, on the slip. */
+const ASKS = 'wants to open a link';
 
 // An agent wants a link opened on the phone, most often a sign-in its
 // program started (the kit's phonecando-open, its BROWSER). Nothing opens
 // without the user: Open hands the link to Android, Copy puts it on the
 // clipboard (native does it; it holds the link), Not now drops it. It shows
-// when the oldest waiting prompt is a link, over whatever tab is open.
+// when the oldest waiting prompt is a link, over whatever tab is open, as a
+// permission slip from the agent: its face, then the link's site set into
+// the field's edge over the whole link.
 export default function OpenUrlDialog() {
   const { current, queue } = useBridgePrompts();
   const prompt = current?.kind === 'open_url' ? current : null;
@@ -49,50 +57,29 @@ export default function OpenUrlDialog() {
   const note = waitingLine(queue.length - 1);
 
   return (
-    <Modal visible={prompt !== null} transparent animationType="fade" onRequestClose={close}>
-      <YStack flex={1} backgroundColor="scrimSoft" alignItems="center" justifyContent="center" padding="5">
-        <YStack
-          backgroundColor="panel"
-          borderWidth={1}
-          borderColor="lineStrong"
-          borderRadius={0}
-          padding="4"
-          gap="3"
-          width="100%"
-          maxWidth={360}
-        >
-          <Text fontSize={19} fontWeight="700">
-            {prompt ? openUrlTitle(prompt) : 'Open a link'}
-          </Text>
-          <Text fontFamily="mono" fontSize={12} color="dim" numberOfLines={6} userSelect="text">
-            {url}
-          </Text>
-          <Text fontSize={13} color="color10">
-            Open it only if you expect it, for example a sign-in you started with this agent.
-          </Text>
-          {note ? (
-            <Text fontSize={13} color="color10">
-              {note}
-            </Text>
-          ) : null}
-          {msg ? (
-            <Text fontSize={13} color="color10">
-              {msg}
-            </Text>
-          ) : null}
-          <XStack gap="2" marginTop="2">
-            <AppButton variant="secondary" flex={1} onPress={close}>
-              Not now
-            </AppButton>
-            <AppButton variant="secondary" flex={1} onPress={copy}>
-              Copy
-            </AppButton>
-            <AppButton flex={1} disabled={!isWebLink(url)} onPress={open}>
-              Open
-            </AppButton>
-          </XStack>
-        </YStack>
-      </YStack>
-    </Modal>
+    <SlipDialog open={prompt !== null} onClose={close} slip="slipLink">
+      {prompt ? <SlipFrom agentId={prompt.agentId} name={prompt.agentName} asks={ASKS} /> : null}
+      <SlipField label={urlHost(url) || 'A link'} value={url} lines={6} />
+      <PlainText fontSize={13} color="muted">
+        Open it only if you expect it, for example a sign-in you started with this agent.
+      </PlainText>
+      {note ? (
+        <PlainText fontSize={13} color="muted">
+          {note}
+        </PlainText>
+      ) : null}
+      {msg ? (
+        <PlainText fontSize={13} color="muted">
+          {msg}
+        </PlainText>
+      ) : null}
+      <DeckKeys
+        actions={[
+          { label: 'Open', role: 'go', disabled: !isWebLink(url), onPress: open },
+          { label: 'Copy', onPress: copy },
+          { label: 'Not now', role: 'back', onPress: close },
+        ]}
+      />
+    </SlipDialog>
   );
 }
