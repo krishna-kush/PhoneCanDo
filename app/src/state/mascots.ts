@@ -66,7 +66,7 @@ export const useMascotsStore = create<MascotsState>((set, get) => ({
   },
 
   setLook: (id, look) => {
-    // Our own characters' outfits (mascot/designs.ts OURS: the guide A-09's) are never an agent's.
+    // Our own characters' outfits (mascot/designs.ts RESERVED: the guide A-09's, the front desk A-04's) are never an agent's.
     if (!isWearable(look.design)) return;
     const looks = { ...get().looks, [id]: look };
     set({ looks });

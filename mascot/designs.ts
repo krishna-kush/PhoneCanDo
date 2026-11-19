@@ -93,15 +93,15 @@ export const EARNED = [{ id: 'shift-lead', name: 'Shift lead', hat: 'hardhat', n
  * front desk, who asks you when the app itself needs a yes (a delete to
  * confirm): a clerk's eyeshade and a name badge.
  */
-export const OURS = [
+export const RESERVED = [
   { id: 'a09', name: 'A-09', hat: 'signpost' },
   { id: 'a04', name: 'A-04', hat: 'eyeshade', neck: 'badge' },
 ] as const satisfies readonly Design[];
 
-export type DesignId = (typeof DESIGNS)[number]['id'] | (typeof EARNED)[number]['id'] | (typeof OURS)[number]['id'];
+export type DesignId = (typeof DESIGNS)[number]['id'] | (typeof EARNED)[number]['id'] | (typeof RESERVED)[number]['id'];
 
-const BY_ID = new Map<string, Design>([...DESIGNS, ...EARNED, ...OURS].map((d) => [d.id, d]));
-const OUR_IDS = new Set<string>(OURS.map((d) => d.id));
+const BY_ID = new Map<string, Design>([...DESIGNS, ...EARNED, ...RESERVED].map((d) => [d.id, d]));
+const RESERVED_IDS = new Set<string>(RESERVED.map((d) => d.id));
 
 /** A design by its id; null for one we no longer have. */
 export const designOf = (id: string): Design | null => BY_ID.get(id) ?? null;
@@ -109,4 +109,4 @@ export const designOf = (id: string): Design | null => BY_ID.get(id) ?? null;
 export const isDesignId = (id: unknown): id is DesignId => typeof id === 'string' && BY_ID.has(id);
 
 /** A design an agent may wear: any but our own characters'. */
-export const isWearable = (id: unknown): id is DesignId => isDesignId(id) && !OUR_IDS.has(id);
+export const isWearable = (id: unknown): id is DesignId => isDesignId(id) && !RESERVED_IDS.has(id);

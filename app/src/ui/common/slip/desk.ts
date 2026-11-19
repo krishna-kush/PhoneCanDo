@@ -1,5 +1,5 @@
 // The front desk: A-04, one of our own A-series characters (mascot/designs.ts
-// OURS), who asks you when the app itself needs a yes, as a delete to
+// RESERVED), who asks you when the app itself needs a yes, as a delete to
 // confirm; never an agent, so never in a picker or the site's catalog: a
 // square red unit in a clerk's eyeshade and a name badge. Pure.
 import type { Look } from '../../../../../mascot/look.ts';

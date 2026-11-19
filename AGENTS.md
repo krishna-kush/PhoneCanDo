@@ -141,7 +141,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   deps), built on `theme/logo.json`: the body and its five shapes
   (`body.ts`), the parts a unit wears (`parts/{hat,neck,face}/`, a file
   each), the designs (`designs.ts`: a new design is a line; `EARNED` ones
-  are never picked at random, the app unlocks them; `OURS` are our own
+  are never picked at random, the app unlocks them; `RESERVED` are our own
   A-series characters' outfits, never an agent's, as an A-series serial is
   never an agent's name), random picks
   (`pick.ts`) and the layout every side draws from (`layout/figure.ts`:

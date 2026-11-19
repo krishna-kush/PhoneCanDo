@@ -1,5 +1,5 @@
 // The guide who leads the way on a walk: A-09, one of our own A-series
-// characters (mascot/designs.ts OURS), never the agent it shows you round,
+// characters (mascot/designs.ts RESERVED), never the agent it shows you round,
 // so its face and serial are its own: a wide red unit with a signpost on
 // its head, its arrow pointing the way it looks. No agent can take an
 // A-series serial (state/flows/logic/names.ts) nor wear its outfit

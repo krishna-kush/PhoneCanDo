@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import { SHAPES, bodyOf, stretchOf } from '../body.ts';
-import { DESIGNS, EARNED, OURS, designOf, isWearable } from '../designs.ts';
+import { DESIGNS, EARNED, RESERVED, designOf, isWearable } from '../designs.ts';
 import { figure } from '../layout/figure.ts';
 import { pathOf } from '../layout/path.ts';
 import { PLAIN, lookKey, readLook } from '../look.ts';
@@ -37,7 +37,7 @@ test('the body comes from the logo spec', () => {
 });
 
 test('designs have unique ids and names, and wear parts that exist in their slot', () => {
-  const every = [...DESIGNS, ...EARNED, ...OURS];
+  const every = [...DESIGNS, ...EARNED, ...RESERVED];
   assert.equal(new Set(every.map((d) => d.id)).size, every.length);
   assert.equal(new Set(every.map((d) => d.name)).size, every.length);
   for (const d of every) {
@@ -66,8 +66,8 @@ test('an earned design is a real look, laid out like any other, and never drawn 
 });
 
 test("our own characters' designs lay out, but are never drawn at random nor read back as an agent's look", () => {
-  const ours = new Set(OURS.map((d) => d.id));
-  for (const d of OURS) {
+  const reserved = new Set(RESERVED.map((d) => d.id));
+  for (const d of RESERVED) {
     assert.equal(designOf(d.id)?.name, d.name);
     assert.equal(isWearable(d.id), false, d.id);
     for (const shape of SHAPES) {
@@ -82,13 +82,13 @@ test("our own characters' designs lay out, but are never drawn at random nor rea
   const rand = seeded(11);
   const taken = [];
   for (let i = 0; i < DESIGNS.length * 3; i++) taken.push(pickLook(taken, rand));
-  assert.ok(taken.every((l) => !ours.has(l.design)));
-  assert.ok(allLooks().every((l) => !ours.has(l.design)));
+  assert.ok(taken.every((l) => !reserved.has(l.design)));
+  assert.ok(allLooks().every((l) => !reserved.has(l.design)));
   assert.ok(isWearable('plain') && isWearable(EARNED[0].id));
 });
 
 test('every part is worn by some design', () => {
-  const worn = new Set([...DESIGNS, ...EARNED, ...OURS].flatMap((d) => [d.hat, d.neck, d.face]).filter(Boolean));
+  const worn = new Set([...DESIGNS, ...EARNED, ...RESERVED].flatMap((d) => [d.hat, d.neck, d.face]).filter(Boolean));
   for (const id of [...Object.keys(HATS), ...Object.keys(NECKS), ...Object.keys(FACES)]) assert.ok(worn.has(id), id);
 });
 
