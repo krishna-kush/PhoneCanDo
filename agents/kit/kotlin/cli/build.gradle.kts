@@ -1,7 +1,8 @@
 // kit-cli: renders on a plain JVM with the kit's own code what CI runs as
 // the phone would: a kind's install script (InstallRenderer, for
-// lre-compat.yml and local-models.yml) and its one-shot run with a local
-// model (ModelSeam, for local-models.yml). A leaf: nothing depends on it,
+// lre-compat.yml, local-models.yml and agents-latest.yml), its one-shot run
+// with a local model (ModelSeam, for local-models.yml) and an image kind's
+// launch (ManifestKind, for agents-latest.yml). A leaf: nothing depends on it,
 // it is not published and nothing ships it (kit/cli/deps/kotlin-law.mjs).
 // installDist writes build/install/kit-cli/bin/kit-cli.
 plugins {

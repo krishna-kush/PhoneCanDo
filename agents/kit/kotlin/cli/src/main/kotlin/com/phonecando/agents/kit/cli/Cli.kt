@@ -8,11 +8,12 @@ import java.io.PrintStream
 // The kit's CLI for CI, one command per file:
 //   render-install  a kind's install script, as the phone renders it (RenderInstall)
 //   render-model    a kind's one-shot run with a local model, guest side (RenderModel)
+//   render-launch   an image kind's terminal or ACP launch, guest side (RenderLaunch)
 // Exit codes: 0 done, 1 nothing to render or a refusal (a manifest that
 // cannot be read, no recipe, no wiring for the served APIs), 2 usage; every
 // failure says why on stderr.
 object Cli {
-  val USAGE = "usage:\n  ${RenderInstall.USAGE}\n  ${RenderModel.USAGE}"
+  val USAGE = "usage:\n  ${RenderInstall.USAGE}\n  ${RenderModel.USAGE}\n  ${RenderLaunch.USAGE}"
 
   fun main(args: List<String>, out: PrintStream, err: PrintStream, env: (String) -> String? = System::getenv): Int {
     if (args.isEmpty() || args.first() in listOf("help", "--help", "-h")) {
@@ -24,6 +25,7 @@ object Cli {
       when (args.first()) {
         "render-install" -> RenderInstall.run(RenderInstall.parse(rest), out, err)
         "render-model" -> RenderModel.run(RenderModel.parse(rest), env, out, err)
+        "render-launch" -> RenderLaunch.run(RenderLaunch.parse(rest), out, err)
         else -> throw IllegalArgumentException("unknown command ${args.first()}")
       }
     } catch (e: Refused) {
