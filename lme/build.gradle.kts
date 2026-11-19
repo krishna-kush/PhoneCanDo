@@ -7,8 +7,8 @@
 // record and the device and never reads a file. No android.*, no org.json
 // anywhere here.
 plugins {
-    kotlin("jvm") version "2.2.10" apply false
-    kotlin("plugin.serialization") version "2.2.10" apply false
+    kotlin("jvm") version "2.4.21" apply false
+    kotlin("plugin.serialization") version "2.4.21" apply false
 }
 
 allprojects {
