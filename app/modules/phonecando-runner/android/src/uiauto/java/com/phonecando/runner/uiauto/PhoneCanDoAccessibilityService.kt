@@ -11,16 +11,20 @@ import com.phonecando.runner.FullAutomation
 import com.phonecando.runner.PceAuto
 import com.phonecando.runner.PceAutomation
 import com.phonecando.runner.RestrictedSettings
+import com.phonecando.runner.autooff.AutoOff
+import com.phonecando.runner.autooff.AutoOffWatch
 import com.phonecando.runner.presence.Presence
 import com.phonecando.runner.uiauto.overlay.GlassOverlay
 
 // Full-build accessibility host. All observation and action logic lives in the
-// PCE adapter; this service only owns the Android lifecycle, and the
+// PCE adapter; this service only owns the Android lifecycle, the
 // glass (overlay/GlassOverlay): the agent's mascot over every app while it
-// drives or has handed the phone to you, the view Presence tells.
+// drives or has handed the phone to you, the view Presence tells, and Auto
+// off (autooff/), which turns the service off while nobody needs it.
 class PhoneCanDoAccessibilityService : AccessibilityService() {
   private var pce: PceAutomation? = null
   private var overlay: GlassOverlay? = null
+  private var autoOff: AutoOffWatch? = null
 
   // Android exposes no direct "current activity" query to an accessibility
   // service. Track the last window-state event; the PCE asks for it by
@@ -41,8 +45,10 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
   override fun onServiceConnected() {
     super.onServiceConnected()
     // Android bound us: the restricted-settings lock is cleared on this
-    // install, and that outlives updates (RestrictedSettings.kt).
-    RestrictedSettings.markConnected(this)
+    // install, and that outlives updates (RestrictedSettings.kt). The
+    // first time ever, the app offers Auto off.
+    if (RestrictedSettings.markConnected(this)) AutoOff.offer(this)
+    autoOff = AutoOffWatch(this) { disableSelf() }.also { it.start() }
     try {
       AutomationHosts.current = FullAutomation
       val shown = GlassOverlay(this)
@@ -105,6 +111,8 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
   }
 
   override fun onDestroy() {
+    autoOff?.stop()
+    autoOff = null
     PceAuto.clear(pce)
     pce = null
     overlay?.let {

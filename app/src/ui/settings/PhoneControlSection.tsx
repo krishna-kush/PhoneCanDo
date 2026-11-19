@@ -1,5 +1,7 @@
 import { XStack, YStack } from 'tamagui';
 import AccessibilitySetup from '../accessibility/AccessibilitySetup';
+import AutoOffBox from '../accessibility/auto-off/AutoOffBox';
+import { useAutoOff } from '../accessibility/auto-off/useAutoOff';
 import { COPY } from '../accessibility/guide';
 import { useAccessibilitySteps } from '../accessibility/useAccessibilitySteps';
 import AgentFace from '../common/face/AgentFace';
@@ -19,14 +21,17 @@ import StatusRow from './phone-control/StatusRow';
 // control panel: a key box whose first row is A-01 at the controls (how
 // the keys below add up), then the two keys agents need turned before
 // they see and tap the phone: Android's Accessibility switch with its
-// one-time setup, and the biometric lock (control-lock/), then how often
-// the lock asks. Each explanation steps aside once its key is turned: the
+// one-time setup, and the biometric lock (control-lock/), then Auto off
+// (accessibility/auto-off/: the switch turns itself off while nobody needs
+// it, so bank apps open) and how often the lock asks. Each explanation
+// steps aside once its key is turned: the
 // Accessibility lines once the switch is on, the unlock reason once
 // unlocked. Lite and play: A-01 off duty and what the build cannot do.
 export default function PhoneControlSection({ channel }: { channel: string }) {
   const a11y = useAccessibilitySteps();
   const switchedOn = a11y.enabled;
   const lock = useControlLock();
+  const auto = useAutoOff();
   const asks = lock.mode === 'ask';
   const open = asks ? lock.asking > 0 : lock.unlocked;
   const active = usePageActive();
@@ -57,7 +62,12 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
         </PlainText>
       )}
       <RowGroup title={PANEL_TITLE} barcode="phoneControl">
-        <StatusRow level={handsLevel(a11y.enabled, a11y.connected, open)} asks={asks} still={!active} />
+        <StatusRow
+          level={handsLevel(a11y.enabled, a11y.connected, open)}
+          asks={asks}
+          clockedOut={!a11y.enabled && auto.turnedOff}
+          still={!active}
+        />
         <Spot id="settings.phone">
           <AccessibilitySetup a11y={a11y} />
         </Spot>
@@ -70,6 +80,7 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
         )}
         <LockRow lock={lock} />
       </RowGroup>
+      {auto.available ? <AutoOffBox auto={auto} /> : null}
       <LockModePicker value={lock.mode} onPick={(m) => void lock.changeMode(m)} disabled={lock.busy} />
     </>
   );

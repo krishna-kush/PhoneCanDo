@@ -100,6 +100,7 @@ export const BARCODE_LINES = {
   atLaunch: 'LIFTOFF',
   phoneControl: 'LOOK NO HANDS',
   lockMode: 'FINGER GUNS',
+  autoOff: 'PUNCH OUT',
 
   // Privacy
   usageStats: 'JUST NUMBERS',

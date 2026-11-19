@@ -6,6 +6,8 @@ import { waitingLine } from '../common/promptQueue';
 import SlipDialog from '../common/slip/SlipDialog';
 import SlipFrom from '../common/slip/SlipFrom';
 import { markAnswered, useBridgePrompts } from '../common/useBridgePrompts';
+import { DIALOG_LINE } from './auto-off/copy';
+import { useAutoOff } from './auto-off/useAutoOff';
 import { COPY } from './guide';
 import StepLinks from './StepLinks';
 import StepList from './StepList';
@@ -22,13 +24,14 @@ const ASKS = 'needs Accessibility';
 // it stays open between trips; it closes once the service connects (every
 // waiting request then returns and its prompt is gone), and "Not now" tells
 // this request's bridge call to stop waiting. A permission slip from the
-// agent, with its face.
+// agent, with its face; a line says so when Auto off turned the switch off.
 export default function AccessibilityDialog() {
   const { current, queue } = useBridgePrompts();
   const prompt = current?.kind === 'accessibility' ? current : null;
   const requestId = prompt?.requestId;
   const [msg, setMsg] = useState('');
   const steps = useAccessibilitySteps();
+  const auto = useAutoOff();
 
   useEffect(() => setMsg(''), [requestId]);
 
@@ -77,7 +80,7 @@ export default function AccessibilityDialog() {
         {steps.guided ? COPY.dialogGuided : COPY.dialogPlain}
       </PlainText>
       {steps.guided ? <StepList step={steps.step} note={steps.note} /> : null}
-      {[COPY.dialogOnlyYou, waiting, msg]
+      {[auto.turnedOff ? DIALOG_LINE : '', COPY.dialogOnlyYou, waiting, msg]
         .filter((line) => line)
         .map((line) => (
           <PlainText key={line} fontSize={13} color="muted">

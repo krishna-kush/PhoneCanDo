@@ -25,8 +25,18 @@ data class Reply(val status: Int, val body: String, val headers: Map<String, Str
 
     fun automationOff() = error(403, "automation_off", "phone control is locked; unlock it in PhoneCanDo settings")
 
-    fun automationUnavailable() =
-      error(503, "automation_unavailable", "enable PhoneCanDo in Android accessibility settings")
+    /** `autoOff`: Auto off turned the service off (autooff/), which the agent hears so it can tell the user. */
+    fun automationUnavailable(autoOff: Boolean = false) =
+      if (autoOff) {
+        error(
+          503,
+          "automation_unavailable",
+          "Auto off turned PhoneCanDo's accessibility service off while no agent used the screen, so payment apps open; " +
+            "call mobile_open_accessibility to ask the user to turn it back on",
+        )
+      } else {
+        error(503, "automation_unavailable", "enable PhoneCanDo in Android accessibility settings")
+      }
 
     /** Another agent has the screen (ScreenLease): the caller waits in line at `place`. */
     fun busy(holder: String, retryAfterMs: Long, place: Int) = Reply(

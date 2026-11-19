@@ -1,6 +1,7 @@
 package com.phonecando.runner.api
 
 import android.content.Context
+import com.phonecando.runner.autooff.AutoOff
 import com.phonecando.runner.bridge.Bridge
 import com.phonecando.runner.controllock.ControlLocks
 import com.phonecando.runner.controllock.LockMode
@@ -9,7 +10,9 @@ import expo.modules.kotlin.modules.ModuleDefinitionBuilder
 // The phone-control lock, for the app's Settings and unlock dialog
 // (controllock/ControlLock). Only the app calls these, each unlock or mode
 // change right after the user's biometric; no agent process can reach
-// them. Full builds only use them: lite and play have no lock.
+// them. And Auto off (autooff/), which turns the accessibility service off
+// while nobody needs it, so payment apps open. Full builds only use them:
+// lite and play have no lock and no service.
 internal fun ModuleDefinitionBuilder.phoneControlFunctions(context: () -> Context) {
   // "install" | "launch" | "ask".
   Function("getLockMode") {
@@ -45,5 +48,33 @@ internal fun ModuleDefinitionBuilder.phoneControlFunctions(context: () -> Contex
   // An agent is driving the screen right now (the bridge's screen lease).
   Function("isPhoneInUse") {
     Bridge.screenInUse()
+  }
+
+  Function("getAutoOff") {
+    AutoOff.isOn(context())
+  }
+
+  // Returns the switch as kept, and answers the offer. The service's watch
+  // reads it at its next look.
+  Function("setAutoOff") { on: Boolean ->
+    val ctx = context()
+    AutoOff.set(ctx, on)
+    AutoOff.isOn(ctx)
+  }
+
+  // Auto off turned the service off and it has not run since.
+  Function("wasAutoOff") {
+    AutoOff.turnedOff(context())
+  }
+
+  // The switch came on for the first time on this install and Auto off's
+  // offer is not answered yet.
+  Function("autoOffOfferDue") {
+    AutoOff.offerDue(context())
+  }
+
+  // "Stay on duty": the offer is answered, Auto off stays as it is.
+  Function("dropAutoOffOffer") {
+    AutoOff.dropOffer(context())
   }
 }

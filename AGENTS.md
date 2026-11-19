@@ -81,7 +81,11 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `app/scripts/license-text.mjs`.
   `accessibility/` is the whole Accessibility setup guide: `guide.ts`
   (pure: the `RESTRICTED_FLOW` switch, steps and every line of copy), the
-  hook, the step list, the Settings block and the agent's dialog.
+  hook, the step list, the Settings block and the agent's dialog; and
+  `auto-off/`, Auto off (the service turns itself off while nobody needs
+  it, so bank apps open; native `runner/autooff/`, store
+  `state/autoOff.ts`): its Settings box, the time card, and the ask after
+  the switch's first turn-on on this install.
   Terminal split: `TerminalScreen.tsx` (session shell) + `TerminalView.tsx`
   (the IME, mirror, sizing and spacer; used by a terminal page and by a
   TUI-home agent's Home) + `transport/` (local PTY or the engine's hosted

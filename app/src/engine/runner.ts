@@ -59,6 +59,12 @@ export type RunnerModule = {
   setKeepRunning?(agentId: string, on: boolean): boolean;
   /** Absent from native builds older than agents_keep_running. */
   keepRunningAsk?(agentId: string): NativeKeepAsk | null;
+  /** Auto off (engine/autoOff.ts). Absent from native builds older than it. */
+  getAutoOff?(): boolean;
+  setAutoOff?(on: boolean): boolean;
+  wasAutoOff?(): boolean;
+  autoOffOfferDue?(): boolean;
+  dropAutoOffOffer?(): void;
   /** Agent messages (engine/messages/, which checks what these return). Absent from native builds older than messaging. */
   messageLog?(limit: number): NativeMessage[];
   unreadCounts?(): Record<string, number>;

@@ -146,6 +146,16 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   openAccessibilitySettings(): string;
   isAccessibilityServiceEnabled(): boolean;
   hasAccessibilityConnectedBefore(): boolean;
+  /** Auto off: the accessibility service turns itself off while nobody needs it (full builds). */
+  getAutoOff(): boolean;
+  /** Saves Auto off and returns it as kept; answers its offer too. */
+  setAutoOff(on: boolean): boolean;
+  /** Auto off turned the service off and it has not run since. */
+  wasAutoOff(): boolean;
+  /** The switch came on for the first time on this install and Auto off's offer is not answered yet. */
+  autoOffOfferDue(): boolean;
+  /** Answers the offer, leaving Auto off as it is. */
+  dropAutoOffOffer(): void;
   canRequestPackageInstalls(): boolean;
   markSelfUpdatePending(): boolean;
   canShowRestrictedSettingNote(): boolean;

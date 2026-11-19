@@ -50,6 +50,8 @@ class BridgeRouter(
   private val onPaused: (agentId: String) -> Unit = {},
   // You left the agent stopped and the run it was stopped in goes on.
   private val leftStopped: (agentId: String) -> Boolean = { false },
+  // Auto off turned the accessibility service off (autooff/): the 503 says so.
+  private val autoOff: () -> Boolean = { false },
 ) {
   fun handle(agent: AgentRecord, method: String, path: String, body: String): Reply {
     val route = Route.find(method, path)
@@ -65,7 +67,7 @@ class BridgeRouter(
       if (route.screen) lease.waitInLine(agent.id, agent.name, alive, startedByAgent(agent.id))?.let { return refusal(it) }
       return Reply.automationOff()
     }
-    if (route.pce && host?.connected != true) return Reply.automationUnavailable()
+    if (route.pce && host?.connected != true) return Reply.automationUnavailable(autoOff())
 
     // Only full builds have a driver to hand the controls over from.
     val hands = if (full && route.screen) handOver() else null
@@ -110,7 +112,7 @@ class BridgeRouter(
       // The service disconnected between the connected check and the call:
       // the same 503 as a service that was never on, so the agent recovers
       // through mobile_open_accessibility instead of seeing a 500.
-      return Reply.automationUnavailable()
+      return Reply.automationUnavailable(autoOff())
     } catch (e: Exception) {
       onError("$method $path failed", e)
       return Reply.error(500, "internal", e.message ?: "bridge failure")

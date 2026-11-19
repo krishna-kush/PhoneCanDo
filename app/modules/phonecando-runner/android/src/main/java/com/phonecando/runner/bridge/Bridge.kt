@@ -8,6 +8,7 @@ import android.util.Log
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.AutomationHosts
 import com.phonecando.runner.agents.AgentDirectory
+import com.phonecando.runner.autooff.AutoOff
 import com.phonecando.runner.bridge.mcp.McpToolAssets
 import com.phonecando.runner.controllock.ControlLocks
 import com.phonecando.runner.engine.Engines
@@ -73,6 +74,18 @@ object Bridge {
   fun screenHolder(): String? = lease?.holderId()
 
   /**
+   * An agent wants the screen: one holds it (idle or not, as [screenHolder]),
+   * it is kept for the first in line, or someone waits. Auto off (autooff/)
+   * leaves Accessibility on meanwhile.
+   */
+  fun screenWanted(): Boolean {
+    val screen = lease ?: return false
+    if (screen.holderId() != null) return true
+    val line = screen.line()
+    return line.holder != null || line.waiting.isNotEmpty()
+  }
+
+  /**
    * The agent has no run going any more: its status goes, and it gives back
    * the screen if it holds it (ScreenLease.runEnded), unless you have the
    * controls it handed over (Presence keeps the screen for it).
@@ -118,6 +131,7 @@ object Bridge {
       handOver = Presence.store::handOver,
       onPaused = Presence.store::pausedCall,
       leftStopped = Presence.store::leftStopped,
+      autoOff = { AutoOff.turnedOff(app) },
     )
     val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val ports = BridgePorts.candidates(prefs.getInt(KEY_PORT, 0))

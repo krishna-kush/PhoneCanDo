@@ -107,6 +107,18 @@ class BridgeRouterTest {
     assertEquals(200, router().handle(dir.records[0], "POST", "/app", "{}").status)
   }
 
+  @Test fun autoOffSaysItTurnedTheServiceOff() {
+    host.service = false
+    val plain = json(router().handle(dir.records[0], "POST", "/pce/observe", "{}"))
+    assertEquals("enable PhoneCanDo in Android accessibility settings", plain.getString("message"))
+    val auto = BridgeRouter(true, { host }, lock, lease, { dir.get(it) != null }, handlers, autoOff = { true })
+    val reply = auto.handle(dir.records[0], "POST", "/pce/observe", "{}")
+    assertEquals(503, reply.status)
+    assertEquals("automation_unavailable", json(reply).getString("code"))
+    assertTrue(json(reply).getString("message").contains("mobile_open_accessibility"))
+    assertNull(lease.holderId())
+  }
+
   @Test fun badJsonIs400AndTakesNoLease() {
     val reply = router().handle(dir.records[0], "POST", "/pce/observe", "[1,2]")
     assertEquals(400, reply.status)

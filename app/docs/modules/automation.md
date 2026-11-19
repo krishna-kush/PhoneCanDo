@@ -54,6 +54,18 @@ running, one drives the screen at a time and the others get 409
 work; the staged `mobile_wait` eventSeq comparison lands with the next APK
 because the generated asset was stale.
 
+Auto off (runner `autooff/`, Settings → Phone control): payment and bank
+apps refuse to open while an accessibility service Google has not reviewed
+is on, so with Auto off on the service calls `disableSelf()` once
+PhoneCanDo has been out of sight and no agent has wanted the screen
+(`Bridge.screenWanted`, or a hand-over to you) for 10 s, never in the 2
+minutes after it connects (`AutoOffRules`). It marks itself the cause, so
+the 503 below says so and the agent asks through
+`mobile_open_accessibility`; only the user switches it back on. The app
+offers it once, after the switch's first turn-on on this install (marked
+natively at that first bind; a switch on before never brings it), after a
+first shift walk ends (`ui/accessibility/auto-off/`).
+
 ## Implemented slice (2026-10-30)
 
 The PCE-backed slice is live; the rest of the API tree is the target surface.
