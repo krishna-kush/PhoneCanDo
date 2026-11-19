@@ -2,9 +2,13 @@
 // FIG. 01A, the body lifted apart into its plates in 3D, each named with the
 // site's own callouts. Then the stack turns to face us, lying sideways, the
 // plates over and under Linux peel away, and the camera dives into the
-// terminal on it: the terminal scene's own, so the dive lands in it.
+// terminal on it: the terminal scene's own, so the dive lands in it. Before
+// the turn, a crew unit pops up holding one more line, the local model,
+// its leader dashed to A-01's plate: an extra you plug in, not a layer.
 
 import { inOutCubic, outBack, outCubic } from '../../../../engine/motion/ease.ts';
+import { hop } from '../unit/moves.ts';
+import { lookOf, makeUnit } from '../unit/draw.ts';
 import { lerp, seg } from '../../../../engine/motion/tween.ts';
 import { apart as A, type Layer } from '../../script/apart.ts';
 import { el, place, svgEl } from '../el.ts';
@@ -17,17 +21,20 @@ import { termFont } from './terminal.ts';
 type Layout = {
   stack: { x: number; y: number; h: number };
   legend: { x: number; y: number; step: number; font: number };
+  /** The size of the unit presenting the local model's line, in u. */
+  holder: number;
 };
 
 const layout = (st: Stage): Layout =>
   byShape<Layout>(
     st,
-    { stack: { x: 124, y: 51, h: 64 }, legend: { x: 11, y: 22, step: 9.3, font: 2.4 } },
-    { stack: { x: 73, y: 100, h: 50 }, legend: { x: 4, y: 66, step: 9.5, font: 1.75 } },
-    { stack: { x: 68, y: 54, h: 46 }, legend: { x: 5, y: 24, step: 8.6, font: 1.6 } },
+    { stack: { x: 124, y: 51, h: 64 }, legend: { x: 11, y: 22, step: 9.3, font: 2.4 }, holder: 6 },
+    { stack: { x: 73, y: 100, h: 50 }, legend: { x: 4, y: 66, step: 9.5, font: 1.75 }, holder: 6 },
+    { stack: { x: 68, y: 54, h: 46 }, legend: { x: 5, y: 24, step: 8.6, font: 1.6 }, holder: 4.5 },
   );
 
 const LINUX = A.layers.findIndex((l) => l.id === 'linux');
+const AGENT = A.layers.findIndex((l) => l.id === 'agent');
 
 /** What each plate shows. */
 function fillPlate(plate: HTMLElement, layer: Layer) {
@@ -116,6 +123,28 @@ export function makeApart({ st }: Ctx): View {
     return { g, num, name, note, line, dot, text: [String(i).padStart(2, '0'), layer.name, ` — ${layer.note}`] as const };
   });
 
+  // The local model's line, and the crew unit that holds it up.
+  const model = el('div', 'legend model', cam);
+  model.style.fontSize = `${L.legend.font * st.u}px`;
+  const modelNum = el('b', '', model);
+  const modelName = el('span', '', model);
+  const modelNote = el('em', '', model);
+  const modelLine = svgEl('polyline', { fill: 'none', stroke: 'var(--amber)', 'stroke-width': 0.18 * st.u, 'stroke-dasharray': `${0.8 * st.u} ${0.6 * st.u}` }, leaders);
+  const holder = makeUnit(cam, L.holder * st.u);
+  const modelText = [String(layers.length).padStart(2, '0'), A.text.model.name, ` — ${A.text.model.note}`] as const;
+  /** The line's whole width in u, measured once with every word in, so the unit at its end stands still while it types. */
+  let modelW = 0;
+  const widthOf = () => {
+    if (!modelW) {
+      [modelNum, modelName, modelNote].forEach((e, i) => {
+        e.textContent = modelText[i];
+        delete e.dataset.k;
+      });
+      modelW = model.offsetWidth / st.u;
+    }
+    return modelW;
+  };
+
   /** Where [spot] is drawn now, in u on the camera's layer. */
   const anchorOf = (spot: HTMLElement, push: number, ox: number, oy: number): [number, number] => {
     const frame = root.getBoundingClientRect();
@@ -185,6 +214,35 @@ export function makeApart({ st }: Ctx): View {
         g.dot.setAttribute('cy', String(ey * u));
         g.dot.style.opacity = draw >= 1 ? String(fade) : '0';
       });
+
+      // The local model: brought up from below the frame by a crew unit, presenting it at its end; a leader dashed on to A-01.
+      const at = A.at.model;
+      const rise = seg(t, at - 0.3, at, outBack(1.4));
+      const y = L.legend.y + layers.length * L.legend.step;
+      const shown = t >= at - 0.3;
+      const lift = (1 - rise) * (st.H - y + 12);
+      place(model, st, { x: L.legend.x, y: y + lift, ax: 0, o: shown ? fade : 0, r: (1 - rise) * -4 });
+      const end = L.legend.x + widthOf();
+      typeOn(modelNum, modelText[0], t, at - 0.3, 0.001);
+      typeOn(modelName, modelText[1], t, at - 0.3, 0.001);
+      typeOn(modelNote, modelText[2], t, at + 0.05, 0.012);
+      const cheer = hop(t, at + 0.35, 0.35, 0.3, 0.1);
+      const hx = end + 1.5 + L.holder * 0.6;
+      place(holder.el, st, { x: hx, y: y + lift + L.holder * 0.45, o: shown ? fade : 0 });
+      holder.draw(lookOf('inventor'), {
+        eyes: t < at ? 'wide' : cheer.lift > 0 || t > at + 0.7 ? 'happy' : 'dot',
+        gaze: [-0.8, -0.2],
+        sx: cheer.sx,
+        sy: cheer.sy,
+        lift: cheer.lift,
+        shadow: 0,
+      });
+      const [px, py] = anchorOf(spots[AGENT], push, L.stack.x, L.stack.y);
+      const x0 = hx + L.holder * 0.7 + 1;
+      const draw = seg(t, at + 0.2, at + 0.6, outCubic);
+      const u = st.u;
+      modelLine.setAttribute('points', `${x0 * u},${y * u} ${(x0 + (px - x0) * draw) * u},${(y + (py - y) * draw) * u}`);
+      modelLine.style.opacity = draw > 0 ? String(fade) : '0';
     },
   };
 }

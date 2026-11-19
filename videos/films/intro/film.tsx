@@ -1,6 +1,6 @@
 // The intro, for the engine: a phone types on its own, the camera dives
 // in, and A-01 takes you through the field manual's pages to
-// phonecando.app, in one continuous camera. 50 seconds for YouTube,
+// phonecando.app, in one continuous camera. 54 seconds for YouTube,
 // LinkedIn and the feeds, in all three shapes.
 //
 // Its picture is built by hand into one element (picture/mount.ts) rather

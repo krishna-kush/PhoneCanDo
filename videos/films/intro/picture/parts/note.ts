@@ -1,10 +1,11 @@
 // A note passed hand to hand down a chain of units: it pops up over the
-// first one's head, is thrown in a high arc to the next, held up there a
-// moment, thrown on, and read by the last, who tucks it away. A dashed
-// tail follows it through the air, so you can follow it. Every frame sets it
-// from the time alone.
+// first one's head, is thrown in an arc to the next, held up there a
+// moment, thrown on, and read by the last, who opens it to show what it
+// says, then tucks it away. A hand that holds it for no time at all is a
+// head it bounces off. A dashed tail follows it through the air, so you
+// can follow it. Every frame sets it from the time alone.
 
-import { outBack, inCubic } from '../../../../engine/motion/ease.ts';
+import { inCubic, outBack } from '../../../../engine/motion/ease.ts';
 import { lerp, seg } from '../../../../engine/motion/tween.ts';
 import { el, place, svgEl } from '../el.ts';
 import type { Stage } from '../stage.ts';
@@ -17,8 +18,11 @@ export type Passes = {
   up: number;
   /** When each hand throws it on to the next: one fewer than the hands. */
   throws: readonly number[];
-  /** Beats in the air. */
-  flight: number;
+  /** Beats in the air, a throw each. */
+  flights: readonly number[];
+  /** When the last hand opens it, and what it says. */
+  read: number;
+  says: string;
   /** When the last hand has tucked it away. */
   end: number;
   /** How high an arc may go, in u from the top: under the heading. */
@@ -31,8 +35,9 @@ export type Note = {
   draw: (t: number, hands: Hand[]) => void;
 };
 
-/** How big it is against its CSS box. */
+/** How big it is against its CSS box, folded and opened. */
 const SIZE = 2;
+const OPEN = 1.7;
 
 /** How much of its way the tail behind it covers. */
 const TAIL = 0.4;
@@ -48,13 +53,14 @@ export function makeNote(parent: HTMLElement, st: Stage, P: Passes): Note {
   const u = st.u;
   const paths = P.throws.map(() => svgEl('path', { 'stroke-width': (0.35 * u).toFixed(1), 'stroke-dasharray': `${(1.2 * u).toFixed(1)} ${(1.1 * u).toFixed(1)}` }, trail));
   const note = el('div', 'note', parent);
-  const landOf = (k: number) => P.throws[k] + P.flight;
+  const says = el('span', '', note, P.says);
+  const landOf = (k: number) => P.throws[k] + P.flights[k];
 
   const where = (t: number, hands: Hand[]): Hand | null => {
     if (t < P.up || t >= P.end) return null;
     for (let k = 0; k < P.throws.length; k++) {
       if (t < P.throws[k]) return hands[k];
-      if (t < landOf(k)) return arc(hands[k], hands[k + 1], (t - P.throws[k]) / P.flight, P.top);
+      if (t < landOf(k)) return arc(hands[k], hands[k + 1], (t - P.throws[k]) / P.flights[k], P.top);
     }
     return hands[P.throws.length];
   };
@@ -81,24 +87,29 @@ export function makeNote(parent: HTMLElement, st: Stage, P: Passes): Note {
       });
       if (!at) return;
 
-      const k = P.throws.findIndex((th) => t >= th && t < th + P.flight);
+      const k = P.throws.findIndex((th, j) => t >= th && t < landOf(j));
       const pop = seg(t, P.up, P.up + 0.25, outBack(2));
       const tuck = 1 - seg(t, P.end - 0.3, P.end, inCubic);
       if (k >= 0) {
         // In the air: tipping over the top of its arc, a flutter on the way.
-        const f = (t - P.throws[k]) / P.flight;
-        const dir = hands[k + 1].x > hands[k].x ? 1 : -1;
+        const f = (t - P.throws[k]) / P.flights[k];
+        const dir = hands[k + 1].x >= hands[k].x ? 1 : -1;
+        note.classList.remove('open');
+        says.style.opacity = '0';
         place(note, st, { x: at.x, y: at.y, ay: 1, r: dir * lerp(-28, 28, f) + 8 * Math.sin(f * Math.PI * 3), s: SIZE });
         return;
       }
-      // Held up: a catch's little give, then still; the last hand reads it, then tucks it away.
+      // Held up: a catch's little give, then still; the last hand opens it to read, then tucks it away.
       let caught = -1;
       P.throws.forEach((_, j) => {
         if (t >= landOf(j)) caught = j;
       });
-      const give = caught < 0 ? 0 : Math.exp(-8 * (t - landOf(caught))) * Math.sin((t - landOf(caught)) * 18);
-      const read = caught === P.throws.length - 1 ? 0.25 * seg(t, landOf(caught) + 0.1, landOf(caught) + 0.35, outBack(2)) : 0;
-      place(note, st, { x: at.x, y: at.y, ay: 1, r: -6 + 10 * give, s: SIZE * pop * tuck * (1 + read), sy: 1 - 0.15 * give });
+      const since = caught < 0 ? 0 : t - landOf(caught);
+      const give = caught < 0 ? 0 : Math.exp(-8 * since) * Math.sin(since * 18);
+      const open = seg(t, P.read, P.read + 0.3, outBack(2));
+      note.classList.toggle('open', t >= P.read);
+      says.style.opacity = seg(t, P.read + 0.1, P.read + 0.3).toFixed(3);
+      place(note, st, { x: at.x, y: at.y, ay: 1, r: lerp(-6 + 10 * give, 0, open), s: SIZE * pop * tuck * lerp(1, OPEN, open), sy: 1 - 0.15 * give });
     },
   };
 }

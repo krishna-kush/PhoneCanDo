@@ -5,6 +5,7 @@
 
 import logo from '../../../../../theme/logo.json' with { type: 'json' };
 import { seg } from '../../../../engine/motion/tween.ts';
+import { crew } from '../../script/crew.ts';
 import { end as E } from '../../script/end.ts';
 import { el, place } from '../el.ts';
 import { makePhone } from '../parts/phone.ts';
@@ -48,7 +49,7 @@ export function makeCover({ st }: Ctx): View {
   const sub = el('div', 'pin page-intro', cam, E.text.cover);
   const phone = makePhone(cam, st, L.phone.h);
   const stamp = makeStamp(cam, E.text.url, 'fill');
-  const call = makeCurtainCall(cam, st, { from: E.at.call, bow: E.at.bow }, L.crew);
+  const call = makeCurtainCall(cam, st, { from: E.at.call, bow: E.at.bow, late: E.at.late, lateBow: E.at.lateBow, again: E.at.again }, L.crew, crew.snoozer);
 
   return {
     el: root,

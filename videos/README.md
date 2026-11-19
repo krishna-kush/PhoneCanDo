@@ -48,7 +48,7 @@ films/     one folder per film
 
 The films:
 
-- `intro`: the 50-second intro we publish, in all three shapes. It came
+- `intro`: the 54-second intro we publish, in all three shapes. It came
   over from `video/`, the package this one replaced: its scenes' scripts
   are `script/`, its music `score/`, and its picture (`picture/`) is still
   built by hand into one element, every element set from the beat each

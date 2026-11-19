@@ -1,11 +1,13 @@
 // Schedules (night.ts on the timeline), inside the crew's moon: A-01 in its
 // night-watch beanie sets a task for the morning, the clock races through
-// the night under the stars, the sun comes up, and the list is already
-// done. Then the crew's magician makes the set vanish under a cloth.
+// the night under the stars, the alarm rings, the sun comes up, and the
+// list is already done. The crew's sleepyhead, curled up beside it, stirs at
+// the alarm, grumbles and sleeps on. Then the crew's magician makes the set vanish under a cloth.
 
 import { inOutCubic, outBack, outCubic } from '../../../../engine/motion/ease.ts';
 import { hash } from '../../../../engine/motion/noise.ts';
 import { clamp, lerp, seg } from '../../../../engine/motion/tween.ts';
+import { crew } from '../../script/crew.ts';
 import { night as S } from '../../script/night.ts';
 import { el, place } from '../el.ts';
 import { leave, makeWords, rise, typeOn } from '../parts/words.ts';
@@ -15,14 +17,16 @@ import { lookOf, makeUnit } from '../unit/draw.ts';
 import { blinking, bob, hop } from '../unit/moves.ts';
 import type { Ctx, View } from './scene.ts';
 
-type Layout = { head: number; font: number; card: { x: number; y: number; w: number }; unit: { x: number; y: number; size: number }; sun: [number, number] };
+type Spot = { x: number; y: number; size: number };
+
+type Layout = { head: number; font: number; card: { x: number; y: number; w: number }; unit: Spot; snoozer: Spot; sun: [number, number] };
 
 const layout = (st: Stage): Layout =>
   byShape<Layout>(
     st,
-    { head: 20, font: 11, card: { x: 112, y: 60, w: 74 }, unit: { x: 46, y: 84, size: 25 }, sun: [154, 30] },
-    { head: 26, font: 11.5, card: { x: 50, y: 82, w: 86 }, unit: { x: 50, y: 150, size: 22 }, sun: [82, 52] },
-    { head: 15, font: 8.5, card: { x: 61, y: 59, w: 66 }, unit: { x: 15, y: 86, size: 14 }, sun: [86, 24] },
+    { head: 20, font: 11, card: { x: 112, y: 60, w: 74 }, unit: { x: 46, y: 84, size: 25 }, snoozer: { x: 17, y: 88, size: 11 }, sun: [154, 30] },
+    { head: 26, font: 11.5, card: { x: 50, y: 82, w: 86 }, unit: { x: 50, y: 150, size: 22 }, snoozer: { x: 17, y: 160, size: 10 }, sun: [82, 52] },
+    { head: 15, font: 8.5, card: { x: 61, y: 59, w: 66 }, unit: { x: 15, y: 86, size: 14 }, snoozer: { x: 33, y: 92, size: 7 }, sun: [86, 24] },
   );
 
 /** Minutes past midnight, as the clock reads them. */
@@ -63,6 +67,8 @@ export function makeNight({ st }: Ctx): View {
     return { row, box, stamp };
   });
   const unit = makeUnit(cam, L.unit.size * st.u);
+  const snoozer = makeUnit(cam, L.snoozer.size * st.u);
+  const snore = el('div', 'zzz', cam, 'z');
 
   const from = 23 * 60;
   const to = 7 * 60 + 24 * 60;
@@ -94,6 +100,9 @@ export function makeNight({ st }: Ctx): View {
       place(card, st, { x: L.card.x, y: L.card.y, s: cardIn, r: (1 - cardIn) * 6 });
       typeOn(when, `Schedule · ${S.text.when}`, t, 0.3, 0.015);
       const m = lerp(from, to, spin);
+      const ringing = t >= S.at.alarm && t < S.at.rung;
+      clock.classList.toggle('ring', ringing);
+      clock.style.transform = ringing ? `translateX(${(Math.sin(t * 90) * 0.5 * st.u).toFixed(1)}px) rotate(${(Math.sin(t * 70) * 3).toFixed(2)}deg)` : '';
       const shown = `${hhmm(m)}<small>${t >= S.at.sunrise ? 'Wake up' : t >= S.at.set ? 'Set' : 'Tonight'}</small>`;
       if (clock.dataset.k !== shown) clock.innerHTML = clock.dataset.k = shown;
       tasks.forEach((task, i) => {
@@ -120,6 +129,23 @@ export function makeNight({ st }: Ctx): View {
         lift: press.lift + wake.lift + groove.lift,
         shadow: 0.5,
       });
+
+      // The sleepyhead: a jolt at the alarm, one bleary look, then back to sleep the other way round.
+      const jolt = hop(t, S.at.alarm + 0.1, 0.25, 0.12, 0.05);
+      const stirs = t >= S.at.alarm + 0.1 && t < S.at.rung + 0.2;
+      const breath = bob(t * 0.35, 0.02);
+      place(snoozer.el, st, { x: L.snoozer.x, y: L.snoozer.y, sx: t >= S.at.rung + 0.2 ? -1 : 1 });
+      snoozer.draw(lookOf(crew.snoozer, 'wide'), {
+        eyes: stirs ? 'sleepy' : 'shut',
+        gaze: stirs ? [1, -0.3] : [0, 0],
+        sx: jolt.sx * breath.sx,
+        sy: jolt.sy * breath.sy,
+        lift: jolt.lift + breath.lift,
+        shadow: 0.4,
+      });
+      const cycle = ((t + 10) % 1.6) / 1.6;
+      const s = L.snoozer;
+      place(snore, st, { x: s.x + s.size * 0.6 + cycle * 4, y: s.y - s.size * 1.1 - cycle * 8, o: stirs ? 0 : Math.sin(cycle * Math.PI), s: 0.6 + cycle * 0.5 });
     },
   };
 }

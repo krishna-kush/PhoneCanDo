@@ -14,6 +14,7 @@
   border-radius: calc(var(--u) * 0.8);
 }
 .intro .sched .clock { font: 600 calc(var(--u) * 12) / 0.9 var(--mono); color: var(--fg); letter-spacing: -0.02em; }
+.intro .sched .clock.ring { color: var(--red); }
 .intro .sched .clock small { font-size: 0.32em; color: var(--muted); letter-spacing: 0.1em; margin-left: 0.5em; }
 .intro .sched .task { display: flex; align-items: center; gap: calc(var(--u) * 1.6); font: 500 calc(var(--u) * 3.2) / 1.1 var(--sans); color: var(--fg); }
 .intro .sched .task i { flex: none; width: calc(var(--u) * 3); height: calc(var(--u) * 3); border: calc(var(--u) * 0.3) solid var(--line-strong); }
