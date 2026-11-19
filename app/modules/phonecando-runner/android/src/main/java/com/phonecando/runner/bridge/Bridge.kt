@@ -1,6 +1,8 @@
 package com.phonecando.runner.bridge
 
+import android.app.KeyguardManager
 import android.content.Context
+import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import com.phonecando.runner.AutomationHost
@@ -12,6 +14,10 @@ import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.engine.work.KeepAsks
 import com.phonecando.runner.engine.work.KeepRunning
 import com.phonecando.runner.messages.Messages
+import com.phonecando.runner.notify.AppOnScreen
+import com.phonecando.runner.presence.Focus
+import com.phonecando.runner.presence.NotifyRules
+import com.phonecando.runner.presence.Presence
 import com.phonecando.runner.schedule.PhoneTime
 import com.phonecando.runner.schedule.Schedules
 import com.phonecando.runner.schedule.SelfScheduling
@@ -40,7 +46,10 @@ interface BridgeHandle {
 // engine is gone leaves it. An agent's ask to stay up (/keep, KeepRoutes)
 // goes to the work watch's KeepAsks, which drops it with the engine. An
 // agent's tasks for itself (/schedule/*, ScheduleRoutes) go to the
-// process's Schedules, as long as its "Can schedule itself" is on.
+// process's Schedules, as long as its "Can schedule itself" is on. The
+// agents' presence (presence/: the hand-over to you, status lines, where
+// you look; PresenceRoutes) works on this bridge's lease while it is open,
+// and hears each second, each granted screen request and each engine gone.
 object Bridge {
   private const val TAG = "PhoneCanDoBridge"
   private const val PREFS = "phonecando_bridge"
@@ -53,10 +62,6 @@ object Bridge {
   @Volatile
   private var lease: ScreenLease? = null
 
-  // The open bridge's take back (the overlay's button); null while none is open.
-  @Volatile
-  private var takeBackHolder: (() -> Boolean)? = null
-
   /** An agent is driving the screen now: a screen call runs or ran within the lease's idle time. */
   fun screenInUse(): Boolean = lease?.inUse() == true
 
@@ -67,18 +72,14 @@ object Bridge {
    */
   fun screenHolder(): String? = lease?.holderId()
 
-  /** The agent has no run going any more: it gives back the screen if it holds it (ScreenLease.runEnded). */
-  fun runEnded(agentId: String) {
-    lease?.runEnded(agentId)
-  }
-
   /**
-   * The user takes the screen back from the agent holding it (the overlay's
-   * Take back): its lease ends, its screen calls get control_taken_back
-   * until its run ends, and an ask-mode unlock ends too. False when nobody
-   * held it.
+   * The agent has no run going any more: its status goes, and it gives back
+   * the screen if it holds it (ScreenLease.runEnded), unless you have the
+   * controls it handed over (Presence keeps the screen for it).
    */
-  fun takeBack(): Boolean = takeBackHolder?.invoke() == true
+  fun runEnded(agentId: String) {
+    if (!Presence.runEnded(agentId)) lease?.runEnded(agentId)
+  }
 
   /** Who holds the screen and who waits for it; null while no bridge is open. */
   fun screenLine(): ScreenLease.Line? = lease?.line()
@@ -93,15 +94,17 @@ object Bridge {
     val launcher = AppLauncher(app)
     val lock = ControlLocks.get(app)
     val messages = Messages.get(app)
-    val handlers = DeviceRoutes(app, channel, automation, lock).table() +
+    val notifyRules = NotifyRules { SystemClock.elapsedRealtime() }
+    val chatOnScreen = { agentId: String -> NotifyRules.chatOnScreen(AppOnScreen.shown, Engines.peek()?.openAgent(), agentId) }
+    val handlers = DeviceRoutes(app, channel, automation, lock, notifyRules, chatOnScreen).table() +
       ActivityRoutes(app, launcher).table() +
       PceRoutes(automation).table() +
       PromptRoutes(app, PromptFlows(BridgePrompts.registry, launcher), automation, lock).table() +
       AgentRoutes(messages.mailbox, messages.view).table() +
       KeepRoutes(KeepAsks.shared, KeepRunning.get(app)::isOn) { Engines.work()?.poke() }.table() +
-      ScheduleRoutes(Schedules.get(app).book, SelfScheduling.get(app)::isOn, timeText = PhoneTime.text(app)).table()
+      ScheduleRoutes(Schedules.get(app).book, SelfScheduling.get(app)::isOn, timeText = PhoneTime.text(app)).table() +
+      PresenceRoutes(Presence.store, { focusFacts(app) }).table()
     val screen = ScreenLease(LEASE_IDLE_MS, notices = messages.screenNotices(LEASE_IDLE_MS)) { SystemClock.elapsedRealtime() }
-    val watch = DriverWatch(screen)
     val router = BridgeRouter(
       full = channel == "full",
       automation = automation,
@@ -111,7 +114,9 @@ object Bridge {
       handlers = handlers,
       onError = { msg, e -> Log.w(TAG, msg, e) },
       startedByAgent = messages.mailbox.wakes::startedByAgent,
-      onDrive = watch::check,
+      onDrive = Presence::publish,
+      handOver = Presence.store::handOver,
+      onPaused = Presence.store::pausedCall,
     )
     val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val ports = BridgePorts.candidates(prefs.getInt(KEY_PORT, 0))
@@ -119,20 +124,16 @@ object Bridge {
     val server = BridgeServer.start(ports, agents, router, tools, appVersion(app), onCall, messages.mailbox::unread)
       ?: return null
     prefs.edit().putInt(KEY_PORT, server.listeningPort).apply()
-    val ticker = ScreenTicker(screen, alive = { agents.get(it) != null }, after = watch::check).also { it.start() }
-    val takeBack = {
-      val holder = screen.holderId()
-      val taken = holder != null && screen.takeBack(holder)
-      if (taken) lock.endAsk(holder!!)
-      watch.check()
-      taken
-    }
     lease = screen
-    takeBackHolder = takeBack
+    Presence.attach(app, screen) { agents.get(it) != null }
+    val ticker = ScreenTicker(screen, alive = { agents.get(it) != null }, after = Presence::tick).also { it.start() }
     return object : BridgeHandle {
       override val url = "http://127.0.0.1:${server.listeningPort}"
 
       override fun agentGone(agentId: String) {
+        // Its hand-over ends (no note) and its status goes.
+        Presence.forget(agentId)
+        notifyRules.forget(agentId)
         lock.endAsk(agentId)
         // Out of the screen line: it holds nothing and waits for nothing.
         screen.forget(agentId)
@@ -142,9 +143,8 @@ object Bridge {
         ticker.stop()
         server.stop()
         if (lease === screen) lease = null
-        if (takeBackHolder === takeBack) takeBackHolder = null
         // Nobody drives a phone with no bridge.
-        ScreenIndicator.current?.let { runCatching { it.show(null) } }
+        Presence.detach(screen)
         // No engine is left to hear the answers: end the waits now, and
         // every ask-mode unlock with them.
         BridgePrompts.registry.cancelAll()
@@ -152,6 +152,14 @@ object Bridge {
       }
     }
   }
+
+  // Where the user looks, for /focus: the app and the chat it shows, the screen on, the keyguard up.
+  private fun focusFacts(context: Context): Focus.Facts = Focus.Facts(
+    appShown = AppOnScreen.shown,
+    openAgent = Engines.peek()?.openAgent(),
+    interactive = context.getSystemService(PowerManager::class.java)?.isInteractive != false,
+    locked = context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true,
+  )
 
   // MCP's serverInfo.version.
   private fun appVersion(context: Context): String = try {

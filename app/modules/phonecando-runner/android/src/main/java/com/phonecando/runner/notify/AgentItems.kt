@@ -2,7 +2,9 @@ package com.phonecando.runner.notify
 
 // One notification per agent at work under the service's (ServicePlan),
 // titled with its name, a tap landing on its Home: its chats, one line
-// each ("Fix the login · Working", ChatBoard), then its WorkLines line,
+// each ("Fix the login · Working", ChatBoard; a working chat says the
+// agent's own status line instead, "Fix the login · Reading the logs",
+// presence/), then its WorkLines line,
 // then its jobs being stopped ("Stopping npm run dev…") and "Starting"
 // while its engine starts. An agent being stopped says only "Stopping…".
 // Either stop runs a bar that only runs, so a stop that takes a few seconds
@@ -19,7 +21,7 @@ internal object AgentItems {
    * [names]: agent id → name; [work]: WorkLines of the agents kept up;
    * [starting]: the agents whose engines start; [stopping]: the agents a
    * Stop was asked of whose engines still run; [ending]: the jobs being
-   * stopped.
+   * stopped; [statuses]: agent id → its status line.
    */
   fun of(
     chats: List<ChatBoard.Chat>,
@@ -28,6 +30,7 @@ internal object AgentItems {
     starting: Collection<String> = emptyList(),
     stopping: Collection<String> = emptyList(),
     ending: List<EndingJob> = emptyList(),
+    statuses: Map<String, String> = emptyMap(),
   ): List<ServiceItem> {
     val agents = (chats.map { it.agentId } + work.map { it.agentId } + starting + stopping + ending.map { it.agentId }).distinct()
     return agents.map { id ->
@@ -37,7 +40,8 @@ internal object AgentItems {
       val own = chats.filter { it.agentId == id }
       val line = work.firstOrNull { it.agentId == id }
       val ends = ending.filter { it.agentId == id }
-      val lines = own.map { "${it.title ?: NEW_CHAT} · ${it.state.label}" } + listOfNotNull(line?.text) +
+      val status = statuses[id]
+      val lines = own.map { "${it.title ?: NEW_CHAT} · ${chatState(it, status)}" } + listOfNotNull(line?.text) +
         ends.map { "Stopping ${it.name}…" } + listOfNotNull(STARTING.takeIf { id in starting })
       val stops = line?.let { l -> l.jobs.map { ServiceItem.Stop("Stop ${it.name}", id, it) } + ServiceItem.Stop("Stop $name", id) }.orEmpty()
       ServiceItem(
@@ -58,6 +62,10 @@ internal object AgentItems {
     chatCounts(chats).ifEmpty { if (starting) STARTING_PUBLIC else AT_WORK }
 
   private fun key(agentId: String) = "agent:$agentId"
+
+  // A working chat says what the agent says it does now, when it said.
+  private fun chatState(chat: ChatBoard.Chat, status: String?): String =
+    if (chat.state == ChatBoard.State.WORKING && status != null) status else chat.state.label
 
   private const val NEW_CHAT = "New chat"
   private const val STARTING = "Starting"

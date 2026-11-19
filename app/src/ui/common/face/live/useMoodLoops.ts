@@ -16,7 +16,8 @@ const driftOf = (m: Mood) => (m === 'asleep' ? 'z' : m === 'sweaty' ? 'drop' : n
 
 /**
  * A live face's moods' own loops, on the UI thread: awake blinks, the "z"
- * or drop drifts, happy's hearts float up (the pupils' looking is
+ * or drop drifts, happy's hearts float up, thinking's dots pop in one by
+ * one (on the hearts' clock; the pupils' looking is
  * useLook's). A loop runs while its mood is on either side of a change,
  * so a mark keeps moving as it fades; a mark a change brings in starts as
  * the marks hand over. The lids are the change's while one plays
@@ -29,12 +30,12 @@ export function useMoodLoops(shift: Shift, quiet: boolean, { lid, drift, beat }:
   const resting = shift.change == null;
   const [blinkEvery] = useState(() => between(BLINK_EVERY_MS, Math.random()));
 
-  // At rest the lid is the mood's; awake blinks every few seconds.
+  // At rest the lid is the mood's; awake (and thinking) blinks every few seconds.
   useEffect(() => {
     if (!resting) return;
     cancelAnimation(lid);
     lid.value = LID[to];
-    if (quiet || to !== 'awake') return;
+    if (quiet || (to !== 'awake' && to !== 'thinking')) return;
     lid.value = blinking(blinkEvery);
     return () => cancelAnimation(lid);
   }, [to, resting, quiet, blinkEvery, lid]);
@@ -62,14 +63,15 @@ export function useMoodLoops(shift: Shift, quiet: boolean, { lid, drift, beat }:
     return () => cancelAnimation(drift);
   }, [drifting, quiet, drift]);
 
-  // Happy: one steady clock the hearts share, each a step behind the last.
-  // Still, one heart holds halfway up.
-  const hearty = from === 'happy' || to === 'happy';
+  // Happy: one steady clock the hearts share, each a step behind the last;
+  // thinking's dots keep the same beat. Still, one heart holds halfway up
+  // and every dot is in.
+  const beating = from === 'happy' || to === 'happy' || from === 'thinking' || to === 'thinking';
   useEffect(() => {
     cancelAnimation(beat);
     beat.value = quiet ? REST.beat : 0;
-    if (quiet || !hearty) return;
+    if (quiet || !beating) return;
     beat.value = withRepeat(withTiming(1, { duration: HEART_MS, easing: Easing.linear }), -1, false);
     return () => cancelAnimation(beat);
-  }, [hearty, quiet, beat]);
+  }, [beating, quiet, beat]);
 }

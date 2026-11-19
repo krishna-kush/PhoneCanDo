@@ -149,6 +149,38 @@ can wake it" (`wakeable`, on by default) for a kind that can be woken
 Pure parts in `ui/messages/logic/`, checked by
 `scripts/vectors/test_messages.js`.
 
+## Presence: status, thinking and the hand-over card
+
+The runner's presence frame (who drives the phone, the hand-over to you,
+each agent's status line; see `runner.md` and `bridge.md` → Hands) comes
+through `engine/presence/` (`native.ts` the calls and the
+`phonecandoPresence` event, `parse.ts` the checked shapes) into
+`state/presence.ts`, read at launch and on each change by `usePresence`
+(`ui/presence/`, mounted once in `App.tsx`). The same hook hands the
+overlay every agent's mascot in the poses it draws on the screen
+(`engine/presence/figures.ts`, from `mascot/`): all of them at each start,
+then again for an agent whose look changed or a new agent.
+
+- **Status:** an agent's `agents_status` line sits under its name on
+  Home's header and on its drawer row (`ui/presence/StatusLine.tsx`): one
+  amber mono line, cut short with an ellipsis, a mark for its mood first
+  (`>` working, `…` thinking, `‖` waiting), only while it has one.
+- **Thinking:** while its line's mood is thinking (and it runs), the
+  agent's face (`useAgentLook`) is the `thinking` mood: eyes rolled up to
+  a corner and slowly over to the other, a trail of square thought dots
+  popping up off its head (`ui/common/face/`).
+- **The hand-over card:** while you have the phone's controls, a card
+  under Home's header (`ui/presence/HandOverCard.tsx`) says so. Watch:
+  "<name> handed you the phone: <why>" (or "You have the controls" when you
+  took them) with Your turn; paused: "<name> is paused" with Leave it and
+  Start me again. Its buttons are the runner's `presenceAct`; the card goes
+  when the frame says the hand-over ended, from here, the overlay or the
+  notification.
+
+Pure parts: `engine/presence/parse.ts`, `figures.ts` and
+`ui/presence/copy.ts`, checked by `scripts/vectors/test_presence.js`; the
+face's thinking by `test_face_motion.js`.
+
 ## TUI home
 
 For a kind whose `home` is `tui` (its engine runs a program in a PTY the

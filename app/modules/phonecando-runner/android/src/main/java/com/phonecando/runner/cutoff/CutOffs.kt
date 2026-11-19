@@ -4,11 +4,9 @@ import android.content.Context
 import android.os.SystemClock
 import android.text.format.DateFormat
 import android.util.Log
-import com.phonecando.agents.kit.manifest.EngineStyle
 import com.phonecando.linux.jobs.JobTarget
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.agents.AgentStores
-import com.phonecando.runner.agents.KindCatalogs
 import com.phonecando.runner.checks.now.CheckNow
 import com.phonecando.runner.cutoff.BringRules.Plan
 import com.phonecando.runner.cutoff.CutOffLook.Offer
@@ -22,7 +20,6 @@ import com.phonecando.runner.engine.starts.LiveStartRoom
 import com.phonecando.runner.engine.starts.StartHolds
 import com.phonecando.runner.engine.tui.EngineTerminal
 import com.phonecando.runner.jobs.JobsAnchor
-import com.phonecando.runner.messages.delivery.KindInbox
 import com.phonecando.runner.notify.ChatBoard
 import com.phonecando.runner.schedule.Schedules
 import com.phonecando.runner.schedule.StateFile
@@ -349,16 +346,7 @@ class CutOffs private constructor(context: Context) {
 
   private fun newestMode(offer: Offer): EngineMode = offer.runs.maxByOrNull { it.seenAt }?.mode ?: EngineMode.TERMINAL
 
-  private fun kindOf(agent: AgentRecord): BringRules.Kind? {
-    val kind = KindCatalogs.get(app).get(agent.kind) ?: return null
-    return BringRules.Kind(
-      server = kind.style == EngineStyle.SERVER,
-      acp = kind.speaksAcp,
-      prompts = kind.promptsAtStart,
-      resumes = kind.manifest.engine?.resume != null,
-      wakesByServer = KindInbox.of(kind)?.wakesByServer == true,
-    )
-  }
+  private fun kindOf(agent: AgentRecord): BringRules.Kind? = BringKinds.of(app, agent)
 
   // Each scheduled run these runs began as stays failed, with when it was brought back.
   private fun linkScheduled(runs: List<CutOffRun>, now: Long) {

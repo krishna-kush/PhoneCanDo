@@ -1,9 +1,10 @@
-import { Text, XStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import type { KindView } from '../../../../agents/kit/ts/contract/view.ts';
 import type { Agent } from '../../engine/agents/records';
 import { agentKind } from '../../engine/agents/registry';
 import { useActiveAgent } from '../../state/agents';
 import { useAppStore } from '../../state/app';
+import { useAgentStatus } from '../../state/presence';
 import { walkDare } from '../../state/starter';
 import CardMenu, { type CardMenuItem } from '../common/CardMenu';
 import ChevronIcon from '../common/ChevronIcon';
@@ -17,6 +18,8 @@ import { useHomeInFront } from '../nav/homeInFront';
 import MenuHead from './MenuHead';
 import MemoryChip from '../memory/indicators/MemoryChip';
 import NewMessagesChip from '../messages/NewMessagesChip';
+import { statusLabel } from '../presence/copy';
+import StatusLine from '../presence/StatusLine';
 import ReadingChip from '../models/parts/ReadingChip';
 import { webGoHome } from './webNavigation';
 
@@ -31,7 +34,8 @@ import { webGoHome } from './webNavigation';
 // never changing the bar's height; so do new messages between agents since
 // the user last looked (NewMessagesChip, a tap opens Messages) and the RAM
 // warning's countdown while memory is short and the warning is closed
-// (MemoryChip).
+// (MemoryChip). While the agent has a status line (agents_status), it
+// sits under the name, one short line, the bar's height kept.
 export default function HomeHeader() {
   const t = useTheme();
   const agent = useActiveAgent();
@@ -42,6 +46,7 @@ export default function HomeHeader() {
   const openLinuxTerminal = useAppStore((s) => s.openLinuxTerminal);
   const kind = agent ? agentKind(agent.kind) : null;
   const nameSpot = useSpot('home.name');
+  const status = useAgentStatus(agent?.id);
 
   const menuItems: CardMenuItem[] =
     agent && kind
@@ -80,22 +85,31 @@ export default function HomeHeader() {
         opacity="press:0.7"
         onPress={() => setDrawerOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={agent ? `Agent ${agent.name}. Opens the menu: agents, models, settings` : 'Open the menu'}
+        accessibilityLabel={
+          agent
+            ? `Agent ${agent.name}${status ? `, ${statusLabel(status)}` : ''}. Opens the menu: agents, models, settings`
+            : 'Open the menu'
+        }
       >
         {agent ? <ChipFace agentId={agent.id} /> : <LogoMark size={13} />}
-        <Text
-          fontFamily="mono"
-          fontSize={17}
-          fontWeight="600"
-          letterSpacing={-0.3}
-          numberOfLines={1}
-          flexShrink={1}
-          minWidth={0}
-          ellipsizeMode="tail"
-        >
-          {agent?.name ?? 'PhoneCanDo'}
-        </Text>
-        <ChevronIcon dir="down" size={12} color={t.dim} />
+        <YStack flexShrink={1} minWidth={0}>
+          <XStack alignItems="center" gap={8} minWidth={0}>
+            <Text
+              fontFamily="mono"
+              fontSize={17}
+              fontWeight="600"
+              letterSpacing={-0.3}
+              numberOfLines={1}
+              flexShrink={1}
+              minWidth={0}
+              ellipsizeMode="tail"
+            >
+              {agent?.name ?? 'PhoneCanDo'}
+            </Text>
+            <ChevronIcon dir="down" size={12} color={t.dim} />
+          </XStack>
+          <StatusLine agentId={agent?.id} />
+        </YStack>
       </XStack>
 
       <ReadingChip agentId={agent?.id ?? null} />

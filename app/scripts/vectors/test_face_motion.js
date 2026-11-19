@@ -27,11 +27,13 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   const tm = await import(src('ui/common/face/change/timing.ts'));
   const pt = await import(src('ui/common/face/change/parts.ts'));
   const sh = await import(src('ui/common/face/change/shift.ts'));
+  const md = await import(src('ui/common/face/mood.ts'));
+  const MOODS = ['awake', 'busy', 'asleep', 'oops', 'sweaty', 'happy', 'thinking'];
 
   // --- at rest (a still face, or a live one paused) --------------------------------
   t('rest: no hop', r(m.liftStyle(m.REST.lift)), { transform: [{ translateY: 0 }] });
-  t('rest: eyes ahead', r(m.pupilStyle(m.LOOK.busy, 10)), { transform: [{ translateX: 0 }] });
-  t('rest: awake looks a little right, as the site does', r(m.pupilStyle(m.LOOK.awake, 10)), { transform: [{ translateX: 1.1 }] });
+  t('rest: eyes ahead', r(m.pupilStyle(m.LOOK.busy, 10)), { transform: [{ translateX: 0 }, { translateY: 0 }] });
+  t('rest: awake looks a little right, as the site does', r(m.pupilStyle(m.LOOK.awake, 10)), { transform: [{ translateX: 1.1 }, { translateY: 0 }] });
   t('rest: the "z" halfway, in full', r(m.zStyle(m.REST.drift, 10)), { opacity: 1, transform: [{ translateY: 0 }] });
   t('rest: the drop halfway, in full', r(m.dropStyle(m.REST.drift, 10)), { opacity: 1, transform: [{ translateY: 4 }, { rotate: '45deg' }] });
   t('rest: one heart halfway up', r(m.heartStyle(m.REST.beat, 0, 12)), { opacity: 1, transform: [{ translateY: -6 }] });
@@ -43,13 +45,25 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   t('a rhythm is picked inside its range', [m.between([100, 300], 0), m.between([100, 300], 0.5), m.between([100, 300], 1)], [100, 200, 300]);
   t('each face picks its own rhythm from a range', [m.BLINK_EVERY_MS[0] < m.BLINK_EVERY_MS[1], m.GLANCE.everyMs[0] < m.GLANCE.everyMs[1]], [true, true]);
 
+  // --- thinking: eyes up in a corner, a trail of thought dots ---------------------
+  t('thinking: eyes open, up and to the side', [m.LID.thinking, m.RAISE.thinking, m.LOOK.thinking > m.LOOK.awake, m.LOOK.thinking < m.PUPIL_REACH], [1, 1, true, true]);
+  t('no other mood looks up', Object.entries(m.RAISE).filter(([k, v]) => v !== 0).map(([k]) => k), ['thinking']);
+  t('a raised pupil goes up, to the eye\'s top', r(m.pupilStyle(m.LOOK.thinking, 10, 1, 20)), { transform: [{ translateX: 1.54 }, { translateY: -4.8 }] });
+  t('rest: every thought dot in, in full', [0, 1, 2].map((i) => r(m.dotStyle(m.REST.beat, i, 4))), [0, 1, 2].map(() => ({ opacity: 1, transform: [{ translateY: 0 }] })));
+  t('the dots pop in one after another', [0, 1, 2].map((i) => m.dotStyle(0.1, i, 4).opacity > 0), [true, false, false]);
+  t('a dot pops up from a little low', r(m.dotStyle(m.DOT_IN[1] + 0.03, 1, 4)), { opacity: 0.5, transform: [{ translateY: 2 }] });
+  t('the dots fade out together', [0, 1, 2].map((i) => r(m.dotStyle(0.9, i, 4).opacity)), [0.5, 0.5, 0.5]);
+  t('the loop ends with no dots', [0, 1, 2].map((i) => m.dotStyle(0.99, i, 4).opacity), [0, 0, 0]);
+  t('the dots come in before they go', m.DOT_IN.every((at) => at < m.DOTS_OUT[0]) && m.DOT_IN.every((at, i) => i === 0 || at > m.DOT_IN[i - 1]), true);
+  t('a ponder holds longer than it moves', m.PONDER.holdMs > m.PONDER.moveMs, true);
+
   // --- along the loops ------------------------------------------------------------
   t('the "z" fades in', r(m.zStyle(0.1, 10).opacity), 0.5);
   t('the "z" fades out', r(m.zStyle(0.9, 10).opacity), 0.5);
   t('the "z" starts low and ends high', [r(m.zStyle(0, 10)).transform[0].translateY, r(m.zStyle(1, 10)).transform[0].translateY], [4, -4]);
   t('the drop is gone at both ends', [m.dropStyle(0, 10).opacity, m.dropStyle(1, 10).opacity], [0, 0]);
-  t('pupils look a full gaze', r(m.pupilStyle(-1, 10)), { transform: [{ translateX: -2.2 }] });
-  t('a pupil stops at its reach, in its eye', [r(m.pupilStyle(2, 10)), r(m.pupilStyle(-2, 10))], [{ transform: [{ translateX: 2.42 }] }, { transform: [{ translateX: -2.42 }] }]);
+  t('pupils look a full gaze', r(m.pupilStyle(-1, 10)), { transform: [{ translateX: -2.2 }, { translateY: 0 }] });
+  t('a pupil stops at its reach, in its eye', [r(m.pupilStyle(2, 10)), r(m.pupilStyle(-2, 10))], [{ transform: [{ translateX: 2.42 }, { translateY: 0 }] }, { transform: [{ translateX: -2.42 }, { translateY: 0 }] }]);
   t('past its reach, the eyes turn the rest of the way', [r(m.eyeStyle(1, 2, 10)).transform[0], r(m.eyeStyle(1, -2, 10)).transform[0]], [{ translateX: 1.98 }, { translateX: -1.98 }]);
   t('within reach the eyes stay put (busy, sweaty, at rest)', [-1, 0, m.LOOK.awake, 1].map((g) => Math.abs(m.eyeStyle(1, g, 10).transform[0].translateX)), [0, 0, 0, 0]);
   t('a pupil and its eye add up to the whole glance', r(m.pupilStyle(2, 10).transform[0].translateX + m.eyeStyle(1, 2, 10).transform[0].translateX), 4.4);
@@ -106,14 +120,18 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   t('out of a smile or a nap into one: a blend', [of('happy', 'asleep', false).steps.length, of('asleep', 'happy', true).steps.length], [1, 1]);
   t('the same mood again: a blend', lids(of('asleep', 'asleep', true)), [m.LID.asleep]);
   t('a blend hands over as it starts', [tm.handOverAtMs(of('awake', 'sweaty', false)), of('awake', 'sweaty', false).handOverMs], [0, sp.BLEND_MS]);
-  t('every change ends on its new mood\'s lid', ['awake', 'busy', 'asleep', 'oops', 'sweaty', 'happy'].every((f) =>
-    ['awake', 'busy', 'asleep', 'oops', 'sweaty', 'happy'].every((to) => [false, true].every((b) => lids(of(f, to, b)).at(-1) === m.LID[to])),
+  t('every change ends on its new mood\'s lid', MOODS.every((f) =>
+    MOODS.every((to) => [false, true].every((b) => lids(of(f, to, b)).at(-1) === m.LID[to])),
   ), true);
 
   // --- the parts and their hand-over -------------------------------------------------
   t('every mood but happy has eyes; happy its smile', Object.entries(pt.PARTS).map(([k, p]) => [k, p.includes('eyes'), p.includes('smile')]), [
-    ['awake', true, false], ['busy', true, false], ['asleep', true, false], ['oops', true, false], ['sweaty', true, false], ['happy', false, true],
+    ['awake', true, false], ['busy', true, false], ['asleep', true, false], ['oops', true, false], ['sweaty', true, false], ['happy', false, true], ['thinking', true, false],
   ]);
+  t('only thinking has thought dots, and its pupils with them', Object.entries(pt.PARTS).filter(([, p]) => p.includes('dots')).map(([k, p]) => [k, p.includes('pupils')]), [['thinking', true]]);
+  t('awake to thinking: the dots come, the eyes and pupils stay', [pt.sidesOf('dots', 'awake', 'thinking'), pt.sidesOf('pupils', 'awake', 'thinking')], [[0, 1], [1, 1]]);
+  t('into and out of thinking: a blend; out of sleep: the slow wake', [lids(of('awake', 'thinking', false)), lids(of('thinking', 'awake', false)), lids(of('asleep', 'thinking', false))], [[1], [1], lids(W)]);
+  t('thinking dozes off like any open-eyed mood', of('thinking', 'asleep', false), D);
   t('asleep has no pupils, only its "z"', [pt.PARTS.asleep.includes('pupils'), pt.PARTS.asleep.includes('z')], [false, true]);
   t('both moods\' parts, once each, in one order', pt.unionOf(pt.PARTS.asleep, pt.PARTS.awake, pt.PARTS.awake), ['eyes', 'pupils', 'z']);
   t('sides: waking brings the pupils, takes the "z", keeps the eyes', [pt.sidesOf('pupils', 'asleep', 'awake'), pt.sidesOf('z', 'asleep', 'awake'), pt.sidesOf('eyes', 'asleep', 'awake')], [[0, 1], [1, 0], [1, 1]]);
@@ -144,6 +162,12 @@ const r = (style) => JSON.parse(JSON.stringify(style, (_, v) => (typeof v === 'n
   t('a reaction given plays instead of the jolt', [named.from, named.change === G], ['asleep', true]);
   t('done a beat after its own length', [sh.endsAfterMs(dozing), sh.endsAfterMs(up)], [1460 + sh.END_SLACK_MS, 0]);
   t('a page reading its state is not played', sh.SETTLE_MS, 300);
+
+  // --- an agent's mood from its engine and its status line ---------------------------
+  t('running and thinking: thinking', md.moodOf('ready', false, true), 'thinking');
+  t('thinking only while it runs', [md.moodOf('starting', false, true), md.moodOf('stopped', false, true), md.moodOf('failed', false, true)], ['busy', 'asleep', 'oops']);
+  t('installing beats thinking', md.moodOf('ready', true, true), 'busy');
+  t('no status: awake', md.moodOf('ready'), 'awake');
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

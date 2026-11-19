@@ -49,6 +49,9 @@ interface AgentsView {
 
   /** Who holds the screen and who waits for it; empty when no bridge is open or in builds without a driver. */
   fun screen(): ScreenLine = ScreenLine.NONE
+
+  /** The agent's own status line (agents_status) and its mood ("working", "thinking", "waiting"); null when it set none. */
+  fun status(agentId: String): Pair<String, String>? = null
 }
 
 /** What an agent is doing now, and its chat's title (the working one, else the latest); null when none is known. */

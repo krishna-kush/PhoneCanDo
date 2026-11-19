@@ -301,6 +301,19 @@ class MailboxTest {
     assertTrue(logged.deliveryTo("d")!!.woke)
   }
 
+  @Test fun aResumeWakesPastTheSwitchAndSpendsNoBudget() {
+    val off = agent("d", "Night", wakeable = false)
+    view.records.add(off)
+    courier.answers["d"] = Handover.WOKE
+    val noticed = box.notice("d", "The user is done.", wake = true, resume = true)!!
+    assertTrue(noticed.woke)
+    assertEquals(MessageRules.WAKES_PER_HOUR, box.policy.wakesLeft("d"))
+    assertFalse(box.wakes.startedByAgent("d"))
+    // Kept as a resume, so a new process spends no budget for it either.
+    assertEquals(MessageRules.WAKES_PER_HOUR, mailbox().policy.wakesLeft("d"))
+    assertTrue(mailbox().recent(1).single().resume)
+  }
+
   @Test fun aScheduledTaskThatMayNotWakeWaitsAsANotice() {
     view.set("b", AgentState.WORKING)
     val task = ScheduledNote("s1", ScheduledNote.BY_USER, newChat = false, timing = "once at 2026-11-14 09:00")

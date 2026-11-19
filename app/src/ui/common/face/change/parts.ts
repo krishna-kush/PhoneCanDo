@@ -3,11 +3,11 @@
 // Pure (zero RN imports); partWeight and weighted are worklets.
 import type { Mood } from '../mood';
 
-export type Part = 'eyes' | 'pupils' | 'smile' | 'z' | 'drop' | 'query' | 'hearts';
+export type Part = 'eyes' | 'pupils' | 'smile' | 'z' | 'drop' | 'query' | 'hearts' | 'dots';
 
-const ORDER: readonly Part[] = ['eyes', 'pupils', 'smile', 'z', 'drop', 'query', 'hearts'];
+const ORDER: readonly Part[] = ['eyes', 'pupils', 'smile', 'z', 'drop', 'query', 'hearts', 'dots'];
 
-/** Each mood's parts: open eyes with pupils, shut ones under a "z", a frown's "?", a sweat drop, a smile's brackets and its hearts. */
+/** Each mood's parts: open eyes with pupils, shut ones under a "z", a frown's "?", a sweat drop, a smile's brackets and its hearts, a thought's dots. */
 export const PARTS: Record<Mood, readonly Part[]> = {
   awake: ['eyes', 'pupils'],
   busy: ['eyes', 'pupils'],
@@ -15,6 +15,7 @@ export const PARTS: Record<Mood, readonly Part[]> = {
   oops: ['eyes', 'pupils', 'query'],
   sweaty: ['eyes', 'pupils', 'drop'],
   happy: ['smile', 'hearts'],
+  thinking: ['eyes', 'pupils', 'dots'],
 };
 
 /** Every part in [lists], once each, in one order. */

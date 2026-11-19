@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { PLAIN, type Look } from '../../../../../mascot/look.ts';
 import { PARTS } from './change/parts';
-import FaceDrawing, { type Moving, PixelHeart } from './FaceDrawing';
+import FaceDrawing, { type Moving, PixelHeart, ThoughtDot } from './FaceDrawing';
 import { faceLayout } from './layout';
 import type { Mood } from './mood';
-import { dropStyle, eyeStyle, heartStyle, LID, liftStyle, LOOK, pupilStyle, REST, zStyle } from './motion';
+import { dotStyle, dropStyle, eyeStyle, heartStyle, LID, liftStyle, LOOK, pupilStyle, RAISE, REST, zStyle } from './motion';
 
 type Props = {
   mood: Mood;
@@ -35,7 +35,7 @@ export default function StillFace({ mood, size = 24, mascot = PLAIN, stand = fal
       motion={{
         body: liftStyle(REST.lift),
         eye: eyeStyle(LID[mood], LOOK[mood], layout.eyeW),
-        pupil: pupilStyle(LOOK[mood], layout.eyeW),
+        pupil: pupilStyle(LOOK[mood], layout.eyeW, RAISE[mood], layout.eyeH),
         smile: null,
         z: zStyle(REST.drift, layout.mark),
         drop: dropStyle(REST.drift, layout.mark),
@@ -43,6 +43,7 @@ export default function StillFace({ mood, size = 24, mascot = PLAIN, stand = fal
       }}
       hearts={1}
       heart={(_, __, place) => <PixelHeart place={place} style={heartStyle(REST.beat, 0, layout.heartH)} view={STILL.View} />}
+      dot={(i, place, color) => <ThoughtDot place={place} color={color} style={dotStyle(REST.beat, i, place.size)} view={STILL.View} />}
     />
   );
 }

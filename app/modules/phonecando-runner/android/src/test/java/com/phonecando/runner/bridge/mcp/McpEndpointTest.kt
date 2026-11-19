@@ -124,8 +124,8 @@ class McpEndpointTest {
         assertTrue(it.getString("description").isNotEmpty())
       }.map { it.getString("name") }
     }
-    val basic = listOf("mobile_ping", "mobile_battery", "mobile_notify", "mobile_share", "mobile_open", "mobile_clipboard") +
-      listOf("agents_list", "agents_send", "agents_inbox", "agents_wait", "agents_keep_running") +
+    val basic = listOf("mobile_ping", "mobile_battery", "mobile_notify", "mobile_focus", "mobile_share", "mobile_open", "mobile_clipboard") +
+      listOf("agents_list", "agents_send", "agents_status", "agents_inbox", "agents_wait", "agents_keep_running") +
       listOf("schedule_add", "schedule_list", "schedule_cancel")
     assertEquals(basic, names(McpRig(full = false)))
     val full = names(rig)
@@ -157,7 +157,7 @@ class McpEndpointTest {
 
   @Test fun theLockedSwitchRefusesTheCallAsAToolError() {
     rig.lock.lock()
-    val (out, isError) = text(rig.post(call(1, "mobile_notify", JSONObject().put("text", "hi"))))
+    val (out, isError) = text(rig.post(call(1, "mobile_clipboard", JSONObject().put("action", "get"))))
     assertTrue(isError)
     assertEquals("error automation_off: phone control is locked; unlock it in PhoneCanDo settings", out)
     assertTrue(rig.handled.isEmpty())
@@ -193,7 +193,7 @@ class McpEndpointTest {
     assertEquals("You have 3 unread agent messages: call agents_inbox.", some.getJSONObject(1).getString("text"))
     // Refusals too; another caller's count is its own.
     rig.lock.lock()
-    val refused = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(3, "mobile_notify", JSONObject().put("text", "x"))))
+    val refused = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(3, "mobile_clipboard", JSONObject().put("action", "get"))))
     assertTrue(refused.getBoolean("isError"))
     assertEquals(2, refused.getJSONArray("content").length())
     assertEquals(1, result(endpoint.handle(rig.dir.records[1], "POST", emptyMap(), call(4, "mobile_ping"))).getJSONArray("content").length())

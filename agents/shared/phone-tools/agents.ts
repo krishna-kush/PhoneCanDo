@@ -14,7 +14,7 @@ export const agentTools: PhoneTool[] = [
   {
     name: "agents_list",
     description:
-      "List the AI agents on this phone, to see who is here, what each is doing and whom to message. scope is machine (default: the agents that share your machine and its files) or phone (every agent). Returns {you, scope, screen, agents}: you is your own name and kind; screen says which agent drives the phone's screen now (holder), who waits for it (waiting) and your place in that line (yourPlace, null when you are not in it); each agent has name, kind, machine (yours or other), machineMates, state (working, waiting, idle or stopped), chat (its chat's title), messages (how your messages reach it: wakes = into its turns, and wake: true can start one while it is idle; delivered = into its turns; inbox = only when it calls agents_inbox; none = it cannot read messages, so sending to it is refused), wakeable (the user lets other agents wake it, and start it when stopped) and canWake (wake: true would start its turn now if it is idle, or start it if it is stopped).",
+      "List the AI agents on this phone, to see who is here, what each is doing and whom to message. scope is machine (default: the agents that share your machine and its files) or phone (every agent). Returns {you, scope, screen, agents}: you is your own name and kind; screen says which agent drives the phone's screen now (holder), who waits for it (waiting) and your place in that line (yourPlace, null when you are not in it); each agent has name, kind, machine (yours or other), machineMates, state (working, waiting, idle or stopped), chat (its chat's title), status ({text, mood} it set with agents_status, or null), messages (how your messages reach it: wakes = into its turns, and wake: true can start one while it is idle; delivered = into its turns; inbox = only when it calls agents_inbox; none = it cannot read messages, so sending to it is refused), wakeable (the user lets other agents wake it, and start it when stopped) and canWake (wake: true would start its turn now if it is idle, or start it if it is stopped).",
     input: {
       type: "object",
       properties: {
@@ -50,6 +50,22 @@ export const agentTools: PhoneTool[] = [
     channel: "all",
     run: (args, signal) =>
       call("/agents/send", { to: args.to, text: args.text, replyTo: args.replyTo, wake: args.wake }, signal),
+  },
+  {
+    name: "agents_status",
+    description:
+      "Tell the user (and other agents) in a few words what you are doing now, such as \"Running the tests\" or \"Reading the build log\". Your mascot shows it on the phone, in PhoneCanDo and in its notification; agents_list shows it to other agents. While you drive the phone (mobile_* screen tools), always keep it set: say what you are about to do before each step (\"Opening Settings\", \"Looking for Wi-Fi\"), since the user watches your mascot say it as you go; otherwise update it as you move between steps, not on every tool call. mood is working (default), thinking or waiting. One line, at most 80 characters (longer is cut); an empty text clears it, and it clears by itself when your run ends. Returns {shown:true}.",
+    input: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "What you are doing now, a few words; empty to clear it" },
+        mood: { type: "string", enum: ["working", "thinking", "waiting"], description: "How it is going (default working)" },
+      },
+      required: ["text"],
+      additionalProperties: false,
+    },
+    channel: "all",
+    run: (args, signal) => call("/status", { text: args.text, mood: args.mood }, signal),
   },
   {
     name: "agents_inbox",

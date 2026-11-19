@@ -5,7 +5,7 @@ import type { Shift } from '../change/shift';
 import { BLEND_MS, lookAround, type LookStep } from '../change/specs';
 import { lookAtMs } from '../change/timing';
 import type { Mood } from '../mood';
-import { between, GLANCE, LOOK } from '../motion';
+import { between, GLANCE, LOOK, PONDER, RAISE } from '../motion';
 
 const ease = Easing.inOut(Easing.quad);
 
@@ -15,9 +15,15 @@ const looking = (steps: readonly LookStep[]) =>
 
 // A mood's own looking: awake glances to a side now and then (every
 // [every] ms), the next one the other way; busy looks left and right;
-// sweaty glances quickly, held; any other eases to where it rests them.
+// sweaty glances quickly, held; thinking ponders, its pupils up in one
+// corner, then slowly over to the other; any other eases to where it
+// rests them.
 function ownLook(to: Mood, every: number) {
   const settle = withTiming(LOOK[to], { duration: BLEND_MS, easing: ease });
+  if (to === 'thinking') {
+    const drift = (gaze: number) => withDelay(PONDER.holdMs, withTiming(gaze, { duration: PONDER.moveMs, easing: ease }));
+    return withSequence(settle, withRepeat(withSequence(drift(-LOOK.thinking), drift(LOOK.thinking)), -1, false));
+  }
   if (to === 'awake') {
     const move = (gaze: number) => withTiming(gaze, { duration: GLANCE.moveMs, easing: ease });
     const glance = (side: number) => withSequence(withDelay(every, move(side * GLANCE.to)), withDelay(GLANCE.holdMs, move(LOOK.awake)));
@@ -36,10 +42,11 @@ function ownLook(to: Mood, every: number) {
  * (ownLook), each face in its own glance rhythm. A change with a look of
  * its own (a tap waking it: who woke it?) plays that first, once the
  * pupils are in; a tap ([hop]) on a face already up looks around for who
- * tapped it the same way. Then its own looking carries on. At rest while
- * [quiet].
+ * tapped it the same way. Then its own looking carries on. How far up the
+ * pupils look ([raise]) eases to the mood's (thinking rolls them up). At
+ * rest while [quiet].
  */
-export function useLook(shift: Shift, quiet: boolean, hop: number, look: SharedValue<number>) {
+export function useLook(shift: Shift, quiet: boolean, hop: number, look: SharedValue<number>, raise: SharedValue<number>) {
   const { to } = shift;
   const [every] = useState(() => between(GLANCE.everyMs, Math.random()));
 
@@ -55,6 +62,11 @@ export function useLook(shift: Shift, quiet: boolean, hop: number, look: SharedV
     look.value = c?.look ? withSequence(withDelay(lookAtMs(c), looking(c.look)), own) : own;
     return () => cancelAnimation(look);
   }, [to, quiet, every, look]);
+
+  useEffect(() => {
+    cancelAnimation(raise);
+    raise.value = quiet ? RAISE[to] : withTiming(RAISE[to], { duration: BLEND_MS, easing: ease });
+  }, [to, quiet, raise]);
 
   // Runs only on a tap: one that woke it looks about in its change
   // already, and a face with no pupils (asleep, a smile) has none to look with.

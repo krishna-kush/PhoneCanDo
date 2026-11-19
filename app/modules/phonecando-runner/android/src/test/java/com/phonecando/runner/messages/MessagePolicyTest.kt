@@ -157,6 +157,19 @@ class MessagePolicyTest {
     assertFalse(MessagePolicy.answerWakes(asked.copy(from = Message.RUNNER, notice = true), from = "b", to = Message.RUNNER))
   }
 
+  @Test fun aResumeWakesAsAScheduledTaskDoes() {
+    val note = MessagePolicy.WakeCheck(
+      asked = true, broadcast = false, hop = 0, sentAt = now, wakeable = false,
+      kindCanWake = true, running = true, idle = true, wakesLeft = 0, resume = true,
+    )
+    assertNull(MessagePolicy.wakeRefusal(note.copy(hop = 5), now))
+    assertNull(MessagePolicy.wakeRefusal(note.copy(sentAt = now - 20 * 60_000), now))
+    assertNotNull(MessagePolicy.wakeRefusal(note.copy(resume = false), now))
+    // It still waits for the agent to be free.
+    assertNotNull(MessagePolicy.wakeRefusal(note.copy(idle = false), now))
+    assertNotNull(MessagePolicy.wakeRefusal(note.copy(kindCanWake = false), now))
+  }
+
   @Test fun aScheduledTaskWakesPastTheSwitchTheHopAndTheBudgetForHalfAnHour() {
     val task = MessagePolicy.WakeCheck(
       asked = true, broadcast = false, hop = 0, sentAt = now, wakeable = true,

@@ -37,7 +37,8 @@ import com.phonecando.runner.messages.start.StartRules
 // - A scheduled task's notice (ScheduledNote) is the user's or the agent's
 //   own, not another agent's: it wakes whatever the switch, the hop and the
 //   budget say, for 30 minutes; the kind must still wake, and the engine
-//   run and be idle, or be one that may start.
+//   run and be idle, or be one that may start. So does the note that sends
+//   an agent on after you had the phone (resume): it is yours.
 // The windows live in memory: a new app process starts them afresh (the
 // wake budget is seeded from the log). Pure: the clock is injected.
 class MessagePolicy(private val clock: () -> Long) {
@@ -134,9 +135,14 @@ class MessagePolicy(private val clock: () -> Long) {
     val wakesLeft: Int,
     /** A scheduled task's notice (ScheduledNote). */
     val scheduled: Boolean = false,
+    /** The note to go on after a hand-over to the user (presence/): wakes as a scheduled task does. */
+    val resume: Boolean = false,
     /** Not running: why a message may not start it now (start/StartRules, or it is starting); null when it may. */
     val startRefusal: String? = StartRules.NEVER,
-  )
+  ) {
+    /** The user's or the agent's own wake (a scheduled task, a resume), not another agent's. */
+    val own: Boolean get() = scheduled || resume
+  }
 
   companion object {
     /**
@@ -152,14 +158,14 @@ class MessagePolicy(private val clock: () -> Long) {
     fun wakeRefusal(c: WakeCheck, now: Long): String? = when {
       !c.asked -> "not asked"
       c.broadcast -> "a broadcast never wakes anyone"
-      !c.scheduled && c.hop >= NO_WAKE_HOP -> "a reply to a reply never wakes anyone"
-      now - c.sentAt > (if (c.scheduled) SCHEDULED_WAKE_TTL_MS else WAKE_TTL_MS) -> "asked too long ago"
-      !c.scheduled && !c.wakeable -> "the user switched off waking it"
+      !c.own && c.hop >= NO_WAKE_HOP -> "a reply to a reply never wakes anyone"
+      now - c.sentAt > (if (c.own) SCHEDULED_WAKE_TTL_MS else WAKE_TTL_MS) -> "asked too long ago"
+      !c.own && !c.wakeable -> "the user switched off waking it"
       !c.kindCanWake -> "its kind cannot be woken"
       !c.running && c.startRefusal != null -> c.startRefusal
       c.running && !c.hookWaiting -> "it can be woken only while the hook it leaves after a turn is waiting, and none is waiting now"
       c.running && !c.idle -> "it is busy"
-      !c.scheduled && c.wakesLeft <= 0 -> "it was woken $WAKES_PER_HOUR times this hour"
+      !c.own && c.wakesLeft <= 0 -> "it was woken $WAKES_PER_HOUR times this hour"
       else -> null
     }
   }

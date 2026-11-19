@@ -22,6 +22,7 @@ import com.phonecando.runner.api.messageFunctions
 import com.phonecando.runner.api.notifyFunctions
 import com.phonecando.runner.api.phoneControlFunctions
 import com.phonecando.runner.api.pickFunctions
+import com.phonecando.runner.api.presenceFunctions
 import com.phonecando.runner.api.runLimitFunctions
 import com.phonecando.runner.api.scheduleFunctions
 import com.phonecando.runner.api.shareFunctions
@@ -37,6 +38,7 @@ import com.phonecando.runner.memory.MemoryStatus
 import com.phonecando.runner.models.prompt.PromptReading
 import com.phonecando.runner.notify.AppForeground
 import com.phonecando.runner.notify.AppOnScreen
+import com.phonecando.runner.presence.PresenceEvents
 import com.phonecando.runner.prompts.OpenUrlPrompts
 import com.phonecando.runner.prompts.PermissionPrompts
 import com.phonecando.runner.schedule.ScheduleEvents
@@ -112,7 +114,7 @@ class PhoneCanDoRunnerModule : Module() {
     Events(
       "phonecandoLaunchTarget", "phonecandoBridgePrompt", "phonecandoEngineState", "phonecandoPromptReading", "phonecandoMemory",
       "phonecandoMessages", "phonecandoRunFinished", ScheduleEvents.NAME, AcpAppEvents.NAME, ChecksEvents.NAME,
-      UpdateEvents.NAME,
+      UpdateEvents.NAME, PresenceEvents.NAME,
     )
 
     OnCreate {
@@ -152,6 +154,7 @@ class PhoneCanDoRunnerModule : Module() {
         ScheduleEvents.listener = null
         ChecksEvents.sink = null
         UpdateEvents.sink = null
+        PresenceEvents.sink = null
       }
     }
     // The app comes on screen: the service drops its ready line.
@@ -197,6 +200,7 @@ class PhoneCanDoRunnerModule : Module() {
     scheduleFunctions { context() }
     updateFunctions({ context() }) { sendEvent(UpdateEvents.NAME, it) }
     pickFunctions { appContext.currentActivity }
+    presenceFunctions({ context() }) { sendEvent(PresenceEvents.NAME, it) }
 
     Function("getPrefix") {
       appFilesDir().absolutePath

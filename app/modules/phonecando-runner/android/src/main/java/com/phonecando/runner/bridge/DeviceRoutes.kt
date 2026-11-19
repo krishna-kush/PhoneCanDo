@@ -10,6 +10,7 @@ import android.os.Build
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.controllock.ControlLock
 import com.phonecando.runner.notify.AgentNotices
+import com.phonecando.runner.presence.NotifyRules
 import org.json.JSONObject
 
 // The routes that read or post without touching the screen: /ping, /battery,
@@ -19,6 +20,9 @@ class DeviceRoutes(
   private val channel: String,
   private val automation: () -> AutomationHost?,
   private val lock: ControlLock,
+  // mobile_notify's limits, and whether PhoneCanDo shows the agent's own chat now.
+  private val notifyRules: NotifyRules,
+  private val chatOnScreen: (agentId: String) -> Boolean,
 ) {
   private val notices = AgentNotices(context)
 
@@ -58,12 +62,19 @@ class DeviceRoutes(
   // the name beside the app name, or the name as the title when it gave
   // none. One per agent and title (AgentNotices tags it with the agent), so
   // a new status with the same title replaces the last and agents never
-  // replace each other's. A tap opens that agent's Home.
+  // replace each other's. A tap opens that agent's Home. Not while its own
+  // chat is on screen (posted false, with why), and within NotifyRules'
+  // limits (429 notify_too_often past them); the lock does not gate it.
   private fun notify(call: BridgeCall): Reply {
     val o = call.body
     val text = o.optString("text", "").takeIf { it.isNotBlank() }
       ?: return Reply.badRequest("bad_request", "text is required")
     val title = o.optString("title", "").takeIf { it.isNotBlank() }
+    when (val verdict = notifyRules.check(call.agent.id, chatOnScreen(call.agent.id))) {
+      is NotifyRules.Verdict.Skip -> return Reply.ok(JSONObject().put("posted", false).put("reason", verdict.reason))
+      is NotifyRules.Verdict.TooOften -> return Reply.notifyTooOften(verdict.retryAfterMs)
+      NotifyRules.Verdict.Post -> {}
+    }
     val shown = notices.post(
       AgentNotices.Notice(
         agentId = call.agent.id,
@@ -74,6 +85,7 @@ class DeviceRoutes(
       ),
     )
     // Advisory, not an error: a missing POST_NOTIFICATIONS grant posts nothing.
+    if (shown) notifyRules.posted(call.agent.id)
     return Reply.ok(JSONObject().put("posted", shown))
   }
 

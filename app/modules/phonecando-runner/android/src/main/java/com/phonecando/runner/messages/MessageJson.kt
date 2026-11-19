@@ -24,6 +24,7 @@ internal object MessageJson {
     .put("notice", m.notice)
     .put("deliveries", JSONArray(m.deliveries.map(::delivery)))
     .put("scheduled", m.scheduled?.let(::scheduled) ?: JSONObject.NULL)
+    .apply { if (m.resume) put("resume", true) }
 
   fun read(o: JSONObject): Message? {
     val id = o.optLong("id", 0L).takeIf { it > 0 } ?: return null
@@ -45,6 +46,7 @@ internal object MessageJson {
       notice = o.optBoolean("notice", false),
       deliveries = (0 until list.length()).mapNotNull { list.optJSONObject(it)?.let(::delivery) },
       scheduled = o.optJSONObject("scheduled")?.let(::scheduled),
+      resume = o.optBoolean("resume", false),
     )
   }
 

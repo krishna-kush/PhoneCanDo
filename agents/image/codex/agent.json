@@ -101,7 +101,9 @@
             "-c",
             "mcp_servers.phonecando.url=\"{{bridgeUrl}}/mcp\"",
             "-c",
-            "mcp_servers.phonecando.bearer_token_env_var=\"PHONECANDO_BRIDGE_TOKEN\""
+            "mcp_servers.phonecando.bearer_token_env_var=\"PHONECANDO_BRIDGE_TOKEN\"",
+            "-c",
+            "mcp_servers.phonecando.tool_timeout_sec=300"
           ]
         }
       ],

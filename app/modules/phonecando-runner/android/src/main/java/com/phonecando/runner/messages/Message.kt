@@ -7,7 +7,8 @@ package com.phonecando.runner.messages
 // (hop: 0 from a turn the user started, the cause's hop + 1 from a turn
 // another agent's message started), whether the sender asked to wake an
 // idle recipient (direct messages only) and, per recipient, how far it got
-// (Delivery). A notice may be a scheduled task (ScheduledNote). Pure.
+// (Delivery). A notice may be a scheduled task (ScheduledNote), or the note
+// that sends an agent on after you had the phone (resume). Pure.
 data class Message(
   /** The runner's sequence, increasing. */
   val id: Long,
@@ -34,7 +35,12 @@ data class Message(
   val deliveries: List<Delivery>,
   /** A scheduled task's notice (schedule/); null for every other message. */
   val scheduled: ScheduledNote? = null,
+  /** The note to go on after a hand-over to the user (presence/Resume). */
+  val resume: Boolean = false,
 ) {
+  /** A wake the user or the agent itself asked for (a scheduled task, a resume), not another agent's. */
+  val ownWake: Boolean get() = scheduled != null || resume
+
   /** The text as its recipient reads it: a scheduled task's with its label (ScheduledNote.line). */
   val readText: String get() = scheduled?.line(text) ?: text
 

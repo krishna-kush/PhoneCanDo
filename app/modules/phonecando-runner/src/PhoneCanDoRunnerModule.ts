@@ -111,6 +111,21 @@ type RunnerEvents = {
   phonecandoChecks(e: { agentId: string }): void;
   /** The self-update's download moved: a step, or its bytes (about four times a second). */
   phonecandoUpdateDownload(e: NativeUpdateDownload): void;
+  /** The presence changed: who drives, the hand-over to you, the agents' status lines. */
+  phonecandoPresence(e: NativePresence): void;
+};
+
+/** The runner's presence frame (presence/PresenceJs.kt): who drives, the hand-over to you, each agent's status line. */
+export type NativePresence = {
+  driver: { agentId: string; name: string } | null;
+  handOver: {
+    agentId: string;
+    agentName: string;
+    mode: 'watch' | 'paused';
+    by: 'user' | 'agent';
+    why: string | null;
+  } | null;
+  statuses: Record<string, { text: string; mood: 'working' | 'thinking' | 'waiting' }>;
 };
 
 declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
@@ -259,6 +274,13 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   getTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   consumeTelemetrySnapshot(): TelemetryNativeSnapshot | null;
   setTelemetryEnabled(enabled: boolean): void;
+  presenceSnapshot(): NativePresence;
+  /** A UserAct name (LET_ME, STOP, GIVE_BACK, START_AGAIN, LEAVE); false when it does not apply now. */
+  presenceAct(act: string): boolean;
+  /** The agent's mascot as figures for the overlay (memory only: push again at start and on every change of look). */
+  setMascotFigures(agentId: string, json: string): void;
+  /** The app's theme setting, for the mascot on the glass (full builds; system: the phone's). */
+  setGlassScheme(scheme: 'system' | 'light' | 'dark'): void;
 }
 
 const mod = requireNativeModule<PhoneCanDoRunnerModule>('PhoneCanDoRunner');

@@ -6,13 +6,14 @@ import { partWeight, sidesOf, weighted } from './change/parts';
 import type { Reaction } from './change/specs';
 import FaceDrawing, { type Moving } from './FaceDrawing';
 import { faceLayout } from './layout';
+import FloatingDot from './live/FloatingDot';
 import FloatingHeart from './live/FloatingHeart';
 import { useChangeMotion } from './live/useChangeMotion';
 import { useLook } from './live/useLook';
 import { useMoodChange } from './live/useMoodChange';
 import { useMoodLoops } from './live/useMoodLoops';
 import type { Mood } from './mood';
-import { dropStyle, eyeStyle, LID, liftStyle, LOOK, pupilStyle, zStyle } from './motion';
+import { dropStyle, eyeStyle, LID, liftStyle, LOOK, pupilStyle, RAISE, zStyle } from './motion';
 
 type Props = {
   mood: Mood;
@@ -41,8 +42,10 @@ const LIVE: Moving = { View: Animated.View, Text: Animated.Text };
 // awake it blinks and glances left and right now and then (a tap makes it
 // hop and look around for who tapped it), busy it looks about, asleep its eyes shut under a drifting "z", in trouble it squints
 // under a "?", sweaty (the phone short of memory) it glances about,
-// wide-eyed, while a drop runs down its brow, and happy its eyes close in a smile while a pixel heart floats up
-// (or a few, one after another). Every change of mood is played, never
+// wide-eyed, while a drop runs down its brow, happy its eyes close in a smile while a pixel heart floats up
+// (or a few, one after another), and thinking it rolls its eyes up to a
+// corner and over to the other while square thought dots pop up off its
+// head. Every change of mood is played, never
 // snapped (change/: it dozes off, comes to, jolts awake at a tap, or blends),
 // so a page only says the mood. Every motion is a Reanimated animation on
 // the UI thread (no JS per step, no re-render), and none runs while it is
@@ -54,6 +57,7 @@ export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, st
   const { from, to, at } = shift;
   const lid = useSharedValue<number>(LID[from]);
   const look = useSharedValue<number>(LOOK[from]);
+  const raise = useSharedValue<number>(RAISE[from]);
   const lift = useSharedValue(0);
   const drift = useSharedValue(0.5);
   const beat = useSharedValue(0);
@@ -61,11 +65,11 @@ export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, st
   const over = useSharedValue<number>(at);
 
   const layout = useMemo(() => faceLayout(mascot, size), [mascot, size]);
-  const { eyeW, mark, heartH } = layout;
+  const { eyeW, eyeH, mark, heartH } = layout;
 
   useChangeMotion(shift, size, quiet, { lid, lift, over });
   useMoodLoops(shift, quiet, { lid, drift, beat });
-  useLook(shift, quiet, hop, look);
+  useLook(shift, quiet, hop, look, raise);
 
   // A tap: a small hop with a landing bounce.
   useEffect(() => {
@@ -87,12 +91,16 @@ export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, st
   // A glance past a pupil's reach turns the eyes too (motion.ts's PUPIL_REACH).
   const eye = useAnimatedStyle(() => weighted(eyeStyle(lid.value, look.value, eyeW), partWeight(eyes, over.value, at)), [eyeW, eyes[0], eyes[1], at]);
   // Busy and sweaty, the pupils look as far as a gaze of 1 each way.
-  const pupil = useAnimatedStyle(() => weighted(pupilStyle(look.value, eyeW), partWeight(pupils, over.value, at)), [eyeW, pupils[0], pupils[1], at]);
+  const pupil = useAnimatedStyle(
+    () => weighted(pupilStyle(look.value, eyeW, raise.value, eyeH), partWeight(pupils, over.value, at)),
+    [eyeW, eyeH, pupils[0], pupils[1], at],
+  );
   const smile = useAnimatedStyle(() => weighted({}, partWeight(smiles, over.value, at)), [smiles[0], smiles[1], at]);
   const z = useAnimatedStyle(() => weighted(zStyle(drift.value, mark), partWeight(zs, over.value, at)), [mark, zs[0], zs[1], at]);
   const drop = useAnimatedStyle(() => weighted(dropStyle(drift.value, mark), partWeight(drops, over.value, at)), [mark, drops[0], drops[1], at]);
   const query = useAnimatedStyle(() => weighted({}, partWeight(queries, over.value, at)), [queries[0], queries[1], at]);
   const heartSides = sidesOf('hearts', from, to);
+  const dotSides = sidesOf('dots', from, to);
 
   return (
     <FaceDrawing
@@ -104,6 +112,7 @@ export default function AgentFace({ mood, size = 24, mascot = PLAIN, hop = 0, st
       heart={(i, count, place) => (
         <FloatingHeart beat={beat} phase={i / count} place={place} h={heartH} sides={heartSides} over={over} at={at} />
       )}
+      dot={(i, place, color) => <FloatingDot beat={beat} i={i} place={place} color={color} sides={dotSides} over={over} at={at} />}
     />
   );
 }

@@ -8,10 +8,16 @@
  * shuts them in its smile (drawn as brackets), so its lids only show as a
  * face changes to or from it: they squint shut into the smile.
  */
-export const LID = { awake: 1, busy: 1, asleep: 0.15, oops: 0.45, sweaty: 1, happy: 0.15 } as const;
+export const LID = { awake: 1, busy: 1, asleep: 0.15, oops: 0.45, sweaty: 1, happy: 0.15, thinking: 1 } as const;
 
-/** Where the pupils rest for each mood, as a gaze (-1 to 1, as pupilStyle takes it): awake a little to the right, as the site's do. */
-export const LOOK = { awake: 0.5, busy: 0, asleep: 0, oops: 0, sweaty: 0, happy: 0 } as const;
+/** Where the pupils rest for each mood, as a gaze (-1 to 1, as pupilStyle takes it): awake a little to the right, as the site's do; thinking further, up in the corner. */
+export const LOOK = { awake: 0.5, busy: 0, asleep: 0, oops: 0, sweaty: 0, happy: 0, thinking: 0.7 } as const;
+
+/** How far up the pupils look for each mood (0 level, 1 as high as they go): thinking rolls them up, mulling it over. */
+export const RAISE = { awake: 0, busy: 0, asleep: 0, oops: 0, sweaty: 0, happy: 0, thinking: 1 } as const;
+
+/** Thinking's pondering: its pupils hold up in one corner `holdMs`, then drift over `moveMs` to the other. */
+export const PONDER = { moveMs: 520, holdMs: 1700 } as const;
 
 /** A while [r] (0 to 1) of the way from [lo] to [hi] ms: each face picks its own rhythm in a range. */
 export function between([lo, hi]: readonly [number, number], r: number): number {
@@ -36,6 +42,9 @@ export const PUPIL_REACH = 1.1;
 /** How far a gaze of 1 moves a pupil, in eye widths. */
 const GAZE_W = 0.22;
 
+/** How far a raise of 1 lifts a pupil, in eye heights: to the eye's top, never past it. */
+const GAZE_UP = 0.24;
+
 // [look] held to the pupil's reach.
 function reached(look: number): number {
   'worklet';
@@ -50,13 +59,17 @@ export const HEART_RISE = 0.78;
 /** Each heart's sideways place, in heart widths from the first (up to three). */
 export const HEART_SHIFT = [0, -0.75, -0.35];
 
+/** Thinking's thought dots, small to big off the head: when each comes in along the beat (the hearts' clock), and when they all go. */
+export const DOT_IN = [0.05, 0.17, 0.29] as const;
+export const DOTS_OUT = [0.84, 0.96] as const;
+
 /** Asleep's "z": one float up, and the wait before the next. */
 export const Z_FLOAT_MS = 1800;
 export const Z_WAIT_MS = 500;
 /** How far along its float the "z" is first seen in full: a change into asleep starts it there, never from unseen. */
 export const Z_SHOWN = 0.2;
 
-/** Where each loop rests on a face that does not move: no hop, the "z" or drop halfway, one heart halfway up (the pupils rest at LOOK). */
+/** Where each loop rests on a face that does not move: no hop, the "z" or drop halfway, one heart halfway up, every thought dot in (the pupils rest at LOOK and RAISE). */
 export const REST = { lift: 0, drift: 0.5, beat: HEART_RISE / 2 } as const;
 
 // [x] along the points [from], mapped onto [to] in straight lines between
@@ -82,10 +95,10 @@ export function eyeStyle(lid: number, look: number, eyeW: number) {
   return { transform: [{ translateX: (look - reached(look)) * eyeW * GAZE_W }, { scaleY: lid }] };
 }
 
-/** The pupils looking [look] of the way to a side (-1 to 1, held to their reach) in an eye [eyeW] wide. */
-export function pupilStyle(look: number, eyeW: number) {
+/** The pupils looking [look] of the way to a side (-1 to 1, held to their reach) in an eye [eyeW] wide, and [raise] of the way up an eye [eyeH] tall. */
+export function pupilStyle(look: number, eyeW: number, raise = 0, eyeH = 0) {
   'worklet';
-  return { transform: [{ translateX: reached(look) * eyeW * GAZE_W }] };
+  return { transform: [{ translateX: reached(look) * eyeW * GAZE_W }, { translateY: -raise * eyeH * GAZE_UP }] };
 }
 
 /** Asleep: the "z" [drift] of the way up its float, fading in and out. */
@@ -116,4 +129,15 @@ export function heartStyle(beat: number, phase: number, h: number) {
     opacity: p >= HEART_RISE ? 0 : along(life, [0, 0.25, 0.8, 1], [0, 1, 1, 0]),
     transform: [{ translateY: along(eased, [0, 1], [h * 0.4, -h * 0.8]) }],
   };
+}
+
+/** Thinking: thought dot [i] at [beat] of the shared loop, popping in one after another, a little bob as it lands, then all fading together. */
+export function dotStyle(beat: number, i: number, cell: number) {
+  'worklet';
+  const p = beat % 1;
+  const at = DOT_IN[Math.max(0, Math.min(DOT_IN.length - 1, i))];
+  if (p < at || p >= DOTS_OUT[1]) return { opacity: 0, transform: [{ translateY: 0 }] };
+  if (p >= DOTS_OUT[0]) return { opacity: along(p, [DOTS_OUT[0], DOTS_OUT[1]], [1, 0]), transform: [{ translateY: 0 }] };
+  const pop = Math.min(1, (p - at) / 0.06);
+  return { opacity: pop, transform: [{ translateY: (1 - pop) * cell }] };
 }

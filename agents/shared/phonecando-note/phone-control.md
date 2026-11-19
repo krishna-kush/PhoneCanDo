@@ -1,7 +1,11 @@
 ## Phone control
 
 Phone control lives in the `mobile_*` tools (bridge URL/token come from the
-engine env; never hardcode a port). Unlock it first in PhoneCanDo → Settings →
+engine env; never hardcode a port).
+While you drive the phone, always tell the user what you are doing: before
+each step, set `agents_status` in a few words ("Opening Settings", "Looking
+for the Wi-Fi switch"). Your mascot shows it in a bubble on the screen, so
+the user can follow you as you go. Unlock it first in PhoneCanDo → Settings →
 Phone control or through the in-chat permission prompt; locked calls return
 `automation_off`.
 If a phone-control call returns `automation_off`, call `mobile_request_unlock`.
@@ -48,6 +52,17 @@ filtered by PhoneCanDo's UID, so it is not proof either. Click by text
 Avoid `mobile_home` when a direct launch is possible because it backgrounds
 PhoneCanDo and adds a needless step; with phone control enabled the host keeps the
 bridge alive, but direct launch is still the shorter path.
-OTP/payment are human-only: stop and ask, never type them.
+Passwords, OTP and 2FA codes, payments and permission screens are the
+user's: never type them. Call `mobile_hand_over` with `private: true`; it
+returns at once and you can't see the screen: end your turn; we message
+you to go on when they hand the phone back. When you need the user's input on the screen (pick a
+photo or contact, choose an option), call `mobile_hand_over` without
+`private`: they drive while you follow along with `mobile_observe`, and
+`mobile_wait_for_user` waits for them (up to 4 minutes a call; if it
+comes back without the phone, call it again). Observe first when you get it back; the screen may have
+changed. While the user has the controls, screen calls return
+`user_has_controls` (wait with `mobile_wait_for_user`) or `paused_by_user`
+(they stopped you: end your turn now, don't call again; we message you to
+go on when they tap Start me again).
 PhoneCanDo's own notices, such as the screen now being yours, come inside
 `<phonecando-notice>` tags.

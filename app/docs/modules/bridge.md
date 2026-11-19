@@ -19,16 +19,18 @@ loopback-only, runs in the app process beside the engines
 - `BridgeRouter.kt` decides the rest, in this order: route lookup (404
   `not_found`), flavor (full-only routes answer 404 in lite/play), the
   phone-control switch (403 `automation_off`), the accessibility service
-  (503 `automation_unavailable`), the JSON body (400), the screen lease (409
-  `control_busy`, `screen_refused` or `control_taken_back`, full builds
-  only), then the handler.
+  (503 `automation_unavailable`), the hands (409 `user_has_controls` or
+  `paused_by_user` while you have the phone's controls, full builds only;
+  Hands below), the JSON body (400), the screen lease (409 `control_busy`
+  or `screen_refused`, full builds only), then the handler.
   A refused request never takes the lease, though it may wait in line
   (Screen lease below). `Routes.kt` lists every route with its guards.
 - Endpoints: `ping/battery/notify/share/open/clipboard/app/unlock/accessibility`
   plus the automation `/pce/*` routes, the agents' messages
   `/agents/list|send|inbox|wait` (Agent messages below), `/keep` (an
   agent's ask to stay up, below), `/schedule/add|list|cancel` (an agent's
-  tasks for itself, Schedules below), and `/mcp`, the
+  tasks for itself, Schedules below), `/hands/over|wait`, `/status` and
+  `/focus` (the agent's presence, Hands below), and `/mcp`, the
   same tools over MCP (below). Bodies over 256 KB return 413. A body is
   its Content-Length bytes read as UTF-8, whatever the Content-Type says
   (`RequestBody`: NanoHTTPD's own `parseBody` takes a body with no charset
@@ -46,7 +48,15 @@ loopback-only, runs in the app process beside the engines
   title when it gave none. It is tagged with the agent, one per agent and
   title (a new status with the same title replaces the last; agents never
   replace each other's), and a tap opens that agent's Home. `posted` is
-  false when Android shows no notifications for the app.
+  false when Android shows no notifications for the app. It is on every
+  channel and not gated by the phone-control lock: an agent reaching you is
+  not phone control. Instead it has its own limits (`presence/NotifyRules`):
+  while PhoneCanDo shows that agent's chat (`AppOnScreen` and the chat Home
+  shows, `EngineSupervisor.openAgent`) it posts nothing and answers
+  `{posted: false, reason}` (say it in the chat instead); otherwise one a
+  minute and five an hour per agent, past which it is 429
+  `notify_too_often` with `retryAfterMs`. Only posts count; each post
+  alerts.
 - `/app` is ungated on purpose: it only brings PhoneCanDo back, on an
   optional `home|env|settings` tab with the calling agent active. In front,
   the switch goes to JS at once (the `phonecandoLaunchTarget` event); behind,
@@ -103,11 +113,12 @@ Several agents can run at once, but one drives the screen at a time
 (`ScreenLease.kt`, full builds only). The PCE keeps one current snapshot per
 phone, so another agent's observe would invalidate the first one's snapshot
 ids, and a long act holds the PCE lane. The first agent to call a screen
-route (`/pce/observe`, `/pce/act`, `/pce/pack`, `/open`, `/share`, `/app`)
-holds the screen until it has been idle for 30 s, counted from the end of
+route (`/pce/observe`, `/pce/act`, `/pce/pack`, `/open`, `/share`, `/app`,
+`/hands/over`) holds the screen until it has been idle for 30 s, counted from the end of
 its last screen request; its own requests always pass, so observe then act
 cannot be split by another agent. `/ping`, `/battery`, `/notify`,
-`/clipboard`, `/pce/describe` and the prompts are not screen routes. Lite
+`/clipboard`, `/pce/describe`, `/hands/wait`, `/status`, `/focus` and the
+prompts are not screen routes. Lite
 and play have no driver, so they take no lease.
 
 The others wait in line, first come first served. A screen request from
@@ -155,37 +166,145 @@ reservation, or a lease that began with one. A hand-over is never a
 phone-control unlock: `ControlLock.unlockedFor` still applies, so in ask
 mode the user's yes is still needed.
 
+## Hands
+
+Who has the phone's controls (`runner/presence/`, full builds only): the
+agent driving (the lease above), or you after a hand-over. One hand-over at
+a time per phone, of two kinds: **watch** (you drive; the agent still sees
+the screen and keeps running) and **paused** (you drive; the agent can't
+see, its run is stopped, and it goes on when you tap Start me again).
+`Presence` is the one entry point and store (`PresenceStore`, pure
+`HandsRules`); the glass, the app (`presenceAct`) and a notification call
+`Presence.user(act)`.
+
+- **Starting.** Your **Let me** (watch) or **Stop** (paused) works while an
+  agent drives or holds the screen, and the hand-over is for that agent;
+  Stop also turns a watch paused. An agent's `/hands/over {why, private?}`
+  (`mobile_hand_over`; `why` 1–120 characters) is a screen route: it must
+  hold the screen or find it free and be unlocked (else the usual
+  `control_busy` or `screen_refused`). Watch blocks up to 4 minutes and
+  answers `{mode: "watch", back}`; private (paused) answers at once
+  `{mode: "private", back: false, message}`. `/hands/wait {timeoutSec?}`
+  (`mobile_wait_for_user`, no arguments for agents; 1–240 s, default 240)
+  blocks while you have the controls in watch (Let me: a pause) and
+  answers `{back: true}` once you hand back, or at once when no hand-over
+  is the caller's; its time run out, `back: false` with a `message` to
+  call it again (one call per 4 minutes, the same turn). Stopped (Stop,
+  at once, and a Stop ends a running wait) it answers `mode: "private"`
+  with a `message` to end the turn: Stop really stops. The
+  4 minutes sit under the MCP clients' tool timeouts (Codex's
+  `tool_timeout_sec` and Claude Code's `MCP_TOOL_TIMEOUT` are raised to 5
+  in their manifests). Both are full only and gated; a wait blocks on the
+  request's own thread.
+- **While it is on.** The agent's time on the screen stands still
+  (`ScreenLease.promptOpened`, as for its unlock dialog) and nobody else is
+  handed the screen. The router's `HandsGate`, after the lock and service
+  checks and before the lease, turns screen routes away: for the agent the
+  hand-over is for, watch lets `/pce/observe` through (with no lease claim)
+  and answers anything else 409 `user_has_controls`; paused answers every
+  screen route 409 `paused_by_user`, which tells it to end its turn; a
+  screen call after the first in the same Stop means it did not stop, and
+  its turn is stopped where its kind can (`PresenceStore.pausedCall`: an
+  ACP turn is cancelled). Every other
+  agent gets 409 `user_has_controls`; an agent's `/hands/over` while one is
+  on gets it too. A run that ends meanwhile changes nothing: the screen
+  stays with it (`Bridge.runEnded` holds back the lease's `runEnded`).
+- **Ending.** **Your turn** (watch, `GIVE_BACK`): a waiting `/hands/over`
+  or `/hands/wait` returns `back: true`; otherwise the resume note goes to
+  the agent. **Start me again** (paused): the resume note, which sends it
+  on in the same chat. **Go to app** (paused)
+  opens the agent's chat in PhoneCanDo and changes nothing. **Leave**
+  (paused): it stays stopped with no note; the screen goes back if its run
+  ended, and its next run drives as normal. Its engine gone (`forget`) ends
+  the hand-over with no note. The time starts over at the end
+  (`promptClosed(keep = true)`).
+- **The resume note** (`HandsText`, `Resume`): a running engine gets it as
+  a runner notice that wakes it past its wake switch, budget and hop, like
+  a scheduled task; a stopped one is brought back as a run cut off is
+  (`cutoff/BringRules`, in the chat it was in), or reads it when it next
+  runs.
+
+`/status {text, mood?}` (`agents_status`, every channel) sets the agent's
+status line: one line, control characters out, at most 80 characters with
+"…"; an empty text clears it; the same line again within 1 s is ignored;
+it clears at run end, when its engine goes and after 15 minutes stale
+(`StatusRules`). It answers `{shown: true}`. `agents_list` shows it per
+agent (`status`), and the agent's notification shows it in place of a
+working chat's "Working". `/focus {}` (`mobile_focus`, every channel)
+answers `{app: "front"|"back", onScreen: "your_chat"|"other_agent"|"app"|null,
+phone: "unlocked"|"locked"|"off"}`.
+
 ### Driving overlay
 
 While an agent drives (`ScreenLease.driver()`: the holder while
-`inUse()`), you see it over every app: the screen's edge lit and a pill
-with A-01's face, the agent's name, "is driving your phone" and **Take
-back** (`uiauto/overlay/`, full only). Both are accessibility overlay
-windows of our service, so no draw-over permission is needed and Android
-lets touches through them to the app below. The edge never takes a touch.
-`DriverWatch` tells the overlay (`ScreenIndicator.current`, which the
-service sets) when the driver changes: at once on a granted screen
-request, otherwise on `ScreenTicker`'s second, so it fades about 30 s after
-the agent's last screen request, or as its run ends. The colours are
-`theme/tokens.json`'s, generated into resources by `theme.gradle`.
+`inUse()`) or has handed the phone to you, its own mascot lives on the
+screen's walls over every app, the glass (`uiauto/overlay/`, full only;
+`GlassOverlay` is `Presence.view`, which the accessibility service sets,
+and Presence tells it each change of the frame). It draws natively from
+the figures the app pushes for each agent (`MascotFigures`, laid out by
+`mascot/`; plain A-01 until they come, `glass/figure/PlainFigures`), and
+moves the pupils, the lids (blinks) and the squash itself. Where it sticks
+and how it moves are pure (`presence/glass/`, JVM-tested): side on against
+a side wall facing into the screen, hanging from the top edge or standing
+on the bottom one. It peeks in from outside the phone, leaning round its
+side wall's edge with only its eye showing, looks about, sees you and
+ducks out, peeks again more warily, then hops in onto the wall
+(`glass/walls/Entrance`, `Peek`; a pose may carry its own facing, eyes,
+gaze and blink, `motion/Glance`); when nobody drives and nothing is
+handed over it backs out the same way, with a last look (`Exit`).
 
-The agent never meets the overlay (`uiauto/GuardedBackend.kt`, around the
-PCE's backend). A screenshot is taken with both windows see-through. A
-tap, long press or swipe lands with the pill letting touches through,
-because the backend taps even a node by a touch at its centre first, and a
-touch goes to whatever window is on top. Each waits for a drawn frame
-first. Our overlay windows are dropped from a snapshot's window list.
-Typing, keys, scrolls and launches never touch the screen.
+- **Driving:** the edge glows red and breathes; the mascot says its status
+  (`agents_status`) in a bubble in the card's look (`BubblePainter`: a
+  square speech box, red edge, hard amber shadow, blocky tail), typed out
+  in Geist Mono behind a blinking red cursor, popping as the words change,
+  with three hopping amber blocks for the `thinking` mood. What it says to
+  you after a button or your touch is a red bubble. It looks at each touch of the agent's and slides along its wall to
+  stay level with it, never over it (`Dodge`). Tap it for **Let me** and
+  **Stop** (`UserAct.LET_ME`, `STOP`).
+- **Watching (WATCH):** it turns face on, the glow goes amber, and its sign
+  says the agent's why (or "Your turn") with **Done** (`GIVE_BACK`).
+- **Paused (PAUSED):** it turns its back, the glow goes off, "Not looking".
+  After **I'm done** (the glass's own step) it slides to a bottom corner and
+  sleeps with z's: **Start me again** (`START_AGAIN`), **Go to app** (opens
+  its chat in PhoneCanDo, the pause kept) or a small **Leave it**
+  (`LEAVE`). A tap on it folds a sign away or brings it back.
+- You can drag it and throw it: it lands on the wall the throw heads for.
+- **You touch the screen yourself** while it drives: that is **Let me**
+  ("All yours, I'll watch"). A one-pixel watch window hears of every touch
+  elsewhere (`TouchWatch`, `FLAG_WATCH_OUTSIDE_TOUCH`); the agent's own
+  touches never count (the watch hears nothing while the glass lets them
+  through, nor for 600 ms after), nor yours on the mascot or its card.
 
-**Take back** (`Bridge.takeBack` → `ScreenLease.takeBack`) ends the
-holder's lease, its reservation and its place in line at once, and the line
-moves on. Its screen requests, `/unlock` included, then get 409
-`control_taken_back` ("the user took the phone back; don't use the screen
-again this run…") until its run ends (`runEnded`) or its engine is gone
-(`forget`). An ask-mode unlock ends with it. A request already running
-finishes on its own. The pill says "Phone is yours" for a moment, then
-goes. TEMP: a long press on the pill switches between the looks being tried
-(`OverlayLook`).
+Its buttons call `Presence.user` off the main thread. It has three
+accessibility overlay windows of our service, so no draw-over permission
+is needed and Android lets touches through them to the app below: a
+full-screen stage that never takes a touch (the mascot, glow, bubble), a
+see-through grip over the mascot where it rests (14 dp wider all round
+and at least 72 dp, so a tap near it never lands on the page), and the
+card beside it: the app's look (`CardView`), a square speech box with a
+red edge and a hard amber shadow whose tail points at the mascot
+(`CardBack`), an amber kicker with a live light, and its buttons as the
+app's keys (`KeyButton`: mono uppercase, the shadow they sink into when
+pressed). It pops out of the mascot's side as it shows. Its mono face is
+the app's Geist Mono, copied in as font resources by `theme.gradle`. The colours are `theme/tokens.json`'s, generated into resources by
+`theme.gradle`; the mascot's dark ink (`theme_darkBg`) is the dark
+theme's bg in both themes. Light or dark is the app's own theme setting
+(System, Light or Dark: JS pushes it, `setGlassScheme`; `GlassScheme`
+keeps it in prefs and themes the context the glass reads its colours
+from), the phone's on System or until the app has said. A change
+recolours the glass at once, the app's (`GlassScheme.listener`) or the
+phone's (the service's `onConfigurationChanged`): `Palette.load`, the
+card's words and keys again (`CardView.recolor`), the rest as it draws.
+
+The agent never meets the glass (`uiauto/GuardedBackend.kt`, around the
+PCE's backend). A screenshot is taken with every window see-through. A
+tap, long press or swipe tells the glass where it lands first (its point,
+a node's centre from the last snapshot, or a swipe's ends), so the mascot
+can look and move away, then lands with the grip and card letting touches
+through, because the backend taps even a node by a touch at its centre
+first, and a touch goes to whatever window is on top. Each waits for a
+drawn frame first. Our overlay windows are dropped from a snapshot's
+window list. Typing, keys, scrolls and launches never touch the screen.
 
 ## Agent messages
 
@@ -196,7 +315,7 @@ screen routes; the caller is the bearer's agent:
 
 | Route | Body | `data` |
 | --- | --- | --- |
-| `/agents/list` | `{scope?: "machine"\|"phone"}` | `{you:{name, id, kind, machine}, scope, screen:{holder, reserved, waiting:[name], yourPlace}, agents:[{name, id, kind, machine:"yours"\|"other", machineMates, state:"working"\|"waiting"\|"idle"\|"stopped", chat, wakeable, canWake}]}` |
+| `/agents/list` | `{scope?: "machine"\|"phone"}` | `{you:{name, id, kind, machine}, scope, screen:{holder, reserved, waiting:[name], yourPlace}, agents:[{name, id, kind, machine:"yours"\|"other", machineMates, state:"working"\|"waiting"\|"idle"\|"stopped", chat, status:{text, mood}\|null, wakeable, canWake}]}` |
 | `/agents/send` | `{to, text, replyTo?, wake?}` | `{id, results:[{to, status:"delivered"\|"queued"\|"woken"\|"refused", reason?}]}` |
 | `/agents/inbox` | `{limit?}` (default 20, at most 50) | `{messages:[{id, from, kind, machine, sentAt, replyTo, text, notice}], more, note?}`, now read |
 | `/agents/wait` | `{from?, timeoutSec?}` (at most 30) | the first new message as inbox, or `{timeout: true}` |
@@ -276,17 +395,20 @@ The tools are kind-neutral: `agents/shared/phone-tools/`
 holds their names, descriptions, schemas and the bridge client
 (`client.ts`), and is packaged inside each kind's config. opencode registers
 them through thin plugin adapters: `plugins/mobile/index.ts` registers the
-six basic tools every channel gets
-(`mobile_ping/battery/notify/share/open/clipboard`); `plugins/automation/index.ts`,
+seven basic tools every channel gets
+(`mobile_ping/battery/notify/focus/share/open/clipboard`); `plugins/automation/index.ts`,
 shipped only in full, registers phone control (`phone-tools/control/`),
-`mobile_return` (`/app`), `mobile_request_unlock` (`/unlock`) and
-`mobile_open_accessibility` (`/accessibility`). Both go through
+`mobile_return` (`/app`), `mobile_request_unlock` (`/unlock`),
+`mobile_open_accessibility` (`/accessibility`), `mobile_hand_over`
+(`/hands/over`) and `mobile_wait_for_user` (`/hands/wait`). Both go through
 `plugins/mobile/opencode.ts` (`Plugin.define` + `ctx.tool.transform`).
 The agent messages' tools, `agents_list`, `agents_send`, `agents_inbox` and
-`agents_wait` (`agents.ts`, one route each), `agents_keep_running`
+`agents_wait` (`agents.ts`, one route each), `agents_status` (`/status`),
+`agents_keep_running`
 (`keep.ts`, `/keep`) and `schedule_add`, `schedule_list` and
 `schedule_cancel` (`schedule.ts`, `/schedule/*`) are on every channel.
-The client uses a 15 s timeout by default, 50 s for unlock and 255 s for
+The client uses a 15 s timeout by default, 40 s for the 30 s waits
+(`agents_wait`, `mobile_hand_over`, `mobile_wait_for_user`), 50 s for unlock and 255 s for
 accessibility, whose bridge wait is 240 s, and degrades to a message when
 the bridge is absent. `mobile_act` derives its timeout from the call, so a
 long wait ends in the bridge's own result rather than a client timeout:

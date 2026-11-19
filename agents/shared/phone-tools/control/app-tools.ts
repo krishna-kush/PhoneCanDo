@@ -1,8 +1,13 @@
 import { call } from "../client"
 import { noArgs, type PhoneTool } from "../tool"
 
-// The full-only tools that are not drivers: back to PhoneCanDo, and the two
-// prompts that ask the user (unlock, accessibility setup).
+// How long a hand-over call may take: the bridge waits up to 4 minutes
+// for the user (PresenceRoutes.WAIT_MAX_MS), and the client a little more.
+const HANDS_WAIT_MS = 255_000
+
+// The full-only tools that are not drivers: back to PhoneCanDo, the two
+// prompts that ask the user (unlock, accessibility setup), and handing the
+// user the phone's controls and waiting for them back.
 export const appTools: PhoneTool[] = [
   {
     name: "mobile_return",
@@ -44,5 +49,34 @@ export const appTools: PhoneTool[] = [
     // The bridge waits up to waitMs for the service; the client allows a
     // little more. Both stay under five minutes, where HTTP clients give up.
     run: (_args, signal) => call("/accessibility", { waitMs: 240_000 }, signal, 255_000),
+  },
+  {
+    name: "mobile_hand_over",
+    description:
+      "Give the user the phone's controls when you need them on the screen. Watch (default): you need their input (pick a photo or a contact, choose an option, check something): they drive while you may follow along with mobile_observe; the call waits for them (up to 4 minutes) and returns {mode:\"watch\", back} (back:true: they handed the phone back; observe first, it may have changed). If back is false, call mobile_wait_for_user to keep waiting. private:true: something is theirs alone (passwords, payments, 2FA codes, permission screens): you can't see the screen, and the call returns at once {mode:\"private\", back:false, message}: end your turn now; PhoneCanDo messages you to go on when they hand the phone back. why is one short line the user sees (at most 120 characters). You must hold the screen or find it free; while the user has the controls every other screen call is refused (user_has_controls). Requires phone-control unlock.",
+    input: {
+      type: "object",
+      properties: {
+        why: { type: "string", description: "What you need the user for, one short line they see (at most 120 characters)" },
+        private: {
+          type: "boolean",
+          description: "true for passwords, payments, 2FA and permission screens: you can't see the screen until they hand it back",
+        },
+      },
+      required: ["why"],
+      additionalProperties: false,
+    },
+    channel: "full",
+    // A watch hand-over waits up to 4 minutes; the client allows a little more.
+    run: (args, signal) => call("/hands/over", { why: args.why, private: args.private }, signal, HANDS_WAIT_MS),
+  },
+  {
+    name: "mobile_wait_for_user",
+    description:
+      "Wait while the user has the phone's controls and you watch: you handed them over (mobile_hand_over), or they took them (Let me on your mascot, or touching the screen). Takes no arguments: it waits for them, up to 4 minutes a call. Returns {back:true} once they hand the phone back (or when nothing of yours is handed over): observe the screen first, then go on with your task in this same turn. {back:false, mode:\"watch\"}: still theirs; call it again. {back:false, mode:\"private\"}: they stopped you: end your turn now, don't call again; PhoneCanDo messages you to go on when they tap Start me again.",
+    input: noArgs,
+    channel: "full",
+    // The bridge waits up to 4 minutes; the client allows a little more.
+    run: (_args, signal) => call("/hands/wait", {}, signal, HANDS_WAIT_MS),
   },
 ]

@@ -100,6 +100,11 @@ engine's HOME.
   `openAlarmSettings()`, `canScheduleItself(agentId)`,
   `setCanScheduleItself(agentId, on)` and `kindRunsSchedules(kindId)`;
   changes come as the `phonecandoSchedules` event (`{}`).
+- `api/PresenceFunctions.kt` (see Presence): `presenceSnapshot()` (the
+  frame as `{driver, handOver, statuses}`, `presence/PresenceJs`),
+  `presenceAct(act)` (a `UserAct` name; false when it does not apply now)
+  and `setMascotFigures(agentId, json)`; changes come as the
+  `phonecandoPresence` event (the same map).
 - `PhoneCanDoRunnerModule.kt`: `getPrefix`, `getBuildChannel`, the
   phone-control switch, the `phonecandoLaunchTarget` event, the bridge
   prompts (`pendingPrompts`, `resolveUnlock`, `resolveAccessibility`, event
@@ -1497,6 +1502,31 @@ back without your OK.
   (`ScheduleRuns.addNote`). Twice in 6 hours, an agent gets Open only, so
   a run that keeps getting cut off never loops. A start that fails before
   it is ready posts the notice again with why (Open).
+
+## Presence
+
+`presence/` is the agents' presence on the phone: who drives the screen
+(the bridge's lease), the hand-over of the controls to you (watch or
+paused) and each agent's status line (`agents_status`). `Presence` is the
+one entry point; its state is `PresenceStore` (pure, its steps decided by
+`HandsRules`; the clock and what a step does outside injected), and the
+bridge's routes are `bridge/PresenceRoutes.kt` (`bridge.md` → Hands). The
+open bridge attaches its lease and ticks it each second; `Bridge.runEnded`
+and an engine gone (`agentGone`) reach it first. A change of the frame
+goes to the full build's glass (`Presence.view`), to the app (the
+`phonecandoPresence` event) and, for a status, to the service's
+notification (an agent's working chat says its status line instead of
+"Working", `AgentItems`). Let me is a pause (the agent waits in
+`/hands/wait`, the same turn); Stop really stops: the agent is told to end
+its turn, and one that calls the screen again has its ACP turn cancelled
+(`PresenceStore.pausedCall`). The note that sends it on is `Resume`: a runner notice that wakes it like a scheduled
+task (`Mailbox.notice(resume = true)`, `MessagePolicy`'s `resume`), or,
+its engine stopped, a bring-back as for a run cut off
+(`cutoff/BringKinds`, `BringRules.plan`, in the chat it was in when the
+hand-over began). `/notify`'s limits are `NotifyRules` and `/focus` reads
+`Focus`. The mascot's figures (`MascotFigures`) live in memory only: JS
+pushes them at start and on every change of look. All of it is memory
+only: a new process starts with no hand-over and no statuses.
 
 ## Checks
 

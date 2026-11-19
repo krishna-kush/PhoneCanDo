@@ -82,7 +82,7 @@ export const screenTools: PhoneTool[] = [
   {
     name: "mobile_text",
     description:
-      "Type into the focused editable field, or the first visible editable field when none is focused. append=false replaces the field contents; append=true appends. Tap the field first when it is not focused. Retries once after 300ms if the field does not yet own input focus. Requires phone-control unlock; never use for OTPs or payment credentials.",
+      "Type into the focused editable field, or the first visible editable field when none is focused. append=false replaces the field contents; append=true appends. Tap the field first when it is not focused. Retries once after 300ms if the field does not yet own input focus. Requires phone-control unlock; never use for passwords, OTPs or payment credentials: hand those to the user with mobile_hand_over (private: true).",
     input: {
       type: "object",
       properties: {

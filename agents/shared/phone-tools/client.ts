@@ -59,8 +59,8 @@ export async function call(
 // and the caller joined the queue for it) names the holder and the caller's
 // place in line, and says a message comes when the screen is the caller's,
 // so the model does other work instead of hammering the bridge. Every other
-// code (screen_refused, control_taken_back among them) is the bridge's own
-// message.
+// code (screen_refused, user_has_controls and paused_by_user among them) is
+// the bridge's own message.
 export function errorText(e: Envelope, status: number): string {
   if (e.code === "control_busy") {
     const place = typeof e.place === "number" ? `; you are #${e.place} in line` : ""

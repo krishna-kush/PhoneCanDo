@@ -4,6 +4,9 @@ import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.AutomationUnavailableException
 import com.phonecando.runner.controllock.LockMode
 import com.phonecando.runner.controllock.unlockedLock
+import com.phonecando.runner.presence.HandBy
+import com.phonecando.runner.presence.HandMode
+import com.phonecando.runner.presence.HandOver
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -155,13 +158,13 @@ class BridgeRouterTest {
   @Test fun askModeLetsInOnlyTheAgentThatAsked() {
     lock.setMode(LockMode.ASK)
     val r = router()
-    assertEquals(403, r.handle(dir.records[0], "POST", "/notify", "{}").status)
+    assertEquals(403, r.handle(dir.records[0], "POST", "/clipboard", "{}").status)
     lock.grantAsk("a1")
-    assertEquals(200, r.handle(dir.records[0], "POST", "/notify", "{}").status)
-    assertEquals(403, r.handle(dir.records[1], "POST", "/notify", "{}").status)
+    assertEquals(200, r.handle(dir.records[0], "POST", "/clipboard", "{}").status)
+    assertEquals(403, r.handle(dir.records[1], "POST", "/clipboard", "{}").status)
     // Handing the phone back ends the unlock with the task.
     assertEquals(200, r.handle(dir.records[0], "POST", "/app", "{}").status)
-    assertEquals(403, r.handle(dir.records[0], "POST", "/notify", "{}").status)
+    assertEquals(403, r.handle(dir.records[0], "POST", "/clipboard", "{}").status)
   }
 
   @Test fun anAskUnlockLastsWhileItIsUsed() {
@@ -221,17 +224,59 @@ class BridgeRouterTest {
     assertEquals(200, r.handle(dir.records[1], "POST", "/clipboard", "{}").status)
   }
 
-  @Test fun aTakenBackAgentGetsControlTakenBackUntilItsRunEnds() {
-    val r = router()
+  private fun handsRouter(handOver: () -> HandOver?, paused: MutableList<String> = mutableListOf()) = BridgeRouter(
+    true, { host }, lock, lease, { dir.get(it) != null }, handlers,
+    handOver = handOver,
+    onPaused = { paused += it },
+  )
+
+  private fun handOver(mode: HandMode) = HandOver("a1", "opencode", mode, HandBy.USER, null, 0)
+
+  @Test fun watchingYouDriveTheAgentMayOnlyObserve() {
+    var on: HandOver? = null
+    val r = handsRouter({ on })
     assertEquals(200, r.handle(dir.records[0], "POST", "/pce/observe", "{}").status)
-    lease.takeBack("a1")
-    val refused = r.handle(dir.records[0], "POST", "/open", "{}")
-    assertEquals(409, refused.status)
-    assertEquals("control_taken_back", json(refused).getString("code"))
+    on = handOver(HandMode.WATCH)
+    // It follows along on time that stands still: no lease is claimed.
+    val ran = handled.size
+    assertEquals(200, r.handle(dir.records[0], "POST", "/pce/observe", "{}").status)
+    val act = r.handle(dir.records[0], "POST", "/open", "{}")
+    assertEquals(409, act.status)
+    assertEquals("user_has_controls", json(act).getString("code"))
+    assertTrue(json(act).getString("message").contains("mobile_wait_for_user"))
+    // Another agent is turned away before it could join the line.
+    val other = r.handle(dir.records[1], "POST", "/pce/observe", "{}")
+    assertEquals("user_has_controls", json(other).getString("code"))
+    assertTrue(lease.line().waiting.isEmpty())
     // Calls that leave the screen alone still pass.
-    assertEquals(200, r.handle(dir.records[0], "POST", "/clipboard", "{}").status)
-    lease.runEnded("a1")
-    assertEquals(200, r.handle(dir.records[0], "POST", "/pce/observe", "{}").status)
+    assertEquals(200, r.handle(dir.records[1], "POST", "/clipboard", "{}").status)
+    assertEquals(200, r.handle(dir.records[0], "POST", "/hands/wait", "{}").status)
+    // (Observe runs PceRoutes, which this list does not see.)
+    assertEquals(ran + 2, handled.size)
+    // Handed back: it drives again.
+    on = null
+    assertEquals(200, r.handle(dir.records[0], "POST", "/open", "{}").status)
+  }
+
+  @Test fun aStoppedAgentIsTurnedAwayFromTheScreenAndEachRefusalCounted() {
+    val paused = mutableListOf<String>()
+    val r = handsRouter({ handOver(HandMode.PAUSED) }, paused)
+    for (path in listOf("/pce/observe", "/pce/act", "/app", "/hands/over")) {
+      val reply = r.handle(dir.records[0], "POST", path, "{}")
+      assertEquals(409, reply.status)
+      assertEquals("paused_by_user", json(reply).getString("code"))
+    }
+    assertEquals(List(4) { "a1" }, paused)
+    assertEquals("user_has_controls", json(r.handle(dir.records[1], "POST", "/hands/over", "{}")).getString("code"))
+    assertEquals(200, r.handle(dir.records[0], "GET", "/ping", "").status)
+  }
+
+  @Test fun theGateComesAfterTheLockAndOnlyInFull() {
+    val lite = BridgeRouter(false, { null }, lock, lease, { dir.get(it) != null }, handlers, handOver = { handOver(HandMode.PAUSED) })
+    assertEquals(200, lite.handle(dir.records[0], "POST", "/open", "{}").status)
+    lock.lock()
+    val r = handsRouter({ handOver(HandMode.PAUSED) })
+    assertEquals("automation_off", json(r.handle(dir.records[0], "POST", "/open", "{}")).getString("code"))
   }
 
   @Test fun aGrantedScreenRequestShowsTheDriver() {

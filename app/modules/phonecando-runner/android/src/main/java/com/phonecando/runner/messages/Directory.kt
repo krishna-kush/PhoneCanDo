@@ -9,11 +9,13 @@ import org.json.JSONObject
 //    screen:{holder, reserved, waiting:[name], yourPlace},
 //    agents:[{name, id, kind, machine:"yours"|"other", machineMates:[name],
 //             state:"working"|"waiting"|"idle"|"stopped", chat,
+//             status:{text, mood:"working"|"thinking"|"waiting"}|null,
 //             messages:"wakes"|"delivered"|"inbox"|"none", wakeable, canWake}]}
 // scope "machine" (the default) lists the other agents on the caller's
 // machine, "phone" every other agent. kind is the kind's label; machineMates
 // the other agents on that agent's machine; chat its working chat's title,
-// else its latest (null when none is known); messages how far messages
+// else its latest (null when none is known); status what it says it is
+// doing now (agents_status; null when it said nothing this run); messages how far messages
 // reach it (kit MessagingLevel: none means it can't read them, so a send
 // to it is refused); canWake whether a direct message with wake: true
 // would start its run now if it is idle (its switch, its kind and, for a
@@ -47,6 +49,7 @@ object Directory {
           .put("machineMates", JSONArray(mates))
           .put("state", presence.state.wire)
           .put("chat", presence.chat ?: JSONObject.NULL)
+          .put("status", view.status(a.id)?.let { (text, mood) -> JSONObject().put("text", text).put("mood", mood) } ?: JSONObject.NULL)
           .put("messages", view.kindLevel(a.kind).wire)
           .put("wakeable", a.wakeable)
           .put("canWake", canWake),

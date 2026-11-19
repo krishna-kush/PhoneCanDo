@@ -30,7 +30,7 @@
     },
     {
       "name": "mobile_notify",
-      "description": "Post an Android notification on the phone, labelled with your agent's name in PhoneCanDo; tapping it opens your chat. text is required; title defaults to your agent's name. A new notification with the same title replaces your previous one. Requires phone-control unlock in full builds and is ungated in lite/play. Use only when the user asked for a notification or status update.",
+      "description": "Post an Android notification on the phone, labelled with your agent's name in PhoneCanDo; tapping it opens your chat. Use it to reach the user while they are away from your chat: progress on a long task, \"I'll need you in about 10 minutes\", something went wrong that they must act on. Never use it for what PhoneCanDo already tells them: a run finished, failed or waiting for their answer, a schedule, the phone hand-over. Check mobile_focus first if unsure. text is required; title defaults to your agent's name; a new notification with the same title replaces your previous one. At most one a minute and five an hour (429 notify_too_often with retryAfterMs past that). While your chat is on screen it posts nothing and returns {posted:false, reason}: say it in the chat instead. Returns {posted, reason?}.",
       "channel": "all",
       "method": "POST",
       "route": "/notify",
@@ -50,6 +50,19 @@
         "required": [
           "text"
         ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_focus",
+      "description": "Where the user is looking now, before you reach them. Returns {app, onScreen, phone}: app is front or back (PhoneCanDo on screen or not); onScreen is your_chat, other_agent (another agent's chat), app (another PhoneCanDo page) or null while it is in the back; phone is unlocked, locked or off (screen off). In your chat, just say it there; away, mobile_notify reaches them.",
+      "channel": "all",
+      "method": "POST",
+      "route": "/focus",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
         "additionalProperties": false
       }
     },
@@ -129,7 +142,7 @@
     },
     {
       "name": "agents_list",
-      "description": "List the AI agents on this phone, to see who is here, what each is doing and whom to message. scope is machine (default: the agents that share your machine and its files) or phone (every agent). Returns {you, scope, screen, agents}: you is your own name and kind; screen says which agent drives the phone's screen now (holder), who waits for it (waiting) and your place in that line (yourPlace, null when you are not in it); each agent has name, kind, machine (yours or other), machineMates, state (working, waiting, idle or stopped), chat (its chat's title), messages (how your messages reach it: wakes = into its turns, and wake: true can start one while it is idle; delivered = into its turns; inbox = only when it calls agents_inbox; none = it cannot read messages, so sending to it is refused), wakeable (the user lets other agents wake it, and start it when stopped) and canWake (wake: true would start its turn now if it is idle, or start it if it is stopped).",
+      "description": "List the AI agents on this phone, to see who is here, what each is doing and whom to message. scope is machine (default: the agents that share your machine and its files) or phone (every agent). Returns {you, scope, screen, agents}: you is your own name and kind; screen says which agent drives the phone's screen now (holder), who waits for it (waiting) and your place in that line (yourPlace, null when you are not in it); each agent has name, kind, machine (yours or other), machineMates, state (working, waiting, idle or stopped), chat (its chat's title), status ({text, mood} it set with agents_status, or null), messages (how your messages reach it: wakes = into its turns, and wake: true can start one while it is idle; delivered = into its turns; inbox = only when it calls agents_inbox; none = it cannot read messages, so sending to it is refused), wakeable (the user lets other agents wake it, and start it when stopped) and canWake (wake: true would start its turn now if it is idle, or start it if it is stopped).",
       "channel": "all",
       "method": "POST",
       "route": "/agents/list",
@@ -178,6 +191,36 @@
         },
         "required": [
           "to",
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "agents_status",
+      "description": "Tell the user (and other agents) in a few words what you are doing now, such as \"Running the tests\" or \"Reading the build log\". Your mascot shows it on the phone, in PhoneCanDo and in its notification; agents_list shows it to other agents. While you drive the phone (mobile_* screen tools), always keep it set: say what you are about to do before each step (\"Opening Settings\", \"Looking for Wi-Fi\"), since the user watches your mascot say it as you go; otherwise update it as you move between steps, not on every tool call. mood is working (default), thinking or waiting. One line, at most 80 characters (longer is cut); an empty text clears it, and it clears by itself when your run ends. Returns {shown:true}.",
+      "channel": "all",
+      "method": "POST",
+      "route": "/status",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "What you are doing now, a few words; empty to clear it"
+          },
+          "mood": {
+            "type": "string",
+            "enum": [
+              "working",
+              "thinking",
+              "waiting"
+            ],
+            "description": "How it is going (default working)"
+          }
+        },
+        "required": [
           "text"
         ],
         "additionalProperties": false
@@ -370,7 +413,7 @@
     },
     {
       "name": "mobile_observe",
-      "description": "Observe the current screen and return a compact snapshot: snapshotId, package, activity, eventSeq, device/display, focused node id, windows, and nodes. Each node uses i as its node id plus cls, text, desc, id, bounds [l,t,r,b], parent and boolean flags. Pass the snapshotId to mobile_act; the snapshot becomes stale after the screen changes, so observe again. windows defaults true, includeInvisible defaults false, maxNodes defaults 500 and is clamped to 1..2000. screenshot=true requests an observation artifact on Android 11+; the returned screenshot.path is readable by the agent, so use it for visual verification instead of the reserved screenshot action.",
+      "description": "Observe the current screen and return a compact snapshot: snapshotId, package, activity, eventSeq, device/display, focused node id, windows, and nodes. Each node uses i as its node id plus cls, text, desc, id, bounds [l,t,r,b], parent and boolean flags. Pass the snapshotId to mobile_act; the snapshot becomes stale after the screen changes, so observe again. windows defaults true, includeInvisible defaults false, maxNodes defaults 500 and is clamped to 1..2000. screenshot=true requests an observation artifact on Android 11+; the returned screenshot.path is readable by the agent, so use it for visual verification instead of the reserved screenshot action. While the user has the controls you handed over (mobile_hand_over, watch), this is the one screen call that still works: follow along with it.",
       "channel": "full",
       "method": "POST",
       "route": "/pce/observe",
@@ -404,7 +447,7 @@
     },
     {
       "name": "mobile_act",
-      "description": "Run one typed PCE action against a snapshotId from mobile_observe. action is PCE JSON. Targets: {\"type\":\"node\",\"nodeId\":N} (preferred), {\"type\":\"selector\",\"selector\":{...}}, or {\"type\":\"coordinates\",\"point\":{\"x\":N,\"y\":N}}. Actions: tap; long_press (durationMs); type_text (text, target?, clear); key (ENTER|BACK|HOME|RECENTS|TAB|ESCAPE|UP|DOWN|LEFT|RIGHT|DELETE); scroll (UP|DOWN|LEFT|RIGHT, target?, amount); swipe (from,to,durationMs); wait (selector,timeoutMs); assert (selector); launch (packageName,activityName?). For launching an installed app prefer mobile_launch. screenshot is reserved and returns UNSUPPORTED_ACTION; use mobile_observe screenshot=true. Optional expect selector is a post-action wait. timeoutMs (default 30000, clamped to 1000..120000) caps a wait action, which ends at the smaller of its own timeoutMs and this one; expectTimeoutMs (default 5000, clamped to 500..30000) caps the expect wait. The call waits for both plus 10 s, so a slow wait returns its own TIMEOUT error.",
+      "description": "Run one typed PCE action against a snapshotId from mobile_observe. action is PCE JSON. Targets: {\"type\":\"node\",\"nodeId\":N} (preferred), {\"type\":\"selector\",\"selector\":{...}}, or {\"type\":\"coordinates\",\"point\":{\"x\":N,\"y\":N}}. Actions: tap; long_press (durationMs); type_text (text, target?, clear); key (ENTER|BACK|HOME|RECENTS|TAB|ESCAPE|UP|DOWN|LEFT|RIGHT|DELETE); scroll (UP|DOWN|LEFT|RIGHT, target?, amount); swipe (from,to,durationMs); wait (selector,timeoutMs); assert (selector); launch (packageName,activityName?). For launching an installed app prefer mobile_launch. screenshot is reserved and returns UNSUPPORTED_ACTION; use mobile_observe screenshot=true. Optional expect selector is a post-action wait. timeoutMs (default 30000, clamped to 1000..120000) caps a wait action, which ends at the smaller of its own timeoutMs and this one; expectTimeoutMs (default 5000, clamped to 500..30000) caps the expect wait. The call waits for both plus 10 s, so a slow wait returns its own TIMEOUT error. Passwords, payments, 2FA codes, permission dialogs and pickers (a photo, a contact) are the user's: call mobile_hand_over instead of acting on them.",
       "channel": "full",
       "method": "POST",
       "route": "/pce/act",
@@ -536,6 +579,44 @@
       "body": {
         "waitMs": 240000
       },
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_hand_over",
+      "description": "Give the user the phone's controls when you need them on the screen. Watch (default): you need their input (pick a photo or a contact, choose an option, check something): they drive while you may follow along with mobile_observe; the call waits for them (up to 4 minutes) and returns {mode:\"watch\", back} (back:true: they handed the phone back; observe first, it may have changed). If back is false, call mobile_wait_for_user to keep waiting. private:true: something is theirs alone (passwords, payments, 2FA codes, permission screens): you can't see the screen, and the call returns at once {mode:\"private\", back:false, message}: end your turn now; PhoneCanDo messages you to go on when they hand the phone back. why is one short line the user sees (at most 120 characters). You must hold the screen or find it free; while the user has the controls every other screen call is refused (user_has_controls). Requires phone-control unlock.",
+      "channel": "full",
+      "method": "POST",
+      "route": "/hands/over",
+      "body": {},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "why": {
+            "type": "string",
+            "description": "What you need the user for, one short line they see (at most 120 characters)"
+          },
+          "private": {
+            "type": "boolean",
+            "description": "true for passwords, payments, 2FA and permission screens: you can't see the screen until they hand it back"
+          }
+        },
+        "required": [
+          "why"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "mobile_wait_for_user",
+      "description": "Wait while the user has the phone's controls and you watch: you handed them over (mobile_hand_over), or they took them (Let me on your mascot, or touching the screen). Takes no arguments: it waits for them, up to 4 minutes a call. Returns {back:true} once they hand the phone back (or when nothing of yours is handed over): observe the screen first, then go on with your task in this same turn. {back:false, mode:\"watch\"}: still theirs; call it again. {back:false, mode:\"private\"}: they stopped you: end your turn now, don't call again; PhoneCanDo messages you to go on when they tap Start me again.",
+      "channel": "full",
+      "method": "POST",
+      "route": "/hands/wait",
+      "body": {},
       "inputSchema": {
         "type": "object",
         "properties": {},

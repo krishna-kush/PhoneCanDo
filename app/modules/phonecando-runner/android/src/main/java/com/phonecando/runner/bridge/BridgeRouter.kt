@@ -4,6 +4,9 @@ import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.AutomationUnavailableException
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.controllock.ControlLock
+import com.phonecando.runner.presence.HandOver
+import com.phonecando.runner.presence.HandsGate
+import com.phonecando.runner.presence.HandsText
 import org.json.JSONObject
 
 /** One authenticated call, as a route handler sees it. */
@@ -13,15 +16,21 @@ typealias RouteHandler = (BridgeCall) -> Reply
 
 // Decides what an authenticated request gets, in this order: route lookup
 // (404), flavor (lite/play have no full-only routes: 404), the phone-control
-// lock for this agent (403), the accessibility service (503), the JSON body
-// (400), the screen lease (409, full builds only), then the handler. A
+// lock for this agent (403), the accessibility service (503), the hands
+// (409 while you have the phone's controls, full builds only: HandsGate),
+// the JSON body (400), the screen lease (409, full builds only), then the
+// handler. A
 // refused request never takes the lease, though it may wait in line: a
 // locked agent's screen request, or its /unlock, while another agent has
 // the screen gets the 409 with its place (ScreenLease) instead of a 403 or
 // a dialog over that agent's app. A turn another agent's message started
 // (`startedByAgent`) gets 409 screen_refused unless the line handed it the
-// screen. An agent the user took the screen back from gets 409
-// control_taken_back until its run ends. Pure: the automation host, the lock, the lease, the agent checks
+// screen. While you have the controls, the agent you took them from may
+// only observe (WATCH; it needs no lease, its time standing still) or
+// nothing at all (PAUSED: paused_by_user, told to end its turn; a repeat
+// call stops its turn, `onPaused`); every other agent gets
+// user_has_controls. Pure: the
+// automation host, the lock, the lease, the hand-over, the agent checks
 // and the handlers are injected.
 class BridgeRouter(
   private val full: Boolean,
@@ -34,6 +43,10 @@ class BridgeRouter(
   private val startedByAgent: (agentId: String) -> Boolean = { false },
   // A screen request was granted: the overlay shows its driver at once.
   private val onDrive: () -> Unit = {},
+  // The hand-over to you now (presence/), null when none.
+  private val handOver: () -> HandOver? = { null },
+  // A screen request of an agent you stopped was refused.
+  private val onPaused: (agentId: String) -> Unit = {},
 ) {
   fun handle(agent: AgentRecord, method: String, path: String, body: String): Reply {
     val route = Route.find(method, path)
@@ -51,14 +64,27 @@ class BridgeRouter(
     }
     if (route.pce && host?.connected != true) return Reply.automationUnavailable()
 
+    // Only full builds have a driver to hand the controls over from.
+    val hands = if (full && route.screen) handOver() else null
+    when (HandsGate.check(agent.id, route, hands)) {
+      HandsGate.Refusal.PAUSED_BY_USER -> {
+        onPaused(agent.id)
+        return Reply.pausedByUser(HandsText.PAUSED)
+      }
+      HandsGate.Refusal.USER_HAS_CONTROLS ->
+        return Reply.userHasControls(if (hands?.agentId == agent.id) HandsText.USER_HAS_CONTROLS else HandsText.SOMEONE_ELSE)
+      null -> {}
+    }
+
     val json = if (route.method == "POST") {
       parse(body) ?: return Reply.badRequest("bad_json", "body must be a JSON object")
     } else {
       JSONObject()
     }
 
-    // Lite/play have no driver whose flow another agent could break.
-    val ticket = if (route.screen && full) {
+    // Lite/play have no driver whose flow another agent could break. The
+    // agent watching you drive observes on time that stands still.
+    val ticket = if (route.screen && full && hands == null) {
       when (val claim = lease.claim(agent.id, agent.name, alive, startedByAgent(agent.id))) {
         is ScreenLease.Granted -> claim.ticket.also { onDrive() }
         else -> return refusal(claim)
@@ -98,7 +124,6 @@ class BridgeRouter(
 
   private fun refusal(claim: ScreenLease.Claim): Reply = when (claim) {
     is ScreenLease.Busy -> Reply.busy(claim.holderName, claim.retryAfterMs, claim.place)
-    ScreenLease.TakenBack -> Reply.takenBack()
     else -> Reply.screenRefused()
   }
 

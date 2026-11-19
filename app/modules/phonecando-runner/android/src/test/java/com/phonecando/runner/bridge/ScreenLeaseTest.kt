@@ -398,44 +398,6 @@ class ScreenLeaseTest {
     lease.done(granted("a4"))
   }
 
-  @Test fun takeBackEndsTheLeaseAndHandsTheScreenOn() {
-    lease.done(granted("a1"))
-    busy("a2")
-    assertTrue(lease.takeBack("a1"))
-    assertNull(lease.holderId())
-    assertEquals("yours a2", told.notes.last())
-    lease.done(granted("a2"))
-  }
-
-  @Test fun aTakenBackAgentIsRefusedUntilItsRunEnds() {
-    val act = granted("a1")
-    assertTrue(lease.takeBack("a1"))
-    // Its running request ending counts for nothing.
-    lease.done(act)
-    assertEquals(ScreenLease.TakenBack, claim("a1"))
-    assertEquals(ScreenLease.TakenBack, lease.waitInLine("a1", "name-a1", isAlive))
-    assertEquals(ScreenLease.TakenBack, lease.promptOpened("a1", "name-a1", isAlive))
-    assertNull(lease.holderId())
-    lease.runEnded("a1")
-    lease.done(granted("a1"))
-  }
-
-  @Test fun forgetClearsATakeBack() {
-    lease.done(granted("a1"))
-    lease.takeBack("a1")
-    lease.forget("a1")
-    lease.done(granted("a1"))
-  }
-
-  @Test fun takeBackDropsAWaitersPlace() {
-    lease.done(granted("a1"))
-    busy("a2")
-    assertTrue(lease.takeBack("a2"))
-    assertEquals(emptyList<String>(), waiting())
-    assertEquals(ScreenLease.TakenBack, claim("a2"))
-    assertFalse(lease.takeBack("a3"))
-  }
-
   @Test fun theDriverIsTheHolderWhileInUse() {
     assertNull(lease.driver())
     val act = granted("a1")
@@ -450,5 +412,37 @@ class ScreenLeaseTest {
     assertNull(lease.driver())
     // Idle with nobody waiting: it still holds, but nobody is shown driving.
     assertEquals("a1", lease.holderId())
+    assertEquals(ScreenLease.Seat("a1", "name-a1"), lease.holder())
+  }
+
+  @Test fun aHandOverStopsTheHoldersTimeAsADialogDoes() {
+    lease.done(granted("a1"))
+    busy("a2")
+    // The hand-over: its time stands still however long you drive.
+    assertNull(lease.promptOpened("a1", "name-a1", isAlive))
+    now += 600_000
+    lease.tick(isAlive)
+    assertEquals("a1", lease.holderId())
+    assertEquals(ScreenLease.Busy("name-a1", 30_000, 1), claim("a2"))
+    // Handed back: its 30 s start over.
+    lease.promptClosed("a1", keep = true)
+    now += 29_999
+    lease.tick(isAlive)
+    assertEquals("a1", lease.holderId())
+    now += 1
+    lease.tick(isAlive)
+    assertNull(lease.holderId())
+  }
+
+  @Test fun aHandBackCountsAsUseSoTheDriverStaysWhileItPicksUp() {
+    lease.done(granted("a1"))
+    // You had the phone for a while: its time stood still, its last use long past.
+    lease.promptOpened("a1", "name-a1", isAlive)
+    now += 120_000
+    assertNull(lease.driver())
+    lease.promptClosed("a1", keep = true)
+    assertEquals("a1", lease.driver()?.agentId)
+    now += 29_999
+    assertEquals("a1", lease.driver()?.agentId)
   }
 }

@@ -33,7 +33,8 @@ import com.phonecando.runner.notify.ChatBoard
 // that works now (Checks.levelNow: a capability found not working drops it
 // below what the kind declares), each engine's state and chats (the
 // supervisor's chat board: waiting when a chat waits for the user, working
-// when one runs, else idle) and the screen line of the open bridge. Also
+// when one runs, else idle), the screen line of the open bridge and each
+// agent's status line (presence/). Also
 // where a server engine takes its messages (ServerSeat): its port and
 // password while it runs, and its working chat, else its latest; and, for a
 // kind with an ACP mode, which mode its engine runs in and whether it is
@@ -146,6 +147,10 @@ class LiveAgentsView(context: Context) : AgentsView {
     val chat = chats.firstOrNull { it.state == ChatBoard.State.WORKING } ?: chats.firstOrNull { it.sessionId == latest } ?: chats.firstOrNull()
     return Presence(state, chat?.title)
   }
+
+  // presence.Presence, not this package's Presence (an agent's state).
+  override fun status(agentId: String): Pair<String, String>? =
+    com.phonecando.runner.presence.Presence.store.statuses()[agentId]?.let { it.text to it.mood.name.lowercase() }
 
   override fun screen(): ScreenLine {
     val line = Bridge.screenLine() ?: return ScreenLine.NONE

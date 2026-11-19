@@ -4,7 +4,7 @@ import type { AnimatedStyle } from 'react-native-reanimated';
 import tokens from '../../../../../theme/tokens.json';
 import { useTheme } from '../globals';
 import type { Part } from './change/parts';
-import type { FaceLayout } from './layout';
+import type { DotPlace, FaceLayout } from './layout';
 import { HEART, HEART_SHIFT } from './motion';
 import WearMarks from './WearMarks';
 
@@ -40,15 +40,18 @@ type Props = {
   hearts: number;
   /** The [i]th of [count] hearts, at [place]. */
   heart: (i: number, count: number, place: HeartPlace) => ReactNode;
+  /** Thinking's [i]th dot, smallest first, at [place] in [color]. */
+  dot: (i: number, place: DotPlace, color: string) => ReactNode;
 };
 
 // A-01's face as drawn, for the live face (AgentFace) and the still one
 // (StillFace) alike: the logo's red square on its amber shadow with two
 // eyes, in the agent's own mascot (its shape, which ink is in front and what
 // it wears, laid out by the shared spec), and the mood's marks: a "z"
-// asleep, a "?" in trouble, a drop when sweaty, hearts when happy.
+// asleep, a "?" in trouble, a drop when sweaty, hearts when happy, a trail
+// of square thought dots when thinking.
 // Decoration only (hidden from screen readers): rows say the state in words.
-export default function FaceDrawing({ layout: f, parts, moving, motion, hearts, heart }: Props) {
+export default function FaceDrawing({ layout: f, parts, moving, motion, hearts, heart, dot }: Props) {
   const t = useTheme();
   const has = (p: Part) => parts.includes(p);
   const { fig, dx, dy, eyeA, eyeB, eyeW, eyeH, pupil } = f;
@@ -173,6 +176,7 @@ export default function FaceDrawing({ layout: f, parts, moving, motion, hearts, 
             </Fragment>
           ))
         : null}
+      {has('dots') ? f.dots.map((place, i) => <Fragment key={`dot-${i}`}>{dot(i, place, t.dim)}</Fragment>) : null}
       {has('query') ? (
         <moving.Text
           style={[{ position: 'absolute', right: 0, top: 0, fontFamily: 'GeistMono-Bold', fontSize: f.mark, color: t.primary }, motion.query]}
@@ -201,5 +205,15 @@ export function PixelHeart({ place, style, view: Box }: { place: HeartPlace; sty
         ),
       )}
     </Box>
+  );
+}
+
+// One of thinking's square dots at [place]; [style] pops it in and fades it
+// (the live face's beat, or the still one's rest).
+export function ThoughtDot({ place, color, style, view: Box }: { place: DotPlace; color: string; style: Style; view: Moving['View'] }) {
+  return (
+    <Box
+      style={[{ position: 'absolute', left: place.left, top: place.top, width: place.size, height: place.size, backgroundColor: color }, style]}
+    />
   );
 }

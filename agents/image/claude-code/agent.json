@@ -82,7 +82,8 @@
       "env": {
         "BROWSER": "/root/.phonecando/bin/phonecando-open",
         "DISABLE_AUTOUPDATER": "1",
-        "USE_BUILTIN_RIPGREP": "0"
+        "USE_BUILTIN_RIPGREP": "0",
+        "MCP_TOOL_TIMEOUT": "300000"
       },
       "cwd": "{{projectDir}}"
     },
@@ -91,7 +92,7 @@
     "prompt": { "args": ["--", "{{prompt}}"] },
     "acp": {
       "argv": ["/root/.local/bin/claude-agent-acp"],
-      "env": { "CLAUDE_CODE_EXECUTABLE": "/root/.local/bin/claude" },
+      "env": { "CLAUDE_CODE_EXECUTABLE": "/root/.local/bin/claude", "MCP_TOOL_TIMEOUT": "300000" },
       "tools": "session",
       "options": { "mode": "default" },
       "meta": { "claudeCode": { "options": { "settings": "/root/.phonecando/claude-code/settings.json" } } },

@@ -8,6 +8,12 @@ import { HEART } from './motion';
 
 export type FaceLayout = ReturnType<typeof faceLayout>;
 
+/** Where one of thinking's dots sits in the box, and its side. */
+export type DotPlace = { left: number; top: number; size: number };
+
+/** Thinking's three dots' sides, in face sizes, smallest (nearest the head) first. */
+const DOT_SHARE = [0.09, 0.13, 0.18];
+
 export function faceLayout(mascot: Look, size: number, stand = false) {
   // Room for every look, so faces line up down a list.
   const box = Math.round(size * BOX);
@@ -17,6 +23,18 @@ export function faceLayout(mascot: Look, size: number, stand = false) {
   const [eyeA, eyeB] = fig.eyes.map((e) => e.open);
   const mark = Math.max(8, Math.round(size * 0.5));
   const cell = Math.max(1, Math.round(size * 0.07));
+  // Thinking's dots, small to big, up and away off the head's top-right
+  // corner to the box's: the biggest where the "z" and "?" sit.
+  const dotSizes = DOT_SHARE.map((k, i) => Math.max(2 + i, Math.round(size * k)));
+  const dotGap = Math.max(1, Math.round(size * 0.05));
+  const dots: DotPlace[] = [];
+  let right = 0;
+  let top = 0;
+  for (let i = dotSizes.length - 1; i >= 0; i--) {
+    dots[i] = { left: box - right - dotSizes[i], top, size: dotSizes[i] };
+    right += dotSizes[i] + dotGap;
+    top += dotSizes[i] + dotGap;
+  }
   return {
     box,
     fig,
@@ -46,5 +64,7 @@ export function faceLayout(mascot: Look, size: number, stand = false) {
     cell,
     heartW: cell * HEART[0].length,
     heartH: cell * HEART.length,
+    /** Thinking's dots, smallest first. */
+    dots,
   };
 }

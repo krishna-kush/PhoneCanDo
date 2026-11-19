@@ -9,18 +9,18 @@ import org.junit.Test
 class RoutesTest {
   @Test fun screenRoutes() {
     val screen = Route.entries.filter { it.screen }.map { it.path }.toSet()
-    assertEquals(setOf("/pce/observe", "/pce/act", "/pce/pack", "/open", "/share", "/app"), screen)
+    assertEquals(setOf("/pce/observe", "/pce/act", "/pce/pack", "/open", "/share", "/app", "/hands/over"), screen)
   }
 
   @Test fun gatedAndFullOnlyRoutes() {
     val gated = Route.entries.filter { it.gated }.map { it.path }.toSet()
     assertEquals(
-      setOf("/notify", "/share", "/open", "/clipboard", "/pce/describe", "/pce/observe", "/pce/act", "/pce/pack"),
+      setOf("/share", "/open", "/clipboard", "/pce/describe", "/pce/observe", "/pce/act", "/pce/pack", "/hands/over", "/hands/wait"),
       gated,
     )
     val fullOnly = Route.entries.filter { it.fullOnly }.map { it.path }.toSet()
     assertEquals(
-      setOf("/unlock", "/accessibility", "/pce/describe", "/pce/observe", "/pce/act", "/pce/pack"),
+      setOf("/unlock", "/accessibility", "/pce/describe", "/pce/observe", "/pce/act", "/pce/pack", "/hands/over", "/hands/wait"),
       fullOnly,
     )
     assertEquals(Route.entries.filter { it.path.startsWith("/pce/") }, Route.entries.filter { it.pce })
@@ -38,6 +38,7 @@ class RoutesTest {
     assertEquals("pce_act", Route.telemetryKey("/pce/act"))
     assertEquals("accessibility", Route.telemetryKey("/accessibility"))
     assertEquals("keep", Route.telemetryKey("/keep"))
+    assertEquals("hands_over", Route.telemetryKey("/hands/over"))
     assertNull(Route.telemetryKey("/nope"))
   }
 

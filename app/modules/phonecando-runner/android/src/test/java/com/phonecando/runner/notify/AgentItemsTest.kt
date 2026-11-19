@@ -22,6 +22,15 @@ class AgentItemsTest {
     assertEquals("1 working · 1 done", items[0].publicText)
   }
 
+  @Test fun aWorkingChatSaysTheAgentsStatusLine() {
+    val chats = listOf(chat("a1", "Fix the login", ChatBoard.State.WORKING), chat("a1", "Tests", ChatBoard.State.DONE))
+    val item = AgentItems.of(chats, names, statuses = mapOf("a1" to "Reading the logs", "a2" to "Idle line")).single()
+    // The title stays; only the working chat's state gives way to it.
+    assertEquals(listOf("Fix the login · Reading the logs", "Tests · Done"), item.lines)
+    // The lock screen still shows no words of its own.
+    assertEquals("1 working · 1 done", item.publicText)
+  }
+
   @Test fun anAgentKeptUpGetsItsStopsJobsFirst() {
     val server = WorkWatch.Job("python3 -m http.server", 11, 1L)
     val vite = WorkWatch.Job("vite", 12, 2L)

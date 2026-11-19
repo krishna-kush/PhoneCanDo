@@ -46,7 +46,8 @@ import java.util.concurrent.TimeUnit
 // - a scheduled task (schedule/) is a notice with its ScheduledNote: it may
 //   wake past the switch, the hop and the budget (MessagePolicy), and its
 //   wake neither spends the budget nor marks the run startedByAgent: the
-//   task is the user's, or the agent's own.
+//   task is the user's, or the agent's own. So is the note that sends an
+//   agent on after you had the phone (resume, presence/).
 // onChange runs after every change (the app's phonecandoMessages event).
 // Pure apart from the log's store and the courier; the clock is injected.
 class Mailbox(
@@ -165,13 +166,21 @@ class Mailbox(
     "${agent.name} can't read messages: ${agents.kindLabel(agent.kind)} isn't connected to the phone tools"
 
   /**
-   * A runner notice to [agentId] (the screen queue, a scheduled task);
-   * [wake]: it may wake the agent as a direct message that asks to;
-   * [scheduled]: it is that task (ScheduledNote). Null for an unknown agent.
+   * A runner notice to [agentId] (the screen queue, a scheduled task, the
+   * note to go on after a hand-over); [wake]: it may wake the agent as a
+   * direct message that asks to; [scheduled]: it is that task
+   * (ScheduledNote); [resume]: it is that note, which wakes as a scheduled
+   * task does. Null for an unknown agent.
    */
-  fun notice(agentId: String, text: String, wake: Boolean = false, scheduled: ScheduledNote? = null): Noticed? {
+  fun notice(
+    agentId: String,
+    text: String,
+    wake: Boolean = false,
+    scheduled: ScheduledNote? = null,
+    resume: Boolean = false,
+  ): Noticed? {
     val agent = agents.get(agentId) ?: return null
-    val notice = log.add { id -> noticeTo(id, agent, MessageText.clean(text), wake, scheduled) }
+    val notice = log.add { id -> noticeTo(id, agent, MessageText.clean(text), wake, scheduled, resume) }
     capUnread(agent)
     val out = deliver(agentId)
     changed()
@@ -190,13 +199,21 @@ class Mailbox(
 
   private fun refused(to: String, reason: String) = SendResult(null, listOf(Sent(to, SendStatus.REFUSED, reason)))
 
-  private fun noticeTo(id: Long, agent: AgentRecord, text: String, wake: Boolean, scheduled: ScheduledNote? = null): Message {
+  private fun noticeTo(
+    id: Long,
+    agent: AgentRecord,
+    text: String,
+    wake: Boolean,
+    scheduled: ScheduledNote? = null,
+    resume: Boolean = false,
+  ): Message {
     val now = clock()
     return Message(
       id = id, from = Message.RUNNER, fromName = Message.RUNNER_NAME, fromKind = null, fromImage = null,
       to = agent.id, toName = agent.name, text = text, replyTo = null, sentAt = now, hop = 0, wake = wake,
       notice = true, deliveries = listOf(Delivery(agent.id, agent.name, DeliveryStatus.QUEUED, at = now)),
       scheduled = scheduled,
+      resume = resume,
     )
   }
 
@@ -260,7 +277,7 @@ class Mailbox(
     val woke = parcel != null && parcel.wake && mine.any { it in parcel.ids } && presence.state != AgentState.WORKING
     log.mark(agentId, mine, DeliveryStatus.READ, woke = woke)
     // Only another agent's message spends the budget and marks the run.
-    if (woke && mine.any { log.get(it)?.let { m -> m.wake && m.scheduled == null } == true }) {
+    if (woke && mine.any { log.get(it)?.let { m -> m.wake && !m.ownWake } == true }) {
       policy.woke(agentId)
       wakes.woke(agentId, mine.mapNotNull { log.get(it)?.hop }.maxOrNull() ?: 0, workingNow = false)
     }
@@ -313,7 +330,7 @@ class Mailbox(
           }
           log.mark(agentId, parcel.ids, DeliveryStatus.DELIVERED, woke = woke, started = started, reasons = notWoken)
           parcels.remove(agentId)
-          val byAgents = wakers.filter { it.scheduled == null }
+          val byAgents = wakers.filter { !it.ownWake }
           if (woke && byAgents.isNotEmpty()) {
             policy.woke(agentId)
             wakes.woke(agentId, byAgents.maxOf { it.hop }, workingNow = false)
@@ -368,6 +385,7 @@ class Mailbox(
     idle = presence.idle,
     wakesLeft = policy.wakesLeft(agent.id),
     scheduled = m.scheduled != null,
+    resume = m.resume,
     startRefusal = startRefusal,
   )
 

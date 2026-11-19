@@ -34,6 +34,20 @@ version changes. The screen/info/.../wait wrappers now call `/pce/observe` and
 Implementation status, wrapper parity and device proof are in
 `../../app/docs/modules/automation.md`.
 
+## Hands, status and focus
+
+Handing the user the phone's controls (full only, gated) and reaching
+them (every channel, outside the lock); one bridge route each
+(`../../app/docs/modules/bridge.md` → Hands):
+
+| Tool | Route | Purpose |
+|---|---|---|
+| `mobile_hand_over` | `POST /hands/over` | give the user the controls with a `why` they see: watch (their input; you follow with `mobile_observe`, it waits up to 30 s for `back`) or `private: true` (passwords, payments, 2FA, permission screens: you can't see the screen; end your turn and get a message when they hand it back) |
+| `mobile_wait_for_user` | `POST /hands/wait` | no arguments: wait up to 4 minutes a call while the user drives and you watch (a watch hand-over, or Let me), in the same turn; `back: false` in watch: call it again; `mode: "private"`: they stopped you, end the turn |
+| `mobile_focus` | `POST /focus` | where the user looks: `app` front or back, `onScreen` your chat, another agent's, another page or null, `phone` unlocked, locked or off |
+| `mobile_notify` | `POST /notify` | reach the user away from your chat; nothing while your chat is on screen (`posted: false`), one a minute and five an hour (429 `notify_too_often`) |
+| `agents_status` | `POST /status` | a few words on what you do now, with a `mood` (working, thinking, waiting); your mascot and `agents_list` show it, an empty text clears it. While driving the phone, set it before each step so the user can follow |
+
 ## Agent tools
 
 Messages between the AI agents on the phone, an agent's ask to stay up
@@ -43,7 +57,7 @@ one bridge route each, so MCP serves them too):
 
 | Tool | Route | Purpose |
 |---|---|---|
-| `agents_list` | `POST /agents/list` | who is here (`scope` machine or phone), what each does, who holds or waits for the screen |
+| `agents_list` | `POST /agents/list` | who is here (`scope` machine or phone), what each does (its state, chat and status line), who holds or waits for the screen |
 | `agents_send` | `POST /agents/send` | a message to an agent by name, `@machine` or `@phone`; `wake: true` (direct only) wakes an idle one, or starts a stopped one; an answer (`replyTo`) to a message that woke you wakes its sender |
 | `agents_inbox` | `POST /agents/inbox` | read and mark read the caller's unread messages and notices |
 | `agents_wait` | `POST /agents/wait` | wait up to 30 s for the next message (`from` one agent); never for an agent you just woke or started, whose answer can take minutes: end your turn, and its answer wakes you |

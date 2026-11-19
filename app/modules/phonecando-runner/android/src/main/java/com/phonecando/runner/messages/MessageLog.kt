@@ -115,8 +115,8 @@ class MessageLog(
 
   /** When each agent was woken by messages (distinct times), for the wake budget. */
   fun wokeAt(): List<Pair<String, Long>> = lock.withLock {
-    // A scheduled task's wake is not another agent's: it spends no budget.
-    messages.values.filter { it.scheduled == null }
+    // A scheduled task's wake, or a resume, is not another agent's: it spends no budget.
+    messages.values.filter { !it.ownWake }
       .flatMap { m -> m.deliveries.filter { it.woke }.map { it.agentId to it.at } }.distinct().sortedBy { it.second }
   }
 

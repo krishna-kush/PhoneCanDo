@@ -45,12 +45,18 @@ data class Reply(val status: Int, val body: String, val headers: Map<String, Str
       "a turn another agent's message started can't take the screen; the user or your own earlier request in the queue can",
     )
 
-    /** The user took the screen back from this agent for the rest of its run (ScreenLease.takeBack). */
-    fun takenBack() = error(
-      409,
-      "control_taken_back",
-      "the user took the phone back; don't use the screen again this run. Carry on without it, " +
-        "or end your turn and ask them if you need it",
+    /** You have the phone's controls (presence/HandsGate): [message] says what the caller can do meanwhile. */
+    fun userHasControls(message: String) = error(409, "user_has_controls", message)
+
+    /** You stopped the caller to use the phone (presence/HandsGate): it ends its turn. */
+    fun pausedByUser(message: String) = error(409, "paused_by_user", message)
+
+    /** Over mobile_notify's limits (presence/NotifyRules): it may post again in `retryAfterMs`. */
+    fun notifyTooOften(retryAfterMs: Long) = Reply(
+      429,
+      errorBody("notify_too_often", "you notified the user too often; at most one a minute and five an hour")
+        .put("retryAfterMs", retryAfterMs)
+        .toString(),
     )
 
     fun errorBody(code: String, message: String): JSONObject =

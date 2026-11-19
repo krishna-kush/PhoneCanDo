@@ -10,6 +10,7 @@ const MOOD: Record<Mood, string> = {
   oops: 'ouch · see why',
   sweaty: 'phew · tight on RAM',
   happy: 'having fun',
+  thinking: 'hmm · thinking',
 };
 
 export function moodLine(mood: Mood): string {

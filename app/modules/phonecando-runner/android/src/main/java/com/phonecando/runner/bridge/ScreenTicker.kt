@@ -8,7 +8,8 @@ import java.util.concurrent.TimeUnit
 // the lease's time, or a reservation nobody claimed, passes the screen to
 // the next in line even while no agent calls the bridge, so a waiter hears
 // it is theirs. One daemon thread per open bridge; it sleeps with the phone.
-// After each tick, `after` runs (the overlay's DriverWatch).
+// After each tick, `after` runs (Presence.tick: stale statuses go, and the
+// overlay and the app hear of a driver whose lease ran out).
 class ScreenTicker(
   private val lease: ScreenLease,
   private val alive: (agentId: String) -> Boolean,

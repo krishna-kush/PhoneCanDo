@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,models,memory,messages,schedule,recommend,account,update,terms,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,models,memory,messages,schedule,recommend,account,update,terms,presence,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -243,6 +243,20 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   next start, one notice per agent; Continue starts it in the same chat
   with a note to go on; pure `CutOffRules`, `CutOffLook`, `BringRules`,
   `CutOffText`).
+  `presence/` is who has the phone's controls and what each agent is
+  doing: a hand-over to you (WATCH: it watches and keeps running;
+  PAUSED: it can't see or touch the screen until Start me again, and
+  its other work goes on), from the mascot's buttons or
+  `mobile_hand_over`; the bridge's Hands gate; each agent's
+  `agents_status` line; `/focus` and `/notify`'s rules; the resume note
+  (pure `HandsRules`, `HandsGate`,
+  `StatusRules`, `NotifyRules`). `presence/glass/` is the mascot on the
+  glass's pure motion (walls, entrances, dodge, fling) and figures; the
+  full build draws it over every app from the accessibility service
+  (`src/uiauto/.../overlay/`), each agent in its own mascot, whose
+  figures the app pushes (`app/src/engine/presence/figures.ts`). The
+  app's side is `ui/presence/` (status lines, the hand-over card) and
+  `state/presence.ts`.
 - `app/assets/xterm/` — `terminal.js` (page source), `terminal.bundle.html`
   (generated; `node scripts/inline-xterm.js` after page edits).
 - `docs/README.md` — repo docs map; `app/docs/README.md` — app/engine docs.

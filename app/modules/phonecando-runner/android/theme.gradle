@@ -1,9 +1,11 @@
 // The driving overlay's colours (src/uiauto/.../uiauto/overlay), from
-// theme/tokens.json, the one palette: each role below becomes a colour
+// theme/tokens.json, the one palette (and its mono face, below): each role below becomes a colour
 // resource `theme_<role>`, light in values/ and dark in values-night/, so
 // the overlay follows the phone's theme like the rest of the screen. Full
 // only: the other channels have no overlay. `rgba(...)` tokens turn into
-// #AARRGGBB.
+// #AARRGGBB. A role in `fixedDark` is the dark palette's in both folders:
+// `darkBg`, the mascot's dark ink (its pupils), is tokens.dark.bg in either
+// theme, as the site and the app draw it.
 
 abstract class ThemeColors extends DefaultTask {
   @InputFile
@@ -12,6 +14,10 @@ abstract class ThemeColors extends DefaultTask {
 
   @Input
   abstract ListProperty<String> getRoles()
+
+  // Role name to the dark palette's token it always takes.
+  @Input
+  abstract MapProperty<String, String> getFixedDark()
 
   @OutputDirectory
   abstract DirectoryProperty getOutputDir()
@@ -25,6 +31,10 @@ abstract class ThemeColors extends DefaultTask {
       def lines = roles.get().collect { role ->
         def value = theme[role]
         if (value == null) throw new GradleException("theme/tokens.json has no $role")
+        "  <color name=\"theme_$role\">${androidColor(value)}</color>"
+      } + fixedDark.get().collect { role, token ->
+        def value = palette.dark[token]
+        if (value == null) throw new GradleException("theme/tokens.json has no dark $token")
         "  <color name=\"theme_$role\">${androidColor(value)}</color>"
       }
       def folder = new File(root, dir)
@@ -45,13 +55,33 @@ abstract class ThemeColors extends DefaultTask {
 def themeColors = tasks.register('themeColors', ThemeColors) {
   tokens = file('../../../../theme/tokens.json')
   roles = ['primary', 'secondary', 'panel', 'fg', 'muted', 'onPrimary', 'lineStrong']
+  fixedDark = [darkBg: 'bg']
   outputDir = layout.buildDirectory.dir('generated/themeColors')
+}
+
+// The overlay's buttons and labels in the app's mono face, Geist Mono
+// (app/assets/fonts, OFL): copied in as font resources, the names
+// lowercased as Android wants them (geist_mono_regular, geist_mono_bold).
+abstract class ThemeFonts extends Sync {
+  @OutputDirectory
+  abstract DirectoryProperty getOutputDir()
+}
+
+def themeFonts = tasks.register('themeFonts', ThemeFonts) {
+  into(outputDir)
+  from(file('../../../assets/fonts')) {
+    include 'GeistMono-Regular.ttf', 'GeistMono-Bold.ttf'
+    into 'font'
+    rename { it.replace('GeistMono-', 'geist_mono_').toLowerCase() }
+  }
+  outputDir = layout.buildDirectory.dir('generated/themeFonts')
 }
 
 androidComponents {
   onVariants(selector().all()) { variant ->
     if (variant.flavorName == 'full') {
       variant.sources.res?.addGeneratedSourceDirectory(themeColors) { it.outputDir }
+      variant.sources.res?.addGeneratedSourceDirectory(themeFonts) { it.outputDir }
     }
   }
 }

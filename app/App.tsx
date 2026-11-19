@@ -15,6 +15,8 @@ import { useBackChain } from './src/ui/nav/useBackChain';
 import { useShareLinkOpen } from './src/ui/recommend/useShareLinkOpen';
 import { useSettingsSync } from './src/ui/account/useSettingsSync';
 import { useMascotPicks } from './src/ui/common/face/useMascotPicks';
+import { usePresence } from './src/ui/presence/usePresence';
+import HandOverCard from './src/ui/presence/HandOverCard';
 import { useDeskSeats } from './src/ui/common/desk/useDeskSeats';
 import { useEngineTerminalTheme } from './src/ui/terminal/theme/useEngineTerminalTheme';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
@@ -97,6 +99,9 @@ export default function App() {
   useSettingsSync();
   useMascotPicks();
   useDeskSeats();
+  // Who has the phone's controls and the agents' status lines; the
+  // overlay's mascot figures for every agent's look.
+  usePresence();
 
   useEffect(() => {
     // Where to land when the app opens for a reason: a tap on a
@@ -194,6 +199,8 @@ export default function App() {
                   home={
                     <YStack flex={1}>
                       <HomeHeader />
+                      {/* While you have the phone's controls: the way back. */}
+                      <HandOverCard />
                       <HomeScreen />
                       {/* While the first shift runs: how far along, the next job. */}
                       <ShiftCard />

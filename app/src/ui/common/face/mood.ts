@@ -9,15 +9,17 @@ import type { EngineState } from '../../../engine/agents/records';
  * awake: running · busy: starting, stopping or installing · asleep: stopped ·
  * oops: failed or died · sweaty: A-01 itself while the phone is nearly out
  * of memory (the RAM warning; no engine state maps to it) · happy: A-01
- * itself, pleased (the "Having fun?" card; no engine state maps to it).
+ * itself, pleased (the "Having fun?" card; no engine state maps to it) ·
+ * thinking: running, and its status line (agents_status, state/presence.ts)
+ * says it is thinking.
  */
-export type Mood = 'awake' | 'busy' | 'asleep' | 'oops' | 'sweaty' | 'happy';
+export type Mood = 'awake' | 'busy' | 'asleep' | 'oops' | 'sweaty' | 'happy' | 'thinking';
 
-export function moodOf(state: EngineState | null | undefined, installing = false): Mood {
+export function moodOf(state: EngineState | null | undefined, installing = false, thinking = false): Mood {
   if (installing) return 'busy';
   switch (state) {
     case 'ready':
-      return 'awake';
+      return thinking ? 'thinking' : 'awake';
     case 'starting':
     case 'stopping':
       return 'busy';

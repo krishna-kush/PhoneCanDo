@@ -22,7 +22,7 @@ export const basicTools: PhoneTool[] = [
   {
     name: "mobile_notify",
     description:
-      "Post an Android notification on the phone, labelled with your agent's name in PhoneCanDo; tapping it opens your chat. text is required; title defaults to your agent's name. A new notification with the same title replaces your previous one. Requires phone-control unlock in full builds and is ungated in lite/play. Use only when the user asked for a notification or status update.",
+      "Post an Android notification on the phone, labelled with your agent's name in PhoneCanDo; tapping it opens your chat. Use it to reach the user while they are away from your chat: progress on a long task, \"I'll need you in about 10 minutes\", something went wrong that they must act on. Never use it for what PhoneCanDo already tells them: a run finished, failed or waiting for their answer, a schedule, the phone hand-over. Check mobile_focus first if unsure. text is required; title defaults to your agent's name; a new notification with the same title replaces your previous one. At most one a minute and five an hour (429 notify_too_often with retryAfterMs past that). While your chat is on screen it posts nothing and returns {posted:false, reason}: say it in the chat instead. Returns {posted, reason?}.",
     input: {
       type: "object",
       properties: {
@@ -34,6 +34,14 @@ export const basicTools: PhoneTool[] = [
     },
     channel: "all",
     run: (args, signal) => call("/notify", { title: args.title, text: args.text }, signal),
+  },
+  {
+    name: "mobile_focus",
+    description:
+      "Where the user is looking now, before you reach them. Returns {app, onScreen, phone}: app is front or back (PhoneCanDo on screen or not); onScreen is your_chat, other_agent (another agent's chat), app (another PhoneCanDo page) or null while it is in the back; phone is unlocked, locked or off (screen off). In your chat, just say it there; away, mobile_notify reaches them.",
+    input: noArgs,
+    channel: "all",
+    run: (_args, signal) => call("/focus", {}, signal),
   },
   {
     name: "mobile_share",

@@ -41,6 +41,7 @@ import com.phonecando.runner.notify.ServiceNotification
 import com.phonecando.runner.notify.ServicePlan
 import com.phonecando.runner.notify.TimeLimitNotice
 import com.phonecando.runner.notify.WorkLines
+import com.phonecando.runner.presence.Presence
 import com.phonecando.runner.power.WorkLock
 import java.util.Date
 import java.util.concurrent.ExecutorService
@@ -156,6 +157,9 @@ class PhoneCanDoServeService : Service() {
     main.post { render() }
   }
 
+  // An agent's status line changed: its notification says it.
+  private val statusListener = { main.post { render() }; Unit }
+
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onCreate() {
@@ -179,6 +183,7 @@ class PhoneCanDoServeService : Service() {
     JobsAnchor.install(this)
     JobsAnchor.addListener(jobsListener)
     AppOnScreen.addListener(screenListener)
+    Presence.addStatusListener(statusListener)
     JobsAnchor.service(up = true)
     goForeground()
   }
@@ -326,6 +331,7 @@ class PhoneCanDoServeService : Service() {
     Engines.removeListener(engineListener)
     JobsAnchor.removeListener(jobsListener)
     AppOnScreen.removeListener(screenListener)
+    Presence.removeStatusListener(statusListener)
     workLock.release()
     // Jobs still running (the system ended the service): the next job
     // event asks for the service again.
@@ -497,7 +503,8 @@ class PhoneCanDoServeService : Service() {
     // A Stop asked (here or in the app): "Stopping…" under a running bar
     // until the engine is down.
     val stopping = supervisor?.statuses()?.filter { it.state == EngineState.STOPPING }?.map { it.agentId }.orEmpty()
-    val agentItems = AgentItems.of(chats, names, work, starting.distinct(), stopping, endingJobs.values.toList())
+    val statuses = Presence.store.statuses().mapValues { it.value.text }
+    val agentItems = AgentItems.of(chats, names, work, starting.distinct(), stopping, endingJobs.values.toList(), statuses)
     val reading = supervisor?.promptReading()?.let { ReadingLines.item(it.modelId, it.modelName, it.read, it.total, it.agentIds) }
     val jobs = listOfNotNull(reading) + JobLines.read(agents)
     return ServicePlan.of(agentItems, jobs, chats, running, names, AppOnScreen.shown)

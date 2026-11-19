@@ -3,6 +3,7 @@ package com.phonecando.runner.uiauto
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.phonecando.runner.AutomationHosts
@@ -10,15 +11,16 @@ import com.phonecando.runner.FullAutomation
 import com.phonecando.runner.PceAuto
 import com.phonecando.runner.PceAutomation
 import com.phonecando.runner.RestrictedSettings
-import com.phonecando.runner.bridge.ScreenIndicator
-import com.phonecando.runner.uiauto.overlay.DrivingOverlay
+import com.phonecando.runner.presence.Presence
+import com.phonecando.runner.uiauto.overlay.GlassOverlay
 
 // Full-build accessibility host. All observation and action logic lives in the
 // PCE adapter; this service only owns the Android lifecycle, and the
-// driving overlay (overlay/DrivingOverlay) that shows you who drives.
+// glass (overlay/GlassOverlay): the agent's mascot over every app while it
+// drives or has handed the phone to you, the view Presence tells.
 class PhoneCanDoAccessibilityService : AccessibilityService() {
   private var pce: PceAutomation? = null
-  private var overlay: DrivingOverlay? = null
+  private var overlay: GlassOverlay? = null
 
   // Android exposes no direct "current activity" query to an accessibility
   // service. Track the last window-state event; the PCE asks for it by
@@ -43,9 +45,11 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
     RestrictedSettings.markConnected(this)
     try {
       AutomationHosts.current = FullAutomation
-      val shown = DrivingOverlay(this)
+      val shown = GlassOverlay(this)
       overlay = shown
-      ScreenIndicator.current = shown
+      Presence.view = shown
+      // It shows what is going on now, not only the next change.
+      Presence.publish()
       val next = PceAutomationImpl(this, shown)
       PceAuto.setService(next)
       pce = next
@@ -90,6 +94,12 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
       false
     }
 
+  // The phone's light or dark changed: the glass recolours (when the app has set no theme of its own).
+  override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    overlay?.themeChanged()
+  }
+
   override fun onInterrupt() {
     Log.w(TAG, "accessibility service interrupted")
   }
@@ -98,7 +108,7 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
     PceAuto.clear(pce)
     pce = null
     overlay?.let {
-      if (ScreenIndicator.current === it) ScreenIndicator.current = null
+      if (Presence.view === it) Presence.view = null
       it.close()
     }
     overlay = null

@@ -9,12 +9,16 @@ package com.phonecando.runner.bridge
 //             (ScreenLease; 409 control_busy with a place in line while
 //             another agent has it, 409 screen_refused for a turn another
 //             agent's message started). Lite/play have no driver whose flow
-//             it could break.
+//             it could break. While you have the phone's controls (a
+//             hand-over, presence/HandsGate) every screen route is turned
+//             away first: 409 user_has_controls or paused_by_user.
 // Screen routes: /pce/observe, /pce/act and /pce/pack (a pack run drives the
 // screen and every pack call shares the PCE lane), /open and /share (they
 // start an activity over whatever is showing) and /app (brings PhoneCanDo
-// forward; the holder's /app also ends its lease, see BridgeRouter). Not
-// screen routes: /ping, /battery, /notify, /clipboard, /pce/describe, and the
+// forward; the holder's /app also ends its lease, see BridgeRouter) and
+// /hands/over (an agent handing you the controls: it must hold the screen,
+// or take a free one). Not screen routes: /hands/wait (waiting for you to
+// hand them back), /ping, /battery, /notify, /clipboard, /pce/describe, and the
 // prompts /unlock and /accessibility: they only matter while the gate is off
 // or the service is down, when nobody can drive the screen anyway, and the
 // app queues their dialogs. In ask mode others can drive while one agent is
@@ -26,7 +30,10 @@ package com.phonecando.runner.bridge
 // (an agent asking to stay up while idle, KeepRoutes), on every channel
 // too: it changes nothing on the phone. Nor are /schedule/* (an agent's
 // tasks for itself, ScheduleRoutes), on every channel: a task runs as the
-// agent's own turn. /mcp is not a
+// agent's own turn. Nor are /status (an agent's status line) and /focus
+// (where the user is looking), on every channel, and /notify, which is
+// held to its own limits (presence/NotifyRules) instead of the lock: an
+// agent reaching you is not phone control. /mcp is not a
 // route: BridgeEntry hands it to the MCP endpoint (mcp/), whose tools call
 // these routes through the router.
 // Pure.
@@ -40,7 +47,7 @@ enum class Route(
 ) {
   PING("GET", "/ping"),
   BATTERY("GET", "/battery"),
-  NOTIFY("POST", "/notify", gated = true),
+  NOTIFY("POST", "/notify"),
   CLIPBOARD("POST", "/clipboard", gated = true),
   SHARE("POST", "/share", gated = true, screen = true),
   OPEN("POST", "/open", gated = true, screen = true),
@@ -59,6 +66,10 @@ enum class Route(
   SCHEDULE_ADD("POST", "/schedule/add"),
   SCHEDULE_LIST("POST", "/schedule/list"),
   SCHEDULE_CANCEL("POST", "/schedule/cancel"),
+  HANDS_OVER("POST", "/hands/over", fullOnly = true, gated = true, screen = true),
+  HANDS_WAIT("POST", "/hands/wait", fullOnly = true, gated = true),
+  STATUS("POST", "/status"),
+  FOCUS("POST", "/focus"),
   ;
 
   companion object {

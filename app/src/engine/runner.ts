@@ -131,6 +131,11 @@ export type RunnerModule = {
   kindLevels?(): unknown;
   checkNow?(agentId: string, full: boolean): unknown;
   checkCancel?(agentId: string): unknown;
+  /** Presence (engine/presence/, which checks what these return). Absent from native builds older than presence. */
+  presenceSnapshot?(): unknown;
+  presenceAct?(act: string): boolean;
+  setMascotFigures?(agentId: string, json: string): void;
+  setGlassScheme?(scheme: 'system' | 'light' | 'dark'): void;
   consumeLaunchTarget(): NativeLaunchTarget | null;
   guestUnset(agentId: string): string[];
   installPlan(agentId: string, family: string): NativeInstallPlan | null;
