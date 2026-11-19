@@ -16,7 +16,7 @@ export default function StartFields({ k }: { k: FormKit }) {
   const program = command.split(/\s+/)[0].split('/').pop() ?? '';
   const placeholder = isPreset(form.install)
     ? commandGuess(form.installPackage) || '/root/.local/bin/cli'
-    : '/root/.local/bin/aider --no-auto-commits';
+    : '/root/.local/bin/duck --quiet';
   return (
     <>
       <FormField

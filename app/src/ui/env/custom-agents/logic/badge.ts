@@ -45,7 +45,7 @@ export function badgeMood(needs: readonly BadgeNeed[], problems: number): BadgeM
   return done === needs.length ? 'awake' : 'busy';
 }
 
-/** Its program: the command's first word, without its folder ("aider"). */
+/** Its program: the command's first word, without its folder ("duck"). */
 export function programOf(command: string): string {
   const first = command.trim().split(/\s+/)[0] ?? '';
   return first.split('/').pop() ?? '';

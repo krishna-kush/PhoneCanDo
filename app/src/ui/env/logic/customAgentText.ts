@@ -76,12 +76,12 @@ export const PACKAGE_FIELD: Record<PresetWay, { label: string; placeholder: stri
   npm: {
     label: 'npm package',
     placeholder: '@scope/cli',
-    hint: 'Like @qwen-code/qwen-code or cline. We install the latest; Update agent gets the newest.',
+    hint: 'Like @rubber-duck/cli. We install the latest; Update agent gets the newest.',
   },
   python: {
     label: 'Python package',
-    placeholder: 'aider-chat',
-    hint: 'Like aider-chat or mistral-vibe. We install the latest; Update agent gets the newest.',
+    placeholder: 'rubber-duck',
+    hint: 'Like rubber-duck, its name on PyPI. We install the latest; Update agent gets the newest.',
   },
 };
 

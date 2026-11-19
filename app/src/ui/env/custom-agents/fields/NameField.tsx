@@ -10,7 +10,7 @@ export default function NameField({ k }: { k: FormKit }) {
       tag={FIELD_TAGS.name}
       value={k.form.name}
       onChange={(v) => k.set('name', v)}
-      placeholder="Aider"
+      placeholder="Rubber Duck"
       problems={fieldProblems(k.problems, 'name')}
     />
   );

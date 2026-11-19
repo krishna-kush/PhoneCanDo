@@ -44,7 +44,7 @@ export default function InstallChoice({ k }: { k: FormKit }) {
           tag={FIELD_TAGS.script}
           value={k.form.script}
           onChange={(v) => k.set('script', v)}
-          placeholder="pip install --user aider-chat"
+          placeholder="pip install --user rubber-duck"
           hint={SCRIPT_HINT}
           problems={fieldProblems(k.problems, 'script')}
           code
