@@ -11,4 +11,5 @@ export const mortarboard: Part = {
     { line: [[[0.5, 0.42], -0.18], [[0.5, 0.44], 0.02]], stroke: 'red', width: 0.04, follow: true },
     { rect: [[0.5, 0.4], 0, 0.08, 0.1], fill: 'red', follow: true },
   ],
+  side: 'same',
 };

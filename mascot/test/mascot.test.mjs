@@ -49,6 +49,12 @@ test('designs have unique ids and names, and wear parts that exist in their slot
   assert.equal(designOf('gone'), null);
 });
 
+test('every part says how it looks turned side on: its own marks, or the same as face on', () => {
+  for (const [id, p] of Object.entries({ ...HATS, ...FACES, ...NECKS })) {
+    assert.ok(p.side === 'same' || (Array.isArray(p.side) && p.side.length > 0), id);
+  }
+});
+
 test('an earned design is a real look, laid out like any other, and never drawn at random', () => {
   for (const d of EARNED) {
     assert.equal(designOf(d.id)?.name, d.name);

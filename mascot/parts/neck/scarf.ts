@@ -12,4 +12,5 @@ export const scarf: Part = {
       follow: true,
     },
   ],
+  side: 'same',
 };

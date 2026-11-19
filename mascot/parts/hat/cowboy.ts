@@ -24,4 +24,5 @@ export const cowboy: Part = {
       fill: 'wear',
     },
   ],
+  side: 'same',
 };

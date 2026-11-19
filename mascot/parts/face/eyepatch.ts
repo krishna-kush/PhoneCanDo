@@ -8,4 +8,5 @@ export const eyepatch: Part = {
     { line: [[0, 0.1], [[1, 0], 0.3]], stroke: 'dark', width: 0.04 },
     { rect: [[0, -0.06], [0, -0.05], [1, 0.12], [1, 0.1]], fill: 'dark', eye: 'one' },
   ],
+  side: 'same',
 };

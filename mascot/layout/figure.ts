@@ -43,7 +43,7 @@ const SIDE_W = 0.82;
 const VENT: Mark[] = [0, 1, 2].map((k) => ({ rect: [[0.28, 0], [0.36, k * 0.12], [0.44, 0], 0.05], fill: 'dark', alpha: 0.35 }));
 
 function marksOf(part: Part, facing: Facing): readonly Mark[] {
-  if (facing === 'side') return part.side ?? part.front;
+  if (facing === 'side') return part.side === 'same' ? part.front : part.side;
   if (facing === 'back') return part.back ?? (part.slot === 'hat' ? part.front : []);
   return part.front;
 }

@@ -9,4 +9,5 @@ export const santa: Part = {
     { rect: [-0.04, -0.07, [1, 0.08], 0.11], fill: 'wear' },
     circle([1, 0.04], -0.1, 0.08, { fill: 'wear', follow: true }),
   ],
+  side: 'same',
 };

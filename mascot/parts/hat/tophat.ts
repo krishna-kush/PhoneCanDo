@@ -9,4 +9,5 @@ export const tophat: Part = {
     { rect: [[0.5, -0.3], -0.13, 0.6, 0.09], fill: 'red' },
     { rect: [[0.5, -0.48], -0.07, 0.96, 0.08], fill: 'wear' },
   ],
+  side: 'same',
 };

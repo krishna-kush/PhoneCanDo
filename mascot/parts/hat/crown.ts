@@ -19,4 +19,5 @@ export const crown: Part = {
     },
     { rect: [[0.5, -0.04], -0.1, 0.08, 0.08], fill: 'red' },
   ],
+  side: 'same',
 };

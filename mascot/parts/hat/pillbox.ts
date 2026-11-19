@@ -11,4 +11,5 @@ export const pillbox: Part = {
     { rect: [[0.5, -0.22], -0.09, 0.44, 0.06], fill: 'front' },
     { rect: [[0.5, -0.04], -0.31, 0.08, 0.05], fill: 'front' },
   ],
+  side: 'same',
 };

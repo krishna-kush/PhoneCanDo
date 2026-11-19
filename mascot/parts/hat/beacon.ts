@@ -23,4 +23,5 @@ export const beacon: Part = {
     GLINT,
     BASE,
   ],
+  side: 'same',
 };

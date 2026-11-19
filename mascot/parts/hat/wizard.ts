@@ -19,4 +19,5 @@ export const wizard: Part = {
     { rect: [[0.5, -0.08], -0.3, 0.1, 0.1], fill: 'red' },
     { rect: [[0.5, -0.44], -0.09, 0.88, 0.08], fill: 'wear' },
   ],
+  side: 'same',
 };

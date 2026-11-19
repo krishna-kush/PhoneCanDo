@@ -12,4 +12,5 @@ export const signpost: Part = {
     { rect: [[0.5, -0.26], -0.39, 0.29, 0.14], fill: 'back', follow: true },
     { poly: [[[0.5, 0.02], -0.48], [[0.5, 0.36], -0.32], [[0.5, 0.02], -0.16]], fill: 'back', follow: true },
   ],
+  side: 'same',
 };

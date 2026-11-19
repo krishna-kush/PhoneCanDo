@@ -7,5 +7,6 @@ export const cap: Part = {
   slot: 'hat',
   label: 'Cap',
   front: [CROWN, { rect: [[0.6, 0], -0.02, [0.4, 0.26], 0.07], fill: 'wear', follow: true }],
+  side: 'same',
   back: [CROWN, { rect: [[0.5, -0.07], -0.06, 0.14, 0.06], fill: 'dark' }],
 };

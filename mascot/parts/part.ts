@@ -51,8 +51,14 @@ export type Part = {
   label: string;
   /** Face on. */
   front: readonly Mark[];
-  /** Side on, turned to the right (mirrored for the left); the front's when left out. */
-  side?: readonly Mark[];
+  /**
+   * Side on, turned to the right (mirrored for the left), its far half
+   * hidden or in the `back` ink; `same` for a part that looks the same
+   * turned (round, or worn in the middle), so its front is drawn. Every
+   * part says which, as a pair (ears, horns, lenses) or a knot tied at the
+   * back drawn face on looks wrong once it turns.
+   */
+  side: readonly Mark[] | 'same';
   /** From behind; the front's when left out for a hat, nothing for a neck or face part. */
   back?: readonly Mark[];
 };

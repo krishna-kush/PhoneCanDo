@@ -15,4 +15,5 @@ export const mapHat: Part = {
     { line: [[[0.5, 0.01], -0.28], [[0.5, 0.17], -0.12]], stroke: 'red', width: 0.08, follow: true },
     { line: [[[0.5, 0.01], -0.12], [[0.5, 0.17], -0.28]], stroke: 'red', width: 0.08, follow: true },
   ],
+  side: 'same',
 };

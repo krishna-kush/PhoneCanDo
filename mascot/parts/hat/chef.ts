@@ -11,4 +11,5 @@ export const chef: Part = {
     circle([0.5, 0], -0.38, 0.18, { fill: 'wear' }),
     { line: [[[0.5, -0.24], -0.14], [[0.5, 0.24], -0.14]], stroke: 'dark', width: 0.03 },
   ],
+  side: 'same',
 };
