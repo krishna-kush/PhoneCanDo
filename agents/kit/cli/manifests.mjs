@@ -24,13 +24,16 @@
 //     installs on, at least one family is left that they all do, and its
 //     packages are keyed by those (or `*`);
 //   - a kind has a one-shot.json (one-shot.ts) exactly when it has a models
-//     block.
+//     block;
+//   - a kind's probes.json (probes.ts), when it has one, holds probes CI can
+//     run on it: an image kind's, ACP only for a kind with engine.acp.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseRuntimeNeed } from '../ts/manifest/install.ts';
 import { ANY_FAMILY, FAMILIES, PATTERNS, TRUST_IN_ARGV } from '../ts/manifest/rules.ts';
 import { ONE_SHOT_FILE, validateOneShot } from '../ts/manifest/one-shot.ts';
+import { PROBES_FILE, validateProbes } from '../ts/manifest/probes.ts';
 import { validateRuntime } from '../ts/manifest/runtime-plugin.ts';
 import { validate } from '../ts/manifest/validate.ts';
 
@@ -45,7 +48,8 @@ const PART_FIELDS = ['into', 'fullOnly'];
 
 /**
  * Every kind, every runtime and every problem, never throwing.
- * entries: [{ id, type, dir (absolute), manifest, parts: [{ name, dir, into, fullOnly }] }]
+ * entries: [{ id, type, dir (absolute), manifest, parts: [{ name, dir, into, fullOnly }], probes }]
+ *   (probes: the kind's probes.json, or null when it has none or it is not JSON)
  * runtimes: [{ id, dir (absolute), manifest }]
  * problems: [{ file (repo-relative), path (JSON pointer), code, detail }]
  */
@@ -163,7 +167,8 @@ function loadOne(root, folder, name, dir, problems) {
     }
   }
   checkOneShot(manifest, folder, name, dir, problems);
-  return { id: manifest.id, type: manifest.type, dir, manifest, parts };
+  const probes = checkProbes(manifest, folder, name, dir, problems);
+  return { id: manifest.id, type: manifest.type, dir, manifest, parts, probes };
 }
 
 // A trust in our phone tools that a config file holds: the file, each copy
@@ -200,6 +205,18 @@ function checkOneShot(manifest, folder, name, dir, problems) {
   const json = readJson(join(dir, ONE_SHOT_FILE), file, add);
   if (json === undefined) return;
   for (const p of validateOneShot(json, manifest).problems) add(p.path, p.code, p.detail);
+}
+
+// What CI's weekly check of the newest releases asks of the kind
+// (agents-latest.yml); optional, so a kind with none is only installed.
+function checkProbes(manifest, folder, name, dir, problems) {
+  if (!existsSync(join(dir, PROBES_FILE))) return null;
+  const file = `agents/${folder}/${name}/${PROBES_FILE}`;
+  const add = (path, code, detail) => problems.push({ file, path, code, detail });
+  const json = readJson(join(dir, PROBES_FILE), file, add);
+  if (json === undefined) return null;
+  for (const p of validateProbes(json, manifest).problems) add(p.path, p.code, p.detail);
+  return json;
 }
 
 function loadPart(root, name, add) {

@@ -266,6 +266,36 @@ describe('phone tools trust', () => {
   });
 });
 
+describe('probes', () => {
+  const probes = 'agents/image/gemini-cli/probes.json';
+  const help = { help: [{ argv: ['/root/.local/bin/gemini', '--help'], has: ['--resume'] }] };
+
+  it('takes none, or a valid one beside an image kind', () => {
+    const bare = makeRoot({ ...imageKind({}), ...runtime('node') });
+    assert.deepEqual(codes(bare), []);
+    assert.equal(scanManifests({ root: bare }).entries[0].probes, null);
+    const run = { run: [{ argv: ['/root/.local/bin/gemini', 'mcp', 'list'], env: { X: '{{config}}/settings.json' }, has: ['phonecando'] }] };
+    const root = makeRoot({ ...imageKind({}), ...runtime('node'), [probes]: { ...help, ...run } });
+    assert.deepEqual(codes(root), []);
+    assert.deepEqual(scanManifests({ root }).entries[0].probes, { ...help, ...run }, 'the entry carries its probes');
+  });
+
+  it('reports a bad one with its file', () => {
+    const bad = { help: [{ argv: ['gemini', '{{tmp}}'], has: [] }], acp: { require: ['loadSession'] } };
+    assert.deepEqual(codes(makeRoot({ ...imageKind({}), ...runtime('node'), [probes]: bad })), [
+      `${probes} /help/0/argv/1 unknown`,
+      `${probes} /help/0/has length`,
+      `${probes} /acp forbidden`,
+    ]);
+    assert.deepEqual(codes(makeRoot({ ...imageKind({}), ...runtime('node'), [probes]: '{ nope' })), [`${probes}  json`]);
+  });
+
+  it('keeps them to image kinds', () => {
+    const got = codes(makeRoot({ ...nativeKind('alpha', 'al'), ...PHONE_TOOLS, 'agents/native/alpha/probes.json': help }));
+    assert.deepEqual(got, ['agents/native/alpha/probes.json  forbidden']);
+  });
+});
+
 describe('forChannel', () => {
   it('keeps the kinds that list the channel', () => {
     const list = [
