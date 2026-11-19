@@ -106,7 +106,7 @@ export default function App() {
 
   useEffect(() => {
     // Where to land when the app opens for a reason: a tap on a
-    // notification or an agent bringing the app back (mobile_return);
+    // notification or an agent bringing the app back (phone_return);
     // applyLaunchTarget (ui/nav/launchTarget.ts) says where each lands. The
     // event covers the app in front; the pref covers a cold or resumed
     // start. Until the agents are read, a switch would be undone by the

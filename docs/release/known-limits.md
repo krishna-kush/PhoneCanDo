@@ -6,24 +6,24 @@ These are not scheduled work unless they are also listed in
 
 ## Automation API
 
-- `mobile_screenshot` is not registered. Use
-  `mobile_observe({screenshot: true})`; the explicit `Action.Screenshot` has
+- `phone_screenshot` is not registered. Use
+  `phone_observe({screenshot: true})`; the explicit `Action.Screenshot` has
   no artifact return path and every backend rejects it.
-- `mobile_execute`, `mobile_flow`, `mobile_doctor` and flow saving are target
+- `phone_execute`, `phone_flow`, `phone_doctor` and flow saving are target
   surface. The current build runs a named flow with
-  `mobile_pack {"action":"run","id":"<pack>","flow":"<flow>","params":{...}}`.
+  `phone_pack {"action":"run","id":"<pack>","flow":"<flow>","params":{...}}`.
 - Pack crypto is gated below API 33; no provider is bundled. The above gate is
   code-inspected, not device-tested.
 - Bundled baseline packs and app-start refresh throttling are not implemented;
-  pack updates are manual (`mobile_pack refresh`).
+  pack updates are manual (`phone_pack refresh`).
 - Android 11+ package visibility can hide an installed app from
   `getLaunchIntentForPackage` and from the bridge shell's `pm list packages`.
-  `mobile_launch` may return `NOT_FOUND`; fall back to launcher UI search.
-- `mobile_info.activity` comes from the last accessibility window-state event;
+  `phone_launch` may return `NOT_FOUND`; fall back to launcher UI search.
+- `phone_info.activity` comes from the last accessibility window-state event;
   it is null until the service sees one and can lag a dialog/window transition.
-  `mobile_wait` polls; it compares `eventSeq` when present and falls back to
+  `phone_wait` polls; it compares `eventSeq` when present and falls back to
   the node signature. The staged eventSeq comparison lands with the next APK.
-- `mobile_home` backgrounds PhoneCanDo. While an agent drives the screen
+- `phone_home` backgrounds PhoneCanDo. While an agent drives the screen
   (a screen call now or in the last 30 s) the runner's idle stop stops
   nothing.
 - With the app in the background an idle agent stops once nothing it
@@ -68,7 +68,7 @@ These are not scheduled work unless they are also listed in
 - opencode 2.0.26 has no `ctx.permission.assert`, and Code Mode's `execute`
   bypasses top-level permission rules for plugin tools. The app-side biometric
   master switch is the gate until opencode is bumped.
-- Release builds ship without a pack key, so `mobile_pack` refuses every
+- Release builds ship without a pack key, so `phone_pack` refuses every
   pack ("No trusted pack public key is configured"); agents drive apps with
   the other phone tools. No packs are published yet; the key arrives with
   the first ones (`docs/planning/todo.md`, Packs). Debug builds use a

@@ -32,7 +32,7 @@ accessibility clicks.
 - Screenshot: Shizuku `screencap` below API 30.
 - Device ops: Shizuku only.
 
-The backend router is a capability negotiation: `mobile_describe` tells the
+The backend router is a capability negotiation: `phone_describe` tells the
 AI what is available, and missing backends produce `BACKEND_UNAVAILABLE` with
 a recovery action.
 

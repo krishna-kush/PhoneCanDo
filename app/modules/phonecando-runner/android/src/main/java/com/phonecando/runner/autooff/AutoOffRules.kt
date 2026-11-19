@@ -6,7 +6,7 @@ package com.phonecando.runner.autooff
 // itself off once PhoneCanDo has been out of sight and no agent has wanted
 // the screen for QUIET_MS. Never in WARM_UP_MS after it connects: the user
 // who just flipped the switch is still in Android's Settings, and the agent
-// that asked for it (mobile_open_accessibility) has not taken the screen
+// that asked for it (phone_open_accessibility) has not taken the screen
 // yet. Pure: times are one monotonic clock's.
 object AutoOffRules {
   /** How often the watch looks. */

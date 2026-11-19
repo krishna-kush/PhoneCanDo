@@ -68,7 +68,7 @@ object Bridge {
 
   /**
    * The agent in the middle of driving the phone: it holds the screen, idle
-   * or not, in a run that has not ended or given it back (mobile_return).
+   * or not, in a run that has not ended or given it back (phone_return).
    * Null while the screen is free or no bridge is open.
    */
   fun screenHolder(): String? = lease?.holderId()

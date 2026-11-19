@@ -33,7 +33,7 @@ class McpEntryTest {
 
   @Test fun aBadTokenIs401AndRunsNothing() {
     for (token in listOf("Bearer nope", "token-a1", null)) {
-      val reply = entry.handle(request(token, "/mcp", call(1, "mobile_ping")))
+      val reply = entry.handle(request(token, "/mcp", call(1, "phone_ping")))
       assertEquals(401, reply.status)
       assertEquals("unauthorized", JSONObject(reply.body).getString("code"))
     }
@@ -44,7 +44,7 @@ class McpEntryTest {
   }
 
   @Test fun theTokenNamesTheCallerAndTheRouteIsCounted() {
-    val reply = entry.handle(request("Bearer token-a2", "/mcp", call(1, "mobile_ping")))
+    val reply = entry.handle(request("Bearer token-a2", "/mcp", call(1, "phone_ping")))
     assertEquals(200, reply.status)
     assertEquals(listOf("a2"), used)
     assertEquals(listOf("a2 /ping {}"), rig.handled)

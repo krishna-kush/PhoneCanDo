@@ -78,7 +78,7 @@ enum class Route(
 
     // Telemetry key per route: the path without its leading slash, `/` as
     // `_` (tce's tool.<name> allows [a-z0-9_] only). Keys are route names,
-    // not mobile_* tool names: that mapping lives in the agent plugins, and
+    // not phone_* tool names: that mapping lives in the agent plugins, and
     // many tools share /pce/act. A fixed table, so an unknown path never
     // becomes a key; looked up by path whatever the method, as a wrong
     // method answers 404, which is not counted.

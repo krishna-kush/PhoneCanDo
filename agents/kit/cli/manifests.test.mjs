@@ -312,7 +312,7 @@ describe('matchesGlob', () => {
     assert.ok(matchesGlob('AGENTS.md', 'AGENTS.md'));
     assert.ok(!matchesGlob('plugins/AGENTS.md', 'AGENTS.md'));
     assert.ok(matchesGlob('plugins/automation/index.ts', 'plugins/automation/**'));
-    assert.ok(!matchesGlob('plugins/mobile/index.ts', 'plugins/automation/**'));
+    assert.ok(!matchesGlob('plugins/phone/index.ts', 'plugins/automation/**'));
     assert.ok(matchesGlob('a/b/c.ts', '**/c.ts'));
     assert.ok(matchesGlob('c.ts', '**/c.ts'));
     assert.ok(matchesGlob('control/x.ts', 'control/'));

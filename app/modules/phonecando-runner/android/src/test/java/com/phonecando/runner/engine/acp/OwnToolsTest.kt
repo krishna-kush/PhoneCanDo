@@ -10,38 +10,38 @@ import org.junit.Test
 // that allows one: only our exact tool names, bare or with our server's
 // name round them.
 class OwnToolsTest {
-  private val names = setOf("mobile_click", "agents_list", "schedule_add")
+  private val names = setOf("phone_click", "agents_list", "schedule_add")
 
   @Test fun ourToolsAsAgentsTitleThem() {
     for (t in listOf(
-      "mobile_click",
+      "phone_click",
       "mcp__phonecando__agents_list",
       "phonecando/schedule_add",
-      "phonecando.mobile_click",
-      "phonecando:mobile_click",
-      "mobile_click (phonecando MCP Server)",
+      "phonecando.phone_click",
+      "phonecando:phone_click",
+      "phone_click (phonecando MCP Server)",
       "agents_list (phonecando)",
-      "phonecando__mobile_click",
+      "phonecando__phone_click",
       "phonecando__agents_list: to=\"Ada\"\nand more",
-      "  mobile_click  ",
+      "  phone_click  ",
     )) assertTrue(t, OwnTools.isOurs(t, names))
   }
 
   @Test fun anythingElseStillAsks() {
     for (t in listOf(
-      "grep mobile_click notes.txt",
-      "Run mobile_click",
-      "mcp__other__mobile_click",
-      "other/mobile_click",
-      "mobile_click (other MCP Server)",
+      "grep phone_click notes.txt",
+      "Run phone_click",
+      "mcp__other__phone_click",
+      "other/phone_click",
+      "phone_click (other MCP Server)",
       "mcp__phonecando__rm_rf",
-      "mobile_clicks",
+      "phone_clicks",
       "phonecando__rm_rf: x",
-      "phonecando__mobile_click; rm -rf",
-      "other__mobile_click",
+      "phonecando__phone_click; rm -rf",
+      "other__phone_click",
       "",
     )) assertFalse(t, OwnTools.isOurs(t, names))
-    assertFalse(OwnTools.isOurs("mobile_click", emptySet()))
+    assertFalse(OwnTools.isOurs("phone_click", emptySet()))
   }
 
   @Test fun allowsOnceRatherThanAlways() {

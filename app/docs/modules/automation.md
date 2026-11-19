@@ -9,14 +9,14 @@ packs or accessibility host; see `bridge.md` for the flavor split.
 and is a minimal Android lifecycle shell. It creates `PceAutomationImpl`,
 registers it in `PceAuto.service`, and owns nothing else; all observation and
 action logic lives in the PCE. The old vendored driver and `/ui/*` routes
-are removed. The old `mobile_screen/info/click/tap/text/scroll/swipe/back/home/wait`
+are removed. The old `phone_screen/info/click/tap/text/scroll/swipe/back/home/wait`
 names are plugin wrappers over `/pce/observe` and `/pce/act`;
-`/ui/*` returns 404. `mobile_launch` wraps the PCE `launch` action for installed
-apps, while `mobile_open` remains URL-only and rejects app schemes. The runner
+`/ui/*` returns 404. `phone_launch` wraps the PCE `launch` action for installed
+apps, while `phone_open` remains URL-only and rejects app schemes. The runner
 manifest declares a MAIN/LAUNCHER `<queries>` entry so `getLaunchIntentForPackage`
 can see launcher apps on Android 11+. The bridge shell runs as the PhoneCanDo
 UID, so its `pm list packages` output is filtered; it is not proof that an app
-is missing. If `mobile_launch` returns `NOT_FOUND`, the agent must try launcher
+is missing. If `phone_launch` returns `NOT_FOUND`, the agent must try launcher
 UI search before reporting the app as absent.
 Screen dumps and click/input/scroll targets skip nodes whose bounds are
 malformed or whose center is off-display (PhoneCanDo's horizontal pager keeps
@@ -39,19 +39,19 @@ fallback) because React Native nodes report clickable without handling
 `PhoneCanDoAccessibilityService` tracks the package/class of the last
 `TYPE_WINDOW_STATE_CHANGED` event and exposes it by package;
 `PceAutomationImpl` writes `activity` into the bridge snapshot from it, so
-`mobile_info.activity` works even before the PCE AAR is republished.
+`phone_info.activity` works even before the PCE AAR is republished.
 `A11yBackend` also accepts an optional `A11yActivityNameProvider` for that
 republish, without adding an Android type to `pce/api`. The service also exposes a
-monotonic `eventSeq`; the bridge snapshot includes it and `mobile_wait` compares
+monotonic `eventSeq`; the bridge snapshot includes it and `phone_wait` compares
 it (falling back to the node signature) so a change that reverts between polls is
 still noticed. Every authenticated bridge call marks the calling agent's
 engine used, so it is not the one stopped to make room, and the runner's
 idle stop (`engine/work/`, `runner.md` → Jobs and the idle stop) stops
 nothing while an agent drives the screen (`Bridge.screenInUse`), so
-`mobile_home` does not strand the next tool call. The screen routes take the screen lease: with several agents
+`phone_home` does not strand the next tool call. The screen routes take the screen lease: with several agents
 running, one drives the screen at a time and the others get 409
 `control_busy` (`bridge.md`). Device-verified 2026-10-31: `activityName` and `eventSeq`
-work; the staged `mobile_wait` eventSeq comparison lands with the next APK
+work; the staged `phone_wait` eventSeq comparison lands with the next APK
 because the generated asset was stale.
 
 Auto off (runner `autooff/`, Settings → Phone control): payment and bank
@@ -61,7 +61,7 @@ PhoneCanDo has been out of sight and no agent has wanted the screen
 (`Bridge.screenWanted`, or a hand-over to you) for 10 s, never in the 2
 minutes after it connects (`AutoOffRules`). It marks itself the cause, so
 the 503 below says so and the agent asks through
-`mobile_open_accessibility`; only the user switches it back on. The app
+`phone_open_accessibility`; only the user switches it back on. The app
 offers it once, after the switch's first turn-on on this install (marked
 natively at that first bind; a switch on before never brings it), after a
 first shift walk ends (`ui/accessibility/auto-off/`).
@@ -78,11 +78,11 @@ The PCE-backed slice is live; the rest of the API tree is the target surface.
 - Gate: the same biometric/master switch. Locked calls return HTTP 403
   `automation_off`; a missing accessibility service returns HTTP 503
   `automation_unavailable`.
-- Plugin tools: `mobile_describe`, `mobile_observe`, `mobile_act`,
-  `mobile_launch`, `mobile_pack`. The existing screen/info/click/tap/text/
+- Plugin tools: `phone_describe`, `phone_observe`, `phone_act`,
+  `phone_launch`, `phone_pack`. The existing screen/info/click/tap/text/
   scroll/swipe/back/home/wait tools are PCE-backed wrappers; `/ui/*` is
-  removed. `mobile_open` is URL-only (http/https/mailto/tel/geo/market);
-  `mobile_launch` is the package launcher.
+  removed. `phone_open` is URL-only (http/https/mailto/tel/geo/market);
+  `phone_launch` is the package launcher.
 - Build split: main-source `PceAutomation`/`PceAuto` seam; the full-only
   `PceAutomationImpl` and `PackStore` live under `src/uiauto/java`. Play
   builds exclude the uiauto source/res and PCE dependencies.
@@ -98,10 +98,10 @@ The PCE-backed slice is live; the rest of the API tree is the target surface.
 - Tool parity device-proven 2026-10-30: screen, info, click by text, tap,
   text set/append/replace/clear, scroll down/up, swipe, back, home, and wait
   changed/timeout. `/ui/*` now returns 404.
-- Not yet: `mobile_execute`, `mobile_flow`, explicit screenshot action, and a
+- Not yet: `phone_execute`, `phone_flow`, explicit screenshot action, and a
   pack-crypto provider below API 33 (packs are gated there).
-- Host metadata: `mobile_info.activity` comes from the accessibility service's
-  last `TYPE_WINDOW_STATE_CHANGED`; `mobile_wait` uses the host `eventSeq` when
+- Host metadata: `phone_info.activity` comes from the accessibility service's
+  last `TYPE_WINDOW_STATE_CHANGED`; `phone_wait` uses the host `eventSeq` when
   present and falls back to the node signature. Device-verified 2026-10-31:
   `activityName` and `eventSeq`; the staged eventSeq comparison lands with the
   next APK because the generated asset was stale.
@@ -109,12 +109,12 @@ The PCE-backed slice is live; the rest of the API tree is the target surface.
   stop (`engine/work/WorkWatch`) leaves every engine running when
   PhoneCanDo is backgrounded, and each bridge call marks the calling
   agent's engine used.
-  `mobile_home` therefore does not strand the next tool call. The JS veto was
+  `phone_home` therefore does not strand the next tool call. The JS veto was
   verified on-device with Metro in the single-engine build; the multi-agent
   store keeps the same check.
 - Known limits: Android 11+ package visibility can hide an installed app from
   `getLaunchIntentForPackage` and from the bridge shell's `pm list packages`;
-  `mobile_launch` may return `NOT_FOUND` for an app that is present. The app
+  `phone_launch` may return `NOT_FOUND` for an app that is present. The app
   declares a MAIN/LAUNCHER `<queries>` entry, but when a launch still fails the
   agent must fall back to launcher UI search before reporting the app as
   missing.
@@ -123,23 +123,23 @@ The PCE-backed slice is live; the rest of the API tree is the target surface.
 
 | Tool | PCE-backed behavior |
 |---|---|
-| `mobile_screen` | `observe`; flatten text/desc nodes; `editable` and scrollable-ancestor filters |
-| `mobile_info` | `observe`; package, activity, root child count |
-| `mobile_click` | `observe`; text/desc/id match plus clickable-parent walk; `act` tap node |
-| `mobile_tap` | `act` tap coordinates |
-| `mobile_text` | `observe`; focused/first editable; `act` type_text with `clear=!append` |
-| `mobile_scroll` | `observe`; target text scrollable ancestor or first scrollable; repeated `act` scroll |
-| `mobile_swipe` | `act` swipe |
-| `mobile_back` / `mobile_home` | `act` key BACK / HOME |
-| `mobile_wait` | poll `observe`; compare `eventSeq` plus snapshot signature |
-| `mobile_launch` | `observe`; `act` launch by package, optional activity |
+| `phone_screen` | `observe`; flatten text/desc nodes; `editable` and scrollable-ancestor filters |
+| `phone_info` | `observe`; package, activity, root child count |
+| `phone_click` | `observe`; text/desc/id match plus clickable-parent walk; `act` tap node |
+| `phone_tap` | `act` tap coordinates |
+| `phone_text` | `observe`; focused/first editable; `act` type_text with `clear=!append` |
+| `phone_scroll` | `observe`; target text scrollable ancestor or first scrollable; repeated `act` scroll |
+| `phone_swipe` | `act` swipe |
+| `phone_back` / `phone_home` | `act` key BACK / HOME |
+| `phone_wait` | poll `observe`; compare `eventSeq` plus snapshot signature |
+| `phone_launch` | `observe`; `act` launch by package, optional activity |
 
 ## Pack lifecycle
 
 PCE status (2026-10-30): `pce-pack` implements `load`/`run` with detached
 Ed25519 verification, strict validation, compatibility checks and signed
 manifest verification (27 tests). The app wires packs through `/pce/pack` and
-`mobile_pack`; the host flow is in Bridge routes above. The lifecycle is
+`phone_pack`; the host flow is in Bridge routes above. The lifecycle is
 device-proven on API 36: install, idempotent refresh, v2→v1 rollback,
 bad manifest signature (`PACK_SIGNATURE_INVALID`) and incompatible pack
 (`PACK_INCOMPATIBLE`, active version unchanged). Running an active pack flow is

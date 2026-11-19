@@ -291,7 +291,7 @@ opencode); everything else keeps Android's TLS-only default.
 
 ## Update-speed rules
 
-- App knowledge: signed packs (`mobile_pack refresh`), no APK.
+- App knowledge: signed packs (`phone_pack refresh`), no APK.
 - opencode/PCE/native, UI, terminal, IME: new APK.
 - A broken release cannot fetch its own fix; keep the website APK as the
   manual escape hatch.

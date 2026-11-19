@@ -98,7 +98,7 @@ from its own config file gets neither.
 
 ### Phone tools
 
-The phone tools (`mobile_*`) and the agent tools (`agents_*` for
+The phone tools (`phone_*`) and the agent tools (`agents_*` for
 messages, `schedule_*` for tasks) come from one MCP server on the phone.
 Your CLI needs an HTTP MCP client that our settings file (`mcp:config`)
 or a flag (`mcp:argv`) can point at it. The token is only ever an env

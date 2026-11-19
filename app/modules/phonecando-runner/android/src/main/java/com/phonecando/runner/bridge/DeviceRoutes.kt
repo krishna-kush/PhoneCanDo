@@ -20,7 +20,7 @@ class DeviceRoutes(
   private val channel: String,
   private val automation: () -> AutomationHost?,
   private val lock: ControlLock,
-  // mobile_notify's limits, and whether PhoneCanDo shows the agent's own chat now.
+  // phone_notify's limits, and whether PhoneCanDo shows the agent's own chat now.
   private val notifyRules: NotifyRules,
   private val chatOnScreen: (agentId: String) -> Boolean,
 ) {

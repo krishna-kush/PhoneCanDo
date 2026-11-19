@@ -63,7 +63,7 @@ redesigns, and new AI clients without another rewrite.
 - The PCE owns snapshots, selectors, typed actions, verification, trace and
   packs.
 - The PCE never depends on PhoneCanDo, React Native, Expo, NanoHTTPD or
-  `mobile_*` names. See `pce/AGENTS.md`.
+  `phone_*` names. See `pce/AGENTS.md`.
 
 ## Related
 

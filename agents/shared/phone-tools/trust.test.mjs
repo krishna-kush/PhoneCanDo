@@ -1,8 +1,8 @@
 // A kind whose trust in our server (phoneToolsTrust) lists our tools by
 // name, because its CLI has no rule for a whole server, lists every one in
 // tools.json; a tool added later would otherwise ask in that kind. Names
-// count with a prefix (phonecando_mobile_ping, phonecando__mobile_ping) but
-// not as part of a longer name (mobile_open in mobile_open_accessibility).
+// count with a prefix (phonecando_phone_ping, phonecando__phone_ping) but
+// not as part of a longer name (phone_open in phone_open_accessibility).
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';

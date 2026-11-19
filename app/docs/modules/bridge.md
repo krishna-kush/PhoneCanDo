@@ -1,6 +1,6 @@
-# Loopback bridge and mobile tools
+# Loopback bridge and phone tools
 
-The host bridge exposes `mobile_*` tools to every running agent. It is
+The host bridge exposes `phone_*` tools to every running agent. It is
 loopback-only, runs in the app process beside the engines
 (`runner/bridge/`), opens with the first engine and closes with the last.
 
@@ -126,7 +126,7 @@ another agent joins the line once and gets 409 `control_busy` with
 `holder`, `retryAfterMs` and its `place` (1-based): "`<holder>` holds the
 screen; you are #`<place>` in line; we'll message you when it is yours". The
 holder hears of each new waiter once (`ScreenNotices.waiting`). When the
-holder's lease ends (it calls `/app`, `mobile_return`, done with the phone;
+holder's lease ends (it calls `/app`, `phone_return`, done with the phone;
 its run ends, `runEnded`; it has been idle 30 s while someone waits; its
 engine stops, `forget`, or its agent is deleted), the screen is reserved
 for the first in line for 30 s and that agent is told it is theirs
@@ -180,12 +180,12 @@ see, its run is stopped, and it goes on when you tap Start me again).
 - **Starting.** Your **Let me** (watch) or **Stop** (paused) works while an
   agent drives or holds the screen, and the hand-over is for that agent;
   Stop also turns a watch paused. An agent's `/hands/over {why, private?}`
-  (`mobile_hand_over`; `why` 1–120 characters) is a screen route: it must
+  (`phone_hand_over`; `why` 1–120 characters) is a screen route: it must
   hold the screen or find it free and be unlocked (else the usual
   `control_busy` or `screen_refused`). Watch blocks up to 4 minutes and
   answers `{mode: "watch", back}`; private (paused) answers at once
   `{mode: "private", back: false, message}`. `/hands/wait {timeoutSec?}`
-  (`mobile_wait_for_user`, no arguments for agents; 1–240 s, default 240)
+  (`phone_wait_for_user`, no arguments for agents; 1–240 s, default 240)
   blocks while you have the controls in watch (Let me: a pause) and
   answers `{back: true}` once you hand back, or at once when no hand-over
   is the caller's; its time run out, `back: false` with a `message` to
@@ -240,7 +240,7 @@ status line: one line, control characters out, at most 80 characters with
 it clears at run end, when its engine goes and after 15 minutes stale
 (`StatusRules`). It answers `{shown: true}`. `agents_list` shows it per
 agent (`status`), and the agent's notification shows it in place of a
-working chat's "Working". `/focus {}` (`mobile_focus`, every channel)
+working chat's "Working". `/focus {}` (`phone_focus`, every channel)
 answers `{app: "front"|"back", onScreen: "your_chat"|"other_agent"|"app"|null,
 phone: "unlocked"|"locked"|"off"}`.
 
@@ -408,23 +408,23 @@ agent).
 The tools are kind-neutral: `agents/shared/phone-tools/`
 holds their names, descriptions, schemas and the bridge client
 (`client.ts`), and is packaged inside each kind's config. opencode registers
-them through thin plugin adapters: `plugins/mobile/index.ts` registers the
+them through thin plugin adapters: `plugins/phone/index.ts` registers the
 seven basic tools every channel gets
-(`mobile_ping/battery/notify/focus/share/open/clipboard`); `plugins/automation/index.ts`,
+(`phone_ping/battery/notify/focus/share/open/clipboard`); `plugins/automation/index.ts`,
 shipped only in full, registers phone control (`phone-tools/control/`),
-`mobile_return` (`/app`), `mobile_request_unlock` (`/unlock`),
-`mobile_open_accessibility` (`/accessibility`), `mobile_hand_over`
-(`/hands/over`) and `mobile_wait_for_user` (`/hands/wait`). Both go through
-`plugins/mobile/opencode.ts` (`Plugin.define` + `ctx.tool.transform`).
+`phone_return` (`/app`), `phone_request_unlock` (`/unlock`),
+`phone_open_accessibility` (`/accessibility`), `phone_hand_over`
+(`/hands/over`) and `phone_wait_for_user` (`/hands/wait`). Both go through
+`plugins/phone/opencode.ts` (`Plugin.define` + `ctx.tool.transform`).
 The agent messages' tools, `agents_list`, `agents_send`, `agents_inbox` and
 `agents_wait` (`agents.ts`, one route each), `agents_status` (`/status`),
 `agents_keep_running`
 (`keep.ts`, `/keep`) and `schedule_add`, `schedule_list` and
 `schedule_cancel` (`schedule.ts`, `/schedule/*`) are on every channel.
 The client uses a 15 s timeout by default, 40 s for the 30 s waits
-(`agents_wait`, `mobile_hand_over`, `mobile_wait_for_user`), 50 s for unlock and 255 s for
+(`agents_wait`, `phone_hand_over`, `phone_wait_for_user`), 50 s for unlock and 255 s for
 accessibility, whose bridge wait is 240 s, and degrades to a message when
-the bridge is absent. `mobile_act` derives its timeout from the call, so a
+the bridge is absent. `phone_act` derives its timeout from the call, so a
 long wait ends in the bridge's own result rather than a client timeout:
 `timeoutMs` (clamped to 1–120 s, default 30 s) plus, with `expect`,
 `expectTimeoutMs` (0.5–30 s, default 5 s) plus 10 s, capped at 280 s.
@@ -474,15 +474,15 @@ GET and DELETE answer 405.
   (`--check` fails when it is stale; `pnpm -C agents check` runs it). The
   generator traces each tool's `run` against a stub bridge and keeps a tool
   only when it is one pass-through call to one route. The composed
-  wrappers (`mobile_launch/screen/info/click/tap/text/scroll/swipe/back/home/wait`,
+  wrappers (`phone_launch/screen/info/click/tap/text/scroll/swipe/back/home/wait`,
   `control/composed.ts`) chain `/pce/observe` and `/pce/act` or build on a
   snapshot in TypeScript, so they are left out, each listed under `omitted`
-  with its reason; over MCP an agent uses `mobile_observe` and `mobile_act`.
+  with its reason; over MCP an agent uses `phone_observe` and `phone_act`.
   agents.gradle packages the table as the asset of the same path; the
   bridge serves its `channel: "full"` tools only in full builds, and a
   build without the table serves MCP with no tools.
-- Long waits: `mobile_open_accessibility` holds the call up to 240 s,
-  `mobile_request_unlock` up to 45 s and `agents_wait` up to 30 s. An MCP
+- Long waits: `phone_open_accessibility` holds the call up to 240 s,
+  `phone_request_unlock` up to 45 s and `agents_wait` up to 30 s. An MCP
   client with a shorter request timeout gives up first; the prompt itself
   stays up in the app.
 
@@ -497,7 +497,7 @@ Phone control, says how long an unlock lasts:
 - `launch`: one switch, in memory; it ends with the process or when the user
   closes PhoneCanDo (the activity finishes: swiped from recents).
 - `ask`: no switch. The user's yes to an agent's `/unlock` is that agent's
-  own unlock (`AskGrants`); it ends at the agent's `/app` (`mobile_return`),
+  own unlock (`AskGrants`); it ends at the agent's `/app` (`phone_return`),
   when its engine stops (`BridgeHandle.agentGone`), after 5 minutes with no
   gated call from it, or when the user locks. Other agents stay locked and
   ask for themselves.
@@ -518,7 +518,7 @@ Locked calls to `notify/share/open/clipboard/pce/*` return 403
 service is not enabled in Android settings, `/pce/*` returns 503
 `automation_unavailable`, also when the service disconnects between the
 bridge's check and the call (the agent's cue to call
-`mobile_open_accessibility`). `/app` stays ungated: own-app launch is safe
+`phone_open_accessibility`). `/app` stays ungated: own-app launch is safe
 even while locked. `/unlock`, `/accessibility` and `/pce/*` exist only in
 full builds; lite/play return 404 `not_found` for them.
 
@@ -529,15 +529,15 @@ explain what is missing. The engine launcher injects
 `PHONECANDO_CHANNEL=full|lite|play` into every engine's env; the agent asset
 also omits the full-only automation plugin and phone-control tools outside
 full. Full builds register the base six tools plus three extra
-non-driver tools, `mobile_return`, `mobile_request_unlock`, and
-`mobile_open_accessibility`, the four PCE tools
-`mobile_describe`/`observe`/`act`/`pack`, the `mobile_launch` package launcher,
+non-driver tools, `phone_return`, `phone_request_unlock`, and
+`phone_open_accessibility`, the four PCE tools
+`phone_describe`/`observe`/`act`/`pack`, the `phone_launch` package launcher,
 and the legacy screen/info/click/tap/text/scroll/swipe/back/home/wait wrappers
 (24 tools total). Lite/play get the base six only.
 
 ### No agent asks about our tools
 
-The lock above is the only check on our own tools (`mobile_*`, `agents_*`,
+The lock above is the only check on our own tools (`phone_*`, `agents_*`,
 `schedule_*`): no agent waits on its own approval prompt before calling one.
 An agent's own tools (shell, file edits, other MCP servers) still ask as its
 settings say.

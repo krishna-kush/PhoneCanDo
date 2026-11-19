@@ -33,7 +33,7 @@ export function sampleResults() {
     ],
     eventNames: [
       { name: 'chat.open', n: 400, devices: 25 },
-      { name: 'tool.mobile_click', n: 250, devices: 9 },
+      { name: 'tool.phone_click', n: 250, devices: 9 },
       { name: 'update.check.none', n: 150, devices: 28 },
     ],
     errorsDaily: [

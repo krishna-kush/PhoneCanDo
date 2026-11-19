@@ -8,7 +8,7 @@ import com.phonecando.runner.checks.Checks
 import fi.iki.elonen.NanoHTTPD
 import java.io.IOException
 
-// Loopback bridge for the agents' mobile_* tools: each engine is a separate
+// Loopback bridge for the agents' phone_* tools: each engine is a separate
 // process, so a local socket is the only shared channel. NanoHTTPD (MIT) does
 // the HTTP framing, bound to 127.0.0.1 only (nothing on the network/LAN can
 // reach it). Every request needs the bearer token its engine got at launch;

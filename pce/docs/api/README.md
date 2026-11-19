@@ -1,7 +1,7 @@
 # API guide
 
 The PCE is host-neutral: it has no PhoneCanDo, React Native, Expo, bridge or
-`mobile_*` types. A host supplies a `Backend`; the core supplies snapshots,
+`phone_*` types. A host supplies a `Backend`; the core supplies snapshots,
 selectors, actions, verification, trace and packs.
 
 Coordinates:

@@ -169,7 +169,7 @@ export function sessionRow(over: Partial<SessionRow> = {}): SessionRow {
     battery_opt_ignored: 1,
     fg_service_ok: 1,
     a11y_on: 0,
-    counters: '{"tool.mobile_click":3}',
+    counters: '{"tool.phone_click":3}',
     country: 'IN',
     received: T0,
     ...over,
@@ -337,7 +337,7 @@ export function sessionWire(over: Partial<SessionWire> = {}): SessionWire {
     batteryOptIgnored: true,
     fgServiceOk: true,
     a11yOn: false,
-    counters: { 'tool.mobile_click': 3 },
+    counters: { 'tool.phone_click': 3 },
     ...over,
   };
 }

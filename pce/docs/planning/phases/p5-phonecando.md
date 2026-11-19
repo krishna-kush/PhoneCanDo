@@ -8,7 +8,7 @@ The first PCE-backed slice is device-proven on 2026-10-30 (Android 16/API 36).
 The bridge exposes `GET /pce/describe`,
 `POST /pce/observe`, `POST /pce/act` and `POST /pce/pack` behind the
 existing biometric gate; the plugin exposes
-`mobile_describe`/`observe`/`act`/`pack`. The full-only adapter lives in
+`phone_describe`/`observe`/`act`/`pack`. The full-only adapter lives in
 `app/modules/phonecando-runner/android/src/uiauto/java` behind the main
 `PceAutomation`/`PceAuto` seam. Play APK re-audited after the wrapper
 change: no PCE, pack or uiauto classes, no accessibility service and no
@@ -24,19 +24,19 @@ results, and typed errors covered an unknown flow (`NOT_FOUND`) and non-string
 params (`bad_request`). Selector taps use a gesture first because React Native
 nodes report clickable without handling `ACTION_CLICK`.
 
-The old vendored driver and `/ui/*` routes are gone; the old `mobile_*`
+The old vendored driver and `/ui/*` routes are gone; the old `phone_*`
 names are plugin wrappers over `observe`/`act` (device-tested 2026-10-30:
 screen, info, click, tap, text set/append/replace/clear, scroll, swipe, back,
-home, and wait changed/timeout). At P5 time `mobile_info.activity` was empty
-because the PCE did not populate `activityName`, and `mobile_wait` was
+home, and wait changed/timeout). At P5 time `phone_info.activity` was empty
+because the PCE did not populate `activityName`, and `phone_wait` was
 poll-based; the follow-up host changes add both (native rebuild pending). Packs
 are gated below API 33.
 
 ## Scope
 
-- app adapter: bridge routes call the PCE; tool names stay `mobile_*`.
+- app adapter: bridge routes call the PCE; tool names stay `phone_*`.
 - keep biometric gate, master switch, `full`/`play` split.
-- remove the old vendored driver and `/ui/*`; keep `mobile_*` names as
+- remove the old vendored driver and `/ui/*`; keep `phone_*` names as
   PCE-backed wrappers.
 - host pack lifecycle: manifest, `sha256`, storage, atomic swap, rollback.
 - pack crypto gate: platform Ed25519 is API 33+ (API 36 probe green), so v1
@@ -45,7 +45,7 @@ are gated below API 33.
 ## Acceptance
 
 - [x] `full`: unlock, observe, tap/text/back, wait, expect; locked calls 403.
-- [x] Orb-eye driver and `/ui/*` removed; the old `mobile_*` names are
+- [x] Orb-eye driver and `/ui/*` removed; the old `phone_*` names are
   PCE-backed wrappers.
 - [x] `play`: no a11y service and no PCE, pack or uiauto classes.
 - [x] Device evidence: logcat + screenshot for each claimed action.

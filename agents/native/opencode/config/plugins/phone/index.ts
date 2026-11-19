@@ -9,4 +9,4 @@ import { phonePlugin } from "./opencode"
 // between the agents on this phone, agents_keep_running, to stay up
 // while idle, and the schedule_* tools, to set itself tasks for later.
 // Phone control is the full-only automation plugin.
-export default phonePlugin("phonecando.mobile", [...basicTools, ...agentTools, ...keepTools, ...scheduleTools])
+export default phonePlugin("phonecando.phone", [...basicTools, ...agentTools, ...keepTools, ...scheduleTools])

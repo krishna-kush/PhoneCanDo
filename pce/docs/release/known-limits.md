@@ -5,13 +5,13 @@ These are not scheduled work unless they are also listed in
 
 ## PCE / API
 
-- `mobile_info.activity` comes from the last accessibility window-state event;
+- `phone_info.activity` comes from the last accessibility window-state event;
   it is null until the service sees one and can lag a dialog/window transition.
 - `Action.Screenshot` has no artifact return path; use observation screenshots.
 - Device coverage is currently Android 16 API 36.
-- `mobile_wait` compares the host accessibility event sequence when the bridge
+- `phone_wait` compares the host accessibility event sequence when the bridge
   provides it; it still polls, and it is not a general event stream.
-- `mobile_home` backgrounds PhoneCanDo. With phone control enabled the host vetoes
+- `phone_home` backgrounds PhoneCanDo. With phone control enabled the host vetoes
   the JS idle shutdown; with phone control off the idle shutdown still applies.
 
 ## Accessibility backend

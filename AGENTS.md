@@ -256,7 +256,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   doing: a hand-over to you (WATCH: it watches and keeps running;
   PAUSED: it can't see or touch the screen until Start me again, and
   its other work goes on), from the mascot's buttons or
-  `mobile_hand_over`; the bridge's Hands gate; each agent's
+  `phone_hand_over`; the bridge's Hands gate; each agent's
   `agents_status` line; `/focus` and `/notify`'s rules; the resume note
   (pure `HandsRules`, `HandsGate`,
   `StatusRules`, `NotifyRules`). `presence/glass/` is the mascot on the
@@ -285,7 +285,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   `./manage agent new`), `native/<id>/` (built by us for Android, in the
   APK lib dir, outside proot: opencode), `image/<id>/` (installed into a
   machine's image at creation, data only), `builtin/` (the one place code
-  hooks are registered), `shared/phone-tools/` (the `mobile_*` and
+  hooks are registered), `shared/phone-tools/` (the `phone_*` and
   `agents_*` tools). Each kind's `agent.json`
   drives packaging, CI matrices, the APK audit, the website's agent cards
   and which kind is the default (`"default": true` on at most one bundled

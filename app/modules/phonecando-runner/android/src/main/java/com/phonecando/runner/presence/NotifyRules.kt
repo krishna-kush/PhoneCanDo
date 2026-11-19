@@ -1,6 +1,6 @@
 package com.phonecando.runner.presence
 
-// When an agent's mobile_notify posts. Not while its own chat is on screen
+// When an agent's phone_notify posts. Not while its own chat is on screen
 // (it says it in the chat instead: posted false, with why). Otherwise at
 // most PER_MINUTE in a minute and PER_HOUR in an hour per agent; past that
 // 429 notify_too_often with when it may post again. Each post alerts. Only

@@ -59,22 +59,22 @@ const sub = { agentId: 'a2', parentAgentId: 'a1' };
 const tool = (toolName, snapshot = root) => ({ snapshot, toolCall: { toolCallId: 't1', toolName, input: {} } });
 
 test('trusts our tools only', () => {
-  assert.ok(trusted('phonecando__mobile_ping'));
+  assert.ok(trusted('phonecando__phone_ping'));
   assert.ok(trusted('phonecando__agents_send'));
-  for (const name of ['phonecando__', 'phonecando_mobile_ping', 'run_commands', 'editor', 'other__phonecando__x', undefined, 42]) {
+  for (const name of ['phonecando__', 'phonecando_phone_ping', 'run_commands', 'editor', 'other__phonecando__x', undefined, 42]) {
     assert.equal(trusted(name), false, String(name));
   }
 });
 
 test('beforeTool approves our tools, sub-agents too, and leaves the rest to Cline', async () => {
   const { p } = live();
-  assert.deepEqual(await p.hooks.beforeTool(tool('phonecando__mobile_ping')), { policy: { autoApprove: true } });
+  assert.deepEqual(await p.hooks.beforeTool(tool('phonecando__phone_ping')), { policy: { autoApprove: true } });
   assert.deepEqual(await p.hooks.beforeTool(tool('phonecando__agents_wait', sub)), { policy: { autoApprove: true } });
   assert.equal(await p.hooks.beforeTool(tool('run_commands')), undefined);
   assert.equal(await p.hooks.beforeTool(tool('editor')), undefined);
   // Without the bridge nothing of ours runs, so nothing is trusted.
   const noBridge = createPlugin({ env: { PHONECANDO_INBOX: folder() }, raise: () => {} });
-  assert.equal(await noBridge.hooks.beforeTool(tool('phonecando__mobile_ping')), undefined);
+  assert.equal(await noBridge.hooks.beforeTool(tool('phonecando__phone_ping')), undefined);
 });
 
 test('without our variables it is a bare plugin: no hooks, no setup', () => {

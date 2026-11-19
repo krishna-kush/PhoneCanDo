@@ -3,7 +3,7 @@ package com.phonecando.runner.presence
 /** Who has the controls once the agent hands them over: you drive while it watches, or while it is paused. */
 enum class HandMode { WATCH, PAUSED }
 
-/** Who started the hand-over: you, with the mascot's buttons, or the agent (mobile_hand_over). */
+/** Who started the hand-over: you, with the mascot's buttons, or the agent (phone_hand_over). */
 enum class HandBy { USER, AGENT }
 
 /**

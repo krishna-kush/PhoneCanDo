@@ -62,7 +62,7 @@ Rules:
 - Packs live in `files/automation/packs/<id>/<version>/` with an
   `active` pointer; previous versions stay for rollback.
 - Bundled baseline packs are planned, not implemented. Remote packs are
-  installed by `mobile_pack refresh`.
+  installed by `phone_pack refresh`.
 
 ## Manifest and signing
 
@@ -92,10 +92,10 @@ Rules:
 - Verify signature and hash before install; atomic swap; keep previous
   version for rollback. `pce-pack` verifies the manifest and pack signatures;
   the host verifies the download hash and owns the swap.
-- Update check: manual `mobile_pack refresh` (app-start throttling is not
+- Update check: manual `phone_pack refresh` (app-start throttling is not
   implemented). No server is required — a static HTTPS URL or a signed GitHub
   release is enough. Loopback HTTP is allowed for device testing only.
-- `mobile_describe` and `mobile_pack list` expose active pack versions, flows
+- `phone_describe` and `phone_pack list` expose active pack versions, flows
   and parameters so the AI knows what knowledge it has.
 
 Pack lifecycle status, device proof and the host adapter are in

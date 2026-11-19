@@ -26,13 +26,13 @@ own tree at `pce/docs/README.md`, and so has the Linux runtime at
 
 ## Automation contract (v1, host-facing)
 
-This is the AI/host contract (`mobile_*` tools and `/pce/*` JSON), not the PCE
+This is the AI/host contract (`phone_*` tools and `/pce/*` JSON), not the PCE
 Kotlin library API. The library API is in `pce/docs/api/`.
 
 - `api/README.md` — coordinates and reading order.
 - `api/mental-model.md` — layers, update speeds and why the contract is
   updatable.
-- `api/tools.md` — AI-facing `mobile_*` tool surface.
+- `api/tools.md` — AI-facing `phone_*` tool surface.
 - `api/snapshots.md` — observation payloads, node ids and screenshot rules.
 - `api/selectors.md` — selector fields and resolution order.
 - `api/actions.md` — action registry and risk levels.
@@ -53,7 +53,7 @@ Kotlin library API. The library API is in `pce/docs/api/`.
   PTYs, xterm renderer, input/sizing contract and terminal sessions.
 - `app/docs/modules/chat.md` — Home: the active agent's web UI or TUI.
 - `app/docs/modules/bridge.md` — loopback bridge, per-agent tokens, prompts,
-  screen lease, `mobile_*` tools, trust gate and full/lite/play channels.
+  screen lease, `phone_*` tools, trust gate and full/lite/play channels.
 - `app/docs/modules/automation.md` — PCE host integration, routes, pack
   lifecycle and current implementation status.
 - `app/docs/context.md` — project context and hard-won platform notes,

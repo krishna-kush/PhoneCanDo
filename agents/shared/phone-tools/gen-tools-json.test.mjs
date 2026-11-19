@@ -13,12 +13,12 @@ test('one-route tools are served with the fields their run always sends', async 
   const { tools } = await build();
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   assert.deepEqual(
-    { method: byName.mobile_ping.method, route: byName.mobile_ping.route, channel: byName.mobile_ping.channel },
+    { method: byName.phone_ping.method, route: byName.phone_ping.route, channel: byName.phone_ping.channel },
     { method: 'GET', route: '/ping', channel: 'all' },
   );
-  assert.deepEqual(byName.mobile_return.body, { tab: 'home', notify: true, reason: 'return' });
-  assert.equal(byName.mobile_return.channel, 'full');
-  assert.deepEqual(byName.mobile_request_unlock.body, { waitMs: 45_000 });
+  assert.deepEqual(byName.phone_return.body, { tab: 'home', notify: true, reason: 'return' });
+  assert.equal(byName.phone_return.channel, 'full');
+  assert.deepEqual(byName.phone_request_unlock.body, { waitMs: 45_000 });
 });
 
 test('the agent messaging tools are served on every channel, one route each', async () => {
@@ -45,7 +45,7 @@ test('the keep-running ask is served on every channel, one route', async () => {
 test('composed tools are left out, each with its reason', async () => {
   const { tools, omitted } = await build();
   const names = new Set(tools.map((t) => t.name));
-  for (const name of ['mobile_launch', 'mobile_click', 'mobile_wait']) {
+  for (const name of ['phone_launch', 'phone_click', 'phone_wait']) {
     assert.ok(!names.has(name), name);
     assert.match(omitted.find((o) => o.name === name)?.why ?? '', /\/pce\/observe/);
   }

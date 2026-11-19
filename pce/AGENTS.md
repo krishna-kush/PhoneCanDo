@@ -18,11 +18,11 @@ The host app owns:
 
 - HTTP bridge, auth, bearer tokens, rate limits
 - biometric gate and master switch
-- AI tool names (`mobile_*`), prompts and UI
+- AI tool names (`phone_*`), prompts and UI
 - app lifecycle, foreground service and notifications
 
 If a change needs an app type, an Expo/React Native type, NanoHTTPD, or a
-`mobile_*` name, it does not belong in `pce/`.
+`phone_*` name, it does not belong in `pce/`.
 
 ## 2. Dependency law
 

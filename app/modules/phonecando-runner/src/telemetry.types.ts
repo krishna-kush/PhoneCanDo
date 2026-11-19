@@ -81,7 +81,7 @@ export type TelemetryNativeSnapshot = {
   /**
    * Bridge route → calls since the last reset, keyed by route path with '/'
    * turned into '_' and the leading one dropped, e.g. { "notify": 2, "pce_act": 3 }.
-   * Several mobile_* tools share one route (/pce/act), so this is per route.
+   * Several phone_* tools share one route (/pce/act), so this is per route.
    */
   toolCalls: Record<string, number>;
   /** Engine sessions created (from the engine event stream) since the last reset. */

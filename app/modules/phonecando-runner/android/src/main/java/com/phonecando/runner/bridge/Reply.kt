@@ -32,7 +32,7 @@ data class Reply(val status: Int, val body: String, val headers: Map<String, Str
           503,
           "automation_unavailable",
           "Auto off turned PhoneCanDo's accessibility service off while no agent used the screen, so payment apps open; " +
-            "call mobile_open_accessibility to ask the user to turn it back on",
+            "call phone_open_accessibility to ask the user to turn it back on",
         )
       } else {
         error(503, "automation_unavailable", "enable PhoneCanDo in Android accessibility settings")
@@ -61,7 +61,7 @@ data class Reply(val status: Int, val body: String, val headers: Map<String, Str
     /** You stopped the caller to use the phone (presence/HandsGate): it ends its turn. */
     fun pausedByUser(message: String) = error(409, "paused_by_user", message)
 
-    /** Over mobile_notify's limits (presence/NotifyRules): it may post again in `retryAfterMs`. */
+    /** Over phone_notify's limits (presence/NotifyRules): it may post again in `retryAfterMs`. */
     fun notifyTooOften(retryAfterMs: Long) = Reply(
       429,
       errorBody("notify_too_often", "you notified the user too often; at most one a minute and five an hour")

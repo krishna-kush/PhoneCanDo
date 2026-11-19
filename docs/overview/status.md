@@ -18,7 +18,7 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
   the header switches agents. The terminal tab is the agent's TUI, or a
   shell in its image, over the own JNI PTY. Sessions and projects live in
   the web UI.
-- The loopback bridge (one for all agents, a token per agent), `mobile_*`
+- The loopback bridge (one for all agents, a token per agent), `phone_*`
   tools, biometric/master-switch gate, per-request prompts, screen lease
   (one agent drives the screen at a time; the others wait in line and get a
   message when it is theirs) and full/lite/play channel split are live.
@@ -40,7 +40,7 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
   for the switch and carrying on by itself, the update dialog's own
   "Install unknown apps" step, and the compact step links.
 - `activityName` and `eventSeq` are device-verified. The staged
-  `mobile_wait` eventSeq comparison lands with the next APK because the
+  `phone_wait` eventSeq comparison lands with the next APK because the
   generated asset was stale.
 
 ## Linux images
@@ -71,13 +71,13 @@ As of 2026-11-07. Device evidence is Android 16 / API 36.
 
 - The PCE-backed slice is live in full builds: `GET /pce/describe`,
   `POST /pce/observe`, `POST /pce/act`, `POST /pce/pack` and
-  `mobile_describe/observe/act/pack`.
+  `phone_describe/observe/act/pack`.
 - Signed pack lifecycle is device-proven: install, idempotent refresh,
   v2→v1 rollback, signature rejection, incompatible pack rejection, and
   active-pack flow execution with step `expect` and flow `verify`.
 - Play builds contain no accessibility service, `uiauto`/PCE/pack classes or
   `accessibility_config` resource.
-- Not yet: `mobile_execute`, `mobile_flow`, `mobile_doctor`, explicit
+- Not yet: `phone_execute`, `phone_flow`, `phone_doctor`, explicit
   screenshot action, pack crypto below API 33, granted-path Shizuku, vision
   backend.
 

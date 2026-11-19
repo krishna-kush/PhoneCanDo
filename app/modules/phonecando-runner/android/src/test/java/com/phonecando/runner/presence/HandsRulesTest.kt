@@ -49,7 +49,7 @@ class HandsRulesTest {
 
   @Test fun startAgainAndLeaveEndAPauseOnly() {
     assertEquals(Step.Ended(paused, Then.RESUME), user(UserAct.START_AGAIN, paused))
-    // Waiting for you (mobile_wait_for_user): its call returns instead of a note.
+    // Waiting for you (phone_wait_for_user): its call returns instead of a note.
     assertEquals(Step.Ended(paused, Then.BACK), user(UserAct.START_AGAIN, paused, waiting = true))
     assertEquals(Step.Ended(paused, Then.NONE), user(UserAct.LEAVE, paused))
     for (act in listOf(UserAct.START_AGAIN, UserAct.LEAVE)) {

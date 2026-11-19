@@ -14,7 +14,7 @@ import com.phonecando.runner.bridge.ScreenLease
 // Nothing here stops an agent's run: a paused agent keeps working on
 // whatever is not the screen, and only its screen calls are refused.
 //   anything else                                                not now
-// An agent's mobile_hand_over starts one (WATCH, or PAUSED when private)
+// An agent's phone_hand_over starts one (WATCH, or PAUSED when private)
 // only while none is on; the screen side of it (it holds the screen, or
 // the screen is free and it is unlocked) is the lease's, in the router.
 // A run that ends changes nothing: the hand-over waits for you. Pure.

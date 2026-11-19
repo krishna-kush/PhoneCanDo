@@ -111,13 +111,13 @@ class BridgeRouter(
     } catch (_: AutomationUnavailableException) {
       // The service disconnected between the connected check and the call:
       // the same 503 as a service that was never on, so the agent recovers
-      // through mobile_open_accessibility instead of seeing a 500.
+      // through phone_open_accessibility instead of seeing a 500.
       return Reply.automationUnavailable(autoOff())
     } catch (e: Exception) {
       onError("$method $path failed", e)
       return Reply.error(500, "internal", e.message ?: "bridge failure")
     } finally {
-      // /app (mobile_return) is the agent saying it is done with the phone:
+      // /app (phone_return) is the agent saying it is done with the phone:
       // the holder hands the screen back at once instead of making the next
       // agent wait it out, and an ask-mode unlock ends with the task.
       val handedBack = route == Route.APP && reply?.status == 200

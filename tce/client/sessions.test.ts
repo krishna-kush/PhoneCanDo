@@ -12,8 +12,8 @@ describe('session facts', () => {
     const { client, net } = setup();
     await client.init();
     const sid = client.startSession();
-    client.updateSession({ bootMs: 1200, counters: { 'engine.starts': 1, 'tool.mobile_click': 2 } });
-    client.updateSession({ engineOk: true, counters: { 'tool.mobile_click': 5 } });
+    client.updateSession({ bootMs: 1200, counters: { 'engine.starts': 1, 'tool.phone_click': 2 } });
+    client.updateSession({ engineOk: true, counters: { 'tool.phone_click': 5 } });
     net.reply(OK_BATCH, OK_BATCH);
     await client.flush();
     assert.deepEqual(batches(net)[0]!.sessions[0], {
@@ -24,7 +24,7 @@ describe('session facts', () => {
       channel: 'full',
       bootMs: 1200,
       engineOk: true,
-      counters: { 'engine.starts': 1, 'tool.mobile_click': 5 },
+      counters: { 'engine.starts': 1, 'tool.phone_click': 5 },
     });
     assert.equal(await client.flush(), null); // clean now
     client.updateSession({ a11yOn: true });

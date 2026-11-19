@@ -54,7 +54,7 @@ export const agentTools: PhoneTool[] = [
   {
     name: "agents_status",
     description:
-      "Tell the user (and other agents) in a few words what you are doing now, such as \"Running the tests\" or \"Reading the build log\". Your mascot shows it on the phone, in PhoneCanDo and in its notification; agents_list shows it to other agents. While you drive the phone (mobile_* screen tools), always keep it set: say what you are about to do before each step (\"Opening Settings\", \"Looking for Wi-Fi\"), since the user watches your mascot say it as you go; otherwise update it as you move between steps, not on every tool call. mood is working (default), thinking or waiting. One line, at most 80 characters (longer is cut); an empty text clears it, and it clears by itself when your run ends. Returns {shown:true}.",
+      "Tell the user (and other agents) in a few words what you are doing now, such as \"Running the tests\" or \"Reading the build log\". Your mascot shows it on the phone, in PhoneCanDo and in its notification; agents_list shows it to other agents. While you drive the phone (phone_* screen tools), always keep it set: say what you are about to do before each step (\"Opening Settings\", \"Looking for Wi-Fi\"), since the user watches your mascot say it as you go; otherwise update it as you move between steps, not on every tool call. mood is working (default), thinking or waiting. One line, at most 80 characters (longer is cut); an empty text clears it, and it clears by itself when your run ends. Returns {shown:true}.",
     input: {
       type: "object",
       properties: {

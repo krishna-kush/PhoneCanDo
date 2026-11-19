@@ -1,8 +1,8 @@
 package com.phonecando.runner.controllock
 
 // Ask mode's unlocks, one per agent: the user's yes to that agent's
-// mobile_request_unlock. One lasts until the agent hands the phone back
-// (mobile_return), its engine stops, or it goes `idleMs` without a
+// phone_request_unlock. One lasts until the agent hands the phone back
+// (phone_return), its engine stops, or it goes `idleMs` without a
 // phone-control call; then its next task asks again. Pure: the clock is
 // injected.
 class AskGrants(private val idleMs: Long, private val clock: () -> Long) {

@@ -19,7 +19,7 @@ As of 2026-10-30:
 - The PhoneCanDo P5 integration is device-proven; `/ui/*` and the old vendored driver
   are removed.
 - Host `activityName` and bridge `eventSeq` are device-verified; the
-  `mobile_wait` eventSeq comparison is staged for the next APK, and the
+  `phone_wait` eventSeq comparison is staged for the next APK, and the
   five-minute bridge grace is in the build.
 
 Open work: `../planning/todo.md`.

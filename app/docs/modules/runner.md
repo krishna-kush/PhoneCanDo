@@ -1954,7 +1954,7 @@ sends later, even from a new process, can still attach it. The shape is
 - Tool calls: `bridge/BridgeServer.kt` counts every authorized call to a
   known route that is not a 404, keyed by `Route.telemetryKey` in
   `bridge/Routes.kt` (`notify`, `pce_act`: the path without its slash, `/`
-  as `_`). The `mobile_*` names live in the phone tools, and several tools
+  as `_`). The `phone_*` names live in the phone tools, and several tools
   share `/pce/act`.
 - Low memory (`TelemetryMemoryCallbacks.kt`): `onTrimMemory` at
   `RUNNING_LOW`, `RUNNING_CRITICAL` or `COMPLETE`, and `onLowMemory`.

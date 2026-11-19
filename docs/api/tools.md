@@ -1,35 +1,35 @@
 # AI tools
 
-Keep the existing `mobile_*` namespace. Add verbs; do not rename what the
+Keep the existing `phone_*` namespace. Add verbs; do not rename what the
 agent already knows.
 
 | Tool | Purpose |
 |---|---|
-| `mobile_describe` | contract, pce, device, backends, action catalog, limits, installed packs |
-| `mobile_observe` | one compact snapshot: tree + windows + meta + optional screenshot |
-| `mobile_act` | one action against a snapshot (simple cases) |
-| `mobile_launch` | launch an installed app by package name (PCE launch action) |
-| `mobile_execute` | batch/DSL with per-step expect, retry, timeout |
-| `mobile_flow` | list/run/save a named app flow from a pack |
-| `mobile_pack` | list/refresh/rollback packs; run a flow |
-| `mobile_doctor` | a11y, Shizuku, keyguard, screen, IME, rotation, packs, bridge, trace |
+| `phone_describe` | contract, pce, device, backends, action catalog, limits, installed packs |
+| `phone_observe` | one compact snapshot: tree + windows + meta + optional screenshot |
+| `phone_act` | one action against a snapshot (simple cases) |
+| `phone_launch` | launch an installed app by package name (PCE launch action) |
+| `phone_execute` | batch/DSL with per-step expect, retry, timeout |
+| `phone_flow` | list/run/save a named app flow from a pack |
+| `phone_pack` | list/refresh/rollback packs; run a flow |
+| `phone_doctor` | a11y, Shizuku, keyguard, screen, IME, rotation, packs, bridge, trace |
 
 The table is the contract target. The current build registers the existing
-wrappers plus `mobile_describe/observe/act/launch/pack`; status is in
+wrappers plus `phone_describe/observe/act/launch/pack`; status is in
 `../../app/docs/modules/automation.md`.
 
-`mobile_screenshot` is not registered. Request an observation screenshot with
-`mobile_observe({screenshot: true})`; the PCE's explicit `Action.Screenshot`
+`phone_screenshot` is not registered. Request an observation screenshot with
+`phone_observe({screenshot: true})`; the PCE's explicit `Action.Screenshot`
 stays reserved until `Backend.execute` can return an artifact.
 
-Existing `mobile_ping/battery/notify/share/open/clipboard` and the legacy
-automation wrappers (`mobile_screen`, `mobile_info`, `mobile_click`,
-`mobile_tap`, `mobile_text`, `mobile_scroll`, `mobile_swipe`, `mobile_back`,
-`mobile_home`, `mobile_wait`, `mobile_return`, `mobile_request_unlock`,
-`mobile_open_accessibility`) remain and are deprecated only when the contract
+Existing `phone_ping/battery/notify/share/open/clipboard` and the legacy
+automation wrappers (`phone_screen`, `phone_info`, `phone_click`,
+`phone_tap`, `phone_text`, `phone_scroll`, `phone_swipe`, `phone_back`,
+`phone_home`, `phone_wait`, `phone_return`, `phone_request_unlock`,
+`phone_open_accessibility`) remain and are deprecated only when the contract
 version changes. The screen/info/.../wait wrappers now call `/pce/observe` and
-`/pce/act` directly; `/ui/*` is gone. `mobile_launch` is the package launcher;
-`mobile_open` stays URL-only and rejects app schemes.
+`/pce/act` directly; `/ui/*` is gone. `phone_launch` is the package launcher;
+`phone_open` stays URL-only and rejects app schemes.
 
 Implementation status, wrapper parity and device proof are in
 `../../app/docs/modules/automation.md`.
@@ -42,10 +42,10 @@ them (every channel, outside the lock); one bridge route each
 
 | Tool | Route | Purpose |
 |---|---|---|
-| `mobile_hand_over` | `POST /hands/over` | give the user the controls with a `why` they see: watch (their input; you follow with `mobile_observe`, it waits up to 30 s for `back`) or `private: true` (passwords, payments, 2FA, permission screens: you can't see the screen; end your turn and get a message when they hand it back) |
-| `mobile_wait_for_user` | `POST /hands/wait` | no arguments: wait up to 4 minutes a call while the user drives and you watch (a watch hand-over, or Let me), in the same turn; `back: false` in watch: call it again; `mode: "private"`: they stopped you, end the turn |
-| `mobile_focus` | `POST /focus` | where the user looks: `app` front or back, `onScreen` your chat, another agent's, another page or null, `phone` unlocked, locked or off |
-| `mobile_notify` | `POST /notify` | reach the user away from your chat; nothing while your chat is on screen (`posted: false`), one a minute and five an hour (429 `notify_too_often`) |
+| `phone_hand_over` | `POST /hands/over` | give the user the controls with a `why` they see: watch (their input; you follow with `phone_observe`, it waits up to 30 s for `back`) or `private: true` (passwords, payments, 2FA, permission screens: you can't see the screen; end your turn and get a message when they hand it back) |
+| `phone_wait_for_user` | `POST /hands/wait` | no arguments: wait up to 4 minutes a call while the user drives and you watch (a watch hand-over, or Let me), in the same turn; `back: false` in watch: call it again; `mode: "private"`: they stopped you, end the turn |
+| `phone_focus` | `POST /focus` | where the user looks: `app` front or back, `onScreen` your chat, another agent's, another page or null, `phone` unlocked, locked or off |
+| `phone_notify` | `POST /notify` | reach the user away from your chat; nothing while your chat is on screen (`posted: false`), one a minute and five an hour (429 `notify_too_often`) |
 | `agents_status` | `POST /status` | a few words on what you do now, with a `mood` (working, thinking, waiting); your mascot and `agents_list` show it, an empty text clears it. While driving the phone, set it before each step so the user can follow |
 
 ## Agent tools
@@ -76,7 +76,7 @@ runner starts it with the task as its first prompt (the manifest's
 as its own reminder, never as a new instruction from the user
 (`../../app/docs/modules/runner.md`, Schedules).
 
-## `mobile_describe`
+## `phone_describe`
 
 ```json
 {
@@ -102,11 +102,11 @@ The AI reads this to know what it can do on this device before planning.
 Current builds report `vision.available: false`; the example shows the target
 shape.
 
-## `mobile_observe`
+## `phone_observe`
 
 See `snapshots.md` for the full payload and rules.
 
-## `mobile_act`
+## `phone_act`
 
 ```json
 {
@@ -118,7 +118,7 @@ See `snapshots.md` for the full payload and rules.
 }
 ```
 
-## `mobile_execute`
+## `phone_execute`
 
 ```json
 {
@@ -139,7 +139,7 @@ Each step supports `timeoutMs`, `retry`, `expect`, `onFail`
 (`stop|continue`), and `risk`. The PCE executes the batch in one call.
 The model does not sleep or re-observe between every step.
 
-## `mobile_flow`
+## `phone_flow`
 
 ```json
 {"action": "run", "id": "zepto.search", "params": {"query": "milk"}}
@@ -147,7 +147,7 @@ The model does not sleep or re-observe between every step.
 
 Flows are named, parameterized step lists stored in packs. The current build
 runs one with
-`mobile_pack {"action":"run","id":"<pack>","flow":"<flow>","params":{...}}`;
-the dedicated `mobile_flow` tool and flow saving are still
+`phone_pack {"action":"run","id":"<pack>","flow":"<flow>","params":{...}}`;
+the dedicated `phone_flow` tool and flow saving are still
 target surface. The AI can run a known-good flow, or author one and save it
 with `{"action":"save", ...}` once that lands.

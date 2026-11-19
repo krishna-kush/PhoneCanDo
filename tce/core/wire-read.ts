@@ -17,7 +17,7 @@ export const ERROR_KINDS: readonly ErrorKind[] = ['js', 'native', 'engine'];
 // Event names are at most ~60 characters (schema/events.ts); a longer string
 // is cut here and then fails isEventName, so the cut never makes a name valid.
 const EVENT_NAME_READ_CAP = 128;
-// Counter keys are code identifiers (`tool.mobile_click`); anything else could carry free text.
+// Counter keys are code identifiers (`tool.pce_act`); anything else could carry free text.
 const COUNTER_KEY = /^[A-Za-z0-9_.:-]+$/;
 
 /** One session from a batch, with absent optional fields as null. */

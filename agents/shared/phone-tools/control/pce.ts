@@ -21,7 +21,7 @@ export function act(snapshotId: number, action: unknown, signal?: AbortSignal): 
   return pce("/pce/act", { snapshotId, action, timeoutMs: 30_000 }, signal, 35_000)
 }
 
-// Client timeout for one mobile_act call, from the bridge's caps
+// Client timeout for one phone_act call, from the bridge's caps
 // (PceAutomationImpl.act): timeoutMs is clamped to 1-120 s (default 30 s)
 // and bounds a wait; expectTimeoutMs to 0.5-30 s (default 5 s), used only
 // with expect. The margin covers the last observe a wait runs before giving

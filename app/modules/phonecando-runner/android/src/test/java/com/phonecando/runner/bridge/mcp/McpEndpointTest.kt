@@ -124,20 +124,20 @@ class McpEndpointTest {
         assertTrue(it.getString("description").isNotEmpty())
       }.map { it.getString("name") }
     }
-    val basic = listOf("mobile_ping", "mobile_battery", "mobile_notify", "mobile_focus", "mobile_share", "mobile_open", "mobile_clipboard") +
+    val basic = listOf("phone_ping", "phone_battery", "phone_notify", "phone_focus", "phone_share", "phone_open", "phone_clipboard") +
       listOf("agents_list", "agents_send", "agents_status", "agents_inbox", "agents_wait", "agents_keep_running") +
       listOf("schedule_add", "schedule_list", "schedule_cancel")
     assertEquals(basic, names(McpRig(full = false)))
     val full = names(rig)
-    assertTrue(full.containsAll(basic + listOf("mobile_observe", "mobile_act", "mobile_return", "mobile_request_unlock")))
+    assertTrue(full.containsAll(basic + listOf("phone_observe", "phone_act", "phone_return", "phone_request_unlock")))
     // Composed in TypeScript (gen-tools-json.mjs leaves them out).
-    assertFalse(full.contains("mobile_launch"))
-    assertFalse(full.contains("mobile_click"))
+    assertFalse(full.contains("phone_launch"))
+    assertFalse(full.contains("phone_click"))
   }
 
   @Test fun anAllowedCallRunsItsRouteWithTheSchemasArguments() {
     val args = JSONObject().put("text", "done").put("title", "build").put("bogus", 1).put("ignored", JSONObject.NULL)
-    val (out, isError) = text(rig.post(call(7, "mobile_notify", args)))
+    val (out, isError) = text(rig.post(call(7, "phone_notify", args)))
     assertFalse(isError)
     assertEquals("/notify", JSONObject(out).getString("route"))
     // JSON.stringify's text: no `\/` escapes in paths.
@@ -148,7 +148,7 @@ class McpEndpointTest {
   }
 
   @Test fun fixedFieldsGoWithTheArguments() {
-    text(rig.post(call(1, "mobile_return", JSONObject().put("tab", "env").put("notify", false))))
+    text(rig.post(call(1, "phone_return", JSONObject().put("tab", "env").put("notify", false))))
     val sent = JSONObject(rig.handled.single().removePrefix("a1 /app "))
     assertEquals("env", sent.getString("tab"))
     assertTrue(sent.getBoolean("notify"))
@@ -157,24 +157,24 @@ class McpEndpointTest {
 
   @Test fun theLockedSwitchRefusesTheCallAsAToolError() {
     rig.lock.lock()
-    val (out, isError) = text(rig.post(call(1, "mobile_clipboard", JSONObject().put("action", "get"))))
+    val (out, isError) = text(rig.post(call(1, "phone_clipboard", JSONObject().put("action", "get"))))
     assertTrue(isError)
     assertEquals("error automation_off: phone control is locked; unlock it in PhoneCanDo settings", out)
     assertTrue(rig.handled.isEmpty())
     // The prompt that flips it is ungated.
-    assertFalse(text(rig.post(call(2, "mobile_request_unlock"))).second)
+    assertFalse(text(rig.post(call(2, "phone_request_unlock"))).second)
   }
 
   @Test fun aMissingServiceIsUnavailable() {
     rig.host.service = false
-    val (out, isError) = text(rig.post(call(1, "mobile_describe")))
+    val (out, isError) = text(rig.post(call(1, "phone_describe")))
     assertTrue(isError)
     assertTrue(out, out.startsWith("error automation_unavailable: "))
   }
 
   @Test fun theScreenLeaseHoldsOverMcpToo() {
-    assertFalse(text(rig.post(call(1, "mobile_observe"), agentAt = 0)).second)
-    val (out, isError) = text(rig.post(call(2, "mobile_observe"), agentAt = 1))
+    assertFalse(text(rig.post(call(1, "phone_observe"), agentAt = 0)).second)
+    val (out, isError) = text(rig.post(call(2, "phone_observe"), agentAt = 1))
     assertTrue(isError)
     assertTrue(out, out.startsWith("error control_busy: opencode holds the screen; you are #1 in line. We'll message you (agents_inbox)"))
     assertEquals("a1", rig.lease.holderId())
@@ -185,34 +185,34 @@ class McpEndpointTest {
     val endpoint = McpEndpoint(RepoTools.parse(full = true), "1.2.3", unread = { if (it == "a1") unread else 0 }) { agent, route, body ->
       rig.router.handle(agent, route.method, route.path, body)
     }
-    val none = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(1, "mobile_ping"))).getJSONArray("content")
+    val none = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(1, "phone_ping"))).getJSONArray("content")
     assertEquals(1, none.length())
     unread = 3
-    val some = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(2, "mobile_ping"))).getJSONArray("content")
+    val some = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(2, "phone_ping"))).getJSONArray("content")
     assertEquals(2, some.length())
     assertEquals("You have 3 unread agent messages: call agents_inbox.", some.getJSONObject(1).getString("text"))
     // Refusals too; another caller's count is its own.
     rig.lock.lock()
-    val refused = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(3, "mobile_clipboard", JSONObject().put("action", "get"))))
+    val refused = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(3, "phone_clipboard", JSONObject().put("action", "get"))))
     assertTrue(refused.getBoolean("isError"))
     assertEquals(2, refused.getJSONArray("content").length())
-    assertEquals(1, result(endpoint.handle(rig.dir.records[1], "POST", emptyMap(), call(4, "mobile_ping"))).getJSONArray("content").length())
+    assertEquals(1, result(endpoint.handle(rig.dir.records[1], "POST", emptyMap(), call(4, "phone_ping"))).getJSONArray("content").length())
     unread = 1
-    val one = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(5, "mobile_ping"))).getJSONArray("content")
+    val one = result(endpoint.handle(rig.dir.records[0], "POST", emptyMap(), call(5, "phone_ping"))).getJSONArray("content")
     assertEquals("You have 1 unread agent message: call agents_inbox.", one.getJSONObject(1).getString("text"))
   }
 
   @Test fun fullOnlyToolsAreUnknownOnLite() {
     val lite = McpRig(full = false)
-    val reply = lite.post(call(4, "mobile_observe"))
+    val reply = lite.post(call(4, "phone_observe"))
     assertEquals(JsonRpc.INVALID_PARAMS, error(reply).getInt("code"))
-    assertEquals("unknown tool: mobile_observe", error(reply).getString("message"))
+    assertEquals("unknown tool: phone_observe", error(reply).getString("message"))
     assertTrue(lite.handled.isEmpty())
     assertNull(lite.lease.holderId())
   }
 
   @Test fun badParamsAreJsonRpcErrors() {
-    val notObject = rig.post(rpc(1, "tools/call", JSONObject().put("name", "mobile_ping").put("arguments", "x")))
+    val notObject = rig.post(rpc(1, "tools/call", JSONObject().put("name", "phone_ping").put("arguments", "x")))
     assertEquals(JsonRpc.INVALID_PARAMS, error(notObject).getInt("code"))
     assertEquals(JsonRpc.INVALID_PARAMS, error(rig.post(rpc(2, "tools/call"))).getInt("code"))
     assertTrue(rig.handled.isEmpty())

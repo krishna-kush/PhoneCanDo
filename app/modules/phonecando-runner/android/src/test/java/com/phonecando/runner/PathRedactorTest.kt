@@ -98,7 +98,7 @@ class PathRedactorTest {
 
   @Test fun frameLineSuffixStays() {
     both(
-      "    at load (/data/user/0/$pkg/files/phonecando-home/.config/opencode/plugins/mobile/index.ts:42:7)",
+      "    at load (/data/user/0/$pkg/files/phonecando-home/.config/opencode/plugins/phone/index.ts:42:7)",
       "    at load (<path>:42:7)",
     )
     both("com.x.Gen.run(/data/data/$pkg/files/Gen.kt:12)", "com.x.Gen.run(<path>:12)")

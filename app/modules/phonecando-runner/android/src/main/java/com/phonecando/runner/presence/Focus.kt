@@ -1,6 +1,6 @@
 package com.phonecando.runner.presence
 
-// Where the user is looking, as mobile_focus tells an agent before it
+// Where the user is looking, as phone_focus tells an agent before it
 // reaches them: PhoneCanDo in front or not, what it shows (the caller's
 // own chat, another agent's, or another page; null when it is behind),
 // and whether the phone is unlocked, locked or its screen off. Pure.

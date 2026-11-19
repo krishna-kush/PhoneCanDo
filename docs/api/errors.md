@@ -14,7 +14,7 @@ Every failure is structured:
 
 | Code | Meaning | Recovery |
 |---|---|---|
-| `STALE_SNAPSHOT` | UI changed since observation | `mobile_observe` |
+| `STALE_SNAPSHOT` | UI changed since observation | `phone_observe` |
 | `NOT_FOUND` | selector matched nothing | observe, scroll, wait |
 | `AMBIGUOUS` | multiple plausible nodes | observe, use `i` or `index` |
 | `NOT_VISIBLE` | node exists but is covered/offscreen | scroll or wait |
@@ -22,7 +22,7 @@ Every failure is structured:
 | `KEYGUARD` | device is locked | ask the user |
 | `SCREEN_OFF` | display is off | `wake`, then observe |
 | `SECURE_WINDOW` | screenshot blocked | use the tree; do not retry |
-| `BACKEND_UNAVAILABLE` | a11y/Shizuku missing | `mobile_open_accessibility` / Shizuku setup |
+| `BACKEND_UNAVAILABLE` | a11y/Shizuku missing | `phone_open_accessibility` / Shizuku setup |
 | `CONFIRM_REQUIRED` | high-risk action | ask the user |
 | `APP_NOT_ALLOWED` | package outside allowlist | ask the user |
 | `INVALID_PACK` | pack malformed or references an unknown action/selector | fix or disable pack |
@@ -31,7 +31,7 @@ Every failure is structured:
 | `CONTRACT_UNSUPPORTED` | client/PCE mismatch | update one side |
 | `TIMEOUT` | step exceeded budget | retry or observe |
 | `CANCELLED` | user/agent aborted | stop |
-| `INTERNAL` | bug | `mobile_doctor` + trace |
+| `INTERNAL` | bug | `phone_doctor` + trace |
 
 The recovery hint is part of the contract: the AI should be able to recover
 without guessing. The bridge envelope has the same shape; see
@@ -46,10 +46,10 @@ HTTP status and a lowercase code (`../../app/docs/modules/bridge.md`):
 |---|---|---|---|
 | `unauthorized` | 401 | missing bearer, or a token that belongs to no agent | stop; restart the agent's engine from the app |
 | `not_found` | 404 | no such route, or a full-only route in lite/play | use what `/ping` reports |
-| `automation_off` | 403 | phone control is locked | `mobile_request_unlock` |
-| `automation_unavailable` | 503 | the accessibility service is not connected; its message says so when Auto off turned it off (it does while no agent wants the screen and PhoneCanDo is in the background, so payment apps open) | `mobile_open_accessibility` |
-| `control_busy` | 409 | another agent holds the screen (or has it reserved); the caller is now in line, and the body adds `holder` (its name), `place` (1-based) and `retryAfterMs` | do other work or end the turn; a "the screen is yours" notice arrives with the agent's messages (`agents_inbox`), then call again. `mobile_request_unlock` answers the same way, at once and without a dialog: that is not a refusal |
-| `user_has_controls` | 409 | the user has the phone's controls (a hand-over: the mascot's Let me, or `mobile_hand_over`); no agent may act on the screen meanwhile. The agent the controls came from may still `mobile_observe` | that agent: `mobile_wait_for_user`, or follow along with `mobile_observe`; any other agent: do other work or end the turn. `mobile_hand_over` while one is on gets it too |
+| `automation_off` | 403 | phone control is locked | `phone_request_unlock` |
+| `automation_unavailable` | 503 | the accessibility service is not connected; its message says so when Auto off turned it off (it does while no agent wants the screen and PhoneCanDo is in the background, so payment apps open) | `phone_open_accessibility` |
+| `control_busy` | 409 | another agent holds the screen (or has it reserved); the caller is now in line, and the body adds `holder` (its name), `place` (1-based) and `retryAfterMs` | do other work or end the turn; a "the screen is yours" notice arrives with the agent's messages (`agents_inbox`), then call again. `phone_request_unlock` answers the same way, at once and without a dialog: that is not a refusal |
+| `user_has_controls` | 409 | the user has the phone's controls (a hand-over: the mascot's Let me, or `phone_hand_over`); no agent may act on the screen meanwhile. The agent the controls came from may still `phone_observe` | that agent: `phone_wait_for_user`, or follow along with `phone_observe`; any other agent: do other work or end the turn. `phone_hand_over` while one is on gets it too |
 | `paused_by_user` | 409 | the user stopped this agent to use the phone (the mascot's Stop, or its own private hand-over); every screen call is refused; the user's Stop also stops its turn where its kind can (an ACP turn is cancelled, a server's running chats interrupted), and so does a second screen call in the same Stop | end the turn now; a message comes to go on when the user taps Start me again |
 | `screen_refused` | 409 | a turn another agent's message started tried to take the screen | tell the user; only a turn the user started, or the caller's own earlier place in line, can take the screen |
-| `notify_too_often` | 429 | `mobile_notify` past its limits: one a minute and five an hour per agent; the body adds `retryAfterMs` | don't post again before then; say it in the chat, or batch it into one later notification |
+| `notify_too_often` | 429 | `phone_notify` past its limits: one a minute and five an hour per agent; the body adds `retryAfterMs` | don't post again before then; say it in the chat, or batch it into one later notification |

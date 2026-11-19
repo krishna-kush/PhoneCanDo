@@ -73,4 +73,4 @@ bottleneck. Before Shizuku or remote publication, make observation screenshots
 reliable in the host and add a rule to verify irreversible actions before
 retrying. The PCE-side screenshot action can stay deferred while observation
 screenshots cover the workflow. The host now also keeps serve alive while phone
-control is enabled, so `mobile_home` does not strand the next tool call.
+control is enabled, so `phone_home` does not strand the next tool call.

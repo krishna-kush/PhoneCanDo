@@ -48,7 +48,7 @@ called them should:
 5. Replace old screen/info/tap/text/scroll/swipe/back/home/wait calls with the
    equivalent PCE actions.
 
-The old `mobile_*` names remain in the PhoneCanDo host as compatibility wrappers over
+The old `phone_*` names remain in the PhoneCanDo host as compatibility wrappers over
 `/pce/observe` and `/pce/act`; they are not part of the PCE API.
 
 ## From screen-global actions to snapshot-scoped actions

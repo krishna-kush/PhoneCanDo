@@ -13,9 +13,9 @@ describe('track and error', () => {
     client.startSession();
     client.track('totally.made_up');
     client.track('provider.Anthropic');
-    client.track('tool.mobile_click');
+    client.track('tool.phone_click');
     await client.flush();
-    assert.deepEqual(batches(net)[0]!.events.map((e) => e.name), ['tool.mobile_click']);
+    assert.deepEqual(batches(net)[0]!.events.map((e) => e.name), ['tool.phone_click']);
     assert.ok(log.has('warn', 'unknown event'));
   });
 

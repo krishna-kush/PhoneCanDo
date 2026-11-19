@@ -67,7 +67,7 @@ export interface SessionWire {
   batteryOptIgnored?: boolean;
   fgServiceOk?: boolean;
   a11yOn?: boolean;
-  /** Free-form counters, e.g. { "tool.mobile_click": 4, "session.create": 1 }. */
+  /** Free-form counters, e.g. { "tool.pce_act": 4, "session.create": 1 }. */
   counters?: Record<string, number>;
 }
 

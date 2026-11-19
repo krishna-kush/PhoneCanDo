@@ -32,7 +32,7 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
   @Volatile private var activityPackage: String? = null
   @Volatile private var activityClass: String? = null
 
-  // Monotonic accessibility-event counter. mobile_wait uses it to notice a
+  // Monotonic accessibility-event counter. phone_wait uses it to notice a
   // change that appeared and reverted between two snapshot polls.
   @Volatile var eventSeq: Long = 0L
     private set

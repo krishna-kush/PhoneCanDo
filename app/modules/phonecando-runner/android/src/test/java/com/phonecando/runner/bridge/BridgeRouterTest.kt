@@ -115,7 +115,7 @@ class BridgeRouterTest {
     val reply = auto.handle(dir.records[0], "POST", "/pce/observe", "{}")
     assertEquals(503, reply.status)
     assertEquals("automation_unavailable", json(reply).getString("code"))
-    assertTrue(json(reply).getString("message").contains("mobile_open_accessibility"))
+    assertTrue(json(reply).getString("message").contains("phone_open_accessibility"))
     assertNull(lease.holderId())
   }
 
@@ -255,7 +255,7 @@ class BridgeRouterTest {
     val act = r.handle(dir.records[0], "POST", "/open", "{}")
     assertEquals(409, act.status)
     assertEquals("user_has_controls", json(act).getString("code"))
-    assertTrue(json(act).getString("message").contains("mobile_wait_for_user"))
+    assertTrue(json(act).getString("message").contains("phone_wait_for_user"))
     // Another agent is turned away before it could join the line.
     val other = r.handle(dir.records[1], "POST", "/pce/observe", "{}")
     assertEquals("user_has_controls", json(other).getString("code"))

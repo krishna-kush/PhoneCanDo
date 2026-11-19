@@ -15,14 +15,14 @@ class ScreenMessages(
   private val reservedSec: Long,
 ) : ScreenNotices {
   override fun waiting(holderId: String, waiterName: String) {
-    val text = "$waiterName is waiting for the screen. When you are done with the phone, call mobile_return " +
+    val text = "$waiterName is waiting for the screen. When you are done with the phone, call phone_return " +
       "so they get it sooner."
     worker.execute { mailbox.notice(holderId, text) }
   }
 
   override fun yours(agentId: String) {
     val text = "The screen is yours now. It is kept for you for $reservedSec seconds: call the phone tool you were " +
-      "waiting to use. If you no longer need it, call mobile_return so the next agent gets it."
+      "waiting to use. If you no longer need it, call phone_return so the next agent gets it."
     worker.execute { mailbox.notice(agentId, text, wake = true) }
   }
 }

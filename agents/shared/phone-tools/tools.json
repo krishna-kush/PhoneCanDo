@@ -3,7 +3,7 @@
   "schema": 1,
   "tools": [
     {
-      "name": "mobile_ping",
+      "name": "phone_ping",
       "description": "Check the PhoneCanDo phone bridge. Returns {channel, sdk, model, automation, unlocked, ui, pce}: channel is full|lite|play, unlocked is the phone-control gate, ui is the accessibility/PCE availability (compatibility alias), and pce is the PCE backend. Ungated and safe to call first or after any failure; only full builds register the phone-control tools.",
       "channel": "all",
       "method": "GET",
@@ -16,7 +16,7 @@
       }
     },
     {
-      "name": "mobile_battery",
+      "name": "phone_battery",
       "description": "Read the phone's battery. Ungated; returns {percent, charging} as reported by Android.",
       "channel": "all",
       "method": "GET",
@@ -29,8 +29,8 @@
       }
     },
     {
-      "name": "mobile_notify",
-      "description": "Post an Android notification on the phone, labelled with your agent's name in PhoneCanDo; tapping it opens your chat. Use it to reach the user while they are away from your chat: progress on a long task, \"I'll need you in about 10 minutes\", something went wrong that they must act on. Never use it for what PhoneCanDo already tells them: a run finished, failed or waiting for their answer, a schedule, the phone hand-over. Check mobile_focus first if unsure. text is required; title defaults to your agent's name; a new notification with the same title replaces your previous one. At most one a minute and five an hour (429 notify_too_often with retryAfterMs past that). While your chat is on screen it posts nothing and returns {posted:false, reason}: say it in the chat instead. Returns {posted, reason?}.",
+      "name": "phone_notify",
+      "description": "Post an Android notification on the phone, labelled with your agent's name in PhoneCanDo; tapping it opens your chat. Use it to reach the user while they are away from your chat: progress on a long task, \"I'll need you in about 10 minutes\", something went wrong that they must act on. Never use it for what PhoneCanDo already tells them: a run finished, failed or waiting for their answer, a schedule, the phone hand-over. Check phone_focus first if unsure. text is required; title defaults to your agent's name; a new notification with the same title replaces your previous one. At most one a minute and five an hour (429 notify_too_often with retryAfterMs past that). While your chat is on screen it posts nothing and returns {posted:false, reason}: say it in the chat instead. Returns {posted, reason?}.",
       "channel": "all",
       "method": "POST",
       "route": "/notify",
@@ -54,8 +54,8 @@
       }
     },
     {
-      "name": "mobile_focus",
-      "description": "Where the user is looking now, before you reach them. Returns {app, onScreen, phone}: app is front or back (PhoneCanDo on screen or not); onScreen is your_chat, other_agent (another agent's chat), app (another PhoneCanDo page) or null while it is in the back; phone is unlocked, locked or off (screen off). In your chat, just say it there; away, mobile_notify reaches them.",
+      "name": "phone_focus",
+      "description": "Where the user is looking now, before you reach them. Returns {app, onScreen, phone}: app is front or back (PhoneCanDo on screen or not); onScreen is your_chat, other_agent (another agent's chat), app (another PhoneCanDo page) or null while it is in the back; phone is unlocked, locked or off (screen off). In your chat, just say it there; away, phone_notify reaches them.",
       "channel": "all",
       "method": "POST",
       "route": "/focus",
@@ -67,7 +67,7 @@
       }
     },
     {
-      "name": "mobile_share",
+      "name": "phone_share",
       "description": "Open the Android share sheet with text. title is an optional subject. Requires phone-control unlock in full builds; the user picks the target app. Returns an error if no app can handle the share.",
       "channel": "all",
       "method": "POST",
@@ -92,8 +92,8 @@
       }
     },
     {
-      "name": "mobile_open",
-      "description": "Open a URL with the phone's default app. This is NOT an app launcher: only http, https, mailto, tel, geo and market URLs are accepted, and app schemes such as whatsapp:// are rejected with bad_scheme. To launch an installed app use mobile_launch with its package name (full builds only). Requires phone-control unlock in full builds; works while PhoneCanDo is in the foreground.",
+      "name": "phone_open",
+      "description": "Open a URL with the phone's default app. This is NOT an app launcher: only http, https, mailto, tel, geo and market URLs are accepted, and app schemes such as whatsapp:// are rejected with bad_scheme. To launch an installed app use phone_launch with its package name (full builds only). Requires phone-control unlock in full builds; works while PhoneCanDo is in the foreground.",
       "channel": "all",
       "method": "POST",
       "route": "/open",
@@ -113,7 +113,7 @@
       }
     },
     {
-      "name": "mobile_clipboard",
+      "name": "phone_clipboard",
       "description": "Read or write the phone clipboard. action=get|set; text is required for set. Reading needs PhoneCanDo in the foreground on Android 10+ because the OS hides clipboard contents from background apps. Requires phone-control unlock in full builds.",
       "channel": "all",
       "method": "POST",
@@ -198,7 +198,7 @@
     },
     {
       "name": "agents_status",
-      "description": "Tell the user (and other agents) in a few words what you are doing now, such as \"Running the tests\" or \"Reading the build log\". Your mascot shows it on the phone, in PhoneCanDo and in its notification; agents_list shows it to other agents. While you drive the phone (mobile_* screen tools), always keep it set: say what you are about to do before each step (\"Opening Settings\", \"Looking for Wi-Fi\"), since the user watches your mascot say it as you go; otherwise update it as you move between steps, not on every tool call. mood is working (default), thinking or waiting. One line, at most 80 characters (longer is cut); an empty text clears it, and it clears by itself when your run ends. Returns {shown:true}.",
+      "description": "Tell the user (and other agents) in a few words what you are doing now, such as \"Running the tests\" or \"Reading the build log\". Your mascot shows it on the phone, in PhoneCanDo and in its notification; agents_list shows it to other agents. While you drive the phone (phone_* screen tools), always keep it set: say what you are about to do before each step (\"Opening Settings\", \"Looking for Wi-Fi\"), since the user watches your mascot say it as you go; otherwise update it as you move between steps, not on every tool call. mood is working (default), thinking or waiting. One line, at most 80 characters (longer is cut); an empty text clears it, and it clears by itself when your run ends. Returns {shown:true}.",
       "channel": "all",
       "method": "POST",
       "route": "/status",
@@ -399,8 +399,8 @@
       }
     },
     {
-      "name": "mobile_describe",
-      "description": "Describe the PCE automation without observing the screen. Returns contract, PCE version, backend, capabilities (observe/tap/long_press/set_text/key/scroll/swipe/launch), sdk, model, unlocked and installed packs. Requires phone-control unlock and the accessibility service; use mobile_ping for a cheap health check.",
+      "name": "phone_describe",
+      "description": "Describe the PCE automation without observing the screen. Returns contract, PCE version, backend, capabilities (observe/tap/long_press/set_text/key/scroll/swipe/launch), sdk, model, unlocked and installed packs. Requires phone-control unlock and the accessibility service; use phone_ping for a cheap health check.",
       "channel": "full",
       "method": "GET",
       "route": "/pce/describe",
@@ -412,8 +412,8 @@
       }
     },
     {
-      "name": "mobile_observe",
-      "description": "Observe the current screen and return a compact snapshot: snapshotId, package, activity, eventSeq, device/display, focused node id, windows, and nodes. Each node uses i as its node id plus cls, text, desc, id, bounds [l,t,r,b], parent and boolean flags. Pass the snapshotId to mobile_act; the snapshot becomes stale after the screen changes, so observe again. windows defaults true, includeInvisible defaults false, maxNodes defaults 500 and is clamped to 1..2000. screenshot=true requests an observation artifact on Android 11+; the returned screenshot.path is readable by the agent, so use it for visual verification instead of the reserved screenshot action. While the user has the controls you handed over (mobile_hand_over, watch), this is the one screen call that still works: follow along with it.",
+      "name": "phone_observe",
+      "description": "Observe the current screen and return a compact snapshot: snapshotId, package, activity, eventSeq, device/display, focused node id, windows, and nodes. Each node uses i as its node id plus cls, text, desc, id, bounds [l,t,r,b], parent and boolean flags. Pass the snapshotId to phone_act; the snapshot becomes stale after the screen changes, so observe again. windows defaults true, includeInvisible defaults false, maxNodes defaults 500 and is clamped to 1..2000. screenshot=true requests an observation artifact on Android 11+; the returned screenshot.path is readable by the agent, so use it for visual verification instead of the reserved screenshot action. While the user has the controls you handed over (phone_hand_over, watch), this is the one screen call that still works: follow along with it.",
       "channel": "full",
       "method": "POST",
       "route": "/pce/observe",
@@ -446,8 +446,8 @@
       }
     },
     {
-      "name": "mobile_act",
-      "description": "Run one typed PCE action against a snapshotId from mobile_observe. action is PCE JSON. Targets: {\"type\":\"node\",\"nodeId\":N} (preferred), {\"type\":\"selector\",\"selector\":{...}}, or {\"type\":\"coordinates\",\"point\":{\"x\":N,\"y\":N}}. Actions: tap; long_press (durationMs); type_text (text, target?, clear); key (ENTER|BACK|HOME|RECENTS|TAB|ESCAPE|UP|DOWN|LEFT|RIGHT|DELETE); scroll (UP|DOWN|LEFT|RIGHT, target?, amount); swipe (from,to,durationMs); wait (selector,timeoutMs); assert (selector); launch (packageName,activityName?). For launching an installed app prefer mobile_launch. screenshot is reserved and returns UNSUPPORTED_ACTION; use mobile_observe screenshot=true. Optional expect selector is a post-action wait. timeoutMs (default 30000, clamped to 1000..120000) caps a wait action, which ends at the smaller of its own timeoutMs and this one; expectTimeoutMs (default 5000, clamped to 500..30000) caps the expect wait. The call waits for both plus 10 s, so a slow wait returns its own TIMEOUT error. Passwords, payments, 2FA codes, permission dialogs and pickers (a photo, a contact) are the user's: call mobile_hand_over instead of acting on them.",
+      "name": "phone_act",
+      "description": "Run one typed PCE action against a snapshotId from phone_observe. action is PCE JSON. Targets: {\"type\":\"node\",\"nodeId\":N} (preferred), {\"type\":\"selector\",\"selector\":{...}}, or {\"type\":\"coordinates\",\"point\":{\"x\":N,\"y\":N}}. Actions: tap; long_press (durationMs); type_text (text, target?, clear); key (ENTER|BACK|HOME|RECENTS|TAB|ESCAPE|UP|DOWN|LEFT|RIGHT|DELETE); scroll (UP|DOWN|LEFT|RIGHT, target?, amount); swipe (from,to,durationMs); wait (selector,timeoutMs); assert (selector); launch (packageName,activityName?). For launching an installed app prefer phone_launch. screenshot is reserved and returns UNSUPPORTED_ACTION; use phone_observe screenshot=true. Optional expect selector is a post-action wait. timeoutMs (default 30000, clamped to 1000..120000) caps a wait action, which ends at the smaller of its own timeoutMs and this one; expectTimeoutMs (default 5000, clamped to 500..30000) caps the expect wait. The call waits for both plus 10 s, so a slow wait returns its own TIMEOUT error. Passwords, payments, 2FA codes, permission dialogs and pickers (a photo, a contact) are the user's: call phone_hand_over instead of acting on them.",
       "channel": "full",
       "method": "POST",
       "route": "/pce/act",
@@ -457,7 +457,7 @@
         "properties": {
           "snapshotId": {
             "type": "number",
-            "description": "snapshotId from mobile_observe"
+            "description": "snapshotId from phone_observe"
           },
           "action": {
             "type": "object",
@@ -486,7 +486,7 @@
       }
     },
     {
-      "name": "mobile_pack",
+      "name": "phone_pack",
       "description": "List, refresh, roll back or run signed app packs. action=list returns each active pack's version, flows and parameters. action=refresh fetches manifestUrl (manifest.json; manifest.json.sig is fetched next to it), verifies every pack's sha256 and Ed25519 signature, then installs versions atomically; refresh is idempotent. action=rollback switches to the previous installed version and requires id. action=run requires id and flow, accepts string-only params, and returns each step's action and expect result. Requires phone-control unlock and the accessibility service; manifestUrl must be HTTPS, or loopback HTTP for local testing.",
       "channel": "full",
       "method": "POST",
@@ -529,7 +529,7 @@
       }
     },
     {
-      "name": "mobile_return",
+      "name": "phone_return",
       "description": "Bring PhoneCanDo back to the foreground after finishing a phone-control task, with you as the active agent. tab=home|env|settings (default home, your chat). When PhoneCanDo is backgrounded it also posts a tap-to-return notification and reports notified:true; tell the user to tap it if the app did not come forward. Call this before your final report, not between steps: it hands the phone back, and if the user has phone control ask each time, it also ends your unlock. Ungated; registered in full builds.",
       "channel": "full",
       "method": "POST",
@@ -556,8 +556,8 @@
       }
     },
     {
-      "name": "mobile_request_unlock",
-      "description": "Phone control is locked (automation_off). Show the biometric/PIN prompt over the chat and wait up to 45s for the user. This never unlocks by itself. If the result has unlocked:true, continue the task; if unlocked:false, stop and ask the user to unlock. If another agent holds the screen (or it is kept for the next one in line), the call returns at once with your place in line and shows no prompt: that is not a refusal. You will get a message (agents_inbox) when the screen is yours, or see it in agents_list; call this again then, and do other work or end your turn meanwhile. Depending on the user's setting, an unlock may last only for this task (until you call mobile_return), so a later task may need to ask again. Never retry the locked action or try to bypass the gate.",
+      "name": "phone_request_unlock",
+      "description": "Phone control is locked (automation_off). Show the biometric/PIN prompt over the chat and wait up to 45s for the user. This never unlocks by itself. If the result has unlocked:true, continue the task; if unlocked:false, stop and ask the user to unlock. If another agent holds the screen (or it is kept for the next one in line), the call returns at once with your place in line and shows no prompt: that is not a refusal. You will get a message (agents_inbox) when the screen is yours, or see it in agents_list; call this again then, and do other work or end your turn meanwhile. Depending on the user's setting, an unlock may last only for this task (until you call phone_return), so a later task may need to ask again. Never retry the locked action or try to bypass the gate.",
       "channel": "full",
       "method": "POST",
       "route": "/unlock",
@@ -571,8 +571,8 @@
       }
     },
     {
-      "name": "mobile_open_accessibility",
-      "description": "UI automation is unavailable because Android's accessibility service is off (automation_unavailable). Shows PhoneCanDo's setup dialog over the chat and waits up to 4 minutes while the user follows it, returning as soon as the service connects. This never enables anything; only the user can flip the switch. Returns {opened, enabled, cancelled, restricted}. If enabled:true, continue the task right away. If cancelled:true, the user tapped 'Not now': stop and ask whether to continue. Otherwise (enabled:false after the wait), tell the user to finish the steps shown in PhoneCanDo and say when done; when they do, call mobile_ping and continue only when it reports ui:true. Do not call this again in a loop. restricted is 'sideload' when the user went through PhoneCanDo's restricted-settings guide (Android locks the switch for apps installed from a file: Android's 'Restricted setting' note, then App info → Allow restricted settings, then the switch). Never toggle accessibility yourself.",
+      "name": "phone_open_accessibility",
+      "description": "UI automation is unavailable because Android's accessibility service is off (automation_unavailable). Shows PhoneCanDo's setup dialog over the chat and waits up to 4 minutes while the user follows it, returning as soon as the service connects. This never enables anything; only the user can flip the switch. Returns {opened, enabled, cancelled, restricted}. If enabled:true, continue the task right away. If cancelled:true, the user tapped 'Not now': stop and ask whether to continue. Otherwise (enabled:false after the wait), tell the user to finish the steps shown in PhoneCanDo and say when done; when they do, call phone_ping and continue only when it reports ui:true. Do not call this again in a loop. restricted is 'sideload' when the user went through PhoneCanDo's restricted-settings guide (Android locks the switch for apps installed from a file: Android's 'Restricted setting' note, then App info → Allow restricted settings, then the switch). Never toggle accessibility yourself.",
       "channel": "full",
       "method": "POST",
       "route": "/accessibility",
@@ -586,8 +586,8 @@
       }
     },
     {
-      "name": "mobile_hand_over",
-      "description": "Give the user the phone's controls when you need them on the screen. Watch (default): you need their input (pick a photo or a contact, choose an option, check something): they drive while you may follow along with mobile_observe; the call waits for them (up to 4 minutes) and returns {mode:\"watch\", back} (back:true: they handed the phone back; observe first, it may have changed). If back is false, call mobile_wait_for_user to keep waiting. private:true: something is theirs alone (passwords, payments, 2FA codes, permission screens): you can't see the screen, and the call returns at once {mode:\"private\", back:false, message}: end your turn now; PhoneCanDo messages you to go on when they hand the phone back. why is one short line the user sees (at most 120 characters). You must hold the screen or find it free; while the user has the controls every other screen call is refused (user_has_controls). Requires phone-control unlock.",
+      "name": "phone_hand_over",
+      "description": "Give the user the phone's controls when you need them on the screen. Watch (default): you need their input (pick a photo or a contact, choose an option, check something): they drive while you may follow along with phone_observe; the call waits for them (up to 4 minutes) and returns {mode:\"watch\", back} (back:true: they handed the phone back; observe first, it may have changed). If back is false, call phone_wait_for_user to keep waiting. private:true: something is theirs alone (passwords, payments, 2FA codes, permission screens): you can't see the screen, and the call returns at once {mode:\"private\", back:false, message}: end your turn now; PhoneCanDo messages you to go on when they hand the phone back. why is one short line the user sees (at most 120 characters). You must hold the screen or find it free; while the user has the controls every other screen call is refused (user_has_controls). Requires phone-control unlock.",
       "channel": "full",
       "method": "POST",
       "route": "/hands/over",
@@ -611,8 +611,8 @@
       }
     },
     {
-      "name": "mobile_wait_for_user",
-      "description": "Wait while the user has the phone's controls and you watch: you handed them over (mobile_hand_over), or they took them (Let me on your mascot, or touching the screen). Takes no arguments: it waits for them, up to 4 minutes a call. Returns {back:true} once they hand the phone back (or when nothing of yours is handed over): observe the screen first, then go on with your task in this same turn. {back:false, mode:\"watch\"}: still theirs; call it again. {back:false, mode:\"private\"}: they stopped you: end your turn now, don't call again; PhoneCanDo messages you to go on when they tap Start me again.",
+      "name": "phone_wait_for_user",
+      "description": "Wait while the user has the phone's controls and you watch: you handed them over (phone_hand_over), or they took them (Let me on your mascot, or touching the screen). Takes no arguments: it waits for them, up to 4 minutes a call. Returns {back:true} once they hand the phone back (or when nothing of yours is handed over): observe the screen first, then go on with your task in this same turn. {back:false, mode:\"watch\"}: still theirs; call it again. {back:false, mode:\"private\"}: they stopped you: end your turn now, don't call again; PhoneCanDo messages you to go on when they tap Start me again.",
       "channel": "full",
       "method": "POST",
       "route": "/hands/wait",
@@ -626,47 +626,47 @@
   ],
   "omitted": [
     {
-      "name": "mobile_launch",
+      "name": "phone_launch",
       "why": "its run chains /pce/observe → /pce/act in TypeScript"
     },
     {
-      "name": "mobile_screen",
+      "name": "phone_screen",
       "why": "its run builds on what /pce/observe returns in TypeScript"
     },
     {
-      "name": "mobile_info",
+      "name": "phone_info",
       "why": "its run builds on what /pce/observe returns in TypeScript"
     },
     {
-      "name": "mobile_click",
+      "name": "phone_click",
       "why": "its run builds on what /pce/observe returns in TypeScript"
     },
     {
-      "name": "mobile_tap",
+      "name": "phone_tap",
       "why": "its run chains /pce/observe → /pce/act in TypeScript"
     },
     {
-      "name": "mobile_text",
+      "name": "phone_text",
       "why": "its run builds on what /pce/observe returns in TypeScript"
     },
     {
-      "name": "mobile_scroll",
+      "name": "phone_scroll",
       "why": "its run builds on what /pce/observe returns in TypeScript"
     },
     {
-      "name": "mobile_swipe",
+      "name": "phone_swipe",
       "why": "its run chains /pce/observe → /pce/act in TypeScript"
     },
     {
-      "name": "mobile_back",
+      "name": "phone_back",
       "why": "its run chains /pce/observe → /pce/act in TypeScript"
     },
     {
-      "name": "mobile_home",
+      "name": "phone_home",
       "why": "its run chains /pce/observe → /pce/act in TypeScript"
     },
     {
-      "name": "mobile_wait",
+      "name": "phone_wait",
       "why": "its run chains /pce/observe → /pce/observe in TypeScript"
     }
   ]

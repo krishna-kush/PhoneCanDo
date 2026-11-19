@@ -267,7 +267,7 @@ every start:
   `NODE_USE_ENV_PROXY` sends Node's `fetch` through one even to
   127.0.0.1. Nothing it writes (answers, or stderr, which Cline quotes in
   its errors) holds the token.
-- `timeout: 300` (Cline's default is 60 s; `mobile_open_accessibility`
+- `timeout: 300` (Cline's default is 60 s; `phone_open_accessibility`
   waits up to 240). It is the start's budget too, so the script leaves at
   once with no bridge in its env, or when Cline retries a failed start
   with `Content-Length` framing, which it doesn't speak.

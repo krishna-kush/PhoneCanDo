@@ -14,12 +14,12 @@ object HandsText {
     "don't wait or call the screen again. We'll message you to go on when they tap Start me again."
 
   /** A wait that ran out while you still have the phone: it waits again. */
-  const val STILL_YOURS = "the user still has the phone. Call mobile_wait_for_user again to keep waiting; don't " +
+  const val STILL_YOURS = "the user still has the phone. Call phone_wait_for_user again to keep waiting; don't " +
     "end your turn."
 
   /** 409 user_has_controls's message. */
-  const val USER_HAS_CONTROLS = "the user has the controls; call mobile_wait_for_user to wait for them, or " +
-    "mobile_observe to follow along."
+  const val USER_HAS_CONTROLS = "the user has the controls; call phone_wait_for_user to wait for them, or " +
+    "phone_observe to follow along."
 
   /** 409 user_has_controls for an agent the hand-over is not for: there is nothing of its own to follow. */
   const val SOMEONE_ELSE = "the user has the controls of the phone now; do other work, or end your turn and ask " +

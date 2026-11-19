@@ -13,7 +13,7 @@ product and as independent parts:
 
 The PCE is not the PhoneCanDo app. PhoneCanDo owns the roadmap and is the primary
 consumer; it proves the contract. Nothing in the PCE may depend on PhoneCanDo,
-React Native, Expo, NanoHTTPD, the biometric gate or `mobile_*` tool names.
+React Native, Expo, NanoHTTPD, the biometric gate or `phone_*` tool names.
 
 ## Host boundary
 
@@ -24,7 +24,7 @@ The host owns the HTTP bridge, auth, biometric gate, master switch, AI tool
 names, prompts, UI, app lifecycle, foreground service and notifications.
 
 If a change needs an app type, an Expo/React Native type, NanoHTTPD or a
-`mobile_*` name, it does not belong in `pce/`.
+`phone_*` name, it does not belong in `pce/`.
 
 ## Mental model
 

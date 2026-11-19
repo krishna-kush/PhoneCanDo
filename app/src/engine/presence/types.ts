@@ -7,7 +7,7 @@ import type { AgentId } from '../agents/records';
 /** watch: you drive, the agent still sees and keeps running. paused: you drive, the agent's run is stopped until Start me again. */
 export type HandMode = 'watch' | 'paused';
 
-/** Who started the hand-over: you (the mascot's Let me or Stop) or the agent (mobile_hand_over). */
+/** Who started the hand-over: you (the mascot's Let me or Stop) or the agent (phone_hand_over). */
 export type HandBy = 'user' | 'agent';
 
 export type HandOver = {

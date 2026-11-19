@@ -21,7 +21,7 @@ const ENV: Envelope = {
 };
 
 function session(id: string): SessionWire {
-  return { sessionId: id, startedAt: 1, counters: { 'tool.mobile_click': 3 } };
+  return { sessionId: id, startedAt: 1, counters: { 'tool.phone_click': 3 } };
 }
 
 function events(n: number, sessionId = 's1', props?: EventWire['props']): EventWire[] {

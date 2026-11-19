@@ -59,7 +59,7 @@ everything. The `*-ok` job is the one check to require for each.
 
 ## Automation test layers
 
-In the target contract, every `mobile_execute` produces a trace:
+In the target contract, every `phone_execute` produces a trace:
 
 ```json
 {
@@ -76,7 +76,7 @@ In the target contract, every `mobile_execute` produces a trace:
 
 - Ring buffer in app-private storage; export on demand.
 - Metrics: success rate per flow/pack, latency, retries, ambiguity rate.
-- `mobile_doctor` (target) reports backend/pack/bridge state.
+- `phone_doctor` (target) reports backend/pack/bridge state.
 - Contract tests: JSON schema validation for describe/observe/execute.
 - Unit tests: resolver, compaction, DSL parser, pack validation.
 - On-device smoke: `androidx.test.uiautomator` instrumentation.

@@ -6,9 +6,9 @@ import * as composed from "./composed"
 // use them.
 export const screenTools: PhoneTool[] = [
   {
-    name: "mobile_launch",
+    name: "phone_launch",
     description:
-      "Launch an installed Android app by package name, e.g. {\"packageName\":\"com.whatsapp\"}. Use this instead of mobile_open for apps; mobile_open only handles URLs. activityName is optional and is resolved relative to the package when it starts with '.' or has no dot. Requires phone-control unlock and the accessibility service. Returns {packageName, activityName} after the launch action; call mobile_wait or mobile_info to verify the foreground app. NOT_FOUND can mean the package is absent, disabled or hidden by Android package visibility; do not conclude it is missing. Fall back to mobile_home + launcher search and report not installed only after that UI search also fails.",
+      "Launch an installed Android app by package name, e.g. {\"packageName\":\"com.whatsapp\"}. Use this instead of phone_open for apps; phone_open only handles URLs. activityName is optional and is resolved relative to the package when it starts with '.' or has no dot. Requires phone-control unlock and the accessibility service. Returns {packageName, activityName} after the launch action; call phone_wait or phone_info to verify the foreground app. NOT_FOUND can mean the package is absent, disabled or hidden by Android package visibility; do not conclude it is missing. Fall back to phone_home + launcher search and report not installed only after that UI search also fails.",
     input: {
       type: "object",
       properties: {
@@ -25,9 +25,9 @@ export const screenTools: PhoneTool[] = [
     run: composed.launch,
   },
   {
-    name: "mobile_screen",
+    name: "phone_screen",
     description:
-      "Read the current screen as a flat list of visible elements that have text or a content description: {id, text?, desc?, bounds, centerX, centerY, clickable, editable, scrollable}. Use it for a quick human-readable dump; use mobile_observe when you need the full node tree or a snapshotId for mobile_act. scrollable=true keeps elements inside a scrollable ancestor; editable=true keeps editable fields. Click by text/desc/id with mobile_click, or tap centerX/centerY with mobile_tap.",
+      "Read the current screen as a flat list of visible elements that have text or a content description: {id, text?, desc?, bounds, centerX, centerY, clickable, editable, scrollable}. Use it for a quick human-readable dump; use phone_observe when you need the full node tree or a snapshotId for phone_act. scrollable=true keeps elements inside a scrollable ancestor; editable=true keeps editable fields. Click by text/desc/id with phone_click, or tap centerX/centerY with phone_tap.",
     input: {
       type: "object",
       properties: {
@@ -40,17 +40,17 @@ export const screenTools: PhoneTool[] = [
     run: composed.screen,
   },
   {
-    name: "mobile_info",
+    name: "phone_info",
     description:
-      "Return the foreground app package, activity, windowPackage and windowChildCount. Use to verify an app launch or a screen switch. For the full tree, focused node or a snapshotId, use mobile_observe; for PCE capabilities use mobile_describe.",
+      "Return the foreground app package, activity, windowPackage and windowChildCount. Use to verify an app launch or a screen switch. For the full tree, focused node or a snapshotId, use phone_observe; for PCE capabilities use phone_describe.",
     input: noArgs,
     channel: "full",
     run: composed.info,
   },
   {
-    name: "mobile_click",
+    name: "phone_click",
     description:
-      "Click a visible element by text (case-insensitive contains), desc (contains) or id (exact resource id, e.g. com.app:id/button). It prefers a clickable node and walks up to a clickable parent; prefer this over coordinates. Only the first match is used, so use mobile_observe + mobile_act with a precise selector when duplicates matter. Requires phone-control unlock.",
+      "Click a visible element by text (case-insensitive contains), desc (contains) or id (exact resource id, e.g. com.app:id/button). It prefers a clickable node and walks up to a clickable parent; prefer this over coordinates. Only the first match is used, so use phone_observe + phone_act with a precise selector when duplicates matter. Requires phone-control unlock.",
     input: {
       type: "object",
       properties: {
@@ -64,9 +64,9 @@ export const screenTools: PhoneTool[] = [
     run: composed.click,
   },
   {
-    name: "mobile_tap",
+    name: "phone_tap",
     description:
-      "Tap absolute screen pixels at x,y. Use centerX/centerY from mobile_screen when no text/id matches; coordinates are physical pixels, not density-independent units. Prefer mobile_click for text/desc/id targets. Requires phone-control unlock.",
+      "Tap absolute screen pixels at x,y. Use centerX/centerY from phone_screen when no text/id matches; coordinates are physical pixels, not density-independent units. Prefer phone_click for text/desc/id targets. Requires phone-control unlock.",
     input: {
       type: "object",
       properties: {
@@ -80,9 +80,9 @@ export const screenTools: PhoneTool[] = [
     run: composed.tap,
   },
   {
-    name: "mobile_text",
+    name: "phone_text",
     description:
-      "Type into the focused editable field, or the first visible editable field when none is focused. append=false replaces the field contents; append=true appends. Tap the field first when it is not focused. Retries once after 300ms if the field does not yet own input focus. Requires phone-control unlock; never use for passwords, OTPs or payment credentials: hand those to the user with mobile_hand_over (private: true).",
+      "Type into the focused editable field, or the first visible editable field when none is focused. append=false replaces the field contents; append=true appends. Tap the field first when it is not focused. Retries once after 300ms if the field does not yet own input focus. Requires phone-control unlock; never use for passwords, OTPs or payment credentials: hand those to the user with phone_hand_over (private: true).",
     input: {
       type: "object",
       properties: {
@@ -96,9 +96,9 @@ export const screenTools: PhoneTool[] = [
     run: composed.text,
   },
   {
-    name: "mobile_scroll",
+    name: "phone_scroll",
     description:
-      "Scroll a container up or down. direction=up|down; count repeats the scroll (default 1). target is optional text inside the container; without it the first visible scrollable container is used. The PCE sends a scroll action to that container, not a blind swipe. Use mobile_swipe for an arbitrary gesture. Requires phone-control unlock.",
+      "Scroll a container up or down. direction=up|down; count repeats the scroll (default 1). target is optional text inside the container; without it the first visible scrollable container is used. The PCE sends a scroll action to that container, not a blind swipe. Use phone_swipe for an arbitrary gesture. Requires phone-control unlock.",
     input: {
       type: "object",
       properties: {
@@ -113,9 +113,9 @@ export const screenTools: PhoneTool[] = [
     run: composed.scroll,
   },
   {
-    name: "mobile_swipe",
+    name: "phone_swipe",
     description:
-      "Swipe between absolute screen coordinates, e.g. to dismiss a sheet or pull to refresh. x1,y1 is the start and x2,y2 the end; duration is in milliseconds (default 300). This is a raw gesture, not a scroll action; prefer mobile_scroll when a scrollable container is present. Requires phone-control unlock.",
+      "Swipe between absolute screen coordinates, e.g. to dismiss a sheet or pull to refresh. x1,y1 is the start and x2,y2 the end; duration is in milliseconds (default 300). This is a raw gesture, not a scroll action; prefer phone_scroll when a scrollable container is present. Requires phone-control unlock.",
     input: {
       type: "object",
       properties: {
@@ -132,25 +132,25 @@ export const screenTools: PhoneTool[] = [
     run: composed.swipe,
   },
   {
-    name: "mobile_back",
+    name: "phone_back",
     description:
-      "Press the Android Back key. Use to dismiss a dialog, leave a screen or return from an app; verify with mobile_wait or mobile_info. Requires phone-control unlock.",
+      "Press the Android Back key. Use to dismiss a dialog, leave a screen or return from an app; verify with phone_wait or phone_info. Requires phone-control unlock.",
     input: noArgs,
     channel: "full",
     run: composed.back,
   },
   {
-    name: "mobile_home",
+    name: "phone_home",
     description:
-      "Press the Android Home key. This backgrounds PhoneCanDo; with phone control enabled the host keeps the bridge alive, but prefer mobile_launch/mobile_open when you need another app and call mobile_return when the task is done. Requires phone-control unlock.",
+      "Press the Android Home key. This backgrounds PhoneCanDo; with phone control enabled the host keeps the bridge alive, but prefer phone_launch/phone_open when you need another app and call phone_return when the task is done. Requires phone-control unlock.",
     input: noArgs,
     channel: "full",
     run: composed.home,
   },
   {
-    name: "mobile_wait",
+    name: "phone_wait",
     description:
-      "Poll the observed screen until its package, activity, focused node, node signature or accessibility event sequence changes, or timeoutMs expires (default 5000, max 12000). Returns {changed, timeoutMs, package, activity}; changed=false means no change was seen before the deadline. The accessibility event counter catches a change that reverted between polls. Use after a tap/launch instead of a blind sleep; for a specific element use mobile_act wait or expect. Requires phone-control unlock.",
+      "Poll the observed screen until its package, activity, focused node, node signature or accessibility event sequence changes, or timeoutMs expires (default 5000, max 12000). Returns {changed, timeoutMs, package, activity}; changed=false means no change was seen before the deadline. The accessibility event counter catches a change that reverted between polls. Use after a tap/launch instead of a blind sleep; for a specific element use phone_act wait or expect. Requires phone-control unlock.",
     input: {
       type: "object",
       properties: {

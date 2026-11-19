@@ -34,7 +34,7 @@ class McpToolsTest {
   }
 
   @Test fun nullArgumentsLeaveTheFixedFields() {
-    val ret = RepoTools.parse(full = true).single { it.name == "mobile_return" }
+    val ret = RepoTools.parse(full = true).single { it.name == "phone_return" }
     val body = ret.body(JSONObject().put("tab", JSONObject.NULL))
     assertEquals("home", body.getString("tab"))
   }

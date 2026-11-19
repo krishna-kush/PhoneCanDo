@@ -29,7 +29,7 @@ limits) stay in the repo-root `docs/` tree.
   Face, downloads and imports, RAM verdicts, context and the Memory
   setting, and the token.
 - [`modules/bridge.md`](modules/bridge.md) — loopback bridge, per-agent tokens,
-  prompts, screen lease, `mobile_*` tools, trust gate and flavors.
+  prompts, screen lease, `phone_*` tools, trust gate and flavors.
 - [`modules/automation.md`](modules/automation.md) — PCE host integration, routes
   and current status.
 

@@ -31,7 +31,7 @@ export type StaticEventName = (typeof EVENT_NAMES)[number];
 export const EVENT_PATTERNS: readonly RegExp[] = [
   /^update\.check\.(none|newer|failed)$/,
   /^a11y\.step\.[0-9]{1,2}\.(reached|done)$/,
-  /^tool\.[a-z0-9_]{1,48}$/, // tool.mobile_click
+  /^tool\.[a-z0-9_]{1,48}$/, // tool.pce_act
   /^provider\.[a-z0-9_.-]{1,48}$/, // provider.anthropic (name only)
 ];
 

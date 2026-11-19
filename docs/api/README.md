@@ -8,7 +8,7 @@ The contract is the product. The a11y driver is one backend behind it.
 Shizuku is another. Vision is a third. Any of them can be replaced without
 changing what the AI sees.
 
-This tree describes the **host-facing** automation contract: the `mobile_*`
+This tree describes the **host-facing** automation contract: the `phone_*`
 tools exposed by the opencode plugin and the `/pce/*` bridge routes.
 
 It is not the PCE Kotlin library API. `pce/docs/api/` documents how a host

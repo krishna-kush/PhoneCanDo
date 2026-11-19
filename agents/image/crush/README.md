@@ -95,7 +95,7 @@ over a GET stream, and our file would set `channel_enabled`.
 
 Phone check: start a Crush agent (or Update agent on an old one) and ask
 it to list its tools; the `phonecando` tools should be there, and a
-`mobile_*` call should work. Send it a message from another agent while
+`phone_*` call should work. Send it a message from another agent while
 it works; it should see the message after its next tool call.
 
 ## Local models

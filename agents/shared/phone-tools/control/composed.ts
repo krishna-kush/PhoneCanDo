@@ -12,7 +12,7 @@ import {
   visible,
 } from "./snapshot"
 
-// The compatibility tools (mobile_launch/screen/info/click/tap/text/scroll/
+// The compatibility tools (phone_launch/screen/info/click/tap/text/scroll/
 // swipe/back/home/wait), each built from observe + act on the typed PCE API.
 // Each one's result is JSON, or the bridge's error text.
 type Run = (args: Args, signal?: AbortSignal) => Promise<string>

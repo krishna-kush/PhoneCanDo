@@ -59,13 +59,13 @@ test('GOOSE_PATH_ROOT moves it, and an empty file is written whole', () => {
 test("goose's own shape gets only the names it lacks, the rest kept", () => {
   const before =
     'smart_approve:\n  always_allow: []\n  ask_before:\n  - developer__shell\n  never_allow: []\n' +
-    'user:\n  always_allow:\n  - developer__text_editor\n  - phonecando__mobile_ping\n' +
+    'user:\n  always_allow:\n  - developer__text_editor\n  - phonecando__phone_ping\n' +
     '  ask_before:\n  - developer__shell\n  never_allow: []\n';
-  const missing = tools.filter((name) => name !== 'mobile_ping').map((name) => `  - phonecando__${name}\n`).join('');
+  const missing = tools.filter((name) => name !== 'phone_ping').map((name) => `  - phonecando__${name}\n`).join('');
   assert.equal(
     file(before),
     'smart_approve:\n  always_allow: []\n  ask_before:\n  - developer__shell\n  never_allow: []\n' +
-      `user:\n  always_allow:\n  - developer__text_editor\n  - phonecando__mobile_ping\n${missing}` +
+      `user:\n  always_allow:\n  - developer__text_editor\n  - phonecando__phone_ping\n${missing}` +
       '  ask_before:\n  - developer__shell\n  never_allow: []\n',
   );
 });

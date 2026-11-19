@@ -19,7 +19,7 @@ RN shell (Expo / Tamagui / Zustand)
   └─ engine seam (app/src/engine)
         │
         ├─ phonecando-runner ── foreground service ── engines (≤ 3, one per agent)
-        │       └─ loopback bridge ── mobile_* tools, MCP (one token per agent)
+        │       └─ loopback bridge ── phone_* tools, MCP (one token per agent)
         ├─ phonecando-linux ── lre/ ── images in files/images/<id>/
         │       └─ shims ── launcher ── proot ── guest commands
         ├─ phonecando-models ── lme/ ── models in files/models/

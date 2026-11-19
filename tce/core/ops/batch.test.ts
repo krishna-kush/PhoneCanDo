@@ -278,7 +278,7 @@ describe('batch run', () => {
     const [session] = ctx.store.tables.sessions;
     assert.equal(session!.engine_ok, 1);
     assert.equal(session!.a11y_on, 0);
-    assert.equal(session!.counters, '{"tool.mobile_click":3}');
+    assert.equal(session!.counters, '{"tool.phone_click":3}');
     assert.equal(session!.country, 'IN');
     assert.equal(session!.received, T0 + 250);
     const terminal = ctx.store.tables.events.find((e) => e.seq === 2)!;
@@ -332,7 +332,7 @@ describe('batch run', () => {
       batchRequest({
         events: [
           eventWire({ seq: 1, name: 'secret.prompt_text' }),
-          eventWire({ seq: 1, name: 'tool.mobile_click' }),
+          eventWire({ seq: 1, name: 'tool.phone_click' }),
           eventWire({ seq: 2, name: 'update.check.newer' }),
           eventWire({ seq: 3, name: 'a11y.step.2.done' }),
           eventWire({ seq: 4, name: 'Chat.Open' }),
@@ -344,7 +344,7 @@ describe('batch run', () => {
     assert.equal(res.accepted.events, 4);
     assert.deepEqual(
       ctx.store.tables.events.map((e) => e.name),
-      ['tool.mobile_click', 'update.check.newer', 'a11y.step.2.done', 'provider.anthropic'],
+      ['tool.phone_click', 'update.check.newer', 'a11y.step.2.done', 'provider.anthropic'],
     );
   });
 
@@ -434,13 +434,13 @@ describe('batch run', () => {
 
   it('bounds counters to non-negative integers with identifier keys', async () => {
     const ctx = setup();
-    const counters: Record<string, number> = { 'tool.mobile_click': 4, neg: -1, frac: 1.5, 'has space': 3, 'session.create': 1 };
+    const counters: Record<string, number> = { 'tool.phone_click': 4, neg: -1, frac: 1.5, 'has space': 3, 'session.create': 1 };
     (counters as Record<string, unknown>).str = '7';
     for (let i = 0; i < 80; i++) counters[`c${i}`] = i;
     await send(ctx, batchRequest({ sessions: [sessionWire({ counters })] }));
     const stored = JSON.parse(ctx.store.tables.sessions[0]!.counters!) as Record<string, number>;
     assert.equal(Object.keys(stored).length, LIMITS.counterKeys);
-    assert.equal(stored['tool.mobile_click'], 4);
+    assert.equal(stored['tool.phone_click'], 4);
     assert.equal(stored['session.create'], 1);
     for (const k of ['neg', 'frac', 'has space', 'str']) assert.equal(k in stored, false, k);
   });

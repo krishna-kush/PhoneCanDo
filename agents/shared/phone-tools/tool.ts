@@ -1,5 +1,5 @@
 // One phone tool, independent of any agent kind: an agent's adapter
-// registers these with its own plugin API (opencode: plugins/mobile/opencode.ts).
+// registers these with its own plugin API (opencode: plugins/phone/opencode.ts).
 // The names, descriptions and schemas are a contract: prompts and saved chats
 // rely on them, so keep them stable.
 export type Args = Record<string, any>

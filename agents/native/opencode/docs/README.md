@@ -19,7 +19,7 @@ v2 loads `plugins/<id>/index.ts` (`@opencode/plugin`, `Plugin.define` +
 `ctx.tool.transform`) from the global config dir and from
 `<project>/.opencode/plugins/`; v1 `tools/*.ts` and `@opencode-ai/plugin`
 do not load. Our phone tools ship as such plugins (`../config/plugins/`):
-`mobile` (every channel: the basic tools, the `agents_*` tools and the
+`phone` (every channel: the basic tools, the `agents_*` tools and the
 `schedule_*` tools) and `automation` (full only: phone control).
 
 ## Messages

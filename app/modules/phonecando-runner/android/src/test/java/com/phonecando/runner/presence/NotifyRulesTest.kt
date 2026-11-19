@@ -6,7 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-// mobile_notify's limits: a minute, an hour, the chat on screen.
+// phone_notify's limits: a minute, an hour, the chat on screen.
 class NotifyRulesTest {
   private var now = 0L
   private val rules = NotifyRules { now }

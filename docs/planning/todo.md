@@ -72,7 +72,7 @@ Before play ships:
   it with the test key in `src/debug/`).
 - [ ] Write and sign the first packs and their manifest, host them on a
   static HTTPS address (a GitHub release is enough), and test
-  `mobile_pack refresh` and `run` on a release build.
+  `phone_pack refresh` and `run` on a release build.
 - [ ] Ship the key in an app update, and drop the known-limits line.
 
 ## 4. Account: coming features (optional, need sign-in)
