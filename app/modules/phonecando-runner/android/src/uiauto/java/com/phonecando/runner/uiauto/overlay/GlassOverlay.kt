@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.View
 import com.phonecando.runner.engine.Engines
 import com.phonecando.runner.notify.AppOnScreen
@@ -32,6 +33,8 @@ import com.phonecando.runner.presence.glass.scene.Own
 import com.phonecando.runner.presence.glass.scene.Scene
 import com.phonecando.runner.presence.glass.scene.Show
 import com.phonecando.runner.presence.glass.walls.Beside
+import com.phonecando.runner.presence.glass.walls.Bin
+import com.phonecando.runner.presence.glass.walls.BinSpot
 import com.phonecando.runner.presence.glass.walls.Dodge
 import com.phonecando.runner.presence.glass.walls.Entrance
 import com.phonecando.runner.presence.glass.walls.Exit
@@ -52,7 +55,8 @@ import kotlinx.coroutines.withContext
 // for Let me and Stop. Handed over to you, it turns to you (watching) or
 // turns its back (paused), then sleeps in a corner until you start it
 // again. Nobody driving and nothing handed over, it hops off the screen.
-// You can drag it and throw it to another wall.
+// You can drag it and throw it to another wall; paused, a bin comes up as
+// you drag, and dropped on it the agent is left stopped (Leave it).
 //
 // The agent never meets it (GuardedBackend): a screenshot is taken with
 // the glass see-through, and a touch of the agent's first tells it where
@@ -79,6 +83,10 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
   private var entering = false
   private var leaving = false
   private var dragging = false
+
+  // Dropped in the bin: on its way in (binned), and in (dropped).
+  private var binned = false
+  private var dropped = false
   private var controls = false
   private var rested = false
   private var folded = false
@@ -208,6 +216,16 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
     main.removeCallbacks(closeControls)
     windows.grip(null)
     windows.card(null)
+    if (binned) {
+      // Dropped in the bin: it is gone once it has sunk in.
+      leaving = true
+      stage?.show = stage?.show?.copy(glow = Glow.OFF, bubble = null, thinking = false)
+      if (dropped) {
+        leaving = false
+        gone()
+      }
+      return
+    }
     if (stage == null || room == null || pose == null || at == null) {
       gone()
       return
@@ -227,6 +245,12 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
     perch = null
     entering = false
     dragging = false
+    binned = false
+    dropped = false
+    windows.stage?.let {
+      it.bin = null
+      it.binArmed = false
+    }
     val next = target
     if (next == null) windows.close() else enter(next)
   }
@@ -247,7 +271,7 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
     val stage = windows.stage ?: return
     val room = stage.room ?: return
     val at = perch ?: return
-    if (dragging || entering || leaving) return
+    if (dragging || entering || leaving || binned) return
     windows.grip(room.area(room.pose(at, stage.body()), stage.body()))
     placeCard()
   }
@@ -258,7 +282,7 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
     val room = stage.room
     val at = perch
     val copy = show()?.let { GlassCopy.card(it.card, s) }
-    if (copy == null || room == null || at == null || entering || leaving || dragging) {
+    if (copy == null || room == null || at == null || entering || leaving || dragging || binned) {
       windows.card(null)
       return
     }
@@ -290,7 +314,7 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
     }
     val stage = windows.stage ?: return
     val at = perch ?: return
-    if (entering || leaving || dragging) return
+    if (entering || leaving || dragging || binned) return
     // Turned or resized: the same wall, as far along as still fits.
     val kept = room.clamp(at, stage.body())
     perch = kept
@@ -359,7 +383,7 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
 
   override fun tap() {
     val s = scene ?: return
-    if (entering || leaving) return
+    if (entering || leaving || binned) return
     if (s.act == Act.DRIVING) {
       controls = !controls
       main.removeCallbacks(closeControls)
@@ -372,15 +396,22 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
 
   override fun drag(x: Float, y: Float) {
     val stage = windows.stage ?: return
-    if (entering || leaving) return
+    if (entering || leaving || binned) return
+    val dp = service.resources.displayMetrics.density
     if (!dragging) {
       dragging = true
       controls = false
       windows.card(null)
+      if (scene?.droppable == true) stage.room?.let { stage.bin = Bin.spot(it, dp) }
     }
     val body = stage.body()
     stage.hold(Pose(x, y + body.h / 2, sx = 0.94f, sy = 1.08f, toward = stage.pose()?.toward ?: 1))
     windows.gripAt(Pt(x, y))
+    val spot = stage.bin ?: return
+    val over = Bin.over(spot, Pt(x, y), dp)
+    if (over == stage.binArmed) return
+    stage.binArmed = over
+    if (over) windows.grip?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
   }
 
   override fun letGo(x: Float, y: Float, vx: Float, vy: Float) {
@@ -388,6 +419,13 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
     val room = stage.room ?: return
     if (!dragging) return
     dragging = false
+    val spot = stage.bin
+    if (spot != null && stage.binArmed) {
+      drop(spot)
+      return
+    }
+    stage.bin = null
+    stage.binArmed = false
     val body = stage.body()
     val from = stage.pose() ?: return
     val landing = Fling.land(room, body, Pt(x, y), Pt(vx, vy))
@@ -395,6 +433,42 @@ internal class GlassOverlay(private val service: AccessibilityService) : Presenc
     remembered = landing
     stage.wall = landing.wall
     stage.play(Fling.move(room, body, from, landing), Facing.FRONT to Eyes.WIDE) { settled() }
+    refresh()
+  }
+
+  // Let go over the bin: it drops in and the agent is left stopped (Leave
+  // it); the scene ending then takes the glass away (leave).
+  private fun drop(spot: BinSpot) {
+    val stage = windows.stage ?: return
+    val from = stage.pose() ?: return
+    binned = true
+    windows.grip(null)
+    windows.card(null)
+    stage.play(Bin.drop(from, spot), Facing.FRONT to Eyes.SHUT) {
+      dropped = true
+      if (leaving) {
+        leaving = false
+        gone()
+      }
+    }
+    // Off the main thread: the store's notices may write the message log.
+    thread(name = "phonecando-presence-act") {
+      if (!Presence.user(UserAct.LEAVE)) main.post { unbin() }
+    }
+  }
+
+  // Leave it no longer applied (the pause ended meanwhile): it comes back out to its wall.
+  private fun unbin() {
+    if (!binned || leaving) return
+    val stage = windows.stage ?: return
+    val room = stage.room ?: return
+    val at = perch ?: return
+    val from = stage.pose() ?: return
+    binned = false
+    dropped = false
+    stage.bin = null
+    stage.binArmed = false
+    stage.play(Fling.move(room, stage.body(), from, at), Facing.FRONT to Eyes.WIDE) { settled() }
     refresh()
   }
 

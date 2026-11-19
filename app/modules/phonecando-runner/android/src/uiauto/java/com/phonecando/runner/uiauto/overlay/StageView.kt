@@ -20,6 +20,7 @@ import com.phonecando.runner.presence.glass.motion.Pose
 import com.phonecando.runner.presence.glass.motion.Pt
 import com.phonecando.runner.presence.glass.scene.Glow
 import com.phonecando.runner.presence.glass.scene.Show
+import com.phonecando.runner.presence.glass.walls.BinSpot
 import com.phonecando.runner.presence.glass.walls.Body
 import com.phonecando.runner.presence.glass.walls.Room
 import com.phonecando.runner.presence.glass.walls.Wall
@@ -27,20 +28,22 @@ import kotlin.math.sin
 
 // The glass's one drawing surface, the whole screen in a window that never
 // takes a touch: the edge's glow, the mascot where its move has it, its
-// line when it hangs from one, its speech bubble, thinking dots and the
-// z's of its sleep. It runs the moves GlassOverlay gives it frame by frame
+// line when it hangs from one, its speech bubble, thinking dots, the
+// z's of its sleep, and the bin while you drag a stopped agent's mascot. It runs the moves GlassOverlay gives it frame by frame
 // (presence/glass/motion, pure) and adds the life of its own: blinks, eyes
 // that wander or follow the agent's touch, breathing.
 internal class StageView(context: Context, private val palette: Palette) : View(context) {
   private val dp = resources.displayMetrics.density
   private val mascot = MascotPainter(palette)
   private val glow = EdgeGlow(dp)
+  private val mono = runCatching { resources.getFont(R.font.geist_mono_regular) }.getOrNull()
   private val bubble = BubblePainter(
     palette,
     dp,
     TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 1f, resources.displayMetrics),
-    runCatching { resources.getFont(R.font.geist_mono_regular) }.getOrNull(),
+    mono,
   )
+  private val binPainter = BinPainter(palette, dp, mono)
   private val thread = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     style = Paint.Style.STROKE
     strokeWidth = 1.5f * dp
@@ -68,6 +71,22 @@ internal class StageView(context: Context, private val palette: Palette) : View(
 
   /** The wall it rests on, for where the bubble goes. */
   var wall: Wall = Wall.RIGHT
+
+  /** The bin, up while you drag a stopped agent's mascot; null when not. */
+  var bin: BinSpot? = null
+    set(value) {
+      if (value != null && field == null) binAt = SystemClock.uptimeMillis()
+      field = value
+      invalidate()
+    }
+
+  /** The mascot is over the bin: let go and it drops in. */
+  var binArmed = false
+    set(value) {
+      field = value
+      invalidate()
+    }
+  private var binAt = 0L
 
   private var rest: Pose? = null
   private var move: Move? = null
@@ -204,6 +223,7 @@ internal class StageView(context: Context, private val palette: Palette) : View(
       val color = if (show.glow == Glow.RED) palette.primary else palette.secondary
       glow.draw(canvas, width, height, color, Idle.glow(t), corner())
     }
+    bin?.let { binPainter.draw(canvas, it, now - binAt, binArmed) }
     val pose = pose() ?: return
     val base = when {
       held != null -> Facing.FRONT to Eyes.WIDE

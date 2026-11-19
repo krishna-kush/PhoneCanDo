@@ -267,8 +267,12 @@ handed over it backs out the same way, with a last look (`Exit`).
   After **I'm done** (the glass's own step) it slides to a bottom corner and
   sleeps with z's: **Start me again** (`START_AGAIN`), **Go to app** (opens
   its chat in PhoneCanDo, the pause kept) or a small **Leave it**
-  (`LEAVE`). A tap on it folds a sign away or brings it back.
+  (`LEAVE`: the screen goes at once, and a run still going stays off it,
+  refused as paused, until that run ends; `PresenceStore.leftStopped`). A
+  tap on it folds a sign away or brings it back.
 - You can drag it and throw it: it lands on the wall the throw heads for.
+  Paused, a bin comes up low in the middle as you drag (`glass/walls/Bin`,
+  `BinPainter`); let go over it and it drops in: **Leave it**.
 - **You touch the screen yourself** while it drives: that is **Let me**
   ("All yours, I'll watch"). A one-pixel watch window hears of every touch
   elsewhere (`TouchWatch`, `FLAG_WATCH_OUTSIDE_TOUCH`); the agent's own

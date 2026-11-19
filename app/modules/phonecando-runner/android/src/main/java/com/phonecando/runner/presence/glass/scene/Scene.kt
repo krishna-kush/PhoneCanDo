@@ -22,6 +22,9 @@ data class Scene(
   /** When the hand-over began (elapsedRealtime), so a new one is told from the same one again. */
   val since: Long?,
 ) {
+  /** A drag of its mascot offers the bin (walls/Bin: drop it there to leave it stopped): only in a pause. */
+  val droppable: Boolean get() = act == Act.PAUSED
+
   companion object {
     /** The hand-over wins over the driver; nobody driving and nothing handed over shows nothing. */
     fun of(frame: PresenceFrame): Scene? {
