@@ -64,7 +64,8 @@ concurrency:
 
 env:
   # Tools that are not web deps, installed per job into $RUNNER_TEMP/tools
-  # (npm --no-save, nothing lands in the repo or its lockfile).
+  # (npm --no-save, nothing lands in the repo or its lockfile). Playwright's
+  # version is also the smoke job's container image tag.
   PLAYWRIGHT_VERSION: 1.64.1
   AXE_PLAYWRIGHT_VERSION: 4.14.0
   HTML_VALIDATE_VERSION: 11.18.0
@@ -249,9 +250,15 @@ jobs:
   smoke:
     name: Smoke (${{ matrix.browser }})
     needs: build
-    # Pinned image: playwright install --with-deps is distro-specific.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # Playwright's own image for PLAYWRIGHT_VERSION (bump the two together):
+    # every browser and the system libraries it needs are in it, so nothing
+    # runs apt. WebKit's `install --with-deps` went past the timeout on a
+    # slow Ubuntu mirror. The runner's uid, as Playwright's CI docs advise.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f
+      options: --user 1001
     strategy:
       fail-fast: false
       matrix:
@@ -275,7 +282,8 @@ jobs:
           set -euo pipefail
           npm i --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/tools" \
             "playwright@$PLAYWRIGHT_VERSION" "@axe-core/playwright@$AXE_PLAYWRIGHT_VERSION"
-          "$RUNNER_TEMP/tools/node_modules/.bin/playwright" install --with-deps "$BROWSER"
+          # The image has it (PLAYWRIGHT_BROWSERS_PATH); this only checks.
+          "$RUNNER_TEMP/tools/node_modules/.bin/playwright" install "$BROWSER"
       # axe fails the job on critical violations only. Serious ones (today:
       # colour contrast of the red `primary` ink as small text) are listed in
       # the summary; switch to --axe serious once they are fixed.
