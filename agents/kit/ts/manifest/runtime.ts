@@ -22,11 +22,11 @@ export function checkRuntime(add: Add, m: Json) {
   if ('signIn' in m) checkSignIn(add, m.signIn);
 }
 
-// A chat's title, the chats running now, and a chat's last reply, over
-// HTTP (server); a tui engine's title comes from its window title
+// A chat's title, the chats running now, a chat's last reply and its stop,
+// over HTTP (server); a tui engine's title comes from its window title
 // (surfaces.chatTitle). The reply is read by a code hook, as an SSE stream is.
 function checkChats(add: Add, chats: unknown, hooks: unknown, style: string | null) {
-  if (!fields(add, '/chats', chats, ['title', 'active', 'reply'], [])) return;
+  if (!fields(add, '/chats', chats, ['title', 'active', 'reply', 'interrupt'], [])) return;
   if (style !== 'server') add('/chats', 'forbidden', 'chats over HTTP need engine.style server');
   const c = chats as Json;
   if (!('title' in c) && !('active' in c)) add('/chats', 'required', 'title or active is required');
@@ -37,6 +37,11 @@ function checkChats(add: Add, chats: unknown, hooks: unknown, style: string | nu
     if (http) string(add, `/chats/${key}/http/json`, http.json, PATTERNS.jsonPointer, MAX.relPath);
   }
   if ('reply' in c) checkReply(add, c.reply, hooks);
+  if ('interrupt' in c && fields(add, '/chats/interrupt', c.interrupt, ['http'], ['http'])) {
+    httpBlock(add, '/chats/interrupt/http', (c.interrupt as Json).http);
+    // Stop names the chats to interrupt by asking which run now.
+    if (!('active' in c)) add('/chats/interrupt', 'required', 'interrupt needs active, the chats to stop');
+  }
 }
 
 function checkReply(add: Add, reply: unknown, hooks: unknown) {

@@ -408,6 +408,22 @@
               }
             }
           }
+        },
+        "interrupt": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["http"],
+          "properties": {
+            "http": {
+              "description": "Stops a chat's run now (Stop on the phone's controls): POST path, its answer not read.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path"],
+              "properties": {
+                "path": { "$ref": "#/$defs/httpPath" }
+              }
+            }
+          }
         }
       }
     },

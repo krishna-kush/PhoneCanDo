@@ -35,7 +35,8 @@ class ManifestDecoderTest {
       "chats": {
         "title": { "http": { "path": "/chat/{{sessionId}}", "json": "/title" } },
         "active": { "http": { "path": "/chats/active", "json": "/data" } },
-        "reply": { "http": { "path": "/chat/{{sessionId}}/messages", "parser": "demo.reply" } }
+        "reply": { "http": { "path": "/chat/{{sessionId}}/messages", "parser": "demo.reply" } },
+        "interrupt": { "http": { "path": "/chat/{{sessionId}}/stop" } }
       },
       "idle": { "from": ["events"], "quietSec": 30 },
       "surfaces": {
@@ -77,6 +78,7 @@ class ManifestDecoderTest {
     assertEquals(TitleSource("/chat/{{sessionId}}", "/title"), m.chats!!.title)
     assertEquals(ActiveSource("/chats/active", "/data"), m.chats!!.active)
     assertEquals(ReplySource("/chat/{{sessionId}}/messages", "demo.reply"), m.chats!!.reply)
+    assertEquals(InterruptSource("/chat/{{sessionId}}/stop"), m.chats!!.interrupt)
     assertEquals(Idle(listOf("events"), 30), m.idle)
     val surfaces = m.surfaces!!
     assertEquals(HomeSurface.WEB, surfaces.home)

@@ -38,7 +38,8 @@ class ManifestKindTest {
       "events": [{ "sse": { "path": "/ev", "parser": "demo.events" } }],
       "chats": {
         "title": { "http": { "path": "/chats/{{sessionId}}", "json": "/name" } },
-        "active": { "http": { "path": "/chats/running", "json": "/running" } }
+        "active": { "http": { "path": "/chats/running", "json": "/running" } },
+        "interrupt": { "http": { "path": "/chats/{{sessionId}}/interrupt" } }
       },
       "idle": { "from": ["events"], "quietSec": 60 },
       "surfaces": { "home": "tui" },
@@ -174,6 +175,17 @@ class ManifestKindTest {
     assertNull(none.parseActiveChats("""{"running":{}}"""))
   }
 
+  @Test fun aChatsRunIsStoppedWithAPost() {
+    val stop = kind().interruptChat("7", "pw", "s 1")!!
+    assertEquals("http://127.0.0.1:7/chats/s%201/interrupt", stop.url)
+    assertEquals("POST", stop.method)
+    assertNull(kind("""{"chats":{"active":{"http":{"path":"/chats/running","json":"/running"}}}}""").interruptChat("7", "pw", "s1"))
+    assertEquals(
+      "demo: chats.interrupt needs chats.active",
+      refused("""{"chats":{"title":{"http":{"path":"/c","json":"/t"}},"interrupt":{"http":{"path":"/c/{{sessionId}}/stop"}}}}"""),
+    )
+  }
+
   @Test fun idleQuietSeconds() {
     assertEquals(null, kind("""{"idle":null}""").idleQuietSec)
     assertEquals(45, kind("""{"idle":{"from":["events"],"quietSec":45}}""").idleQuietSec)
@@ -279,7 +291,7 @@ class ManifestKindTest {
       ),
     )
     assertEquals(
-      "demo: a tui engine cannot have events[].sse, chats.title",
+      "demo: a tui engine cannot have events[].sse, chats.title, chats.interrupt",
       refused("""{"engine":{"style":"tui","launch":{"argv":["x"]}},"hooks":null}""", null),
     )
     assertEquals(

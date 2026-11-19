@@ -85,6 +85,9 @@ interface AgentKind {
   /** The ids of the chats running now in that response; null when it does not read as such. */
   fun parseActiveChats(body: String): Set<String>? = null
 
+  /** Request that stops a chat's run now (the manifest's `chats.interrupt`, a POST); null when the kind has none. */
+  fun interruptChat(port: String, password: String, sessionId: String): HttpProbe? = null
+
   /** Seconds without activity after which an agent of it is idle (the manifest's `idle.quietSec`); null without an idle rule. */
   val idleQuietSec: Int? get() = null
 

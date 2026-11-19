@@ -254,6 +254,11 @@ class ManifestKind private constructor(
 
   override fun parseActiveChats(body: String): Set<String>? = manifest.chats?.active?.let { JsonPointer.ids(body, it.pointer) }
 
+  override fun interruptChat(port: String, password: String, sessionId: String): HttpProbe? =
+    manifest.chats?.interrupt?.let {
+      HttpProbe(url(port, it.path, mapOf("sessionId" to sessionId)), SecretForms.headers(auth, password), method = "POST")
+    }
+
   override val idleQuietSec: Int? get() = manifest.idle?.quietSec
 
   override fun passwordForms(password: String): List<String> = SecretForms.of(auth, password)

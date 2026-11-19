@@ -156,6 +156,11 @@
         "path": "/api/session/active",
         "json": "/data"
       }
+    },
+    "interrupt": {
+      "http": {
+        "path": "/api/session/{{sessionId}}/interrupt"
+      }
     }
   },
   "inbox": {

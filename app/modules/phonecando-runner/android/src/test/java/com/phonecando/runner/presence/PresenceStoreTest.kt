@@ -54,34 +54,36 @@ class PresenceStoreTest {
     store.user(UserAct.LET_ME)
     val wait = waitInBackground()
     assertTrue(store.user(UserAct.STOP))
-    // A real stop: its wait answers at once, and it ends its turn.
+    // A real stop: its wait answers at once, and its turn is stopped.
     assertEquals(PresenceStore.Wait.PAUSED, wait.get(2, TimeUnit.SECONDS))
     assertEquals(HandMode.PAUSED, store.handOver()!!.mode)
     // A switch keeps the frozen time: no second freeze.
-    assertEquals(listOf("freeze a1"), fx.log)
+    assertEquals(listOf("freeze a1", "stop a1"), fx.log)
     assertFalse(store.user(UserAct.GIVE_BACK))
     assertTrue(store.user(UserAct.START_AGAIN))
-    assertEquals(listOf("freeze a1", "thaw a1", "resume a1 after paused"), fx.log)
+    assertEquals(listOf("freeze a1", "stop a1", "thaw a1", "resume a1 after paused"), fx.log)
   }
 
-  @Test fun aStoppedAgentThatCallsTheScreenAgainHasItsTurnStopped() {
+  @Test fun stopStopsItsTurnAndAgainWhenItCallsTheScreenRegardless() {
     store.user(UserAct.STOP)
-    // The first refusal is how it hears of the Stop.
-    store.pausedCall("a1")
-    assertEquals(listOf("freeze a1"), fx.log)
+    // At once, where its kind can.
+    assertEquals(listOf("freeze a1", "stop a1"), fx.log)
+    // The first refusal is how a kind that can't be stopped hears of it.
     store.pausedCall("a1")
     assertEquals(listOf("freeze a1", "stop a1"), fx.log)
+    store.pausedCall("a1")
+    assertEquals(listOf("freeze a1", "stop a1", "stop a1"), fx.log)
     // Another agent's calls, or calls with no Stop on, count for nothing.
     store.pausedCall("a2")
     store.user(UserAct.START_AGAIN)
     store.pausedCall("a1")
-    assertEquals(listOf("freeze a1", "stop a1", "thaw a1", "resume a1 after paused"), fx.log)
+    assertEquals(listOf("freeze a1", "stop a1", "stop a1", "thaw a1", "resume a1 after paused"), fx.log)
   }
 
   @Test fun startAgainSendsTheNoteToAnAgentNotWaiting() {
     store.user(UserAct.STOP)
     assertTrue(store.user(UserAct.START_AGAIN))
-    assertEquals(listOf("freeze a1", "thaw a1", "resume a1 after paused"), fx.log)
+    assertEquals(listOf("freeze a1", "stop a1", "thaw a1", "resume a1 after paused"), fx.log)
   }
 
   @Test fun leaveKeepsItStoppedAndGivesTheScreenBackIfItsRunEnded() {
@@ -90,7 +92,7 @@ class PresenceStoreTest {
     assertTrue(store.runEnded("a1"))
     assertFalse(store.runEnded("a2"))
     assertTrue(store.user(UserAct.LEAVE))
-    assertEquals(listOf("freeze a1", "thaw a1, give back"), fx.log)
+    assertEquals(listOf("freeze a1", "stop a1", "thaw a1, give back"), fx.log)
   }
 
   @Test fun leaveWhileItsRunGoesOnKeepsItOffTheScreenUntilThatRunEnds() {
@@ -98,7 +100,7 @@ class PresenceStoreTest {
     assertTrue(store.user(UserAct.LEAVE))
     // The screen goes now, and its turn is stopped where its kind can.
     assertNull(store.handOver())
-    assertEquals(listOf("freeze a1", "thaw a1, give back", "stop a1"), fx.log)
+    assertEquals(listOf("freeze a1", "stop a1", "thaw a1, give back", "stop a1"), fx.log)
     assertTrue(store.leftStopped("a1"))
     assertFalse(store.leftStopped("a2"))
     // Still calling the screen: each call stops its turn again; no hand-over of its own.
@@ -114,7 +116,7 @@ class PresenceStoreTest {
     store.user(UserAct.STOP)
     store.runEnded("a1")
     store.user(UserAct.START_AGAIN)
-    assertEquals("thaw a1", fx.log[1])
+    assertEquals("thaw a1", fx.log[2])
   }
 
   @Test fun nothingToDoWithNobodyAtTheScreen() {
@@ -124,6 +126,12 @@ class PresenceStoreTest {
     assertFalse(store.user(UserAct.LEAVE))
     assertTrue(fx.log.isEmpty())
     assertEquals(0, fx.changes)
+  }
+
+  @Test fun anAgentsOwnPrivateHandOverLeavesItsTurnAlone() {
+    // It asked for the pause and waits in it: nothing to stop.
+    store.agent("a1", "opencode", "type your password", private = true)
+    assertEquals(listOf("freeze a1"), fx.log)
   }
 
   @Test fun anAgentHandsOverOncePerPhone() {

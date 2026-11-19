@@ -237,8 +237,13 @@ enum class PtyEvent(val wire: String) {
   STOPPED("stopped"),
 }
 
-/** Where a chat's title is read ([title]), which chats run now ([active]), and a chat's last reply ([reply]). */
-data class Chats(val title: TitleSource?, val active: ActiveSource? = null, val reply: ReplySource? = null)
+/** Where a chat's title is read ([title]), which chats run now ([active]), a chat's last reply ([reply]) and how its run is stopped ([interrupt]). */
+data class Chats(
+  val title: TitleSource?,
+  val active: ActiveSource? = null,
+  val reply: ReplySource? = null,
+  val interrupt: InterruptSource? = null,
+)
 
 /** A chat's title: GET [path], then the string at the JSON pointer [pointer]. */
 data class TitleSource(val path: String, val pointer: String)
@@ -255,6 +260,9 @@ data class ActiveSource(val path: String, val pointer: String)
  * code hook [parser] (listed in `hooks`) reads the agent's final text in it.
  */
 data class ReplySource(val path: String, val parser: String)
+
+/** Stops a chat's run now (Stop on the phone's controls): POST [path], its answer not read. */
+data class InterruptSource(val path: String)
 
 /** Idle once nothing from [from] happened for [quietSec] seconds. */
 data class Idle(val from: List<String>, val quietSec: Int)

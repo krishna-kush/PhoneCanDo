@@ -93,8 +93,21 @@ describe('events, chats, idle', () => {
     fails((m) => (m.chats!.active!.http.json = 'data'), '/chats/active/http/json pattern');
     fails((m) => (m.chats!.active = { http: { path: 'api' } } as never), '/chats/active/http/path pattern', '/chats/active/http/json required');
     ok((m) => delete m.chats!.title);
-    ok((m) => delete m.chats!.active);
+    ok((m) => {
+      delete m.chats!.active;
+      delete m.chats!.interrupt;
+    });
     fails((m) => (m.chats = {}), '/chats required');
+  });
+
+  it('stops a chat with a path of its own and nothing else', () => {
+    ok((m) => (m.chats!.interrupt = { http: { path: '/api/session/{{sessionId}}/interrupt' } }));
+    fails((m) => (m.chats!.interrupt = { http: { path: 'api' } }), '/chats/interrupt/http/path pattern');
+    fails((m) => (m.chats!.interrupt = { http: { path: '/a', json: '/b' } } as never), '/chats/interrupt/http/json unknown');
+    fails((m) => {
+      m.chats!.interrupt = { http: { path: '/a' } };
+      delete m.chats!.active;
+    }, '/chats/interrupt required');
   });
 
   it('idles on a stream it has, for a sane time', () => {

@@ -206,6 +206,8 @@ export interface Chats {
    * code hook `parser` (listed in hooks) reads the agent's final text in it.
    */
   reply?: { http: HttpPath & { parser: string } };
+  /** Stops a chat's run now (Stop on the phone's controls): POST `path`, its answer not read. */
+  interrupt?: { http: HttpPath };
 }
 
 export interface Idle {

@@ -142,6 +142,7 @@ object ManifestDecoder {
     title = c.optObj("title")?.obj("http")?.let { TitleSource(it.string("path"), it.string("json")) },
     active = c.optObj("active")?.obj("http")?.let { ActiveSource(it.string("path"), it.string("json")) },
     reply = c.optObj("reply")?.obj("http")?.let { ReplySource(it.string("path"), it.string("parser")) },
+    interrupt = c.optObj("interrupt")?.obj("http")?.let { InterruptSource(it.string("path")) },
   )
 
   private fun surfaces(s: JsonFields) = Surfaces(

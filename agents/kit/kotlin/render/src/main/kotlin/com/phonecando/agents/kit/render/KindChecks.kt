@@ -71,6 +71,8 @@ internal object KindChecks {
     if (manifest.events.any { it is EventSource.Pty }) throw KindException("$id: PTY events need a tui engine")
     if (manifest.events.any { it is EventSource.Hook }) throw KindException("$id: hook events need a tui engine")
     if (manifest.engine?.prompt != null) throw KindException("$id: engine.prompt needs a tui engine (a server takes a task through its inbox)")
+    // Stop names the chats to interrupt by asking which run now.
+    if (manifest.chats?.interrupt != null && manifest.chats?.active == null) throw KindException("$id: chats.interrupt needs chats.active")
     return manifest.engine?.readiness?.http?.path ?: throw KindException("$id: a server engine needs engine.readiness.http")
   }
 
@@ -85,6 +87,7 @@ internal object KindChecks {
       "events[].sse".takeIf { manifest.events.any { it is EventSource.Sse } },
       "chats.title".takeIf { manifest.chats?.title != null },
       "chats.reply".takeIf { manifest.chats?.reply != null },
+      "chats.interrupt".takeIf { manifest.chats?.interrupt != null },
       "surfaces.web".takeIf { manifest.surfaces?.web != null },
       "a web Home".takeIf { manifest.surfaces?.home == HomeSurface.WEB },
     )

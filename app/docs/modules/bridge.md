@@ -202,10 +202,13 @@ see, its run is stopped, and it goes on when you tap Start me again).
   checks and before the lease, turns screen routes away: for the agent the
   hand-over is for, watch lets `/pce/observe` through (with no lease claim)
   and answers anything else 409 `user_has_controls`; paused answers every
-  screen route 409 `paused_by_user`, which tells it to end its turn; a
-  screen call after the first in the same Stop means it did not stop, and
-  its turn is stopped where its kind can (`PresenceStore.pausedCall`: an
-  ACP turn is cancelled). Every other
+  screen route 409 `paused_by_user`, which tells it to end its turn. Your
+  Stop also stops its turn at once where its kind can
+  (`engine/stop/TurnStop`: an ACP turn is cancelled; a server engine with
+  `chats.interrupt` has each chat `chats.active` names interrupted), and
+  again at a screen call after the first in the same Stop
+  (`PresenceStore.pausedCall`); an agent's own private hand-over is left
+  alone, as it waits in it. Every other
   agent gets 409 `user_has_controls`; an agent's `/hands/over` while one is
   on gets it too. A run that ends meanwhile changes nothing: the screen
   stays with it (`Bridge.runEnded` holds back the lease's `runEnded`).

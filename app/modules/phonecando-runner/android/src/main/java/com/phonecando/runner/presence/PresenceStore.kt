@@ -16,10 +16,11 @@ import kotlin.concurrent.withLock
 // A wait (/hands/wait, a WATCH /hands/over) blocks on the caller's own
 // thread while you have the controls in WATCH (Let me: a pause, the agent
 // goes on in the same turn), until you hand the phone back or its time is
-// up. A Stop ends a wait at once: the agent really stops (ends its turn),
-// and the note sends it on when you start it again. A screen call of a
-// paused agent's after its first (pausedCall) means it did not stop: its
-// turn is stopped where its kind can (Effects.stopTurn). Leave it keeps it
+// up. A Stop ends a wait at once and stops its turn where its kind can
+// (Effects.stopTurn): the agent really stops, and the note sends it on
+// when you start it again. A kind that can't be stopped is told to end its
+// turn; a screen call of a paused agent's after its first (pausedCall)
+// means it did not, and its turn is stopped again. Leave it keeps it
 // stopped: the screen goes at once, and a run still going stays off it
 // (leftStopped: its screen calls are refused as paused, each stops its
 // turn) until that run ends; its next run drives as normal. Pure apart
@@ -35,7 +36,7 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
     /** Its hand-over ended: its time runs again; [giveBack]: and the screen goes (its run ended meanwhile, or you left it stopped). */
     fun thaw(agentId: String, giveBack: Boolean)
 
-    /** [agentId] keeps calling the screen while you stopped it: stop its turn where its kind can. */
+    /** You stopped [agentId] (Stop, Leave it, or a screen call after): stop its turn where its kind can. */
     fun stopTurn(agentId: String)
 
     /** The note to go on after a hand-over in [after]. */
@@ -89,7 +90,10 @@ class PresenceStore(private val clock: () -> Long, private val effects: Effects)
       val step = HandsRules.user(act, now, target, waiting, clock())
       step to apply(step)
     }
-    return after(step, giveBack)
+    val done = after(step, giveBack)
+    // Stop really stops: its turn now, not at its next screen call.
+    if (act == UserAct.STOP && step is HandsRules.Step.Started) effects.stopTurn(step.handOver.agentId)
+    return done
   }
 
   /**

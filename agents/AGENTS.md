@@ -145,6 +145,11 @@ phonecando-linux <- kit-api   (ProjectDir only: the machine's shell starts in th
     `hooks`) reads the agent's final text in the answer. The runner asks
     once a scheduled task's run in that chat ends, for the run and its
     notice.
+  - `chats.interrupt.http {path}`: POST to stop a chat's run now
+    (`{{sessionId}}` in the path), what Stop on the phone's controls does
+    to an agent's running chats (those `chats.active` names; it needs
+    `active`) when it is not in ACP mode. Without it, Stop only tells the agent to end its
+    turn at its next screen call.
 - **tui**: the kind's own TUI on a PTY the runner keeps. It runs on when
   you leave the tab or the app, its screen comes back when you return, and
   the Home tab shows it. It has no port, so none of the server blocks.

@@ -35,7 +35,12 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   each agent's face, in the agent's own mascot (`state/mascots.ts`, changed
   on its Mascot page, `env/agent/mascot/`); it plays every change of mood
   itself (`change/` pure, `live/` its hooks), so a page only gives the
-  mood. `models/` is the Models page and
+  mood. A page's buttons go in `common/actions/` `ActionDeck` (the
+  Controls box: each button's role, the main one first, pairs, deletes
+  under a rule), never stacked `AppButton`s; a pop-up is a
+  `common/slip/` `SlipDialog` with the deck's `DeckKeys` (an agent's
+  question is a permission slip with its own face, a delete has hazard
+  tape and A-04, `slip/desk.ts`). `models/` is the Models page and
   a model's own page (`model/`); an agent's Model page is in `env/agent/`. `memory/` is the
   RAM warning (sheet, Home chip, pill, auto-stop line; pure copy and rows
   in `memory/logic/`), mounted once

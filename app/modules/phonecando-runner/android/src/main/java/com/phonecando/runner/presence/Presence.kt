@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import com.phonecando.runner.bridge.ScreenLease
-import com.phonecando.runner.engine.acp.AcpEngines
+import com.phonecando.runner.engine.stop.TurnStop
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
@@ -17,9 +17,10 @@ import java.util.concurrent.Executors
 // (the lease's promptOpened, then promptClosed keeping it), nobody else is
 // handed the screen (the router's HandsGate), and a run of its that ends
 // keeps the screen until you leave it. Let me is a pause: the agent waits
-// and goes on in the same turn. Stop really stops: the agent is told to
-// end its turn, and one that calls the screen again has its turn stopped
-// where its kind can (an ACP turn is cancelled). The note to go on
+// and goes on in the same turn. Stop really stops: its turn is stopped at
+// once where its kind can (engine/stop/TurnStop: an ACP turn cancelled, a
+// server's running chats interrupted), and it is told to end its turn at
+// its next screen call. The note to go on
 // (Resume) runs on our own thread.
 // Every change goes to the overlay ([view], set by the full build's
 // accessibility service) and to the app (PresenceEvents), only when the
@@ -64,7 +65,8 @@ object Presence {
     }
 
     override fun stopTurn(agentId: String) {
-      later { AcpEngines.of(agentId)?.takeIf { it.busy }?.cancel() }
+      val context = app ?: return
+      later { TurnStop(context).stop(agentId) }
     }
 
     override fun resume(agentId: String, after: HandMode) {
