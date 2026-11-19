@@ -2,6 +2,7 @@
 
 import { antenna } from './antenna.ts';
 import { bandana } from './bandana.ts';
+import { beacon } from './beacon.ts';
 import { beanie } from './beanie.ts';
 import { beret } from './beret.ts';
 import { bow } from './bow.ts';
@@ -14,7 +15,6 @@ import { catEars } from './catEars.ts';
 import { chef } from './chef.ts';
 import { cowboy } from './cowboy.ts';
 import { crown } from './crown.ts';
-import { eyeshade } from './eyeshade.ts';
 import { halo } from './halo.ts';
 import { hardhat } from './hardhat.ts';
 import { headband } from './headband.ts';
@@ -40,6 +40,7 @@ import { wizard } from './wizard.ts';
 export const HATS = {
   antenna,
   bandana,
+  beacon,
   beanie,
   beret,
   bow,
@@ -52,7 +53,6 @@ export const HATS = {
   chef,
   cowboy,
   crown,
-  eyeshade,
   halo,
   hardhat,
   headband,

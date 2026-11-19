@@ -1,7 +1,7 @@
 // The front desk: A-04, one of our own A-series characters (mascot/designs.ts
 // RESERVED), who asks you when the app itself needs a yes, as a delete to
 // confirm; never an agent, so never in a picker or the site's catalog: a
-// square red unit in a clerk's eyeshade and a name badge. Pure.
+// square red unit with a warning beacon on its head and a name badge. Pure.
 import type { Look } from '../../../../../mascot/look.ts';
 
 export const DESK_SERIAL = 'A-04';

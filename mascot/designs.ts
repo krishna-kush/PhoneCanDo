@@ -91,11 +91,11 @@ export const EARNED = [{ id: 'shift-lead', name: 'Shift lead', hat: 'hardhat', n
  * A-09 is the app's guide, who leads the way on its first shift: a
  * signpost on its head, its arrow pointing the way it looks. A-04 is the
  * front desk, who asks you when the app itself needs a yes (a delete to
- * confirm): a clerk's eyeshade and a name badge.
+ * confirm): a warning beacon on its head and a name badge.
  */
 export const RESERVED = [
   { id: 'a09', name: 'A-09', hat: 'signpost' },
-  { id: 'a04', name: 'A-04', hat: 'eyeshade', neck: 'badge' },
+  { id: 'a04', name: 'A-04', hat: 'beacon', neck: 'badge' },
 ] as const satisfies readonly Design[];
 
 export type DesignId = (typeof DESIGNS)[number]['id'] | (typeof EARNED)[number]['id'] | (typeof RESERVED)[number]['id'];
