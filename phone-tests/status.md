@@ -73,6 +73,7 @@ After each round, change only the cells of the cases that round ran.
 | [LIFE-02](cases/lifecycle.md#life-02) | The CPU stays awake while a long local turn works, screen off | [Pass, W2-1, 11-15](phones/moto-g96-5g/rounds/2026-11-15-1347-w2-1-first/results.md) |
 | [LIFE-03](cases/lifecycle.md#life-03) | The notification never keeps an old chat's title | [Pass, W2-2, 11-15](phones/moto-g96-5g/rounds/2026-11-15-1729-w2-2-retest/results.md) |
 | [LIFE-04](cases/lifecycle.md#life-04) | Quitting an agent's own app on purpose gives no "stopped by itself" notice | [Pass, W2-3, 11-16](phones/moto-g96-5g/rounds/2026-11-15-1941-w2-3-final/results.md) |
+| [LIFE-05](cases/lifecycle.md#life-05) | An agent whose kind a new build dropped says so and keeps its machine | Not run |
 
 ## Bring back cut-off runs
 

@@ -1,10 +1,11 @@
 import { YStack } from 'tamagui';
-import { agentKind } from '../../engine/agents/registry';
+import { agentKind, kindShipped } from '../../engine/agents/registry';
 import { useActiveAgent } from '../../state/agents';
 import Spot from '../common/spot/Spot';
 import CheckHomeBar from '../env/agent/checks/CheckHomeBar';
 import AgentWebView from './AgentWebView';
 import InstallHome from './InstallHome';
+import KindGoneHome from './KindGoneHome';
 import NoAgents from './noAgents/NoAgents';
 import AgentTuiHome from './tui/AgentTuiHome';
 import { useEngineTouch } from './useEngineTouch';
@@ -15,7 +16,8 @@ import { useEngineTouch } from './useEngineTouch';
 // agent's engine where it listens now (an engine can come back on another
 // port), then reopens the page the agent was last on; a TUI view attaches
 // to the engine's terminal and the replay restores its screen. An agent not
-// installed in its machine yet (a kind with an install) shows that install.
+// installed in its machine yet (a kind with an install) shows that install,
+// and one whose kind this build no longer ships says so (KindGoneHome).
 // While a check runs, of this agent or another, a bar over it leads back to
 // that check. A TUI's chat box, at its foot, is a spot the first shift's Say
 // hi points at; a web UI marks its own (useWebSpots.ts).
@@ -28,7 +30,9 @@ export default function HomeScreen() {
   return (
     <YStack flex={1}>
       <CheckHomeBar activeId={agent.id} />
-      {agent.needsInstall ? (
+      {!kindShipped(agent.kind) ? (
+        <KindGoneHome key={agent.id} agent={agent} />
+      ) : agent.needsInstall ? (
         <InstallHome key={agent.id} agent={agent} />
       ) : agentKind(agent.kind).home === 'tui' ? (
         <Spot id="home.chat" fill>

@@ -4,7 +4,7 @@ import java.io.File
 
 // The work folder every agent starts in: `projects` in its machine's HOME,
 // so a machine reset keeps it. Not HOME itself: Claude Code never saves a
-// folder trust for HOME (it asks on every start) and Aider warns there.
+// folder trust for HOME (it asks on every start).
 // {{projectDir}} names it; the host makes it before a launch.
 object ProjectDir {
   /** The folder's name in HOME. */

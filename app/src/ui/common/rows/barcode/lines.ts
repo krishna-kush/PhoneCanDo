@@ -142,6 +142,7 @@ export const BARCODE_LINES = {
   deckInstall: 'FRESH COAT',
   deckChooseAgent: 'PLAYER ONE',
   deckCheckNow: 'POP QUIZ',
+  deckKindGone: 'GONE FISHING',
 
   // What an agent asks you (slip/SlipDialog)
   slipPermission: 'MAY I PLEASE',

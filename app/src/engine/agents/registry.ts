@@ -46,6 +46,15 @@ export function reloadKinds(): void {
 }
 
 /**
+ * True when this build ships the kind (bundled, or the user's own and
+ * readable). False for an agent made by an older build of a kind we have
+ * since dropped: it keeps its machine and files but never starts here.
+ */
+export function kindShipped(id: AgentKindId): boolean {
+  return allKinds().some((k) => k.id === id);
+}
+
+/**
  * The kind with this id. An agent of a kind this build does not ship gets a
  * stand-in: named by its id, with no web UI and no chat titles, so screens
  * show it without crashing. The same id always gets the same object.

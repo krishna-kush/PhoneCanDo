@@ -60,3 +60,22 @@ why. Latest results: [status.md](../status.md).
 - **Touches:** runner `engine/tui/`, `cutoff/`, `notify/`.
 - **Note:** `adb shell input keycombination 113 31` does not reach the
   terminal; use the on-screen ^C key.
+
+<a id="life-05"></a>
+
+### LIFE-05 An agent whose kind a new build dropped says so and keeps its machine
+
+- **Agents:** A-08 (Aider, which builds after 2026-11-19 no longer ship).
+- **Setup:** A build without Aider installed over one that had it, with
+  A-08 still on the phone.
+- **Steps:** Make A-08 the active agent from the drawer. Tap Open terminal
+  in its machine and run `aider --version`. Back on Home, tap Add it as a
+  custom agent, then Back. Tap Agent settings.
+- **Expect:** Home says "aider is no longer included", with no Retry and
+  no error loop. The terminal opens in its machine and `aider` is still
+  there. Add it as a custom agent opens an empty custom agent form. Its
+  page shows the same line and Add it as a custom agent, no Start and no
+  Open home, and still has Open terminal and Delete. The other agents,
+  and A-08's machine mates, start as before.
+- **Touches:** `chat/KindGoneHome.tsx`, `env/agent/EngineSection.tsx`,
+  runner `agents/install/AgentInstalls.kt` (`guestUnset`).

@@ -22,10 +22,9 @@ already has both skips the script.
 - One file for every family: uv's musl build is statically linked, so it
   runs on glibc and musl images alike.
 - The Python a kind needs, whatever the image ships: Debian 13 has 3.13
-  and Alpine 3.22 has 3.12, but Aider needs below 3.13 and Mistral Vibe at
-  least 3.12. uv installs CPython 3.12 from python-build-standalone,
-  checked against the sha256 each uv release carries, so the uv pin pins
-  Python too.
+  and Alpine 3.22 has 3.12, and Mistral Vibe needs at least 3.12. uv
+  installs CPython 3.12 from python-build-standalone, checked against the
+  sha256 each uv release carries, so the uv pin pins Python too.
 - Each tool in its own venv: only `uv` and `uvx` go on PATH, so the
   agent's `python3` stays the image's.
 - It is what the vendors of our Python kinds tell you to use.

@@ -18,7 +18,7 @@
 #     run     that in the machine; OK on exit 0, some output on stdout and
 #             at least one answer the server finished during the run (its
 #             log's `eval time` line). Exit 0 and output alone are not
-#             enough: kinds print banners, and some (Aider) exit 0 after
+#             enough: kinds print banners, and some exit 0 after
 #             giving up on the server. The check proves the wiring, not the
 #             model: whether the reply holds the word the prompt asks for
 #             (EXPECT; a tiny model often talks around it) is only noted

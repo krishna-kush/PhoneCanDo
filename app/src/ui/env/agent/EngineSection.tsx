@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { XStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
-import { agentKind } from '../../../engine/agents/registry';
+import { agentKind, kindShipped } from '../../../engine/agents/registry';
 import type { Image } from '../../../engine/linux/types';
 import { useAgentsStore } from '../../../state/agents';
 import { useAppStore } from '../../../state/app';
@@ -12,6 +12,7 @@ import { moodOf } from '../../common/face/mood';
 import PlainText from '../../common/PlainText';
 import { engineIsUp, engineStateWord } from '../logic/engineState';
 import { startFailureCode, startFailureText } from '../logic/errorText';
+import { kindGoneText } from '../logic/kindGone';
 import Note from '../parts/Note';
 
 type Props = { agent: Agent; image: Image | undefined; linux: boolean };
@@ -20,13 +21,17 @@ type Props = { agent: Agent; image: Image | undefined; linux: boolean };
 // chat and the terminal UI (a web-home kind), or its own TUI on Home (a
 // tui-home kind, which has no client to attach), and a shell in its
 // machine. All need the machine ready; all but the shell need the agent
-// installed in it (a kind with an install, see InstallSection).
+// installed in it (a kind with an install, see InstallSection). An agent
+// whose kind this build no longer ships keeps only the shell (and Stop,
+// should it still run), says why and offers the custom agent form, to add
+// it back as your own.
 export default function EngineSection({ agent, image, linux }: Props) {
   const status = useAgentsStore((s) => s.statuses[agent.id]);
   const startAgent = useAgentsStore((s) => s.startAgent);
   const stopAgent = useAgentsStore((s) => s.stopAgent);
   const setActiveAgent = useAgentsStore((s) => s.setActiveAgent);
   const goHome = useAppStore((s) => s.goHome);
+  const push = useAppStore((s) => s.push);
   const openFolderPicker = useAppStore((s) => s.openFolderPicker);
   const openLinuxTerminal = useAppStore((s) => s.openLinuxTerminal);
   const [busy, setBusy] = useState<'start' | 'stop' | null>(null);
@@ -36,6 +41,7 @@ export default function EngineSection({ agent, image, linux }: Props) {
   const machineReady = image?.state === 'ready';
   const ready = machineReady && !agent.needsInstall;
   const kind = agentKind(agent.kind);
+  const shipped = kindShipped(agent.kind);
 
   const start = () => {
     setBusy('start');
@@ -76,17 +82,20 @@ export default function EngineSection({ agent, image, linux }: Props) {
           {status.error}
         </PlainText>
       ) : null}
-      {!machineReady ? <Note>It can start once its machine is ready.</Note> : null}
-      {machineReady && !ready ? <Note>It can start once it's installed.</Note> : null}
+      {!shipped ? <Note>{kindGoneText(agent.kind)}</Note> : null}
+      {shipped && !machineReady ? <Note>It can start once its machine is ready.</Note> : null}
+      {shipped && machineReady && !ready ? <Note>It can start once it's installed.</Note> : null}
       {/* The first shift's terminal walk leads to Open terminal, maybe with a command to type in. */}
       <ActionDeck
         barcode="deckEngine"
         actions={[
-          !up && { label: 'Start', role: 'go', loading: busy === 'start', disabled: !ready, onPress: start },
-          kind.home === 'tui'
-            ? { label: `Open ${kind.label} home`, disabled: !ready, onPress: () => follow(goHome) }
-            : { label: 'Open chat', disabled: !ready, onPress: () => follow(goHome) },
-          kind.home !== 'tui' && { label: 'Open TUI', disabled: !ready, onPress: () => follow(openFolderPicker) },
+          shipped && !up && { label: 'Start', role: 'go', loading: busy === 'start', disabled: !ready, onPress: start },
+          !shipped
+            ? { label: 'Add it as a custom agent', role: 'go', onPress: () => push({ name: 'custom-agent', kindId: null }) }
+            : kind.home === 'tui'
+              ? { label: `Open ${kind.label} home`, disabled: !ready, onPress: () => follow(goHome) }
+              : { label: 'Open chat', disabled: !ready, onPress: () => follow(goHome) },
+          shipped && kind.home !== 'tui' && { label: 'Open TUI', disabled: !ready, onPress: () => follow(openFolderPicker) },
           {
             label: linux ? 'Open terminal in the machine' : 'Open terminal',
             disabled: !machineReady,

@@ -77,7 +77,7 @@ export function scheduleLevel(kind: Pick<KindView, 'schedules' | 'canWake' | 'ac
   return kind.canWake || kind.acp ? 'wakes' : 'starts';
 }
 
-/** The applicants that can't be picked here, a line per reason: "Needs a Linux env: Aider, Cline". */
+/** The applicants that can't be picked here, a line per reason: "Needs a Linux env: Cline, Crush". */
 export function sittingOut(offers: readonly Pick<Offer, 'label' | 'blocked'>[]): string[] {
   const byReason = new Map<string, string[]>();
   for (const o of offers) {

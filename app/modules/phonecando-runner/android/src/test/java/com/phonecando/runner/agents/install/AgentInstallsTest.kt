@@ -126,6 +126,14 @@ class AgentInstallsTest {
     assertEquals(emptyList<String>(), repo.guestUnset(fx.store.create(image.id, "Apart", "m2").id))
   }
 
+  @Test fun anAgentWhoseKindIsGoneStillGetsItsMachinesList() {
+    // A kind a later build dropped: a shell in its machine still opens.
+    val repo = AgentInstalls(fx.store, TestKinds.catalog)
+    val gone = fx.store.create("gone", "Gone", "m1")
+    fx.store.create("opencode", "Oc", "m1")
+    assertEquals(TestKinds.catalog.get("opencode")!!.guestUnset, repo.guestUnset(gone.id))
+  }
+
   @Test fun anInstallServesEveryAgentOfTheKindOnTheMachine() {
     val mate = fx.store.create("demo", "Demo 2", "img1", ownStateSupported = true)
     assertTrue(mate.ownState)

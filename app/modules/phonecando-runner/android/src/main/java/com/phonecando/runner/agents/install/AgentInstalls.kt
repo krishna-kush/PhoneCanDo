@@ -23,8 +23,13 @@ internal class AgentInstalls(private val agents: AgentStore, private val kinds: 
   /**
    * The env names the agent's machine keeps from its guests: [machineUnset]
    * of its image, so its launch.conf is the same whichever agent there asks.
+   * Its own kind is not needed: a shell still opens in the machine of an
+   * agent whose kind this build no longer ships.
    */
-  fun guestUnset(agentId: String): List<String> = machineUnset(target(agentId).first.imageId)
+  fun guestUnset(agentId: String): List<String> {
+    val record = agents.get(agentId) ?: throw IllegalArgumentException("unknown agent")
+    return machineUnset(record.imageId)
+  }
 
   /**
    * What the agents on the machine [imageId] keep from guests, together
