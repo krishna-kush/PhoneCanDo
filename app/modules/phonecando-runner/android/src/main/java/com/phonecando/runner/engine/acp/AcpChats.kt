@@ -14,9 +14,11 @@ internal fun interface AcpRpc {
 // else the newest the agent lists for the folder when it can list them,
 // reopened with its history (session/load) or without it
 // (session/resume), as the agent can; a new chat when none of that works,
-// except for a start that only goes on in the kept chat (a run brought
-// back, StartPrompt.sameChat): that start fails instead. Each request carries the
-// folder, the bridge as an MCP server over HTTP when the setup hands it
+// except for a start that only goes on in the chat it was in (a run
+// brought back, a hand-over's note, StartPrompt.sameChat): the kept one,
+// else the newest it lists when none is kept; that start fails instead.
+// Each request carries the folder, the bridge as an MCP server over HTTP
+// when the setup hands it
 // in the chat and the agent takes HTTP (else no servers: no phone tools
 // this time, as its env has no bridge either), and the kind's `_meta`.
 // The kept chat refused (an agent may drop a chat it never answered in:
@@ -41,8 +43,10 @@ internal class AcpChats(
    */
   fun open(newChat: Boolean, stored: String?, onlyStored: Boolean = false, storedFailed: () -> Unit = {}): Opened {
     if (onlyStored) {
-      return stored?.let { reopen(it, storedFailed) }
-        ?: throw AcpException(AcpWire.SESSION_LOAD, AcpError(0, "its chat could not be opened again"))
+      // With none kept (a terminal launch cleared it), the chat it was in is
+      // the newest it lists: the one its terminal left.
+      val again = if (stored != null) reopen(stored, storedFailed) else newestListed()?.let { reopen(it) }
+      return again ?: throw AcpException(AcpWire.SESSION_LOAD, AcpError(0, "its chat could not be opened again"))
     }
     if (!newChat) {
       stored?.let { id -> reopen(id, storedFailed)?.let { return it } }

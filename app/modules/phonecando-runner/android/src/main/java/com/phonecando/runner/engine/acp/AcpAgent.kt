@@ -71,6 +71,9 @@ internal class AcpAgent(
 
     /** A turn went silent and was ended with [reason] (AcpTurnWatch); it takes no prompt any more. */
     fun onSilent(reason: String) {}
+
+    /** What the agent offers, as it started (AcpCaps): whether it lists its chats is kept (AcpListing). */
+    fun onCaps(caps: AcpCaps) {}
   }
 
   private class Running(val done: (AcpTurnEnd) -> Unit, val watch: AcpTurnWatch) {
@@ -144,6 +147,7 @@ internal class AcpAgent(
     onSteps {
       try {
         val caps = AcpCaps.of(connection.request(AcpWire.INITIALIZE, AcpWire.initialize(process.setup.clientVersion), INIT_MS))
+        hooks.onCaps(caps)
         if (process.setup.bridge != null && !caps.mcpHttp) {
           Log.w(TAG, "$agentId takes no MCP over HTTP: no phone tools in ACP mode")
         }

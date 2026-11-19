@@ -158,15 +158,32 @@ class AcpChatsTest {
     )
     val chats = AcpChats(agent, AcpCaps(list = true, loadSession = true), setup())
     assertEquals("listed", chats.open(newChat = false, stored = "listed", onlyStored = true).chatId)
-    for (stored in listOf("kept", null)) {
-      try {
-        chats.open(newChat = false, stored = stored, onlyStored = true)
-        throw AssertionError("expected a failure")
-      } catch (e: AcpException) {
-        assertEquals(AcpWire.SESSION_LOAD, e.method)
-      }
+    try {
+      chats.open(newChat = false, stored = "kept", onlyStored = true)
+      throw AssertionError("expected a failure")
+    } catch (e: AcpException) {
+      assertEquals(AcpWire.SESSION_LOAD, e.method)
     }
     assertFalse(AcpWire.SESSION_NEW in agent.methods() || AcpWire.SESSION_LIST in agent.methods())
+  }
+
+  @Test fun withNoneKeptItGoesOnInTheChatItsTerminalLeftOrFails() {
+    val agent = FakeAgent(
+      mapOf(
+        AcpWire.SESSION_LIST to reply("""{"sessions":[{"sessionId":"left"},{"sessionId":"older"}]}"""),
+        AcpWire.SESSION_LOAD to reply("{}"),
+        AcpWire.SESSION_NEW to fresh,
+      ),
+    )
+    assertEquals("left", AcpChats(agent, AcpCaps(list = true, loadSession = true), setup()).open(false, null, onlyStored = true).chatId)
+    // An agent that lists no chats can't find it: no new chat instead.
+    try {
+      AcpChats(agent, AcpCaps(loadSession = true), setup()).open(false, null, onlyStored = true)
+      throw AssertionError("expected a failure")
+    } catch (e: AcpException) {
+      assertEquals(AcpWire.SESSION_LOAD, e.method)
+    }
+    assertFalse(AcpWire.SESSION_NEW in agent.methods())
   }
 
   @Test fun theBridgeGoesInOnlyOverHttp() {

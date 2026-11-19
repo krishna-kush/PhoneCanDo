@@ -17,7 +17,9 @@ import com.phonecando.runner.checks.Checks
 import com.phonecando.runner.checks.now.CheckNow
 import com.phonecando.runner.checks.rules.CheckRules
 import com.phonecando.runner.engine.acp.AcpAgent
+import com.phonecando.runner.engine.acp.AcpCaps
 import com.phonecando.runner.engine.acp.AcpExit
+import com.phonecando.runner.engine.acp.AcpListing
 import com.phonecando.runner.engine.acp.AcpProcess
 import com.phonecando.runner.engine.acp.AcpReady
 import com.phonecando.runner.engine.acp.AcpTurnWatch
@@ -517,6 +519,8 @@ internal class EngineSupervisor(
       override fun endsSilentTurns() = !CheckNow.owns(agentId)
 
       override fun onSilent(reason: String) = onAcpSilent(agentId, proc, reason)
+
+      override fun onCaps(caps: AcpCaps) = AcpListing.save(context, plan.kind.id, caps.list)
     },
     ownTools = { ownTools },
   )

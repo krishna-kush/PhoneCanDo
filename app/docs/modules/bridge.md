@@ -223,7 +223,14 @@ see, its run is stopped, and it goes on when you tap Start me again).
   (`promptClosed(keep = true)`).
 - **The resume note** (`HandsText`, `Resume`): a running engine gets it as
   a runner notice that wakes it past its wake switch, budget and hop, like
-  a scheduled task; a stopped one is brought back as a run cut off is
+  a scheduled task. One idle in a TUI that its own wake can't reach goes on
+  in the same chat (`ResumeRules`), unless it left jobs running: a TUI that
+  takes a first prompt is started again with the note (Codex); one that
+  takes none starts in ACP mode with it, in the chat its terminal left,
+  when its ACP mode lists its chats (Kimi Code; `AcpListing` keeps which
+  kinds do, as each last started). Otherwise the note waits, unwoken, for
+  its next turn (Gemini CLI, whose ACP mode would open a new chat). A
+  stopped one is brought back as a run cut off is
   (`cutoff/BringRules`, in the chat it was in), or reads it when it next
   runs.
 
@@ -528,13 +535,22 @@ non-driver tools, `mobile_return`, `mobile_request_unlock`, and
 and the legacy screen/info/click/tap/text/scroll/swipe/back/home/wait wrappers
 (24 tools total). Lite/play get the base six only.
 
-### Trust gate caveat
+### No agent asks about our tools
 
-Verified on device: opencode 2.0.26 has no `ctx.permission.assert` (newer v2 docs
-describe it), and plugin tools invoked through Code Mode's `execute` never hit
-top-level `permissions` rules, so a `mobile_*` ask rule is inert in this build.
-Per-call prompts return when opencode is bumped; until then the app-side
-master switch (biometric, default off) is the gate.
+The lock above is the only check on our own tools (`mobile_*`, `agents_*`,
+`schedule_*`): no agent waits on its own approval prompt before calling one.
+An agent's own tools (shell, file edits, other MCP servers) still ask as its
+settings say.
+
+- ACP mode: the runner answers a permission question about one of our tools
+  allow-once itself (`engine/acp/OwnTools`, see runner.md), so it never
+  reaches you.
+- TUI mode: each kind that loads our MCP server also loads a setting that
+  trusts that one server, named in its manifest's `phoneToolsTrust` (the
+  launch argv or a file in its config folder, and the text that must be
+  there); the kit refuses a bundled kind with MCP phone tools and no trust.
+- opencode: plugin tools called through Code Mode's `execute` never hit its
+  `permissions` rules (verified on 2.0.26), so it needs no setting.
 
 ## Build channels
 
