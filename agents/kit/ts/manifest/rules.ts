@@ -17,6 +17,8 @@ export const TRUST_IN_ARGV = 'argv';
 export const HOMES = ['web', 'tui'];
 /** The places on the way to a chat a web adapter's `spots` may name, in order. */
 export const WEB_SPOTS = ['projects', 'addProject', 'pickFolder', 'newChat', 'composer'];
+/** The smallest zoom a web UI may ask for, in percent (MAX.webZoom the largest). */
+export const MIN_WEB_ZOOM = 50;
 export const PAIR_METHODS = ['POST'];
 export const IDLE_SOURCES = ['events', 'output'];
 /** What a tui engine's PTY output can signal, and the engine events a rule maps it to. */
@@ -246,6 +248,8 @@ export const MAX = {
   acpMetaBytes: 4096,
   /** The text a kind's trust in our phone tools holds (phoneToolsTrust.has). */
   trustHas: 256,
+  /** The largest zoom a web UI may ask for, in percent. */
+  webZoom: 200,
 };
 
 /** Config fields that describe the bundled asset folder, so need config.dir. */

@@ -133,6 +133,18 @@ describe('rules beyond the fixtures', () => {
     assert.ok(withPath('/s/{{sessionId}}', null).some((p) => p.path === at && p.code === 'required'));
   });
 
+  it('takes a web zoom in percent, from 50 to 200', () => {
+    const m = opencode();
+    const withZoom = (zoom: unknown) => {
+      const adapter = { ...m.surfaces.web.adapter, zoom };
+      return validate({ ...m, surfaces: { ...m.surfaces, web: { ...m.surfaces.web, adapter } } }, { origin: 'bundled' }).problems;
+    };
+    const at = '/surfaces/web/adapter/zoom';
+    assert.deepEqual(withZoom(130), []);
+    assert.ok(withZoom(1.15).some((p) => p.path === at && p.code === 'type'));
+    assert.ok(withZoom(300).some((p) => p.path === at && p.code === 'range'));
+  });
+
   it('reports a missing field once, as required', () => {
     const { licence: _, ...rest } = opencode();
     assert.deepEqual(validate(rest, { origin: 'bundled' }).problems, [

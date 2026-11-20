@@ -172,6 +172,7 @@ object ManifestDecoder {
     a.optString("sessionUrl")
     a.optString("sessionPath")
     a.stringMap("spots")
+    a.optInt("zoom")
     return a.tree
   }
 

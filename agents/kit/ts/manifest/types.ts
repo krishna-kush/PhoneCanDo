@@ -244,6 +244,8 @@ export interface WebAdapter {
   sessionPath?: string;
   /** Per place on the way to a chat, the selector of the thing to tap there; the app's guide points at it. */
   spots?: Partial<Record<WebSpot, string>>;
+  /** How big the app shows the web UI, in percent of the page's own size; the app's default (115) when left out. */
+  zoom?: number;
 }
 
 /** The places on the way to a chat in a web UI (rules.ts WEB_SPOTS). */

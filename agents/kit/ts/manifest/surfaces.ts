@@ -1,11 +1,11 @@
 // The surfaces the app shows: the home tab (the kind's web UI, or its own
 // TUI), the web UI's pairing and adapter, the terminal tab (a client of the
 // server, or a shell in the agent's image) and the chat title regexes.
-import { fields, list, oneOf, record, regex, string, type Add, type Json } from './primitives.ts';
-import { HOMES, MAX, PAIR_METHODS, PALETTE_ROLES, PATTERNS, WEB_SPOTS } from './rules.ts';
+import { fields, integer, list, oneOf, record, regex, string, type Add, type Json } from './primitives.ts';
+import { HOMES, MAX, MIN_WEB_ZOOM, PAIR_METHODS, PALETTE_ROLES, PATTERNS, WEB_SPOTS } from './rules.ts';
 import { command, httpPath, template } from './templates.ts';
 
-const ADAPTER_FIELDS = ['colorSchemeKey', 'cssVars', 'hide', 'authUrl', 'sessionUrl', 'sessionPath', 'spots'];
+const ADAPTER_FIELDS = ['colorSchemeKey', 'cssVars', 'hide', 'authUrl', 'sessionUrl', 'sessionPath', 'spots', 'zoom'];
 // What a chat's path may carry: the chat, and the page's origin as base64url
 // (a web UI that keeps its chats under the server they live on).
 const SESSION_PATH_PLACEHOLDERS = ['sessionId', 'origin64'];
@@ -71,6 +71,7 @@ function checkAdapter(add: Add, adapter: unknown) {
       string(add, path, selector, PATTERNS.selector, MAX.selector);
     });
   }
+  integer(add, `${at}/zoom`, a.zoom, MIN_WEB_ZOOM, MAX.webZoom);
 }
 
 // The path that shows one chat: an http path with {{sessionId}} in it, and

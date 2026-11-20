@@ -78,6 +78,12 @@ const mod = pathToFileURL(path.join(__dirname, '../../src/engine/agents/webAdapt
   });
   t('any other message', [readSpots('hi'), readSpots('{}'), readSpots('null'), readSpots(JSON.stringify({ phonecandoSpots: { width: 0, spots: {} } }))], [null, null, null, null]);
 
+  // --- zoom: how big the page shows -----------------------------------------
+  const fitOf = (script) => /var content = (\[[^\]]*\])/.exec(script)?.[1];
+  t('no zoom named: 115%', fitOf(web.zoomScript(414)), '["width=360","initial-scale=1.15"]');
+  t('a named zoom wins', fitOf(webUiFor({ cssVars: { '--x': 'fg' }, authUrl: '/login/', zoom: 125 }).zoomScript(400)), '["width=320","initial-scale=1.25"]');
+  t('the zoom script parses', (() => { new Function(web.zoomScript(414)); return true; })(), true);
+
   // The watch script itself, in a page of two buttons: one in front, one
   // under a dialog. It posts once, and again only on a change.
   const posted = [];

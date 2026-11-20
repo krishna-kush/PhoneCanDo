@@ -42,6 +42,8 @@ export type WebAdapterSpec = {
    * front is the thing to tap. A place the web UI lacks is left out.
    */
   spots?: Partial<Record<WebSpot, string>>;
+  /** How big the app shows the web UI, in percent of the page's own size; the app's default (115) when left out. */
+  zoom?: number;
 };
 
 /**
@@ -75,4 +77,6 @@ export type AgentWebUi = {
    * installed at document start.
    */
   watchScript(places: readonly WebSpot[]): string;
+  /** Zooms the page to the kind's zoom (the app's default if it names none) in a view `width` dp wide. */
+  zoomScript(width: number): string;
 };

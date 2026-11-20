@@ -33,7 +33,46 @@ export function webUiFor(spec: WebAdapterSpec): AgentWebUi {
       const selectors = Object.fromEntries(places.flatMap((p) => (spots[p] ? [[p, spots[p]]] : [])));
       return `window.__phonecandoSpots && window.__phonecandoSpots.watch(${JSON.stringify(selectors)});\ntrue;`;
     },
+    zoomScript: (width) => zoomScript(width, spec.zoom ?? WEB_ZOOM),
   };
+}
+
+/**
+ * How big our WebView shows a web UI, in percent, when its adapter names no
+ * zoom: one sized for a desk reads small on a phone.
+ */
+export const WEB_ZOOM = 115;
+
+/**
+ * Zooms the page to `zoom` percent in a view `width` dp wide, as a browser's
+ * own zoom does: its viewport tag says the page is that much narrower in CSS
+ * px, so type, icons and spacing all draw bigger and full-height layouts
+ * still fit. The tag's other keys (the keyboard's interactive-widget) stay.
+ * Injected at document start, where it rewrites the page's tag once parsed,
+ * and again whenever the view's width changes.
+ */
+function zoomScript(width: number, zoom: number): string {
+  const scale = zoom / 100;
+  const fit = [`width=${Math.round((width / scale) * 100) / 100}`, `initial-scale=${scale}`];
+  return `(function () {
+  var fit = function () {
+    var meta = document.querySelector('meta[name=viewport]');
+    if (!meta) {
+      if (!document.head) return;
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      document.head.appendChild(meta);
+    }
+    var keep = (meta.getAttribute('content') || '').split(',').map(function (p) { return p.trim(); }).filter(function (p) {
+      return p && !/^(width|initial-scale)\\s*=/.test(p);
+    });
+    var content = ${JSON.stringify(fit)}.concat(keep).join(', ');
+    if (meta.getAttribute('content') !== content) meta.setAttribute('content', content);
+  };
+  fit();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fit);
+})();
+true;`;
 }
 
 /** How often a watching page looks for its spots again. */

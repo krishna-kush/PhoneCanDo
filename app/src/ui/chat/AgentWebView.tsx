@@ -37,6 +37,8 @@ import { useTheme } from '../common/globals';
 // embed scripts come from the kind's web adapter (webAdapter.ts). While a page or the drawer covers it, its page holds no
 // text focus and takes no keys (useWebCover.ts, webCover.ts). While a guide
 // looks for the web UI's spots, the page says where they are (useWebSpots.ts).
+// The page shows zoomed (the kind's zoom, else a little bigger), worked out
+// from the frame's width, so the WebView waits for it.
 export default function AgentWebView({ agent }: { agent: Agent }) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,8 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   const restoreRef = useRef(lastPage(agent.id));
   // The chat the page shows, if any: a run that ends there is seen.
   const [chatId, setChatId] = useState<string | null>(null);
+  // The frame's width in dp, which the page's zoom is worked out from.
+  const [width, setWidth] = useState<number | null>(null);
   const web = useRef<WebView<object>>(null);
   const frame = useRef<ComponentRef<typeof View>>(null);
   const canGoBackRef = useRef(false);
@@ -105,6 +109,11 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
   useEffect(() => {
     if (webUi) web.current?.injectJavaScript(webUi.themeScript(themeMode, t));
   }, [themeMode, t, webUi]);
+
+  // A new width (a turn, a split screen) zooms the page in place again.
+  useEffect(() => {
+    if (webUi && width != null) web.current?.injectJavaScript(webUi.zoomScript(width));
+  }, [width, webUi]);
 
   useEffect(() => {
     let cancelled = false;
@@ -187,57 +196,64 @@ export default function AgentWebView({ agent }: { agent: Agent }) {
       automaticOffset
       style={{ flex: 1, backgroundColor: t.bg }}
     >
-      <View ref={frame} collapsable={false} style={{ flex: 1, backgroundColor: t.bg }}>
+      <View
+        ref={frame}
+        collapsable={false}
+        style={{ flex: 1, backgroundColor: t.bg }}
+        onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width))}
+      >
         {/* WebView<object>: react-native-webview 13.16.2 defaults its extra-props
             type to `undefined`, which leaves no prop valid; object types the same
             on every version. */}
-        <WebView<object>
-          ref={web}
-          source={{ uri: url }}
-          style={{ flex: 1, backgroundColor: t.bg }}
-          originWhitelist={['*']}
-          javaScriptEnabled
-          domStorageEnabled
-          sharedCookiesEnabled
-          thirdPartyCookiesEnabled
-          injectedJavaScriptBeforeContentLoaded={`${KEY_GUARD}\n${SPOTS_WATCH}\n${webUi.themeScript(themeMode, t)}`}
-          onMessage={(e) => spots.onMessage(e.nativeEvent.data)}
-          onLoadEnd={(e) => {
-            web.current?.injectJavaScript(webUi.themeScript(themeMode, t));
-            applyCover();
-            spots.watch();
-            const loaded = e.nativeEvent.url;
-            if (!webUi.isAuthUrl(loaded)) {
-              const target = chatLanding(loaded) ?? restoreUrl(loaded, restoreRef.current);
-              restoreRef.current = null;
-              if (target) {
-                // Replaces the home it passed through; back from it goes home.
-                web.current?.injectJavaScript(`window.location.replace(${JSON.stringify(target)}); true;`);
-                return;
+        {width == null ? null : (
+          <WebView<object>
+            ref={web}
+            source={{ uri: url }}
+            style={{ flex: 1, backgroundColor: t.bg }}
+            originWhitelist={['*']}
+            javaScriptEnabled
+            domStorageEnabled
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            injectedJavaScriptBeforeContentLoaded={`${KEY_GUARD}\n${SPOTS_WATCH}\n${webUi.zoomScript(width)}\n${webUi.themeScript(themeMode, t)}`}
+            onMessage={(e) => spots.onMessage(e.nativeEvent.data)}
+            onLoadEnd={(e) => {
+              web.current?.injectJavaScript(webUi.themeScript(themeMode, t));
+              applyCover();
+              spots.watch();
+              const loaded = e.nativeEvent.url;
+              if (!webUi.isAuthUrl(loaded)) {
+                const target = chatLanding(loaded) ?? restoreUrl(loaded, restoreRef.current);
+                restoreRef.current = null;
+                if (target) {
+                  // Replaces the home it passed through; back from it goes home.
+                  web.current?.injectJavaScript(`window.location.replace(${JSON.stringify(target)}); true;`);
+                  return;
+                }
               }
-            }
-            shownRef.current = true;
-            setCovered(false);
-          }}
-          onNavigationStateChange={(nav) => {
-            currentUrlRef.current = nav.url;
-            setChatId(webUi.isAuthUrl(nav.url) ? null : webUi.sessionOf(nav.url));
-            if (!homeUrlRef.current && nav.url && !webUi.isAuthUrl(nav.url)) {
-              homeUrlRef.current = nav.url;
-            }
-            canGoBackRef.current = nav.canGoBack;
-          }}
-          injectedJavaScript={webUi.embedScript}
-          onHttpError={(e) => {
-            const code = e.nativeEvent.statusCode;
-            if (code === 401 || code === 403) {
-              setError(`web UI refused auth (http ${code}) — retry re-pairs`);
-            }
-          }}
-          onError={(e) => {
-            setError(e.nativeEvent.description || 'web view failed to load');
-          }}
-        />
+              shownRef.current = true;
+              setCovered(false);
+            }}
+            onNavigationStateChange={(nav) => {
+              currentUrlRef.current = nav.url;
+              setChatId(webUi.isAuthUrl(nav.url) ? null : webUi.sessionOf(nav.url));
+              if (!homeUrlRef.current && nav.url && !webUi.isAuthUrl(nav.url)) {
+                homeUrlRef.current = nav.url;
+              }
+              canGoBackRef.current = nav.canGoBack;
+            }}
+            injectedJavaScript={webUi.embedScript}
+            onHttpError={(e) => {
+              const code = e.nativeEvent.statusCode;
+              if (code === 401 || code === 403) {
+                setError(`web UI refused auth (http ${code}) — retry re-pairs`);
+              }
+            }}
+            onError={(e) => {
+              setError(e.nativeEvent.description || 'web view failed to load');
+            }}
+          />
+        )}
         {covered ? (
           <View
             pointerEvents="none"
