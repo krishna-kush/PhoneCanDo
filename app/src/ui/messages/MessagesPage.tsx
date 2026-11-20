@@ -40,13 +40,18 @@ type Props = { agentId: AgentId | null };
 // from that agent.
 // Unfiltered, how far messages reach each agent (LevelsCard) heads it.
 // At the top, while one agent drives the phone's screen or another waits
-// for it, the screen queue as a deli counter. The log is read once the page has
-// slid in and kept current while it is open; while it is in front the
-// screen queue is re-read every few seconds and the times move on.
+// for it, the screen queue as a deli counter. The newest few messages are
+// read as the page opens, enough for its first screen; once it has slid
+// in, a page more each time the list nears its end (infinite scroll), and
+// one agent's view reads on until its screen has some or the log ends.
+// What is read is kept current while the page is open; while it is in
+// front the screen queue is re-read every few seconds and the times move
+// on.
 export default function MessagesPage({ agentId }: Props) {
   const active = usePageActive();
   const slidIn = useSlidIn();
   const log = useMessagesStore((s) => s.log);
+  const older = useMessagesStore((s) => s.older);
   const screen = useMessagesStore((s) => s.screen);
   const replaceTop = useAppStore((s) => s.replaceTop);
   const [ready, setReady] = useState(false);
@@ -54,15 +59,16 @@ export default function MessagesPage({ agentId }: Props) {
   const list = useRef<FlatList<AgentMessage>>(null);
   const [flash, setFlash] = useState<number | null>(null);
   const wasActive = useRef(false);
+  // The list's end came near while the page slid in: read on once it is in.
+  const endWhileSliding = useRef(false);
   // Messages sent after this land with their stamps (row/Deliveries.tsx).
   const [openedAt] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!slidIn) return;
     const stop = useMessagesStore.getState().watchMessages();
     setReady(true);
     return stop;
-  }, [slidIn]);
+  }, []);
 
   // Back in front after another page: re-read (the first time, the watch just did).
   useEffect(() => {
@@ -87,6 +93,20 @@ export default function MessagesPage({ agentId }: Props) {
   }, [flash]);
 
   const shown = useMemo(() => messagesFor(log, agentId), [log, agentId]);
+
+  // Older ones are read only once the page is in, so the slide never waits on them.
+  const nearEnd = () => {
+    if (slidIn) useMessagesStore.getState().showOlder();
+    else endWhileSliding.current = true;
+  };
+  useEffect(() => {
+    if (!slidIn || !older) return;
+    // One agent's view may find none of its own in the newest few: read on until it has a screen's worth.
+    if (endWhileSliding.current || shown.length < FIRST_CARDS) {
+      endWhileSliding.current = false;
+      useMessagesStore.getState().showOlder();
+    }
+  }, [slidIn, older, shown.length]);
 
   // The agents a shown message still waits for: their checks say why it
   // waits (MessageRow). One key, so a re-read log with the same waits
@@ -146,7 +166,8 @@ export default function MessagesPage({ agentId }: Props) {
             <ScreenCounter queue={screen} />
           </YStack>
         }
-        ListEmptyComponent={ready ? <EmptyLine agentId={agentId} /> : undefined}
+        ListEmptyComponent={ready && !older ? <EmptyLine agentId={agentId} /> : undefined}
+        onEndReached={older ? nearEnd : undefined}
         onScrollToIndexFailed={(info) => {
           // A card not laid out yet: get near it by the average height, then try again.
           list.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });

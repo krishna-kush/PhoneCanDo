@@ -4,7 +4,7 @@
 // recipient's status, replies (src/ui/messages/logic/messageView.ts), the
 // times, the screen queue's line and the copy (messagesCopy.ts), and the
 // page's look: delivery stamps, day boxes (days.ts) and the deli counter
-// (queue.ts). Imports
+// (queue.ts), and how much of the log a page reads (logPages.ts). Imports
 // the real pure modules (Node 22.18+ strips their types), so these cannot
 // drift. Times read in UTC.
 // Run: node test_messages.js (or pnpm check:vectors)
@@ -260,6 +260,19 @@ const HOUR = 60 * MIN;
   t('free', qu.screenWord({ holder: null, reserved: false, waiting: [R] }), 'free');
   t('the empty page naps', c.napLine(false), 'A-01 · napping by the inbox');
   t("an agent's empty page naps", c.napLine(true, 'Coder'), 'Coder · nothing yet, back to sleep');
+
+  // --- how much of the log a page reads (state/logic/logPages.ts) ------------
+  const lp = await import(src('state/logic/logPages.ts'));
+  t('opens with a first screen', lp.FIRST_READ, 8);
+  t('a page more', lp.nextLimit(8, 500), 38);
+  t('never past what the runner keeps', lp.nextLimit(490, 500), 500);
+  t('a full read: older ones left', lp.hasOlder(8, 8, 500), true);
+  t('a short read: the log ended', lp.hasOlder(5, 8, 500), false);
+  t('all the runner keeps: none left', lp.hasOlder(500, 500, 500), false);
+  t('new on top: as many more', lp.withNewOnTop(38, 120, 123, 500), 41);
+  t('nothing new: the same', lp.withNewOnTop(38, 120, 120, 500), 38);
+  t('before the first read: the same', lp.withNewOnTop(8, null, 200, 500), 8);
+  t('new on top, never past the cap', lp.withNewOnTop(499, 10, 20, 500), 500);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

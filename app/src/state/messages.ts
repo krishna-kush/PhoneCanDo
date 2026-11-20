@@ -1,7 +1,9 @@
 // Agent messages as the screens read them (engine/messages/): each agent's
 // unread count (the drawer's marks, an agent's Messages row), how many came
 // since the user last looked (Home's chip) and, while a Messages page is
-// open, the log and the screen queue. The first refresh
+// open, the log and the screen queue. A page opens with the newest few
+// messages and reads more as its list nears its end (logic/logPages.ts);
+// every re-read asks for as many as it has. The first refresh
 // subscribes to the runner's changes (each carries the unread counts, so
 // those land at once) and to the app coming back to the foreground; a
 // burst of changes (a broadcast to every agent) reads the log once.
@@ -11,10 +13,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { create } from 'zustand';
 import type { AgentId } from '../engine/agents/records';
-import { messageLog, onMessages, screenQueue, unreadCounts } from '../engine/messages/native';
+import { LOG_LIMIT, messageLog, onMessages, screenQueue, unreadCounts } from '../engine/messages/native';
 import { NO_SCREEN_QUEUE } from '../engine/messages/parse';
 import type { AgentMessage, ScreenQueue, UnreadCounts } from '../engine/messages/types';
 import { keepUnchangedMap, sameValue } from './logic/keepUnchanged';
+import { FIRST_READ, hasOlder, nextLimit, withNewOnTop } from './logic/logPages';
 
 /** A burst of runner changes within this reads once. */
 const SETTLE_MS = 150;
@@ -24,12 +27,16 @@ const SEEN_KEY = 'phonecando.messagesSeen.v1';
 
 interface MessagesState {
   unread: UnreadCounts;
-  /** Newest first; read only while a Messages page watches (empty before). */
+  /** Newest first, as many as the open page has asked for; read only while a Messages page watches (empty before). */
   log: AgentMessage[];
+  /** Older messages are left to read (showOlder). */
+  older: boolean;
+  /** The list neared its end: reads a page more, while older ones are left. */
+  showOlder: () => void;
   screen: ScreenQueue;
   /** Re-reads the unread counts, and the log and the screen queue while a page watches; subscribes once. */
   refreshMessages: () => void;
-  /** A Messages page in front: reads the log and the queue now and on each change, until the returned stop. */
+  /** A Messages page in front: reads the newest few and the queue now, and again on each change, until the returned stop. */
   watchMessages: () => () => void;
   /** Re-reads the screen queue alone (it can change with no message: a claim nobody waits on). */
   refreshScreen: () => void;
@@ -44,6 +51,10 @@ interface MessagesState {
 let subscribed = false;
 let watchers = 0;
 let pending: ReturnType<typeof setTimeout> | null = null;
+/** How many messages the open pages have asked for. */
+let limit = FIRST_READ;
+/** The newest message they have read; null before their first read. */
+let newestRead: number | null = null;
 
 /** The log with each unchanged message kept as the same object. */
 function keepLog(prev: AgentMessage[], next: AgentMessage[]): AgentMessage[] {
@@ -88,8 +99,13 @@ export const useMessagesStore = create<MessagesState>((set, get) => {
     setUnread(unreadCounts());
     readLatest();
     if (watchers === 0) return;
-    const log = keepLog(get().log, messageLog());
+    limit = withNewOnTop(limit, newestRead, get().latestId, LOG_LIMIT);
+    const got = messageLog(limit);
+    newestRead = got[0]?.id ?? newestRead;
+    const log = keepLog(get().log, got);
     if (log !== get().log) set({ log });
+    const older = hasOlder(got.length, limit, LOG_LIMIT);
+    if (older !== get().older) set({ older });
     readScreen();
   };
 
@@ -119,6 +135,7 @@ export const useMessagesStore = create<MessagesState>((set, get) => {
   return {
     unread: {},
     log: [],
+    older: false,
     screen: NO_SCREEN_QUEUE,
 
     refreshMessages: () => {
@@ -128,6 +145,11 @@ export const useMessagesStore = create<MessagesState>((set, get) => {
 
     watchMessages: () => {
       subscribe();
+      // A page opening on its own starts from the newest few again.
+      if (watchers === 0) {
+        limit = FIRST_READ;
+        newestRead = null;
+      }
       watchers++;
       read();
       let stopped = false;
@@ -136,6 +158,12 @@ export const useMessagesStore = create<MessagesState>((set, get) => {
         stopped = true;
         watchers--;
       };
+    },
+
+    showOlder: () => {
+      if (watchers === 0 || !get().older) return;
+      limit = nextLimit(limit, LOG_LIMIT);
+      read();
     },
 
     refreshScreen: readScreen,
