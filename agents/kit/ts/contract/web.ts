@@ -42,7 +42,7 @@ export type WebAdapterSpec = {
    * front is the thing to tap. A place the web UI lacks is left out.
    */
   spots?: Partial<Record<WebSpot, string>>;
-  /** How big the app shows the web UI, in percent of the page's own size; the app's default (115) when left out. */
+  /** How big the app shows the web UI, in percent of the page's own size; the app's default (105) when left out. */
   zoom?: number;
 };
 

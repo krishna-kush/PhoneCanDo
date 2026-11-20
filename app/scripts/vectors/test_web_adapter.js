@@ -80,8 +80,8 @@ const mod = pathToFileURL(path.join(__dirname, '../../src/engine/agents/webAdapt
 
   // --- zoom: how big the page shows -----------------------------------------
   const fitOf = (script) => /var content = (\[[^\]]*\])/.exec(script)?.[1];
-  t('no zoom named: 115%', fitOf(web.zoomScript(414)), '["width=360","initial-scale=1.15"]');
-  t('a named zoom wins', fitOf(webUiFor({ cssVars: { '--x': 'fg' }, authUrl: '/login/', zoom: 125 }).zoomScript(400)), '["width=320","initial-scale=1.25"]');
+  t('no zoom named: 105%', fitOf(web.zoomScript(414)), '["width=394.29","initial-scale=1.05","minimum-scale=1.05","maximum-scale=1.05","user-scalable=no"]');
+  t('a named zoom wins', fitOf(webUiFor({ cssVars: { '--x': 'fg' }, authUrl: '/login/', zoom: 125 }).zoomScript(400)), '["width=320","initial-scale=1.25","minimum-scale=1.25","maximum-scale=1.25","user-scalable=no"]');
   t('the zoom script parses', (() => { new Function(web.zoomScript(414)); return true; })(), true);
 
   // The watch script itself, in a page of two buttons: one in front, one

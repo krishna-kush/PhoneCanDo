@@ -1040,7 +1040,7 @@
           "additionalProperties": { "type": "string", "maxLength": 256, "pattern": "^[^'\\\\{}\\u0000-\\u001f]+$" }
         },
         "zoom": {
-          "description": "How big the app shows the web UI, in percent of the page's own size; the app's default (115) when left out.",
+          "description": "How big the app shows the web UI, in percent of the page's own size; the app's default (105) when left out.",
           "type": "integer",
           "minimum": 50,
           "maximum": 200

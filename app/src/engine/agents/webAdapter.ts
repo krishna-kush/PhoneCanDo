@@ -41,19 +41,27 @@ export function webUiFor(spec: WebAdapterSpec): AgentWebUi {
  * How big our WebView shows a web UI, in percent, when its adapter names no
  * zoom: one sized for a desk reads small on a phone.
  */
-export const WEB_ZOOM = 115;
+export const WEB_ZOOM = 105;
 
 /**
  * Zooms the page to `zoom` percent in a view `width` dp wide, as a browser's
  * own zoom does: its viewport tag says the page is that much narrower in CSS
  * px, so type, icons and spacing all draw bigger and full-height layouts
- * still fit. The tag's other keys (the keyboard's interactive-widget) stay.
+ * still fit. It also pins the scale there, so a pinch never zooms the page
+ * (a page's own lock would otherwise be lost under the new initial-scale).
+ * The tag's other keys (the keyboard's interactive-widget) stay.
  * Injected at document start, where it rewrites the page's tag once parsed,
  * and again whenever the view's width changes.
  */
 function zoomScript(width: number, zoom: number): string {
   const scale = zoom / 100;
-  const fit = [`width=${Math.round((width / scale) * 100) / 100}`, `initial-scale=${scale}`];
+  const fit = [
+    `width=${Math.round((width / scale) * 100) / 100}`,
+    `initial-scale=${scale}`,
+    `minimum-scale=${scale}`,
+    `maximum-scale=${scale}`,
+    'user-scalable=no',
+  ];
   return `(function () {
   var fit = function () {
     var meta = document.querySelector('meta[name=viewport]');
@@ -64,7 +72,7 @@ function zoomScript(width: number, zoom: number): string {
       document.head.appendChild(meta);
     }
     var keep = (meta.getAttribute('content') || '').split(',').map(function (p) { return p.trim(); }).filter(function (p) {
-      return p && !/^(width|initial-scale)\\s*=/.test(p);
+      return p && !/^(width|initial-scale|minimum-scale|maximum-scale|user-scalable)\\s*=/.test(p);
     });
     var content = ${JSON.stringify(fit)}.concat(keep).join(', ');
     if (meta.getAttribute('content') !== content) meta.setAttribute('content', content);
