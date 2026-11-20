@@ -12,7 +12,8 @@ name: Release
 #   build  stages what the APKs ship, builds and checks them with
 #          `--sign-later` (the debug key signs for now; Gradle, the Android
 #          plugins and the npm packages run here) and hands the staged
-#          release on as an artifact. No secrets.
+#          release on as an artifact. Its preflight waits for CI on the
+#          commit while that is still running (`--wait-ci`). No secrets.
 #   sign   in the `release` environment, whose four secrets only it can
 #          read and only after a reviewer approves: re-signs the staged
 #          APKs with the release key (`--sign-staged`), checks the signer and
@@ -83,10 +84,12 @@ jobs:
     name: build v${{ inputs.version }} (no key)
     if: ${{ github.ref == 'refs/heads/prod' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # The build, plus up to 45 minutes waiting for CI on the commit.
+    timeout-minutes: 165
     permissions:
       contents: read
-      # CI's opencode and llama-server builds.
+      # CI's opencode and llama-server builds, and the preflight's look at a
+      # skipped workflow's last run on the branch.
       actions: read
       # The preflight reads CI's checks on the commit.
       checks: read
@@ -166,9 +169,12 @@ jobs:
           ALLOW_RED_CI: ${{ inputs.allow_red_ci }}
         # --accept-all: no terminal here to ask about the Default image's age
         # or proot behind upstream; both still print in this log.
+        # --wait-ci: CI on the commit may still be running when we get here
+        # (a release started right after a push), so wait for it, up to 45
+        # minutes, while nothing is red; the staging above ran meanwhile.
         run: |
           set -euo pipefail
-          args=(--version "$VERSION" --label "$LABEL" --sign-later --accept-all)
+          args=(--version "$VERSION" --label "$LABEL" --sign-later --accept-all --wait-ci 45)
           if [ -n "$NOTES" ]; then args+=(--notes "$NOTES"); fi
           if [ "$ALLOW_RED_CI" = true ]; then args+=(--allow-red-ci); fi
           node scripts/release-android.mjs "${args[@]}"

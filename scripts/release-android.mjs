@@ -58,6 +58,8 @@ const VERSION_FILES = [APP_JSON, APP_PKG, UPDATES_TS];
 const apkFor = (flavor) =>
   join(APP, `android/app/build/outputs/apk/${flavor}/release/app-${flavor}-release.apk`);
 const STAGE_ROOT = join(ROOT, 'dist/release');
+// The preflight runs synchronously, so its CI wait blocks the thread.
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 // Beside the staged APKs: the commit they were built from.
 const SOURCE_COMMIT = 'source-commit';
 // lre/proot/source-tarball.sh's workdir, shared by every release: the
@@ -165,6 +167,8 @@ function main() {
     withoutLinux: args.withoutLinux,
     stagedChecked: args.signStaged,
     hearing: JSON.parse(readFileSync(HEARING_JSON, 'utf8')),
+    // --allow-red-ci releases whatever CI says, so nothing to wait for.
+    waitCi: args.waitCi && !args.allowRedCi ? { limitMs: args.waitCi * 60_000, sleep: sleepSync, now: Date.now, log: console.log } : undefined,
   });
   console.log('');
   // What blocks in CI comes first, in red; the whole table after asking.
@@ -512,6 +516,7 @@ function parseArgs(argv) {
     uploadOnly: false,
     clean: false,
     allowRedCi: false,
+    waitCi: 0,
     withoutLinux: false,
     acceptAll: false,
     signLater: false,
@@ -526,6 +531,11 @@ function parseArgs(argv) {
     else if (arg === '--upload-only') out.uploadOnly = true;
     else if (arg === '--clean') out.clean = true;
     else if (arg === '--allow-red-ci') out.allowRedCi = true;
+    else if (arg === '--wait-ci') {
+      i += 1;
+      out.waitCi = Number(requireValue(argv, i, '--wait-ci'));
+      if (!Number.isInteger(out.waitCi) || out.waitCi < 1) fail('--wait-ci needs a whole number of minutes, 1 or more');
+    }
     else if (arg === '--without-linux') out.withoutLinux = true;
     else if (arg === '--accept-all') out.acceptAll = true;
     else if (arg === '--sign-later') out.signLater = true;
@@ -578,6 +588,10 @@ Options:
   --allow-red-ci    Release although CI on the commit is red or unfinished;
                     the GitHub release notes say so. Never skips the clean
                     tree, pushed commit or Linux checks
+  --wait-ci MIN     While CI on the commit is only unfinished (nothing red),
+                    read it again every minute, for up to MIN minutes, then
+                    decide (the GitHub release's build job). Not with
+                    --allow-red-ci
   --sign-later      Build and stage without the release key (the debug key
                     signs for now), no upload: the GitHub release's build job
   --sign-staged     Sign the staged APKs with the release key, then upload
@@ -596,7 +610,8 @@ Preflight (before anything is written): the working tree must be clean
 (--upload-only: except the three version files), GitHub must have the commit
 (HEAD; --upload-only: the one the staged APKs were built from), and CI on it
 must be green (ci-ok, lint-ok; web-ok, pce-ok, tce-ok, lre-ok, proot-ok and
-the Android jobs when they ran). Linux: the staged proot libs must match the
+the Android jobs when they ran; one that did not run counts by its last run
+on the same branch, on a commit this one contains). Linux: the staged proot libs must match the
 SHA256SUMS staged with them and be the PROOT_VERSION in lre/proot/pins.env;
 the staged Default image must be the one lre/images/default/lock.json locks
 (lock/check.sh --locked --remote passes, its lre-image run is green, its

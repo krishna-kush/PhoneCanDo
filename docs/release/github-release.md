@@ -54,7 +54,9 @@ jobs:
 
 ## Release from GitHub
 
-1. Push what you release, with CI green as for a local release.
+1. Push what you release. You need not wait for CI: `build` waits for it
+   (up to 45 minutes, while nothing is red) before it builds, and stops at
+   the first red check.
 2. `./manage release 1.0.0 --via-github --notes "..."`. It takes `--notes`,
    `--label alpha|beta`, `--allow-red-ci` and `--publish`, and refuses the flags only a local build has (`--dry-run`,
    `--upload-only`, `--without-linux`, `--clean`). The same inputs are on

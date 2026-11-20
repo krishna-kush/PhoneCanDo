@@ -5,14 +5,17 @@
 import { failure, spawnRunner } from './spawn.mjs';
 
 const CHECK_RUN = '.check_runs[] | {id, name, status, conclusion, suite: .check_suite.id, app: .app.slug}';
-const WORKFLOW_RUN = '.workflow_runs[] | {id, name, path, event, status, conclusion, check_suite_id, created_at}';
+const WORKFLOW_RUN = '.workflow_runs[] | {id, name, path, event, status, conclusion, check_suite_id, created_at, branch: .head_branch}';
+const BRANCH_RUN = '.workflow_runs[] | {id, head_sha, status, conclusion, created_at}';
 const STATUS = '.statuses[] | {context, state}';
 const RUN = '{path, status, conclusion, branch: .head_branch, url: .html_url}';
 const RELEASE = '{draft, prerelease, assets: [.assets[] | {name, size}]}';
 
 /**
- * { commitState(repo, sha), ciState(repo, sha), runState(repo, id),
- *   releaseState(repo, tag) } over `run` (default: the gh CLI).
+ * { commitState(repo, sha), ciState(repo, sha), branchRuns(repo, file,
+ *   branch), contains(repo, older, sha), runState(repo, id),
+ *   releaseState(repo, tag), upstreamLag(repo, commit) } over `run`
+ *   (default: the gh CLI).
  */
 export function makeGh({ run = spawnRunner('gh') } = {}) {
   const api = (path, jq) => run(['api', '--paginate', path, '--jq', jq]);
@@ -47,6 +50,29 @@ export function makeGh({ run = spawnRunner('gh') } = {}) {
         workflowRuns: list(`repos/${repo}/actions/runs?head_sha=${sha}&per_page=100`, WORKFLOW_RUN),
         statuses: list(`repos/${repo}/commits/${sha}/status?per_page=100`, STATUS),
       };
+    },
+    /**
+     * The newest runs of workflow `file` on `branch`, newest first: one page
+     * of { id, head_sha, status, conclusion, created_at }. Unpaginated: the
+     * look-back only needs the latest few.
+     */
+    branchRuns(repo, file, branch) {
+      const path = `repos/${repo}/actions/workflows/${file}/runs?branch=${encodeURIComponent(branch)}&per_page=20`;
+      const result = run(['api', path, '--jq', BRANCH_RUN]);
+      if (result.error || result.status !== 0) throw new Error(`gh api ${path}: ${failure(result)}`);
+      return result.stdout.split('\n').filter((line) => line.trim()).map((line) => JSON.parse(line));
+    },
+    /**
+     * True when commit `sha` contains commit `older` (the same commit, or
+     * one behind it in its history). Asks GitHub's compare, since a CI
+     * checkout is shallow; unpaginated: the status is whole on the first page.
+     */
+    contains(repo, older, sha) {
+      if (older === sha) return true;
+      const path = `repos/${repo}/compare/${older}...${sha}`;
+      const result = run(['api', path, '--jq', '.status']);
+      if (result.error || result.status !== 0) throw new Error(`gh api ${path}: ${failure(result)}`);
+      return ['ahead', 'identical'].includes(result.stdout.trim());
     },
     /** Workflow run `id`: { path, status, conclusion, branch, url }, or 'missing'. */
     runState(repo, id) {

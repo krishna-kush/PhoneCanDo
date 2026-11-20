@@ -30,7 +30,7 @@ function fakeGh({ commits = [SHA], ci = loadCi(), run = okRun(), release = okRel
     },
     ciState(repo, sha) {
       asked.push(['ci', repo, sha]);
-      return ci;
+      return typeof ci === 'function' ? ci() : ci;
     },
     runState(repo, id) {
       asked.push(['run', repo, id]);
@@ -87,6 +87,30 @@ test('clean, pushed, green, Linux verified: go, and the report says so', () => {
   assert.doesNotMatch(folded, /CHECK\s+WORKFLOW/);
   assert.match(folded, /CI table left out: \d+ check\(s\), none blocking/);
   assert.match(folded, /Preflight passed\.$/);
+});
+
+test('--wait-ci: CI still running is read again until it is green, then the release goes on', () => {
+  let reads = 0;
+  const ci = () => {
+    reads += 1;
+    const fx = loadCi();
+    if (reads === 1) Object.assign(fx.checkRuns.find((c) => c.name === 'ci-ok'), { status: 'in_progress', conclusion: null });
+    return fx;
+  };
+  const slept = [];
+  const waitCi = { limitMs: 45 * 60_000, sleep: (ms) => slept.push(ms), now: () => 0, log: () => {} };
+  const result = preflight({ gh: fakeGh({ ci }), waitCi });
+  assert.equal(result.proceed, true);
+  assert.equal(reads, 2);
+  assert.deepEqual(slept, [60_000]);
+});
+
+test('without --wait-ci, CI still running refuses at once', () => {
+  const running = loadCi();
+  Object.assign(running.checkRuns.find((c) => c.name === 'ci-ok'), { status: 'in_progress', conclusion: null });
+  const result = preflight({ gh: fakeGh({ ci: running }) });
+  assert.equal(result.proceed, false);
+  assert.match(result.refusals[0], /^CI: not green: ci-ok \(in_progress\)/);
 });
 
 test('an outdated agent payload refuses the release, never overridden', () => {

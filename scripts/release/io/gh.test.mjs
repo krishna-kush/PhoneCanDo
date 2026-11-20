@@ -119,3 +119,23 @@ test('only ever reads: plain `gh api` GETs, no method, field or input flags', ()
     }
   }
 });
+
+test('branchRuns: one page of the workflow runs on the branch, newest first', () => {
+  const runs = [{ id: 2, head_sha: 'b' }, { id: 1, head_sha: 'a' }];
+  const fake = fakeRun({ [`repos/${REPO}/actions/workflows/lre.yml/runs`]: ok(runs.map((r) => JSON.stringify(r)).join('\n')) });
+  assert.deepEqual(makeGh(fake).branchRuns(REPO, 'lre.yml', 'prod'), runs);
+  assert.ok(fake.calls[0].some((arg) => arg.includes('branch=prod')));
+  assert.ok(!fake.calls[0].includes('--paginate'));
+  const down = fakeRun({ [`repos/${REPO}/actions/workflows/`]: httpError(502, 'Bad Gateway') });
+  assert.throws(() => makeGh(down).branchRuns(REPO, 'lre.yml', 'prod'), /Bad Gateway/);
+});
+
+test('contains: the same commit, or one the compare says is behind', () => {
+  const OLD = '1'.repeat(40);
+  const compare = (status) => fakeRun({ [`repos/${REPO}/compare/${OLD}...${SHA}`]: ok(`${status}\n`) });
+  assert.equal(makeGh(fakeRun({})).contains(REPO, SHA, SHA), true);
+  assert.equal(makeGh(compare('ahead')).contains(REPO, OLD, SHA), true);
+  assert.equal(makeGh(compare('diverged')).contains(REPO, OLD, SHA), false);
+  assert.equal(makeGh(compare('behind')).contains(REPO, OLD, SHA), false);
+  assert.throws(() => makeGh(fakeRun({})).contains(REPO, OLD, SHA), /Not Found/);
+});

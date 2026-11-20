@@ -15,6 +15,12 @@ const RANK = { block: 0, warn: 1, ok: 2 };
 /** The conclusion once completed ('success', 'failure', ...), else the status ('queued', 'in_progress', ...). */
 export const checkState = (run) => (run.status === 'completed' ? (run.conclusion ?? 'unknown') : run.status);
 
+// What a check or workflow not yet finished shows as its state: GitHub's
+// statuses before 'completed', and 'running' for a gate whose run is going.
+const UNFINISHED = new Set(['running', 'queued', 'in_progress', 'waiting', 'requested', 'pending']);
+/** True for a row whose check or workflow has not finished. */
+export const unfinished = (row) => UNFINISHED.has(row.state);
+
 /**
  * { checkRuns, workflowRuns, statuses } -> { rows, blocks, warns }. A row is
  * { name, workflow, file, suite, state, role, decision, note }; rows that
@@ -38,7 +44,12 @@ export function classifyChecks({ checkRuns, workflowRuns, statuses = [] }) {
   const rows = [...latest.values()].map((check) => judge(check, owners.get(check.suite)));
   allowExpectedRed(rows);
   rows.push(...absent(runs, rows), ...statuses.map(judgeStatus));
-  rows.sort(
+  return tally(rows);
+}
+
+/** Rows -> { rows, blocks, warns }, blocking rows first. */
+export function tally(rows) {
+  const sorted = [...rows].sort(
     (a, b) =>
       RANK[a.decision] - RANK[b.decision] ||
       Number(GATE_ROLES.has(b.role)) - Number(GATE_ROLES.has(a.role)) ||
@@ -46,9 +57,9 @@ export function classifyChecks({ checkRuns, workflowRuns, statuses = [] }) {
       a.name.localeCompare(b.name),
   );
   return {
-    rows,
-    blocks: rows.filter((row) => row.decision === 'block'),
-    warns: rows.filter((row) => row.decision === 'warn'),
+    rows: sorted,
+    blocks: sorted.filter((row) => row.decision === 'block'),
+    warns: sorted.filter((row) => row.decision === 'warn'),
   };
 }
 

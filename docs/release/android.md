@@ -96,9 +96,19 @@ The script:
      `local-models-ok`, `suggested-models-ok`, ...) when it ran; and every
      `android.yml` job that ran (PTY host test, prebuild, the debug APKs,
      the release shape, the lite emulator smoke on API 36).
-   - Only a warning: a workflow that did not run for the commit (its path
-     filters skipped it; GitHub also skips path filters silently when a push
-     changes more than 300 files), `upstream-drift` (red until the opencode
+   - A workflow that did not run for the commit (its path filters skipped
+     it) counts by its last run on the same branch, on a commit this one
+     contains: red or unfinished there blocks, green there is green. Say
+     `lre.yml` failed on commit A and commit B, on top, changed only `web/`:
+     a release of B is refused for A's `lre-ok`. One that never ran on the
+     branch before only warns.
+   - The GitHub release's build job waits for CI (`--wait-ci 45`): while
+     everything that blocks is only unfinished, it reads CI again every
+     minute, for up to 45 minutes, so a release can start right after a
+     push. Anything red ends the wait at once. A local release reads CI once.
+   - Only a warning: a workflow that never ran on the branch (GitHub also
+     skips path filters silently when a push changes more than 300 files),
+     `upstream-drift` (red until the opencode
      pin moves), `Release downloads` (red after a version bump until that
      release is published; `web-ok` red only because of it warns too), the
      experimental emulator legs (full on API 36, lite on API 29), report-only

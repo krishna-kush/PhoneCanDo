@@ -3,13 +3,17 @@
 // (proot, the Default image) exactly the verified, locked one, and is every
 // native agent payload they ship the build of this tree's sources? The gates
 // run in order, each one that can (a dirty tree still gets its CI table), and
-// the verdict says whether the release may go on. No IO of its own: git, gh,
-// the staged Linux files and the staged agent payloads come in as objects
-// (io/git.mjs, io/gh.mjs, io/linux.mjs, io/agents.mjs), so the tests run all
-// of it on fakes.
+// the verdict says whether the release may go on. A workflow that did not
+// run on the commit counts by its last earlier run (ci/earlier.mjs), and CI
+// still running can be waited for (ci/wait.mjs). No IO of its own: git, gh,
+// the staged Linux files, the staged agent payloads and the wait's clock come
+// in as objects (io/git.mjs, io/gh.mjs, io/linux.mjs, io/agents.mjs), so the
+// tests run all of it on fakes.
 
 import { payloadsGate } from './agents/payloads.mjs';
 import { classifyChecks } from './ci/classify.mjs';
+import { makeLookBack } from './ci/earlier.mjs';
+import { waitForCi } from './ci/wait.mjs';
 import { hearingGate } from './hearing/gate.mjs';
 import { imageGate } from './linux/image.mjs';
 import { prootGate } from './linux/proot.mjs';
@@ -35,6 +39,8 @@ import { dirtyEntries, parsePorcelain } from './worktree.mjs';
  *                    build job), so only tree, pushed and CI run here
  *   hearing          the site's second-opinion pin { version, commit }
  *                    (web/src/data/secondOpinion.json), or none: no row
+ *   waitCi           --wait-ci: { limitMs, sleep(ms), now(), log(line) },
+ *                    wait while CI is only unfinished; none: read it once
  * }
  * -> { head, sha, gates, ci, proot, image, agents, proceed, refusals, overridden, notes }
  *    proot { version, libs: { name: sha256 } }, image { version, sha256,
@@ -90,7 +96,12 @@ function pushedGate(ctx, state) {
 
 function ciGate(ctx, state) {
   if (!state.pushed) return null; // GitHub has no checks for a commit it lacks
-  state.ci = classifyChecks(ctx.gh.ciState(ctx.repo, state.sha));
+  const lookBack = makeLookBack(ctx.gh, ctx.repo);
+  const read = () => {
+    const raw = ctx.gh.ciState(ctx.repo, state.sha);
+    return lookBack(state.sha, raw, classifyChecks(raw));
+  };
+  state.ci = ctx.waitCi ? waitForCi(read, ctx.waitCi) : read();
   const red = state.ci.blocks.map((row) => `${row.name} (${row.state})`);
   const warned = state.ci.warns.length ? `; ${state.ci.warns.length} warning(s)` : '';
   return {
