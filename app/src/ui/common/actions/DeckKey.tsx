@@ -12,7 +12,8 @@ import type { DeckAction } from './types';
 // One key of a deck (ActionDeck): the main one red and tall with its
 // glyph in a little window, the others outlined on the page's colour, Cancel's
 // border dashed, Delete's edged in hazard tape. Keys with a hard amber
-// shadow sink into it as pressed, like AppButton's.
+// shadow sink into it as pressed, like AppButton's: by the shadow's own
+// pixels (a bare number here would be a space token, many times more).
 export default function DeckKey({ action, flex }: { action: DeckAction; flex?: number }) {
   const t = useTheme();
   const role: DeckRole = action.role ?? 'more';
@@ -43,8 +44,8 @@ export default function DeckKey({ action, flex }: { action: DeckAction; flex?: n
           borderColor={filled ? 'primary' : role === 'danger' ? 'primary' : 'lineStrong'}
           backgroundColor={filled ? 'primary' : role === 'back' ? 'transparent' : 'bg'}
           boxShadow={sinks ? `${role === 'go' ? 3 : 2}px ${role === 'go' ? 3 : 2}px 0 ${shadow} press:0px 0px 0 ${shadow}` : undefined}
-          x={sinks ? `press:${role === 'go' ? 3 : 2}` : undefined}
-          y={sinks ? `press:${role === 'go' ? 3 : 2}` : undefined}
+          x={sinks ? `press:${role === 'go' ? 3 : 2}px` : undefined}
+          y={sinks ? `press:${role === 'go' ? 3 : 2}px` : undefined}
           opacity={`${opacity} press:${sinks ? opacity : 0.6}`}
         >
           {role === 'danger' ? (

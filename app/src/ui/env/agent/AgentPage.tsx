@@ -21,7 +21,7 @@ import AgentScheduleRows from './AgentScheduleRows';
 import AllowAllRow from './AllowAllRow';
 import { hasModelSetting, installDetail, machineDetail, modelDetail } from './agentSettings';
 import ChecksRow from './checks/ChecksRow';
-import DangerSection from './DangerSection';
+import DangerSection from './danger/DangerSection';
 import EngineSection from './EngineSection';
 import KeepRunningRow from './KeepRunningRow';
 import MascotRow from './mascot/MascotRow';
@@ -34,7 +34,7 @@ import { useMissingTools } from './useMissingTools';
 // for a kind that can use one, Machine, Install for a kind with one, What
 // it can do: what we have seen it do), Keep running and, for a kind with
 // a background (ACP) mode, Allow everything, both switches, its
-// Messages and Schedules groups, then Reset and Delete.
+// Messages and Schedules groups, then the Danger zone (Reset, Delete).
 // What needs a look now shows here too: a machine still setting up, an
 // install running or stopped, tools the machine lacks (on the Machine row).
 export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: boolean }) {

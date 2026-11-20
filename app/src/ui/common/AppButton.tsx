@@ -80,8 +80,8 @@ export default function AppButton({
       borderColor={outlined ? 'lineStrong press:transparent' : ghost ? 'transparent' : 'primary press:transparent'}
       backgroundColor={outlined || ghost ? 'transparent' : 'primary'}
       boxShadow={sinks ? '2px 2px 0 secondary press:0px 0px 0 secondary' : undefined}
-      x={sinks ? 'press:2' : undefined}
-      y={sinks ? 'press:2' : undefined}
+      x={sinks ? 'press:2px' : undefined}
+      y={sinks ? 'press:2px' : undefined}
       opacity={`${opacity} press:${sinks ? opacity : 0.7}`}
       outlineColor="focus-visible:primaryHi"
       outlineStyle="focus-visible:solid"

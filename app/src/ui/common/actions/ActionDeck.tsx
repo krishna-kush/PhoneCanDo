@@ -10,15 +10,17 @@ type Props = {
   actions: readonly (DeckAction | null | false | undefined)[];
   /** The strip's barcode, the page's own line (rows/barcode/lines.ts). */
   barcode: BarcodeId;
+  /** The strip's title, when not Controls. */
+  title?: string;
 };
 
 // A page's buttons that would otherwise stack one under another, as one
 // control panel in the figure key's box: its strip titled Controls, with
 // the page's barcode and three status lights, then its keys (DeckKeys).
-export default function ActionDeck({ actions, barcode }: Props) {
+export default function ActionDeck({ actions, barcode, title = DECK_TITLE }: Props) {
   return (
     <YStack borderWidth={1} borderColor="line" backgroundColor="panel">
-      <KeyHead title={DECK_TITLE} barcode={barcode} trailing={<Lights />} />
+      <KeyHead title={title} barcode={barcode} trailing={<Lights />} />
       <YStack padding="3" paddingBottom={15}>
         <DeckKeys actions={actions} />
       </YStack>

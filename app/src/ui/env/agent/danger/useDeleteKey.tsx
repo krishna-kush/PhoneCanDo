@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import type { Agent } from '../../../engine/agents/records';
-import { imageSize } from '../../../engine/linux/native';
-import type { Image } from '../../../engine/linux/types';
-import { useAgentsStore } from '../../../state/agents';
-import { useAppStore } from '../../../state/app';
-import { deleteAgentAndImage } from '../../../state/flows/deleteAgentAndImage';
-import AppButton from '../../common/AppButton';
-import ConfirmDialog from '../../common/ConfirmDialog';
-import { linuxFailureText } from '../logic/errorText';
-import { formatBytes } from '../logic/format';
-import { deleteSharedMessage } from '../logic/sharedMachineText';
-import Note from '../parts/Note';
-import { useMachineMates } from './useMachineMates';
+import { type ReactNode, useState } from 'react';
+import type { Agent } from '../../../../engine/agents/records';
+import { imageSize } from '../../../../engine/linux/native';
+import type { Image } from '../../../../engine/linux/types';
+import { useAgentsStore } from '../../../../state/agents';
+import { useAppStore } from '../../../../state/app';
+import { deleteAgentAndImage } from '../../../../state/flows/deleteAgentAndImage';
+import type { DeckAction } from '../../../common/actions/types';
+import ConfirmDialog from '../../../common/ConfirmDialog';
+import { linuxFailureText } from '../../logic/errorText';
+import { formatBytes } from '../../logic/format';
+import { deleteSharedMessage } from '../../logic/sharedMachineText';
+import Note from '../../parts/Note';
+import { useMachineMates } from '../useMachineMates';
 
 type Size = { kind: 'measuring' } | { kind: 'known'; bytes: number } | { kind: 'unknown' };
 
@@ -19,7 +19,8 @@ type Size = { kind: 'measuring' } | { kind: 'known'; bytes: number } | { kind: '
 // machine first, so it says how much space comes back. A machine other
 // agents use stays: the confirm names them, and says whether its sign-in
 // and chats go with it (a folder of its own) or stay in the machine.
-export default function DeleteBlock({ agent, image }: { agent: Agent; image: Image | undefined }) {
+// Its key goes in the danger deck; `below` is what shows under the deck.
+export function useDeleteKey(agent: Agent, image: Image | undefined): { action: DeckAction; below: ReactNode } {
   const leaveAgent = useAppStore((s) => s.leaveAgent);
   const onlyAgent = useAgentsStore((s) => s.agents.length === 1);
   const mates = useMachineMates(agent);
@@ -59,20 +60,20 @@ export default function DeleteBlock({ agent, image }: { agent: Agent; image: Ima
     ? deleteSharedMessage(mates.map((a) => a.name))
     : `This deletes the agent and its machine with everything in it: projects, chats, keys and installed tools.${sizeLine}${lastLine}`;
 
-  return (
-    <>
-      <AppButton variant="danger" loading={busy} onPress={ask}>
-        Delete agent
-      </AppButton>
-      {error ? <Note tone="error">{error}</Note> : null}
-      <ConfirmDialog
-        open={confirm}
-        onClose={() => setConfirm(false)}
-        title={`Delete ${agent.name}?`}
-        message={message}
-        agentIds={[agent.id]}
-        onConfirm={remove}
-      />
-    </>
-  );
+  return {
+    action: { label: 'Delete agent', role: 'danger', loading: busy, onPress: ask },
+    below: (
+      <>
+        {error ? <Note tone="error">{error}</Note> : null}
+        <ConfirmDialog
+          open={confirm}
+          onClose={() => setConfirm(false)}
+          title={`Delete ${agent.name}?`}
+          message={message}
+          agentIds={[agent.id]}
+          onConfirm={remove}
+        />
+      </>
+    ),
+  };
 }

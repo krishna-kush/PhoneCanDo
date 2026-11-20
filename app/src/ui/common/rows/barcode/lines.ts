@@ -144,6 +144,7 @@ export const BARCODE_LINES = {
   deckChooseAgent: 'PLAYER ONE',
   deckCheckNow: 'POP QUIZ',
   deckKindGone: 'GONE FISHING',
+  deckDanger: 'NO TAKEBACKS',
 
   // What an agent asks you (slip/SlipDialog)
   slipPermission: 'MAY I PLEASE',
