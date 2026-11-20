@@ -24,6 +24,7 @@ keystore, base64), `PHONECANDO_STORE_PASSWORD`, `PHONECANDO_KEY_ALIAS` and
 | Time | about 20 min (incremental) | about 30-40 min, plus your approval |
 | The changed files | left in your tree to commit | a pull request to merge |
 | Retry a failed upload | `--upload-only` | Re-run failed jobs |
+| Build attestation | none | both APKs (`gh attestation verify`) |
 
 ## How it runs
 
@@ -41,6 +42,9 @@ jobs:
    key, checks the release certificate is their only signer and uploads the
    draft. It installs no packages: only our scripts, Node, `apksigner` and
    `gh` run while the key is on the runner, and the key is deleted after.
+   With the key gone, GitHub's `actions/attest` attests both signed APKs: their SHA-256,
+   signed for this run, its workflow and its commit, so anyone can check a
+   download with `gh attestation verify <apk> --repo <owner/repo>`.
    Once the draft has them, it deletes `build`'s debug-signed APKs (the
    `release-staged` artifact), which anyone signed in to GitHub could
    otherwise download for a day.

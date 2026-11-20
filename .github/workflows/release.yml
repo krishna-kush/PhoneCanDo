@@ -18,7 +18,10 @@ name: Release
 #          APKs with the release key (`--sign-staged`), checks the signer and
 #          uploads the draft. It runs only our scripts (no npm packages),
 #          Node, the SDK's apksigner and gh. The key is written to the
-#          runner's temp folder and deleted after, whatever happened.
+#          runner's temp folder and deleted after, whatever happened. Then,
+#          with the key gone, GitHub's attest action attests both signed
+#          APKs (their SHA-256 signed for this run, so `gh attestation
+#          verify` proves a download was built here from this commit).
 #   pr     commits the version files and release.json to release/v<version>
 #          and opens a pull request to prod. Only git and gh; no secrets.
 # Inputs reach the shell only through env, never pasted into a script.
@@ -196,6 +199,11 @@ jobs:
       checks: read
       # Deleting the build job's debug-signed APKs once they are signed.
       actions: write
+      # Attesting the signed APKs: a Sigstore certificate for this run, the
+      # attestation itself and its storage record.
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -258,6 +266,15 @@ jobs:
       - name: Remove the release key
         if: ${{ always() }}
         run: rm -f "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/release-signing.env"
+
+      # The exact files the draft carries, once the key is gone. Anyone can
+      # check a download with `gh attestation verify <apk> --repo <owner/repo>`.
+      - name: Attest the signed APKs
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/release/v${{ inputs.version }}/phonecando-${{ inputs.version }}-full-arm64.apk
+            dist/release/v${{ inputs.version }}/phonecando-${{ inputs.version }}-lite-arm64.apk
 
       # The staged APKs carry only the debug key, and anyone signed in to
       # GitHub can download a public repo's artifacts: once signed and
