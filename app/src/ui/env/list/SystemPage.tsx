@@ -7,9 +7,9 @@ import Screen from '../../common/Screen';
 import { buildEnvSections } from '../logic/sections';
 import { systemFacts } from '../logic/systemFacts';
 import { envTitle } from '../logic/titles';
+import FactTable from '../parts/FactTable';
 import Note from '../parts/Note';
 import EnvSection from './EnvSection';
-import SystemFacts from './SystemFacts';
 import SystemMark from './SystemMark';
 
 const KICKER = { default: 'system · in the app', registry: 'system · downloaded', android: 'system · no linux' } as const;
@@ -18,7 +18,8 @@ const KICKER = { default: 'system · in the app', registry: 'system · downloade
 const LOGO = 48;
 
 // One system (env): its logo by its name, what it is (logic/systemFacts.ts),
-// its download, the agents on it and Delete (EnvSection). envId null: the machines whose env
+// its download, the agents on it (each machine's line opens its page) and
+// Delete (EnvSection). envId null: the machines whose env
 // or image we cannot find, so they can still be opened and deleted.
 export default function SystemPage({ envId }: { envId: string | null }) {
   const envs = useLinuxStore((s) => s.envs);
@@ -33,6 +34,7 @@ export default function SystemPage({ envId }: { envId: string | null }) {
   );
   const env = section?.env ?? null;
   const openAgent = (agentId: string) => push({ name: 'agent', agentId });
+  const openMachine = (imageId: string) => push({ name: 'machine', imageId });
 
   if (!section) {
     return (
@@ -51,11 +53,18 @@ export default function SystemPage({ envId }: { envId: string | null }) {
         trailing={<SystemMark env={env} size={LOGO} />}
       />
       {env ? (
-        <SystemFacts facts={systemFacts(env, Date.now())} />
+        <FactTable title="Details" barcode="systemDetails" facts={systemFacts(env, Date.now())} />
       ) : (
         <Note>Their system or their machine is missing. Open one to delete it.</Note>
       )}
-      <EnvSection env={env} rows={section.rows} linuxAvailable={linuxAvailable} onOpenAgent={openAgent} onDeleted={back} />
+      <EnvSection
+        env={env}
+        rows={section.rows}
+        linuxAvailable={linuxAvailable}
+        onOpenAgent={openAgent}
+        onOpenMachine={openMachine}
+        onDeleted={back}
+      />
     </Screen>
   );
 }

@@ -111,12 +111,16 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('reset alone', w.resetMessage('alpine:3.22', ['opencode']), "System files go back to the alpine:3.22 base. Your projects, chats and keys stay. Anything you installed goes; we'll offer to install it again. The agent stops first.");
   t('reset shared', w.resetMessage('alpine:3.22', ['opencode', 'Gemini CLI']), "System files go back to the alpine:3.22 base. opencode and Gemini CLI share it, so both stop first. Your projects, chats and keys stay. Tools either agent installed go away; we'll offer to install them again.");
   t('reset shared by three', w.resetMessage('alpine:3.22', ['a', 'b', 'c']), "System files go back to the alpine:3.22 base. a, b and c share it, so they all stop first. Your projects, chats and keys stay. Tools any of them installed go away; we'll offer to install them again.");
-  t('machine agents title', w.machineAgentsTitle(3), 'On this machine · 3 agents');
+  t('agents on it', w.agentsOnItTitle(3), '3 agents on it');
+  t('agents on it, one', w.agentsOnItTitle(1), '1 agent on it');
+  t('agents on it, none', w.agentsOnItTitle(0), 'No agents on it');
   t('update alone', w.updateStopsLine([]), 'An update stops the agent first and starts it again when done.');
   t('update stops another', w.updateStopsLine(['Gemini CLI']), 'An update stops the agent first, and Gemini CLI too, since it uses the same files; they start again when done.');
   t('shared log', w.sharedLogLine(['opencode']), 'opencode shares this machine, so this may be the log of its install.');
-  t('shared machine line', w.sharedMachineLine('1.2 GB'), 'Shared machine · 1.2 GB');
-  t('shared machine line with its room', w.sharedMachineLine('1.2 GB', 'room 1'), 'Shared machine · room 1 · 1.2 GB');
+  t('shared machine line', w.machineLine(2, null, '1.2 GB'), 'Shared machine · 1.2 GB');
+  t('shared machine line with its room', w.machineLine(3, 'room 1', '1.2 GB'), 'Shared machine · room 1 · 1.2 GB');
+  t('one agent\'s machine line', w.machineLine(1, 'room 2', null), 'Machine · room 2');
+  t('unused machine line', w.machineLine(0, null, '900 MB'), 'Unused machine · 900 MB');
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

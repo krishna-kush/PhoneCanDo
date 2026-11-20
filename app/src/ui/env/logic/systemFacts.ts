@@ -1,10 +1,9 @@
 // What a system's page says about it, one fact per row. Pure (zero RN
 // imports): scripts/vectors/test_env_flows.js checks it.
 import type { Env } from '../../../engine/linux/types';
+import type { Fact } from './fact.ts';
 import { formatAgo, formatBytes } from './format.ts';
 import { osName } from './titles.ts';
-
-export type Fact = { label: string; value: string };
 
 type EnvLike = Pick<Env, 'source' | 'state' | 'os' | 'sizeBytes' | 'createdAt'>;
 

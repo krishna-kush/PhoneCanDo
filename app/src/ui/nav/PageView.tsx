@@ -11,8 +11,8 @@ function PageView({ route }: { route: Route }) {
       return <Pages.AgentPage agentId={route.agentId} fresh={route.fresh === true} />;
     case 'agent-model':
       return <Pages.AgentModelPage agentId={route.agentId} />;
-    case 'agent-machine':
-      return <Pages.AgentMachinePage agentId={route.agentId} />;
+    case 'machine':
+      return <Pages.MachinePage imageId={route.imageId} agentId={route.agentId} />;
     case 'agent-install':
       return <Pages.AgentInstallPage agentId={route.agentId} />;
     case 'agent-install-log':

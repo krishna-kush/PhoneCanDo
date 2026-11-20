@@ -31,10 +31,13 @@ export function machineDetail(
   missingTools: number,
   /** Every agent on the machine, this one included. */
   agentsOnMachine: number,
+  /** A reset left a reinstall to do: this agent, or what was installed by hand (the Machine page offers it). */
+  reinstall = false,
 ): RowDetail {
   if (!image) return { text: 'missing', alert: true };
   if (image.state === 'failed') return { text: 'setup stopped', alert: true };
   if (image.state !== 'ready') return { text: image.state === 'creating' ? 'setting up' : image.state, alert: false };
+  if (reinstall) return { text: 'reinstall after reset', alert: true };
   if (missingTools > 0) return { text: missingTools === 1 ? '1 tool missing' : `${missingTools} tools missing`, alert: true };
   const size = image.sizeBytes > 0 ? formatBytes(image.sizeBytes) : null;
   const shared = agentsOnMachine > 1 ? `${agentsOnMachine} agents` : null;

@@ -16,6 +16,7 @@ export const BARCODE_LINES = {
   checksAcp: 'ROLL CALL',
   checksApp: 'CHECK CHECK',
   machineAgents: 'SHARE NICELY',
+  machineInspection: 'CHECKS OUT',
   mascotStage: 'STRIKE A POSE',
   newAgentModel: 'PICK A BRAIN',
 
@@ -145,6 +146,8 @@ export const BARCODE_LINES = {
   deckCheckNow: 'POP QUIZ',
   deckKindGone: 'GONE FISHING',
   deckDanger: 'NO TAKEBACKS',
+  deckMachine: 'POP THE HOOD',
+  deckMachineDanger: 'FACTORY RESET',
 
   // What an agent asks you (slip/SlipDialog)
   slipPermission: 'MAY I PLEASE',

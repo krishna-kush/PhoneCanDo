@@ -9,8 +9,8 @@ type Props = {
 };
 
 // What a system's plate holds: its OS's Docker Hub logo, else the root's
-// slash, never its letter. The plate is the caller's. Used by an agent's
-// Machine page and New agent's Where does it run?.
+// slash, never its letter. The plate is the caller's. Used by New agent's
+// Where does it run?.
 export default function SystemLogo({ keys, size }: Props) {
   return <OsLogo uri={useSystemLogo(keys)} size={size} />;
 }

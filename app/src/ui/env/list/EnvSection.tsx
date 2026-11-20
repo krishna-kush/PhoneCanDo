@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 import type { Agent } from '../../../engine/agents/records';
 import { cancelJob } from '../../../engine/linux/native';
-import type { Env, Image } from '../../../engine/linux/types';
+import type { Env, Image, ImageId } from '../../../engine/linux/types';
 import { retryOwnEnv } from '../../../state/flows/createOwnEnv';
 import { useOwnEnvRun } from '../../../state/flows/ownEnvRuns';
 import { removeEnv } from '../../../state/flows/rowActions';
@@ -17,6 +17,7 @@ import { useSlidInList } from '../../nav/slidIn';
 import { linuxFailureText, recordErrorText } from '../logic/errorText';
 import { formatBytes } from '../logic/format';
 import { agentCountOf, type EnvRow } from '../logic/sections';
+import { agentsOnItTitle } from '../logic/sharedMachineText';
 import { isPaused } from '../logic/titles';
 import { useNewAgent } from '../new-agent/useNewAgent';
 import Note from '../parts/Note';
@@ -33,6 +34,7 @@ type Props = {
   /** False on play and in builds without Linux: no new Linux machines. */
   linuxAvailable: boolean;
   onOpenAgent: (agentId: string) => void;
+  onOpenMachine: (imageId: ImageId) => void;
   /** The env was deleted: its page closes. */
   onDeleted: () => void;
 };
@@ -52,10 +54,10 @@ function deleteMessage(env: Env): string {
 
 // One system's page body: its download (its parcel run and Pause; paused,
 // Resume; or why it stopped and Retry), the agents on it (each machine a row of one group,
-// with every agent that shares it, and New agent here, on a machine of its
-// own, as the last row), then Delete system, offered only once no machine
-// comes from it.
-export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onDeleted }: Props) {
+// its line opening the machine's page, over every agent on it, and New
+// agent here, on a machine of its own, as the last row), then Delete
+// system, offered only once no machine comes from it.
+export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onOpenMachine, onDeleted }: Props) {
   const progress = useTargetProgress(env ? { kind: 'env', id: env.id } : null);
   const [busy, setBusy] = useState<'retry' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -126,10 +128,10 @@ export default function EnvSection({ env, rows, linuxAvailable, onOpenAgent, onD
       {error ? <Note tone="error">{error}</Note> : null}
       {newAgentHere.error ? <Note tone="error">{newAgentHere.error}</Note> : null}
 
-      <RowGroup title={agents === 1 ? '1 agent on it' : `${agents} agents on it`} barcode="systemAgents">
+      <RowGroup title={agentsOnItTitle(agents)} barcode="systemAgents">
         {shown.map((r) => (
           <RowFrame key={r.key} bare>
-            <MachineRow image={r.image} agents={r.agents} onOpen={onOpenAgent} />
+            <MachineRow image={r.image} agents={r.agents} onOpen={onOpenAgent} onOpenMachine={onOpenMachine} />
           </RowFrame>
         ))}
         {makingFirst && rows.length === 0 ? (

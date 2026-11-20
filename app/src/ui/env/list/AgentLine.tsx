@@ -16,30 +16,25 @@ type Props = {
   agent: Agent;
   /** Its machine's record is gone. */
   missing: boolean;
-  /** Its machine's size, on the machine's only agent; null on a shared machine (its line has it). */
-  size: string | null;
-  /** Null: the line is the page's own agent, shown but not opened. */
+  /** Null: the line is the agent its page was opened from, shown but not opened. */
   onOpen: ((agentId: string) => void) | null;
-  /** Before its engine's word (its kind's name, on a machine's page). */
+  /** Before its engine's word (its kind's name, on a model's Used by). */
   label?: string;
-  /** A running engine's activity (Working or Idle instead of Running); null or absent: not known. */
+  /** A running engine's activity (Working or Idle instead of Running, on a machine's page); null or absent: not known. */
   idle?: boolean | null;
-  /** After its engine's word (its unread messages, on a machine's page); empty or absent: nothing. */
-  extra?: string;
-  /** Under its line, inside the tap (its machine's setup state). */
-  children?: ReactNode;
 };
 
-// One agent in a list, as its machine's row or one of a shared machine's
-// agents (Systems, an agent's Machine page): its face, name and engine's
-// word. A tap opens its page (a spinner for the › until it is in). It sits
-// in a RowGroup, at the group's gutter. Its desk leads the line under its
-// name ("desk 1b · running"): agents sharing a machine share its room.
-export default function AgentLine({ agent, missing, size, onOpen, label, idle = null, extra, children }: Props) {
+// One agent in a list, under its machine's line (MachineRow, on a system's
+// page and a machine's page) or a model's Used by: its face, name and
+// engine's word. A tap opens its page (a spinner for the › until it is
+// in). It sits in a RowGroup, at the group's gutter. Its desk leads the
+// line under its name ("desk 1b · running"): agents sharing a machine
+// share its room.
+export default function AgentLine({ agent, missing, onOpen, label, idle = null }: Props) {
   const status = useAgentsStore((s) => s.statuses[agent.id]);
   const desk = useDesk(agent.id);
   const state = missing ? 'Its machine is missing' : activityWord(status?.state, idle);
-  const sub = [desk, label, state, extra, size, onOpen ? null : 'this agent'].filter(Boolean).join(' · ');
+  const sub = [desk, label, state, onOpen ? null : 'this agent'].filter(Boolean).join(' · ');
   const open = useOpening(onOpen ? () => onOpen(agent.id) : undefined);
   return (
     <YStack
@@ -63,7 +58,6 @@ export default function AgentLine({ agent, missing, size, onOpen, label, idle = 
           ) : null
         }
       />
-      {children}
     </YStack>
   );
 }

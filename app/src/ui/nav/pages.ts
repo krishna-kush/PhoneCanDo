@@ -10,9 +10,6 @@ export const Pages = {
   get AgentInstallPage(): typeof import('../env/agent/AgentInstallPage').default {
     return require('../env/agent/AgentInstallPage').default;
   },
-  get AgentMachinePage(): typeof import('../env/agent/AgentMachinePage').default {
-    return require('../env/agent/AgentMachinePage').default;
-  },
   get AgentModelPage(): typeof import('../env/agent/AgentModelPage').default {
     return require('../env/agent/AgentModelPage').default;
   },
@@ -24,6 +21,9 @@ export const Pages = {
   },
   get AgentPage(): typeof import('../env/agent/AgentPage').default {
     return require('../env/agent/AgentPage').default;
+  },
+  get MachinePage(): typeof import('../env/machine/MachinePage').default {
+    return require('../env/machine/MachinePage').default;
   },
   get CustomAgentForm(): typeof import('../env/custom-agents/CustomAgentForm').default {
     return require('../env/custom-agents/CustomAgentForm').default;

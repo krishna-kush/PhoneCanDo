@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { agentKind } from '../../../engine/agents/registry';
 import { errorMessage } from '../../../engine/errors/message';
 import { useAppStore } from '../../../state/app';
-import { useInstallRun } from '../../../state/flows/installRuns';
+import { useAgentReinstallOffered, useInstallRun } from '../../../state/flows/installRuns';
 import { renameAgentTo } from '../../../state/flows/renameAgent';
 import { useModelsStore } from '../../../state/models';
 import AppButton from '../../common/AppButton';
@@ -12,6 +12,8 @@ import RowGroup from '../../common/rows/RowGroup';
 import Screen from '../../common/Screen';
 import AgentMessageRows from '../../messages/AgentMessageRows';
 import { envTitle } from '../logic/titles';
+import { usePendingReinstall } from '../machine/reset/usePendingReinstall';
+import { useMissingTools } from '../machine/useMissingTools';
 import ImageStatus from '../parts/ImageStatus';
 import InstallStatus from '../parts/InstallStatus';
 import Note from '../parts/Note';
@@ -27,16 +29,16 @@ import KeepRunningRow from './KeepRunningRow';
 import MascotRow from './mascot/MascotRow';
 import { useAgentRecords } from './useAgentRecords';
 import { useMachineMates } from './useMachineMates';
-import { useMissingTools } from './useMissingTools';
 
 // One agent: its face and name (Rename), its engine and the ways in, then
 // its settings as a group of rows that open their own pages (Mascot, Model
 // for a kind that can use one, Machine, Install for a kind with one, What
 // it can do: what we have seen it do), Keep running and, for a kind with
 // a background (ACP) mode, Allow everything, both switches, its
-// Messages and Schedules groups, then the Danger zone (Reset, Delete).
-// What needs a look now shows here too: a machine still setting up, an
-// install running or stopped, tools the machine lacks (on the Machine row).
+// Messages and Schedules groups, then the Danger zone (Delete; Reset is on
+// the Machine page). What needs a look now shows here too: a machine still
+// setting up, an install running or stopped, tools the machine lacks or a
+// reinstall a reset left to do (on the Machine row).
 export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: boolean }) {
   const push = useAppStore((s) => s.push);
   const { agent, image, env, linux } = useAgentRecords(agentId);
@@ -46,14 +48,17 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
   const [renameError, setRenameError] = useState<string | null>(null);
-  const tools = useMissingTools(agent, image, linux);
+  const tools = useMissingTools(agent ? [agent] : [], image, linux);
   const mates = useMachineMates(agent);
+  const agentReinstall = useAgentReinstallOffered(agentId);
+  const [packagesOffer] = usePendingReinstall(linux && image?.state === 'ready' ? image.id : null);
 
   if (!agent) return <AgentGone />;
 
   const kind = agentKind(agent.kind);
   const place = env ? envTitle(env.source) : linux ? 'Linux machine' : "Android's own shell";
-  const machine = machineDetail(image, env, tools?.missingTools.length ?? 0, mates.length + 1);
+  const reinstall = agentReinstall || packagesOffer != null;
+  const machine = machineDetail(image, env, tools?.missingTools.length ?? 0, mates.length + 1, reinstall);
   const install = installDetail(agent, run);
   const installBusy = kind.hasInstall && (agent.needsInstall || (run != null && run.status !== 'done'));
 
@@ -95,7 +100,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
         {hasModelSetting(agent, device.supported) ? (
           <LinkRow label="Model" {...rowProps(modelDetail(agent, models))} onPress={() => push({ name: 'agent-model', agentId })} />
         ) : null}
-        <LinkRow label="Machine" {...rowProps(machine)} onPress={() => push({ name: 'agent-machine', agentId })} />
+        <LinkRow label="Machine" {...rowProps(machine)} onPress={() => push({ name: 'machine', imageId: agent.imageId, agentId })} />
         {kind.hasInstall ? (
           <LinkRow label="Install" {...rowProps(install)} onPress={() => push({ name: 'agent-install', agentId })} />
         ) : null}
@@ -106,7 +111,7 @@ export default function AgentPage({ agentId, fresh }: { agentId: string; fresh: 
       <AgentMessageRows agent={agent} />
       <AgentScheduleRows agent={agent} />
 
-      <DangerSection agent={agent} image={image} env={env} linux={linux} />
+      <DangerSection agent={agent} image={image} />
       <PromptDialog
         open={renaming}
         onClose={() => setRenaming(false)}

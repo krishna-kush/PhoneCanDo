@@ -2,7 +2,7 @@
 // RN imports): the page stack (stack.ts) and the vectors read it. Home
 // itself is no route: it is always there, under the stack.
 import type { AgentId } from '../../engine/agents/records';
-import type { EnvId } from '../../engine/linux/types';
+import type { EnvId, ImageId } from '../../engine/linux/types';
 import type { AgentPick } from '../flows/logic/modelStep';
 
 /** A tag the user picked, with what the picker knew about it. */
@@ -33,8 +33,12 @@ export type Route =
   | { name: 'agent'; agentId: AgentId; fresh?: boolean }
   /** The agent's local model. */
   | { name: 'agent-model'; agentId: AgentId }
-  /** The agent's machine: its env, OS, size and missing tools. */
-  | { name: 'agent-machine'; agentId: AgentId }
+  /**
+   * A machine: its details, what is inside, the tools its agents need, its agents, Controls and Reset (or
+   * an unused one's Delete). Opened from an agent's page (`agentId`: that agent, marked on it and whose
+   * terminal, install log and reinstall it shows) or from its system's page.
+   */
+  | { name: 'machine'; imageId: ImageId; agentId?: AgentId }
   /** The agent's install inside its machine (a kind with one). */
   | { name: 'agent-install'; agentId: AgentId }
   /** The end of the agent's last install or update log, read back from its machine. */

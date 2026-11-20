@@ -1,12 +1,12 @@
-import type { Agent } from '../../../engine/agents/records';
-import type { ReinstallList } from '../../../engine/linux/types';
-import { useAppStore } from '../../../state/app';
-import { installAgent } from '../../../state/flows/installAgent';
-import { forgetAgentReinstall } from '../../../state/flows/installRuns';
-import { forgetReinstall } from '../../../state/flows/resetAgentImage';
-import ActionDeck from '../../common/actions/ActionDeck';
-import { agentReinstallLine, reinstallLine } from '../logic/hints';
-import Note from '../parts/Note';
+import type { Agent } from '../../../../engine/agents/records';
+import type { ReinstallList } from '../../../../engine/linux/types';
+import { useAppStore } from '../../../../state/app';
+import { installAgent } from '../../../../state/flows/installAgent';
+import { forgetAgentReinstall } from '../../../../state/flows/installRuns';
+import { forgetReinstall } from '../../../../state/flows/resetAgentImage';
+import ActionDeck from '../../../common/actions/ActionDeck';
+import { agentReinstallLine, reinstallLine } from '../../logic/hints';
+import Note from '../../parts/Note';
 
 type Props = {
   agent: Agent;
@@ -43,6 +43,7 @@ export default function ReinstallOffer({ agent, imageId, offer, agentReinstall, 
           agentReinstall && {
             label: `Reinstall ${agent.name}`,
             role: 'go',
+            mark: 'play',
             onPress: () => {
               forgetAgentReinstall(agent.id);
               void installAgent(agent.id);

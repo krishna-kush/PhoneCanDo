@@ -101,7 +101,12 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   its background run and the app-wide permission dialog (`chat/background/`).
   `env/` holds the agent pages (`agent/`; What it can do, each
   capability checked or not and Check now, is `agent/checks/`, pure copy
-  in `agent/checks/logic/`), New agent (`new-agent/`;
+  in `agent/checks/logic/`), a machine's page, the only place its
+  details show, opened from an agent or its system (`machine/`: its
+  Controls, its agents as Systems lists them, its inspection tag (what it
+  is, its space and its tools at a glance) in `inspection/`, Reset in
+  `reset/` and an unused machine's Delete in `delete/`; pure parts in
+  `machine/logic/`), New agent (`new-agent/`;
   `new-env/` downloads a Linux), Systems (`list/`) and Custom agents
   (`custom-agents/`); pure parts in `env/logic/`. `setup/` is first
   launch (the first agent and its machine), once ever (prefs `setUp`):

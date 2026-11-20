@@ -1,24 +1,26 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import type { Agent } from '../../../../engine/agents/records';
-import type { Env, Image, ReinstallList } from '../../../../engine/linux/types';
+import type { Env, Image } from '../../../../engine/linux/types';
 import { useAgentReinstallOffered } from '../../../../state/flows/installRuns';
-import { pendingReinstall, resetAgentImage } from '../../../../state/flows/resetAgentImage';
+import { resetAgentImage } from '../../../../state/flows/resetAgentImage';
 import type { DeckAction } from '../../../common/actions/types';
 import ConfirmDialog from '../../../common/ConfirmDialog';
+import { useMachineMates } from '../../agent/useMachineMates';
 import { linuxFailureText, recordErrorText } from '../../logic/errorText';
 import { resetMessage } from '../../logic/sharedMachineText';
 import { envTitle } from '../../logic/titles';
 import Note from '../../parts/Note';
-import ReinstallOffer from '../ReinstallOffer';
-import { useMachineMates } from '../useMachineMates';
+import ReinstallOffer from './ReinstallOffer';
+import { usePendingReinstall } from './usePendingReinstall';
 
 type Target = { image: Image; env: Env };
 
-// Reset: system files back to the env's base, home kept, every agent on
-// the machine stopped first (the confirm names them when it is shared).
-// Afterwards (or when an earlier reset left one) the reinstall offer: the
-// agent itself (a kind with an install; each agent on the machine gets its
-// own on its page) and what was installed by hand.
+// Reset, on the machine page: system files back to the env's base, home
+// kept, every agent on the machine stopped first (the confirm names them
+// when it is shared). Afterwards (or when an earlier reset left one) the
+// reinstall offer: the agent the page was opened from, or the oldest on
+// it (a kind with an install; each agent on the machine gets its own, its
+// agent page's Machine row pointing here) and what was installed by hand.
 // Its key goes in the danger deck; `below` is what shows under the deck.
 // No target (an Android agent, or its env gone): no key.
 export function useResetKey(agent: Agent, target: Target | null): { action: DeckAction | null; below: ReactNode } {
@@ -27,15 +29,10 @@ export function useResetKey(agent: Agent, target: Target | null): { action: Deck
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [offer, setOffer] = useState<ReinstallList | null>(null);
   const agentReinstall = useAgentReinstallOffered(agent.id);
-
-  const imageId = target?.image.id;
   const ready = target?.image.state === 'ready';
-  // An offer a reset left while this page was closed.
-  useEffect(() => {
-    if (imageId && ready) setOffer(pendingReinstall(imageId));
-  }, [imageId, ready]);
+  // Also an offer a reset left while this page was closed.
+  const [offer, setOffer] = usePendingReinstall(ready && target ? target.image.id : null);
 
   if (!target) return { action: null, below: null };
 

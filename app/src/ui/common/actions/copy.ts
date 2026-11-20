@@ -6,5 +6,5 @@ export const DECK_TITLE = 'Controls';
 /** Over the keys that can't be undone. */
 export const DANGER_ZONE = "Can't be undone";
 
-/** The strip of a page's box of only such keys (an agent's Reset and Delete). */
+/** The strip of a page's box of only such keys (an agent's Delete, a machine's Reset). */
 export const DANGER_DECK_TITLE = 'Danger zone';

@@ -1,7 +1,7 @@
 // What the pages say about a machine several agents share: New agent's
-// place step and its Share confirm, the agent's Delete and Reset confirms,
-// its Machine and Install pages, and the Systems list. Pure (zero RN
-// imports). Names come oldest agent first.
+// place step and its Share confirm, the agent's Delete confirm, its
+// Machine page and Reset confirm there, its Install page, and the agents on
+// a machine as a system's page and a machine's page list them. Pure (zero RN imports). Names come oldest agent first.
 import { nameList } from '../../memory/logic/memoryCopy.ts';
 
 /** The place step's note over the choices; `canShare` when there are machines to share. */
@@ -57,12 +57,13 @@ export function resetMessage(system: string, names: readonly string[]): string {
   return `${base} ${nameList(names)} share it, ${stop}. Your projects, chats and keys stay. Tools ${who} installed go away; we'll offer to install them again.`;
 }
 
-/** On an agent's Machine page: the title over every agent on a machine agents share. */
-export function machineAgentsTitle(count: number): string {
-  return `On this machine · ${count} agents`;
+/** The title over the agents on a system's machines, or on one machine: "2 agents on it". */
+export function agentsOnItTitle(count: number): string {
+  if (count === 0) return 'No agents on it';
+  return `${count} ${count === 1 ? 'agent' : 'agents'} on it`;
 }
 
-/** Under that list: what they share and what each keeps. */
+/** Under a shared machine's agents on its page: what they share and what each keeps. */
 export const SHARED_MACHINE_NOTE =
   'They share its projects, installed tools and settings. Each keeps its own sign-in and chats, and its instructions name the others here.';
 
@@ -80,7 +81,8 @@ export function sharedLogLine(others: readonly string[]): string {
     : `${nameList(others)} share this machine, so this may be the log of one of their installs.`;
 }
 
-/** The Systems list's line over a machine agents share: "Shared machine · room 1 · 1.2 GB". */
-export function sharedMachineLine(size: string | null, room: string | null = null): string {
-  return ['Shared machine', room, size].filter(Boolean).join(' · ');
+/** The line over a machine's agents, as it heads them in a list: "Shared machine · room 1 · 1.2 GB". */
+export function machineLine(agents: number, room: string | null, size: string | null): string {
+  const what = agents > 1 ? 'Shared machine' : agents === 0 ? 'Unused machine' : 'Machine';
+  return [what, room, size].filter(Boolean).join(' · ');
 }
