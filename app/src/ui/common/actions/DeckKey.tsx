@@ -10,7 +10,8 @@ import type { DeckRole } from './logic/deal';
 import type { DeckAction } from './types';
 
 // One key of a deck (ActionDeck): the main one red and tall with its
-// glyph in a little window, the others outlined on the page's colour, Cancel's
+// mark in a little window (none for a key that names none, while it
+// isn't busy), the others outlined on the page's colour, Cancel's
 // border dashed, Delete's edged in hazard tape. Keys with a hard amber
 // shadow sink into it as pressed, like AppButton's: by the shadow's own
 // pixels (a bare number here would be a space token, many times more).
@@ -58,7 +59,7 @@ export default function DeckKey({ action, flex }: { action: DeckAction; flex?: n
               </YStack>
             </>
           ) : null}
-          {role === 'go' ? (
+          {role === 'go' && (action.mark !== null || action.loading) ? (
             <YStack
               width={26}
               height={26}
@@ -67,7 +68,7 @@ export default function DeckKey({ action, flex }: { action: DeckAction; flex?: n
               borderWidth={1}
               borderColor={filled ? 'onPrimary' : 'lineStrong'}
             >
-              {action.loading ? <LogoLoader size={9} /> : <KeyGlyph role="go" color={t.onPrimary} size={11} />}
+              {action.loading ? <LogoLoader size={9} /> : <KeyGlyph role="go" mark={action.mark} color={t.onPrimary} size={11} />}
             </YStack>
           ) : null}
           <XStack flex={1} alignItems="center" gap="2" justifyContent={role === 'go' ? 'flex-start' : 'center'}>

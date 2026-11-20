@@ -42,7 +42,7 @@ export default function PromptDialog({
       />
       <DeckKeys
         actions={[
-          { label: confirmLabel, role: 'go', onPress: onConfirm },
+          { label: confirmLabel, role: 'go', mark: 'save', onPress: onConfirm },
           { label: 'Cancel', role: 'back', onPress: onClose },
         ]}
       />

@@ -146,6 +146,7 @@ export default function ScheduleEditor({ schedule, agentId, onDone }: Props) {
             {
               label: saveLabel(schedule != null),
               role: 'go',
+              mark: 'save',
               onPress: () => void save(),
               loading: actions.busy === 'save',
               disabled: !schedule && runners.length === 0,

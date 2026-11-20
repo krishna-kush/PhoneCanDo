@@ -83,7 +83,7 @@ export default function CustomAgentList() {
       <ActionDeck
         barcode="deckCustomKinds"
         actions={[
-          { label: 'Add your own agent', role: 'go', onPress: () => push({ name: 'custom-agent', kindId: null }) },
+          { label: 'Add your own agent', role: 'go', mark: 'add', onPress: () => push({ name: 'custom-agent', kindId: null }) },
           { label: 'Import', onPress: () => push({ name: 'custom-agent-import' }) },
         ]}
       />

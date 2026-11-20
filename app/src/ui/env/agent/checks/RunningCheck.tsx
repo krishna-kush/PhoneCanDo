@@ -94,6 +94,7 @@ export default function RunningCheck({ agentId, name, run }: Props) {
           cancelLabel={NOT_NOW}
           confirmLabel={words.open}
           confirmVariant="primary"
+          confirmMark="next"
           onConfirm={() => {
             setDialog(false);
             openAgent();

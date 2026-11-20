@@ -24,7 +24,7 @@ export default function KindGoneHome({ agent }: { agent: Agent }) {
       <ActionDeck
         barcode="deckKindGone"
         actions={[
-          { label: 'Add it as a custom agent', role: 'go', onPress: () => push({ name: 'custom-agent', kindId: null }) },
+          { label: 'Add it as a custom agent', role: 'go', mark: 'add', onPress: () => push({ name: 'custom-agent', kindId: null }) },
           {
             label: 'Open terminal in its machine',
             disabled: image?.state !== 'ready',

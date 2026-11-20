@@ -102,9 +102,9 @@ export default function PullProgress({ repo, tag, envId }: { repo: string; tag: 
       <ActionDeck
         barcode="deckDownload"
         actions={[
-          paused && { label: 'Resume', role: 'go', loading: busy === 'retry', onPress: retry },
-          failed && { label: 'Retry', role: 'go', loading: busy === 'retry', onPress: retry },
-          needsAgent && { label: 'New agent here', role: 'go', loading: newAgentHere.busy, onPress: () => newAgentHere.start({ kind: 'env', envId }) },
+          paused && { label: 'Resume', role: 'go', mark: 'play', loading: busy === 'retry', onPress: retry },
+          failed && { label: 'Retry', role: 'go', mark: 'play', loading: busy === 'retry', onPress: retry },
+          needsAgent && { label: 'New agent here', role: 'go', mark: 'add', loading: newAgentHere.busy, onPress: () => newAgentHere.start({ kind: 'env', envId }) },
           env?.state === 'downloading' && progress && { label: 'Pause', onPress: () => cancelJob(progress.jobId) },
           { label: 'See this system', role: 'back', onPress: () => finishCreation({ name: 'system', envId }) },
           paused && { label: 'Delete this download', role: 'danger', loading: busy === 'delete', onPress: remove },

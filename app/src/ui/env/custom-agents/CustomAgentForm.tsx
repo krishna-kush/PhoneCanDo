@@ -59,7 +59,7 @@ export default function CustomAgentForm({ kindId, forNewAgent }: Props) {
         <ActionDeck
           barcode="deckCustomAgent"
           actions={[
-            { label: kindId ? 'Save changes' : 'Save agent', role: 'go', onPress: save },
+            { label: kindId ? 'Save changes' : 'Save agent', role: 'go', mark: 'save', onPress: save },
             { label: 'Back to the form', role: 'back', onPress: k.edit },
           ]}
         />

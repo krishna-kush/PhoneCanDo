@@ -1,6 +1,7 @@
 import { Text, XStack, YStack } from 'tamagui';
 import type { AgentId } from '../../engine/agents/records';
 import DeckKeys from './actions/DeckKeys';
+import type { KeyMark } from './actions/types';
 import AgentFace from './face/AgentFace';
 import { DESK_LOOK } from './slip/desk';
 import SlipDialog from './slip/SlipDialog';
@@ -19,6 +20,8 @@ type Props = {
   cancelLabel?: string;
   /** A delete or a restart, which can't be undone; primary for a way on that undoes nothing. */
   confirmVariant?: 'danger' | 'primary';
+  /** A calm one's act's mark (KeyGlyph): a tick, unless it starts something or opens something. */
+  confirmMark?: KeyMark;
   /** The agents it would delete: their own faces sweat by the title, in place of the front desk's. */
   agentIds?: readonly AgentId[];
   onConfirm: () => void;
@@ -40,6 +43,7 @@ export default function ConfirmDialog({
   confirmLabel = 'Delete',
   cancelLabel = 'Cancel',
   confirmVariant = 'danger',
+  confirmMark = 'save',
   agentIds = [],
   onConfirm,
 }: Props) {
@@ -70,7 +74,7 @@ export default function ConfirmDialog({
       ) : null}
       <DeckKeys
         actions={[
-          { label: confirmLabel, role: danger ? 'danger' : 'go', onPress: onConfirm },
+          { label: confirmLabel, role: danger ? 'danger' : 'go', mark: confirmMark, onPress: onConfirm },
           { label: cancelLabel, role: 'back', onPress: onClose },
         ]}
       />

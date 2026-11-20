@@ -47,7 +47,7 @@ export default function PermissionQuestion({ agentId, agentName, title, toolKind
       ) : null}
       <SlipField label={toolKindAsk(toolKind)} value={permissionStep(title)} />
       <DeckKeys
-        actions={[...options.map((o) => ({ label: o.name, role: answerRole(o, main), onPress: () => onAnswer(o.optionId) })), allowAll]}
+        actions={[...options.map((o) => ({ label: o.name, role: answerRole(o, main), mark: 'save' as const, onPress: () => onAnswer(o.optionId) })), allowAll]}
       />
     </YStack>
   );

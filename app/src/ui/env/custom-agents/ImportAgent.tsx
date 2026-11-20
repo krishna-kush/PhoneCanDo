@@ -48,7 +48,7 @@ export default function ImportAgent() {
         <ActionDeck
           barcode="deckImport"
           actions={[
-            { label: im.ready.replaces ? 'Replace agent' : 'Add agent', role: 'go', onPress: add },
+            { label: im.ready.replaces ? 'Replace agent' : 'Add agent', role: 'go', mark: im.ready.replaces ? 'save' : 'add', onPress: add },
             { label: 'Back', role: 'back', onPress: im.edit },
           ]}
         />

@@ -179,7 +179,7 @@ export default function MemorySetting({ model, onDone }: Props) {
       <ActionDeck
         barcode="deckModelMemory"
         actions={[
-          { label: 'Save', role: 'go', loading: busy, disabled: !changed || refused(plan), onPress: () => void save() },
+          { label: 'Save', role: 'go', mark: 'save', loading: busy, disabled: !changed || refused(plan), onPress: () => void save() },
           { label: error ? 'Close' : 'Cancel', role: 'back', disabled: busy, onPress: onDone },
         ]}
       />

@@ -89,7 +89,7 @@ export default function AccessibilityDialog() {
         ))}
       <DeckKeys
         actions={[
-          { label: steps.guided ? steps.copy.button : 'Open settings', role: 'go', onPress: openStep },
+          { label: steps.guided ? steps.copy.button : 'Open settings', role: 'go', mark: null, onPress: openStep },
           { label: 'Not now', role: 'back', onPress: close },
         ]}
       />

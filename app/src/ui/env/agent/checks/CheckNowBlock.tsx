@@ -59,8 +59,8 @@ export default function CheckNowBlock({ agentId, name, checks, now }: Props) {
         <ActionDeck
           barcode="deckCheckNow"
           actions={[
-            choices.rest && { label: CHECK_REST, role: 'go', onPress: () => ask('rest') },
-            { label: choices.all, role: choices.rest ? 'more' : 'go', onPress: () => ask('all') },
+            choices.rest && { label: CHECK_REST, role: 'go', mark: 'play', onPress: () => ask('rest') },
+            { label: choices.all, role: choices.rest ? 'more' : 'go', mark: 'play', onPress: () => ask('all') },
           ]}
         />
       ) : (
@@ -87,6 +87,7 @@ export default function CheckNowBlock({ agentId, name, checks, now }: Props) {
         message={rest ? checkRestMessage(name, rest, checks.checkModel) : checkNowMessage(name, checks.parts, checks.checkModel)}
         confirmLabel={rest ? CHECK_REST : choices.all}
         confirmVariant="primary"
+        confirmMark="play"
         onConfirm={start}
       />
     </YStack>

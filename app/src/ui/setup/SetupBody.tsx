@@ -29,7 +29,7 @@ export default function SetupBody({ title, note, scene, failure }: Props) {
           <ActionDeck
             barcode="deckSetup"
             actions={[
-              { label: 'Retry', role: 'go', onPress: failure.onRetry },
+              { label: 'Retry', role: 'go', mark: 'play', onPress: failure.onRetry },
               failure.onSkip && { label: 'Continue without Linux', onPress: failure.onSkip },
             ]}
           />

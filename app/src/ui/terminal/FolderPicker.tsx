@@ -95,7 +95,7 @@ export default function FolderPicker() {
       <ActionDeck
         barcode="deckFolder"
         actions={[
-          { label: 'Open terminal UI here', role: 'go', disabled: cwd == null, onPress: () => cwd != null && openTerminalDir(cwd) },
+          { label: 'Open terminal UI here', role: 'go', mark: 'terminal', disabled: cwd == null, onPress: () => cwd != null && openTerminalDir(cwd) },
           { label: 'Cancel', role: 'back', onPress: back },
         ]}
       />

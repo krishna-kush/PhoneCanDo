@@ -89,9 +89,9 @@ export default function EngineSection({ agent, image, linux }: Props) {
       <ActionDeck
         barcode="deckEngine"
         actions={[
-          shipped && !up && { label: 'Start', role: 'go', loading: busy === 'start', disabled: !ready, onPress: start },
+          shipped && !up && { label: 'Start', role: 'go', mark: 'play', loading: busy === 'start', disabled: !ready, onPress: start },
           !shipped
-            ? { label: 'Add it as a custom agent', role: 'go', onPress: () => push({ name: 'custom-agent', kindId: null }) }
+            ? { label: 'Add it as a custom agent', role: 'go', mark: 'add', onPress: () => push({ name: 'custom-agent', kindId: null }) }
             : kind.home === 'tui'
               ? { label: `Open ${kind.label} home`, disabled: !ready, onPress: () => follow(goHome) }
               : { label: 'Open chat', disabled: !ready, onPress: () => follow(goHome) },

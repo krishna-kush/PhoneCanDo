@@ -54,7 +54,7 @@ export default function AutoOffAsk() {
       </PlainText>
       <DeckKeys
         actions={[
-          { label: ASK_YES, role: 'go', onPress: yes },
+          { label: ASK_YES, role: 'go', mark: 'save', onPress: yes },
           { label: ASK_NO, role: 'back', onPress: no },
         ]}
       />
