@@ -44,7 +44,10 @@ Check:
 - what it sends off my phone, and where to
 - what it does with Accessibility and the screen
 - hidden network calls, obfuscated code, or code it downloads and runs
-- whether the release APK is built from this source
+- whether the release APK is built from this source. The GitHub workflow
+  .github/workflows/release.yml builds and signs it, and GitHub attests each
+  APK (${site.repo}/attestations). Check the workflow, and say what the
+  attestation does and doesn't prove.
 
 Name the file for everything you flag. Don't go easy on it.`;
 
