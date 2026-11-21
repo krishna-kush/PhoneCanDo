@@ -13,6 +13,7 @@ export LC_ALL=C
 cd "$(dirname "$0")/.."
 
 PINS=build/pins.env
+COMMITS=ci/commits.env
 DRIVER=build/build.sh
 DOCS=(docs/README.md docs/build.md)
 # Must match the patch → tree mapping in upstream.sh `check`.
@@ -50,6 +51,14 @@ for key in "${REQUIRED[@]}"; do
   if [ -z "${!key:-}" ]; then row "$PINS" "\`$key\`" "missing" "**FAIL**"; fail=1; fi
 done
 if [ "$fail" -ne 0 ]; then exit "$fail"; fi
+
+# The commits the tags must name: ci/sources.sh and check.sh check each clone.
+# shellcheck source=commits.env
+. "$COMMITS"
+for key in OPENCODE_COMMIT OPENTUI_COMMIT; do
+  if [[ "${!key:-}" =~ ^[0-9a-f]{40}$ ]]; then row "$COMMITS" "\`$key\`" "\`${!key:0:12}\`" OK
+  else row "$COMMITS" "\`$key\`" "\`${!key:-(none)}\`" "**FAIL**"; fail=1; fi
+done
 
 same "OPENCODE_VERSION (tag part)" "${OPENCODE_TAG#v}" "${OPENCODE_VERSION%%-*}"
 same "agent.json version" "$OPENCODE_VERSION" "$(jq -r '.version // empty' agent.json)"

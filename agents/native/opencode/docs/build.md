@@ -51,8 +51,12 @@ By hand, the same build is:
 WORK=/path/to/v2build
 git clone --depth 1 --branch v2.0.26 \
   https://github.com/anomalyco/opencode.git "$WORK/oc-v2"
+git -C "$WORK/oc-v2" rev-parse HEAD   # must be OPENCODE_COMMIT in ci/commits.env
 ./agents/native/opencode/build/build.sh "$WORK"
 ```
+
+A tag can be moved upstream: `ci/commits.env` holds the commit each pinned
+tag named, and `ci/sources.sh` stops when a clone is not that commit.
 
 `build/build.sh` defaults `OPENCODE_WORKTREE` to `$WORK/oc-v2`, clones
 `anomalyco/opentui` at `OPENTUI_VERSION` into `$WORK/`, and writes to
