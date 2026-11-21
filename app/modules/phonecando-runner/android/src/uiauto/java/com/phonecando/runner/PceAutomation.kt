@@ -1,14 +1,15 @@
 package com.phonecando.runner
 
+import com.phonecando.runner.appaccess.AppGate
 import org.json.JSONObject
 
 // Full-only adapter seam. The bridge sees only AutomationHost in main; lite and
 // play compile this source set out, so no PCE class reaches their APK.
 interface PceAutomation {
   fun describe(): JSONObject
-  fun observe(options: JSONObject): JSONObject
-  fun act(request: JSONObject): JSONObject
-  fun pack(request: JSONObject): JSONObject
+  fun observe(options: JSONObject, gate: AppGate?): JSONObject
+  fun act(request: JSONObject, gate: AppGate?): JSONObject
+  fun pack(request: JSONObject, gate: AppGate?): JSONObject
   fun frontPackage(): String?
   fun close()
 }

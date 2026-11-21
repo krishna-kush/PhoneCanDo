@@ -1,6 +1,7 @@
 package com.phonecando.runner.bridge
 
 import com.phonecando.runner.AutomationHost
+import com.phonecando.runner.appaccess.AppGate
 import com.phonecando.runner.appaccess.FakeAppAccessStore
 import com.phonecando.runner.appaccess.HOME
 import com.phonecando.runner.appaccess.OWN
@@ -14,21 +15,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // The router's app-access gate: the app in front before the lease, the
-// app an observe or pack result names after it, "Just now" ending with
-// phone_return, no taps on PhoneCanDo's own questions, and the screen
-// line while the app question is up.
+// app a step inside the call reaches (AppGate), the app an observe or pack
+// result names after it, "Just now" ending with phone_return, no taps on
+// PhoneCanDo's own questions, and the screen line while the app question
+// is up.
 class BridgeRouterAppAccessTest {
   private class FakeHost : AutomationHost {
-    // The app in front before a call, and the one its result names.
+    // The app in front before a call, the one a step inside it reaches
+    // (a tap's expect, a pack's flow), and the one its result names.
     var front: String? = null
+    var inside: String? = null
     var shown: String? = null
     override val connected = true
 
     override fun describe() = JSONObject().put("ok", true)
-    override fun observe(options: JSONObject): JSONObject = JSONObject().put("ok", true).put("snapshotId", 7).putOpt("package", shown)
-    override fun act(request: JSONObject) = JSONObject().put("ok", true).put("snapshotId", 8)
-    override fun pack(request: JSONObject): JSONObject = JSONObject().put("ok", true).putOpt("package", shown)
+    override fun observe(options: JSONObject, gate: AppGate?): JSONObject =
+      step(gate) ?: JSONObject().put("ok", true).put("snapshotId", 7).putOpt("package", shown)
+    override fun act(request: JSONObject, gate: AppGate?) = step(gate) ?: JSONObject().put("ok", true).put("snapshotId", 8)
+    override fun pack(request: JSONObject, gate: AppGate?): JSONObject = step(gate) ?: JSONObject().put("ok", true).putOpt("package", shown)
     override fun frontPackage() = front
+
+    // As the PCE meets a refused step: an error of its own, no app named.
+    private fun step(gate: AppGate?): JSONObject? =
+      if (gate == null || gate.allows(inside)) null else JSONObject().put("ok", false).put("code", "CANCELLED").put("message", "stopped")
   }
 
   private val bank = "com.example.bank"
@@ -133,6 +142,24 @@ class BridgeRouterAppAccessTest {
     // A result that names no app passes.
     host.shown = null
     assertEquals(200, router().handle(dir.records[0], "POST", "/pce/observe", "{}").status)
+  }
+
+  @Test fun aStepInsideTheCallIsJudgedByTheAppItReaches() {
+    // The icon tapped on the home screen, the wait on what it opened.
+    host.front = HOME
+    host.inside = bank
+    for (path in listOf("/pce/observe", "/pce/act", "/pce/pack")) {
+      val reply = router().handle(dir.records[0], "POST", path, "{}")
+      assertEquals(403, reply.status)
+      assertEquals("app_not_allowed", json(reply).getString("code"))
+      assertEquals(bank, json(reply).getString("package"))
+    }
+    access.block(bank)
+    assertEquals("app_blocked", json(router().handle(dir.records[0], "POST", "/pce/act", "{}")).getString("code"))
+    // Allowed for this agent: the call goes on.
+    access.forget(bank)
+    access.grantOnce("a1", bank)
+    assertEquals(200, router().handle(dir.records[0], "POST", "/pce/act", "{}").status)
   }
 
   @Test fun noFrontPackagePassesToTheResultCheck() {

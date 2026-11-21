@@ -5,15 +5,16 @@ import com.phonecando.runner.AutomationUnavailableException
 import org.json.JSONObject
 
 // The automation routes (/pce/*, full builds only). The router has already
-// checked the switch, the service and the screen lease. The PCE adapter
-// answers {ok:true,...} / {ok:false,code,message}; we unwrap that into the
-// bridge envelope (app-level failures stay 200 + ok:false). Pure.
+// checked the switch, the service and the screen lease, and hands down the
+// call's app gate. The PCE adapter answers {ok:true,...} /
+// {ok:false,code,message}; we unwrap that into the bridge envelope
+// (app-level failures stay 200 + ok:false). Pure.
 class PceRoutes(private val automation: () -> AutomationHost?) {
   fun table(): Map<Route, RouteHandler> = mapOf(
     Route.PCE_DESCRIBE to { _ -> unwrap(host().describe()) },
-    Route.PCE_OBSERVE to { call -> unwrap(host().observe(call.body)) },
-    Route.PCE_ACT to { call -> unwrap(host().act(call.body)) },
-    Route.PCE_PACK to { call -> unwrap(host().pack(call.body)) },
+    Route.PCE_OBSERVE to { call -> unwrap(host().observe(call.body, call.gate)) },
+    Route.PCE_ACT to { call -> unwrap(host().act(call.body, call.gate)) },
+    Route.PCE_PACK to { call -> unwrap(host().pack(call.body, call.gate)) },
   )
 
   private fun host(): AutomationHost =

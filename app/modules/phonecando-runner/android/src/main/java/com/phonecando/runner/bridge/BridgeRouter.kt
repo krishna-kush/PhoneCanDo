@@ -5,6 +5,7 @@ import com.phonecando.runner.AutomationUnavailableException
 import com.phonecando.runner.agents.AgentRecord
 import com.phonecando.runner.appaccess.AppAccess
 import com.phonecando.runner.appaccess.AppAccessRules
+import com.phonecando.runner.appaccess.AppGate
 import com.phonecando.runner.appaccess.AppTargets
 import com.phonecando.runner.appaccess.AppVerdict
 import com.phonecando.runner.appaccess.OwnQuestions
@@ -14,8 +15,8 @@ import com.phonecando.runner.presence.HandsGate
 import com.phonecando.runner.presence.HandsText
 import org.json.JSONObject
 
-/** One authenticated call, as a route handler sees it. */
-data class BridgeCall(val agent: AgentRecord, val route: Route, val body: JSONObject)
+/** One authenticated call, as a route handler sees it; [gate] for the PCE's screen routes in full builds. */
+data class BridgeCall(val agent: AgentRecord, val route: Route, val body: JSONObject, val gate: AppGate? = null)
 
 typealias RouteHandler = (BridgeCall) -> Reply
 
@@ -28,8 +29,10 @@ typealias RouteHandler = (BridgeCall) -> Reply
 // app_not_allowed or app_blocked, full builds only: appaccess/; and 409
 // user_deciding for a tap or pack run on PhoneCanDo's own screen while the
 // user has a question to answer there: OwnQuestions), the screen lease
-// (409, full builds only), then the handler; an observe or pack result
-// that names an app agents may not use is dropped for that 403. A
+// (409, full builds only), then the handler, whose every look and action
+// the PCE judges again (appaccess/AppGate: the first app it refused
+// answers for the call with that 403); an observe or pack result that
+// names an app agents may not use is dropped for that 403 too. A
 // refused request never takes the lease, though it may wait in line: a
 // locked agent's screen request, or its /unlock or /app-access question,
 // while another agent has the screen gets the 409 with its place
@@ -142,9 +145,15 @@ class BridgeRouter(
     var reply: Reply? = null
     try {
       val handler = handlers[route] ?: return Reply.notFound(method, path)
-      reply = handler(BridgeCall(agent, route, json))
-      if (apps != null && (route == Route.PCE_OBSERVE || route == Route.PCE_PACK)) reply = shownApp(apps, reply, agent.id)
-      return reply
+      val gate = apps?.gate(agent.id)
+      var answer = handler(BridgeCall(agent, route, json, gate))
+      // Whatever the PCE made of a refusal inside the call (a failed step,
+      // a wait cut short), the agent hears which app and why.
+      val refusedApp = gate?.refused
+      if (apps != null && refusedApp != null) answer = appRefusal(apps, refusedApp, agent.id) ?: answer
+      if (apps != null && (route == Route.PCE_OBSERVE || route == Route.PCE_PACK)) answer = shownApp(apps, answer, agent.id)
+      reply = answer
+      return answer
     } catch (_: AutomationUnavailableException) {
       // The service disconnected between the connected check and the call:
       // the same 503 as a service that was never on, so the agent recovers

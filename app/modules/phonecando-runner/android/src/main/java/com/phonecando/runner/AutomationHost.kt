@@ -1,16 +1,19 @@
 package com.phonecando.runner
 
+import com.phonecando.runner.appaccess.AppGate
 import org.json.JSONObject
 
 // Main-source seam. The full-only implementation lives in src/uiauto; lite and
 // play compile only this interface and install nothing. Who may drive is
 // the phone-control lock's call (controllock/ControlLock), not the host's.
+// A screen call's gate judges every look and action inside it
+// (appaccess/AppGate); null: no app checks.
 interface AutomationHost {
   val connected: Boolean
   fun describe(): JSONObject
-  fun observe(options: JSONObject): JSONObject
-  fun act(request: JSONObject): JSONObject
-  fun pack(request: JSONObject): JSONObject
+  fun observe(options: JSONObject, gate: AppGate? = null): JSONObject
+  fun act(request: JSONObject, gate: AppGate? = null): JSONObject
+  fun pack(request: JSONObject, gate: AppGate? = null): JSONObject
 
   /** The package of the app in front, for the app-access gate (appaccess/); null when unknown. */
   fun frontPackage(): String? = null

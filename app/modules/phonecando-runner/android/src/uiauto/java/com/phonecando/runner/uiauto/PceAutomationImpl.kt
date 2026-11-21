@@ -19,21 +19,31 @@ import com.phonecando.pce.core.Pce
 import com.phonecando.pce.json.PceJson
 import com.phonecando.pce.pack.FlowResult
 import com.phonecando.runner.PceAutomation
+import com.phonecando.runner.appaccess.AppGate
 import com.phonecando.runner.packs.PackStore
+import com.phonecando.runner.uiauto.appgate.AppGateCall
+import com.phonecando.runner.uiauto.appgate.AppGatedBackend
 import com.phonecando.runner.uiauto.overlay.OverlayGuard
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 
 // Full-only PCE adapter. The bridge only sees PceAutomation; PCE and
 // accessibility backend classes are absent from play builds. The backend
-// keeps the driving overlay out of the agent's way (GuardedBackend).
+// judges each look and action by the bridge call's app gate, which rides
+// in the call's coroutine (AppGatedBackend), and keeps the driving overlay
+// out of the agent's way (GuardedBackend).
 @OptIn(ExperimentalPceApi::class)
 class PceAutomationImpl(
   private val service: PhoneCanDoAccessibilityService,
   overlay: OverlayGuard = OverlayGuard.NONE,
 ) : PceAutomation {
-  private val backend = GuardedBackend(A11yBackend(A11yServiceProvider { service }), overlay, service.packageName)
+  private val backend = AppGatedBackend(
+    GuardedBackend(A11yBackend(A11yServiceProvider { service }), overlay, service.packageName),
+    service::frontPackage,
+  )
   private val pce = Pce.create(backend)
   private val packs = PackStore(service, pce)
 
@@ -53,7 +63,7 @@ class PceAutomationImpl(
       .put("packs", packs.describeJson())
   }
 
-  override fun observe(options: JSONObject): JSONObject = runBlocking {
+  override fun observe(options: JSONObject, gate: AppGate?): JSONObject = runBlocking(gated(gate)) {
     val request = ObserveOptions(
       includeInvisible = options.optBoolean("includeInvisible", false),
       includeWindows = options.optBoolean("windows", true),
@@ -67,7 +77,7 @@ class PceAutomationImpl(
     }
   }
 
-  override fun act(request: JSONObject): JSONObject = runBlocking {
+  override fun act(request: JSONObject, gate: AppGate?): JSONObject = runBlocking(gated(gate)) {
     val snapshotId = request.optLong("snapshotId", 0L)
     if (snapshotId <= 0L) return@runBlocking badRequest("snapshotId is required")
     val actionElement = request.opt("action")
@@ -117,7 +127,7 @@ class PceAutomationImpl(
     }
   }
 
-  override fun pack(request: JSONObject): JSONObject {
+  override fun pack(request: JSONObject, gate: AppGate?): JSONObject {
     return when (request.optString("action")) {
       "list" -> JSONObject()
         .put("ok", true)
@@ -170,7 +180,7 @@ class PceAutomationImpl(
             params[name] = value
           }
         }
-        when (val result = runBlocking { packs.run(id, flow, params) }) {
+        when (val result = runBlocking(gated(gate)) { packs.run(id, flow, params) }) {
           is PceResult.Err -> error(result.error)
           is PceResult.Ok -> JSONObject()
             .put("ok", true)
@@ -186,6 +196,8 @@ class PceAutomationImpl(
   override fun close() {
     runCatching { runBlocking { pce.close() } }
   }
+
+  private fun gated(gate: AppGate?): CoroutineContext = gate?.let(::AppGateCall) ?: EmptyCoroutineContext
 
   private fun badRequest(message: String): JSONObject = JSONObject()
     .put("ok", false)

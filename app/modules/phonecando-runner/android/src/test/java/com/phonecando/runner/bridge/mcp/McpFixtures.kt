@@ -2,6 +2,7 @@ package com.phonecando.runner.bridge.mcp
 
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.appaccess.AppAccess
+import com.phonecando.runner.appaccess.AppGate
 import com.phonecando.runner.bridge.BridgeRouter
 import com.phonecando.runner.bridge.FakeDirectory
 import com.phonecando.runner.bridge.Reply
@@ -35,9 +36,9 @@ class FakeHost : AutomationHost {
   override fun frontPackage() = front
 
   override fun describe() = JSONObject().put("ok", true)
-  override fun observe(options: JSONObject) = JSONObject().put("ok", true).put("snapshotId", 7)
-  override fun act(request: JSONObject) = JSONObject().put("ok", true)
-  override fun pack(request: JSONObject) = JSONObject().put("ok", true)
+  override fun observe(options: JSONObject, gate: AppGate?) = JSONObject().put("ok", true).put("snapshotId", 7)
+  override fun act(request: JSONObject, gate: AppGate?) = JSONObject().put("ok", true)
+  override fun pack(request: JSONObject, gate: AppGate?) = JSONObject().put("ok", true)
 }
 
 class McpRig(full: Boolean = true, appAccess: AppAccess? = null) {

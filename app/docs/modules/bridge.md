@@ -25,7 +25,8 @@ loopback-only, runs in the app process beside the engines
   in front (403 `app_not_allowed` or `app_blocked`, and 409
   `user_deciding` for a tap or pack run on PhoneCanDo's own question;
   full builds only, App access below), the screen lease (409
-  `control_busy` or `screen_refused`, full builds only), then the handler.
+  `control_busy` or `screen_refused`, full builds only), then the handler
+  (whose every look and action the PCE judges by app again, App access below).
   A refused request never takes the lease, though it may wait in line
   (Screen lease below). `Routes.kt` lists every route with its guards.
 - Endpoints: `ping/battery/notify/share/open/clipboard/app/unlock/accessibility`
@@ -139,6 +140,15 @@ all), Allow all, Always, the agent's own Just now, else ask.
   returns, the result's top-level `package` is checked the same way and a
   result for an app agents may not use is dropped for the refusal (a tap
   moved the screen into it).
+- Inside the call: a call goes on past the router's check (a tap on the
+  home screen's app icon, then its `expect` or a `wait` reads the app it
+  opened; a pack runs every step of its flow), so the router hands the
+  call an `AppGate` (`AppAccess.gate(agentId)`, through `AutomationHost`)
+  and the PCE's backend (`uiauto/appgate/AppGatedBackend`, the gate riding
+  in the call's coroutine) judges every look by the app it shows, a launch
+  by the app it opens and every other action by the app in front. A
+  refused one never runs and ends the call; the router answers with the
+  first app the gate refused, whatever error the PCE made of it.
 - With no front package (no active window and no activity seen yet) the
   gate passes: observe and pack are caught by the result check, and an act
   carries its snapshot id, so the PCE's stale check refuses one whose

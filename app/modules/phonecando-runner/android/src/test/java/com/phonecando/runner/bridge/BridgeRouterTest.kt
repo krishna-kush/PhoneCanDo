@@ -2,6 +2,7 @@ package com.phonecando.runner.bridge
 
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.AutomationUnavailableException
+import com.phonecando.runner.appaccess.AppGate
 import com.phonecando.runner.controllock.LockMode
 import com.phonecando.runner.controllock.unlockedLock
 import com.phonecando.runner.presence.HandBy
@@ -21,9 +22,9 @@ class BridgeRouterTest {
     override val connected get() = service
 
     override fun describe() = JSONObject().put("ok", true)
-    override fun observe(options: JSONObject) = JSONObject().put("ok", true).put("snapshotId", 7)
-    override fun act(request: JSONObject): JSONObject = throw AutomationUnavailableException("gone")
-    override fun pack(request: JSONObject) = JSONObject().put("ok", false).put("code", "NOT_FOUND").put("message", "no pack")
+    override fun observe(options: JSONObject, gate: AppGate?) = JSONObject().put("ok", true).put("snapshotId", 7)
+    override fun act(request: JSONObject, gate: AppGate?): JSONObject = throw AutomationUnavailableException("gone")
+    override fun pack(request: JSONObject, gate: AppGate?) = JSONObject().put("ok", false).put("code", "NOT_FOUND").put("message", "no pack")
   }
 
   private var now = 0L

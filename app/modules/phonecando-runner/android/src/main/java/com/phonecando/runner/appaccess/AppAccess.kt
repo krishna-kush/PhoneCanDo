@@ -33,6 +33,9 @@ class AppAccess(
   fun verdict(pkg: String?, agentId: String): AppVerdict =
     AppAccessRules.verdict(pkg, exempt, blocked, allowAll, always, justNow.of(agentId))
 
+  /** The check inside one screen call of [agentId] (AppGate), on the answers as they stand then. */
+  fun gate(agentId: String) = AppGate { verdict(it, agentId) == AppVerdict.ALLOWED }
+
   /** The app's name as the phone shows it, else its package. */
   fun label(pkg: String): String = labels(pkg)
 
