@@ -43,6 +43,7 @@ class PceAutomationImpl(
   private val backend = AppGatedBackend(
     GuardedBackend(A11yBackend(A11yServiceProvider { service }), overlay, service.packageName),
     service::frontPackage,
+    service::appWindowPackages,
   )
   private val pce = Pce.create(backend)
   private val packs = PackStore(service, pce)
@@ -72,7 +73,10 @@ class PceAutomationImpl(
       timeoutMs = options.optLong("timeoutMs", 5_000).coerceIn(1_000, 15_000),
     )
     when (val result = pce.observe(request)) {
-      is PceResult.Ok -> result.value.toJson()
+      // A screenshot asked for and none taken: AppGatedBackend took none of the home screen.
+      is PceResult.Ok -> result.value.toJson().apply {
+        if (request.screenshot && result.value.screenshot == null) put("screenshotWithheld", HOME_SCREENSHOT)
+      }
       is PceResult.Err -> error(result.error)
     }
   }
@@ -314,5 +318,9 @@ class PceAutomationImpl(
 
   private fun putOpt(out: JSONObject, name: String, value: String?) {
     if (!value.isNullOrEmpty()) out.put(name, value)
+  }
+
+  private companion object {
+    const val HOME_SCREENSHOT = "No screenshot of the home screen: its widgets and Recents cards show other apps. Read the nodes instead."
   }
 }

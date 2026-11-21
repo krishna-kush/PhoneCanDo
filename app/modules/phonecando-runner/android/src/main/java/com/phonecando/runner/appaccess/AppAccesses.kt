@@ -14,7 +14,7 @@ object AppAccesses {
     access ?: run {
       val app = context.applicationContext
       val phone = PhoneApps(app)
-      AppAccess(KeystoreAppAccessStore(app), phone::exempt, phone::label)
+      AppAccess(KeystoreAppAccessStore(app), phone::exempt, phone::label, phone::isHome)
     }.also { access = it }
   }
 }

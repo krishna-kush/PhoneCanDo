@@ -9,11 +9,12 @@ package com.phonecando.runner.appaccess
 // No signs it again or, with no biometric just now, turns Allow all off: a
 // No always holds. The saved answers are read once and kept here, so a
 // screen call never waits on the Keystore. Pure: the store, the apps never
-// asked about and the labels are injected.
+// asked about, the labels and the home screen are injected.
 class AppAccess(
   private val store: AppAccessStore,
   private val exempt: (String) -> Boolean,
   private val labels: (String) -> String,
+  private val home: (String) -> Boolean = { false },
 ) {
   /** One app on the Settings list. */
   data class Entry(val pkg: String, val label: String, val state: String)
@@ -34,7 +35,7 @@ class AppAccess(
     AppAccessRules.verdict(pkg, exempt, blocked, allowAll, always, justNow.of(agentId))
 
   /** The check inside one screen call of [agentId] (AppGate), on the answers as they stand then. */
-  fun gate(agentId: String) = AppGate { verdict(it, agentId) == AppVerdict.ALLOWED }
+  fun gate(agentId: String) = AppGate({ verdict(it, agentId) == AppVerdict.ALLOWED }, home)
 
   /** The app's name as the phone shows it, else its package. */
   fun label(pkg: String): String = labels(pkg)

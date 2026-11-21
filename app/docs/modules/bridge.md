@@ -149,6 +149,14 @@ all), Allow all, Always, the agent's own Just now, else ask.
   by the app it opens and every other action by the app in front. A
   refused one never runs and ends the call; the router answers with the
   first app the gate refused, whatever error the PCE made of it.
+- Screenshots (`observe` with `screenshot=true`) show the whole screen,
+  and agents can read `cache/pce-screenshots/`, so the gate decides before
+  one is taken and again on what the look shows (one taken in a race is
+  deleted at once): an app window of an app agents may not use anywhere on
+  screen (split screen, picture-in-picture) refuses the look with that
+  app; none is taken of the home screen (its widgets and Recents cards
+  show other apps), and the snapshot says `screenshotWithheld`. A
+  heads-up notification is System UI's window, so it can't be told apart.
 - With no front package (no active window and no activity seen yet) the
   gate passes: observe and pack are caught by the result check, and an act
   carries its snapshot id, so the PCE's stale check refuses one whose

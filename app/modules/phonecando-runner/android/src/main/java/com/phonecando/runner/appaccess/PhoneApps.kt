@@ -13,7 +13,9 @@ internal class PhoneApps(context: Context) {
   private val own = context.packageName
   private val pm = context.packageManager
 
-  fun exempt(pkg: String): Boolean = pkg == own || pkg == homeScreen()
+  fun exempt(pkg: String): Boolean = pkg == own || isHome(pkg)
+
+  fun isHome(pkg: String): Boolean = pkg == homeScreen()
 
   // Falls back to the package when Android hides the app from us.
   fun label(pkg: String): String = try {

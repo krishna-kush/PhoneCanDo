@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityWindowInfo
 import com.phonecando.runner.AutomationHosts
 import com.phonecando.runner.FullAutomation
 import com.phonecando.runner.PceAuto
@@ -47,6 +48,14 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
   fun frontPackage(): String? =
     runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()?.takeIf { it.isNotEmpty() }
       ?: activityPackage
+
+  // The apps with a window on screen, for a screenshot's app check (each
+  // half of a split screen, a picture-in-picture): application windows
+  // only, as the bars, the keyboard and our glass show no app's screen.
+  fun appWindowPackages(): List<String?> = runCatching {
+    windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+      .map { window -> window.root?.packageName?.toString() }
+  }.getOrDefault(emptyList())
 
   override fun onServiceConnected() {
     super.onServiceConnected()
