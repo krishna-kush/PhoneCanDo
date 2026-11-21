@@ -131,7 +131,7 @@ all), Allow all, Always, the agent's own Just now, else ask.
   by the app Android would hand its link to (`PhoneApps.linkHandler`), or
   not at all when Android can't say (its chooser, or an app hidden from
   us), when the first look inside asks. Ask: 403 `app_not_allowed` ("PhoneCanDo asks the user
-  before agents use <label>. Call phone_ask_app with package "<pkg>" …",
+  before agents use `<label>`. Call phone_ask_app with package "`<pkg>`" …",
   the package named in the message because the tools show the model only
   code and message). Blocked: 403 `app_blocked` (don't use it; hand the
   phone over if the task needs it). Both bodies add `package` and `label`
