@@ -149,14 +149,30 @@ all), Allow all, Always, the agent's own Just now, else ask.
   by the app it opens and every other action by the app in front. A
   refused one never runs and ends the call; the router answers with the
   first app the gate refused, whatever error the PCE made of it.
+- Parts of other apps inside a window (`ForeignParts`, pure): a widget or
+  an embedded hierarchy carries its own app on every node, so a part
+  starts where a node's app differs from the one above it; a notification
+  row is System UI's on every node and only its header's
+  `android:id/app_name_text` names the app, so the row belongs to every
+  app with that name (`PhoneApps.named`, the launcher apps, read at most
+  once a minute) and a group's rows take the group's name. A look leaves
+  out each part the agent may not see (a name no app has included) with
+  everything below it, and lists them in `hidden`
+  (`{package?, label, what: widget|notification}`). A tap, long press or
+  swipe that starts on a hidden part is refused: 403 `app_not_allowed` or
+  `app_blocked` for its app, or 403 `notification_hidden` (with `label`)
+  when no app can be named. The System UI question says so on the slip
+  (`reachLine`).
 - Screenshots (`observe` with `screenshot=true`) show the whole screen,
-  and agents can read `cache/pce-screenshots/`, so the gate decides before
-  one is taken and again on what the look shows (one taken in a race is
-  deleted at once): an app window of an app agents may not use anywhere on
-  screen (split screen, picture-in-picture) refuses the look with that
-  app; none is taken of the home screen (its widgets and Recents cards
-  show other apps), and the snapshot says `screenshotWithheld`. A
-  heads-up notification is System UI's window, so it can't be told apart.
+  and agents can read `cache/pce-screenshots/`, so the tree is read first
+  and a screenshot is taken only when nothing is hidden, every app window
+  on screen is one the agent may use (another refuses the look with that
+  app: split screen, picture-in-picture) and the home screen isn't in
+  front (its widgets and Recents cards show other apps); otherwise the
+  snapshot says `screenshotWithheld`. The look is judged again on the
+  screenshot's own tree, and one the screen changed under is deleted at
+  once. A heads-up notification is System UI's window, so it can't be
+  told apart.
 - With no front package (no active window and no activity seen yet) the
   gate passes: observe and pack are caught by the result check, and an act
   carries its snapshot id, so the PCE's stale check refuses one whose

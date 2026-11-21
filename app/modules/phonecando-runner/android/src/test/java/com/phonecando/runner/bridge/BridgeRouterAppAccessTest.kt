@@ -3,6 +3,7 @@ package com.phonecando.runner.bridge
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.appaccess.AppGate
 import com.phonecando.runner.appaccess.FakeAppAccessStore
+import com.phonecando.runner.appaccess.ForeignParts
 import com.phonecando.runner.appaccess.HOME
 import com.phonecando.runner.appaccess.OWN
 import com.phonecando.runner.appaccess.appAccess
@@ -26,12 +27,19 @@ class BridgeRouterAppAccessTest {
     var front: String? = null
     var inside: String? = null
     var shown: String? = null
+
+    // A tap lands on a notification whose app no app's name matches.
+    var tappedUnnamed: String? = null
     override val connected = true
 
     override fun describe() = JSONObject().put("ok", true)
     override fun observe(options: JSONObject, gate: AppGate?): JSONObject =
       step(gate) ?: JSONObject().put("ok", true).put("snapshotId", 7).putOpt("package", shown)
-    override fun act(request: JSONObject, gate: AppGate?) = step(gate) ?: JSONObject().put("ok", true).put("snapshotId", 8)
+    override fun act(request: JSONObject, gate: AppGate?): JSONObject {
+      val unnamed = tappedUnnamed?.let { ForeignParts.Part("r", ForeignParts.Kind.NOTIFICATION, emptyList(), it) }
+      if (gate != null && unnamed != null && !gate.mayTap(unnamed)) return JSONObject().put("ok", false).put("code", "CANCELLED")
+      return step(gate) ?: JSONObject().put("ok", true).put("snapshotId", 8)
+    }
     override fun pack(request: JSONObject, gate: AppGate?): JSONObject = step(gate) ?: JSONObject().put("ok", true).putOpt("package", shown)
     override fun frontPackage() = front
 
@@ -160,6 +168,15 @@ class BridgeRouterAppAccessTest {
     access.forget(bank)
     access.grantOnce("a1", bank)
     assertEquals(200, router().handle(dir.records[0], "POST", "/pce/act", "{}").status)
+  }
+
+  @Test fun aTapOnANotificationNobodyCanNameSaysSo() {
+    host.front = HOME
+    host.tappedUnnamed = "Shell"
+    val reply = router().handle(dir.records[0], "POST", "/pce/act", "{}")
+    assertEquals(403, reply.status)
+    assertEquals("notification_hidden", json(reply).getString("code"))
+    assertEquals("Shell", json(reply).getString("label"))
   }
 
   @Test fun noFrontPackagePassesToTheResultCheck() {

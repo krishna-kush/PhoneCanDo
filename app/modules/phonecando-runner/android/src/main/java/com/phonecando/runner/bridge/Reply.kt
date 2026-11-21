@@ -80,6 +80,21 @@ data class Reply(val status: Int, val body: String, val headers: Map<String, Str
       label,
     )
 
+    // A tap on a notification whose app no installed app's name matches
+    // (appaccess/ForeignParts), so nobody can be asked about it. The name is
+    // screen text: one line, cut short, in quotes.
+    fun notificationHidden(label: String): Reply {
+      val name = label.lines().first().take(40)
+      return Reply(
+        403,
+        errorBody(
+          "notification_hidden",
+          "That notification is from \"$name\", an app PhoneCanDo can't name, so agents can't use it. " +
+            "If you need it, call phone_hand_over and ask the user.",
+        ).put("label", name).toString(),
+      )
+    }
+
     /** A question waits in PhoneCanDo and it is in front (appaccess/OwnQuestions): only the user answers it. */
     fun userDeciding() = error(
       409,

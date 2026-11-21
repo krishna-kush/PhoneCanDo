@@ -8,8 +8,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // One screen call's check inside the PCE: each look and action judged
-// again, the first app refused kept for the router, and when a screenshot
-// may be taken.
+// again, the first app refused kept for the router, which parts of other
+// apps a look shows, and when a screenshot may be taken.
 class AppGateTest {
   private val bank = "com.example.bank"
   private val mail = "com.example.mail"
@@ -46,6 +46,37 @@ class AppGateTest {
     assertEquals(bank, gate.refused)
     // The app in front itself.
     assertEquals(Shot.REFUSE, access.gate("a1").shot(mail, listOf(mail)))
+  }
+
+  @Test fun aPartShowsOnlyWhenEveryAppWithItsNameIsAllowed() {
+    val gate = access.gate("a1")
+    val widget = ForeignParts.Part("3", ForeignParts.Kind.WIDGET, listOf(bank), null)
+    assertFalse(gate.mayShow(widget))
+    gate.hid(widget)
+    assertEquals(listOf(AppGate.Hidden(bank, "Name of $bank", "widget")), gate.hidden)
+    // Leaving a part out refuses nothing.
+    assertNull(gate.refused)
+    access.setAlways(notes)
+    val shared = ForeignParts.Part("r", ForeignParts.Kind.NOTIFICATION, listOf(notes, mail), "Notes")
+    assertFalse(gate.mayShow(shared))
+    access.setAlways(mail)
+    assertTrue(gate.mayShow(shared))
+    // A name no app has never shows.
+    assertFalse(gate.mayShow(ForeignParts.Part("s", ForeignParts.Kind.NOTIFICATION, emptyList(), "Shell")))
+  }
+
+  @Test fun aTapOnAHiddenPartIsRefusedByItsApp() {
+    val gate = access.gate("a1")
+    assertFalse(gate.mayTap(ForeignParts.Part("r", ForeignParts.Kind.NOTIFICATION, listOf(bank), "Bank")))
+    assertEquals(bank, gate.refused)
+    // One nobody can name: its name, for the router.
+    val other = access.gate("a1")
+    assertFalse(other.mayTap(ForeignParts.Part("s", ForeignParts.Kind.NOTIFICATION, emptyList(), "Shell")))
+    assertNull(other.refused)
+    assertEquals("Shell", other.refusedUnnamed)
+    // Allowed since: the tap goes on.
+    access.grantOnce("a1", bank)
+    assertTrue(access.gate("a1").mayTap(ForeignParts.Part("r", ForeignParts.Kind.NOTIFICATION, listOf(bank), "Bank")))
   }
 
   @Test fun noScreenshotOfTheHomeScreen() {

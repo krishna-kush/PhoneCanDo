@@ -150,7 +150,12 @@ class BridgeRouter(
       // Whatever the PCE made of a refusal inside the call (a failed step,
       // a wait cut short), the agent hears which app and why.
       val refusedApp = gate?.refused
-      if (apps != null && refusedApp != null) answer = appRefusal(apps, refusedApp, agent.id) ?: answer
+      val unnamed = gate?.refusedUnnamed
+      if (apps != null && refusedApp != null) {
+        answer = appRefusal(apps, refusedApp, agent.id) ?: answer
+      } else if (unnamed != null) {
+        answer = Reply.notificationHidden(unnamed)
+      }
       if (apps != null && (route == Route.PCE_OBSERVE || route == Route.PCE_PACK)) answer = shownApp(apps, answer, agent.id)
       reply = answer
       return answer

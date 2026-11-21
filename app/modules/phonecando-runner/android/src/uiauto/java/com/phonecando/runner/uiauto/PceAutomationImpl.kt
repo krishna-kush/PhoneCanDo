@@ -20,6 +20,7 @@ import com.phonecando.pce.json.PceJson
 import com.phonecando.pce.pack.FlowResult
 import com.phonecando.runner.PceAutomation
 import com.phonecando.runner.appaccess.AppGate
+import com.phonecando.runner.appaccess.PhoneApps
 import com.phonecando.runner.packs.PackStore
 import com.phonecando.runner.uiauto.appgate.AppGateCall
 import com.phonecando.runner.uiauto.appgate.AppGatedBackend
@@ -44,6 +45,7 @@ class PceAutomationImpl(
     GuardedBackend(A11yBackend(A11yServiceProvider { service }), overlay, service.packageName),
     service::frontPackage,
     service::appWindowPackages,
+    PhoneApps(service)::named,
   )
   private val pce = Pce.create(backend)
   private val packs = PackStore(service, pce)
@@ -73,12 +75,17 @@ class PceAutomationImpl(
       timeoutMs = options.optLong("timeoutMs", 5_000).coerceIn(1_000, 15_000),
     )
     when (val result = pce.observe(request)) {
-      // A screenshot asked for and none taken: AppGatedBackend took none of the home screen.
+      // What AppGatedBackend left out, and a screenshot asked for that it didn't take.
       is PceResult.Ok -> result.value.toJson().apply {
-        if (request.screenshot && result.value.screenshot == null) put("screenshotWithheld", HOME_SCREENSHOT)
+        gate?.hidden?.takeIf { it.isNotEmpty() }?.let { put("hidden", hiddenJson(it)) }
+        if (request.screenshot && result.value.screenshot == null) put("screenshotWithheld", WITHHELD)
       }
       is PceResult.Err -> error(result.error)
     }
+  }
+
+  private fun hiddenJson(hidden: List<AppGate.Hidden>) = JSONArray().apply {
+    hidden.forEach { put(JSONObject().putOpt("package", it.pkg).put("label", it.label).put("what", it.what)) }
   }
 
   override fun act(request: JSONObject, gate: AppGate?): JSONObject = runBlocking(gated(gate)) {
@@ -321,6 +328,7 @@ class PceAutomationImpl(
   }
 
   private companion object {
-    const val HOME_SCREENSHOT = "No screenshot of the home screen: its widgets and Recents cards show other apps. Read the nodes instead."
+    const val WITHHELD = "No screenshot: it would show apps you may not use (the home screen's widgets and Recents " +
+      "cards, or the parts listed in hidden). Read the nodes instead."
   }
 }

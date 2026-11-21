@@ -58,6 +58,12 @@ with it, and once it is allowed, observe again before you go on. "Just now"
 lasts until you call `phone_return`. `app_blocked` means the user blocked
 agents from that app: don't use it; if the task needs it, call
 `phone_hand_over` and ask them. Never reach the app another way.
+A look leaves out other apps' widgets and notifications that you may
+not use (its `hidden` list names them), and takes no screenshot of
+the home screen or of a screen with anything hidden
+(`screenshotWithheld`): read the nodes. Ask with `phone_ask_app` for
+the package a hidden item names; `notification_hidden` means its app
+can't be named, so hand the phone over if you need it.
 Passwords, OTP and 2FA codes, payments and permission screens are the
 user's: never type them. Call `phone_hand_over` with `private: true`; it
 returns at once and you can't see the screen: end your turn; we message

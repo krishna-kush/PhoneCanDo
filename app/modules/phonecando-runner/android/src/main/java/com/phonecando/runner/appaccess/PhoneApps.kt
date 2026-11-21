@@ -24,6 +24,30 @@ internal class PhoneApps(context: Context) {
     pkg
   }
 
+  // Every app whose name is [label] (an app's name is all a notification
+  // row shows of it). Read from the apps with a launcher icon, the ones
+  // Android lets us see, at most once a minute; none: no app has that name.
+  fun named(label: String): List<String> {
+    val now = System.currentTimeMillis()
+    val index = names?.takeIf { now - namesAt < NAMES_MS } ?: readNames().also {
+      names = it
+      namesAt = now
+    }
+    return index[label.trim()].orEmpty()
+  }
+
+  @Volatile private var names: Map<String, List<String>>? = null
+
+  @Volatile private var namesAt = 0L
+
+  private fun readNames(): Map<String, List<String>> = try {
+    val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    val apps = pm.queryIntentActivities(launcher, 0).map { it.activityInfo.packageName }.toSet() + own
+    apps.groupBy { label(it).trim() }
+  } catch (_: Exception) {
+    emptyMap()
+  }
+
   // The app Android would hand this link to; null when it can't say: no
   // app, its chooser (the "android" package: you pick), or an app Android
   // hides from us. Then the agent's first look inside asks instead.
@@ -43,5 +67,9 @@ internal class PhoneApps(context: Context) {
       ?.takeIf { it != "android" }
   } catch (_: Exception) {
     null
+  }
+
+  private companion object {
+    const val NAMES_MS = 60_000L
   }
 }
