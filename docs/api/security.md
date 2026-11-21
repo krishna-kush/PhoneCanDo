@@ -26,6 +26,11 @@ Current implementation notes:
   names the calling agent on every bridge request. Guest commands in a
   Linux image do not inherit it, and every agent's password and token are
   redacted from logs and crash reports.
+- A program an agent runs acts as that agent. Everything in a machine runs
+  as the app's one Android user (proot keeps work apart; it is not a
+  sandbox), so a command an image agent starts inherits its bridge token and
+  can read its keys, sign-in and files. The token works only on the phone's
+  loopback, and the phone tools still need the phone-control unlock.
 - The gate starts locked. Settings → Phone control picks how long an unlock
   lasts: once per install (kept across restarts until you lock it), each
   app launch, or each agent's ask (that agent alone, until it hands the
