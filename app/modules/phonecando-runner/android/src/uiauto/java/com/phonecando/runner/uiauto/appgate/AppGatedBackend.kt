@@ -11,6 +11,7 @@ import com.phonecando.pce.api.Point
 import com.phonecando.pce.api.RawSnapshot
 import com.phonecando.runner.appaccess.AppGate
 import com.phonecando.runner.appaccess.AppGate.Shot
+import com.phonecando.runner.screenshots.Screenshots
 import java.io.File
 import kotlinx.coroutines.currentCoroutineContext
 
@@ -23,7 +24,8 @@ import kotlinx.coroutines.currentCoroutineContext
 // starts on one is refused. A screenshot is taken only after the tree says
 // it may be (no part left out, every app window on screen allowed, not the
 // home screen) and is judged again on what it shows; one taken in a race
-// is deleted at once, as agents can read the folder it lands in. A refused
+// is deleted at once, as agents can read the folder it lands in, and every
+// one kept is the agent's for a short while only (screenshots/). A refused
 // look or action never runs and ends the call with an error the router
 // swaps for that app's refusal. A call with no gate (lite, play, the app's
 // own) passes untouched.
@@ -63,6 +65,7 @@ class AppGatedBackend(
     val shown = look(gate, raw)
     if (taken == null || (shown != null && shot(gate, shown) == Shot.TAKE)) {
       if (shown == null) return refused()
+      taken?.let { Screenshots.taken(gate.agentId, it.path) }
       return done(shown)
     }
     // The screen changed under the screenshot: it goes at once.

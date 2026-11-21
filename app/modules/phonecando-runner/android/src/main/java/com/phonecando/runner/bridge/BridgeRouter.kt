@@ -55,8 +55,9 @@ class BridgeRouter(
   private val handlers: Map<Route, RouteHandler>,
   private val onError: (String, Throwable) -> Unit = { _, _ -> },
   private val startedByAgent: (agentId: String) -> Boolean = { false },
-  // A screen request was granted: the overlay shows its driver at once.
-  private val onDrive: () -> Unit = {},
+  // A screen request was granted: the overlay shows its driver at once, and
+  // the screenshots other agents left go (screenshots/).
+  private val onDrive: (agentId: String) -> Unit = {},
   // The hand-over to you now (presence/), null when none.
   private val handOver: () -> HandOver? = { null },
   // A screen request of an agent you stopped was refused.
@@ -72,6 +73,8 @@ class BridgeRouter(
   private val questionWaiting: () -> Boolean = { false },
   // The app Android would hand a /open link to (appaccess/PhoneApps); null: unknown.
   private val linkHandler: (url: String) -> String? = { null },
+  // The agent handed the phone back (phone_return): its screenshots go.
+  private val onHandedBack: (agentId: String) -> Unit = {},
 ) {
   fun handle(agent: AgentRecord, method: String, path: String, body: String): Reply {
     val route = Route.find(method, path)
@@ -127,7 +130,7 @@ class BridgeRouter(
     // agent watching you drive observes on time that stands still.
     val ticket = if (route.screen && full && hands == null) {
       when (val claim = lease.claim(agent.id, agent.name, alive, startedByAgent(agent.id))) {
-        is ScreenLease.Granted -> claim.ticket.also { onDrive() }
+        is ScreenLease.Granted -> claim.ticket.also { onDrive(agent.id) }
         else -> return refusal(claim)
       }
     } else {
@@ -171,12 +174,13 @@ class BridgeRouter(
       // /app (phone_return) is the agent saying it is done with the phone:
       // the holder hands the screen back at once instead of making the next
       // agent wait it out, and an ask-mode unlock ends with the task, its
-      // "Just now" apps too.
+      // "Just now" apps and its screenshots too.
       val handedBack = route == Route.APP && reply?.status == 200
       if (ticket != null) lease.done(ticket, release = handedBack)
       if (handedBack && full) {
         lock.endAsk(agent.id)
         appAccess?.endJustNow(agent.id)
+        onHandedBack(agent.id)
       }
       // A yes starts its time over; a no, or no answer, passes the screen on.
       if (prompting) {

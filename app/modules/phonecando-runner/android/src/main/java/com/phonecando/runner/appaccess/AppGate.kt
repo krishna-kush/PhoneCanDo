@@ -15,6 +15,7 @@ package com.phonecando.runner.appaccess
 // refused ends the call; the router answers with its refusal. Pure: the
 // verdicts, the home screen and the names are injected.
 class AppGate(
+  val agentId: String,
   private val allowed: (pkg: String) -> Boolean,
   private val home: (pkg: String) -> Boolean,
   private val labels: (pkg: String) -> String = { it },

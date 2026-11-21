@@ -172,7 +172,11 @@ all), Allow all, Always, the agent's own Just now, else ask.
   snapshot says `screenshotWithheld`. The look is judged again on the
   screenshot's own tree, and one the screen changed under is deleted at
   once. A heads-up notification is System UI's window, so it can't be
-  told apart.
+  told apart. Every agent runs as one Android user, so each kept
+  screenshot is its agent's for a short while only (`screenshots/`,
+  `ShotBook`): its next one replaces it, and it goes when another agent
+  gets the screen, when its agent hands the phone back or stops, after
+  five minutes, and when the bridge starts or stops.
 - With no front package (no active window and no activity seen yet) the
   gate passes: observe and pack are caught by the result check, and an act
   carries its snapshot id, so the PCE's stale check refuses one whose

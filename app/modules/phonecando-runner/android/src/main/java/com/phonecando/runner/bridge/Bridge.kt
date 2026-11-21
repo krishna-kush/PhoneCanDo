@@ -25,6 +25,7 @@ import com.phonecando.runner.prompts.PermissionPrompts
 import com.phonecando.runner.schedule.PhoneTime
 import com.phonecando.runner.schedule.Schedules
 import com.phonecando.runner.schedule.SelfScheduling
+import com.phonecando.runner.screenshots.Screenshots
 
 /** A running loopback bridge: engines get [url] at launch, each with its own token. */
 interface BridgeHandle {
@@ -115,6 +116,8 @@ object Bridge {
     val lock = ControlLocks.get(app)
     val full = channel == "full"
     val appAccess = if (full) AppAccesses.get(app) else null
+    // Nothing left there from before is anyone's (screenshots/).
+    Screenshots.clear(app.cacheDir)
     val flows = PromptFlows(BridgePrompts.registry, launcher)
     val messages = Messages.get(app)
     val notifyRules = NotifyRules { SystemClock.elapsedRealtime() }
@@ -138,7 +141,10 @@ object Bridge {
       handlers = handlers,
       onError = { msg, e -> Log.w(TAG, msg, e) },
       startedByAgent = messages.mailbox.wakes::startedByAgent,
-      onDrive = Presence::publish,
+      onDrive = { agentId ->
+        Presence.publish()
+        Screenshots.screenTo(agentId)
+      },
       handOver = Presence.store::handOver,
       onPaused = Presence.store::pausedCall,
       leftStopped = Presence.store::leftStopped,
@@ -147,6 +153,7 @@ object Bridge {
       ownPackage = app.packageName,
       questionWaiting = { BridgePrompts.userDeciding() || PermissionPrompts.registry.pending().isNotEmpty() },
       linkHandler = if (full) PhoneApps(app)::linkHandler else { _ -> null },
+      onHandedBack = Screenshots::ended,
     )
     val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val ports = BridgePorts.candidates(prefs.getInt(KEY_PORT, 0))
@@ -156,7 +163,10 @@ object Bridge {
     prefs.edit().putInt(KEY_PORT, server.listeningPort).apply()
     lease = screen
     Presence.attach(app, screen) { agents.get(it) != null }
-    val ticker = ScreenTicker(screen, alive = { agents.get(it) != null }, after = Presence::tick).also { it.start() }
+    val ticker = ScreenTicker(screen, alive = { agents.get(it) != null }) {
+      Presence.tick()
+      Screenshots.sweep()
+    }.also { it.start() }
     return object : BridgeHandle {
       override val url = "http://127.0.0.1:${server.listeningPort}"
 
@@ -166,6 +176,7 @@ object Bridge {
         notifyRules.forget(agentId)
         lock.endAsk(agentId)
         appAccess?.endJustNow(agentId)
+        Screenshots.ended(agentId)
         // Out of the screen line: it holds nothing and waits for nothing.
         screen.forget(agentId)
       }
@@ -181,6 +192,7 @@ object Bridge {
         BridgePrompts.registry.cancelAll()
         lock.endAsks()
         appAccess?.endAllJustNow()
+        Screenshots.clear(app.cacheDir)
       }
     }
   }
