@@ -40,4 +40,14 @@ data class Node(
     val enabled: Boolean get() = NodeFlag.ENABLED in flags
 
     fun has(flag: NodeFlag): Boolean = flag in flags
+
+    companion object {
+        /**
+         * What a [NodeFlag.PASSWORD] node's [text] and [contentDescription]
+         * read as when the backend gave a value: the core never passes the
+         * real one on, so a filled password field shows as filled and
+         * nothing more.
+         */
+        const val HIDDEN_TEXT = "[hidden]"
+    }
 }

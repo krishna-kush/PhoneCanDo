@@ -35,6 +35,12 @@ Current implementation notes:
   screen at a time (the screen lease).
   See `../../app/docs/modules/bridge.md` for the exact 403/409/503
   behavior.
+- A password field's value never reaches an agent: the PCE core replaces
+  its text and description with `[hidden]` in every observation, whatever
+  Android handed over (`pce/core/.../SnapshotAssembler.kt`). Android draws
+  password fields masked, so screenshots show dots. OTP fields are not
+  marked by Android and are not hidden yet; the agent's note tells it to
+  hand the phone over for passwords, codes and payments.
 - opencode 2.0.26 has no `ctx.permission.assert`, and Code Mode's `execute`
   bypasses top-level permission rules for plugin tools. The app-side master
   switch is the gate until opencode is bumped.

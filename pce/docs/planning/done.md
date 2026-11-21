@@ -17,5 +17,8 @@
 - Device checks: observation screenshot in PhoneCanDo and Android Settings
   (2026-10-30, 1080x2400 JPEG readable through `run-as`); `activityName`,
   `eventSeq` across app switches and the bridge grace (2026-10-31).
+- Password fields: the core hides a `PASSWORD` node's text and description
+  (`Node.HIDDEN_TEXT`) in every snapshot, whatever the backend read
+  (2026-11-21, `SnapshotAssemblerTest`).
 
 See the phase files in `phases/` for scope, acceptance and device evidence.

@@ -5,6 +5,7 @@ import com.phonecando.pce.api.PceError
 import com.phonecando.pce.api.PceResult
 import com.phonecando.pce.api.ErrorCode
 import com.phonecando.pce.api.Node
+import com.phonecando.pce.api.NodeFlag
 import com.phonecando.pce.api.NodeId
 import com.phonecando.pce.api.RawSnapshot
 import com.phonecando.pce.api.Snapshot
@@ -73,6 +74,7 @@ internal object SnapshotAssembler {
         }
 
         val nodes = raw.nodes.mapIndexed { index, rawNode ->
+            val password = NodeFlag.PASSWORD in rawNode.flags
             Node(
                 id = NodeId(index),
                 backendId = rawNode.backendId,
@@ -81,8 +83,8 @@ internal object SnapshotAssembler {
                 packageName = rawNode.packageName,
                 className = rawNode.className,
                 viewId = rawNode.viewId,
-                text = rawNode.text,
-                contentDescription = rawNode.contentDescription,
+                text = if (password) hidden(rawNode.text) else rawNode.text,
+                contentDescription = if (password) hidden(rawNode.contentDescription) else rawNode.contentDescription,
                 bounds = rawNode.bounds,
                 flags = rawNode.flags,
             )
@@ -113,4 +115,10 @@ internal object SnapshotAssembler {
             )
         )
     }
+
+    // A password field's value never leaves the core, whatever the backend
+    // read (Android masks it for most views, not for every WebView or
+    // custom field).
+    private fun hidden(value: String?): String? =
+        if (value.isNullOrEmpty()) value else Node.HIDDEN_TEXT
 }

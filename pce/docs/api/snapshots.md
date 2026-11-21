@@ -10,6 +10,10 @@ core-owned:
   `activityName` is optional and backend-provided.
 - `Snapshot.screenshot` is an optional `ScreenshotRef` when
   `ObserveOptions.screenshot` is true.
+- A node flagged `PASSWORD` never carries its value: the core replaces a
+  non-empty `text` or `contentDescription` with `Node.HIDDEN_TEXT`
+  (`[hidden]`), whatever the backend read, so a text selector never matches
+  a password field. Find it by `viewId`, class or flags.
 - `snapshot.node(id)` is the safe lookup.
 - A snapshot id is stable for one PCE instance and is never reused.
 
