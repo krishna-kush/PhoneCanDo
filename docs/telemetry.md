@@ -1,6 +1,7 @@
 # Telemetry
 
-PhoneCanDo sends anonymous usage statistics to its own server. This page is
+PhoneCanDo sends anonymous usage statistics to its own server. Anonymous means no name and no account: only IDs made from the phone, so we can find bugs that happen on one kind of phone.
+This page is
 the published schema: every field the app and the site send, what the server
 adds, where it is kept and for how long, and every other network call the app
 makes. The plain-language version is the site's privacy note
@@ -398,6 +399,7 @@ numbers.
 | `GET https://github.com/krishna-kush/PhoneCanDo/releases/latest/download/latest.json` | on launch (full; lite unless muted in Settings → Update) and from Settings → Update; never in play builds | nothing beyond a normal request |
 | The release APK from `github.com` (redirected to GitHub's file host) | only after you tap install (an update, or lite → full) | nothing beyond a normal request |
 | `https://api.phonecando.app/v1/*` | release builds, while sharing is on; report and delete only when you tap them; share stats when Settings → Tell a friend shows your links | the fields on this page; share stats carry only your links' codes |
+| `https://api.phonecando.app/v1/account/*` (the same Worker, its own database: [accounts.md](accounts.md)) | only if you sign in (Settings → Account): sign-in, sign-out and Delete account when you tap them; while signed in, the account on the Account page, your share links when they change, and the synced settings when one changes, at launch and when the app comes back to the front | your Google ID token once at sign-in (checked, never kept), then the phone's session token; your share links' codes and the synced settings; no usage stats |
 | `GET https://models.opencode.ai/api.json` (opencode's models.dev catalog) | by each running engine (opencode v2.0.26; one per running agent) when it starts, then again every 5 minutes while it runs: the whole catalog (over 2 MB) each time; `OPENCODE_DISABLE_MODELS_FETCH` is not set | a `User-Agent: opencode/<channel>/<version>/<name>` header |
 | `https://hub.docker.com` (Docker Hub's catalog: the official OS list and an image's tags) | full and lite, only while you pick an Own env (Env → New env → Own) | the repository name and the version filter you type; a `User-Agent: phonecando-lre` header |
 | The container registry of an Own env (Docker Hub's `registry-1.docker.io` and its token service, or the registry the image name gives), the storage it redirects downloads to and, for Docker Hub official images when Docker Hub refuses or fails, `public.ecr.aws` and `mirror.gcr.io` | full and lite, only when you add an Own env or retry its download, a running download's automatic retries, and on the next app start for a download the app's process or a lost network stopped | the image name and tag you picked; a `User-Agent: phonecando-lre` header |

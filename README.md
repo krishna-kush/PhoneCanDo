@@ -43,7 +43,7 @@ stay local; the app's network calls are listed in
 | **Terminal** | A real PTY and TUI, rendered by xterm.js; or a Linux shell inside an agent's image. |
 | **Phone control** | Accessibility-driven observe/act, gated by an in-app switch. |
 | **Three channels** | `full` with phone control and Linux; `lite` with Linux but no phone control, the download that installs `full` in place; `play` with neither (agents use Android's shell). |
-| **Local by default** | Sessions, files and keys stay on the device. Anonymous usage stats are on by default, one switch turns them off (Settings → Privacy), and they carry nothing from your sessions or keys: [`docs/telemetry.md`](docs/telemetry.md). |
+| **Local by default** | Sessions, files and keys stay on the device. Anonymous usage stats are on by default, one switch turns them off (Settings → Privacy), and they carry nothing from your sessions or keys. Anonymous means no name and no account: only IDs made from the phone, so we can find bugs that happen on one kind of phone. See [`docs/telemetry.md`](docs/telemetry.md). |
 
 ## How it fits
 
