@@ -31,6 +31,11 @@ Current implementation notes:
   sandbox), so a command an image agent starts inherits its bridge token and
   can read its keys, sign-in and files. The token works only on the phone's
   loopback, and the phone tools still need the phone-control unlock.
+- Accessibility turns itself off once nobody uses it (Auto off, on by
+  default, Settings → Phone control): 10 s after you leave PhoneCanDo with
+  no agent wanting the screen, never in its first 2 minutes. Only you switch
+  it back on, in Android's settings, so control does not sit open while
+  unused, and bank apps open.
 - The gate starts locked. Settings → Phone control picks how long an unlock
   lasts: once per install (kept across restarts until you lock it), each
   app launch, or each agent's ask (that agent alone, until it hands the

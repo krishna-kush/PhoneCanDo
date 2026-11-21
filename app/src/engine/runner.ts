@@ -63,8 +63,6 @@ export type RunnerModule = {
   getAutoOff?(): boolean;
   setAutoOff?(on: boolean): boolean;
   wasAutoOff?(): boolean;
-  autoOffOfferDue?(): boolean;
-  dropAutoOffOffer?(): void;
   /** Agent messages (engine/messages/, which checks what these return). Absent from native builds older than messaging. */
   messageLog?(limit: number): NativeMessage[];
   unreadCounts?(): Record<string, number>;

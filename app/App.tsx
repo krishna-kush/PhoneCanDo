@@ -21,7 +21,6 @@ import { useDeskSeats } from './src/ui/common/desk/useDeskSeats';
 import { useEngineTerminalTheme } from './src/ui/terminal/theme/useEngineTerminalTheme';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
-import AutoOffAsk from './src/ui/accessibility/auto-off/AutoOffAsk';
 import RootError from './src/diagnostics/RootError';
 import SafeRoot from './src/ui/common/SafeRoot';
 import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
@@ -223,8 +222,6 @@ export default function App() {
           </SafeRoot>
           <UnlockDialog />
           <AccessibilityDialog />
-          {/* Once Accessibility comes on: offer Auto off, so bank apps open. */}
-          <AutoOffAsk />
           <OpenUrlDialog />
           <PermissionDialog />
           <UpdateBox />

@@ -10,8 +10,8 @@ import { BOX_CAPTION, BOX_TITLE, boxBody, boxTitle, CATCH, flipLine, SAVE_FAILED
 import TimeCard from './TimeCard';
 import type { AutoOff } from './useAutoOff';
 
-// Settings → Phone control's Auto off, its own key box under the panel and
-// the ask's scene as a switch: A-01 sweating over the shy bank apps while
+// Settings → Phone control's Auto off, its own key box under the panel, as
+// a switch: A-01 sweating over the shy bank apps while
 // it is off, happy once it clocks out by itself. The whole box flips it:
 // A-01 hops and quips in place of its caption, its time card punches OUT
 // (or un-punches) and the stamp slams, while its square mark just fills or

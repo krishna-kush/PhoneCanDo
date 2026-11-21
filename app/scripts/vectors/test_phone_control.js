@@ -58,7 +58,7 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   t('auto off: the warm-up it tells is native\'s', a.WARM_UP_MINUTES * 60_000, ms('WARM_UP_MS'));
   t('auto off: the stamp', [a.cardStamp(true), a.cardStamp(false)], ['auto', 'by hand']);
   t('auto off: the box names the bank apps either way', [a.boxBody(true), a.boxBody(false)].every((n) => n.includes('bank apps')), true);
-  t('auto off: off, the box worries as the ask does', a.boxTitle(false), a.ASK_TITLE);
+  t('auto off: off, the box worries about the shy bank apps', a.boxTitle(false), a.OFF_TITLE);
   t('auto off: a quip per flip, round and round', [1, 2, 3, 4].map((n) => a.flipLine(true, n)), [
     "clocking out when you're done",
     'bank apps can come out now',

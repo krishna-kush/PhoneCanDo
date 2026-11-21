@@ -3,7 +3,6 @@ package com.phonecando.runner.bridge
 import android.content.Context
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.RestrictedSettings
-import com.phonecando.runner.autooff.AutoOff
 import com.phonecando.runner.controllock.ControlLock
 import org.json.JSONObject
 
@@ -39,11 +38,10 @@ class PromptRoutes(
   // in the default wait, which stays under five minutes, where common HTTP
   // clients give up on a response. `restricted` is "sideload" when the user
   // went through the app's restricted-settings guide, otherwise the native
-  // best guess (RestrictedSettings.state). On the switch's first turn-on it
-  // returns once the user has answered the app's Auto off question too.
+  // best guess (RestrictedSettings.state).
   private fun accessibility(call: BridgeCall): Reply {
     val waitMs = call.body.optLong("waitMs", 240_000).coerceIn(30_000, 280_000)
-    val out = flows.accessibility(call.agent, "accessibility", waitMs, { AutoOff.offerDue(context) }) {
+    val out = flows.accessibility(call.agent, "accessibility", waitMs) {
       automation()?.connected == true
     }
     val restricted = when {

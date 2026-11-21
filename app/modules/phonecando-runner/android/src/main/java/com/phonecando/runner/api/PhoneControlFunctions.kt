@@ -54,8 +54,8 @@ internal fun ModuleDefinitionBuilder.phoneControlFunctions(context: () -> Contex
     AutoOff.isOn(context())
   }
 
-  // Returns the switch as kept, and answers the offer. The service's watch
-  // reads it at its next look.
+  // Returns the switch as kept. The service's watch reads it at its next
+  // look.
   Function("setAutoOff") { on: Boolean ->
     val ctx = context()
     AutoOff.set(ctx, on)
@@ -65,16 +65,5 @@ internal fun ModuleDefinitionBuilder.phoneControlFunctions(context: () -> Contex
   // Auto off turned the service off and it has not run since.
   Function("wasAutoOff") {
     AutoOff.turnedOff(context())
-  }
-
-  // The switch came on for the first time on this install and Auto off's
-  // offer is not answered yet.
-  Function("autoOffOfferDue") {
-    AutoOff.offerDue(context())
-  }
-
-  // "Stay on duty": the offer is answered, Auto off stays as it is.
-  Function("dropAutoOffOffer") {
-    AutoOff.dropOffer(context())
   }
 }

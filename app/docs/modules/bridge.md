@@ -98,10 +98,7 @@ Home. When the bridge stops, every waiting prompt ends as a refusal.
   30–280 s, under five minutes where HTTP clients give up) for
   `PceAuto.service` to connect, so the agent carries on by itself once the
   switch is on; once it connects, every waiting request returns `enabled`.
-  On the switch's first turn-on on this install the dialog closes as it
-  connects and the request waits on, within the same `waitMs`, until the
-  user has answered the app's Auto off question (`automation.md`), so the
-  agent never drives over it. Opening a step's screen keeps the wait going; "Not now" ends that
+  Opening a step's screen keeps the wait going; "Not now" ends that
   request's wait at once (`cancelled:true`). The response is `{opened,
   enabled, cancelled, notified, restricted}`; `restricted` is `sideload`
   when the user went through the guide, else the native guess

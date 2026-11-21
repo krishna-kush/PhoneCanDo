@@ -14,8 +14,7 @@ type Props = {
   still?: boolean;
 };
 
-// A-01 with its head line, as the Auto off ask and the Settings box both
-// open: the face (its mood plays every change itself), the line in bold and
+// A-01 with its head line, as the Settings box opens: the face (its mood plays every change itself), the line in bold and
 // a mono caption under it.
 export default function AutoOffHead({ mood, title, caption, hop = 0, still = false }: Props) {
   return (

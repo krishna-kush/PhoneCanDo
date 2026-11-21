@@ -11,7 +11,6 @@ import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 // Prompt registry and the /unlock and /accessibility waits, several agents at
@@ -150,26 +149,6 @@ class PromptFlowsTest {
     assertTrue(first.get(5, TimeUnit.SECONDS).enabled)
     assertTrue(second.get(5, TimeUnit.SECONDS).enabled)
     awaitEmpty()
-  }
-
-  @Test fun theFirstTurnOnWaitsForTheAutoOffAnswer() {
-    val offer = AtomicBoolean(true)
-    val request = async { flows.accessibility(one, "accessibility", 5_000, { offer.get() }) { connected } }
-    awaitPending(1)
-    connected = true
-    // The dialog closes as the switch comes on; the agent waits on.
-    awaitEmpty()
-    Thread.sleep(50)
-    assertFalse(request.isDone)
-    offer.set(false)
-    assertTrue(request.get(5, TimeUnit.SECONDS).enabled)
-  }
-
-  @Test fun anUnansweredOfferStillEndsWithTheWait() {
-    val request = async { flows.accessibility(one, "accessibility", 300, { true }) { connected } }
-    awaitPending(1)
-    connected = true
-    assertTrue(request.get(5, TimeUnit.SECONDS).enabled)
   }
 
   @Test fun answersOnlyReachTheirKind() {

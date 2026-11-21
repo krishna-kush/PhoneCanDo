@@ -11,7 +11,6 @@ import com.phonecando.runner.FullAutomation
 import com.phonecando.runner.PceAuto
 import com.phonecando.runner.PceAutomation
 import com.phonecando.runner.RestrictedSettings
-import com.phonecando.runner.autooff.AutoOff
 import com.phonecando.runner.autooff.AutoOffWatch
 import com.phonecando.runner.presence.Presence
 import com.phonecando.runner.uiauto.overlay.GlassOverlay
@@ -45,9 +44,8 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
   override fun onServiceConnected() {
     super.onServiceConnected()
     // Android bound us: the restricted-settings lock is cleared on this
-    // install, and that outlives updates (RestrictedSettings.kt). The
-    // first time ever, the app offers Auto off.
-    if (RestrictedSettings.markConnected(this)) AutoOff.offer(this)
+    // install, and that outlives updates (RestrictedSettings.kt).
+    RestrictedSettings.markConnected(this)
     autoOff = AutoOffWatch(this) { disableSelf() }.also { it.start() }
     try {
       AutomationHosts.current = FullAutomation

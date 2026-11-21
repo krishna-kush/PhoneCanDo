@@ -55,23 +55,18 @@ class PromptFlows(
   // Waits for PhoneCanDo's accessibility service, so the agent carries on by
   // itself once the user has switched it on. Ends early when the user taps
   // "Not now" on this prompt. The user must flip the system toggle; the
-  // agent cannot. The switch's first turn-on brings the app's Auto off
-  // question (`offerOpen`, autooff/AutoOff): once connected, the prompt ends
-  // (the app's dialog closes) and the agent waits on, in the same `waitMs`,
-  // until the user has answered it, so it never drives over the question.
+  // agent cannot.
   fun accessibility(
     agent: AgentRecord,
     reason: String,
     waitMs: Long,
-    offerOpen: () -> Boolean = { false },
     connected: () -> Boolean,
   ): AccessibilityOutcome {
     if (connected()) {
       return AccessibilityOutcome(opened = false, enabled = true, cancelled = false, notified = false, guided = false)
     }
-    val deadline = clock() + waitMs
     val prompt = registry.open(Kind.ACCESSIBILITY, agent.id, agent.name, reason)
-    val outcome = try {
+    return try {
       val notified = host.announce(prompt)
       waitUntil(waitMs, ACCESSIBILITY_POLL_MS) { prompt.cancelled || connected() }
       val enabled = connected()
@@ -85,8 +80,6 @@ class PromptFlows(
     } finally {
       end(prompt)
     }
-    if (outcome.enabled) waitUntil(deadline - clock(), ACCESSIBILITY_POLL_MS) { !offerOpen() }
-    return outcome
   }
 
   private fun waitUntil(waitMs: Long, pollMs: Long, done: () -> Boolean) {

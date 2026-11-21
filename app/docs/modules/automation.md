@@ -54,22 +54,17 @@ running, one drives the screen at a time and the others get 409
 work; the staged `phone_wait` eventSeq comparison lands with the next APK
 because the generated asset was stale.
 
-Auto off (runner `autooff/`, Settings → Phone control): payment and bank
-apps refuse to open while an accessibility service Google has not reviewed
-is on, so with Auto off on the service calls `disableSelf()` once
+Auto off (runner `autooff/`, Settings → Phone control), on until the user
+turns it off: payment and bank apps refuse to open while an accessibility
+service Google has not reviewed is on, and control nobody is using should
+not stay on, so with Auto off on the service calls `disableSelf()` once
 PhoneCanDo has been out of sight and no agent has wanted the screen
 (`Bridge.screenWanted`, or a hand-over to you) for 10 s, never in the 2
 minutes after it connects (`AutoOffRules`). It marks itself the cause, so
 the 503 below says so and the agent asks through
-`phone_open_accessibility`; only the user switches it back on. The app
-offers it once, after the switch's first turn-on on this install (marked
-natively at that first bind; a switch on before never brings it), while
-the switch is on and PhoneCanDo is in front (`ui/accessibility/auto-off/`);
-in the first shift's Give me hands walk, A-09 calls it on a note atop it.
-An agent whose `phone_open_accessibility` brought that turn-on waits for
-the answer too (`PromptFlows.accessibility`, within its 4 minutes): its
-dialog closes as the switch comes on, and the call returns once the user
-has answered, so the agent never drives over the question.
+`phone_open_accessibility`; only the user switches it back on. Its
+Settings box (`ui/accessibility/auto-off/`) says when it clocks out and
+what that costs.
 
 ## Implemented slice (2026-10-30)
 

@@ -1,17 +1,20 @@
 // Auto off in words (engine/autoOff.ts has why it exists): A-01 clocks out
 // by itself, so payment and bank apps open. The Settings box in A-01's
 // voice (its head line, what the switch means, a quip at each flip), A-01's
-// time card that the box and the ask both draw, the ask after the switch's
-// first turn-on, and the lines that say Auto off was what turned it off.
+// time card the box draws, and the lines that say Auto off was what turned
+// it off.
 // Pure (zero RN imports).
 
 /** The Settings box's strip; also what a screen reader calls its switch. */
 export const BOX_TITLE = 'Auto off';
 
-/** A-01's head line in the box: the same worry as the ask while off, its answer once on. */
+/** A-01's head line in the box: its worry while off, its answer once on. */
 export function boxTitle(on: boolean): string {
-  return on ? 'I clock out by myself' : ASK_TITLE;
+  return on ? 'I clock out by myself' : OFF_TITLE;
 }
+
+/** The box's head line while Auto off is off. */
+export const OFF_TITLE = 'Bank apps are shy';
 
 /** Under the head line, until a flip gives A-01 something to say. */
 export const BOX_CAPTION = 'A-01 · auto off';
@@ -41,7 +44,7 @@ export function flipLine(on: boolean, n: number): string {
   return lines[(Math.max(n, 1) - 1) % lines.length];
 }
 
-/** What Auto off costs, on the box while it is on and on the ask. */
+/** What Auto off costs, on the box while it is on. */
 export const CATCH =
   'The catch: each time an agent needs the phone after that, you switch Accessibility back on. One switch, no steps.';
 
@@ -71,19 +74,6 @@ export function cardLines(on: boolean): readonly CardLine[] {
 export function cardStamp(on: boolean): string {
   return on ? 'auto' : 'by hand';
 }
-
-// The ask, once Accessibility comes on.
-export const ASK_TITLE = 'Bank apps are shy';
-export const ASK_FROM = 'A-01 · phone control';
-export const ASK_BODY =
-  "Payment and bank apps won't open while Accessibility is on for an app like me. I can clock out on my own whenever no agent needs the phone and you've left PhoneCanDo.";
-export const ASK_YES = 'Clock out on my own';
-export const ASK_NO = 'Stay on duty';
-export const ASK_WHERE = 'Change it anytime: Settings → Phone control → Auto off.';
-
-/** On the ask while the first shift's Give me hands walk is on: A-09, our guide, calls it. */
-export const SHIFT_FROM = 'A-09 · first shift';
-export const SHIFT_LINE = 'Pop quiz! No wrong answers, only shy bank apps.';
 
 // Once Auto off has turned the service off, until it runs again.
 export const CLOCKED_OUT_STAMP = 'clocked out';
