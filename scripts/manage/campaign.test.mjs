@@ -1,6 +1,6 @@
 // ./manage campaign against a stub cf (campaigns-d1.mjs with its own spawn):
 // the cf lines add and list send, what they print, what they refuse before
-// any cf call, and a database without migration 0006. cf never runs.
+// any cf call, and a database without migration 0005. cf never runs.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { TAG, campaignLink } from './campaigns.mjs';
@@ -14,7 +14,7 @@ const DB = '00000000-0000-4000-8000-0000000000db';
 
 /**
  * A fake D1 behind a stub spawn: the campaigns rows in `rows` (null: no
- * table, as before migration 0006). `calls` records every cf argv.
+ * table, as before migration 0005). `calls` records every cf argv.
  */
 function fakeCf(rows = []) {
   const calls = [];
@@ -93,12 +93,12 @@ test('list: tag, note, day added and link, oldest first; an empty list says how 
   assert.match(run(fakeCf(), ['list']), /No campaigns yet: \.\/manage campaign add <tag> "<note>"/);
 });
 
-test('before migration 0006: add and list say so and how to apply it, and never run it', () => {
+test('before migration 0005: add and list say so and how to apply it, and never run it', () => {
   for (const args of [['list'], ['add', 'hn', 'note']]) {
     const cf = fakeCf(null);
     assert.throws(
       () => run(cf, args),
-      (e) => e instanceof Stop && /migration 0006 is not applied/.test(e.message) && e.message.includes(`cf d1 migrations apply ${DB} --dir tce/stores/sql/migrations`),
+      (e) => e instanceof Stop && /migration 0005 is not applied/.test(e.message) && e.message.includes(`cf d1 migrations apply ${DB} --dir tce/stores/sql/migrations`),
       args.join(' '),
     );
     assert.equal(cf.calls.length, 1);

@@ -26,7 +26,7 @@ function failed(e, id, params) {
   const message = String(e?.message ?? e);
   if (/no such table:\s*(?:main\.)?campaigns\b/i.test(message)) {
     stop(
-      'the campaigns table is not on the database yet: migration 0006 is not applied. Apply it with cf first ' +
+      'the campaigns table is not on the database yet: migration 0005 is not applied. Apply it with cf first ' +
         `(we never run it from here):\n  cf d1 migrations apply ${id} --dir tce/stores/sql/migrations`,
     );
   }
