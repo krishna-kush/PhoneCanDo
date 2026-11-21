@@ -4,6 +4,10 @@
 # build script and patches) equals this tree's, through lme/llamacpp/stage.sh,
 # which checks its SHA256SUMS. CI keeps those builds 14 days; with none
 # matching it stops and says to run llamacpp.yml.
+# Only runs started by a push, the schedule or by hand count: --branch matches
+# the head branch's name alone, and a pull request (a fork's too) from a
+# branch it named prod runs its own workflow and could keep INPUTS the same.
+# Those events only ever run code already in this repository.
 #
 # Usage: .github/ci/release/stage-llama-server.sh <work-dir>
 # Env: GH_TOKEN (actions: read), GITHUB_REPOSITORY (owner/repo).
@@ -14,7 +18,8 @@ want="$(cd lme/llamacpp && sha256sum pins.env build.sh patches/*.patch | sha256s
 echo "llama-server: looking for a llamacpp.yml build of INPUTS $want"
 
 runs="$(gh run list -R "$repo" --workflow llamacpp.yml --branch prod --status success --limit 10 \
-  --json databaseId -q '.[].databaseId')"
+  --json databaseId,event \
+  -q '.[] | select(.event == "push" or .event == "schedule" or .event == "workflow_dispatch") | .databaseId')"
 for id in $runs; do
   dir="$work/llamacpp-$id"
   if ! gh run download "$id" -R "$repo" -n llamacpp-android-arm64 -D "$dir" > /dev/null 2>&1; then
@@ -27,5 +32,5 @@ for id in $runs; do
   fi
   rm -rf "$dir"
 done
-echo "::error title=No llama-server build::no green llamacpp.yml run on prod in the last 14 days built INPUTS $want; run llamacpp.yml on prod, then release again"
+echo "::error title=No llama-server build::no green push or manual llamacpp.yml run on prod in the last 14 days built INPUTS $want; run llamacpp.yml on prod, then release again"
 exit 1
