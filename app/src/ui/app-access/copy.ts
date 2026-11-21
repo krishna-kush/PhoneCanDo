@@ -20,6 +20,16 @@ export function questionLine(agentName: string, app: string): string {
   return `${agentName || 'An agent'} wants to use ${app}.`;
 }
 
+/**
+ * What an app reaches beyond its name, under the question: System UI draws
+ * the notification shade, where the bridge shows an agent only the rows of
+ * apps it may use (appaccess/ForeignParts). Null for every other app.
+ */
+export function reachLine(pkg: string): string | null {
+  if (pkg !== 'com.android.systemui') return null;
+  return 'System UI is your status bar, notification shade and lock screen. Agents still see only the notifications of apps they may use; the rest stay hidden.';
+}
+
 /** What each answer does, one line each, in the keys' order. */
 export const ALWAYS_LINE = 'Always: saved for every agent. It needs your fingerprint or screen lock.';
 

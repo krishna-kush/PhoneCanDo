@@ -34,6 +34,8 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   // The question.
   t('question: who and which app', c.questionLine('Resident', 'Bank'), 'Resident wants to use Bank.');
   t('question: an agent with no name', c.questionLine('', 'Bank'), 'An agent wants to use Bank.');
+  t('reach: System UI says its notifications stay filtered', c.reachLine('com.android.systemui')?.includes('only the notifications of apps they may use'), true);
+  t('reach: any other app has no extra line', c.reachLine('com.example.bank'), null);
   t('just now: that agent, until it hands the phone back', c.justNowLine('Resident'), 'Just now: only Resident, until it hands the phone back.');
   t('just now: no name', c.justNowLine(''), 'Just now: only this agent, until it hands the phone back.');
   t('always: every agent, and your fingerprint', [c.ALWAYS_LINE.includes('every agent'), c.ALWAYS_LINE.includes('fingerprint')], [true, true]);

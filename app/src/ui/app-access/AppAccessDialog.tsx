@@ -29,6 +29,7 @@ import {
   NO_SCREEN_LOCK_LINE,
   NOT_CONFIRMED_SLIP,
   questionLine,
+  reachLine,
 } from './copy';
 import AppIcon from './icon/AppIcon';
 import { needsConfirm, strongConfirm } from './logic/choices';
@@ -141,7 +142,7 @@ export default function AppAccessDialog() {
       <PlainText fontSize={15}>{questionLine(agentName, app)}</PlainText>
       {pkg ? <SlipField label={app} value={pkg} lines={2} leading={<AppIcon pkg={pkg} size={36} />} /> : null}
       {prompt?.reason ? <SlipField label="Why" value={prompt.reason} lines={6} /> : null}
-      {[ALWAYS_LINE, justNowLine(agentName), NO_LINE, note].filter((line) => line).map((line) => (
+      {[reachLine(pkg), ALWAYS_LINE, justNowLine(agentName), NO_LINE, note].filter((line) => line).map((line) => (
         <PlainText key={line} fontSize={13} color="muted">
           {line}
         </PlainText>
