@@ -14,8 +14,8 @@ import type { AutoOff } from './useAutoOff';
 // a switch: A-01 sweating over the shy bank apps while
 // it is off, happy once it clocks out by itself. The whole box flips it:
 // A-01 hops and quips in place of its caption, its time card punches OUT
-// (or un-punches) and the stamp slams, while its square mark just fills or
-// empties, with no pop; when it clocks out, and what it costs once on.
+// (or un-punches) and the stamp slams, while its mark turns as every
+// switch's does; when it clocks out, and what it costs once on.
 export default function AutoOffBox({ auto }: { auto: AutoOff }) {
   const still = !usePageActive();
   const [flips, setFlips] = useState(0);
@@ -41,7 +41,7 @@ export default function AutoOffBox({ auto }: { auto: AutoOff }) {
                 still={still}
               />
             </YStack>
-            <SquareMark on={auto.on} instant />
+            <SquareMark on={auto.on} />
           </XStack>
           <PlainText fontSize={14} color={auto.failed ? 'primary' : 'muted'}>
             {auto.failed ? SAVE_FAILED : boxBody(auto.on)}

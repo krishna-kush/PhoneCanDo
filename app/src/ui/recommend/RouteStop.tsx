@@ -11,14 +11,15 @@ type Props = {
 };
 
 // One stop on the route's rail, the full height of its step: a hairline
-// rail in, the square (its fill pops in when a friend gets this far), the
+// rail in, the square (its fill grows in when a friend gets this far), the
 // rail out. A lit stretch of rail is red and thicker, so the red runs down
 // the route as far as the links got.
 export default function RouteStop({ lit, above, below }: Props) {
   return (
     <YStack width={20} alignItems="center" alignSelf="stretch" flexShrink={0}>
       <Rail lit={above} />
-      <SquareMark on={lit} />
+      {/* A stop on a line, not a switch: always the 20 px square, whatever MARK_LOOK is. */}
+      <SquareMark on={lit} look="grow" />
       <Rail lit={below} />
     </YStack>
   );

@@ -1,40 +1,22 @@
-import { useEffect } from 'react';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { YStack } from 'tamagui';
-import { useReduceMotion } from '../useReduceMotion';
+import type { ComponentType } from 'react';
+import Grow from './mark/Grow';
+import { MARK_LOOK, type MarkLook } from './mark/looks';
+import type { MarkProps } from './mark/progress';
+import Scan from './mark/Scan';
+import StampWord from './mark/StampWord';
+import Wake from './mark/Wake';
 
-// A spring that overshoots: turned on, the fill lands like a stamp.
-const POP = { damping: 7, stiffness: 260 };
+const LOOKS: Record<MarkLook, ComponentType<MarkProps>> = { grow: Grow, scan: Scan, wake: Wake, stamp: StampWord };
 
-type Props = {
-  on: boolean;
-  /** Fills and empties at once, with no pop (a switch whose row moves enough already). */
-  instant?: boolean;
+type Props = MarkProps & {
+  /** This spot's own look, over MARK_LOOK (a place that must stay a 20 px square, as the Refer page's route stops). */
+  look?: MarkLook;
 };
 
-// A switch's or a choice's mark: a square, its fill red when on (picked),
-// as the site's kicker squares. Turned on, the fill pops in past its size
-// and settles; turned off, it shrinks away; `instant`, it just is.
-export default function SquareMark({ on, instant = false }: Props) {
-  const reduce = useReduceMotion();
-  const fill = useSharedValue(on ? 1 : 0);
-  useEffect(() => {
-    fill.value = reduce || instant ? (on ? 1 : 0) : withSpring(on ? 1 : 0, POP);
-  }, [on, reduce, instant, fill]);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: Math.max(0, fill.value) }] }));
-  return (
-    <YStack
-      width={20}
-      height={20}
-      borderWidth={1.5}
-      borderColor={on ? 'primary' : 'lineStrong'}
-      alignItems="center"
-      justifyContent="center"
-      flexShrink={0}
-    >
-      <Animated.View style={style}>
-        <YStack width={10} height={10} backgroundColor="primary" />
-      </Animated.View>
-    </YStack>
-  );
+// A switch's or a choice's on/off mark, in the app's one look (mark/looks.ts:
+// change it there and every mark follows). Each look comes in with a timing
+// curve, never a spring, and `instant` or Reduce motion shows it at once.
+export default function SquareMark({ on, instant = false, look = MARK_LOOK }: Props) {
+  const Look = LOOKS[look];
+  return <Look on={on} instant={instant} />;
 }
