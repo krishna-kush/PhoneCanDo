@@ -24,7 +24,7 @@ import {
 import { homedir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { auditApk } from './apk-audit.mjs';
+import { auditApk, releaseCertSha256 } from './apk-audit.mjs';
 import { releaseAssets } from './release/assets.mjs';
 import { makeApkReader } from './release/io/apk.mjs';
 import { askShow, askYes } from './terminal/ask.mjs';
@@ -41,6 +41,7 @@ import { sourceDecision } from './release/linux/source.mjs';
 import { runPreflight } from './release/preflight.mjs';
 import { releaseLabel, releaseTitle } from './release/label.mjs';
 import { ciBlocks, ciProblems, preflightReport } from './release/report.mjs';
+import { inReleaseWorkflow, verifyNotes } from './release/verify-notes.mjs';
 
 process.env.CI = '1'; // expo prebuild: never prompt
 process.env.EXPO_NO_GIT_STATUS = '1'; // expo prebuild: never run git
@@ -187,7 +188,19 @@ function main() {
   if (preflight.proot && !args.uploadOnly) checkProotDrift({ ask: askLinux });
   if (preflight.image && !args.uploadOnly) checkImageAge(preflight.image.version, { ask: askLinux });
   // GitHub release notes only: latest.json's notes are the in-app update dialog.
-  const releaseNotes = (base) => [base, ...preflight.notes].join('\n\n');
+  // Last, how to check each file, hashed exactly as it is uploaded.
+  const releaseNotes = (base) =>
+    [
+      base,
+      ...preflight.notes,
+      verifyNotes({
+        repo,
+        sha: preflight.sha,
+        cert: releaseCertSha256(),
+        apks: [asset, liteAsset].map((file) => ({ name: basename(file), sha256: fileDigest(file).sha256 })),
+        attested: inReleaseWorkflow(),
+      }),
+    ].join('\n\n');
   // --sign-staged runs no Linux gate: the source tarball the build job
   // staged is the one its proot was built from (pins.env names it).
   const proot = args.signStaged ? stagedProotSource(stage, version) : preflight.proot;

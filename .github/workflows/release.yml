@@ -17,12 +17,15 @@ name: Release
 #   sign   in the `release` environment, whose four secrets only it can
 #          read and only after a reviewer approves: re-signs the staged
 #          APKs with the release key (`--sign-staged`), checks the signer and
-#          uploads the draft. It runs only our scripts (no npm packages),
-#          Node, the SDK's apksigner and gh. The key is written to the
-#          runner's temp folder and deleted after, whatever happened. Then,
-#          with the key gone, GitHub's attest action attests both signed
-#          APKs (their SHA-256 signed for this run, so `gh attestation
-#          verify` proves a download was built here from this commit).
+#          uploads the draft, whose notes give each file's SHA-256, the
+#          commit and the exact `gh attestation verify` command
+#          (scripts/release/verify-notes.mjs). It runs only our scripts (no
+#          npm packages), Node, the SDK's apksigner and gh. The key is
+#          written to the runner's temp folder and deleted after, whatever
+#          happened. Then, with the key gone, GitHub's attest action attests
+#          both signed APKs (their SHA-256 signed for this run, so `gh
+#          attestation verify` proves a download was built here from this
+#          commit), and only then is the release published, when asked.
 #   pr     commits the version files and release.json to release/v<version>
 #          and opens a pull request to prod. Only git and gh; no secrets.
 # Inputs reach the shell only through env, never pasted into a script.
@@ -254,6 +257,8 @@ jobs:
             printf 'PHONECANDO_KEY_PASSWORD=%q\n' "$KEY_PASSWORD"
           } > "$RUNNER_TEMP/release-signing.env"
 
+      # Always a draft here: publishing waits for the attestation below, which
+      # the draft's notes tell readers how to check.
       - name: Sign and draft (scripts/release-android.mjs --sign-staged)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -261,12 +266,10 @@ jobs:
           PHONECANDO_RELEASE_ENV: ${{ runner.temp }}/release-signing.env
           VERSION: ${{ inputs.version }}
           ALLOW_RED_CI: ${{ inputs.allow_red_ci }}
-          PUBLISH: ${{ inputs.publish }}
         run: |
           set -euo pipefail
           args=(--version "$VERSION" --sign-staged)
           if [ "$ALLOW_RED_CI" = true ]; then args+=(--allow-red-ci); fi
-          if [ "$PUBLISH" = true ]; then args+=(--publish); fi
           node scripts/release-android.mjs "${args[@]}"
 
       - name: Remove the release key
@@ -281,6 +284,15 @@ jobs:
           subject-path: |
             dist/release/v${{ inputs.version }}/phonecando-${{ inputs.version }}-full-arm64.apk
             dist/release/v${{ inputs.version }}/phonecando-${{ inputs.version }}-lite-arm64.apk
+
+      # Only once both files are attested, so a published release never names
+      # an attestation that is not there.
+      - name: Publish (publish input)
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: gh release edit "v$VERSION" --draft=false -R "$GITHUB_REPOSITORY"
 
       # The staged APKs carry only the debug key, and anyone signed in to
       # GitHub can download a public repo's artifacts: once signed and

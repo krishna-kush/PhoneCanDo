@@ -66,6 +66,9 @@ jobs:
 4. Test the draft's APKs (`gh release download v1.0.0`), publish it
    (`gh release edit v1.0.0 --draft=false`), then merge the pull request:
    the merge deploys the site with the new version and hashes.
+   `--publish` publishes only after both APKs are attested. Either way the
+   notes end with "Check this download": each APK's SHA-256, the commit and
+   the exact `gh attestation verify` command.
 
 A local release asks before it ships the Default image (how old its
 packages are) or a proot behind upstream. GitHub has no terminal to ask, so
