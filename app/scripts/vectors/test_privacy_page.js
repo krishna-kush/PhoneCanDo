@@ -41,7 +41,8 @@ const src = (...parts) => pathToFileURL(path.join(__dirname, '../../src', ...par
   ]);
   t('guard on and off duty', [c.guardLine(true, true).title, c.guardLine(true, false).title], ['A-01 · on duty', 'A-01 · off duty']);
   t('share links: never who', c.ALSO[0].note.includes('Never who.'), true);
-  t('sign-in kept apart from stats', c.ALSO[1].note.includes('never link them to these usage stats'), true);
+  t('sign-in: says signed-in share codes are in both, never that they are kept apart',
+    [c.ALSO[1].note.includes("the two aren't fully apart"), /never link/.test(c.ALSO[1].note)], [true, false]);
   t('delete: usage data only, not the account', c.FORGET_NOTE.startsWith('All usage data'), true);
   t('report: only when tapped', c.REPORT_NOTE.includes('Only when you tap it'), true);
   t('reset keeps sent data linked', c.RESET_NOTE.includes('Data already sent stays linked to this phone'), true);
