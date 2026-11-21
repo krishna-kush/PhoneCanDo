@@ -398,6 +398,18 @@ class ScreenLeaseTest {
     lease.done(granted("a4"))
   }
 
+  @Test fun aHolderWaitingOnItsQuestionIsNotShownDriving() {
+    lease.done(granted("a1"))
+    assertEquals("a1", lease.driver()?.agentId)
+    // It asks you something (an app, an unlock): no glow while you decide.
+    assertNull(lease.promptOpened("a1", "name-a1", isAlive))
+    assertNull(lease.driver())
+    assertEquals("a1", lease.holderId())
+    // A yes gives it the screen back, driving again.
+    lease.promptClosed("a1", keep = true)
+    assertEquals("a1", lease.driver()?.agentId)
+  }
+
   @Test fun theDriverIsTheHolderWhileInUse() {
     assertNull(lease.driver())
     val act = granted("a1")

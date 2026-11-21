@@ -245,8 +245,15 @@ class ScreenLease(
   /** A holder is driving: a screen request runs or one ended under `idleMs` ago. A reservation is not. */
   fun inUse(): Boolean = synchronized(mutex) { driving(clock()) }
 
-  /** The agent driving now ([inUse]), for what the user sees on screen; null when nobody is. */
-  fun driver(): Seat? = synchronized(mutex) { holder?.takeIf { driving(clock()) }?.let { Seat(it, holderName) } }
+  /**
+   * The agent driving now ([inUse]), for what the user sees on screen (the
+   * glass's glow and mascot); null when nobody is. A holder waiting on its
+   * own question (an unlock, an app, a hand-over) is not driving: it is
+   * waiting for you.
+   */
+  fun driver(): Seat? = synchronized(mutex) {
+    holder?.takeIf { driving(clock()) && !paused(it) }?.let { Seat(it, holderName) }
+  }
 
   /** Who has the screen and who waits, as of the last call or tick. An idle holder nobody waits for is not shown. */
   fun line(): Line = synchronized(mutex) {
