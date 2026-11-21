@@ -44,7 +44,7 @@ export const ALSO = [
   },
   {
     title: 'Google sign-in (optional)',
-    note: "Settings → Account. We keep your email, your links' codes and a few settings (theme, extra keys, run caps) only if you sign in, and never link them to these usage stats.",
+    note: "Settings → Account. We keep your email, your links' codes and a few settings (theme, extra keys, run caps) only if you sign in. Those codes are in these usage stats too, so signed in, the two aren't fully apart.",
   },
 ] as const;
 

@@ -33,7 +33,7 @@ export const COMING: readonly { title: string; line: string }[] = [
   { title: 'More fun together', line: 'And other things to do with your crew, each one optional too.' },
 ];
 export const WHAT_WE_KEEP =
-  "We keep your email, Google's account number, your share links' codes and those settings, and only if you sign in. Never your chats, keys or files, and your usage stats stay anonymous: they are never linked to your account.";
+  "We keep your email, Google's account number, your share links' codes and those settings, and only if you sign in. Never your chats, keys or files. Signed out, your usage stats can't be tied to you; signed in, your share links' codes are kept with your account too, so the two aren't fully apart.";
 export const SIGN_IN = 'Sign in with Google';
 
 export const NOT_CONFIGURED = "Sign-in isn't set up in this build yet. Everything else works without it.";

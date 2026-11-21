@@ -25,8 +25,10 @@ in `accounts/core/ops/`, numbers in `accounts/core/limits.ts`, tables in
 - **Never kept:** your name, your photo, the token Google gives the app, your
   password (Google never shares it), your IP address, which app you shared a
   link through, and anything from your agents.
-- **Never linked to usage stats.** The account holds no device or install ID,
-  and the usage stats hold no account.
+- **Signed out, your usage stats can't be tied to you.** Signed in, your
+  share links' codes are kept with your account too, so the two aren't fully
+  apart. The account holds no device or install ID, and the usage stats hold
+  no account.
 - **Delete account** (Settings → Account) deletes all of it at once. **Sign
   out** ends only that phone's session. Without the app, ask by email from
   the account's address (`https://phonecando.app/delete-account/`); we
