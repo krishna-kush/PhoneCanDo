@@ -10,6 +10,7 @@ import RowFrame from '../common/rows/RowFrame';
 import RowGroup from '../common/rows/RowGroup';
 import Spot from '../common/spot/Spot';
 import Stamp from '../common/Stamp';
+import AppsRow from '../app-access/settings/AppsRow';
 import LockModePicker from '../control-lock/LockModePicker';
 import { useControlLock } from '../control-lock/useControlLock';
 import { usePageActive } from '../nav/pageActive';
@@ -21,7 +22,8 @@ import StatusRow from './phone-control/StatusRow';
 // control panel: a key box whose first row is A-01 at the controls (how
 // the keys below add up), then the two keys agents need turned before
 // they see and tap the phone: Android's Accessibility switch with its
-// one-time setup, and the biometric lock (control-lock/), then Auto off
+// one-time setup, and the biometric lock (control-lock/), and under them
+// the Apps row (app-access/: which apps agents may use), then Auto off
 // (accessibility/auto-off/: the switch turns itself off while nobody needs
 // it, so bank apps open) and how often the lock asks. Each explanation
 // steps aside once its key is turned: the
@@ -79,6 +81,7 @@ export default function PhoneControlSection({ channel }: { channel: string }) {
           </RowFrame>
         )}
         <LockRow lock={lock} />
+        <AppsRow />
       </RowGroup>
       {auto.available ? <AutoOffBox auto={auto} /> : null}
       <LockModePicker value={lock.mode} onPick={(m) => void lock.changeMode(m)} disabled={lock.busy} />

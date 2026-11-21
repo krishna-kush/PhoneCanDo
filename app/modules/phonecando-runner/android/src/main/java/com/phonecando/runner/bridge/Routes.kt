@@ -12,6 +12,10 @@ package com.phonecando.runner.bridge
 //             it could break. While you have the phone's controls (a
 //             hand-over, presence/HandsGate) every screen route is turned
 //             away first: 409 user_has_controls or paused_by_user.
+// The PCE's screen routes also need the app in front to be one the user
+// let agents use (appaccess/, BridgeRouter: 403 app_not_allowed or
+// app_blocked); /app-access (gated, full only, not a screen route) asks
+// the user about one app and waits for the answer.
 // Screen routes: /pce/observe, /pce/act and /pce/pack (a pack run drives the
 // screen and every pack call shares the PCE lane), /open and /share (they
 // start an activity over whatever is showing) and /app (brings PhoneCanDo
@@ -54,6 +58,7 @@ enum class Route(
   APP("POST", "/app", screen = true),
   UNLOCK("POST", "/unlock", fullOnly = true),
   ACCESSIBILITY("POST", "/accessibility", fullOnly = true),
+  APP_ACCESS("POST", "/app-access", fullOnly = true, gated = true),
   PCE_DESCRIBE("GET", "/pce/describe", fullOnly = true, gated = true, pce = true),
   PCE_OBSERVE("POST", "/pce/observe", fullOnly = true, gated = true, pce = true, screen = true),
   PCE_ACT("POST", "/pce/act", fullOnly = true, gated = true, pce = true, screen = true),
@@ -76,13 +81,13 @@ enum class Route(
     fun find(method: String, path: String): Route? =
       entries.firstOrNull { it.method == method && it.path == path }
 
-    // Telemetry key per route: the path without its leading slash, `/` as
-    // `_` (tce's tool.<name> allows [a-z0-9_] only). Keys are route names,
+    // Telemetry key per route: the path without its leading slash, `/` and
+    // `-` as `_` (tce's tool.<name> allows [a-z0-9_] only). Keys are route names,
     // not phone_* tool names: that mapping lives in the agent plugins, and
     // many tools share /pce/act. A fixed table, so an unknown path never
     // becomes a key; looked up by path whatever the method, as a wrong
     // method answers 404, which is not counted.
     fun telemetryKey(path: String): String? =
-      entries.firstOrNull { it.path == path }?.path?.removePrefix("/")?.replace('/', '_')
+      entries.firstOrNull { it.path == path }?.path?.removePrefix("/")?.replace('/', '_')?.replace('-', '_')
   }
 }

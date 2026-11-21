@@ -96,6 +96,8 @@ export type Route =
   /** Settings: a short hub of rows, each opening one of its pages. */
   | { name: 'settings' }
   | { name: 'settings-page'; page: SettingsPageId }
+  /** Settings → Phone control → Apps: Allow all apps and every app answered Always or No (full builds). */
+  | { name: 'app-access' }
   | { name: 'about' }
   /** The first shift: a newcomer's missions, each ticked when the app sees it happen. */
   | { name: 'starter' }

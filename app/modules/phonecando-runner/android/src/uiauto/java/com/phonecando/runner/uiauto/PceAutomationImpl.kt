@@ -181,6 +181,8 @@ class PceAutomationImpl(
     }
   }
 
+  override fun frontPackage(): String? = service.frontPackage()
+
   override fun close() {
     runCatching { runBlocking { pce.close() } }
   }

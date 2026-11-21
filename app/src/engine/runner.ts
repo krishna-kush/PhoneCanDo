@@ -4,6 +4,8 @@
 // where native code is absent (Expo Go, web).
 import type {
   NativeAgent,
+  NativeAppAccessState,
+  NativeAppAnswer,
   NativeBridgePrompt,
   NativeClientRecipe,
   NativeEngineStatus,
@@ -63,6 +65,12 @@ export type RunnerModule = {
   getAutoOff?(): boolean;
   setAutoOff?(on: boolean): boolean;
   wasAutoOff?(): boolean;
+  /** App access (engine/appAccess.ts, which checks what these return). Full builds only; absent from lite, play and older native builds. */
+  appAccessList?(): unknown;
+  resolveAppAccess?(requestId: string, answer: NativeAppAnswer): boolean;
+  setAppAccess?(pkg: string, state: NativeAppAccessState | 'none'): boolean;
+  setAllowAllApps?(on: boolean): boolean;
+  appIcon?(pkg: string, sizePx: number): Promise<string | null>;
   /** Agent messages (engine/messages/, which checks what these return). Absent from native builds older than messaging. */
   messageLog?(limit: number): NativeMessage[];
   unreadCounts?(): Record<string, number>;
@@ -345,12 +353,14 @@ export function onLaunchTarget(listener: (target: LaunchTarget) => void): Sub {
 
 // A prompt for the user from an agent: biometric unlock for phone control or
 // accessibility setup (its request waits for the answer), a link it wants
-// opened (a sign-in, through the kit's phonecando-open), or a tool step an
+// opened (a sign-in, through the kit's phonecando-open), a tool step an
 // agent in ACP mode asks about (answered with engine/acp/'s
-// resolvePermission). One per request, each with its own requestId.
+// resolvePermission), or the first time agents reach an app (answered with
+// engine/appAccess.ts' resolveAppAccess). One per request, each with its
+// own requestId.
 export type BridgePrompt = {
   requestId: string;
-  kind: 'unlock' | 'accessibility' | 'open_url' | 'permission';
+  kind: 'unlock' | 'accessibility' | 'open_url' | 'permission' | 'app';
   agentId: AgentId;
   agentName: string;
   /** Why it asks; empty when it gives no reason (a permission prompt). */
@@ -362,9 +372,12 @@ export type BridgePrompt = {
   toolKind?: string | null;
   /** A permission prompt's answers, one button each. */
   options?: AcpOption[];
+  /** An app prompt's app: its package, and its label (the package when Android hides it). */
+  package?: string;
+  label?: string;
 };
 
-const PROMPT_KINDS: readonly string[] = ['unlock', 'accessibility', 'open_url', 'permission'];
+const PROMPT_KINDS: readonly string[] = ['unlock', 'accessibility', 'open_url', 'permission', 'app'];
 
 // What native sends, checked: a kind we don't know, or a prompt without an
 // id, is dropped; a missing reason reads as none.
@@ -384,6 +397,10 @@ function asBridgePrompt(value: unknown): BridgePrompt | null {
     prompt.title = text(raw.title);
     prompt.toolKind = text(raw.toolKind) || null;
     prompt.options = asOptions(raw.options);
+  }
+  if (prompt.kind === 'app') {
+    prompt.package = text(raw.package);
+    prompt.label = text(raw.label) || prompt.package;
   }
   return prompt;
 }

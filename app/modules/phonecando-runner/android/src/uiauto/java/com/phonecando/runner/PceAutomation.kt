@@ -9,6 +9,7 @@ interface PceAutomation {
   fun observe(options: JSONObject): JSONObject
   fun act(request: JSONObject): JSONObject
   fun pack(request: JSONObject): JSONObject
+  fun frontPackage(): String?
   fun close()
 }
 

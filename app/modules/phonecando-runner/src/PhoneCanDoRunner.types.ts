@@ -102,12 +102,15 @@ export type NativeTerminalTheme = {
 
 export type NativeBridgePrompt = {
   requestId: string;
-  kind: 'unlock' | 'accessibility' | 'open_url' | 'permission';
+  kind: 'unlock' | 'accessibility' | 'open_url' | 'permission' | 'app';
   agentId: string;
   agentName: string;
   reason: string;
   /** An open_url prompt's link (http or https, at most 2 KiB); absent for the others. */
   url?: string;
+  /** An app prompt's app: its package, and its label (the package when Android hides it); resolveAppAccess(requestId, answer). */
+  package?: string;
+  label?: string;
   /** A permission prompt's question: what the agent asks to do (the tool call's title). */
   title?: string;
   /** A permission prompt's tool kind (ACP's read, edit, execute, ...), null when the agent names none. */
@@ -115,6 +118,21 @@ export type NativeBridgePrompt = {
   /** A permission prompt's answers, one button each; resolvePermission(requestId, optionId). */
   options?: NativeAcpOption[];
 };
+
+/**
+ * The user's answer to an app prompt: always (saved for every agent, right
+ * after biometrics), once (that agent, until it hands the phone back) or no
+ * (blocked for every agent until changed in Settings).
+ */
+export type NativeAppAnswer = 'always' | 'once' | 'no';
+
+/** An app on the app-access list, for every agent: always allowed, or blocked. */
+export type NativeAppAccessState = 'always' | 'blocked';
+
+export type NativeAppAccessApp = { package: string; label: string; state: NativeAppAccessState };
+
+/** The app-access list (full builds): the Allow all apps switch and every app answered Always or No, sorted by label. */
+export type NativeAppAccessList = { allowAll: boolean; apps: NativeAppAccessApp[] };
 
 /** One answer to a permission question; kind is ACP's allow_once, allow_always, reject_once or reject_always. */
 export type NativeAcpOption = { optionId: string; name: string; kind: string };

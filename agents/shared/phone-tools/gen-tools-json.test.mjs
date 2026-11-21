@@ -19,6 +19,8 @@ test('one-route tools are served with the fields their run always sends', async 
   assert.deepEqual(byName.phone_return.body, { tab: 'home', notify: true, reason: 'return' });
   assert.equal(byName.phone_return.channel, 'full');
   assert.deepEqual(byName.phone_request_unlock.body, { waitMs: 45_000 });
+  const ask = byName.phone_ask_app;
+  assert.deepEqual([ask?.route, ask?.channel, ask?.body], ['/app-access', 'full', { waitMs: 120_000 }]);
 });
 
 test('the agent messaging tools are served on every channel, one route each', async () => {

@@ -11,6 +11,7 @@ object FullAutomation : AutomationHost {
   override fun observe(options: JSONObject): JSONObject = pce().observe(options)
   override fun act(request: JSONObject): JSONObject = pce().act(request)
   override fun pack(request: JSONObject): JSONObject = pce().pack(request)
+  override fun frontPackage(): String? = PceAuto.service?.frontPackage()
 
   private fun pce(): PceAutomation =
     PceAuto.service ?: throw AutomationUnavailableException("accessibility service not connected")

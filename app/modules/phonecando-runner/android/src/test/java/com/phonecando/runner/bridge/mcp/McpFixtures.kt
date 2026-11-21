@@ -1,6 +1,7 @@
 package com.phonecando.runner.bridge.mcp
 
 import com.phonecando.runner.AutomationHost
+import com.phonecando.runner.appaccess.AppAccess
 import com.phonecando.runner.bridge.BridgeRouter
 import com.phonecando.runner.bridge.FakeDirectory
 import com.phonecando.runner.bridge.Reply
@@ -29,7 +30,9 @@ object RepoTools {
 
 class FakeHost : AutomationHost {
   var service = true
+  var front: String? = null
   override val connected get() = service
+  override fun frontPackage() = front
 
   override fun describe() = JSONObject().put("ok", true)
   override fun observe(options: JSONObject) = JSONObject().put("ok", true).put("snapshotId", 7)
@@ -37,7 +40,7 @@ class FakeHost : AutomationHost {
   override fun pack(request: JSONObject) = JSONObject().put("ok", true)
 }
 
-class McpRig(full: Boolean = true) {
+class McpRig(full: Boolean = true, appAccess: AppAccess? = null) {
   var now = 0L
   val host = FakeHost()
   val lock = unlockedLock { now }
@@ -50,7 +53,15 @@ class McpRig(full: Boolean = true) {
     handled += "${call.agent.id} ${call.route.path} ${call.body}"
     Reply.ok(JSONObject().put("route", call.route.path).put("shot", "/data/shot.png"))
   }
-  val router = BridgeRouter(full, { if (full) host else null }, lock, lease, { dir.get(it) != null }, Route.entries.associateWith { echo })
+  val router = BridgeRouter(
+    full,
+    { if (full) host else null },
+    lock,
+    lease,
+    { dir.get(it) != null },
+    Route.entries.associateWith { echo },
+    appAccess = appAccess,
+  )
   val endpoint = McpEndpoint(RepoTools.parse(full), "1.2.3") { agent, route, body ->
     router.handle(agent, route.method, route.path, body)
   }

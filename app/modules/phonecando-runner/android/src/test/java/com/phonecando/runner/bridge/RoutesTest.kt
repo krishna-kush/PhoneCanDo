@@ -15,12 +15,18 @@ class RoutesTest {
   @Test fun gatedAndFullOnlyRoutes() {
     val gated = Route.entries.filter { it.gated }.map { it.path }.toSet()
     assertEquals(
-      setOf("/share", "/open", "/clipboard", "/pce/describe", "/pce/observe", "/pce/act", "/pce/pack", "/hands/over", "/hands/wait"),
+      setOf(
+        "/share", "/open", "/clipboard", "/pce/describe", "/pce/observe", "/pce/act", "/pce/pack", "/hands/over",
+        "/hands/wait", "/app-access",
+      ),
       gated,
     )
     val fullOnly = Route.entries.filter { it.fullOnly }.map { it.path }.toSet()
     assertEquals(
-      setOf("/unlock", "/accessibility", "/pce/describe", "/pce/observe", "/pce/act", "/pce/pack", "/hands/over", "/hands/wait"),
+      setOf(
+        "/unlock", "/accessibility", "/pce/describe", "/pce/observe", "/pce/act", "/pce/pack", "/hands/over",
+        "/hands/wait", "/app-access",
+      ),
       fullOnly,
     )
     assertEquals(Route.entries.filter { it.path.startsWith("/pce/") }, Route.entries.filter { it.pce })
@@ -39,6 +45,7 @@ class RoutesTest {
     assertEquals("accessibility", Route.telemetryKey("/accessibility"))
     assertEquals("keep", Route.telemetryKey("/keep"))
     assertEquals("hands_over", Route.telemetryKey("/hands/over"))
+    assertEquals("app_access", Route.telemetryKey("/app-access"))
     assertNull(Route.telemetryKey("/nope"))
   }
 

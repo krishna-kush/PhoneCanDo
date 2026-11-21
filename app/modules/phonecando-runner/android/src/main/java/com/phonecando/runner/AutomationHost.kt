@@ -11,6 +11,9 @@ interface AutomationHost {
   fun observe(options: JSONObject): JSONObject
   fun act(request: JSONObject): JSONObject
   fun pack(request: JSONObject): JSONObject
+
+  /** The package of the app in front, for the app-access gate (appaccess/); null when unknown. */
+  fun frontPackage(): String? = null
 }
 
 // A host call found the accessibility service gone after the bridge's

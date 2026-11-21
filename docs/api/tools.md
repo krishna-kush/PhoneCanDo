@@ -48,6 +48,16 @@ them (every channel, outside the lock); one bridge route each
 | `phone_notify` | `POST /notify` | reach the user away from your chat; nothing while your chat is on screen (`posted: false`), one a minute and five an hour (429 `notify_too_often`) |
 | `agents_status` | `POST /status` | a few words on what you do now, with a `mood` (working, thinking, waiting); your mascot and `agents_list` show it, an empty text clears it. While driving the phone, set it before each step so the user can follow |
 
+## App access
+
+The first time agents reach an app, PhoneCanDo asks the user (full only,
+gated; the refusals are `app_not_allowed` and `app_blocked` in
+`errors.md`); one bridge route, so MCP serves it too:
+
+| Tool | Route | Purpose |
+|---|---|---|
+| `phone_ask_app` | `POST /app-access` | after a screen call's `app_not_allowed`: show the user PhoneCanDo's question for that `package` (Always / Just now / No) and wait up to 2 minutes; `allowed: true`: observe again and go on (`answer: "once"`, Just now, lasts until `phone_return`); `answer: "no"` or `blocked: true`: don't use the app; `answer: null`: no reply in time, don't call again in a loop |
+
 ## Agent tools
 
 Messages between the AI agents on the phone, an agent's ask to stay up

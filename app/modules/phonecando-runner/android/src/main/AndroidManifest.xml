@@ -6,6 +6,12 @@
       <action android:name="android.intent.action.MAIN" />
       <category android:name="android.intent.category.LAUNCHER" />
     </intent>
+    <!-- The default home screen, which agents reach without the app-access
+         question (appaccess/PhoneApps.kt). -->
+    <intent>
+      <action android:name="android.intent.action.MAIN" />
+      <category android:name="android.intent.category.HOME" />
+    </intent>
     <!-- Android 14+: the Settings activity behind the "Restricted setting"
          note, resolved before the guide offers to show it
          (RestrictedSettings.kt). -->

@@ -5,6 +5,9 @@ import type {
   NativeAcpSnapshot,
   NativeAgent,
   NativeAgentChecks,
+  NativeAppAccessList,
+  NativeAppAccessState,
+  NativeAppAnswer,
   NativeBridgePrompt,
   NativeClientRecipe,
   NativeEngineMode,
@@ -48,6 +51,10 @@ export type {
   NativeAcpSnapshot,
   NativeAgent,
   NativeAgentChecks,
+  NativeAppAccessApp,
+  NativeAppAccessList,
+  NativeAppAccessState,
+  NativeAppAnswer,
   NativeAutoStop,
   NativeBridgePrompt,
   NativeCapabilityCheck,
@@ -152,6 +159,21 @@ declare class PhoneCanDoRunnerModule extends NativeModule<RunnerEvents> {
   setAutoOff(on: boolean): boolean;
   /** Auto off turned the service off and it has not run since. */
   wasAutoOff(): boolean;
+  /** App access (full builds only; lite and play leave these out): the Allow all apps switch and every app answered Always or No. */
+  appAccessList?(): NativeAppAccessList;
+  /**
+   * Answers an app prompt. always: right after the user's biometric (a key
+   * that signs only then); false when the signature was refused, the prompt
+   * left unanswered. once: the prompt's agent, until it hands the phone back.
+   * no: blocks the app for every agent.
+   */
+  resolveAppAccess?(requestId: string, answer: NativeAppAnswer): boolean;
+  /** From Settings: always (right after biometrics), blocked, or none (off both lists: asked again). */
+  setAppAccess?(pkg: string, state: NativeAppAccessState | 'none'): boolean;
+  /** Allow all apps; on right after biometrics. Returns the switch as kept. */
+  setAllowAllApps?(on: boolean): boolean;
+  /** The app's launcher icon drawn `sizePx` square, as the file:// URI of a PNG in the cache; null when Android hides the app or it has no icon. */
+  appIcon?(pkg: string, sizePx: number): Promise<string | null>;
   canRequestPackageInstalls(): boolean;
   markSelfUpdatePending(): boolean;
   canShowRestrictedSettingNote(): boolean;

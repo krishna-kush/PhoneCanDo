@@ -102,6 +102,9 @@ export const BARCODE_LINES = {
   phoneControl: 'LOOK NO HANDS',
   lockMode: 'FINGER GUNS',
   autoOff: 'PUNCH OUT',
+  alwaysApps: 'VIP',
+  blockedApps: 'NOT TONIGHT',
+  frontDesk: 'NAME PLEASE',
 
   // Privacy
   usageStats: 'JUST NUMBERS',
@@ -154,6 +157,7 @@ export const BARCODE_LINES = {
   slipLink: 'KNOCK KNOCK',
   slipUnlock: 'OPEN SESAME',
   slipAccess: 'LET ME IN',
+  slipApp: 'MAY I COME IN',
 } as const;
 
 /** A box's barcode line, by what the box is. */

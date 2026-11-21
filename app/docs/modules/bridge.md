@@ -21,12 +21,15 @@ loopback-only, runs in the app process beside the engines
   phone-control switch (403 `automation_off`), the accessibility service
   (503 `automation_unavailable`), the hands (409 `user_has_controls` or
   `paused_by_user` while you have the phone's controls, full builds only;
-  Hands below), the JSON body (400), the screen lease (409 `control_busy`
-  or `screen_refused`, full builds only), then the handler.
+  Hands below), the JSON body (400), for `/pce/observe|act|pack` the app
+  in front (403 `app_not_allowed` or `app_blocked`, and 409
+  `user_deciding` for a tap or pack run on PhoneCanDo's own question;
+  full builds only, App access below), the screen lease (409
+  `control_busy` or `screen_refused`, full builds only), then the handler.
   A refused request never takes the lease, though it may wait in line
   (Screen lease below). `Routes.kt` lists every route with its guards.
 - Endpoints: `ping/battery/notify/share/open/clipboard/app/unlock/accessibility`
-  plus the automation `/pce/*` routes, the agents' messages
+  plus the automation `/pce/*` routes, `/app-access` (App access below), the agents' messages
   `/agents/list|send|inbox|wait` (Agent messages below), `/keep` (an
   agent's ask to stay up, below), `/schedule/add|list|cancel` (an agent's
   tasks for itself, Schedules below), `/hands/over|wait`, `/status` and
@@ -70,11 +73,13 @@ loopback-only, runs in the app process beside the engines
 
 ## Prompts
 
-`/unlock` and `/accessibility` (full builds only, ungated) ask the user
-something for one request and block until the answer, so the agent carries
-on in the same turn (`PromptRoutes.kt`, `PromptFlows.kt`). Each request
-registers its own prompt (`PromptRegistry.kt`: request id, kind, agent id
-and name, reason) and waits on it alone, so a second agent's request never
+`/unlock`, `/accessibility` (full builds only, ungated) and `/app-access`
+(full builds only, gated; App access below) ask the user something for one
+request and block until the answer, so the agent carries on in the same
+turn (`PromptRoutes.kt`, `AppAccessRoutes.kt`, `PromptFlows.kt`). Each
+request registers its own prompt (`PromptRegistry.kt`: request id, kind
+`unlock|accessibility|app`, agent id and name, reason; an `app` prompt
+adds `package` and `label`) and waits on it alone, so a second agent's request never
 ends the first one's wait. The app shows the prompts one at a time with the
 asking agent's name (`ui/common/promptQueue.ts`, `useBridgePrompts.ts`),
 learns of new ones from the `phonecandoBridgePrompt` event and reads
@@ -106,6 +111,76 @@ Home. When the bridge stops, every waiting prompt ends as a refusal.
   agent cannot. On `enabled:false` the agent tells the user to follow the
   steps in the app and checks `/ping` (`pce`; `ui` is a compatibility alias)
   when they say done. `/ping` reports the flavor, lock, and PCE state.
+
+## App access
+
+Full builds only (`runner/appaccess/`). Once phone control is unlocked, an
+agent still needs the user's yes for each app it reaches: one list for
+every agent. PhoneCanDo itself and the default home screen are never asked
+about (`PhoneApps`); everything else is, Android's Settings and System UI
+included. The verdict (`AppAccessRules`, pure): no package passes (the
+result check below covers it), then exempt, a No (blocked, even under Allow
+all), Allow all, Always, the agent's own Just now, else ask.
+
+- Gate: `BridgeRouter` checks `AutomationHost.frontPackage()` (the active
+  window's package, else the last activity the service saw) for
+  `/pce/observe|act|pack` after the lock, service and hands checks and
+  before the lease. A launch (`/pce/act` with a `launch` action) is judged
+  by the app it opens instead (`AppTargets`), so "open WhatsApp" asked
+  from PhoneCanDo's chat asks then, not at the first look inside; `/open`
+  by the app Android would hand its link to (`PhoneApps.linkHandler`), or
+  not at all when Android can't say (its chooser, or an app hidden from
+  us), when the first look inside asks. Ask: 403 `app_not_allowed` ("PhoneCanDo asks the user
+  before agents use <label>. Call phone_ask_app with package "<pkg>" …",
+  the package named in the message because the tools show the model only
+  code and message). Blocked: 403 `app_blocked` (don't use it; hand the
+  phone over if the task needs it). Both bodies add `package` and `label`
+  (the app's name, else its package). After `/pce/observe` or `/pce/pack`
+  returns, the result's top-level `package` is checked the same way and a
+  result for an app agents may not use is dropped for the refusal (a tap
+  moved the screen into it).
+- With no front package (no active window and no activity seen yet) the
+  gate passes: observe and pack are caught by the result check, and an act
+  carries its snapshot id, so the PCE's stale check refuses one whose
+  screen changed.
+- The agent watching you drive (a WATCH hand-over) is checked too: its
+  observe of an app nobody answered for is refused like any other, and it
+  may ask about that app while you drive.
+- `/app-access` (`phone_ask_app`, gated, not a screen route): body
+  `{package, waitMs?}` (default 120 s, 30–240 s; 400 for a package that is
+  not an Android package name). Already allowed: `{asked:false,
+  allowed:true}`; blocked: `{asked:false, allowed:false, blocked:true}`.
+  Otherwise it opens an `app` prompt and waits until it is answered, the
+  verdict stops being ask (another agent's question about that app was
+  answered) or the wait runs out: `{asked:true, allowed, answer:
+  "always"|"once"|"no"|null, notified, blocked?}`. The question waits its
+  turn in the screen line and stops the agent's time while it is up, as
+  the unlock dialog does (Screen lease below): a yes starts its time over,
+  a no or no answer passes the screen on.
+- Answers (the app's `resolveAppAccess`, applied then recorded under the
+  prompt's lock, `BridgePrompts.resolveApp`): Always is saved for every
+  agent and needs the user's biometric or PIN (`KeystoreAppAccessStore`
+  signs it with a per-app Android Keystore key that signs only within 15 s
+  of it, as the lock does; taking an app off deletes its key); Just now is
+  that agent's alone, in memory, until it hands the phone back (a 200
+  `/app`), its engine stops (`agentGone`) or the bridge stops; No blocks
+  the app for every agent, kept in plain prefs (a forged one only blocks
+  more). Settings → Phone control has the list (`appAccessList`,
+  `setAppAccess`), each app's icon (`appIcon`, async: `AppIcons` draws its
+  launcher icon once into `cacheDir/app-icons/` as a PNG, again after the
+  app updates, and returns its `file://` URI) and Allow all
+  (`setAllowAllApps`: on needs the biometric, off needs nothing). Allow all's signed record covers the No list ("allowAll
+  v1" and the sorted packages), so it reads on only while that list is the
+  one it signed; a No taken off behind our back turns it off and everything
+  asks. While it is on, a new No always holds and signs Allow all again, or
+  turns it off when there was no biometric just now; lifting a No
+  (`setAppAccess` "none", or "always" on a blocked app) re-signs it in the
+  same biometric window and is refused (false, nothing changed) without one.
+- PhoneCanDo's own questions: PhoneCanDo is exempt, so while an `app` or
+  `unlock` prompt or an agent's ACP permission question waits, a
+  `/pce/act` or `/pce/pack` with PhoneCanDo in front is 409
+  `user_deciding` (`OwnQuestions`): only the user answers. Observing stays
+  allowed.
 
 ## Screen lease
 
@@ -155,7 +230,8 @@ screen is its own (holder or reserved), its `/unlock` shows the dialog, and
 its time stands still while the dialog is open; after a yes the 30 s start
 over, after a no or no answer the screen passes on at once. An `/unlock` on
 a free screen reserves it for the asking agent for the dialog's length, so
-nobody drives over it.
+nobody drives over it. An `/app-access` that will show its question
+(App access above) goes through the line the same way.
 
 A turn another agent's message started (`startedByAgent`, from the
 messages side) never takes a free screen and never joins the line: its
@@ -247,7 +323,8 @@ phone: "unlocked"|"locked"|"off"}`.
 ### Driving overlay
 
 While an agent drives (`ScreenLease.driver()`: the holder while
-`inUse()`) or has handed the phone to you, its own mascot lives on the
+`inUse()`, but not while its own question waits for you: an unlock, an
+app question) or has handed the phone to you, its own mascot lives on the
 screen's walls over every app, the glass (`uiauto/overlay/`, full only;
 `GlassOverlay` is `Presence.view`, which the accessibility service sets,
 and Presence tells it each change of the frame). It draws natively from
@@ -413,7 +490,8 @@ seven basic tools every channel gets
 (`phone_ping/battery/notify/focus/share/open/clipboard`); `plugins/automation/index.ts`,
 shipped only in full, registers phone control (`phone-tools/control/`),
 `phone_return` (`/app`), `phone_request_unlock` (`/unlock`),
-`phone_open_accessibility` (`/accessibility`), `phone_hand_over`
+`phone_ask_app` (`/app-access`), `phone_open_accessibility`
+(`/accessibility`), `phone_hand_over`
 (`/hands/over`) and `phone_wait_for_user` (`/hands/wait`). Both go through
 `plugins/phone/opencode.ts` (`Plugin.define` + `ctx.tool.transform`).
 The agent messages' tools, `agents_list`, `agents_send`, `agents_inbox` and
@@ -422,7 +500,8 @@ The agent messages' tools, `agents_list`, `agents_send`, `agents_inbox` and
 (`keep.ts`, `/keep`) and `schedule_add`, `schedule_list` and
 `schedule_cancel` (`schedule.ts`, `/schedule/*`) are on every channel.
 The client uses a 15 s timeout by default, 40 s for the 30 s waits
-(`agents_wait`, `phone_hand_over`, `phone_wait_for_user`), 50 s for unlock and 255 s for
+(`agents_wait`, `phone_hand_over`, `phone_wait_for_user`), 50 s for unlock,
+135 s for `phone_ask_app`, whose bridge wait is 120 s, and 255 s for
 accessibility, whose bridge wait is 240 s, and degrades to a message when
 the bridge is absent. `phone_act` derives its timeout from the call, so a
 long wait ends in the bridge's own result rather than a client timeout:
@@ -463,7 +542,8 @@ GET and DELETE answer 405.
   it: the data as JSON, or `error <code>: <message>` with `isError: true`,
   the bridge's refusals included (`automation_off`, `control_busy` with the
   caller's place in line and a message to come, `screen_refused`,
-  `automation_unavailable`): the model acts on them as it does in the
+  `automation_unavailable`, `app_not_allowed` naming the package to ask
+  about): the model acts on them as it does in the
   agent's own plugin. MCP cannot push into a chat, so when the caller has
   unread agent messages, every result (refusals too) gets a second text
   item, `You have N unread agent messages: call agents_inbox.`
@@ -482,7 +562,8 @@ GET and DELETE answer 405.
   bridge serves its `channel: "full"` tools only in full builds, and a
   build without the table serves MCP with no tools.
 - Long waits: `phone_open_accessibility` holds the call up to 240 s,
-  `phone_request_unlock` up to 45 s and `agents_wait` up to 30 s. An MCP
+  `phone_ask_app` up to 120 s, `phone_request_unlock` up to 45 s and
+  `agents_wait` up to 30 s. An MCP
   client with a shorter request timeout gives up first; the prompt itself
   stays up in the app.
 
@@ -519,8 +600,10 @@ service is not enabled in Android settings, `/pce/*` returns 503
 `automation_unavailable`, also when the service disconnects between the
 bridge's check and the call (the agent's cue to call
 `phone_open_accessibility`). `/app` stays ungated: own-app launch is safe
-even while locked. `/unlock`, `/accessibility` and `/pce/*` exist only in
-full builds; lite/play return 404 `not_found` for them.
+even while locked. Past the lock, each app an agent reaches needs the
+user's yes too (App access above). `/unlock`, `/accessibility`,
+`/app-access` and `/pce/*` exist only in full builds; lite/play return 404
+`not_found` for them.
 
 Lite/play builds have no accessibility host and no switch, so the six basic
 tools stay available (and the UI/PCE tools are not registered). `/ping` reports
@@ -528,12 +611,15 @@ tools stay available (and the UI/PCE tools are not registered). `/ping` reports
 explain what is missing. The engine launcher injects
 `PHONECANDO_CHANNEL=full|lite|play` into every engine's env; the agent asset
 also omits the full-only automation plugin and phone-control tools outside
-full. Full builds register the base six tools plus three extra
-non-driver tools, `phone_return`, `phone_request_unlock`, and
-`phone_open_accessibility`, the four PCE tools
+full. Full builds register the seven basic tools and the nine agent and
+schedule tools, plus `phone_return`, `phone_request_unlock`,
+`phone_ask_app`, `phone_open_accessibility`, `phone_hand_over` and
+`phone_wait_for_user`, the four PCE tools
 `phone_describe`/`observe`/`act`/`pack`, the `phone_launch` package launcher,
 and the legacy screen/info/click/tap/text/scroll/swipe/back/home/wait wrappers
-(24 tools total). Lite/play get the base six only.
+(37 tools total; 26 over MCP, which leaves out the 11 composed ones).
+Lite/play get the seven basic tools and the nine agent and schedule tools
+(16).
 
 ### No agent asks about our tools
 

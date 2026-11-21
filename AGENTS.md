@@ -25,7 +25,7 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
 ## Layout
 
 - `app/App.tsx`, `app/index.ts` — root (Tamagui + KeyboardProvider + SafeArea).
-- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,models,memory,messages,schedule,recommend,account,update,terms,presence,common}/` —
+- `app/src/ui/{nav,drawer,chat,terminal,env,setup,starter,settings,accessibility,app-access,models,memory,messages,schedule,recommend,account,update,terms,presence,common}/` —
   feature screens. Navigation: Home (the active agent) with a stack of
   pages over it and a side drawer, no tabs and no back arrows. The stack
   is `state/app/` (`stack.ts` pure); `nav/` draws and moves it and holds
@@ -87,8 +87,15 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   hook, the step list, the Settings block and the agent's dialog; and
   `auto-off/`, Auto off (the service turns itself off while nobody needs
   it, so bank apps open; native `runner/autooff/`, store
-  `state/autoOff.ts`): its Settings box, the time card, and the ask after
-  the switch's first turn-on on this install.
+  `state/autoOff.ts`; on by default): its Settings box and the time card.
+  `app-access/` is asking before agents use an app: the permission slip
+  when an agent first reaches one (Always, which needs your fingerprint;
+  Just now; No, for every agent) and Settings → Phone control → Apps with
+  Allow all apps, each app beside its own launcher icon (`copy.ts`,
+  `logic/` pure; the icon `icon/`, drawn into the cache by native
+  `appaccess/AppIcons.kt`; engine `appAccess.ts`, store
+  `state/appAccess.ts`; native `runner/appaccess/`, the bridge's
+  `/app-access` and `phone_ask_app`).
   Terminal split: `TerminalScreen.tsx` (session shell) + `TerminalView.tsx`
   (the IME, mirror, sizing and spacer; used by a terminal page and by a
   TUI-home agent's Home) + `transport/` (local PTY or the engine's hosted
@@ -129,7 +136,8 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   PTY transport, `runner.ts` engine host, `linux/native.ts` Linux runtime,
   `models/native.ts` local models, `files.ts` file system, `auth.ts`
   biometrics, `backGesture.ts` the back gesture's progress, `memory.ts` the
-  memory guard's reading, `runLimits.ts` the run caps, `keepRunning.ts` an
+  memory guard's reading, `runLimits.ts` the run caps, `appAccess.ts` the
+  apps agents may use, `keepRunning.ts` an
   agent's Keep running, `splash.ts` the launch splash, `pick.ts` Android's
   date and time dialogs, `updates/` the in-app update: `manifest.ts` (the
   release repo's `REPO`, which the release scripts set), `download.ts` and
@@ -240,7 +248,11 @@ the `oc-payload-arm64` artifact). Generic seams (`app/src/engine/`,
   background unless kept running or asked to stay up (`KeepAsks`, the
   `agents_keep_running` tool), pure `AgentWork` and `ReclaimPolicy`),
   `limits/` the run
-  caps, `memory/` the memory guard (pure `MemoryPolicy` and
+  caps, `appaccess/` the apps agents may use (pure `AppAccessRules` and
+  `OwnQuestions`; Always and Allow all signed with Keystore keys that sign
+  only after your fingerprint; the bridge refuses `app_not_allowed`,
+  `app_blocked` and, while a question waits, taps on PhoneCanDo itself),
+  `memory/` the memory guard (pure `MemoryPolicy` and
   `MemoryVictims`, which agent to stop; numbers in `MemoryRules`),
   `jobs/` the jobs anchor (keeps the `specialUse` service
   up while model and Linux jobs run), `power/` the wake lock while work

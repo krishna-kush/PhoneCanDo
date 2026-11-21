@@ -63,6 +63,8 @@ function PageView({ route }: { route: Route }) {
       return <Pages.SettingsScreen />;
     case 'settings-page':
       return <Pages.SettingsPage page={route.page} />;
+    case 'app-access':
+      return <Pages.AppAccessPage />;
     case 'about':
       return <Pages.AboutPage />;
     case 'starter':

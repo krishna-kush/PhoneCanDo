@@ -10,6 +10,7 @@ import com.phonecando.runner.cutoff.CutOffs
 import com.phonecando.runner.api.acpFunctions
 import com.phonecando.runner.api.agentFunctions
 import com.phonecando.runner.api.agentModelFunctions
+import com.phonecando.runner.api.appAccessFunctions
 import com.phonecando.runner.api.checksFunctions
 import com.phonecando.runner.api.clipboardFunctions
 import com.phonecando.runner.api.engineFunctions
@@ -61,9 +62,11 @@ class PhoneCanDoRunnerModule : Module() {
     }
 
     // Bridge -> JS: a prompt for the user from an agent (BridgePrompts
-    // shape: requestId, kind, agentId, agentName, reason; an open_url
-    // prompt, prompts/OpenUrlPrompts, adds url; a permission prompt,
-    // prompts/PermissionPrompts, adds title, toolKind and options).
+    // shape: requestId, kind, agentId, agentName, reason; an app prompt
+    // adds package and label, answered by resolveAppAccess,
+    // api/AppAccessFunctions; an open_url prompt, prompts/OpenUrlPrompts,
+    // adds url; a permission prompt, prompts/PermissionPrompts, adds
+    // title, toolKind and options).
     // pendingPrompts covers the moments JS was not attached.
     fun emitBridgePrompt(prompt: Map<String, Any?>) {
       instance?.sendEvent("phonecandoBridgePrompt", prompt)
@@ -191,6 +194,7 @@ class PhoneCanDoRunnerModule : Module() {
     clipboardFunctions { context() }
     shareFunctions({ context() }) { appContext.currentActivity }
     phoneControlFunctions { context() }
+    appAccessFunctions { context() }
     runLimitFunctions { context() }
     memoryFunctions { context() }
     keepRunningFunctions { context() }
@@ -250,11 +254,12 @@ class PhoneCanDoRunnerModule : Module() {
     }
 
     // Prompts for the user from agents: the ones a bridge request waits on
-    // (biometric unlock, accessibility setup), one per asking request, then
-    // the links agents asked the phone to open (open_url, nothing waits on
-    // those), then the questions agents in ACP mode ask before a tool runs
-    // (permission; resolvePermission, api/AcpFunctions). The app is the
-    // only caller; no agent process can reach these.
+    // (biometric unlock, accessibility setup, an app agents want to use),
+    // one per asking request, then the links agents asked the phone to open
+    // (open_url, nothing waits on those), then the questions agents in ACP
+    // mode ask before a tool runs (permission; resolvePermission,
+    // api/AcpFunctions). The app is the only caller; no agent process can
+    // reach these.
     // resolveAccessibility's `guided`: the screen the user opened is a
     // restricted-settings guide step. The bridge keeps waiting for the
     // service either way; `guided` only makes its answer say

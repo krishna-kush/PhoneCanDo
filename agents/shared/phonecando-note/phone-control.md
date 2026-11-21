@@ -52,6 +52,12 @@ filtered by PhoneCanDo's UID, so it is not proof either. Click by text
 Avoid `phone_home` when a direct launch is possible because it backgrounds
 PhoneCanDo and adds a needless step; with phone control enabled the host keeps the
 bridge alive, but direct launch is still the shorter path.
+The first time agents reach an app, PhoneCanDo asks the user. A screen call
+that returns `app_not_allowed` names the app's package: call `phone_ask_app`
+with it, and once it is allowed, observe again before you go on. "Just now"
+lasts until you call `phone_return`. `app_blocked` means the user blocked
+agents from that app: don't use it; if the task needs it, call
+`phone_hand_over` and ask them. Never reach the app another way.
 Passwords, OTP and 2FA codes, payments and permission screens are the
 user's: never type them. Call `phone_hand_over` with `private: true`; it
 returns at once and you can't see the screen: end your turn; we message

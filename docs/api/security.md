@@ -7,7 +7,6 @@ them.
   agent cannot flip it.
 - Arm with a TTL (e.g. 5 minutes idle) and a persistent “PhoneCanDo is controlling
   your phone” notification with a stop action.
-- Per-app allowlist; first control of a new package asks the user.
 - Risk levels on every action; high-risk requires confirmation.
 - Redact `password` fields and OTP inputs from observations and screenshots.
 - Audit log: timestamp, package, action, selector, result, trace ID. Local
@@ -45,6 +44,26 @@ Current implementation notes:
   screen at a time (the screen lease).
   See `../../app/docs/modules/bridge.md` for the exact 403/409/503
   behavior.
+- Past the unlock, each app needs your yes too (full builds; once a
+  contract target). The first time agents reach an app, PhoneCanDo asks:
+  Always, Just now or No, one list for every agent. Always needs your
+  fingerprint or screen lock and is signed with its own Keystore key, as
+  the lock is, so an agent writing the app's files cannot add an app; Just
+  now lasts until that agent hands the phone back or stops; No blocks the
+  app for every agent until you change it in Settings → Phone control, and
+  stays blocked under Allow all apps there (off by default; turning it on
+  needs your fingerprint or screen lock and is signed too). Allow all's
+  signature covers the list of blocked apps, so an agent that deletes a No
+  from the app's files turns Allow all off instead of getting in; while it
+  is on, lifting a No needs your fingerprint or screen lock, and a new No
+  holds even without it (then Allow all turns off). PhoneCanDo
+  itself and the default home screen are never asked about; Android's
+  Settings and System UI are. A launch asks about the app it opens, and a
+  link about the app Android hands it to when Android can say; else the
+  first look inside asks. A screen result that lands in an app agents
+  may not use is dropped, and while a question waits in PhoneCanDo an
+  agent may not tap PhoneCanDo's own screen (409 `user_deciding`), so only
+  you answer it.
 - A password field's value never reaches an agent: the PCE core replaces
   its text and description with `[hidden]` in every observation, whatever
   Android handed over (`pce/core/.../SnapshotAssembler.kt`). Android draws

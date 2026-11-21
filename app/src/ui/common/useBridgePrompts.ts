@@ -1,5 +1,5 @@
 // One queue for every prompt dialog (unlock, accessibility setup, a link to
-// open), so only one shows at a time: the oldest waiting prompt. Native is the source of
+// open, an app agents want to use), so only one shows at a time: the oldest waiting prompt. Native is the source of
 // truth (each agent request registers its own prompt and removes it when it
 // returns), so we read it on mount, on resume, on every prompt event and once
 // a second while anything is queued. That also drops prompts whose request
@@ -76,6 +76,19 @@ export function pendingUnlockIds(): string[] {
     .pendingPrompts()
     .filter((p) => p.kind === 'unlock')
     .map((p) => p.requestId);
+}
+
+/** Every waiting app prompt for this package, freshly read (Always and No settle them all). */
+export function pendingAppIds(pkg: string): string[] {
+  return runner
+    .pendingPrompts()
+    .filter((p) => p.kind === 'app' && p.package === pkg)
+    .map((p) => p.requestId);
+}
+
+/** Whether native still waits on this prompt (it ends one that ran out of time). */
+export function isWaiting(requestId: string): boolean {
+  return runner.pendingPrompts().some((p) => p.requestId === requestId);
 }
 
 export function useBridgePrompts(): { current: BridgePrompt | null; queue: BridgePrompt[] } {

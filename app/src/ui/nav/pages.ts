@@ -4,6 +4,9 @@
 // a page loads once and stays; Home, the drawer and the stack itself are
 // plain imports and load first.
 export const Pages = {
+  get AppAccessPage(): typeof import('../app-access/settings/AppAccessPage').default {
+    return require('../app-access/settings/AppAccessPage').default;
+  },
   get AgentInstallLogPage(): typeof import('../env/agent/AgentInstallLogPage').default {
     return require('../env/agent/AgentInstallLogPage').default;
   },

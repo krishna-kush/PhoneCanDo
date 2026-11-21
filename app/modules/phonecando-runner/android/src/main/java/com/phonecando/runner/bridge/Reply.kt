@@ -61,6 +61,37 @@ data class Reply(val status: Int, val body: String, val headers: Map<String, Str
     /** You stopped the caller to use the phone (presence/HandsGate): it ends its turn. */
     fun pausedByUser(message: String) = error(409, "paused_by_user", message)
 
+    // The app in front is one the user has not let agents use yet
+    // (appaccess/): the agent asks through phone_ask_app, with the package
+    // named in the message, as the tools show the model only code and message.
+    fun appNotAllowed(pkg: String, label: String) = appRefusal(
+      "app_not_allowed",
+      "PhoneCanDo asks the user before agents use $label. Call phone_ask_app with package \"$pkg\" and wait for " +
+        "the answer. Never work around it.",
+      pkg,
+      label,
+    )
+
+    /** The user said No to agents in this app; Allow all does not lift it. */
+    fun appBlocked(pkg: String, label: String) = appRefusal(
+      "app_blocked",
+      "The user blocked agents from $label. Don't use it; if you need it, call phone_hand_over and ask the user.",
+      pkg,
+      label,
+    )
+
+    /** A question waits in PhoneCanDo and it is in front (appaccess/OwnQuestions): only the user answers it. */
+    fun userDeciding() = error(
+      409,
+      "user_deciding",
+      "The user is answering a question in PhoneCanDo. Wait for it; never tap PhoneCanDo's own questions.",
+    )
+
+    private fun appRefusal(code: String, message: String, pkg: String, label: String) = Reply(
+      403,
+      errorBody(code, message).put("package", pkg).put("label", label).toString(),
+    )
+
     /** Over phone_notify's limits (presence/NotifyRules): it may post again in `retryAfterMs`. */
     fun notifyTooOften(retryAfterMs: Long) = Reply(
       429,

@@ -2,6 +2,7 @@ package com.phonecando.runner.bridge.mcp
 
 import com.phonecando.runner.bridge.mcp.McpRig.Companion.call
 import com.phonecando.runner.bridge.mcp.McpRig.Companion.rpc
+import com.phonecando.runner.appaccess.appAccess
 import com.phonecando.runner.bridge.Reply
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -163,6 +164,23 @@ class McpEndpointTest {
     assertTrue(rig.handled.isEmpty())
     // The prompt that flips it is ungated.
     assertFalse(text(rig.post(call(2, "phone_request_unlock"))).second)
+  }
+
+  @Test fun askAppSendsThePackageAndItsWait() {
+    assertFalse(text(rig.post(call(1, "phone_ask_app", JSONObject().put("package", "com.example.bank")))).second)
+    val sent = JSONObject(rig.handled.single().removePrefix("a1 /app-access "))
+    assertEquals("com.example.bank", sent.getString("package"))
+    assertEquals(120_000L, sent.getLong("waitMs"))
+  }
+
+  @Test fun anAppRefusalNamesThePackageToAskAbout() {
+    val apps = McpRig(appAccess = appAccess())
+    apps.host.front = "com.example.bank"
+    val (out, isError) = text(apps.post(call(1, "phone_observe")))
+    assertTrue(isError)
+    assertTrue(out, out.startsWith("error app_not_allowed: "))
+    assertTrue(out, out.contains("Call phone_ask_app with package \"com.example.bank\""))
+    assertTrue(apps.handled.isEmpty())
   }
 
   @Test fun aMissingServiceIsUnavailable() {

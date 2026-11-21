@@ -1,6 +1,7 @@
 package com.phonecando.runner.bridge
 
 import com.phonecando.runner.agents.AgentRecord
+import com.phonecando.runner.appaccess.AppVerdict
 import com.phonecando.runner.bridge.PromptRegistry.Kind
 import com.phonecando.runner.bridge.PromptRegistry.Prompt
 
@@ -23,7 +24,16 @@ data class AccessibilityOutcome(
   val guided: Boolean,
 )
 
-// The waits behind /unlock and /accessibility. Each request registers its own
+/** `answer`: this prompt's own answer ("always", "once", "no"), null when none came. */
+data class AppOutcome(
+  val asked: Boolean,
+  val allowed: Boolean,
+  val blocked: Boolean,
+  val answer: String?,
+  val notified: Boolean,
+)
+
+// The waits behind /unlock, /accessibility and /app-access. Each request registers its own
 // prompt and waits on it alone, so a second agent's request never orphans
 // the first; the conditions they wait for stay global. The biometric gate
 // is one switch for the phone: when any unlock succeeds, every waiting
@@ -82,6 +92,37 @@ class PromptFlows(
     }
   }
 
+  // The question about one app (appaccess/). Blocks until the user answers
+  // this prompt, the app's verdict for this agent is no longer ASK
+  // (another agent's question about it was answered, or Settings changed
+  // it) or `waitMs` runs out. The app applies an answer, then records it,
+  // both under the prompt's lock (BridgePrompts.resolveApp), so the final
+  // look here sees both or neither.
+  fun app(agent: AgentRecord, pkg: String, label: String, waitMs: Long, verdict: () -> AppVerdict): AppOutcome {
+    when (verdict()) {
+      AppVerdict.ALLOWED -> return AppOutcome(asked = false, allowed = true, blocked = false, answer = null, notified = false)
+      AppVerdict.BLOCKED -> return AppOutcome(asked = false, allowed = false, blocked = true, answer = null, notified = false)
+      AppVerdict.ASK -> {}
+    }
+    val prompt = registry.open(Kind.APP, agent.id, agent.name, APP_REASON, pkg, label)
+    try {
+      val notified = host.announce(prompt)
+      waitUntil(waitMs, APP_POLL_MS) { prompt.appAnswer != null || prompt.cancelled || verdict() != AppVerdict.ASK }
+      return synchronized(prompt) {
+        val now = verdict()
+        AppOutcome(
+          asked = true,
+          allowed = now == AppVerdict.ALLOWED,
+          blocked = now == AppVerdict.BLOCKED,
+          answer = prompt.appAnswer,
+          notified = notified,
+        )
+      }
+    } finally {
+      end(prompt)
+    }
+  }
+
   private fun waitUntil(waitMs: Long, pollMs: Long, done: () -> Boolean) {
     val deadline = clock() + waitMs
     try {
@@ -99,5 +140,7 @@ class PromptFlows(
   private companion object {
     const val UNLOCK_POLL_MS = 100L
     const val ACCESSIBILITY_POLL_MS = 250L
+    const val APP_POLL_MS = 100L
+    const val APP_REASON = "app_access"
   }
 }

@@ -571,6 +571,29 @@
       }
     },
     {
+      "name": "phone_ask_app",
+      "description": "A screen call returned app_not_allowed: PhoneCanDo asks the user before agents use an app for the first time. Call this with the package that refusal names; it shows the user PhoneCanDo's question (Always / Just now / No) and waits up to 2 minutes. This never allows anything by itself. If allowed:true, observe the screen again (phone_observe), then go on with the task; answer \"once\" (Just now) lasts only until you call phone_return, so a later task may need to ask again. If answer is \"no\" or blocked:true, the user blocked agents from that app: don't use it; if the task needs it, call phone_hand_over and ask the user to do that part. If answer is null (no reply in time), tell the user PhoneCanDo is waiting for their answer, then do other work or end your turn; don't call this again in a loop. If notified:true, tell the user to tap the PhoneCanDo notification if the app did not come forward. Never try to reach the app another way (a link, a share, the shell, another app).",
+      "channel": "full",
+      "method": "POST",
+      "route": "/app-access",
+      "body": {
+        "waitMs": 120000
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "package": {
+            "type": "string",
+            "description": "The app's package name, as the app_not_allowed refusal gives it (e.g. com.example.app)"
+          }
+        },
+        "required": [
+          "package"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "phone_open_accessibility",
       "description": "UI automation is unavailable because Android's accessibility service is off (automation_unavailable). Shows PhoneCanDo's setup dialog over the chat and waits up to 4 minutes while the user follows it, returning as soon as the service connects. This never enables anything; only the user can flip the switch. Returns {opened, enabled, cancelled, restricted}. If enabled:true, continue the task right away. If cancelled:true, the user tapped 'Not now': stop and ask whether to continue. Otherwise (enabled:false after the wait), tell the user to finish the steps shown in PhoneCanDo and say when done; when they do, call phone_ping and continue only when it reports ui:true. Do not call this again in a loop. restricted is 'sideload' when the user went through PhoneCanDo's restricted-settings guide (Android locks the switch for apps installed from a file: Android's 'Restricted setting' note, then App info → Allow restricted settings, then the switch). Never toggle accessibility yourself.",
       "channel": "full",

@@ -21,6 +21,7 @@ import { useDeskSeats } from './src/ui/common/desk/useDeskSeats';
 import { useEngineTerminalTheme } from './src/ui/terminal/theme/useEngineTerminalTheme';
 import FirstLaunchScreen from './src/ui/setup/FirstLaunchScreen';
 import AccessibilityDialog from './src/ui/accessibility/AccessibilityDialog';
+import AppAccessDialog from './src/ui/app-access/AppAccessDialog';
 import RootError from './src/diagnostics/RootError';
 import SafeRoot from './src/ui/common/SafeRoot';
 import OpenUrlDialog from './src/ui/common/OpenUrlDialog';
@@ -222,6 +223,7 @@ export default function App() {
           </SafeRoot>
           <UnlockDialog />
           <AccessibilityDialog />
+          <AppAccessDialog />
           <OpenUrlDialog />
           <PermissionDialog />
           <UpdateBox />

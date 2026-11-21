@@ -8,6 +8,8 @@ import android.util.Log
 import com.phonecando.runner.AutomationHost
 import com.phonecando.runner.AutomationHosts
 import com.phonecando.runner.agents.AgentDirectory
+import com.phonecando.runner.appaccess.AppAccesses
+import com.phonecando.runner.appaccess.PhoneApps
 import com.phonecando.runner.autooff.AutoOff
 import com.phonecando.runner.bridge.mcp.McpToolAssets
 import com.phonecando.runner.controllock.ControlLocks
@@ -19,6 +21,7 @@ import com.phonecando.runner.notify.AppOnScreen
 import com.phonecando.runner.presence.Focus
 import com.phonecando.runner.presence.NotifyRules
 import com.phonecando.runner.presence.Presence
+import com.phonecando.runner.prompts.PermissionPrompts
 import com.phonecando.runner.schedule.PhoneTime
 import com.phonecando.runner.schedule.Schedules
 import com.phonecando.runner.schedule.SelfScheduling
@@ -27,7 +30,7 @@ import com.phonecando.runner.schedule.SelfScheduling
 interface BridgeHandle {
   val url: String
 
-  /** The agent's engine stopped: its ask-mode unlock ends with it. */
+  /** The agent's engine stopped: its ask-mode unlock and its "Just now" apps end with it. */
   fun agentGone(agentId: String)
 
   fun stop()
@@ -51,6 +54,10 @@ interface BridgeHandle {
 // agents' presence (presence/: the hand-over to you, status lines, where
 // you look; PresenceRoutes) works on this bridge's lease while it is open,
 // and hears each second, each granted screen request and each engine gone.
+// Full builds check the app in front against the user's app-access list
+// (appaccess/, the router's gate; /app-access, AppAccessRoutes), and keep
+// agents' taps off PhoneCanDo's own questions while one waits
+// (OwnQuestions: app and unlock prompts, agents' permission questions).
 object Bridge {
   private const val TAG = "PhoneCanDoBridge"
   private const val PREFS = "phonecando_bridge"
@@ -106,20 +113,24 @@ object Bridge {
     }
     val launcher = AppLauncher(app)
     val lock = ControlLocks.get(app)
+    val full = channel == "full"
+    val appAccess = if (full) AppAccesses.get(app) else null
+    val flows = PromptFlows(BridgePrompts.registry, launcher)
     val messages = Messages.get(app)
     val notifyRules = NotifyRules { SystemClock.elapsedRealtime() }
     val chatOnScreen = { agentId: String -> NotifyRules.chatOnScreen(AppOnScreen.shown, Engines.peek()?.openAgent(), agentId) }
     val handlers = DeviceRoutes(app, channel, automation, lock, notifyRules, chatOnScreen).table() +
       ActivityRoutes(app, launcher).table() +
       PceRoutes(automation).table() +
-      PromptRoutes(app, PromptFlows(BridgePrompts.registry, launcher), automation, lock).table() +
+      PromptRoutes(app, flows, automation, lock).table() +
+      AppAccessRoutes(flows) { AppAccesses.get(app) }.table() +
       AgentRoutes(messages.mailbox, messages.view).table() +
       KeepRoutes(KeepAsks.shared, KeepRunning.get(app)::isOn) { Engines.work()?.poke() }.table() +
       ScheduleRoutes(Schedules.get(app).book, SelfScheduling.get(app)::isOn, timeText = PhoneTime.text(app)).table() +
       PresenceRoutes(Presence.store, { focusFacts(app) }).table()
     val screen = ScreenLease(LEASE_IDLE_MS, notices = messages.screenNotices(LEASE_IDLE_MS)) { SystemClock.elapsedRealtime() }
     val router = BridgeRouter(
-      full = channel == "full",
+      full = full,
       automation = automation,
       lock = lock,
       lease = screen,
@@ -132,10 +143,14 @@ object Bridge {
       onPaused = Presence.store::pausedCall,
       leftStopped = Presence.store::leftStopped,
       autoOff = { AutoOff.turnedOff(app) },
+      appAccess = appAccess,
+      ownPackage = app.packageName,
+      questionWaiting = { BridgePrompts.userDeciding() || PermissionPrompts.registry.pending().isNotEmpty() },
+      linkHandler = if (full) PhoneApps(app)::linkHandler else { _ -> null },
     )
     val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val ports = BridgePorts.candidates(prefs.getInt(KEY_PORT, 0))
-    val tools = McpToolAssets.load(app, full = channel == "full")
+    val tools = McpToolAssets.load(app, full = full)
     val server = BridgeServer.start(ports, agents, router, tools, appVersion(app), onCall, messages.mailbox::unread)
       ?: return null
     prefs.edit().putInt(KEY_PORT, server.listeningPort).apply()
@@ -150,6 +165,7 @@ object Bridge {
         Presence.forget(agentId)
         notifyRules.forget(agentId)
         lock.endAsk(agentId)
+        appAccess?.endJustNow(agentId)
         // Out of the screen line: it holds nothing and waits for nothing.
         screen.forget(agentId)
       }
@@ -161,9 +177,10 @@ object Bridge {
         // Nobody drives a phone with no bridge.
         Presence.detach(screen)
         // No engine is left to hear the answers: end the waits now, and
-        // every ask-mode unlock with them.
+        // every ask-mode unlock and "Just now" app with them.
         BridgePrompts.registry.cancelAll()
         lock.endAsks()
+        appAccess?.endAllJustNow()
       }
     }
   }

@@ -41,6 +41,13 @@ class PhoneCanDoAccessibilityService : AccessibilityService() {
     return activityClass
   }
 
+  // The app in front, for the app-access gate (appaccess/): the active
+  // window's package, else the last activity we saw. Our glass never takes
+  // focus, so it is never the active window.
+  fun frontPackage(): String? =
+    runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()?.takeIf { it.isNotEmpty() }
+      ?: activityPackage
+
   override fun onServiceConnected() {
     super.onServiceConnected()
     // Android bound us: the restricted-settings lock is cleared on this

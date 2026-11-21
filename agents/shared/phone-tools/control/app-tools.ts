@@ -5,9 +5,9 @@ import { noArgs, type PhoneTool } from "../tool"
 // for the user (PresenceRoutes.WAIT_MAX_MS), and the client a little more.
 const HANDS_WAIT_MS = 255_000
 
-// The full-only tools that are not drivers: back to PhoneCanDo, the two
-// prompts that ask the user (unlock, accessibility setup), and handing the
-// user the phone's controls and waiting for them back.
+// The full-only tools that are not drivers: back to PhoneCanDo, the three
+// prompts that ask the user (unlock, an app's first use, accessibility
+// setup), and handing the user the phone's controls and waiting for them back.
 export const appTools: PhoneTool[] = [
   {
     name: "phone_return",
@@ -39,6 +39,25 @@ export const appTools: PhoneTool[] = [
     input: noArgs,
     channel: "full",
     run: (_args, signal) => call("/unlock", { waitMs: 45_000 }, signal, 50_000),
+  },
+  {
+    name: "phone_ask_app",
+    description:
+      "A screen call returned app_not_allowed: PhoneCanDo asks the user before agents use an app for the first time. Call this with the package that refusal names; it shows the user PhoneCanDo's question (Always / Just now / No) and waits up to 2 minutes. This never allows anything by itself. If allowed:true, observe the screen again (phone_observe), then go on with the task; answer \"once\" (Just now) lasts only until you call phone_return, so a later task may need to ask again. If answer is \"no\" or blocked:true, the user blocked agents from that app: don't use it; if the task needs it, call phone_hand_over and ask the user to do that part. If answer is null (no reply in time), tell the user PhoneCanDo is waiting for their answer, then do other work or end your turn; don't call this again in a loop. If notified:true, tell the user to tap the PhoneCanDo notification if the app did not come forward. Never try to reach the app another way (a link, a share, the shell, another app).",
+    input: {
+      type: "object",
+      properties: {
+        package: {
+          type: "string",
+          description: "The app's package name, as the app_not_allowed refusal gives it (e.g. com.example.app)",
+        },
+      },
+      required: ["package"],
+      additionalProperties: false,
+    },
+    channel: "full",
+    // The bridge waits up to waitMs for the user; the client allows a little more.
+    run: (args, signal) => call("/app-access", { package: args.package, waitMs: 120_000 }, signal, 135_000),
   },
   {
     name: "phone_open_accessibility",

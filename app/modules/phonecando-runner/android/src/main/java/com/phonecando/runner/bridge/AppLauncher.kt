@@ -50,6 +50,7 @@ class AppLauncher(private val context: Context) : PromptHost {
     val text = when (prompt.kind) {
       Kind.UNLOCK -> "Wants to control the phone. Tap to unlock."
       Kind.ACCESSIBILITY -> "Needs Accessibility permission. Tap to review."
+      Kind.APP -> "Wants to use ${prompt.label ?: prompt.pkg}. Tap to answer."
     }
     return notices.post(
       AgentNotices.Notice(

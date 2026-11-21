@@ -20,7 +20,7 @@ pt="phone_ping phone_battery phone_notify phone_focus phone_share phone_open
 phone_clipboard agents_list agents_send agents_status agents_inbox agents_wait
 agents_keep_running schedule_add schedule_list schedule_cancel phone_describe
 phone_observe phone_act phone_pack phone_return phone_request_unlock
-phone_open_accessibility phone_hand_over phone_wait_for_user"
+phone_ask_app phone_open_accessibility phone_hand_over phone_wait_for_user"
 nl='
 '
 

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
 import PlainText from '../PlainText';
 
@@ -8,20 +9,34 @@ type Props = {
   value: string;
   /** Lines it may take before it is cut. */
   lines?: number;
+  /** Beside the line, on its left (an app's icon). */
+  leading?: ReactNode;
 };
 
 // A slip's one important line, the whole card's width: in a dashed box on
 // the page's colour, its label set into the top edge as on a paper form
 // (an amber dash, amber mono capitals), so the label takes no column of
 // its own and the line gets every bit of room. Selectable, to copy a part.
-export default function SlipField({ label, value, lines = 8 }: Props) {
+// `leading` (an app's icon) sits at the line's left, inside the box.
+export default function SlipField({ label, value, lines = 8, leading }: Props) {
   return (
     <YStack paddingTop={7}>
-      <YStack borderWidth={1} borderStyle="dashed" borderColor="lineStrong" backgroundColor="bg" paddingHorizontal="3" paddingTop={14} paddingBottom={10}>
-        <PlainText fontFamily="mono" fontSize={13} lineHeight="19px" numberOfLines={lines} userSelect="text">
+      <XStack
+        borderWidth={1}
+        borderStyle="dashed"
+        borderColor="lineStrong"
+        backgroundColor="bg"
+        paddingHorizontal="3"
+        paddingTop={14}
+        paddingBottom={10}
+        alignItems="center"
+        gap="3"
+      >
+        {leading}
+        <PlainText fontFamily="mono" fontSize={13} lineHeight="19px" numberOfLines={lines} userSelect="text" flex={1} minWidth={0}>
           {value}
         </PlainText>
-      </YStack>
+      </XStack>
       <XStack position="absolute" top={0} left={8} alignItems="center" gap={6} paddingHorizontal={6} backgroundColor="panel">
         <YStack width={10} height={1} backgroundColor="secondary" />
         <PlainText fontFamily="mono" fontSize={10} lineHeight="14px" fontWeight="600" letterSpacing={1.4} textTransform="uppercase" color="secondaryInk" numberOfLines={1}>
