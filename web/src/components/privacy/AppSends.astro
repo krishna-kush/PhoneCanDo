@@ -98,13 +98,6 @@ const badges: [string, string, string][] = [
         </li>
       ))}
     </ul>
-    <p class="pv-badge-void">
-      <span class="pv-badge-void-stamp" aria-hidden="true">Switched off</span>
-      <span>
-        <b>DRM ID</b> An ID from the phone's DRM system is in the code but
-        switched off, so it is never sent.
-      </span>
-    </p>
   </div>
 </section>
 
@@ -253,33 +246,6 @@ const badges: [string, string, string][] = [
     color: var(--muted);
     text-wrap: pretty;
   }
-  .pv-badge-void {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    margin-top: 34px;
-    padding: 14px 18px;
-    border: 1px dashed var(--line-2);
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--muted);
-  }
-  .pv-badge-void b {
-    margin-right: 6px;
-    font: italic 400 20px/1 var(--serif);
-    color: var(--fg);
-    text-decoration: line-through 2px var(--red);
-  }
-  .pv-badge-void-stamp {
-    flex: none;
-    padding: 5px 8px;
-    border: 1.5px solid var(--red-hi);
-    color: var(--red-hi);
-    font: 500 9px/1 var(--mono);
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    rotate: -6deg;
-  }
 
   @keyframes pv-swing {
     0%, 100% { rotate: 0deg; }
@@ -300,7 +266,6 @@ const badges: [string, string, string][] = [
   @media (max-width: 620px) {
     .pv-tags,
     .pv-badges { grid-template-columns: 1fr; }
-    .pv-badge-void { flex-direction: column; align-items: flex-start; gap: 12px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .pv-tag:hover { animation: none; }

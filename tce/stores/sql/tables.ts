@@ -68,7 +68,6 @@ const DEVICE_COLUMNS = columnsOf<DeviceRow>()([
   'device_id',
   'verifier',
   'hw_hash',
-  'drm_id',
   'manufacturer',
   'model',
   'sdk_int',
@@ -87,7 +86,7 @@ const DEVICE_FOREIGN = 'devices.verifier IS NOT NULL AND devices.verifier IS NOT
 
 /**
  * devices: first_seen = min, last_seen = max, descriptive fields from the row
- * with the newer last_seen, drm_id = newest non-null, verifier = first non-null
+ * with the newer last_seen, verifier = first non-null
  * ever written (never replaced). A row carrying another verifier than the
  * pinned one fails the statement (ownership guard).
  */
@@ -110,9 +109,6 @@ export const DEVICES: TableSpec<DeviceRow> = {
       'asn',
       'tester',
     ]),
-    // Why newest-by-last_seen and not arrival order: an older batch replayed
-    // late must not clobber the id a newer one reported.
-    ...newestNonNull('devices', DEVICE_NEWER, ['drm_id']),
     'first_seen = min(devices.first_seen, excluded.first_seen)',
     'last_seen = max(devices.last_seen, excluded.last_seen)',
   ].join(', ')}`,

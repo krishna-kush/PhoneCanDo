@@ -9,16 +9,13 @@ import { getTelemetrySnapshot } from '../runner';
 import { sha256Hex } from './crypto';
 import { channel, deviceFacts, locale } from './device';
 import { flags } from './flags';
-import { deriveIds, withDrmId } from './identity';
+import { deriveIds } from './identity';
 
 export const envPort: EnvPort = {
   async identity() {
     const androidId = getAndroidId();
     if (!androidId) throw new Error('ANDROID_ID unavailable');
-    const ids = await deriveIds(androidId, deviceFacts(), sha256Hex);
-    // The Kotlin side hashes the Widevine id with HASH_PEPPER.drm; null while its flag is off.
-    const drm = getTelemetrySnapshot()?.drmIdHash ?? null;
-    return withDrmId(ids, drm);
+    return deriveIds(androidId, deviceFacts(), sha256Hex);
   },
 
   async device(): Promise<Omit<DeviceWire, 'tester'>> {

@@ -53,7 +53,6 @@ export interface EnvPort {
   identity(): Promise<{
     deviceId: string;
     hwHash: string;
-    drmId?: string;
     deviceVerifier: string;
     deviceProof: string;
   }>;

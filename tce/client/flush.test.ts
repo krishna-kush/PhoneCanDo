@@ -121,7 +121,6 @@ describe('flush', () => {
 describe('server rules', () => {
   it('sends only what the server parsers accept', async () => {
     const { client, net, env } = setup();
-    env.drmId = 'e'.repeat(64);
     env.deviceWire = { ...env.deviceWire, sdkInt: 0, ramGb: 7.7, installSource: 'com.android.vending' };
     await client.init();
     await client.setTester(true);

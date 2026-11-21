@@ -126,7 +126,6 @@ restore on another phone counts as a new install.
 | `deviceId` | 64 hex | SHA-256 of `phonecando.device.v1:` + `ANDROID_ID`, on the phone | reinstall, Clear data | factory reset; `ANDROID_ID` is per device, user and signing key |
 | `deviceVerifier` | 64 hex | SHA-256 of the device proof, where the proof is SHA-256 of `phonecando.forget.v1:` + `ANDROID_ID`, on the phone | like `deviceId` | like `deviceId` |
 | `hwHash` | 64 hex | SHA-256 of `phonecando.hw.v1:` + manufacturer, model, design and product name, build fingerprint and total RAM, on the phone | reinstall, factory reset | a system update (new build fingerprint); identical phones on the same build share it |
-| `drmId` | 64 hex | SHA-256 of `phonecando.drm.v1:` + the Widevine device ID | | **off**: the Kotlin flag `TELEMETRY_DRM_ID_ENABLED` is false, so it is never sent |
 | `sessionId` | UUID | random, per app process start | that run | every start |
 | `seq` | integer | counter per session, shared by events and errors | | |
 
@@ -388,8 +387,8 @@ downloads are the app's update checks, so they approximate launches.
 Prompts, chat and session content, model output, files and file paths,
 environment variable names and values, provider API keys, the bridge token,
 screenshots and screen content, names of apps the agent controlled, contacts,
-messages and notifications, raw IP addresses, the raw `ANDROID_ID` or Widevine
-ID, precise location, advertising IDs, names, email addresses and phone
+messages and notifications, raw IP addresses, the raw `ANDROID_ID`, the
+phone's DRM (Widevine) ID, precise location, advertising IDs, names, email addresses and phone
 numbers.
 
 ## Every network call the app makes

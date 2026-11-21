@@ -10,7 +10,6 @@ import {
   DEVICE_ID_2,
   DEVICE_VERIFIER,
   DEVICE_VERIFIER_2,
-  DRM_ID,
   INSTALL_ID_3,
   REPORT_ID,
   REPORT_ID_2,
@@ -115,7 +114,7 @@ export function reportCases(make: Make): void {
       'merges the device by the applyBatch rules and fills a null stored verifier (a row from before migration 0002)',
       using(make, async (s) => {
         await apply(s.store, identityOnly({ device: deviceRow({ verifier: null }) }));
-        const newer = deviceRow({ model: 'Pixel 9', drm_id: DRM_ID, last_seen: T0 + 1000, first_seen: T0 + 1000 });
+        const newer = deviceRow({ model: 'Pixel 9', last_seen: T0 + 1000, first_seen: T0 + 1000 });
         assert.deepEqual(value(await s.store.insertReport(reportRow(), newer), 'insertReport'), { inserted: true });
         await expectRows(s, 'devices', [{ ...newer, first_seen: T0 }]);
         // An older row merges like applyBatch's: first_seen min, the rest from the newer row.

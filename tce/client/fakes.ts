@@ -119,7 +119,6 @@ export class FakeEnv implements EnvPort {
   hwHash = 'b'.repeat(64);
   deviceVerifier = '9'.repeat(64);
   deviceProof = '7'.repeat(64);
-  drmId: string | undefined = undefined;
   identityCalls = 0;
   failIdentity = false;
   appWire: AppWire = { version: '0.1.3', versionCode: 13, channel: 'full' };
@@ -136,13 +135,12 @@ export class FakeEnv implements EnvPort {
   async identity(): Promise<Awaited<ReturnType<EnvPort['identity']>>> {
     this.identityCalls++;
     if (this.failIdentity) throw new Error('identity unavailable');
-    const base = {
+    return {
       deviceId: this.deviceId,
       hwHash: this.hwHash,
       deviceVerifier: this.deviceVerifier,
       deviceProof: this.deviceProof,
     };
-    return this.drmId ? { ...base, drmId: this.drmId } : base;
   }
 
   async device(): Promise<Omit<DeviceWire, 'tester'>> {

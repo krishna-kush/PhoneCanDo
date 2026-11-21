@@ -62,8 +62,6 @@ export const BATCH_ID = 'd08d9bac-becf-40d7-b18c-9daebfc0d1e2';
 export const DEVICE_ID = 'a1'.repeat(32);
 export const DEVICE_ID_2 = 'b2'.repeat(32);
 export const HW_HASH = 'c3'.repeat(32);
-export const DRM_ID = 'd4'.repeat(32);
-export const DRM_ID_2 = 'e5'.repeat(32);
 /** A plausible error_key (the op computes real ones). */
 export const ERROR_KEY = 'f6'.repeat(32);
 
@@ -118,7 +116,6 @@ export function deviceRow(over: Partial<DeviceRow> = {}): DeviceRow {
     device_id: DEVICE_ID,
     verifier: DEVICE_VERIFIER,
     hw_hash: HW_HASH,
-    drm_id: null,
     manufacturer: 'Google',
     model: 'Pixel 8',
     sdk_int: 36,
@@ -301,7 +298,7 @@ export function batchWrite(over: Partial<BatchWrite> = {}): BatchWrite {
 
 // ---------- wire requests ----------
 
-/** Identity of DEVICE_ID (with its DEVICE_VERIFIER), without a drm id. */
+/** Identity of DEVICE_ID (with its DEVICE_VERIFIER). */
 export function identityWire(over: Partial<IdentityWire> = {}): IdentityWire {
   return { installId: INSTALL_ID, deviceId: DEVICE_ID, hwHash: HW_HASH, deviceVerifier: DEVICE_VERIFIER, ...over };
 }

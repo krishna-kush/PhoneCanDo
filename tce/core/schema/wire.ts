@@ -12,7 +12,6 @@ export type PropValue = string | number | boolean;
  *   deviceId   64 lowercase hex: SHA-256(HASH_PEPPER.device + ANDROID_ID). Survives reinstall.
  *   hwHash     64 lowercase hex: SHA-256(HASH_PEPPER.hardware + build fingerprint, model,
  *              RAM, screen ...). Survives factory reset; not unique across identical units.
- *   drmId      64 lowercase hex: SHA-256(HASH_PEPPER.drm + Widevine id). Absent unless enabled.
  *   deviceVerifier  64 lowercase hex: SHA-256(proof), proof = SHA-256(HASH_PEPPER.forget +
  *              ANDROID_ID). The server pins the first verifier per device and rejects
  *              writes that carry another one (see HASH_PEPPER in limits.ts).
@@ -21,7 +20,6 @@ export interface IdentityWire {
   installId: string;
   deviceId: string;
   hwHash: string;
-  drmId?: string;
   deviceVerifier: string;
 }
 

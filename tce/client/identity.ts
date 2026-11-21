@@ -26,14 +26,13 @@ export async function platformIdentity(
       const hwHash = hex(id?.hwHash);
       const deviceVerifier = hex(id?.deviceVerifier);
       const deviceProof = hex(id?.deviceProof);
-      const drmId = typeof id?.drmId === 'string' ? id.drmId.toLowerCase() : undefined;
       const shapes = [deviceId, hwHash, deviceVerifier, deviceProof].every((h) => HEX64.test(h));
       const distinct = deviceProof !== deviceId && deviceProof !== deviceVerifier && deviceProof !== hwHash;
-      if (!shapes || !distinct || (drmId !== undefined && !HEX64.test(drmId))) {
+      if (!shapes || !distinct) {
         c.log.error('telemetry: platform identity is malformed; nothing sent');
         return err('bad_request', 'platform identity is malformed');
       }
-      c.identityCache = drmId ? { deviceId, hwHash, drmId, deviceVerifier } : { deviceId, hwHash, deviceVerifier };
+      c.identityCache = { deviceId, hwHash, deviceVerifier };
       c.proofCache = deviceProof;
     }
     return ok({ wire: c.identityCache, proof: c.proofCache });

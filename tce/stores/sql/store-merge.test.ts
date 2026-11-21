@@ -8,8 +8,6 @@ import {
   DAY_MS,
   DEVICE_ID,
   DEVICE_ID_2,
-  DRM_ID,
-  DRM_ID_2,
   INSTALL_ID,
   INSTALL_ID_2,
   SESSION_ID,
@@ -51,24 +49,6 @@ describe('merge: devices', () => {
     assert.equal(d.country, null);
     assert.equal(d.asn, null);
     assert.equal(d.tester, 1);
-  });
-
-  test('drm_id keeps the newest non-null value', async () => {
-    const s = store();
-    await s.applyBatch(batchWrite({ device: deviceRow({ drm_id: DRM_ID, last_seen: T0 }) }));
-    await s.applyBatch(batchWrite({ device: deviceRow({ drm_id: null, last_seen: T0 + 1 }) }));
-    assert.equal(read().drm_id, DRM_ID, 'a newer null keeps the stored id');
-    await s.applyBatch(batchWrite({ device: deviceRow({ drm_id: DRM_ID_2, last_seen: T0 - 1 }) }));
-    assert.equal(read().drm_id, DRM_ID, 'an older id does not replace a newer one');
-    await s.applyBatch(batchWrite({ device: deviceRow({ drm_id: DRM_ID_2, last_seen: T0 + 2 }) }));
-    assert.equal(read().drm_id, DRM_ID_2, 'a newer id replaces it');
-  });
-
-  test('an older non-null drm_id fills a stored null', async () => {
-    const s = store();
-    await s.applyBatch(batchWrite({ device: deviceRow({ drm_id: null, last_seen: T0 }) }));
-    await s.applyBatch(batchWrite({ device: deviceRow({ drm_id: DRM_ID, last_seen: T0 - 1 }) }));
-    assert.equal(read().drm_id, DRM_ID);
   });
 
   test('the device upsert carries the verifier and keeps the first one (coalesce)', async () => {

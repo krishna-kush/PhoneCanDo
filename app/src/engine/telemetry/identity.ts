@@ -1,11 +1,9 @@
 // Identity hashing: which strings are hashed, with which HASH_PEPPER, into
-// the device id, the hardware hash, the forget proof and its verifier, and
-// when the native DRM id hash rides along. Pure: the SHA-256 function is
-// passed in, and the device facts are plain data.
+// the device id, the hardware hash, the forget proof and its verifier.
+// Pure: the SHA-256 function is passed in, and the device facts are plain
+// data.
 import { HASH_PEPPER } from '../../../../tce/core/schema/limits.ts';
 import type { DeviceFacts } from './device';
-
-const HEX64 = /^[0-9a-f]{64}$/;
 
 export type DeviceIds = { deviceId: string; hwHash: string; deviceVerifier: string; deviceProof: string };
 
@@ -27,9 +25,4 @@ export async function deriveIds(
   // the proof goes only into Delete my data, and is never logged.
   const deviceVerifier = await sha256Hex(deviceProof);
   return { deviceId, hwHash, deviceVerifier, deviceProof };
-}
-
-/** `ids` plus `drm` as drmId when it is a 64-char lowercase hex hash. */
-export function withDrmId(ids: DeviceIds, drm: string | null) {
-  return drm && HEX64.test(drm) ? { ...ids, drmId: drm } : ids;
 }

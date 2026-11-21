@@ -1963,9 +1963,8 @@ sends later, even from a new process, can still attach it. The shape is
 - Live fields (`TelemetrySnapshot.kt`, read on every call):
   `installSource` (installer package), `batteryOptIgnored`,
   `fgServiceRunning` (true while any agent's engine is starting, ready or
-  stopping), `a11yConnected` (the `isUiAutomationConnected` check, false in
-  lite/play) and `drmIdHash`, null while `TELEMETRY_DRM_ID_ENABLED` is false
-  (MediaDrm is then never touched).
+  stopping) and `a11yConnected` (the `isUiAutomationConnected` check, false in
+  lite/play).
 
 ## Not implemented yet
 

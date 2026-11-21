@@ -7,7 +7,6 @@ import {
   DEVICE_ID_2,
   DEVICE_VERIFIER,
   DEVICE_VERIFIER_2,
-  DRM_ID,
   ERROR_ID,
   ERROR_ID_2,
   INSTALL_ID_2,
@@ -80,7 +79,6 @@ async function post(ctx: FakeCtx<MemoryStore>, path: string, body: unknown): Pro
 describe('batch parse', () => {
   it('accepts the fixture request', () => {
     const input = parsed(batchRequest());
-    assert.equal(input.identity.drmId, null);
     assert.equal(input.events.length, 2);
     assert.equal(input.sessions[0]!.endedAt, null);
   });
@@ -105,7 +103,6 @@ describe('batch parse', () => {
       [batchRequest({ identity: identityWire({ installId: '6f1c2a3b-4d5e-1f60-8a1b-2c3d4e5f6a7b' }) }), 'identity.installId'],
       [batchRequest({ identity: identityWire({ deviceId: 'a'.repeat(63) }) }), 'identity.deviceId'],
       [batchRequest({ identity: identityWire({ hwHash: 'G'.repeat(64) }) }), 'identity.hwHash'],
-      [batchRequest({ identity: identityWire({ drmId: 'abc' }) }), 'identity.drmId'],
       [batchRequest({ identity: identityWire({ deviceVerifier: DEVICE_VERIFIER.toUpperCase() }) }), 'identity.deviceVerifier'],
       [batchRequest({ identity: identityWire({ deviceVerifier: DEVICE_VERIFIER.slice(2) }) }), 'identity.deviceVerifier'],
       [batchRequest({ identity: { ...identityWire(), deviceVerifier: undefined as unknown as string } }), 'identity.deviceVerifier'],
@@ -114,7 +111,8 @@ describe('batch parse', () => {
       [batchRequest({ errors: [errorWire({ errorId: '' })] }), 'errors.0.errorId'],
     ];
     for (const [body, field] of cases) assert.deepEqual([rejected(body).code, rejected(body).field], ['bad_request', field]);
-    assert.equal(parsed(batchRequest({ identity: identityWire({ drmId: DRM_ID }) })).identity.drmId, DRM_ID);
+    const stray = { ...identityWire(), drmId: 'd4'.repeat(32) };
+    assert.equal('drmId' in parsed(batchRequest({ identity: stray })).identity, false, 'a drmId from any client is ignored, never stored');
     assert.equal(parsed(batchRequest()).identity.deviceVerifier, DEVICE_VERIFIER);
   });
 
@@ -241,7 +239,7 @@ describe('batch run', () => {
   it('writes device, install, session, events and errors and answers 200', async () => {
     const ctx = setup();
     ctx.clock.set(T0 + 250);
-    const res = await send(ctx, batchRequest({ identity: identityWire({ drmId: DRM_ID }), device: deviceWire({ tester: true }) }));
+    const res = await send(ctx, batchRequest({ device: deviceWire({ tester: true }) }));
     assert.deepEqual(res, { serverTime: T0 + 250, accepted: { sessions: 1, events: 2, errors: 1 }, droppedEvents: 0 });
 
     const [device] = ctx.store.tables.devices;
@@ -249,7 +247,6 @@ describe('batch run', () => {
       device_id: identityWire().deviceId,
       verifier: DEVICE_VERIFIER,
       hw_hash: identityWire().hwHash,
-      drm_id: DRM_ID,
       manufacturer: 'Google',
       model: 'Pixel 8',
       sdk_int: 36,

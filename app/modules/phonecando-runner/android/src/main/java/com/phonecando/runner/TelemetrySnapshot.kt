@@ -1,29 +1,15 @@
 package com.phonecando.runner
 
 import android.content.Context
-import android.media.MediaDrm
 import android.os.Build
 import android.os.PowerManager
-import java.security.MessageDigest
-import java.util.UUID
-
-// Widevine device id for telemetry's drm_id. Off: the snapshot's drmIdHash
-// stays null and MediaDrm is never touched. Turn on only together with the
-// privacy page and docs/telemetry.md.
-const val TELEMETRY_DRM_ID_ENABLED = false
 
 // What JS reads (the module's getTelemetrySnapshot and
 // consumeTelemetrySnapshot; the shape is src/telemetry.types.ts): the stored
 // half from TelemetryStore plus the device state read live on every call
-// (install source, battery optimisation, accessibility, the DRM id hash).
+// (install source, battery optimisation, accessibility).
 // `fgServiceRunning` comes from the caller: true while any agent's engine runs.
 object TelemetrySnapshot {
-  private const val DRM_PEPPER = "phonecando.drm.v1:"
-  private val WIDEVINE_UUID: UUID = UUID.fromString("edef8ba9-79d6-4ace-a3c8-27dcd51d21ed")
-  private const val HEX = "0123456789abcdef"
-
-  @Volatile private var drmHash: String? = null
-
   /** Read-only peek. */
   fun peek(context: Context, fgServiceRunning: Boolean): Map<String, Any?> =
     toMap(context, fgServiceRunning, TelemetryStore.read(TelemetryStore.prefs(), consume = false))
@@ -53,7 +39,6 @@ object TelemetrySnapshot {
     "toolCalls" to s.toolCalls,
     "sessionCreates" to s.sessionCreates,
     "nativeCrashes" to s.crashes,
-    "drmIdHash" to drmIdHash(),
   )
 
   // Installer of the current install, e.g. com.google.android.packageinstaller
@@ -86,38 +71,4 @@ object TelemetrySnapshot {
   } catch (_: Throwable) {
     false
   }
-
-  /** Lowercase SHA-256 hex of the pepper + hex(Widevine id); null while disabled. */
-  private fun drmIdHash(): String? {
-    if (!TELEMETRY_DRM_ID_ENABLED) return null
-    drmHash?.let { return it }
-    var drm: MediaDrm? = null
-    val hash = try {
-      drm = MediaDrm(WIDEVINE_UUID)
-      // @NonNull; a platform that breaks that lands in the catch below.
-      val id = drm.getPropertyByteArray(MediaDrm.PROPERTY_DEVICE_UNIQUE_ID)
-      if (id.isEmpty()) null else sha256Hex(DRM_PEPPER + hex(id))
-    } catch (_: Throwable) {
-      null
-    } finally {
-      try {
-        drm?.close()
-      } catch (_: Throwable) {
-      }
-    }
-    if (hash != null) drmHash = hash
-    return hash
-  }
-
-  private fun hex(bytes: ByteArray): String {
-    val out = StringBuilder(bytes.size * 2)
-    for (b in bytes) {
-      val v = b.toInt() and 0xff
-      out.append(HEX[v ushr 4]).append(HEX[v and 0x0f])
-    }
-    return out.toString()
-  }
-
-  private fun sha256Hex(text: String): String =
-    hex(MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)))
 }

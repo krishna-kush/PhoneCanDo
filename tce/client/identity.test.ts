@@ -1,4 +1,4 @@
-// Platform identity: shape checks, the drm id, and the device proof that
+// Platform identity: shape checks and the device proof that
 // only forget() ever sends.
 
 import assert from 'node:assert/strict';
@@ -21,15 +21,6 @@ describe('identity and the device proof', () => {
     assert.ok(r2?.ok);
     assert.equal(batches(net)[0]!.identity.deviceId, 'c'.repeat(64));
     assert.equal(batches(net)[0]!.events.length, 1);
-  });
-
-  it('passes a drm id through when the platform has one', async () => {
-    const { client, net, env } = setup();
-    env.drmId = 'D'.repeat(64);
-    await client.init();
-    client.track('chat.open');
-    await client.flush();
-    assert.equal(batches(net)[0]!.identity.drmId, 'd'.repeat(64));
   });
 
   it('sends the verifier in every batch and report, and the proof nowhere but forget', async () => {

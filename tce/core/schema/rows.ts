@@ -42,7 +42,7 @@ export type Bit = 0 | 1;
 
 /**
  * Merge on device_id: first_seen = min, last_seen = max, other fields from the
- * newer row; drm_id keeps the last non-null; verifier is first-write-wins and
+ * newer row; verifier is first-write-wins and
  * never overwritten (a write carrying a different verifier is refused before
  * the merge, see Store.applyBatch).
  */
@@ -51,7 +51,6 @@ export interface DeviceRow {
   /** SHA-256 hex of the device's forget proof; null only for rows written before migration 0002. */
   verifier: string | null;
   hw_hash: string;
-  drm_id: string | null;
   manufacturer: string;
   model: string;
   sdk_int: number;

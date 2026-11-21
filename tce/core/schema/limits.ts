@@ -92,6 +92,5 @@ export const CAPACITY = {
 export const HASH_PEPPER = {
   device: 'phonecando.device.v1:',
   hardware: 'phonecando.hw.v1:',
-  drm: 'phonecando.drm.v1:',
   forget: 'phonecando.forget.v1:',
 } as const;

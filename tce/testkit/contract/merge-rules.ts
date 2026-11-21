@@ -3,17 +3,16 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { DEVICE_ID, DEVICE_VERIFIER, DRM_ID, DRM_ID_2, T0, deviceRow, eventRow, installRow, sessionRow } from '../fixtures.ts';
+import { DEVICE_ID, DEVICE_VERIFIER, T0, deviceRow, eventRow, installRow, sessionRow } from '../fixtures.ts';
 import type { Make } from './harness.ts';
 import { apply, counts, expectRows, identityOnly, needsDump, using, value } from './harness.ts';
 
 /** Register the `merge rules` cases. */
 export function mergeRuleCases(make: Make): void {
   describe('merge rules', () => {
-    const olderDevice = deviceRow({ drm_id: DRM_ID, first_seen: T0, last_seen: T0 });
+    const olderDevice = deviceRow({ first_seen: T0, last_seen: T0 });
     const newerDevice = deviceRow({
       hw_hash: 'c4'.repeat(32),
-      drm_id: null,
       manufacturer: 'Google LLC',
       model: 'Pixel 8 Pro',
       sdk_int: 37,
@@ -26,20 +25,20 @@ export function mergeRuleCases(make: Make): void {
       first_seen: T0 + 1000,
       last_seen: T0 + 1000,
     });
-    // first_seen = min, last_seen = max, the rest from the newer row, drm_id = last non-null.
-    const mergedDevice = { ...newerDevice, first_seen: T0, last_seen: T0 + 1000, drm_id: DRM_ID };
+    // first_seen = min, last_seen = max, the rest from the newer row.
+    const mergedDevice = { ...newerDevice, first_seen: T0, last_seen: T0 + 1000 };
 
     for (const [label, order] of [
       ['in order', [olderDevice, newerDevice]],
       ['out of order', [newerDevice, olderDevice]],
     ] as const) {
       it(
-        `merges devices ${label}: first_seen min, last_seen max, fields from the newer row, drm_id keeps the last non-null`,
+        `merges devices ${label}: first_seen min, last_seen max, fields from the newer row`,
         using(make, async (s, t) => {
           for (const device of order) assert.deepEqual(await apply(s.store, identityOnly({ device })), { sessions: 0, events: 0, errors: 0 });
           if (s.dump) {
             await expectRows(s, 'devices', [mergedDevice]);
-            const newest = deviceRow({ ...newerDevice, drm_id: DRM_ID_2, first_seen: T0 + 2000, last_seen: T0 + 2000 });
+            const newest = deviceRow({ ...newerDevice, model: 'Pixel 9', first_seen: T0 + 2000, last_seen: T0 + 2000 });
             await apply(s.store, identityOnly({ device: newest }));
             await expectRows(s, 'devices', [{ ...newest, first_seen: T0 }]);
           }

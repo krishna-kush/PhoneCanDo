@@ -10,7 +10,6 @@ import {
   DAY_MS,
   DEVICE_ID,
   DEVICE_ID_2,
-  DRM_ID,
   REPORT_ID_2,
   T0,
   githubAssetRow,
@@ -90,9 +89,9 @@ describe('insertReport ownership and the device upsert', () => {
   test('the device upsert is the applyBatch one: merge rules and the first verifier kept', async () => {
     const s = store();
     await s.applyBatch(as(V1));
-    const r = await s.insertReport(reportRow(), dev(V1, { model: 'Pixel 9', drm_id: DRM_ID, last_seen: T0 + 10, first_seen: T0 + 10 }));
+    const r = await s.insertReport(reportRow(), dev(V1, { model: 'Pixel 9', last_seen: T0 + 10, first_seen: T0 + 10 }));
     assert.deepEqual(r, { ok: true, value: { inserted: true } });
-    assert.deepEqual([device().model, device().drm_id, device().first_seen, device().last_seen, device().verifier], ['Pixel 9', DRM_ID, T0, T0 + 10, V1]);
+    assert.deepEqual([device().model, device().first_seen, device().last_seen, device().verifier], ['Pixel 9', T0, T0 + 10, V1]);
     // An older report merges like an older batch: nothing but first_seen moves.
     await s.insertReport(reportRow({ report_id: REPORT_ID_2 }), dev(V1, { model: 'older', first_seen: T0 - 10, last_seen: T0 - 10 }));
     assert.deepEqual([device().model, device().first_seen, device().last_seen], ['Pixel 9', T0 - 10, T0 + 10]);

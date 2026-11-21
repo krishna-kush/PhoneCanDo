@@ -143,19 +143,16 @@ function missingColumn<T extends TableName>(table: T, row: TableRows[T]): string
 }
 
 /**
- * first_seen = min, last_seen = max, other fields from the newer row, drm_id =
- * newest non-null, verifier = the stored one unless it is null (first write
- * wins; applyBatch and insertReport have already refused a write carrying a
- * different one).
+ * first_seen = min, last_seen = max, other fields from the newer row, verifier
+ * = the stored one unless it is null (first write wins; applyBatch and
+ * insertReport have already refused a write carrying a different one).
  */
 export function mergeDevice(stored: DeviceRow, incoming: DeviceRow): DeviceRow {
   const incomingNewer = incoming.last_seen >= stored.last_seen;
   const newer = incomingNewer ? incoming : stored;
-  const older = incomingNewer ? stored : incoming;
   return {
     ...newer,
     verifier: stored.verifier ?? incoming.verifier,
-    drm_id: newer.drm_id ?? older.drm_id,
     first_seen: Math.min(stored.first_seen, incoming.first_seen),
     last_seen: Math.max(stored.last_seen, incoming.last_seen),
   };

@@ -18,7 +18,7 @@
 //   Read order for JS: peek (getTelemetrySnapshot), fold and persist, then
 //   consume — so a kill between the two loses at most the few increments
 //   made in that gap, not the whole period. State fields (installSource, batteryOptIgnored,
-//       fgServiceRunning, a11yConnected, drmIdHash) are read live.
+//       fgServiceRunning, a11yConnected) are read live.
 //   setTelemetryEnabled(enabled: boolean): void
 //       Mirrors the user's on/off choice into native prefs. While off, no
 //       engine event stream is opened just to count sessions.
@@ -88,10 +88,4 @@ export type TelemetryNativeSnapshot = {
   sessionCreates: number;
   /** Uncaught JVM crashes not yet consumed. */
   nativeCrashes: NativeCrash[];
-  /**
-   * Lowercase SHA-256 hex of "phonecando.drm.v1:" + hex(Widevine deviceUniqueId),
-   * the same pepper as tce/core/schema/limits.ts HASH_PEPPER.drm. Always null
-   * while the Kotlin build flag TELEMETRY_DRM_ID_ENABLED is false.
-   */
-  drmIdHash: string | null;
 };

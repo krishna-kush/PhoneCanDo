@@ -2,7 +2,7 @@
 
 - **Cloudflare first, behind `Store` and host seams:** another platform is one `stores/` and one `hosts/` folder.
 - **On by default, no prompt, one switch off:** stats start on the first launch; Settings → Privacy shows them and turns them off (no first-launch box, decided 2026-11-06).
-- **Strong ids, hashed on the phone:** random `install_id`, peppered `device_id` and `hw_hash`; `drm_id` coded but off.
+- **Strong ids, hashed on the phone:** random `install_id`, peppered `device_id` and `hw_hash`. No Widevine (DRM) id: it was coded but never switched on, and was deleted on 2026-11-21 (migration 0006) because nothing used it and an id that outlives a factory reset is one reviewers rightly distrust.
 - **Device proof for ownership:** the server pins a verifier first-write-wins; a known `deviceId` can neither write nor delete.
 - **Delete my data reaches every install of the phone;** a report pins the device so report-only phones can delete too.
 - **Engine log only in user reports:** automatic telemetry sends only the exit code.

@@ -214,7 +214,7 @@ describe('report ownership', () => {
   });
 
   it('pins a device that has never sent a batch: its device row is created exactly as a batch would create it', async () => {
-    const other = identityWire({ installId: INSTALL_ID_3, deviceId: DEVICE_ID_2, deviceVerifier: DEVICE_VERIFIER_2, drmId: 'e5'.repeat(32) });
+    const other = identityWire({ installId: INSTALL_ID_3, deviceId: DEVICE_ID_2, deviceVerifier: DEVICE_VERIFIER_2 });
     const device = deviceWire({ model: 'Pixel 9', tester: true });
     const ctx = setup();
     const res = await postRaw(ctx, JSON.stringify(reportRequest({ identity: other, device })));
@@ -232,7 +232,6 @@ describe('report ownership', () => {
         device_id: DEVICE_ID_2,
         verifier: DEVICE_VERIFIER_2,
         hw_hash: other.hwHash,
-        drm_id: 'e5'.repeat(32),
         manufacturer: device.manufacturer,
         model: 'Pixel 9',
         sdk_int: device.sdkInt,

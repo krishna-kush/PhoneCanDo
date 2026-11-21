@@ -119,13 +119,13 @@ describe('buildInserts', () => {
   });
 
   test('binds columns in spec order, nulls as null', () => {
-    const [stmt] = buildInserts(DEVICES, [deviceRow({ drm_id: null, asn: null })]);
-    const row = deviceRow({ drm_id: null, asn: null });
+    const [stmt] = buildInserts(DEVICES, [deviceRow({ country: null, asn: null })]);
+    const row = deviceRow({ country: null, asn: null });
     assert.deepEqual(
       stmt!.params,
       DEVICES.columns.map((c) => row[c]),
     );
-    assert.match(stmt!.sql, /^INSERT INTO devices \(device_id, verifier, hw_hash, drm_id, .*last_seen\) VALUES \(\?(, \?){14}\) ON CONFLICT \(device_id\) DO UPDATE SET /);
+    assert.match(stmt!.sql, /^INSERT INTO devices \(device_id, verifier, hw_hash, manufacturer, .*last_seen\) VALUES \(\?(, \?){13}\) ON CONFLICT \(device_id\) DO UPDATE SET /);
   });
 
   test('returns nothing for no rows', () => {
@@ -198,6 +198,11 @@ describe('splitSqlStatements', () => {
       'CREATE INDEX reports_device ON reports (device_id)',
       'CREATE INDEX reports_received ON reports (received)',
     ]);
+  });
+
+  test('splits migration 0006 into the one drop of drm_id', () => {
+    const sql = readFileSync(new URL('./migrations/0006_drop_drm_id.sql', import.meta.url), 'utf8');
+    assert.deepEqual(splitSqlStatements(sql), ['ALTER TABLE devices DROP COLUMN drm_id']);
   });
 
   test('keeps semicolons and comment markers inside strings and quoted identifiers', () => {

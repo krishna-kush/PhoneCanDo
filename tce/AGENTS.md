@@ -79,7 +79,7 @@ app/src/engine/telemetry/ -> client, core   (the only code outside tce that impo
 
 Never collected or stored: prompts, session content, file paths, env names,
 provider keys, the bridge token, screenshots, package names of apps the agent
-controlled, raw IP addresses, raw ANDROID_ID or Widevine ids. Hosts pass only
+controlled, raw IP addresses, raw ANDROID_ID, Widevine (DRM) ids. Hosts pass only
 `Edge` (country, region, ASN, colo, request id) to ops. Identity hashes are made
 on the device with the peppers in `core/schema/limits.ts`. A new field is added
 to `docs/telemetry.md` in the same change, or it does not ship.
