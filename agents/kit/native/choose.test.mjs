@@ -42,6 +42,6 @@ test('--rebuild builds even a current payload; --download takes GitHub\'s', () =
 test('--download with no GitHub build cannot be met', () => {
   const none = choose(kind(outdated, []), { download: new Set(['demo']) });
   assert.equal(none.pick, -1);
-  assert.match(none.note, /no build of these sources/);
+  assert.match(none.note, /no trusted build of these sources/);
   assert.match(choose(kind(outdated, null), { download: new Set(['demo']) }).note, /could not be asked/);
 });

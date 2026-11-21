@@ -89,7 +89,9 @@ A native kind's payload is never in git; `kit/native/` gets it into the APK.
   `./manage agent sync` runs it for dev builds): the
   staged one when current, else GitHub's build of these sources (CI uploads
   `<prefix>-payload-inputs-<INPUTS>` beside `<prefix>-payload-arm64`, so
-  `github.mjs` finds one by name, kept 14 days), else a build here
+  `github.mjs` finds one by name, kept 14 days; only from a green run of
+  `agent-payload.yml` in our repo started by a push, the schedule or by
+  hand, never a pull request's, which runs that PR's own workflow), else a build here
   (`build.mjs`: the kind's `ci/sources.sh <workdir>` when it has one, then
   `build/build.sh <workdir>`, into `dist/agents/<id>/<INPUTS>/`). A release
   prefers CI's build over a current one built here, and its preflight

@@ -40,7 +40,7 @@ const day = (iso) => (iso ?? '').slice(0, 10);
 /** owner/name: GITHUB_REPO, else the REPO constant the app's updater uses. */
 export function repoName(root = REPO_ROOT, env = process.env) {
   if (env.GITHUB_REPO) return env.GITHUB_REPO;
-  const file = join(root, 'app/src/engine/updates.ts');
+  const file = join(root, 'app/src/engine/updates/manifest.ts');
   const match = existsSync(file) && readFileSync(file, 'utf8').match(/const REPO = '([^']+)'/);
   return match ? match[1] : null;
 }
@@ -53,7 +53,9 @@ export function describe(kind, choice) {
   lines.push(`    staged   ${paint(staged.state)}${staged.source ? ` (${staged.source})` : ''}`);
   for (const why of staged.state === 'outdated' ? staged.why : []) lines.push(dim(`             ${why}`));
   if (kind.builds === null) lines.push(yellow(`    github   could not ask (${kind.buildsError})`));
-  else if (!kind.builds.length) lines.push('    github   no build of these sources (kept 14 days; a push of them builds one)');
+  else if (!kind.builds.length) {
+    lines.push('    github   no trusted build of these sources (a push to prod or a manual run of agent-payload.yml builds one; kept 14 days)');
+  }
   else {
     const b = kind.builds[0];
     lines.push(`    github   run ${b.runId} from ${b.sha.slice(0, 7)}, built ${day(b.created)}, kept until ${day(b.expires)}`);

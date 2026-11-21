@@ -30,7 +30,7 @@ export function choose(kind, { rebuild = new Set(), download = new Set(), releas
   if (download.has(kind.id)) {
     return newest
       ? { actions, pick: at('download') }
-      : { actions, pick: -1, note: kind.builds === null ? 'GitHub could not be asked' : 'GitHub has no build of these sources' };
+      : { actions, pick: -1, note: kind.builds === null ? 'GitHub could not be asked' : 'GitHub has no trusted build of these sources' };
   }
   if (current) {
     const local = (kind.staged.source ?? '').startsWith(LOCAL_SOURCE);
