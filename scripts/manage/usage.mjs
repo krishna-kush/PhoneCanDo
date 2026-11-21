@@ -8,6 +8,7 @@ export const GROUPS = [
     'Release and APK builds',
     [
       ['release <ver> --notes "..."', 'build full + lite, draft a GitHub release; --publish publishes it'],
+      ['release --major|--minor|--patch', 'in place of <ver>: count up from app/app.json (not with --upload-only)'],
       ['release <ver> --dry-run', 'check env, edits, CI, Linux and agent payloads; no build'],
       ['release <ver> --upload-only', 're-upload the staged assets, no build (--publish too)'],
       ['release <ver> --allow-red-ci', 'release despite red CI (noted in the release notes)'],

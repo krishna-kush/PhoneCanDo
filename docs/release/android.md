@@ -20,7 +20,9 @@ channel, so "0.1.2 · lite" and "0.1.2 · full" are told apart by name, not by
 code. The `play` channel is a later feature; nothing is released from it.
 
 Everything below runs through `./manage release <version> ...` from the repo
-root, which fills in the env defaults.
+root, which fills in the env defaults. `--major`, `--minor` or `--patch` can
+stand in for `<version>`: it counts up from `app/app.json`'s version (not with
+`--upload-only`, which needs the version the first run made).
 
 ## One-time: the release key
 

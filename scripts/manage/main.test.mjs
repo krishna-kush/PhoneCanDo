@@ -8,6 +8,7 @@ import { COMMANDS, main } from './main.mjs';
 import { ROOT } from './paths.mjs';
 import { setRecord } from './run.mjs';
 import { GROUPS, render } from './usage.mjs';
+import { appVersion } from './version.mjs';
 
 // Each line's recorded commands, repo-relative; stdout and stderr muted.
 function dispatch(argv) {
@@ -130,4 +131,27 @@ test('release --via-github takes --accept-all but needs no input for it: the wor
   const { calls } = dispatch(['release', '1.0.0', '--via-github', '--accept-all']);
   const start = calls.find((call) => call[1] === 'gh' && call[2] === 'workflow');
   assert.deepEqual(start.slice(7), ['--ref', 'prod', '-f', 'version=1.0.0']);
+});
+
+test('release --major|--minor|--patch counts up from app/app.json, for both release paths', () => {
+  const [major, minor, patch] = appVersion().split('.').map(Number);
+  const local = (bump) => dispatch(['release', bump, '--dry-run']).calls.find((call) => call[2] === 'scripts/release-android.mjs');
+  assert.deepEqual(local('--patch').slice(3), ['--version', `${major}.${minor}.${patch + 1}`, '--dry-run']);
+  assert.deepEqual(local('--minor').slice(3), ['--version', `${major}.${minor + 1}.0`, '--dry-run']);
+  assert.deepEqual(local('--major').slice(3), ['--version', `${major + 1}.0.0`, '--dry-run']);
+  const start = dispatch(['release', '--via-github', '--minor']).calls.find((call) => call[2] === 'workflow');
+  assert.ok(start.includes(`version=${major}.${minor + 1}.0`));
+});
+
+test('release takes a version or one bump, never both, and no bump with --upload-only', () => {
+  for (const argv of [
+    ['release'],
+    ['release', '--dry-run'],
+    ['release', '1.2.3', '--patch'],
+    ['release', '--major', '--minor'],
+    ['release', 'v1.2.3'],
+    ['release', '--patch', '--upload-only'],
+  ]) {
+    assert.deepEqual(dispatch(argv), { code: 2, calls: [] }, argv.join(' '));
+  }
 });
