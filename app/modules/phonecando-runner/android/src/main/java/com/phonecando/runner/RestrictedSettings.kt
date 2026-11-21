@@ -61,17 +61,12 @@ object RestrictedSettings {
 
   // The accessibility service calls this when Android binds it. Shared prefs
   // survive updates and go with an uninstall, which is the lock's lifetime
-  // too (Android 14+ sets it only on a first install for the user). True
-  // on the first bind ever on this install: the switch's first turn-on
-  // (a re-lock on Android 13 after a file update does not count again).
-  fun markConnected(context: Context): Boolean {
-    val p = prefs(context)
-    val first = !p.getBoolean(KEY_EVER_CONNECTED, false)
-    p.edit()
+  // too (Android 14+ sets it only on a first install for the user).
+  fun markConnected(context: Context) {
+    prefs(context).edit()
       .putBoolean(KEY_EVER_CONNECTED, true)
       .putLong(KEY_CONNECTED_AT, System.currentTimeMillis())
       .apply()
-    return first
   }
 
   // The service ran on this install, so the switch was allowed once. Android
