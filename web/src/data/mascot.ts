@@ -94,6 +94,13 @@ export const toyLines = {
   armedIdle: 'armed · by you',
   tooQuick: 'hold it longer',
   relocked: 'locked again',
+  // The gate's door: an app knocks, the visitor answers.
+  door: {
+    always: 'forever pass ✓',
+    once: 'just this once!',
+    no: 'door shut · ok',
+    locked: 'arm me first',
+  },
   step: (n: number, done: boolean) => (done ? `step ${n} ✓` : `step ${n} undone`),
   allSet: 'all set!',
   opened: (n: number, of: number) => `read ${n} of ${of}`,

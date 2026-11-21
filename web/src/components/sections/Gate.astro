@@ -2,6 +2,7 @@
 import Slate from "../Slate.astro";
 import LogoLoader from "../LogoLoader.astro";
 import ArmPad from "./gate/ArmPad.astro";
+import AppDoor from "./gate/AppDoor.astro";
 import { site } from "../../data/site";
 ---
 
@@ -9,14 +10,15 @@ import { site } from "../../data/site";
     <div class="sec-head">
         <div class="sec-rail">
             <p class="kicker">Sec. 05 / The gate</p>
-            <p class="fig-label">FIG. 07 — Consent, three ways</p>
+            <p class="fig-label">FIG. 07 — Consent at two doors</p>
         </div>
         <div class="sec-body">
             <h2>It ships locked.</h2>
             <p class="lead">
                 Phone control starts <em>locked</em>. Only your fingerprint,
                 face or PIN arms it, you pick how long it stays armed, and the
-                agent can never arm itself.
+                agent can never arm itself. Even armed, it knocks before each
+                new app.
             </p>
         </div>
     </div>
@@ -113,12 +115,19 @@ import { site } from "../../data/site";
             </div>
         </div>
 
+        <AppDoor />
+
         <figcaption class="gate-foot">
             <p>
                 <span>Still works while locked:</span> reopening PhoneCanDo,
                 this unlock prompt, and Android's accessibility screen.
             </p>
             <p>Play build: no driver, nothing to gate.</p>
+            <p>
+                <span>Never knocks:</span> PhoneCanDo itself and your home
+                screen. Allow all apps waves the rest in (fingerprint or PIN
+                first), and a No still holds.
+            </p>
         </figcaption>
     </figure>
 </section>

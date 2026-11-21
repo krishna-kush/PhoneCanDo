@@ -1,0 +1,274 @@
+---
+// The gate's second door, under How often it asks: armed, an agent still
+// asks before each new app (the app's App access: Always, Just now, No).
+// Once the pad above arms the plate (ArmPad.astro, data-armed), an app
+// knocks on the ticket; each answer key stamps it and the next app knocks.
+// Always is held, as it takes a fingerprint in the app; the others are a
+// tap. Locked, nobody knocks.
+---
+
+<div class="gate-modes gate-door" data-door>
+    <div class="gate-modes-label">
+        <p>Then each app knocks</p>
+        <div class="gate-ticket" aria-live="polite">
+            <p class="gate-ticket-idle">Arm it above, then apps knock.</p>
+            <p class="gate-ticket-app" data-knock-app>Maps</p>
+            <p class="gate-ticket-who">A-01 wants in</p>
+            <code><span class="gate-ticket-ask">403 app_not_allowed</span><span class="gate-ticket-no">403 app_blocked</span></code>
+            <span class="gate-ticket-stamp" data-says="always">Always</span>
+            <span class="gate-ticket-stamp" data-says="once">Just now</span>
+            <span class="gate-ticket-stamp" data-says="no">No</span>
+        </div>
+    </div>
+    <button class="gate-mode gate-answer" type="button" data-answer-key="always" aria-label="Always" aria-describedby="door-always">
+        <span class="gate-mode-head">01 / Always</span>
+        <span class="gate-answer-text" id="door-always">
+            A pass for every agent, kept. It takes your fingerprint or PIN,
+            so no agent signs it for you.
+        </span>
+        <span class="gate-answer-how">Hold · like a fingerprint</span>
+    </button>
+    <button class="gate-mode gate-answer" type="button" data-answer-key="once" aria-label="Just now" aria-describedby="door-once">
+        <span class="gate-mode-head">02 / Just now</span>
+        <span class="gate-answer-text" id="door-once">
+            This agent, this visit. The pass tears up when it hands the
+            phone back.
+        </span>
+        <span class="gate-answer-how">Tap</span>
+    </button>
+    <button class="gate-mode gate-answer" type="button" data-answer-key="no" aria-label="No" aria-describedby="door-no">
+        <span class="gate-mode-head">03 / No</span>
+        <span class="gate-answer-text" id="door-no">
+            Door shut for every agent, even with Allow all apps on. Only you
+            reopen it, in Settings.
+        </span>
+        <span class="gate-answer-how">Tap</span>
+    </button>
+</div>
+
+<script>
+    import { cueMascot } from "../../../lib/mascotCue";
+    import { toyLines } from "../../../data/mascot";
+
+    type Answer = "always" | "once" | "no";
+
+    const door = document.querySelector<HTMLElement>("[data-door]");
+    const plate = door?.closest<HTMLElement>(".gate-plate");
+    const app = door?.querySelector<HTMLElement>("[data-knock-app]");
+    if (door && plate && app) {
+        // Who knocks, in turn.
+        const APPS = ["Maps", "Bank", "Camera", "Mail", "Chess", "Notes"];
+        // How long a stamp stays before the next app knocks, and how long
+        // Always is held (.gate-answer[data-holding]).
+        const NEXT = 1800;
+        const HOLD = 700;
+        let turn = 0;
+        let next = 0;
+
+        const armed = () => plate.hasAttribute("data-armed");
+        const knock = () => {
+            window.clearTimeout(next);
+            door.removeAttribute("data-answer");
+            app.textContent = APPS[turn++ % APPS.length];
+            door.removeAttribute("data-knock");
+            void door.offsetWidth;
+            door.setAttribute("data-knock", "");
+        };
+        const say = (a: Answer) => cueMascot({ say: toyLines.door[a], move: a === "no" ? "shake" : "hop" });
+        // A key pressed while a stamp is still up, or before the first
+        // knock, answers the next app.
+        const answer = (a: Answer) => {
+            if (door.hasAttribute("data-answer") || !door.hasAttribute("data-knock")) knock();
+            door.setAttribute("data-answer", a);
+            say(a);
+            next = window.setTimeout(knock, NEXT);
+        };
+
+        new MutationObserver(() => {
+            window.clearTimeout(next);
+            door.removeAttribute("data-answer");
+            door.removeAttribute("data-knock");
+            if (armed()) next = window.setTimeout(knock, 500);
+        }).observe(plate, { attributes: true, attributeFilter: ["data-armed"] });
+
+        for (const key of door.querySelectorAll<HTMLButtonElement>("[data-answer-key]")) {
+            const a = key.dataset.answerKey as Answer;
+            // What this press did, read when its click arrives.
+            let held = false;
+            let letGo = false;
+            let timer = 0;
+            if (a === "always") {
+                key.addEventListener("pointerdown", (e) => {
+                    held = letGo = false;
+                    if (e.button !== 0 || !armed()) return;
+                    key.setAttribute("data-holding", "");
+                    timer = window.setTimeout(() => {
+                        key.removeAttribute("data-holding");
+                        held = true;
+                        answer(a);
+                    }, HOLD);
+                });
+                const release = () => {
+                    if (!key.hasAttribute("data-holding")) return;
+                    window.clearTimeout(timer);
+                    key.removeAttribute("data-holding");
+                    letGo = true;
+                };
+                for (const type of ["pointerup", "pointerleave", "pointercancel"]) key.addEventListener(type, release);
+                key.addEventListener("contextmenu", (e) => e.preventDefault());
+            }
+            // The click comes after the mascot's tap narration, so each
+            // branch has the last word; a keyboard press answers at once.
+            key.addEventListener("click", (e) => {
+                if (!armed()) return cueMascot({ say: toyLines.door.locked, move: "shake" });
+                if (a !== "always" || e.detail === 0) return answer(a);
+                if (held) {
+                    held = false;
+                    return say(a);
+                }
+                if (letGo) {
+                    letGo = false;
+                    cueMascot({ say: toyLines.tooQuick, move: "shake" });
+                }
+            });
+        }
+    }
+</script>
+
+<style is:global>
+    /* The door shares How often it asks' grid (.gate-modes in Gate.astro);
+       its cells are answer keys, its label holds the ticket. */
+    .gate-door .gate-modes-label { justify-content: flex-start; gap: 12px; }
+    .gate-ticket {
+      position: relative;
+      padding: 10px 10px 9px;
+      border: 1px dashed var(--line-2);
+      background: var(--panel);
+    }
+    /* Locked, the idle line covers the knock, which keeps its room so
+       arming doesn't move the row. */
+    .gate-ticket-idle {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      font: 500 8px/1.6 var(--mono);
+      letter-spacing: 0.1em;
+      color: var(--dim);
+    }
+    .gate-ticket-app,
+    .gate-ticket-who,
+    .gate-ticket code { visibility: hidden; }
+    .gate-plate[data-armed] .gate-ticket-idle { display: none; }
+    .gate-plate[data-armed] .gate-ticket-app,
+    .gate-plate[data-armed] .gate-ticket-who,
+    .gate-plate[data-armed] .gate-ticket code { visibility: visible; }
+    .gate-ticket-app {
+      font: 400 22px/1 var(--serif);
+      letter-spacing: -0.01em;
+      text-transform: none;
+      color: var(--fg);
+    }
+    .gate-ticket-who {
+      margin-top: 6px;
+      font: 500 8px/1.4 var(--mono);
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+    .gate-ticket code {
+      display: block;
+      margin-top: 8px;
+      font: 400 9.5px/1.4 var(--mono);
+      letter-spacing: 0;
+      text-transform: none;
+      white-space: nowrap;
+      color: var(--red);
+    }
+    .gate-ticket-no,
+    .gate-door[data-answer='no'] .gate-ticket-ask { display: none; }
+    .gate-door[data-answer='no'] .gate-ticket-no { display: inline; }
+    .gate-door[data-answer='always'] .gate-ticket code,
+    .gate-door[data-answer='once'] .gate-ticket code { text-decoration: line-through 2px var(--fg); }
+    .gate-ticket-stamp {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: none;
+      padding: 4px 7px;
+      border: 1.5px solid currentColor;
+      font: 500 9px/1 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      rotate: 8deg;
+    }
+    .gate-ticket-stamp[data-says='no'] { color: var(--red); rotate: -6deg; }
+    .gate-door[data-answer='always'] [data-says='always'],
+    .gate-door[data-answer='once'] [data-says='once'],
+    .gate-door[data-answer='no'] [data-says='no'] {
+      display: block;
+      animation: gate-stamp 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+    }
+    .gate-door[data-knock] .gate-ticket { animation: gate-knock 0.6s ease-out; }
+    @keyframes gate-knock {
+      0%, 30%, 60%, 100% { translate: 0 0; rotate: 0deg; }
+      12% { translate: 3px 0; rotate: 1deg; }
+      42% { translate: 3px 0; rotate: 1deg; }
+    }
+
+    .gate-answer {
+      position: relative;
+      border: 0;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      transition: background-color 0.15s;
+    }
+    .gate-answer[data-answer-key='always'] { touch-action: none; }
+    .gate-answer-text {
+      margin-top: 6px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .gate-answer-how {
+      margin-top: 10px;
+      font: 500 7.5px/1.2 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+    .gate-plate[data-armed] .gate-answer-how { color: var(--accent-ink); }
+    @media (hover: hover) {
+      .gate-plate[data-armed] .gate-answer:hover {
+        background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--panel);
+      }
+    }
+    .gate-plate[data-armed] .gate-answer:active { translate: 0 1px; }
+    /* Always's hold: a bar fills along the key's foot, and drains when let go. */
+    .gate-answer[data-answer-key='always']::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background: var(--red);
+      scale: 0 1;
+      transform-origin: left;
+      transition: scale 0.25s ease-out;
+    }
+    .gate-answer[data-holding]::after { scale: 1 1; transition: scale 0.7s linear; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .gate-door[data-knock] .gate-ticket,
+      .gate-door[data-answer] .gate-ticket-stamp { animation: none; }
+      .gate-answer,
+      .gate-answer::after { transition: none; }
+    }
+</style>
